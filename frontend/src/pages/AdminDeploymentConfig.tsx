@@ -33,7 +33,7 @@ import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
-import { getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
+import { DEFAULT_MAPLE_MODEL, MAPLE_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
 import { normalizePubkey } from '../utils/nostrKeys'
@@ -762,28 +762,21 @@ export function AdminDeploymentConfig() {
   // LLM help pages data
   const LLM_HELP_PAGES = [
     {
-      title: t('adminDeployment.llmHelp.overviewTitle', 'What is an LLM Provider?'),
+      title: t('adminDeployment.llmHelp.overviewTitle', 'Maple LLM Overview'),
       content: 'overview',
     },
     {
       title: 'Maple',
-      hint: t('adminDeployment.llmHelp.mapleHint', 'Privacy-focused inference. Your queries are never stored or used for training.'),
+      hint: t('adminDeployment.llmHelp.mapleHint', 'Maple is the only supported AI backend for Sanctum.'),
       config: {
         LLM_PROVIDER: 'maple',
         LLM_API_KEY: 'your-api-key-from-trymaple.ai',
-        LLM_MODEL: 'kimi-k2-5',
+        LLM_MODEL: DEFAULT_MAPLE_MODEL,
       },
-      extra: t('adminDeployment.llmHelp.mapleExtra', 'Get your API key at trymaple.ai. In Admin Deployment Config, set LLM_API_KEY (it maps to MAPLE_API_KEY).'),
-    },
-    {
-      title: 'Ollama',
-      hint: t('adminDeployment.llmHelp.ollamaHint', 'Self-hosted, runs on your own hardware. No API key needed.'),
-      config: {
-        LLM_PROVIDER: 'ollama',
-        OLLAMA_BASE_URL: 'http://localhost:11434',
-        LLM_MODEL: 'llama3.2',
-      },
-      extra: t('adminDeployment.llmHelp.ollamaExtra', 'Install Ollama from ollama.ai, then run: ollama pull llama3.2'),
+      extra: t('adminDeployment.llmHelp.mapleExtra', {
+        mapleSignupUrl: MAPLE_SIGNUP_URL,
+        defaultValue: 'Set LLM_API_KEY to your Maple key from {{mapleSignupUrl}}. LLM_* keys map to MAPLE_* env aliases.',
+      }),
     },
   ]
 
@@ -1120,7 +1113,7 @@ export function AdminDeploymentConfig() {
             <button
               onClick={() => setShowLlmHelpModal(true)}
               className="ml-1 text-text-muted hover:text-accent transition-colors"
-              aria-label={t('adminDeployment.llmHelp.ariaLabel', 'LLM provider configuration help')}
+              aria-label={t('adminDeployment.llmHelp.ariaLabel', 'Maple LLM configuration help')}
               title={helpText}
             >
               <HelpCircle className="w-5 h-5" />
@@ -1850,25 +1843,25 @@ export function AdminDeploymentConfig() {
                 {LLM_HELP_PAGES[llmHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.llmHelp.overviewDesc', 'An LLM (Large Language Model) provider is the AI service that powers your assistant\'s responses. Choose based on your privacy needs and infrastructure.')}
+                      {t('adminDeployment.llmHelp.overviewDesc', 'Sanctum uses Maple as its standard LLM service. Maple exposes an OpenAI-compatible API while keeping configuration Maple-first in the product.')}
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_PROVIDER</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.providerField', 'Which service to use: "maple" or "ollama"')}
+                          {t('adminDeployment.llmHelp.providerField', 'Fixed to "maple". This key exists for compatibility and should not be changed.')}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_MODEL</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.modelField', 'The specific AI model to use. Each provider has different models available.')}
+                          {t('adminDeployment.llmHelp.modelField', `Maple model identifier to use (for example: ${DEFAULT_MAPLE_MODEL}).`)}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-medium text-text">{t('adminDeployment.llmHelp.apiKeyLabel', 'API Key (provider-specific)')}</p>
+                        <p className="text-sm font-medium text-text">{t('adminDeployment.llmHelp.apiKeyLabel', 'Maple API Key')}</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for cloud providers. Ollama doesn\'t need one.')}
+                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for Maple. Set LLM_API_KEY (maps to MAPLE_API_KEY).')}
                         </p>
                       </div>
                     </div>
