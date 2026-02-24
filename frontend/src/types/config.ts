@@ -5,7 +5,7 @@
 import type { TFunction } from 'i18next'
 
 export const DEFAULT_MAPLE_MODEL = 'kimi-k2.5'
-export const MAPLE_SIGNUP_URL = 'trymaple.ai'
+export const MAPLE_SIGNUP_URL = 'https://trymaple.ai'
 
 // --- AI Configuration Types ---
 

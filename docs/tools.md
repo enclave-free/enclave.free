@@ -301,13 +301,13 @@ If no fields can be decrypted (e.g., admin lacks the correct private key), the f
 
 **Audit and logging recommendations:**
 - Log when `tool_context` is used (without logging the actual PII content)
-- Mark decrypted-context requests with `tool_context_decrypted=true` (request field) or `X-Tool-Context-Decrypted: true` (header), and never log raw `tool_context` values
+- Mark decrypted-context requests with `tool_context_decrypted=true` (recommended pattern — not yet implemented in the current system) (request field) or `X-Tool-Context-Decrypted: true` (recommended pattern — not yet implemented in the current system) (header), and never log raw `tool_context` values
 - After decryption in `/llm/chat`, enqueue those requests for async/manual compliance review and correlate events with `/admin/tools/execute` for rate-limiting and investigation workflows
 - Consider separate retention policies for decrypted vs. encrypted query logs
 - Implement rate limiting on `/admin/tools/execute` to detect anomalous bulk decryption
 
 **Mitigations:**
-- Use [maple-proxy](https://blog.trymaple.ai/maple-proxy-documentation) (a local reverse proxy for keeping PII on-premises) in your controlled infrastructure where possible
+- Use [maple-proxy](https://blog.trymaple.ai/maple-proxy-documentation) (a local bridge/agent that handles attestation with Maple's secure infrastructure). LLM inference runs in TEEs with end-to-end encrypted prompts/responses that Maple cannot access, but traffic still egresses to `enclave.trymaple.ai` (so data is not fully on-premises)
 - Limit which admins have access to the `db-query` tool
 - Prefer aggregate queries ("count users by type") over queries that return individual PII
 - Review Maple logs and data retention settings

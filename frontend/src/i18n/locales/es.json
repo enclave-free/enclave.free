@@ -1396,7 +1396,7 @@
     "LLM_API_KEY": {
       "label": "Clave API",
       "description": "Clave de API de Maple (secreta)",
-      "hint": "Se asigna a MAPLE_API_KEY. Deje vacío para borrar la anulación y usar la reserva de .env."
+      "hint": "Se asigna a MAPLE_API_KEY. Deja vacío para borrar la anulación y usar la reserva de .env."
     },
     "ADMIN_BASE_URL": {
       "description": "URL del subdominio del panel de administración (opcional)",

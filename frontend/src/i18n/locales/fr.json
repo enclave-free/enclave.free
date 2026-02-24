@@ -498,7 +498,7 @@
       "compact": "Compacte",
       "expand": "Étendre",
       "shareSecretsTitle": "Partager les variables d’environnement secrètes",
-      "shareSecretsHint": "Désactivé par défaut. Activez d'abord l'outil de configuration. Lorsqu'elle est activée, les valeurs secrètes de la configuration de déploiement sont révélées côté client et envoyées à Maple.",
+      "shareSecretsHint": "Désactivé par défaut. Activez d'abord l'outil de configuration. Lorsqu'il est activé, les valeurs secrètes de la configuration de déploiement sont révélées côté client et envoyées à Maple.",
       "sensitive": "Sensible",
       "emptyPrompt": "Posez des questions sur n’importe quelle configuration admin. Si vous voulez que l’assistant propose et applique des changements, demandez-lui d’inclure un jeu de changements JSON.",
       "pendingChanges": "Modifications en attente",

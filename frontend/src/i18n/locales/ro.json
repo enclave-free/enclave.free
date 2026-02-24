@@ -1217,7 +1217,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Configurați inferența Maple",
-      "hint": "Sanctum este doar Maple pentru inferența LLM. Configurați modelul Maple/setările API aici. Modificările necesită o repornire."
+      "hint": "Sanctum utilizează exclusiv Maple pentru inferența LLM. Configurați modelul Maple/setările API aici. Modificările necesită o repornire."
     },
     "embedding": {
       "label": "Procesare text",
