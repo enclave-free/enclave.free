@@ -984,7 +984,7 @@
       "ariaLabel": "עזרה בתצורת Maple LLM",
       "exampleConfig": "דוגמת הגדרה",
       "goToPage": "עבור לעמוד",
-      "mapleExtra": "הגדר LLM_API_KEY למפתח ה-Maple שלך מ-trymaple.ai. מקשי LLM_* ממפים לכינויי MAPLE_*.",
+      "mapleExtra": "הגדר LLM_API_KEY למפתח ה-Maple שלך מ-{{mapleSignupUrl}}. מקשי LLM_* ממפים לכינויי MAPLE_*.",
       "mapleHint": "Maple הוא ה-backend הסטנדרטי של LLM עבור Sanctum.",
       "modelField": "LLM_MODEL — מזהה מודל Maple (לדוגמה: kimi-k2.5).",
       "overviewDesc": "Sanctum משתמש ב-Maple כשירות ה-LLM הסטנדרטי שלו. Maple מספקת API תואם OpenAI מתחת למכסה המנוע.",

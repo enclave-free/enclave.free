@@ -986,7 +986,7 @@
       "ariaLabel": "Maple LLM कॉन्फ़िगरेशन सहायता",
       "exampleConfig": "उदाहरण कॉन्फ़िगरेशन",
       "goToPage": "पेज पर जाएँ",
-      "mapleExtra": "LLM_API_KEY को trymaple.ai से अपनी Maple कुंजी पर सेट करें। LLM_* कुंजियाँ MAPLE_* उपनामों से मैप होती हैं।",
+      "mapleExtra": "LLM_API_KEY को {{mapleSignupUrl}} से अपनी Maple कुंजी पर सेट करें। LLM_* कुंजियाँ MAPLE_* उपनामों से मैप होती हैं।",
       "mapleHint": "Maple Sanctum के लिए मानक LLM बैकएंड है।",
       "modelField": "LLM_MODEL — Maple मॉडल पहचानकर्ता (उदाहरण के लिए: kimi-k2.5)।",
       "overviewDesc": "Sanctum अपने मानक LLM सेवा के रूप में Maple का उपयोग करता है। Maple हुड के तहत एक OpenAI-संगत API प्रदान करता है।",

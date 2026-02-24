@@ -955,7 +955,7 @@
       "ariaLabel": "Hilfe zur Maple LLM-Konfiguration",
       "exampleConfig": "Beispielkonfiguration",
       "goToPage": "Zur Seite",
-      "mapleExtra": "Setze LLM_API_KEY auf deinen Maple-Schlüssel von trymaple.ai. LLM_*-Schlüssel sind MAPLE_*-Aliase zugeordnet.",
+      "mapleExtra": "Setze LLM_API_KEY auf deinen Maple-Schlüssel von {{mapleSignupUrl}}. LLM_*-Schlüssel sind MAPLE_*-Aliase zugeordnet.",
       "mapleHint": "Maple ist das Standard-LLM-Backend für Sanctum.",
       "modelField": "LLM_MODEL — Maple Modell-Identifikator (zum Beispiel: kimi-k2.5).",
       "overviewDesc": "Sanctum verwendet Maple als seinen Standard-LLM-Dienst. Maple bietet unter der Haube eine OpenAI-kompatible API.",

@@ -984,7 +984,7 @@
       "ariaLabel": "ความช่วยเหลือในการกำหนดค่า Maple LLM",
       "exampleConfig": "ตัวอย่างการตั้งค่า",
       "goToPage": "ไปที่หน้า",
-      "mapleExtra": "ตั้งค่า LLM_API_KEY เป็นคีย์ Maple ของคุณจาก trymaple.ai คีย์ LLM_* แมปกับนามแฝง MAPLE_*",
+      "mapleExtra": "ตั้งค่า LLM_API_KEY เป็นคีย์ Maple ของคุณจาก {{mapleSignupUrl}} คีย์ LLM_* แมปกับนามแฝง MAPLE_*",
       "mapleHint": "Maple เป็นแบ็กเอนด์ LLM มาตรฐานสำหรับ Sanctum",
       "modelField": "LLM_MODEL — ตัวระบุโมเดล Maple (เช่น kimi-k2.5)",
       "overviewDesc": "Sanctum ใช้ Maple เป็นบริการ LLM มาตรฐาน Maple ให้บริการ OpenAI-compatible API ภายใต้พื้นฐาน",

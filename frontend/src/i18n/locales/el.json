@@ -987,7 +987,7 @@
       "ariaLabel": "Βοήθεια διαμόρφωσης Maple LLM",
       "exampleConfig": "Παράδειγμα διαμόρφωσης",
       "goToPage": "Μετάβαση στη σελίδα",
-      "mapleExtra": "Ορίστε το LLM_API_KEY στο κλειδί Maple σας από το trymaple.ai. Τα κλειδιά LLM_* αντιστοιχούν σε ψευδώνυμα MAPLE_*.",
+      "mapleExtra": "Ορίστε το LLM_API_KEY στο κλειδί Maple σας από το {{mapleSignupUrl}}. Τα κλειδιά LLM_* αντιστοιχούν σε ψευδώνυμα MAPLE_*.",
       "mapleHint": "Το Maple είναι το βασικό LLM backend για το Sanctum.",
       "modelField": "LLM_MODEL — αναγνωριστικό μοντέλου Maple (για παράδειγμα: kimi-k2.5).",
       "overviewDesc": "Το Sanctum χρησιμοποιεί το Maple ως την τυπική υπηρεσία LLM. Το Maple παρέχει ένα API συμβατό με το OpenAI.",

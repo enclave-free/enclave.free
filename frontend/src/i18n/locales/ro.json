@@ -1001,7 +1001,7 @@
       "ariaLabel": "Ajutor pentru configurarea Maple LLM",
       "exampleConfig": "Exemplu de configurare",
       "goToPage": "Accesează pagina",
-      "mapleExtra": "Setați LLM_API_KEY la cheia dumneavoastră Maple de la trymaple.ai. Cheile LLM_* se mapează la aliasuri MAPLE_*.",
+      "mapleExtra": "Setați LLM_API_KEY la cheia dumneavoastră Maple de la {{mapleSignupUrl}}. Cheile LLM_* se mapează la aliasuri MAPLE_*.",
       "mapleHint": "Maple este backend-ul LLM standard pentru Sanctum.",
       "modelField": "LLM_MODEL — identificator model Maple (de exemplu: kimi-k2.5).",
       "overviewDesc": "Sanctum utilizează Maple ca serviciu LLM standard. Maple oferă un API compatibil OpenAI sub capotă.",
