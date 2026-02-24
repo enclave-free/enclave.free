@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Configureer Maple-inferentie",
-      "hint": "Sanctum is alleen Maple voor LLM-inferentie. Configureer hier de Maple-model/API-instellingen. Wijzigingen vereisen een herstart."
+      "hint": "Sanctum gebruikt momenteel alleen Maple voor LLM-inferentie. Configureer hier de Maple-model-/API-instellingen. Wijzigingen vereisen een herstart."
     },
     "embedding": {
       "label": "Tekstverwerking",
