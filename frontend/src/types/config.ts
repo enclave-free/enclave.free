@@ -4,6 +4,9 @@
 
 import type { TFunction } from 'i18next'
 
+export const DEFAULT_MAPLE_MODEL = 'kimi-k2.5'
+export const MAPLE_SIGNUP_URL = 'trymaple.ai'
+
 // --- AI Configuration Types ---
 
 export interface AIConfigItem {
@@ -475,13 +478,13 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
   return {
     LLM_PROVIDER: {
       label: t('deploymentConfigItems.LLM_PROVIDER.label', 'AI Service'),
-      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'LLM provider (maple only)'),
+      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'LLM provider (Maple only)'),
       hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Maple is the only supported value. This key is retained for compatibility.'),
     },
     LLM_MODEL: {
       label: t('deploymentConfigItems.LLM_MODEL.label', 'Model Name'),
       description: t('deploymentConfigItems.LLM_MODEL.description', 'Model name/identifier'),
-      hint: t('deploymentConfigItems.LLM_MODEL.hint', 'The Maple model identifier to use (e.g., "kimi-k2-5").'),
+      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Maple model identifier to use (e.g., "${DEFAULT_MAPLE_MODEL}").`),
     },
     LLM_API_URL: {
       label: t('deploymentConfigItems.LLM_API_URL.label', 'API Endpoint'),

@@ -986,7 +986,7 @@
       "goToPage": "ไปที่หน้า",
       "mapleExtra": "ตั้งค่า LLM_API_KEY เป็นคีย์ Maple ของคุณจาก trymaple.ai คีย์ LLM_* แมปกับนามแฝง MAPLE_*",
       "mapleHint": "Maple เป็นแบ็กเอนด์ LLM มาตรฐานสำหรับ Sanctum",
-      "modelField": "LLM_MODEL — ตัวระบุโมเดล Maple (เช่น kimi-k2-5)",
+      "modelField": "LLM_MODEL — ตัวระบุโมเดล Maple (เช่น kimi-k2.5)",
       "overviewDesc": "Sanctum ใช้ Maple เป็นบริการ LLM มาตรฐาน Maple ให้บริการ OpenAI-compatible API ภายใต้พื้นฐาน",
       "overviewTitle": "ภาพรวม Maple LLM",
       "providerField": "LLM_PROVIDER — กำหนดตายตัวเป็น \"maple\" เพื่อความเข้ากันได้"
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "บริการ AI",
-      "description": "ผู้ให้บริการ LLM (maple เท่านั้น)",
+      "description": "ผู้ให้บริการ LLM (Maple เท่านั้น)",
       "hint": "Maple เป็นค่าที่รองรับเพียงค่าเดียว คีย์นี้ยังคงอยู่เพื่อความเข้ากันได้"
     },
     "LLM_MODEL": {
       "label": "ชื่อโมเดล",
       "description": "ชื่อ/ตัวระบุโมเดล",
-      "hint": "ตัวระบุโมเดล Maple ที่จะใช้ (เช่น \"kimi-k2-5\")"
+      "hint": "ตัวระบุโมเดล Maple ที่จะใช้ (เช่น \"kimi-k2.5\")"
     },
     "LLM_API_URL": {
       "label": "จุดเชื่อมต่อ API",

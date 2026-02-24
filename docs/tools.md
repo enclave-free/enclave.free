@@ -146,7 +146,7 @@ Responses include a `tools_used` array showing which tools were executed:
 ```json
 {
   "message": "Based on current search results...",
-  "model": "kimi-k2-5",
+  "model": "kimi-k2.5",
   "provider": "maple",
   "tools_used": [
     {
@@ -301,12 +301,13 @@ If no fields can be decrypted (e.g., admin lacks the correct private key), the f
 
 **Audit and logging recommendations:**
 - Log when `tool_context` is used (without logging the actual PII content)
-- Flag requests containing decrypted PII for compliance review
+- Mark decrypted-context requests with `tool_context_decrypted=true` (request field) or `X-Tool-Context-Decrypted: true` (header), and never log raw `tool_context` values
+- After decryption in `/llm/chat`, enqueue those requests for async/manual compliance review and correlate events with `/admin/tools/execute` for rate-limiting and investigation workflows
 - Consider separate retention policies for decrypted vs. encrypted query logs
 - Implement rate limiting on `/admin/tools/execute` to detect anomalous bulk decryption
 
 **Mitigations:**
-- Use maple-proxy in your controlled infrastructure to keep PII on-premises where possible
+- Use [maple-proxy](https://blog.trymaple.ai/maple-proxy-documentation) (a local reverse proxy for keeping PII on-premises) in your controlled infrastructure where possible
 - Limit which admins have access to the `db-query` tool
 - Prefer aggregate queries ("count users by type") over queries that return individual PII
 - Review Maple logs and data retention settings

@@ -988,7 +988,7 @@
       "goToPage": "पेज पर जाएँ",
       "mapleExtra": "LLM_API_KEY को trymaple.ai से अपनी Maple कुंजी पर सेट करें। LLM_* कुंजियाँ MAPLE_* उपनामों से मैप होती हैं।",
       "mapleHint": "Maple Sanctum के लिए मानक LLM बैकएंड है।",
-      "modelField": "LLM_MODEL — Maple मॉडल पहचानकर्ता (उदाहरण के लिए: kimi-k2-5)।",
+      "modelField": "LLM_MODEL — Maple मॉडल पहचानकर्ता (उदाहरण के लिए: kimi-k2.5)।",
       "overviewDesc": "Sanctum अपने मानक LLM सेवा के रूप में Maple का उपयोग करता है। Maple हुड के तहत एक OpenAI-संगत API प्रदान करता है।",
       "overviewTitle": "Maple LLM अवलोकन",
       "providerField": "LLM_PROVIDER — संगतता के लिए \"maple\" पर निश्चित।"
@@ -1304,13 +1304,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI सेवा",
-      "description": "LLM प्रदाता (केवल maple)",
+      "description": "LLM प्रदाता (केवल Maple)",
       "hint": "Maple एकमात्र समर्थित मान है। यह कुंजी संगतता के लिए बनी हुई है।"
     },
     "LLM_MODEL": {
       "label": "मॉडल का नाम",
       "description": "मॉडल का नाम/पहचानकर्ता",
-      "hint": "उपयोग करने के लिए Maple मॉडल पहचानकर्ता (उदाहरण के लिए, \"kimi-k2-5\")."
+      "hint": "उपयोग करने के लिए Maple मॉडल पहचानकर्ता (उदाहरण के लिए, \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API एंडपॉइंट",

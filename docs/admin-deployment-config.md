@@ -94,7 +94,7 @@ curl -X PUT http://localhost:8000/admin/deployment/config/LLM_API_URL \
 curl -X PUT http://localhost:8000/admin/deployment/config/LLM_MODEL \
   -H "Authorization: Bearer <admin-token>" \
   -H "Content-Type: application/json" \
-  -d '{"value":"kimi-k2-5"}'
+  -d '{"value":"kimi-k2.5"}'
 ```
 
 If `LLM_API_KEY` is not set in deployment config, Sanctum still falls back to `.env` Maple keys (`MAPLE_API_KEY`).

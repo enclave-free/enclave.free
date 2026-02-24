@@ -986,7 +986,7 @@
       "goToPage": "পৃষ্ঠায় যান",
       "mapleExtra": "আপনার trymaple.ai থেকে Maple কী-তে LLM_API_KEY সেট করুন। LLM_* কীগুলি MAPLE_* উপনামগুলির সাথে ম্যাপ করে।",
       "mapleHint": "Sanctum-এর জন্য Maple হল স্ট্যান্ডার্ড LLM ব্যাকএন্ড।",
-      "modelField": "LLM_MODEL — Maple মডেল শনাক্তকারী (উদাহরণস্বরূপ: kimi-k2-5)।",
+      "modelField": "LLM_MODEL — Maple মডেল শনাক্তকারী (উদাহরণস্বরূপ: kimi-k2.5)।",
       "overviewDesc": "Sanctum তার স্ট্যান্ডার্ড LLM পরিষেবা হিসাবে Maple ব্যবহার করে। Maple আন্ডার দ্য হুড একটি OpenAI-সামঞ্জস্যপূর্ণ API সরবরাহ করে।",
       "overviewTitle": "Maple LLM ওভারভিউ",
       "providerField": "LLM_PROVIDER — সামঞ্জস্যের জন্য \"maple\" এ স্থির করা হয়েছে।"
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI সার্ভিস",
-      "description": "LLM প্রদানকারী (শুধুমাত্র maple)",
+      "description": "LLM প্রদানকারী (শুধুমাত্র Maple)",
       "hint": "Maple হল একমাত্র সমর্থিত মান। এই কী সামঞ্জস্যের জন্য রয়ে গেছে।"
     },
     "LLM_MODEL": {
       "label": "মডেলের নাম",
       "description": "মডেলের নাম/আইডেন্টিফায়ার",
-      "hint": "ব্যবহার করার জন্য Maple মডেল শনাক্তকারী (যেমন, \"kimi-k2-5\")।"
+      "hint": "ব্যবহার করার জন্য Maple মডেল শনাক্তকারী (যেমন, \"kimi-k2.5\")।"
     },
     "LLM_API_URL": {
       "label": "API এন্ডপয়েন্ট",

@@ -648,7 +648,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             response_time_ms=response_time,
             last_checked=datetime.now(timezone.utc).isoformat(),
         ))
-    except Exception as e:
+    except httpx.RequestError as e:
         logger.warning(f"LLM (maple) health check failed: {e}")
         services.append(ServiceHealthItem(
             name="LLM (maple)",

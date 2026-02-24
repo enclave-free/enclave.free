@@ -986,7 +986,7 @@
       "goToPage": "Ugrás az oldalra",
       "mapleExtra": "Állítsa be az LLM_API_KEY-t a trymaple.ai webhelyről származó Maple kulcsára. Az LLM_* kulcsok a MAPLE_* aliasokhoz vannak hozzárendelve.",
       "mapleHint": "A Maple a Sanctum szabványos LLM háttérrendszere.",
-      "modelField": "LLM_MODEL — Maple modell azonosító (például: kimi-k2-5).",
+      "modelField": "LLM_MODEL — Maple modell azonosító (például: kimi-k2.5).",
       "overviewDesc": "A Sanctum a Maple-t használja szabványos LLM szolgáltatásként. A Maple egy OpenAI-kompatibilis API-t biztosít a háttérben.",
       "overviewTitle": "Maple LLM áttekintés",
       "providerField": "LLM_PROVIDER — kompatibilitás miatt „maple”-re rögzítve."
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI szolgáltató",
-      "description": "LLM szolgáltató (csak maple)",
+      "description": "LLM szolgáltató (csak Maple)",
       "hint": "A Maple az egyetlen támogatott érték. Ez a kulcs a kompatibilitás miatt maradt meg."
     },
     "LLM_MODEL": {
       "label": "Modell neve",
       "description": "Modell név/azonosító",
-      "hint": "A használandó Maple modell azonosító (pl. „kimi-k2-5”)."
+      "hint": "A használandó Maple modell azonosító (pl. „kimi-k2.5”)."
     },
     "LLM_API_URL": {
       "label": "API végpont",

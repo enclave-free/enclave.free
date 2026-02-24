@@ -500,7 +500,7 @@
       "compact": "Compacto",
       "expand": "Ampliar",
       "shareSecretsTitle": "Compartir variables de entorno secretas",
-      "shareSecretsHint": "Desactivado por defecto. Habilite primero la herramienta de configuración. Cuando está habilitado, los valores de configuración de despliegue secretos se revelan en el lado del cliente y se envían a Maple.",
+      "shareSecretsHint": "Desactivado por defecto. Habilita primero la herramienta de configuración. Cuando está habilitado, los valores de configuración de despliegue secretos se revelan en el lado del cliente y se envían a Maple.",
       "sensitive": "Sensible",
       "emptyPrompt": "Haz preguntas sobre cualquier configuración de administración. Si quieres que el asistente proponga y aplique cambios, pídele que incluya un conjunto de cambios JSON.",
       "pendingChanges": "Cambios pendientes",
@@ -960,7 +960,7 @@
       "goToPage": "Ir a la página",
       "mapleExtra": "Establece LLM_API_KEY con tu clave de Maple de trymaple.ai. Las claves LLM_* se asignan a los alias MAPLE_*.",
       "mapleHint": "Maple es el backend LLM estándar para Sanctum.",
-      "modelField": "LLM_MODEL — identificador del modelo Maple (por ejemplo: kimi-k2-5).",
+      "modelField": "LLM_MODEL — identificador del modelo Maple (por ejemplo: kimi-k2.5).",
       "overviewDesc": "Sanctum utiliza Maple como su servicio LLM estándar. Maple proporciona una API compatible con OpenAI.",
       "overviewTitle": "Visión general de LLM de Maple",
       "providerField": "LLM_PROVIDER — fijado a \"maple\" para compatibilidad."
@@ -1305,13 +1305,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Servicio de IA",
-      "description": "Proveedor de LLM (solo maple)",
+      "description": "Proveedor de LLM (solo Maple)",
       "hint": "Maple es el único valor admitido. Esta clave se mantiene por compatibilidad."
     },
     "LLM_MODEL": {
       "label": "Nombre del modelo",
       "description": "Nombre/identificador del modelo",
-      "hint": "El identificador del modelo Maple a utilizar (por ejemplo, \"kimi-k2-5\")."
+      "hint": "El identificador del modelo Maple a utilizar (por ejemplo, \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "Endpoint de API",

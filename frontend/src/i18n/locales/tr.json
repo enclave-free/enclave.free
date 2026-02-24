@@ -986,7 +986,7 @@
       "goToPage": "Sayfaya git",
       "mapleExtra": "LLM_API_KEY'i trymaple.ai adresindeki Maple anahtarınıza ayarlayın. LLM_* anahtarları MAPLE_* takma adlarına eşleşir.",
       "mapleHint": "Maple, Sanctum için standart LLM arka ucudur.",
-      "modelField": "LLM_MODEL — Maple model tanımlayıcısı (örneğin: kimi-k2-5).",
+      "modelField": "LLM_MODEL — Maple model tanımlayıcısı (örneğin: kimi-k2.5).",
       "overviewDesc": "Sanctum, standart LLM hizmeti olarak Maple'ı kullanır. Maple, kaputun altında OpenAI uyumlu bir API sağlar.",
       "overviewTitle": "Maple LLM Genel Bakış",
       "providerField": "LLM_PROVIDER — uyumluluk için \"maple\" olarak sabitlenmiştir."
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Yapay Zeka Servisi",
-      "description": "LLM sağlayıcısı (yalnızca maple)",
+      "description": "LLM sağlayıcısı (yalnızca Maple)",
       "hint": "Maple tek desteklenen değerdir. Bu anahtar uyumluluk için kalır."
     },
     "LLM_MODEL": {
       "label": "Model Adı",
       "description": "Model adı/tanımlayıcısı",
-      "hint": "Kullanılacak Maple model tanımlayıcısı (örn. \"kimi-k2-5\")."
+      "hint": "Kullanılacak Maple model tanımlayıcısı (örn. \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API Uç Noktası",

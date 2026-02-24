@@ -989,7 +989,7 @@
       "goToPage": "Μετάβαση στη σελίδα",
       "mapleExtra": "Ορίστε το LLM_API_KEY στο κλειδί Maple σας από το trymaple.ai. Τα κλειδιά LLM_* αντιστοιχούν σε ψευδώνυμα MAPLE_*.",
       "mapleHint": "Το Maple είναι το βασικό LLM backend για το Sanctum.",
-      "modelField": "LLM_MODEL — αναγνωριστικό μοντέλου Maple (για παράδειγμα: kimi-k2-5).",
+      "modelField": "LLM_MODEL — αναγνωριστικό μοντέλου Maple (για παράδειγμα: kimi-k2.5).",
       "overviewDesc": "Το Sanctum χρησιμοποιεί το Maple ως την τυπική υπηρεσία LLM. Το Maple παρέχει ένα API συμβατό με το OpenAI.",
       "overviewTitle": "Επισκόπηση Maple LLM",
       "providerField": "LLM_PROVIDER — σταθερό σε \"maple\" για συμβατότητα."
@@ -1305,13 +1305,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Υπηρεσία AI",
-      "description": "Πάροχος LLM (μόνο maple)",
+      "description": "Πάροχος LLM (μόνο Maple)",
       "hint": "Το Maple είναι η μόνη υποστηριζόμενη τιμή. Αυτό το κλειδί παραμένει για συμβατότητα."
     },
     "LLM_MODEL": {
       "label": "Όνομα μοντέλου",
       "description": "Όνομα/αναγνωριστικό μοντέλου",
-      "hint": "Το αναγνωριστικό μοντέλου Maple που θα χρησιμοποιηθεί (π.χ., \"kimi-k2-5\")."
+      "hint": "Το αναγνωριστικό μοντέλου Maple που θα χρησιμοποιηθεί (π.χ., \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "Τελικό σημείο API",

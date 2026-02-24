@@ -33,7 +33,7 @@ import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
-import { getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
+import { DEFAULT_MAPLE_MODEL, MAPLE_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
 import { normalizePubkey } from '../utils/nostrKeys'
@@ -767,13 +767,16 @@ export function AdminDeploymentConfig() {
     },
     {
       title: 'Maple',
-      hint: t('adminDeployment.llmHelp.mapleHint', 'Maple is the standard AI backend for Sanctum.'),
+      hint: t('adminDeployment.llmHelp.mapleHint', 'Maple is the only supported AI backend for Sanctum.'),
       config: {
         LLM_PROVIDER: 'maple',
         LLM_API_KEY: 'your-api-key-from-trymaple.ai',
-        LLM_MODEL: 'kimi-k2-5',
+        LLM_MODEL: DEFAULT_MAPLE_MODEL,
       },
-      extra: t('adminDeployment.llmHelp.mapleExtra', 'Set LLM_API_KEY to your Maple key from trymaple.ai. LLM_* keys map to MAPLE_* env aliases.'),
+      extra: t('adminDeployment.llmHelp.mapleExtra', {
+        mapleSignupUrl: MAPLE_SIGNUP_URL,
+        defaultValue: 'Set LLM_API_KEY to your Maple key from {{mapleSignupUrl}}. LLM_* keys map to MAPLE_* env aliases.',
+      }),
     },
   ]
 
@@ -1852,7 +1855,7 @@ export function AdminDeploymentConfig() {
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_MODEL</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.modelField', 'Maple model identifier to use (for example: kimi-k2-5).')}
+                          {t('adminDeployment.llmHelp.modelField', `Maple model identifier to use (for example: ${DEFAULT_MAPLE_MODEL}).`)}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">

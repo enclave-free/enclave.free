@@ -986,7 +986,7 @@
       "goToPage": "페이지로 이동",
       "mapleExtra": "LLM_API_KEY를 trymaple.ai의 Maple 키로 설정하십시오. LLM_* 키는 MAPLE_* 별칭에 매핑됩니다.",
       "mapleHint": "Maple은 Sanctum의 표준 LLM 백엔드입니다.",
-      "modelField": "LLM_MODEL — Maple 모델 식별자 (예: kimi-k2-5).",
+      "modelField": "LLM_MODEL — Maple 모델 식별자 (예: kimi-k2.5).",
       "overviewDesc": "Sanctum은 표준 LLM 서비스로 Maple을 사용합니다. Maple은 내부적으로 OpenAI 호환 API를 제공합니다.",
       "overviewTitle": "Maple LLM 개요",
       "providerField": "LLM_PROVIDER — 호환성을 위해 \"maple\"로 고정됩니다."
@@ -1308,7 +1308,7 @@
     "LLM_MODEL": {
       "label": "모델 이름",
       "description": "모델 이름/식별자",
-      "hint": "사용할 Maple 모델 식별자 (예: \"kimi-k2-5\")."
+      "hint": "사용할 Maple 모델 식별자 (예: \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API 엔드포인트",

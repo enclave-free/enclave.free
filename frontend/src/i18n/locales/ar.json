@@ -986,7 +986,7 @@
       "goToPage": "الذهاب إلى الصفحة",
       "mapleExtra": "عيّن LLM_API_KEY على مفتاح Maple الخاص بك من trymaple.ai. تتوافق مفاتيح LLM_* مع الأسماء المستعارة MAPLE_*.",
       "mapleHint": "Maple هو الخلفية القياسية لنموذج LLM لـ Sanctum.",
-      "modelField": "LLM_MODEL — معرف نموذج Maple (على سبيل المثال: kimi-k2-5).",
+      "modelField": "LLM_MODEL — معرف نموذج Maple (على سبيل المثال: kimi-k2.5).",
       "overviewDesc": "يستخدم Sanctum Maple كخدمة LLM القياسية الخاصة به. يوفر Maple واجهة برمجة تطبيقات متوافقة مع OpenAI.",
       "overviewTitle": "نظرة عامة على LLM من Maple",
       "providerField": "LLM_PROVIDER — ثابت على \"maple\" للتوافق."
@@ -1308,7 +1308,7 @@
     "LLM_MODEL": {
       "label": "اسم النموذج",
       "description": "اسم/معرف النموذج",
-      "hint": "معرف نموذج Maple المراد استخدامه (مثل: \"kimi-k2-5\")."
+      "hint": "معرف نموذج Maple المراد استخدامه (مثل: \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "نقطة نهاية API",

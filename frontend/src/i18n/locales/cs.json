@@ -994,7 +994,7 @@
       "goToPage": "Přejít na stránku",
       "mapleExtra": "Nastavte LLM_API_KEY na váš klíč Maple z trymaple.ai. Klíče LLM_* se mapují na aliasy MAPLE_*.",
       "mapleHint": "Maple je standardní backend LLM pro Sanctum.",
-      "modelField": "LLM_MODEL – identifikátor modelu Maple (například: kimi-k2-5).",
+      "modelField": "LLM_MODEL – identifikátor modelu Maple (například: kimi-k2.5).",
       "overviewDesc": "Sanctum používá Maple jako svou standardní službu LLM. Maple poskytuje pod kapotou API kompatibilní s OpenAI.",
       "overviewTitle": "Přehled Maple LLM",
       "providerField": "LLM_PROVIDER – pevně nastaveno na \"maple\" pro kompatibilitu."
@@ -1310,13 +1310,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI služba",
-      "description": "Poskytovatel LLM (pouze maple)",
+      "description": "Poskytovatel LLM (pouze Maple)",
       "hint": "Maple je jediná podporovaná hodnota. Tento klíč zůstává pro kompatibilitu."
     },
     "LLM_MODEL": {
       "label": "Název modelu",
       "description": "Název/identifikátor modelu",
-      "hint": "Identifikátor modelu Maple, který se má použít (např. \"kimi-k2-5\")."
+      "hint": "Identifikátor modelu Maple, který se má použít (např. \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API koncový bod",

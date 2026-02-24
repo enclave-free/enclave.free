@@ -989,7 +989,7 @@
       "goToPage": "前往页面",
       "mapleExtra": "将 LLM_API_KEY 设置为您的 trymaple.ai 的 Maple 密钥。LLM_* 密钥映射到 MAPLE_* 别名。",
       "mapleHint": "Maple 是 Sanctum 的标准 LLM 后端。",
-      "modelField": "LLM_MODEL — Maple 模型标识符（例如：kimi-k2-5）。",
+      "modelField": "LLM_MODEL — Maple 模型标识符（例如：kimi-k2.5）。",
       "overviewDesc": "Sanctum 使用 Maple 作为其标准 LLM 服务。Maple 在底层提供 OpenAI 兼容的 API。",
       "overviewTitle": "Maple LLM 概述",
       "providerField": "LLM_PROVIDER — 为兼容性固定为 \"maple\"。"
@@ -1311,7 +1311,7 @@
     "LLM_MODEL": {
       "label": "模型名称",
       "description": "模型名称/标识符",
-      "hint": "要使用的 Maple 模型标识符（例如：“kimi-k2-5”）。"
+      "hint": "要使用的 Maple 模型标识符（例如：“kimi-k2.5”）。"
     },
     "LLM_API_URL": {
       "label": "API 端点",

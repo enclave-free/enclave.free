@@ -1056,10 +1056,10 @@
       "ariaLabel": "Maple LLM configuration help",
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
-      "mapleExtra": "Set LLM_API_KEY to your Maple key from trymaple.ai. LLM_* keys map to MAPLE_* aliases.",
-      "mapleHint": "Maple is the standard LLM backend for Sanctum.",
-      "modelField": "LLM_MODEL — Maple model identifier (for example: kimi-k2-5).",
-      "overviewDesc": "Sanctum uses Maple as its standard LLM service. Maple provides an OpenAI-compatible API under the hood.",
+      "mapleExtra": "Set LLM_API_KEY to your Maple key from {{mapleSignupUrl}}. LLM_* keys map to MAPLE_* aliases.",
+      "mapleHint": "Maple is the only supported LLM backend for Sanctum.",
+      "modelField": "LLM_MODEL — Maple model identifier (for example: kimi-k2.5).",
+      "overviewDesc": "Sanctum uses Maple as its only supported LLM service. Maple provides an OpenAI-compatible API under the hood.",
       "overviewTitle": "Maple LLM Overview",
       "providerField": "LLM_PROVIDER — fixed to \"maple\" for compatibility."
     },
@@ -1325,13 +1325,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI Service",
-      "description": "LLM provider (maple only)",
+      "description": "LLM provider (Maple only)",
       "hint": "Maple is the only supported value. This key remains for compatibility."
     },
     "LLM_MODEL": {
       "label": "Model Name",
       "description": "Model name/identifier",
-      "hint": "The Maple model identifier to use (e.g., \"kimi-k2-5\")."
+      "hint": "The Maple model identifier to use (e.g., \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API Endpoint",

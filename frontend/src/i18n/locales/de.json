@@ -957,7 +957,7 @@
       "goToPage": "Zur Seite",
       "mapleExtra": "Setze LLM_API_KEY auf deinen Maple-Schlüssel von trymaple.ai. LLM_*-Schlüssel sind MAPLE_*-Aliase zugeordnet.",
       "mapleHint": "Maple ist das Standard-LLM-Backend für Sanctum.",
-      "modelField": "LLM_MODEL — Maple Modell-Identifikator (zum Beispiel: kimi-k2-5).",
+      "modelField": "LLM_MODEL — Maple Modell-Identifikator (zum Beispiel: kimi-k2.5).",
       "overviewDesc": "Sanctum verwendet Maple als seinen Standard-LLM-Dienst. Maple bietet unter der Haube eine OpenAI-kompatible API.",
       "overviewTitle": "Maple LLM-Übersicht",
       "providerField": "LLM_PROVIDER — zur Kompatibilität auf \"maple\" festgelegt."
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "KI-Dienst",
-      "description": "LLM-Anbieter (nur maple)",
+      "description": "LLM-Anbieter (nur Maple)",
       "hint": "Maple ist der einzige unterstützte Wert. Dieser Schlüssel bleibt zur Kompatibilität erhalten."
     },
     "LLM_MODEL": {
       "label": "Modellname",
       "description": "Modellname/-kennung",
-      "hint": "Der zu verwendende Maple Modell-Identifikator (z.B. \"kimi-k2-5\")."
+      "hint": "Der zu verwendende Maple Modell-Identifikator (z.B. \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API-Endpunkt",

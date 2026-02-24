@@ -30,13 +30,13 @@ class MapleProvider(LLMProvider):
             from config_loader import get_config
             self.base_url = get_config("LLM_API_URL") or get_config("MAPLE_BASE_URL") or "http://maple-proxy:8080/v1"
             self.api_key = get_config("LLM_API_KEY") or get_config("MAPLE_API_KEY") or ""
-            self.default_model = get_config("LLM_MODEL") or get_config("MAPLE_MODEL") or "kimi-k2-5"
+            self.default_model = get_config("LLM_MODEL") or get_config("MAPLE_MODEL") or "kimi-k2.5"
         except ImportError:
             # Fallback to env vars if config_loader not available
             # Use same order as try block: LLM_* first, then MAPLE_*
             self.base_url = os.getenv("LLM_API_URL") or os.getenv("MAPLE_BASE_URL", "http://maple-proxy:8080/v1")
             self.api_key = os.getenv("LLM_API_KEY") or os.getenv("MAPLE_API_KEY", "")
-            self.default_model = os.getenv("LLM_MODEL") or os.getenv("MAPLE_MODEL", "kimi-k2-5")
+            self.default_model = os.getenv("LLM_MODEL") or os.getenv("MAPLE_MODEL", "kimi-k2.5")
 
         # Initialize OpenAI client with Maple endpoint
         self._init_client()

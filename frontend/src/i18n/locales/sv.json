@@ -984,10 +984,10 @@
       "ariaLabel": "Maple LLM-konfigurationshjälp",
       "exampleConfig": "Exempelkonfiguration",
       "goToPage": "Gå till sida",
-      "mapleExtra": "Ställ in LLM_API_KEY till din Maple-nyckel från trymaple.ai. LLM_* nycklar mappas till MAPLE_* alias.",
-      "mapleHint": "Maple är standard LLM-backend för Sanctum.",
-      "modelField": "LLM_MODEL — Maple-modellidentifierare (till exempel: kimi-k2-5).",
-      "overviewDesc": "Sanctum använder Maple som sin standard LLM-tjänst. Maple tillhandahåller ett OpenAI-kompatibelt API under huven.",
+      "mapleExtra": "Ställ in LLM_API_KEY till din Maple-nyckel från {{mapleSignupUrl}}. LLM_* nycklar mappas till MAPLE_* alias.",
+      "mapleHint": "Maple är den enda stödda LLM-backenden för Sanctum.",
+      "modelField": "LLM_MODEL — Maple-modellidentifierare (till exempel: kimi-k2.5).",
+      "overviewDesc": "Sanctum använder Maple som sin enda stödda LLM-tjänst. Maple tillhandahåller ett OpenAI-kompatibelt API under huven.",
       "overviewTitle": "Maple LLM Översikt",
       "providerField": "LLM_PROVIDER — fastställd till \"maple\" för kompatibilitet."
     },
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI-tjänst",
-      "description": "LLM-leverantör (endast maple)",
+      "description": "LLM-leverantör (endast Maple)",
       "hint": "Maple är det enda värdet som stöds. Denna nyckel finns kvar för kompatibilitet."
     },
     "LLM_MODEL": {
       "label": "Modellnamn",
       "description": "Modellnamn/identifierare",
-      "hint": "Maple-modellidentifieraren som ska användas (t.ex. \"kimi-k2-5\")."
+      "hint": "Maple-modellidentifieraren som ska användas (t.ex. \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "API-slutpunkt",

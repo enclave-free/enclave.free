@@ -986,7 +986,7 @@
       "goToPage": "Buka halaman",
       "mapleExtra": "Setel LLM_API_KEY ke kunci Maple Anda dari trymaple.ai. Kunci LLM_* berpeta ke alias MAPLE_*.",
       "mapleHint": "Maple adalah backend LLM standar untuk Sanctum.",
-      "modelField": "LLM_MODEL — pengidentifikasi model Maple (misalnya: kimi-k2-5).",
+      "modelField": "LLM_MODEL — pengidentifikasi model Maple (misalnya: kimi-k2.5).",
       "overviewDesc": "Sanctum menggunakan Maple sebagai layanan LLM standarnya. Maple menyediakan API yang kompatibel dengan OpenAI di balik layar.",
       "overviewTitle": "Ikhtisar LLM Maple",
       "providerField": "LLM_PROVIDER — tetap \"maple\" untuk kompatibilitas."
@@ -1302,13 +1302,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Layanan AI",
-      "description": "Penyedia LLM (hanya maple)",
+      "description": "Penyedia LLM (hanya Maple)",
       "hint": "Maple adalah satu-satunya nilai yang didukung. Kunci ini tetap ada untuk kompatibilitas."
     },
     "LLM_MODEL": {
       "label": "Nama Model",
       "description": "Nama/pengenal model",
-      "hint": "Pengidentifikasi model Maple yang akan digunakan (misalnya, \"kimi-k2-5\")."
+      "hint": "Pengidentifikasi model Maple yang akan digunakan (misalnya, \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "Endpoint API",

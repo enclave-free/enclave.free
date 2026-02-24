@@ -986,9 +986,9 @@
       "ariaLabel": "Trợ giúp cấu hình Maple LLM",
       "exampleConfig": "Cấu hình mẫu",
       "goToPage": "Đi đến trang",
-      "mapleExtra": "Đặt LLM_API_KEY thành khóa Maple của bạn từ trymaple.ai. Các khóa LLM_* ánh xạ tới các bí danh MAPLE_*.",
+      "mapleExtra": "Đặt LLM_API_KEY thành khóa Maple của bạn từ {{mapleSignupUrl}}. Các khóa LLM_* ánh xạ tới các bí danh MAPLE_*.",
       "mapleHint": "Maple là backend LLM tiêu chuẩn cho Sanctum.",
-      "modelField": "LLM_MODEL — mã định danh mô hình Maple (ví dụ: kimi-k2-5).",
+      "modelField": "LLM_MODEL — mã định danh mô hình Maple (ví dụ: kimi-k2.5).",
       "overviewDesc": "Sanctum sử dụng Maple làm dịch vụ LLM tiêu chuẩn. Maple cung cấp API tương thích OpenAI bên dưới.",
       "overviewTitle": "Tổng quan về Maple LLM",
       "providerField": "LLM_PROVIDER — cố định thành \"maple\" để tương thích."
@@ -1304,13 +1304,13 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Dịch vụ AI",
-      "description": "Nhà cung cấp LLM (chỉ maple)",
+      "description": "Nhà cung cấp LLM (chỉ Maple)",
       "hint": "Maple là giá trị duy nhất được hỗ trợ. Khóa này vẫn còn để tương thích."
     },
     "LLM_MODEL": {
       "label": "Tên mô hình",
       "description": "Tên/mã định danh mô hình",
-      "hint": "Mã định danh mô hình Maple để sử dụng (ví dụ: \"kimi-k2-5\")."
+      "hint": "Mã định danh mô hình Maple để sử dụng (ví dụ: \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "Điểm cuối API",

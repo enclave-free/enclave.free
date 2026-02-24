@@ -984,9 +984,9 @@
       "ariaLabel": "راهنمای پیکربندی Maple LLM",
       "exampleConfig": "نمونه پیکربندی",
       "goToPage": "رفتن به صفحه",
-      "mapleExtra": "LLM_API_KEY را با کلید Maple خود از trymaple.ai تنظیم کنید. کلیدهای LLM_* به نام‌های مستعار MAPLE_* نگاشت می‌شوند.",
+      "mapleExtra": "LLM_API_KEY را با کلید Maple خود از {{mapleSignupUrl}} تنظیم کنید. کلیدهای LLM_* به نام‌های مستعار MAPLE_* نگاشت می‌شوند.",
       "mapleHint": "Maple بک‌اند استاندارد LLM برای Sanctum است.",
-      "modelField": "LLM_MODEL — شناسه مدل Maple (به عنوان مثال: kimi-k2-5).",
+      "modelField": "LLM_MODEL — شناسه مدل Maple (به عنوان مثال: kimi-k2.5).",
       "overviewDesc": "Sanctum از Maple به عنوان سرویس استاندارد LLM خود استفاده می‌کند. Maple یک API سازگار با OpenAI را در زیرساخت خود ارائه می‌دهد.",
       "overviewTitle": "بررسی اجمالی Maple LLM",
       "providerField": "LLM_PROVIDER — برای سازگاری روی \"maple\" ثابت شده است."
@@ -1308,7 +1308,7 @@
     "LLM_MODEL": {
       "label": "نام مدل",
       "description": "نام/شناسه مدل",
-      "hint": "شناسه مدل Maple برای استفاده (مثلاً: \"kimi-k2-5\")."
+      "hint": "شناسه مدل Maple برای استفاده (مثلاً: \"kimi-k2.5\")."
     },
     "LLM_API_URL": {
       "label": "نقطه پایانی API",

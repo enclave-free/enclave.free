@@ -272,7 +272,7 @@ Key configuration options (see `.env.example`):
 |----------|---------|-------------|
 | `LLM_PROVIDER` | `maple` | LLM backend (Maple only) |
 | `LLM_API_URL` | `http://maple-proxy:8080/v1` | Base URL for Maple-compatible chat completions (alias: `MAPLE_BASE_URL`) |
-| `LLM_MODEL` | `kimi-k2-5` | Maple model identifier (alias: `MAPLE_MODEL`) |
+| `LLM_MODEL` | `kimi-k2.5` | Maple model identifier (alias: `MAPLE_MODEL`) |
 | `LLM_API_KEY` | (required) | API key for maple-proxy (alias: `MAPLE_API_KEY`) |
 | `QDRANT_HOST` | `qdrant` | Qdrant hostname |
 | `QDRANT_PORT` | `6333` | Qdrant port |
