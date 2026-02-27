@@ -37,7 +37,7 @@ export interface InstanceConfig {
 }
 
 export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
-  name: 'Sanctum',
+  name: 'EnclaveFree',
   accentColor: 'blue',
   icon: 'Sparkles',
   logoUrl: '',
@@ -45,7 +45,7 @@ export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
   appleTouchIconUrl: '',
   assistantIcon: 'Sparkles',
   userIcon: 'User',
-  assistantName: 'Sanctum AI',
+  assistantName: 'EnclaveFree AI',
   userLabel: 'You',
   headerLayout: 'icon_name',
   headerTagline: '',
@@ -125,7 +125,8 @@ export const CURATED_ICONS = [
   'RotateCw', 'RefreshCw',
 ] as const
 
-export const INSTANCE_CONFIG_KEY = 'sanctum_instance_config'
+export const INSTANCE_CONFIG_KEY = 'enclavefree_instance_config'
+export const LEGACY_INSTANCE_CONFIG_KEY = 'sanctum_instance_config'
 
 export interface AccentColorConfig {
   name: string
@@ -193,7 +194,7 @@ export function getAccentColors(t: TFunction): Record<AccentColor, AccentColorCo
 
 /** Load config from localStorage (browser-local only for now) */
 export function getInstanceConfig(): InstanceConfig {
-  const stored = localStorage.getItem(INSTANCE_CONFIG_KEY)
+  const stored = getStoredInstanceConfigRaw()
   if (!stored) return DEFAULT_INSTANCE_CONFIG
   try {
     const parsed = JSON.parse(stored)
@@ -227,6 +228,25 @@ export function getInstanceConfig(): InstanceConfig {
 /** Save config to localStorage (browser-local only for now) */
 export function saveInstanceConfig(config: InstanceConfig): void {
   localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify(config))
+  localStorage.removeItem(LEGACY_INSTANCE_CONFIG_KEY)
+}
+
+function getStoredInstanceConfigRaw(): string | null {
+  const current = localStorage.getItem(INSTANCE_CONFIG_KEY)
+  if (current) return current
+
+  const legacy = localStorage.getItem(LEGACY_INSTANCE_CONFIG_KEY)
+  if (!legacy) return null
+
+  try {
+    JSON.parse(legacy)
+    localStorage.setItem(INSTANCE_CONFIG_KEY, legacy)
+    localStorage.removeItem(LEGACY_INSTANCE_CONFIG_KEY)
+    return legacy
+  } catch {
+    localStorage.removeItem(LEGACY_INSTANCE_CONFIG_KEY)
+    return null
+  }
 }
 
 const CUSTOM_ACCENT_CSS_VARS = [

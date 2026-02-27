@@ -1,5 +1,5 @@
 """
-Sanctum Database Module
+EnclaveFree Database Module
 Handles SQLite connection and schema for user/admin management.
 """
 
@@ -16,20 +16,47 @@ from datetime import datetime
 from Crypto.Cipher import AES
 
 # Configure logging
-logger = logging.getLogger("sanctum.database")
+logger = logging.getLogger("enclavefree.database")
 
 # Configuration
-SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/sanctum.db")
+DEFAULT_SQLITE_PATH = "/data/enclavefree.db"
+LEGACY_SQLITE_PATH = "/data/sanctum.db"
+
+
+def _resolve_sqlite_path(configured_path: str | None) -> str:
+    """
+    Resolve SQLite path with legacy fallback for upgraded deployments.
+
+    If the configured/new default path doesn't exist yet but a legacy DB file does,
+    prefer the legacy file so existing data remains accessible.
+    """
+    path = (configured_path or DEFAULT_SQLITE_PATH).strip() or DEFAULT_SQLITE_PATH
+    if path == DEFAULT_SQLITE_PATH and not os.path.exists(path) and os.path.exists(LEGACY_SQLITE_PATH):
+        logger.warning(
+            "Using legacy SQLite path '%s' because '%s' does not exist",
+            LEGACY_SQLITE_PATH,
+            DEFAULT_SQLITE_PATH,
+        )
+        return LEGACY_SQLITE_PATH
+    return path
+
+
+SQLITE_PATH = _resolve_sqlite_path(os.getenv("SQLITE_PATH", DEFAULT_SQLITE_PATH))
 
 # Lazy-loaded connection
 _connection = None
 _deployment_secret_key = None
+_legacy_deployment_secret_keys = None
 _audit_hmac_key = None
 
 # Deployment secret encryption format:
 # enc::v1::<base64_nonce>:<base64_tag>:<base64_ciphertext>
 DEPLOYMENT_SECRET_PREFIX = "enc::v1::"
 DEPLOYMENT_SECRET_NONCE_BYTES = 12
+DEPLOYMENT_SECRET_DERIVATION_CONTEXT = "enclavefree-deployment-config"
+LEGACY_DEPLOYMENT_SECRET_DERIVATION_CONTEXTS = (
+    "sanctum-deployment-config",
+)
 
 
 def get_connection():
@@ -86,6 +113,11 @@ def get_write_cursor() -> Iterator[sqlite3.Cursor]:
         cursor.close()
 
 
+def _derive_deployment_secret_key(secret_key: str, context: str) -> bytes:
+    """Derive an AES key from SECRET_KEY and a context string."""
+    return hashlib.sha256(f"{context}:{secret_key}".encode("utf-8")).digest()
+
+
 def _get_deployment_secret_key() -> bytes:
     """
     Derive a stable symmetric key for deployment secret encryption.
@@ -94,10 +126,24 @@ def _get_deployment_secret_key() -> bytes:
     global _deployment_secret_key
     if _deployment_secret_key is None:
         from auth import SECRET_KEY
-        _deployment_secret_key = hashlib.sha256(
-            f"sanctum-deployment-config:{SECRET_KEY}".encode("utf-8")
-        ).digest()
+        _deployment_secret_key = _derive_deployment_secret_key(
+            SECRET_KEY,
+            DEPLOYMENT_SECRET_DERIVATION_CONTEXT,
+        )
     return _deployment_secret_key
+
+
+def _get_legacy_deployment_secret_keys() -> list[bytes]:
+    """Return legacy deployment-secret keys used by prior namespace versions."""
+    global _legacy_deployment_secret_keys
+    if _legacy_deployment_secret_keys is None:
+        from auth import SECRET_KEY
+
+        _legacy_deployment_secret_keys = [
+            _derive_deployment_secret_key(SECRET_KEY, context)
+            for context in LEGACY_DEPLOYMENT_SECRET_DERIVATION_CONTEXTS
+        ]
+    return _legacy_deployment_secret_keys
 
 
 def _get_audit_hmac_key() -> bytes:
@@ -138,11 +184,8 @@ def _encrypt_deployment_secret_value(value: str) -> str:
     )
 
 
-def _decrypt_deployment_secret_value(value: str) -> str:
-    """Decrypt deployment secret value (returns input unchanged if plaintext)."""
-    if not _is_deployment_secret_encrypted(value):
-        return value
-
+def _decrypt_deployment_secret_value_with_key(value: str, key: bytes) -> str:
+    """Decrypt an encrypted deployment secret using a specific key."""
     encoded = value[len(DEPLOYMENT_SECRET_PREFIX):]
     parts = encoded.split(":", 2)
     if len(parts) != 3:
@@ -152,9 +195,28 @@ def _decrypt_deployment_secret_value(value: str) -> str:
     tag = b64decode(parts[1].encode("ascii"))
     ciphertext = b64decode(parts[2].encode("ascii"))
 
-    cipher = AES.new(_get_deployment_secret_key(), AES.MODE_GCM, nonce=nonce)
+    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     return plaintext.decode("utf-8")
+
+
+def _decrypt_deployment_secret_value(value: str) -> str:
+    """Decrypt deployment secret value (returns input unchanged if plaintext)."""
+    if not _is_deployment_secret_encrypted(value):
+        return value
+
+    primary_key = _get_deployment_secret_key()
+    try:
+        return _decrypt_deployment_secret_value_with_key(value, primary_key)
+    except Exception as primary_error:
+        for legacy_key in _get_legacy_deployment_secret_keys():
+            try:
+                logger.warning("Decrypting deployment secret with legacy key derivation context")
+                return _decrypt_deployment_secret_value_with_key(value, legacy_key)
+            except Exception:
+                continue
+
+        raise ValueError("Unable to decrypt deployment secret with known key contexts") from primary_error
 
 
 def init_schema():
@@ -574,7 +636,13 @@ def _migrate_add_admin_session_nonce_column() -> None:
 
 
 def _migrate_encrypt_deployment_config_secrets() -> None:
-    """Encrypt existing plaintext deployment_config secrets in place."""
+    """
+    Encrypt plaintext deployment_config secrets and rekey legacy-encrypted rows.
+
+    - Plaintext secret rows are encrypted in-place.
+    - Rows encrypted with legacy derivation context are decrypted and re-encrypted
+      with the current context so future reads don't rely on fallback behavior.
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -587,33 +655,52 @@ def _migrate_encrypt_deployment_config_secrets() -> None:
     """)
     rows = cursor.fetchall()
 
-    migrated = 0
+    encrypted_plaintext = 0
+    rekeyed_legacy = 0
     failed = 0
     for row in rows:
         raw_value = row["value"]
-        if _is_deployment_secret_encrypted(raw_value):
-            continue
-
         try:
+            if _is_deployment_secret_encrypted(raw_value):
+                # Already encrypted with current context: no-op.
+                try:
+                    _decrypt_deployment_secret_value_with_key(raw_value, _get_deployment_secret_key())
+                    continue
+                except Exception:
+                    # Try legacy fallback, then re-encrypt with current key context.
+                    decrypted_value = _decrypt_deployment_secret_value(raw_value)
+                    encrypted_value = _encrypt_deployment_secret_value(decrypted_value)
+                    cursor.execute(
+                        """
+                        UPDATE deployment_config
+                        SET value = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                        (encrypted_value, row["id"]),
+                    )
+                    rekeyed_legacy += cursor.rowcount
+                    continue
+
+            # Plaintext secret path: encrypt in place.
             encrypted_value = _encrypt_deployment_secret_value(raw_value)
+            cursor.execute(
+                """
+                UPDATE deployment_config
+                SET value = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (encrypted_value, row["id"]),
+            )
+            encrypted_plaintext += cursor.rowcount
         except Exception as exc:
             failed += 1
             logger.error(
-                "Migration: Failed to encrypt deployment_config secret key='%s' id=%s: %s",
+                "Migration: Failed to process deployment_config secret key='%s' id=%s: %s",
                 row["key"],
                 row["id"],
                 exc,
             )
             break
-        cursor.execute(
-            """
-            UPDATE deployment_config
-            SET value = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (encrypted_value, row["id"]),
-        )
-        migrated += cursor.rowcount
 
     if failed > 0:
         conn.rollback()
@@ -626,8 +713,16 @@ def _migrate_encrypt_deployment_config_secrets() -> None:
     conn.commit()
     cursor.close()
 
-    if migrated > 0:
-        logger.info(f"Migration: Encrypted {migrated} deployment_config secret value(s) at rest")
+    if encrypted_plaintext > 0:
+        logger.info(
+            "Migration: Encrypted %s plaintext deployment_config secret value(s) at rest",
+            encrypted_plaintext,
+        )
+    if rekeyed_legacy > 0:
+        logger.info(
+            "Migration: Rekeyed %s legacy deployment_config secret value(s) to current context",
+            rekeyed_legacy,
+        )
 
 
 def _audit_hash_payload(
@@ -760,7 +855,7 @@ def _migrate_add_config_audit_hash_columns() -> None:
 def seed_default_settings():
     """Seed default instance settings if not present"""
     defaults = {
-        "instance_name": "Sanctum",
+        "instance_name": "EnclaveFree",
         "primary_color": "#3B82F6",
         "description": "A privacy-first RAG knowledge base",
         "logo_url": "",
@@ -769,7 +864,7 @@ def seed_default_settings():
         "icon": "Sparkles",
         "assistant_icon": "Sparkles",
         "user_icon": "User",
-        "assistant_name": "Sanctum AI",
+        "assistant_name": "EnclaveFree AI",
         "user_label": "You",
         "header_layout": "icon_name",
         "header_tagline": "",
@@ -1443,25 +1538,48 @@ def get_user_by_email(email: str) -> dict | None:
 
     Uses blind index for encrypted emails, falls back to plaintext for legacy data.
     """
-    from encryption import compute_blind_index
+    from encryption import compute_blind_index, compute_blind_index_candidates
 
     # Normalize email: strip whitespace and lowercase
     normalized_email = email.strip().lower() if email else ""
     if not normalized_email:
         return None
 
-    # Compute blind index for the normalized email
-    blind_index = compute_blind_index(normalized_email)
+    # Compute blind indexes for current + legacy derivations (current first)
+    blind_indexes = compute_blind_index_candidates(normalized_email)
+    primary_blind_index = compute_blind_index(normalized_email)
 
     with get_cursor() as cursor:
-        # Try blind index first (encrypted emails)
-        cursor.execute(
-            "SELECT id FROM users WHERE email_blind_index = ? ORDER BY id DESC LIMIT 1",
-            (blind_index,)
-        )
-        row = cursor.fetchone()
-        if row:
-            return get_user(row["id"])
+        # Try blind-index candidates first (encrypted emails)
+        for blind_index in blind_indexes:
+            cursor.execute(
+                "SELECT id FROM users WHERE email_blind_index = ? ORDER BY id DESC LIMIT 1",
+                (blind_index,)
+            )
+            row = cursor.fetchone()
+            if row:
+                user_id = row["id"]
+                # One-way migration: if a legacy blind index matched, upgrade to primary.
+                if blind_index != primary_blind_index:
+                    try:
+                        cursor.execute(
+                            """
+                            UPDATE users
+                            SET email_blind_index = ?
+                            WHERE id = ?
+                              AND email_blind_index = ?
+                            """,
+                            (primary_blind_index, user_id, blind_index),
+                        )
+                        if cursor.rowcount > 0:
+                            logger.info("Migrated legacy email_blind_index to current derivation for user_id=%s", user_id)
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to migrate legacy email_blind_index for user_id=%s: %s",
+                            user_id,
+                            exc,
+                        )
+                return get_user(user_id)
 
         # Fall back to plaintext email (legacy/unencrypted data)
         # Use normalized email for consistent matching

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sanctum Backup Script
+# EnclaveFree Backup Script
 # Creates backups of Neo4j and Qdrant data stores
 #
 # Usage: ./scripts/backup.sh [backup_dir]
@@ -13,7 +13,9 @@ set -euo pipefail
 # Configuration
 QDRANT_HOST="${QDRANT_HOST:-localhost}"
 QDRANT_PORT="${QDRANT_PORT:-6333}"
-QDRANT_COLLECTION="${QDRANT_COLLECTION:-sanctum_knowledge}"
+QDRANT_COLLECTION_OVERRIDE_SET="${QDRANT_COLLECTION+x}"
+QDRANT_COLLECTION="${QDRANT_COLLECTION:-enclavefree_knowledge}"
+QDRANT_LEGACY_COLLECTION="${QDRANT_LEGACY_COLLECTION:-sanctum_knowledge}"
 NEO4J_VOLUME="${NEO4J_VOLUME:-hrf-26-hackathon_neo4j_data}"
 QDRANT_VOLUME="${QDRANT_VOLUME:-hrf-26-hackathon_qdrant_data}"
 
@@ -46,26 +48,48 @@ QDRANT_URL="http://${QDRANT_HOST}:${QDRANT_PORT}"
 if ! curl -s "${QDRANT_URL}/collections" > /dev/null 2>&1; then
     log_warn "Qdrant not reachable at ${QDRANT_URL} - skipping API snapshot"
 else
-    # Check if collection exists
-    COLLECTION_EXISTS=$(curl -s "${QDRANT_URL}/collections/${QDRANT_COLLECTION}" | grep -c '"status":"ok"' || true)
-    
-    if [ "$COLLECTION_EXISTS" -gt 0 ]; then
-        # Create snapshot
-        SNAPSHOT_RESPONSE=$(curl -s -X POST "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots")
-        SNAPSHOT_NAME=$(echo "$SNAPSHOT_RESPONSE" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 || true)
-        
-        if [ -n "$SNAPSHOT_NAME" ]; then
-            log_info "Snapshot created: $SNAPSHOT_NAME"
-            
-            # Download the snapshot
-            curl -s -o "${BACKUP_DIR}/qdrant_${QDRANT_COLLECTION}.snapshot" \
-                "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT_NAME}"
-            log_info "Qdrant snapshot downloaded to ${BACKUP_DIR}/qdrant_${QDRANT_COLLECTION}.snapshot"
-        else
-            log_warn "Failed to create Qdrant snapshot via API"
+    backup_qdrant_collection() {
+        local collection="$1"
+        local exists
+        exists=$(curl -s "${QDRANT_URL}/collections/${collection}" | grep -c '"status":"ok"' || true)
+
+        if [ "$exists" -eq 0 ]; then
+            log_warn "Collection '${collection}' not found - skipping Qdrant API snapshot"
+            return
         fi
+
+        local snapshot_response snapshot_name
+        snapshot_response=$(curl -s -X POST "${QDRANT_URL}/collections/${collection}/snapshots")
+        snapshot_name=$(echo "$snapshot_response" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 || true)
+
+        if [ -z "$snapshot_name" ]; then
+            log_warn "Failed to create Qdrant snapshot via API for '${collection}'"
+            return
+        fi
+
+        local snapshot_file="${BACKUP_DIR}/qdrant_${collection}.snapshot"
+        log_info "Snapshot created for '${collection}': $snapshot_name"
+        if ! curl -fsS -o "$snapshot_file" \
+            "${QDRANT_URL}/collections/${collection}/snapshots/${snapshot_name}"; then
+            log_error "Failed to download Qdrant snapshot for '${collection}'"
+            exit 1
+        fi
+        if [ ! -s "$snapshot_file" ]; then
+            log_error "Downloaded Qdrant snapshot is missing or empty: $snapshot_file"
+            exit 1
+        fi
+        log_info "Qdrant snapshot downloaded to $snapshot_file"
+    }
+
+    if [ -n "${QDRANT_COLLECTION_OVERRIDE_SET}" ]; then
+        # Respect explicit operator override.
+        backup_qdrant_collection "$QDRANT_COLLECTION"
     else
-        log_warn "Collection '${QDRANT_COLLECTION}' not found - skipping Qdrant API snapshot"
+        # Default behavior: capture both current and legacy collections if present.
+        backup_qdrant_collection "$QDRANT_COLLECTION"
+        if [ "$QDRANT_LEGACY_COLLECTION" != "$QDRANT_COLLECTION" ]; then
+            backup_qdrant_collection "$QDRANT_LEGACY_COLLECTION"
+        fi
     fi
 fi
 

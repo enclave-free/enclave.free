@@ -32,6 +32,20 @@ export interface UserProfile {
 
 // LocalStorage helpers
 export const STORAGE_KEYS = {
+  ADMIN_PUBKEY: 'enclavefree_admin_pubkey',
+  ADMIN_SESSION_TOKEN: 'enclavefree_admin_session_token',
+  USER_EMAIL: 'enclavefree_user_email',
+  USER_NAME: 'enclavefree_user_name',
+  CUSTOM_FIELDS: 'enclavefree_custom_fields',
+  USER_PROFILE: 'enclavefree_user_profile',
+  PENDING_EMAIL: 'enclavefree_pending_email',
+  PENDING_NAME: 'enclavefree_pending_name',
+  USER_TYPE_ID: 'enclavefree_user_type_id',
+  SESSION_TOKEN: 'enclavefree_session_token',
+  USER_APPROVED: 'enclavefree_user_approved',
+} as const
+
+const LEGACY_STORAGE_KEYS: { [K in keyof typeof STORAGE_KEYS]: string } = {
   ADMIN_PUBKEY: 'sanctum_admin_pubkey',
   ADMIN_SESSION_TOKEN: 'sanctum_admin_session_token',
   USER_EMAIL: 'sanctum_user_email',
@@ -43,7 +57,34 @@ export const STORAGE_KEYS = {
   USER_TYPE_ID: 'sanctum_user_type_id',
   SESSION_TOKEN: 'sanctum_session_token',
   USER_APPROVED: 'sanctum_user_approved',
-} as const
+}
+
+function migrateLegacyStorageKeys(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const keyNames = Object.keys(STORAGE_KEYS) as Array<keyof typeof STORAGE_KEYS>
+    for (const keyName of keyNames) {
+      const newKey = STORAGE_KEYS[keyName]
+      const legacyKey = LEGACY_STORAGE_KEYS[keyName]
+
+      const currentValue = localStorage.getItem(newKey)
+      if (currentValue !== null) {
+        localStorage.removeItem(legacyKey)
+        continue
+      }
+
+      const legacyValue = localStorage.getItem(legacyKey)
+      if (legacyValue !== null) {
+        localStorage.setItem(newKey, legacyValue)
+        localStorage.removeItem(legacyKey)
+      }
+    }
+  } catch {
+    // Ignore storage access failures (e.g. restricted privacy contexts).
+  }
+}
+
+migrateLegacyStorageKeys()
 
 export function getCustomFields(): CustomField[] {
   const stored = localStorage.getItem(STORAGE_KEYS.CUSTOM_FIELDS)
@@ -57,6 +98,7 @@ export function getCustomFields(): CustomField[] {
 
 export function saveCustomFields(fields: CustomField[]): void {
   localStorage.setItem(STORAGE_KEYS.CUSTOM_FIELDS, JSON.stringify(fields))
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.CUSTOM_FIELDS)
 }
 
 export function getUserProfile(): UserProfile | null {
@@ -71,6 +113,7 @@ export function getUserProfile(): UserProfile | null {
 
 export function saveUserProfile(profile: UserProfile): void {
   localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile))
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.USER_PROFILE)
 }
 
 // User type helpers
@@ -84,13 +127,16 @@ export function getSelectedUserTypeId(): number | null {
 export function saveSelectedUserTypeId(typeId: number | null): void {
   if (typeId === null) {
     localStorage.removeItem(STORAGE_KEYS.USER_TYPE_ID)
+    localStorage.removeItem(LEGACY_STORAGE_KEYS.USER_TYPE_ID)
   } else {
     localStorage.setItem(STORAGE_KEYS.USER_TYPE_ID, String(typeId))
+    localStorage.removeItem(LEGACY_STORAGE_KEYS.USER_TYPE_ID)
   }
 }
 
 export function clearSelectedUserTypeId(): void {
   localStorage.removeItem(STORAGE_KEYS.USER_TYPE_ID)
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.USER_TYPE_ID)
 }
 
 // API base URL - uses Vite proxy in development, can be overridden via env var

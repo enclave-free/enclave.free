@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sanctum Restore Script
+# EnclaveFree Restore Script
 # Restores Neo4j and Qdrant data from a backup
 #
 # Usage: ./scripts/restore.sh [backup_dir]
@@ -13,7 +13,7 @@ set -euo pipefail
 # Configuration
 QDRANT_HOST="${QDRANT_HOST:-localhost}"
 QDRANT_PORT="${QDRANT_PORT:-6333}"
-QDRANT_COLLECTION="${QDRANT_COLLECTION:-sanctum_knowledge}"
+QDRANT_COLLECTION="${QDRANT_COLLECTION:-enclavefree_knowledge}"
 NEO4J_VOLUME="${NEO4J_VOLUME:-hrf-26-hackathon_neo4j_data}"
 QDRANT_VOLUME="${QDRANT_VOLUME:-hrf-26-hackathon_qdrant_data}"
 BACKUP_BASE="${BACKUP_BASE:-./backups}"
@@ -112,14 +112,17 @@ confirm_restore() {
 # -----------------------------------------------------------------------------
 check_services() {
     local services_running=false
-    
-    if docker ps --format '{{.Names}}' | grep -q "sanctum-neo4j"; then
-        log_warn "Neo4j container is running (sanctum-neo4j)"
+    local running_names
+    running_names="$(docker ps --format '{{.Names}}')"
+
+    # Detect both current and legacy container names to keep restores safe after upgrades.
+    if printf '%s\n' "$running_names" | grep -Eq '^(enclavefree|sanctum)-neo4j$'; then
+        log_warn "Neo4j container is running (enclavefree-neo4j or sanctum-neo4j)"
         services_running=true
     fi
-    
-    if docker ps --format '{{.Names}}' | grep -q "sanctum-qdrant"; then
-        log_warn "Qdrant container is running (sanctum-qdrant)"
+
+    if printf '%s\n' "$running_names" | grep -Eq '^(enclavefree|sanctum)-qdrant$'; then
+        log_warn "Qdrant container is running (enclavefree-qdrant or sanctum-qdrant)"
         services_running=true
     fi
     
@@ -259,7 +262,7 @@ restore_uploads() {
 main() {
     echo ""
     log_info "========================================="
-    log_info "Sanctum Restore Script"
+    log_info "EnclaveFree Restore Script"
     log_info "========================================="
     echo ""
     

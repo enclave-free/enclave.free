@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sanctum-backend
+    container_name: enclavefree-backend
     ports:
       - "127.0.0.1:8000:8000"
     environment:
@@ -17,7 +17,8 @@ services:
       - MAPLE_API_KEY=${MAPLE_API_KEY:-}
       - MAPLE_MODEL=kimi-k2.5
       - SEARXNG_URL=http://searxng:8080
-      - SQLITE_PATH=/data/sanctum.db
+      - SQLITE_PATH=${SQLITE_PATH:-/data/enclavefree.db}
+      - SQLITE_MIGRATE_LEGACY_DB=${SQLITE_MIGRATE_LEGACY_DB:-true}
       # Magic Link Auth configuration
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
@@ -27,7 +28,7 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
-      - SMTP_FROM=${SMTP_FROM:-Sanctum <noreply@localhost>}
+      - SMTP_FROM=${SMTP_FROM:-EnclaveFree <noreply@localhost>}
       # Simulation settings for development/testing
       - SIMULATE_USER_AUTH=${SIMULATE_USER_AUTH:-false}
       - SIMULATE_ADMIN_AUTH=${SIMULATE_ADMIN_AUTH:-false}
@@ -50,13 +51,13 @@ services:
       - embedding_cache:/root/.cache/huggingface
       - sqlite_data:/data
     networks:
-      - sanctum-net
+      - enclavefree-net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: sanctum-frontend
+    container_name: enclavefree-frontend
     ports:
       - "127.0.0.1:5173:5173"
     dns:
@@ -71,12 +72,12 @@ services:
       - ./frontend:/app
       - /app/node_modules
     networks:
-      - sanctum-net
+      - enclavefree-net
 
 volumes:
   embedding_cache:
   sqlite_data:
 
 networks:
-  sanctum-net:
+  enclavefree-net:
     driver: bridge

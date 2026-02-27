@@ -10,16 +10,31 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
-const STORAGE_KEY = 'sanctum-theme'
+const STORAGE_KEY = 'enclavefree-theme'
+const LEGACY_STORAGE_KEY = 'sanctum-theme'
 
 function getSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+function getStoredTheme(): Theme | null {
+  if (typeof window === 'undefined') return null
+  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
+  if (stored) return stored
+
+  const legacy = localStorage.getItem(LEGACY_STORAGE_KEY) as Theme | null
+  if (legacy) {
+    localStorage.setItem(STORAGE_KEY, legacy)
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+    return legacy
+  }
+  return null
+}
+
 function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'system'
-  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
+  const stored = getStoredTheme()
   return stored || 'system'
 }
 
@@ -33,6 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
     localStorage.setItem(STORAGE_KEY, newTheme)
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
   }
 
   useEffect(() => {

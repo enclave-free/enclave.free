@@ -1,6 +1,6 @@
 # AI Tools System
 
-Sanctum supports tool calling for the AI chat, allowing the LLM to access external data sources. Tools can be used independently or combined with RAG (knowledge base queries).
+EnclaveFree supports tool calling for the AI chat, allowing the LLM to access external data sources. Tools can be used independently or combined with RAG (knowledge base queries).
 
 ## Available Tools
 
@@ -204,11 +204,12 @@ SearXNG runs as a Docker container on the internal network (not exposed to host)
 # docker-compose.infra.yml
 searxng:
   image: searxng/searxng:latest
-  container_name: sanctum-searxng
+  container_name: enclavefree-searxng
   volumes:
     - ./searxng:/etc/searxng:ro
   environment:
     - SEARXNG_BASE_URL=http://searxng:8080/
+    - SEARXNG_SECRET=${SEARXNG_SECRET}
 ```
 
 ### Settings
@@ -240,6 +241,11 @@ engines:
 The backend connects via:
 ```
 SEARXNG_URL=http://searxng:8080
+```
+
+Set `SEARXNG_SECRET` in `.env` with a random value generated once, for example:
+```bash
+openssl rand -hex 32
 ```
 
 ## SQLite Query Tool (Admin Only)
@@ -500,7 +506,7 @@ searxng/
 Check if the container is healthy:
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs searxng
-docker exec sanctum-backend curl -s "http://searxng:8080/search?q=test&format=json"
+docker exec enclavefree-backend curl -s "http://searxng:8080/search?q=test&format=json"
 ```
 
 ### Tool not appearing in frontend

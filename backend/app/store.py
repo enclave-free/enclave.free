@@ -1,5 +1,5 @@
 """
-Sanctum Store Module
+EnclaveFree Store Module
 Handles storing document chunks and embeddings to Qdrant.
 """
 
@@ -13,7 +13,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
 # Configure logging
-logger = logging.getLogger("sanctum.store")
+logger = logging.getLogger("enclavefree.store")
 
 # Configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
@@ -26,12 +26,23 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 # =============================================================================
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
-# Collection name for knowledge base
-COLLECTION_NAME = "sanctum_knowledge"
+# Collection names for knowledge base
+_QDRANT_COLLECTION_ENV = os.getenv("QDRANT_COLLECTION")
+QDRANT_COLLECTION_EXPLICIT = bool(_QDRANT_COLLECTION_ENV and _QDRANT_COLLECTION_ENV.strip())
+PRIMARY_COLLECTION_NAME = (
+    _QDRANT_COLLECTION_ENV.strip()
+    if QDRANT_COLLECTION_EXPLICIT
+    else "enclavefree_knowledge"
+)
+LEGACY_COLLECTION_NAME = os.getenv("QDRANT_LEGACY_COLLECTION", "sanctum_knowledge")
+
+# Backward-compatible alias kept for existing imports
+COLLECTION_NAME = PRIMARY_COLLECTION_NAME
 
 # Lazy-loaded resources
 _qdrant_client = None
 _embedding_model = None
+_active_collection_name = None
 
 
 def get_qdrant_client():
@@ -40,6 +51,54 @@ def get_qdrant_client():
     if _qdrant_client is None:
         _qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
     return _qdrant_client
+
+
+def _list_collection_names(client: QdrantClient) -> set[str]:
+    """List current Qdrant collection names as a set."""
+    return {c.name for c in client.get_collections().collections}
+
+
+def get_collection_name(refresh: bool = False) -> str:
+    """
+    Resolve the active knowledge collection name.
+
+    Preference order:
+    0) If QDRANT_COLLECTION is explicitly configured, always use it
+    1) Primary collection if present
+    2) Legacy collection if present (upgrade compatibility)
+    3) Primary collection name for fresh installs
+    """
+    global _active_collection_name
+    if _active_collection_name is not None and not refresh:
+        return _active_collection_name
+
+    client = get_qdrant_client()
+    collection_names = _list_collection_names(client)
+
+    if QDRANT_COLLECTION_EXPLICIT:
+        _active_collection_name = PRIMARY_COLLECTION_NAME
+        if (
+            LEGACY_COLLECTION_NAME in collection_names
+            and PRIMARY_COLLECTION_NAME not in collection_names
+        ):
+            logger.info(
+                "QDRANT_COLLECTION is explicitly set to '%s'; using it even though legacy '%s' exists",
+                PRIMARY_COLLECTION_NAME,
+                LEGACY_COLLECTION_NAME,
+            )
+    elif PRIMARY_COLLECTION_NAME in collection_names:
+        _active_collection_name = PRIMARY_COLLECTION_NAME
+    elif LEGACY_COLLECTION_NAME in collection_names:
+        _active_collection_name = LEGACY_COLLECTION_NAME
+        logger.warning(
+            "Using legacy Qdrant collection '%s'; set QDRANT_COLLECTION='%s' to migrate names explicitly",
+            LEGACY_COLLECTION_NAME,
+            PRIMARY_COLLECTION_NAME,
+        )
+    else:
+        _active_collection_name = PRIMARY_COLLECTION_NAME
+
+    return _active_collection_name
 
 
 def get_embedding_model():
@@ -70,20 +129,20 @@ def get_embedding_dimension() -> int:
 def ensure_qdrant_collection():
     """Ensure the knowledge collection exists in Qdrant"""
     client = get_qdrant_client()
-    
-    collections = client.get_collections().collections
-    collection_exists = any(c.name == COLLECTION_NAME for c in collections)
-    
+
+    collection_name = get_collection_name()
+    collection_exists = collection_name in _list_collection_names(client)
+
     if not collection_exists:
         vector_dim = get_embedding_dimension()
         client.create_collection(
-            collection_name=COLLECTION_NAME,
+            collection_name=collection_name,
             vectors_config=VectorParams(
                 size=vector_dim,
                 distance=Distance.COSINE
             )
         )
-        logger.info(f"Created Qdrant collection: {COLLECTION_NAME} (dim={vector_dim})")
+        logger.info(f"Created Qdrant collection: {collection_name} (dim={vector_dim})")
 
 
 def _store_chunk_sync(
@@ -95,6 +154,7 @@ def _store_chunk_sync(
     qdrant_result = {"points_inserted": 0}
 
     client = get_qdrant_client()
+    collection_name = get_collection_name()
 
     # Ensure Qdrant collection exists
     ensure_qdrant_collection()
@@ -122,7 +182,7 @@ def _store_chunk_sync(
 
     # Insert to Qdrant
     client.upsert(
-        collection_name=COLLECTION_NAME,
+        collection_name=collection_name,
         points=[point]
     )
     qdrant_result["points_inserted"] = 1
@@ -166,11 +226,11 @@ async def delete_chunks_from_qdrant(job_id: str) -> int:
     from qdrant_client.models import Filter, FieldCondition, MatchValue, PointIdsList
 
     client = get_qdrant_client()
+    collection_name = get_collection_name()
 
     # Check if collection exists
-    collections = client.get_collections().collections
-    if not any(c.name == COLLECTION_NAME for c in collections):
-        logger.info(f"Collection {COLLECTION_NAME} does not exist, nothing to delete")
+    if collection_name not in _list_collection_names(client):
+        logger.info(f"Collection {collection_name} does not exist, nothing to delete")
         return 0
 
     # First, scroll to find all matching points
@@ -181,7 +241,7 @@ async def delete_chunks_from_qdrant(job_id: str) -> int:
     while True:
         # Scroll through points with matching job_id
         results = client.scroll(
-            collection_name=COLLECTION_NAME,
+            collection_name=collection_name,
             scroll_filter=Filter(
                 must=[
                     FieldCondition(
@@ -204,7 +264,7 @@ async def delete_chunks_from_qdrant(job_id: str) -> int:
         # Delete the found points
         point_ids = [p.id for p in points]
         client.delete(
-            collection_name=COLLECTION_NAME,
+            collection_name=collection_name,
             points_selector=PointIdsList(points=point_ids),
         )
         deleted_count += len(point_ids)

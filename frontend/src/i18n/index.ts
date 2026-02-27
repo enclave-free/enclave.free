@@ -69,6 +69,25 @@ const resources = {
   hu: { translation: hu },
 }
 
+const LANGUAGE_STORAGE_KEY = 'enclavefree_language'
+const LEGACY_LANGUAGE_STORAGE_KEY = 'sanctum_language'
+
+function migrateLegacyLanguagePreference(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const existing = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    if (existing) return
+    const legacy = window.localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY)
+    if (!legacy) return
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, legacy)
+    window.localStorage.removeItem(LEGACY_LANGUAGE_STORAGE_KEY)
+  } catch {
+    // Ignore localStorage access failures (privacy mode, etc.)
+  }
+}
+
+migrateLegacyLanguagePreference()
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -80,7 +99,7 @@ i18n
     },
     detection: {
       order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'sanctum_language',
+      lookupLocalStorage: LANGUAGE_STORAGE_KEY,
       caches: ['localStorage'],
     },
   })

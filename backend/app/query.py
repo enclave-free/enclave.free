@@ -1,5 +1,5 @@
 """
-Sanctum RAG Query Module
+EnclaveFree RAG Query Module
 
 Session-aware RAG for querying knowledge bases.
 Pipeline: Query → Embed → Vector Search → LLM → Answer
@@ -14,6 +14,7 @@ import os
 import re
 import logging
 import uuid
+from urllib.parse import quote
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -24,7 +25,7 @@ import httpx
 import auth
 from store import (
     embed_texts,
-    COLLECTION_NAME,
+    get_collection_name,
     QDRANT_HOST,
     QDRANT_PORT,
 )
@@ -33,7 +34,7 @@ from utils import sanitize_profile_value
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
-logger = logging.getLogger("sanctum.query")
+logger = logging.getLogger("enclavefree.query")
 
 router = APIRouter(prefix="/query", tags=["query"])
 
@@ -197,7 +198,9 @@ async def query(
                 logger.debug(f"Filtering search to {len(allowed_job_ids)} documents for user_type_id={user_type_id}")
 
         # 3. Vector search in Qdrant
-        qdrant_url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/collections/{COLLECTION_NAME}/points/search"
+        collection_name = get_collection_name()
+        encoded_collection_name = quote(collection_name, safe="")
+        qdrant_url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/collections/{encoded_collection_name}/points/search"
         search_payload = {
             "vector": query_embedding,
             "limit": top_k,

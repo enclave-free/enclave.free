@@ -1,5 +1,5 @@
 """
-Sanctum NIP-04 Encryption Module
+EnclaveFree NIP-04 Encryption Module
 Implements Nostr NIP-04 encryption for encrypting sensitive database fields.
 
 Architecture:
@@ -22,13 +22,25 @@ from coincurve import PrivateKey, PublicKey
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
-logger = logging.getLogger("sanctum.encryption")
+logger = logging.getLogger("enclavefree.encryption")
 
 # AES-256-CBC block size
 AES_BLOCK_SIZE = 16
 
-# Cache the blind index key (derived from SECRET_KEY)
+# Blind-index key derivation contexts
+BLIND_INDEX_DERIVATION_CONTEXT = "enclavefree-blind-index"
+LEGACY_BLIND_INDEX_DERIVATION_CONTEXTS = (
+    "sanctum-blind-index",
+)
+
+# Cache blind-index keys (derived from SECRET_KEY)
 _blind_index_key: Optional[bytes] = None
+_legacy_blind_index_keys: Optional[list[bytes]] = None
+
+
+def _derive_blind_index_key(secret_key: str, context: str) -> bytes:
+    """Derive a blind-index HMAC key for a given context."""
+    return hashlib.sha256(f"{context}:{secret_key}".encode()).digest()
 
 
 def _get_blind_index_key() -> bytes:
@@ -40,11 +52,31 @@ def _get_blind_index_key() -> bytes:
     if _blind_index_key is None:
         # Import here to avoid circular imports
         from auth import SECRET_KEY
-        # Derive a separate key for blind indexing using HKDF-like derivation
-        _blind_index_key = hashlib.sha256(
-            f"sanctum-blind-index:{SECRET_KEY}".encode()
-        ).digest()
+        # Derive a separate key for blind indexing using domain separation
+        _blind_index_key = _derive_blind_index_key(
+            SECRET_KEY,
+            BLIND_INDEX_DERIVATION_CONTEXT,
+        )
     return _blind_index_key
+
+
+def _get_legacy_blind_index_keys() -> list[bytes]:
+    """Get blind-index keys derived from legacy namespace contexts."""
+    global _legacy_blind_index_keys
+    if _legacy_blind_index_keys is None:
+        from auth import SECRET_KEY
+
+        _legacy_blind_index_keys = [
+            _derive_blind_index_key(SECRET_KEY, context)
+            for context in LEGACY_BLIND_INDEX_DERIVATION_CONTEXTS
+        ]
+    return _legacy_blind_index_keys
+
+
+def _compute_blind_index_with_key(normalized_value: str, key: bytes) -> str:
+    """Compute HMAC-SHA256 blind index using a specific key."""
+    h = hmac.new(key, normalized_value.encode('utf-8'), hashlib.sha256)
+    return h.hexdigest()
 
 
 def generate_ephemeral_keypair() -> Tuple[bytes, str]:
@@ -204,11 +236,25 @@ def compute_blind_index(value: str) -> str:
     # Normalize: lowercase, strip whitespace
     normalized = value.lower().strip()
 
-    # Compute HMAC-SHA256
-    key = _get_blind_index_key()
-    h = hmac.new(key, normalized.encode('utf-8'), hashlib.sha256)
+    return _compute_blind_index_with_key(normalized, _get_blind_index_key())
 
-    return h.hexdigest()
+
+def compute_blind_index_candidates(value: str) -> list[str]:
+    """
+    Compute current and legacy blind-index hashes for compatibility lookups.
+
+    Returns hashes in priority order: current derivation first, then legacy.
+    """
+    normalized = value.lower().strip()
+    if not normalized:
+        return []
+
+    candidates = [_compute_blind_index_with_key(normalized, _get_blind_index_key())]
+    for legacy_key in _get_legacy_blind_index_keys():
+        candidate = _compute_blind_index_with_key(normalized, legacy_key)
+        if candidate not in candidates:
+            candidates.append(candidate)
+    return candidates
 
 
 def serialize_field_value(value: object) -> str:

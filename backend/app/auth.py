@@ -1,5 +1,5 @@
 """
-Sanctum Authentication Module
+EnclaveFree Authentication Module
 Handles magic link email authentication with signed tokens.
 """
 
@@ -16,7 +16,7 @@ from typing import Optional
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from fastapi import Depends, HTTPException, Header, Cookie, Response
 
-logger = logging.getLogger("sanctum.auth")
+logger = logging.getLogger("enclavefree.auth")
 
 
 def is_production_mode() -> bool:
@@ -25,12 +25,13 @@ def is_production_mode() -> bool:
 
     Production mode is enabled when one of these environment variables is set
     to a production value:
-    - SANCTUM_ENV
+    - ENCLAVEFREE_ENV
+    - SANCTUM_ENV (legacy)
     - APP_ENV
     - ENVIRONMENT
     """
     production_values = {"production", "prod"}
-    for key in ("SANCTUM_ENV", "APP_ENV", "ENVIRONMENT"):
+    for key in ("ENCLAVEFREE_ENV", "SANCTUM_ENV", "APP_ENV", "ENVIRONMENT"):
         value = os.getenv(key)
         if value and value.strip().lower() in production_values:
             return True
@@ -52,7 +53,7 @@ def _get_or_create_secret_key() -> str:
         return env_key
 
     # 2. Check for persisted key file (same directory as SQLite)
-    data_dir = Path(os.environ.get("SQLITE_PATH", "/data/sanctum.db")).parent
+    data_dir = Path(os.environ.get("SQLITE_PATH", "/data/enclavefree.db")).parent
     key_file = data_dir / ".secret_key"
 
     if key_file.exists():
@@ -98,7 +99,7 @@ _SMTP_DEFAULTS = {
     "port": _safe_int(os.environ.get("SMTP_PORT"), 587),
     "user": os.environ.get("SMTP_USER", ""),
     "password": os.environ.get("SMTP_PASS", ""),
-    "from_address": os.environ.get("SMTP_FROM", "Sanctum <noreply@localhost>"),
+    "from_address": os.environ.get("SMTP_FROM", "EnclaveFree <noreply@localhost>"),
     "timeout": _safe_int(os.environ.get("SMTP_TIMEOUT"), 10),
     "mock_mode": MOCK_EMAIL,
 }
@@ -197,7 +198,7 @@ def get_smtp_from() -> str:
     Get SMTP from address with runtime config support.
     
     Returns:
-        From email address (default: "Sanctum <noreply@localhost>")
+        From email address (default: "EnclaveFree <noreply@localhost>")
     """
     return _get_smtp_config()["from_address"]
 
@@ -218,9 +219,9 @@ MAGIC_LINK_MAX_AGE = 15 * 60
 SESSION_MAX_AGE = 7 * 24 * 60 * 60
 
 # Session cookie configuration
-USER_SESSION_COOKIE_NAME = os.getenv("USER_SESSION_COOKIE_NAME", "sanctum_session")
-ADMIN_SESSION_COOKIE_NAME = os.getenv("ADMIN_SESSION_COOKIE_NAME", "sanctum_admin_session")
-CSRF_COOKIE_NAME = os.getenv("CSRF_COOKIE_NAME", "sanctum_csrf")
+USER_SESSION_COOKIE_NAME = os.getenv("USER_SESSION_COOKIE_NAME", "enclavefree_session")
+ADMIN_SESSION_COOKIE_NAME = os.getenv("ADMIN_SESSION_COOKIE_NAME", "enclavefree_admin_session")
+CSRF_COOKIE_NAME = os.getenv("CSRF_COOKIE_NAME", "enclavefree_csrf")
 SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "lax").strip().lower()
 SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", "").strip() or None
 
@@ -529,7 +530,7 @@ def send_magic_link_email(to_email: str, token: str) -> bool:
 
     # Build email
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Sign in to Sanctum"
+    msg["Subject"] = "Sign in to EnclaveFree"
     msg["From"] = smtp["from_address"]
     msg["To"] = to_email
 
@@ -541,11 +542,11 @@ def send_magic_link_email(to_email: str, token: str) -> bool:
     </head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
         <div style="max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #333; margin-bottom: 24px;">Sign in to Sanctum</h2>
+            <h2 style="color: #333; margin-bottom: 24px;">Sign in to EnclaveFree</h2>
             <p style="margin-bottom: 24px;">Click the button below to sign in. This link will expire in 15 minutes.</p>
             <a href="{verify_url}"
                style="display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-                Sign in to Sanctum
+                Sign in to EnclaveFree
             </a>
             <p style="margin-top: 24px; font-size: 14px; color: #666;">
                 If you didn't request this email, you can safely ignore it.
