@@ -320,7 +320,7 @@ export function TestDashboard() {
   // Vector search state
   const [vectorQuery, setVectorQuery] = useState('')
   const [vectorTopK, setVectorTopK] = useState(5)
-  const [vectorCollection, setVectorCollection] = useState('sanctum_smoke_test')
+  const [vectorCollection, setVectorCollection] = useState('enclavefree_smoke_test')
   const [vectorResults, setVectorResults] = useState<VectorSearchResponse | null>(null)
   const [vectorLoading, setVectorLoading] = useState(false)
 
@@ -1933,7 +1933,9 @@ export function TestDashboard() {
                   onChange={(e) => setVectorCollection(e.target.value)}
                   className="ml-2 px-2 py-1 bg-surface border border-border rounded text-text text-sm focus:border-accent focus:ring-1 focus:ring-accent"
                 >
+                  <option value="enclavefree_smoke_test">enclavefree_smoke_test</option>
                   <option value="sanctum_smoke_test">sanctum_smoke_test</option>
+                  <option value="enclavefree_knowledge">enclavefree_knowledge</option>
                   <option value="sanctum_knowledge">sanctum_knowledge</option>
                 </select>
               </label>
@@ -3086,7 +3088,7 @@ export function TestDashboard() {
       {/* Footer */}
       <footer className="border-t border-border mt-12">
         <div className="max-w-6xl mx-auto px-6 py-6 text-center text-sm text-text-muted">
-          {t('testDashboard.extracted.sanctum_private_rag_system_for_curated_knowledge_5afbbe', 'Sanctum — Private RAG System for Curated Knowledge')}
+          {t('testDashboard.extracted.enclavefree_private_rag_system_for_curated_knowledge_5afbbe', 'EnclaveFree — Private RAG System for Curated Knowledge')}
         </div>
       </footer>
     </div>

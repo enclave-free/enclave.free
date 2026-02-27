@@ -1,5 +1,5 @@
 """
-Sanctum Backend - FastAPI Application
+EnclaveFree Backend - FastAPI Application
 RAG system with Qdrant vector search.
 Also provides user/admin management via SQLite.
 """
@@ -69,7 +69,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("sanctum.main")
+logger = logging.getLogger("enclavefree.main")
 
 # Import routers
 from ingest import router as ingest_router
@@ -78,10 +78,10 @@ from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
 
-logger.info("Starting Sanctum API...")
+logger.info("Starting EnclaveFree API...")
 
 app = FastAPI(
-    title="Sanctum API",
+    title="EnclaveFree API",
     description="Privacy-first RAG system for curated knowledge",
     version="0.1.0"
 )
@@ -188,7 +188,7 @@ def _apply_security_headers(request: Request, response: Response) -> None:
 
 
 def _has_cookie_session(request: Request) -> bool:
-    """Whether request carries Sanctum auth cookies."""
+    """Whether request carries EnclaveFree auth cookies."""
     return bool(
         request.cookies.get(auth.USER_SESSION_COOKIE_NAME)
         or request.cookies.get(auth.ADMIN_SESSION_COOKIE_NAME)
@@ -371,8 +371,9 @@ reachout_day_limiter = RateLimiter(
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
-# Collection name for smoke test
-COLLECTION_NAME = "sanctum_smoke_test"
+# Collection names for smoke test (primary + legacy fallback)
+SMOKE_TEST_COLLECTION_NAME = "enclavefree_smoke_test"
+LEGACY_SMOKE_TEST_COLLECTION_NAME = "sanctum_smoke_test"
 
 
 class SmokeTestResult(BaseModel):
@@ -466,7 +467,7 @@ class VectorSearchRequest(BaseModel):
     """Request model for vector search endpoint"""
     query: str
     top_k: int = 5
-    collection: str = "sanctum_smoke_test"
+    collection: Optional[str] = None
 
 
 class VectorSearchResultItem(BaseModel):
@@ -531,11 +532,29 @@ def get_qdrant_client():
     return QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
 
+def _resolve_smoke_test_collection(
+    collection_names: set[str],
+    requested_collection: Optional[str] = None
+) -> str:
+    """
+    Resolve smoke-test collection with a legacy fallback.
+    Explicit request values are always honored.
+    """
+    if requested_collection and requested_collection.strip():
+        return requested_collection.strip()
+
+    if SMOKE_TEST_COLLECTION_NAME in collection_names:
+        return SMOKE_TEST_COLLECTION_NAME
+    if LEGACY_SMOKE_TEST_COLLECTION_NAME in collection_names:
+        return LEGACY_SMOKE_TEST_COLLECTION_NAME
+    return SMOKE_TEST_COLLECTION_NAME
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "name": "Sanctum API",
+        "name": "EnclaveFree API",
         "version": "0.1.0",
         "status": "running"
     }
@@ -576,15 +595,16 @@ async def smoke_test():
         client = get_qdrant_client()
 
         # Check if collection exists
-        collections = client.get_collections().collections
-        collection_exists = any(c.name == COLLECTION_NAME for c in collections)
+        collection_names = {c.name for c in client.get_collections().collections}
+        collection_name = _resolve_smoke_test_collection(collection_names)
+        collection_exists = collection_name in collection_names
 
         if collection_exists:
             # Retrieve the seeded point using UUID derived from claim ID
             claim_id = "claim_knowledge_sharing"
             point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, claim_id))
             points = client.retrieve(
-                collection_name=COLLECTION_NAME,
+                collection_name=collection_name,
                 ids=[point_uuid],
                 with_vectors=True
             )
@@ -605,7 +625,10 @@ async def smoke_test():
         else:
             qdrant_result = {
                 "status": "error",
-                "message": f"Collection '{COLLECTION_NAME}' does not exist. Run seed script."
+                "message": (
+                    f"Collections '{SMOKE_TEST_COLLECTION_NAME}' or "
+                    f"'{LEGACY_SMOKE_TEST_COLLECTION_NAME}' do not exist. Run seed script."
+                ),
             }
     except Exception as e:
         qdrant_result = {
@@ -915,8 +938,13 @@ async def vector_search(
 
         # 2. Search Qdrant
         qdrant = get_qdrant_client()
+        collection_names = {c.name for c in qdrant.get_collections().collections}
+        collection_name = _resolve_smoke_test_collection(
+            collection_names,
+            request.collection,
+        )
         search_result = qdrant.query_points(
-            collection_name=request.collection,
+            collection_name=collection_name,
             query=query_embedding,
             limit=request.top_k,
             with_payload=True
@@ -936,7 +964,7 @@ async def vector_search(
         return VectorSearchResponse(
             results=search_results,
             query_embedding_dim=len(query_embedding),
-            collection=request.collection
+            collection=collection_name
         )
 
     except Exception as e:
@@ -1363,7 +1391,7 @@ async def submit_reachout(
     if mode not in {"feedback", "help", "support"}:
         mode = "support"
 
-    instance_name = (database.get_setting("instance_name") or "Sanctum").strip() or "Sanctum"
+    instance_name = (database.get_setting("instance_name") or "EnclaveFree").strip() or "EnclaveFree"
     subject_prefix = (database.get_setting("reachout_subject_prefix") or "").strip()
 
     subject = f"[{instance_name}] {mode.title()}: user reachout"
@@ -1507,9 +1535,9 @@ async def send_test_email(
     </head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
         <div style="max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #333; margin-bottom: 24px;">Sanctum Test Email</h2>
+            <h2 style="color: #333; margin-bottom: 24px;">EnclaveFree Test Email</h2>
             <p style="margin-bottom: 24px;">
-                This is a test email from your Sanctum instance.
+                This is a test email from your EnclaveFree instance.
                 If you received this, your SMTP configuration is working correctly.
             </p>
             <p style="margin-top: 24px; font-size: 14px; color: #666;">
@@ -1519,7 +1547,7 @@ async def send_test_email(
     </body>
     </html>
     """
-    subject = "Sanctum Test Email"
+    subject = "EnclaveFree Test Email"
 
     try:
         await asyncio.to_thread(_send_html_email_smtp, smtp, email, subject, html)
@@ -1610,7 +1638,7 @@ async def admin_auth(
     Authenticate or register an admin by verifying a signed Nostr event.
 
     The event must:
-    - Be kind 22242 (Sanctum auth event)
+    - Be kind 22242 (EnclaveFree auth event)
     - Have action tag = "admin_auth"
     - Have valid BIP-340 Schnorr signature
     - Be signed within the last 5 minutes
@@ -2897,7 +2925,7 @@ async def export_database(background_tasks: BackgroundTasks, _admin: Dict = Depe
         # Generate filename with timestamp
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"sanctum_backup_{timestamp}.db"
+        filename = f"enclavefree_backup_{timestamp}.db"
         
         # Create a temporary file for the backup
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
