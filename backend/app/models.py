@@ -1,5 +1,5 @@
 """
-Sanctum Pydantic Models
+EnclaveFree Pydantic Models
 Request and response models for user/admin management.
 """
 

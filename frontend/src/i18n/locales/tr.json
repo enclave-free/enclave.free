@@ -57,7 +57,7 @@
       "checkSpam": "Görmüyor musunuz? Spam klasörünü kontrol edin.",
       "simulateMagicLink": "Sihirli bağlantı tıklamasını simüle et",
       "forTesting": "Test amaçları için:",
-      "dataProtectionTitle": "Sanctum verilerinizi nasıl korur",
+      "dataProtectionTitle": "EnclaveFree verilerinizi nasıl korur",
       "noPasswordTitle": "Saklanan parola yok",
       "noPasswordBody": "Tek kullanımlık bir bağlantıyla giriş yaparsınız, bu yüzden yönetilecek parola veritabanı yoktur.",
       "expiringLinkTitle": "Kısa ömürlü giriş bağlantıları",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Varsayılan olarak şifreleme",
       "encryptionBody": "Profil alanları varsayılan olarak şifrelenir, ancak bu örneğin yöneticisi alan düzeyinde ayarları kontrol eder ve seçili verilerin farklı şekilde saklanmasına veya paylaşılmasına izin verebilir.",
       "adminControlNotice": "Veri işleme bu örneğin yöneticisi tarafından yapılandırılır; bu, nelerin şifrelenmeden saklanabileceğini veya yapay zeka araçlarıyla paylaşılabileceğini de kapsar.",
-      "noWarrantyNotice": "Sanctum yazılımı olduğu gibi, herhangi bir garanti olmaksızın sunulmaktadır. Bu örneğin kullanımı yönetici politikalarına tabidir.",
+      "noWarrantyNotice": "EnclaveFree yazılımı olduğu gibi, herhangi bir garanti olmaksızın sunulmaktadır. Bu örneğin kullanımı yönetici politikalarına tabidir.",
       "retentionNotice": "Veri saklama ve silme süreleri bu örnek yöneticisi tarafından belirlenir. Erişim, düzeltme veya silme istekleri için onlarla iletişime geçin."
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "Marka ve kullanıcı kayıt deneyimini özelleştirin",
       "branding": "Örnek Markası",
       "displayName": "Görünen Ad",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Bu ad başlıkta ve kayıt ekranlarında görünür",
       "icon": "Simge",
       "accentColor": "Vurgu Rengi",
@@ -601,7 +601,7 @@
       "tipRequiredDesc": "Alanları yalnızca verilere gerçekten ihtiyacınız olduğunda zorunlu olarak işaretleyin. Çok fazla zorunlu alan kayıtları caydırabilir.",
       "tipsDesc": "Kullanıcı yapılandırmanızı oluştururken bunları aklınızda tutun.",
       "tipsTitle": "İpuçları ve En İyi Uygulamalar",
-      "twoTier": "Sanctum iki katmanlı bir sistem kullanır: Kullanıcı Türleri kullanıcı kategorilerini tanımlar ve Kullanıcı Alanları her türün hangi verileri topladığını tanımlar.",
+      "twoTier": "EnclaveFree iki katmanlı bir sistem kullanır: Kullanıcı Türleri kullanıcı kategorilerini tanımlar ve Kullanıcı Alanları her türün hangi verileri topladığını tanımlar.",
       "typesDesc": "Farklı gruplar için farklı kayıt formları veya izinlere ihtiyacınız olduğunda kullanıcı türleri oluşturun.",
       "typesExample": "Örnek: Bir üniversite, her birinin kendi alanları olan 'Öğrenci', 'Öğretim Üyesi' ve 'Personel' türleri oluşturabilir.",
       "typesTitle": "Kullanıcı Türlerini Anlama",
@@ -620,7 +620,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "Yapay zeka asistanı simgesi",
       "assistantNameLabel": "Asistan görünen adı",
-      "assistantNamePlaceholder": "örn., Sanctum AI",
+      "assistantNamePlaceholder": "örn., EnclaveFree AI",
       "bubbleShadowLabel": "Hafif baloncuk gölgesi ekle",
       "bubbleStyleDesc": "Sohbet baloncuklarının şeklini ve derinliğini seçin.",
       "bubbleStylePill": "Hap",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "Yönetici Paneli",
-    "subtitle": "Sanctum örneğinizin yapılandırmasını yönetin",
+    "subtitle": "EnclaveFree örneğinizin yapılandırmasını yönetin",
     "instance": "Örnek Yapılandırması",
     "instanceDesc": "Marka, kullanıcı türleri ve kayıt alanlarını özelleştirin",
     "ai": "Yapay Zeka Yapılandırması",
@@ -926,9 +926,9 @@
       "goToPage": "Sayfaya git",
       "howItWorks": "Gömme nasıl çalışır:",
       "modelPerfDesc": "Daha büyük modeller daha doğru sonuçlar üretir ancak daha fazla bellek ve zaman gerektirir. Donanımınıza göre seçin.",
-      "modelsDesc": "Sanctum üç çok dilli E5 gömme modelini destekler. Tümü yerel olarak çalışır — hiçbir veri sunucunuzu terk etmez.",
+      "modelsDesc": "EnclaveFree üç çok dilli E5 gömme modelini destekler. Tümü yerel olarak çalışır — hiçbir veri sunucunuzu terk etmez.",
       "modelsTitle": "Gömme Modelleri",
-      "overviewDesc": "Gömmeler, anlamsal arama için metni sayısal vektörlere dönüştürür. Sanctum belgeleri ve sorguları işlemek için yerel bir gömme modeli kullanır.",
+      "overviewDesc": "Gömmeler, anlamsal arama için metni sayısal vektörlere dönüştürür. EnclaveFree belgeleri ve sorguları işlemek için yerel bir gömme modeli kullanır.",
       "overviewNote": "Gömme modelini değiştirmek, vektörlerin tutarlı olması için tüm belgelerin yeniden alınmasını gerektirir.",
       "overviewTitle": "Gömme Genel Bakış",
       "performanceDesc": "Bu ayarlar model yükleme davranışını kontrol eder ve başlatma süresini ve kaynak kullanımını etkileyebilir.",
@@ -985,9 +985,9 @@
       "exampleConfig": "Örnek yapılandırma",
       "goToPage": "Sayfaya git",
       "mapleExtra": "LLM_API_KEY'i {{mapleSignupUrl}} adresindeki Maple anahtarınıza ayarlayın. LLM_* anahtarları MAPLE_* takma adlarına eşleşir.",
-      "mapleHint": "Maple, Sanctum için standart LLM arka ucudur.",
+      "mapleHint": "Maple, EnclaveFree için standart LLM arka ucudur.",
       "modelField": "LLM_MODEL — Maple model tanımlayıcısı (örneğin: kimi-k2.5).",
-      "overviewDesc": "Sanctum, standart LLM hizmeti olarak Maple'ı kullanır. Maple, kaputun altında OpenAI uyumlu bir API sağlar.",
+      "overviewDesc": "EnclaveFree, standart LLM hizmeti olarak Maple'ı kullanır. Maple, kaputun altında OpenAI uyumlu bir API sağlar.",
       "overviewTitle": "Maple LLM Genel Bakış",
       "providerField": "LLM_PROVIDER — uyumluluk için \"maple\" olarak sabitlenmiştir."
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "SSL ayarları HTTPS davranışını, sertifika yollarını ve proxy güvenini kontrol eder. Varsayılanlar yerel HTTP geliştirme için yapılandırılmıştır.",
       "overviewNote": "TLS'yi yöneten bir ters proxy arkasında dağıtıyorsanız, bunları hiç yapılandırmanız gerekmeyebilir.",
       "overviewTitle": "SSL ve HTTPS Genel Bakış",
-      "overviewWhen": "Bunları HTTPS ile üretime dağıtırken veya Sanctum'u TLS sonlandırıcı bir proxy arkasına yerleştirirken yapılandırın.",
+      "overviewWhen": "Bunları HTTPS ile üretime dağıtırken veya EnclaveFree'u TLS sonlandırıcı bir proxy arkasına yerleştirirken yapılandırın.",
       "proxiesDesc": "TRUSTED_PROXIES — ters proxy'ler için virgülle ayrılmış IP adresleri veya CIDR aralıkları listesi. Arka uç gerçek istemci IP'sini belirlemek için bunları kullanır."
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "Yüklemeler dizinini yedekleyin. Bu, kullanıcıların yüklediği orijinal dosyaları içerir.",
       "backupStep3": "3. Qdrant anlık görüntüsü alın",
       "backupStep3Desc": "Vektör verileriniz için bir koleksiyon anlık görüntüsü oluşturmak üzere Qdrant panelini veya API'sini kullanın.",
-      "backupsDesc": "Sanctum verileri üç yerde saklar — eksiksiz bir geri yükleme için üçü de birlikte yedeklenmelidir.",
+      "backupsDesc": "EnclaveFree verileri üç yerde saklar — eksiksiz bir geri yükleme için üçü de birlikte yedeklenmelidir.",
       "backupsTitle": "Yedekleme ve Taşıma",
-      "backupsWhen": "Düzenli olarak yedekleyin ve Sanctum'u yükseltmeden veya depolama yollarını değiştirmeden önce her zaman yedekleyin.",
+      "backupsWhen": "Düzenli olarak yedekleyin ve EnclaveFree'u yükseltmeden veya depolama yollarını değiştirmeden önce her zaman yedekleyin.",
       "goToPage": "Sayfaya git",
-      "overviewDesc": "Depolama ayarları Sanctum'un verileri nerede sakladığını kontrol eder — SQLite veritabanı, yüklenen dosyalar ve vektör gömmeleri.",
+      "overviewDesc": "Depolama ayarları EnclaveFree'un verileri nerede sakladığını kontrol eder — SQLite veritabanı, yüklenen dosyalar ve vektör gömmeleri.",
       "overviewTitle": "Depolama Genel Bakış",
       "overviewWhen": "Harici volume'ları bağlarken, yedekleme konumlarını değiştirirken veya uzak bir Qdrant örneğine bağlanırken bunları ayarlayın.",
       "pathsDesc": "Bu yollar Docker konteyneri içindedir. Kalıcılık için Docker volume'ları kullanarak bunları ana bilgisayar dizinlerine eşleyin.",
@@ -1162,7 +1162,7 @@
       "completedDesc": "Tüm parçalar gömüldü ve vektör veritabanında saklandı. Belge aramaya hazır.",
       "failedProcessing": "Belge 'başarısız' gösteriyor",
       "failedProcessingFix": "Hatalar için arka uç günlüklerini kontrol edin. Yaygın nedenler: bozuk dosya, desteklenmeyen kodlama veya gömme modelinin yüklenmemiş olması.",
-      "formatsDesc": "Sanctum bilgi tabanına alım için aşağıdaki dosya türlerini kabul eder.",
+      "formatsDesc": "EnclaveFree bilgi tabanına alım için aşağıdaki dosya türlerini kabul eder.",
       "formatsTitle": "Desteklenen Formatlar",
       "mdDesc": ".md — Markdown dosyaları. Başlıklar ve yapı parçalama sırasında korunur.",
       "noChunks": "Tamamlandı ancak sıfır parça",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Maple çıkarımını yapılandırın",
-      "hint": "Sanctum, LLM çıkarımı için yalnızca Maple'ı kullanır. Maple modeli/API ayarlarını buradan yapılandırın. Değişiklikler yeniden başlatma gerektirir."
+      "hint": "EnclaveFree, LLM çıkarımı için yalnızca Maple'ı kullanır. Maple modeli/API ayarlarını buradan yapılandırın. Değişiklikler yeniden başlatma gerektirir."
     },
     "embedding": {
       "label": "Metin İşleme",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "Veritabanı Dosyası",
       "description": "SQLite veritabanı yolu",
-      "hint": "SQLite veritabanı dosyasının yolu. Varsayılan: /data/sanctum.db"
+      "hint": "SQLite veritabanı dosyasının yolu. Varsayılan: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Yüklemeler Klasörü",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "DKIM DNS kayıt seçici",
-      "hint": "DKIM TXT kaydınız için seçici öneki. Varsayılan: sanctum. Sağlayıcınız belirli bir seçici gerektirebilir.",
+      "hint": "DKIM TXT kaydınız için seçici öneki. Varsayılan: enclavefree. Sağlayıcınız belirli bir seçici gerektirebilir.",
       "label": "DKIM Seçici"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Sanctum örneğiniz kuruldu ve hazır. Artık ayarları yapılandırabilir, belge yükleyebilir ve bilgi tabanınızı sorgulamaya başlayabilirsiniz.",
+      "body": "EnclaveFree örneğiniz kuruldu ve hazır. Artık ayarları yapılandırabilir, belge yükleyebilir ve bilgi tabanınızı sorgulamaya başlayabilirsiniz.",
       "note": "Güvenilir bir cihaz kullanın — Nostr anahtarınız hassas örnek verilerini şifrelemek ve çözmek için kullanılır.",
       "title": "Her şey hazır!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "Kullanıcıları yönetin, yapay zeka modellerini yapılandırın, belge yükleyin ve örneğinizin her yönünü kontrol edin.",
       "feature3Title": "Tam kontrol",
       "label": "Hoş geldiniz",
-      "title": "Sanctum'unuzu sahiplenin"
+      "title": "EnclaveFree'unuzu sahiplenin"
     },
     "step2": {
-      "body": "Sanctum kimlik doğrulama için Nostr (NIP-07) kullanır. Nostr anahtarlarınızı yöneten bir tarayıcı uzantısına ihtiyacınız olacak.",
+      "body": "EnclaveFree kimlik doğrulama için Nostr (NIP-07) kullanır. Nostr anahtarlarınızı yöneten bir tarayıcı uzantısına ihtiyacınız olacak.",
       "flow1": "Nostr uzantınızı açın (Alby, nos2x vb.)",
       "flow2": "Bağlantı isteğini onaylayın",
       "flow3": "Genel anahtarınız yönetici olarak kaydedilir",
@@ -1530,7 +1530,7 @@
       "title": "Bağlanmaya hazır"
     },
     "subtitle": "Birkaç adımda özel bilgi tabanınızı kurun.",
-    "title": "Sanctum'a Hoş Geldiniz"
+    "title": "EnclaveFree'a Hoş Geldiniz"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "döndürülen satır(lar)",
       "row_s_returned_columns_cb3f95": "döndürülen satır(lar) | Sütunlar:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Bilgi grafiğine karşı salt okunur Cypher sorguları çalıştırın.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Seçilmiş Bilgi için Özel RAG Sistemi",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Seçilmiş Bilgi için Özel RAG Sistemi",
       "score_92d190": "| puan:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "LLM üretimi olmadan vektör deposunu doğrudan arayın. Gömme hata ayıklaması için kullanışlıdır.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Anlamsal olarak benzer bilgi için Qdrant'ı arar",

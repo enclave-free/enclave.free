@@ -1,6 +1,6 @@
 # SQLite Admin & User Management System
 
-This document describes the SQLite-based admin and user management system in Sanctum.
+This document describes the SQLite-based admin and user management system in EnclaveFree.
 
 > **See also:** [Authentication](./authentication.md) for detailed documentation on admin (Nostr NIP-07) and user (magic link email) authentication flows.
 > **See also:** [Encrypted SQLite Data Model (NIP-04)](./sqlite-encryption.md) for the full encryption design and updated schema details.
@@ -82,7 +82,7 @@ Key-value store for instance configuration.
 | `updated_at` | TIMESTAMP | Last update timestamp |
 
 **Default settings:**
-- `instance_name`: "Sanctum"
+- `instance_name`: "EnclaveFree"
 - `primary_color`: "#3B82F6" (supports preset names like `blue` or custom hex values like `#F7931A`)
 - `description`: "A privacy-first RAG knowledge base"
 - `icon`: "Sparkles"
@@ -91,7 +91,7 @@ Key-value store for instance configuration.
 - `apple_touch_icon_url`: "" (optional iOS home icon)
 - `assistant_icon`: "Sparkles"
 - `user_icon`: "User"
-- `assistant_name`: "Sanctum AI"
+- `assistant_name`: "EnclaveFree AI"
 - `user_label`: "You"
 - `header_layout`: "icon_name"
 - `header_tagline`: ""
@@ -312,7 +312,7 @@ Update instance settings (partial update supported).
 ```bash
 curl -X PUT http://localhost:8000/admin/settings \
   -H "Content-Type: application/json" \
-  -d '{"instance_name": "My Sanctum", "primary_color": "#FF5733"}'
+  -d '{"instance_name": "My EnclaveFree", "primary_color": "#FF5733"}'
 ```
 
 ---
@@ -629,7 +629,7 @@ SQLite data persists via Docker volume:
 services:
   backend:
     environment:
-      - SQLITE_PATH=/data/sanctum.db
+      - SQLITE_PATH=/data/enclavefree.db
     volumes:
       - sqlite_data:/data
 
@@ -742,17 +742,17 @@ The frontend uses localStorage for temporary state during onboarding:
 
 | Key | Description |
 | ----- | ------------- |
-| `sanctum_admin_pubkey` | Admin Nostr pubkey (after login) |
-| `sanctum_admin_session_token` | Admin session token (after NIP-07 auth) |
-| `sanctum_session_token` | User session token (after magic link verification) |
-| `sanctum_user_email` | Verified user email |
-| `sanctum_user_name` | User display name |
-| `sanctum_user_type_id` | Selected user type ID |
-| `sanctum_user_approved` | User approval status |
-| `sanctum_custom_fields` | Admin-configured custom fields schema |
-| `sanctum_user_profile` | Complete user profile (JSON) |
-| `sanctum_pending_email` | Email awaiting verification |
-| `sanctum_pending_name` | Name awaiting verification |
+| `enclavefree_admin_pubkey` | Admin Nostr pubkey (after login) |
+| `enclavefree_admin_session_token` | Admin session token (after NIP-07 auth) |
+| `enclavefree_session_token` | User session token (after magic link verification) |
+| `enclavefree_user_email` | Verified user email |
+| `enclavefree_user_name` | User display name |
+| `enclavefree_user_type_id` | Selected user type ID |
+| `enclavefree_user_approved` | User approval status |
+| `enclavefree_custom_fields` | Admin-configured custom fields schema |
+| `enclavefree_user_profile` | Complete user profile (JSON) |
+| `enclavefree_pending_email` | Email awaiting verification |
+| `enclavefree_pending_name` | Name awaiting verification |
 
 ## Admin UI Features
 
@@ -822,7 +822,7 @@ See `docs/user-type-migration.md` for operational guidance and API contracts.
 
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down
-docker volume rm sanctum-rag-runtime_sqlite_data
+docker volume rm enclavefree-rag-runtime_sqlite_data
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build
 ```
 

@@ -1,6 +1,6 @@
 # Email Authentication Configuration
 
-Sanctum uses magic link email authentication. Users enter their email address, receive a link, and click it to sign in. No passwords required.
+EnclaveFree uses magic link email authentication. Users enter their email address, receive a link, and click it to sign in. No passwords required.
 
 ## How It Works
 
@@ -28,7 +28,7 @@ See `docs/admin-deployment-config.md` for UI behavior, validation, and restart r
 | `SMTP_PORT` | SMTP port (usually 587 for TLS) | `587` |
 | `SMTP_USER` | SMTP username/login | `postmaster@mg.example.com` |
 | `SMTP_PASS` | SMTP password or API key | `your-smtp-password` |
-| `SMTP_FROM` | From address for emails | `Sanctum <noreply@example.com>` |
+| `SMTP_FROM` | From address for emails | `EnclaveFree <noreply@example.com>` |
 | `FRONTEND_URL` | Your production frontend URL | `https://app.example.com` |
 
 ### Optional Variables
@@ -77,7 +77,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=yourname@gmail.com
 SMTP_PASS=xxxx-xxxx-xxxx-xxxx    # 16-character App Password
-SMTP_FROM=Sanctum <yourname@gmail.com>
+SMTP_FROM=EnclaveFree <yourname@gmail.com>
 ```
 
 **Note**: Gmail has sending limits (~500/day for personal accounts). Not recommended for high-volume production use.
@@ -92,7 +92,7 @@ SMTP_HOST=smtp.mailgun.org
 SMTP_PORT=587
 SMTP_USER=postmaster@mg.yourdomain.com
 SMTP_PASS=your-mailgun-smtp-password
-SMTP_FROM=Sanctum <noreply@mg.yourdomain.com>
+SMTP_FROM=EnclaveFree <noreply@mg.yourdomain.com>
 ```
 
 Find SMTP credentials in: Mailgun Dashboard > Sending > Domain Settings > SMTP credentials
@@ -107,7 +107,7 @@ SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
 SMTP_USER=apikey                    # Literally the word "apikey"
 SMTP_PASS=SG.xxxxxxxxxxxxxxxxxxxx   # Your API key starting with SG.
-SMTP_FROM=Sanctum <noreply@yourdomain.com>
+SMTP_FROM=EnclaveFree <noreply@yourdomain.com>
 ```
 
 Create an API key in: SendGrid Dashboard > Settings > API Keys
@@ -122,7 +122,7 @@ SMTP_HOST=email-smtp.us-east-1.amazonaws.com   # Use your region
 SMTP_PORT=587
 SMTP_USER=AKIAIOSFODNN7EXAMPLE      # SES SMTP username (not IAM access key)
 SMTP_PASS=wJalrXUtnFEMI/K7MDENG...  # SES SMTP password
-SMTP_FROM=Sanctum <noreply@yourdomain.com>
+SMTP_FROM=EnclaveFree <noreply@yourdomain.com>
 ```
 
 **Important**:
@@ -142,7 +142,7 @@ SMTP_HOST=smtp.postmarkapp.com
 SMTP_PORT=587
 SMTP_USER=your-server-api-token
 SMTP_PASS=your-server-api-token     # Same as user
-SMTP_FROM=Sanctum <noreply@yourdomain.com>
+SMTP_FROM=EnclaveFree <noreply@yourdomain.com>
 ```
 
 Find the Server API Token in: Postmark > Servers > Your Server > API Tokens
@@ -157,7 +157,7 @@ SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
 SMTP_USER=your-brevo-email@example.com
 SMTP_PASS=your-smtp-key
-SMTP_FROM=Sanctum <noreply@yourdomain.com>
+SMTP_FROM=EnclaveFree <noreply@yourdomain.com>
 ```
 
 Generate SMTP key in: Brevo > Settings > SMTP & API

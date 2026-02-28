@@ -551,7 +551,7 @@ export function AdminInstanceConfig() {
                 type="text"
                 value={previewAssistantName}
                 onChange={(e) => handleAssistantNameChange(e.target.value)}
-                placeholder={t('admin.instanceConfig.assistantNamePlaceholder', 'e.g., Sanctum AI')}
+                placeholder={t('admin.instanceConfig.assistantNamePlaceholder', 'e.g., EnclaveFree AI')}
                 className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
             </div>

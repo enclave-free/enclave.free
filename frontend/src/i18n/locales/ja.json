@@ -57,7 +57,7 @@
       "checkSpam": "見当たりませんか？迷惑メールフォルダを確認してください。",
       "simulateMagicLink": "マジックリンクのクリックをシミュレート",
       "forTesting": "テスト用:",
-      "dataProtectionTitle": "Sanctumがあなたのデータを守る仕組み",
+      "dataProtectionTitle": "EnclaveFreeがあなたのデータを守る仕組み",
       "noPasswordTitle": "保存されるパスワードなし",
       "noPasswordBody": "ワンタイムリンクでサインインするため、管理すべきパスワードデータベースがありません。",
       "expiringLinkTitle": "短時間で失効するサインインリンク",
@@ -65,7 +65,7 @@
       "encryptionTitle": "デフォルトで暗号化",
       "encryptionBody": "プロフィールフィールドはデフォルトで暗号化されますが、このインスタンスの管理者がフィールドレベルの設定を管理しており、選択されたデータを異なる方法で保存または共有することを許可する場合があります。",
       "adminControlNotice": "データの取り扱いは、暗号化なしで保存される可能性のあるデータやAIツールと共有されるデータを含め、このインスタンスの管理者が設定します。",
-      "noWarrantyNotice": "Sanctum ソフトウェアは保証なしで現状のまま提供されます。このインスタンスの使用は管理者のポリシーに従います。",
+      "noWarrantyNotice": "EnclaveFree ソフトウェアは保証なしで現状のまま提供されます。このインスタンスの使用は管理者のポリシーに従います。",
       "retentionNotice": "データ保持および削除のタイムラインは、このインスタンスの管理者が設定します。アクセス、修正、または削除のリクエストについては、管理者に連絡してください。"
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "ブランディングとユーザーオンボーディング体験をカスタマイズ",
       "branding": "インスタンスブランディング",
       "displayName": "表示名",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "この名前はヘッダーとオンボーディング画面に表示されます",
       "icon": "アイコン",
       "accentColor": "アクセントカラー",
@@ -601,7 +601,7 @@
       "tipRequiredDesc": "フィールドを必須にするのは、本当にデータが必要な場合のみにしてください。必須フィールドが多すぎると、登録を敬遠させる可能性があります。",
       "tipsDesc": "ユーザー設定を行う際に、以下の点に留意してください。",
       "tipsTitle": "ヒントとベストプラクティス",
-      "twoTier": "Sanctumは二層構造を使用しています。ユーザータイプはユーザーのカテゴリを定義し、ユーザーフィールドは各タイプが収集するデータを定義します。",
+      "twoTier": "EnclaveFreeは二層構造を使用しています。ユーザータイプはユーザーのカテゴリを定義し、ユーザーフィールドは各タイプが収集するデータを定義します。",
       "typesDesc": "異なるグループに対して異なる登録フォームや権限が必要な場合に、ユーザータイプを作成してください。",
       "typesExample": "例：大学では「学生」「教員」「職員」のタイプを作成し、それぞれに固有のフィールドを設定できます。",
       "typesTitle": "ユーザータイプの理解",
@@ -620,7 +620,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "AIアシスタントアイコン",
       "assistantNameLabel": "アシスタントの表示名",
-      "assistantNamePlaceholder": "例：Sanctum AI",
+      "assistantNamePlaceholder": "例：EnclaveFree AI",
       "bubbleShadowLabel": "控えめなバブルシャドウを追加",
       "bubbleStyleDesc": "チャットバブルの形状と奥行きを選択します。",
       "bubbleStylePill": "ピル",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "管理ダッシュボード",
-    "subtitle": "Sanctumインスタンスの設定を管理",
+    "subtitle": "EnclaveFreeインスタンスの設定を管理",
     "instance": "インスタンス設定",
     "instanceDesc": "ブランディング、ユーザータイプ、オンボーディングフィールドをカスタマイズ",
     "ai": "AI設定",
@@ -926,9 +926,9 @@
       "goToPage": "ページへ移動",
       "howItWorks": "埋め込みの仕組み:",
       "modelPerfDesc": "大きなモデルはより正確な結果を生成しますが、より多くのメモリと時間が必要です。ハードウェアに応じて選択してください。",
-      "modelsDesc": "Sanctumは3つの多言語E5埋め込みモデルをサポートしています。すべてローカルで実行されます — データがサーバーから出ることはありません。",
+      "modelsDesc": "EnclaveFreeは3つの多言語E5埋め込みモデルをサポートしています。すべてローカルで実行されます — データがサーバーから出ることはありません。",
       "modelsTitle": "埋め込みモデル",
-      "overviewDesc": "埋め込みはテキストをセマンティック検索のための数値ベクトルに変換します。Sanctumはローカルの埋め込みモデルを使用してドキュメントとクエリを処理します。",
+      "overviewDesc": "埋め込みはテキストをセマンティック検索のための数値ベクトルに変換します。EnclaveFreeはローカルの埋め込みモデルを使用してドキュメントとクエリを処理します。",
       "overviewNote": "埋め込みモデルを変更する場合、ベクトルの一貫性を保つためにすべてのドキュメントを再インジェストする必要があります。",
       "overviewTitle": "埋め込みの概要",
       "performanceDesc": "これらの設定はモデルの読み込み動作を制御し、起動時間とリソース使用量に影響します。",
@@ -985,9 +985,9 @@
       "exampleConfig": "設定例",
       "goToPage": "ページへ移動",
       "mapleExtra": "LLM_API_KEYを{{mapleSignupUrl}}から取得したあなたのMapleキーに設定してください。LLM_*キーはMAPLE_*エイリアスにマッピングされます。",
-      "mapleHint": "Maple は Sanctum の標準 LLM バックエンドです。",
+      "mapleHint": "Maple は EnclaveFree の標準 LLM バックエンドです。",
       "modelField": "LLM_MODEL — Mapleモデル識別子 (例: kimi-k2.5)。",
-      "overviewDesc": "Sanctumは標準のLLMサービスとしてMapleを使用しています。Mapleは内部的にOpenAI互換のAPIを提供しています。",
+      "overviewDesc": "EnclaveFreeは標準のLLMサービスとしてMapleを使用しています。Mapleは内部的にOpenAI互換のAPIを提供しています。",
       "overviewTitle": "Maple LLM概要",
       "providerField": "LLM_PROVIDER — 互換性のため「maple」に固定されています。"
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "SSL設定はHTTPSの動作、証明書パス、プロキシの信頼を制御します。デフォルトはローカルHTTP開発用に構成されています。",
       "overviewNote": "TLSを処理するリバースプロキシの背後にデプロイする場合、これらを設定する必要がない場合もあります。",
       "overviewTitle": "SSLとHTTPSの概要",
-      "overviewWhen": "HTTPSで本番環境にデプロイする場合、またはSanctumをTLS終端プロキシの背後に配置する場合に設定してください。",
+      "overviewWhen": "HTTPSで本番環境にデプロイする場合、またはEnclaveFreeをTLS終端プロキシの背後に配置する場合に設定してください。",
       "proxiesDesc": "TRUSTED_PROXIES — リバースプロキシのIPアドレスまたはCIDR範囲のコンマ区切りリストです。バックエンドはこれらを使用して実際のクライアントIPを判別します。"
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "アップロードディレクトリをバックアップしてください。ユーザーがアップロードした元のファイルが含まれています。",
       "backupStep3": "3. Qdrantのスナップショット",
       "backupStep3Desc": "QdrantダッシュボードまたはAPIを使用して、ベクトルデータのコレクションスナップショットを作成してください。",
-      "backupsDesc": "Sanctumは3か所にデータを保存しています — 完全な復元のために、3つすべてを一緒にバックアップする必要があります。",
+      "backupsDesc": "EnclaveFreeは3か所にデータを保存しています — 完全な復元のために、3つすべてを一緒にバックアップする必要があります。",
       "backupsTitle": "バックアップと移行",
-      "backupsWhen": "定期的にバックアップし、Sanctumのアップグレードやストレージパスの変更前には必ず行ってください。",
+      "backupsWhen": "定期的にバックアップし、EnclaveFreeのアップグレードやストレージパスの変更前には必ず行ってください。",
       "goToPage": "ページへ移動",
-      "overviewDesc": "ストレージ設定は、Sanctumがデータを永続化する場所を制御します — SQLiteデータベース、アップロードファイル、ベクトル埋め込みです。",
+      "overviewDesc": "ストレージ設定は、EnclaveFreeがデータを永続化する場所を制御します — SQLiteデータベース、アップロードファイル、ベクトル埋め込みです。",
       "overviewTitle": "ストレージの概要",
       "overviewWhen": "外部ボリュームのマウント、バックアップ場所の変更、またはリモートQdrantインスタンスへの接続時にこれらを調整してください。",
       "pathsDesc": "これらのパスはDockerコンテナ内のものです。永続化のために、Dockerボリュームを使用してホストディレクトリにマッピングしてください。",
@@ -1162,7 +1162,7 @@
       "completedDesc": "すべてのチャンクが埋め込まれ、ベクトルデータベースに保存されました。ドキュメントは検索可能です。",
       "failedProcessing": "ドキュメントが「失敗」と表示される",
       "failedProcessingFix": "バックエンドのログでエラーを確認してください。よくある原因：破損したファイル、サポートされていないエンコーディング、または埋め込みモデルが読み込まれていない。",
-      "formatsDesc": "Sanctumはナレッジベースへのインジェスト用に以下のファイルタイプを受け付けます。",
+      "formatsDesc": "EnclaveFreeはナレッジベースへのインジェスト用に以下のファイルタイプを受け付けます。",
       "formatsTitle": "サポートされるフォーマット",
       "mdDesc": ".md — Markdownファイル。チャンク化中に見出しと構造が保持されます。",
       "noChunks": "完了したがチャンクが0件",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Maple推論を設定する",
-      "hint": "SanctumはLLM推論においてMaple専用です。Mapleモデル/API設定はここで構成します。変更には再起動が必要です。"
+      "hint": "EnclaveFreeはLLM推論においてMaple専用です。Mapleモデル/API設定はここで構成します。変更には再起動が必要です。"
     },
     "embedding": {
       "label": "テキスト処理",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "データベースファイル",
       "description": "SQLiteデータベースのパス",
-      "hint": "SQLiteデータベースファイルのパス。デフォルト：/data/sanctum.db"
+      "hint": "SQLiteデータベースファイルのパス。デフォルト：/data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "アップロードフォルダ",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "DKIM DNSレコードセレクター",
-      "hint": "DKIM TXTレコードのセレクタープレフィックス。デフォルト: sanctum。プロバイダーによっては特定のセレクターが必要な場合があります。",
+      "hint": "DKIM TXTレコードのセレクタープレフィックス。デフォルト: enclavefree。プロバイダーによっては特定のセレクターが必要な場合があります。",
       "label": "DKIMセレクター"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Sanctumインスタンスのセットアップが完了し、準備ができました。設定の構成、ドキュメントのアップロード、ナレッジベースへのクエリを開始できます。",
+      "body": "EnclaveFreeインスタンスのセットアップが完了し、準備ができました。設定の構成、ドキュメントのアップロード、ナレッジベースへのクエリを開始できます。",
       "note": "信頼できるデバイスを使用してください — Nostrキーは機密性の高いインスタンスデータの暗号化と復号に使用されます。",
       "title": "準備完了！"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "ユーザーの管理、AIモデルの構成、ドキュメントのアップロード、インスタンスのあらゆる側面の制御が可能です。",
       "feature3Title": "完全な制御",
       "label": "ようこそ",
-      "title": "Sanctumを取得"
+      "title": "EnclaveFreeを取得"
     },
     "step2": {
-      "body": "Sanctumは認証にNostr（NIP-07）を使用します。Nostrキーを管理するブラウザ拡張機能が必要です。",
+      "body": "EnclaveFreeは認証にNostr（NIP-07）を使用します。Nostrキーを管理するブラウザ拡張機能が必要です。",
       "flow1": "Nostr拡張機能を開きます（Alby、nos2xなど）",
       "flow2": "接続リクエストを承認します",
       "flow3": "公開鍵が管理者として登録されます",
@@ -1530,7 +1530,7 @@
       "title": "接続準備完了"
     },
     "subtitle": "いくつかのステップでプライベートナレッジベースを設定しましょう。",
-    "title": "Sanctumへようこそ"
+    "title": "EnclaveFreeへようこそ"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "行が返されました",
       "row_s_returned_columns_cb3f95": "行が返されました | 列:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "知識グラフに対して読み取り専用のCypherクエリを実行します。",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — キュレートされた知識のためのプライベートRAGシステム",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — キュレートされた知識のためのプライベートRAGシステム",
       "score_92d190": "| スコア:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "LLM生成なしでベクトルストアを直接検索します。埋め込みのデバッグに役立ちます。",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "セマンティックに類似した知識をQdrantで検索します",

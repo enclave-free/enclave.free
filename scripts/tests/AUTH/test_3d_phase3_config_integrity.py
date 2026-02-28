@@ -36,7 +36,7 @@ COMPOSE_ARGS = [
     "-f", "docker-compose.infra.yml",
     "-f", "docker-compose.app.yml",
 ]
-DEFAULT_DB_PATH = "/data/sanctum.db"
+DEFAULT_DB_PATH = "/data/enclavefree.db"
 SECRET_PREFIX = "enc::v1::"
 DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 ADMIN_SESSION_SALT = "admin-session"

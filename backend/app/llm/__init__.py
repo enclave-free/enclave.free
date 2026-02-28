@@ -1,5 +1,5 @@
 """
-Sanctum LLM Provider Module
+EnclaveFree LLM Provider Module
 
 Maple-first OpenAI-compatible LLM interface.
 """

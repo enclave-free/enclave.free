@@ -23,7 +23,7 @@ function formatTimestamp(date?: Date): string {
   return date.toLocaleString()
 }
 
-export function generateExport({ messages, format, title, translations, instanceName = 'Sanctum' }: ExportOptions): string {
+export function generateExport({ messages, format, title, translations, instanceName = 'EnclaveFree' }: ExportOptions): string {
   const timestamp = new Date().toLocaleString()
   const exportTitle = title || translations.defaultTitle
   const footerText = translations.footer.replace('{{instanceName}}', instanceName)
@@ -77,7 +77,7 @@ export function downloadExport(options: ExportOptions): void {
   const content = generateExport(options)
   const extension = options.format === 'md' ? 'md' : 'txt'
   const mimeType = options.format === 'md' ? 'text/markdown' : 'text/plain'
-  const filename = `sanctum-chat-${Date.now()}.${extension}`
+  const filename = `enclavefree-chat-${Date.now()}.${extension}`
 
   const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
   const url = URL.createObjectURL(blob)

@@ -343,7 +343,7 @@ Register as admin via frontend before running CRM tests.
 ### "Job not found after restart"
 SQLite persistence issue - check if `ingest_jobs` table has data:
 ```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml exec backend sqlite3 /data/sanctum.db "SELECT * FROM ingest_jobs"
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml exec backend sqlite3 /data/enclavefree.db "SELECT * FROM ingest_jobs"
 ```
 
 ### Authentication errors

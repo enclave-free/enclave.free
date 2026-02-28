@@ -11,9 +11,9 @@ from typing import Tuple
 
 from coincurve import PublicKeyXOnly
 
-logger = logging.getLogger("sanctum.nostr")
+logger = logging.getLogger("enclavefree.nostr")
 
-# Sanctum admin auth event kind
+# EnclaveFree admin auth event kind
 AUTH_EVENT_KIND = 22242
 
 # Maximum age for auth events (5 minutes)
@@ -82,7 +82,7 @@ def verify_event_signature(event: dict) -> bool:
 
 def verify_auth_event(event: dict) -> Tuple[bool, str]:
     """
-    Verify a Sanctum admin auth event.
+    Verify a EnclaveFree admin auth event.
 
     Checks:
     1. Event kind is AUTH_EVENT_KIND (22242)

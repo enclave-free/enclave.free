@@ -1,6 +1,6 @@
 # Sessions
 
-Sanctum has two distinct "session" concepts:
+EnclaveFree has two distinct "session" concepts:
 
 - Auth sessions: browser/API authentication for admins and users (signed tokens, usually via cookies).
 - RAG sessions: conversation continuity for `/query` (`session_id`), used to keep chat history and extracted context.
@@ -11,7 +11,7 @@ This doc explains both, plus the CSRF model used with cookie-based auth.
 
 ### What A Session Token Is
 
-Sanctum issues signed, time-limited tokens using `itsdangerous.URLSafeTimedSerializer` with `SECRET_KEY`:
+EnclaveFree issues signed, time-limited tokens using `itsdangerous.URLSafeTimedSerializer` with `SECRET_KEY`:
 
 - User session token salt: `session`
 - Admin session token salt: `admin-session`
@@ -21,11 +21,11 @@ Session tokens are signed (integrity protected) but not encrypted, so treat them
 
 ### How Tokens Are Carried
 
-Sanctum supports two ways to authenticate requests:
+EnclaveFree supports two ways to authenticate requests:
 
 1. Cookie auth (browser default)
-   - User cookie name: `sanctum_session` (configurable)
-   - Admin cookie name: `sanctum_admin_session` (configurable)
+   - User cookie name: `enclavefree_session` (configurable)
+   - Admin cookie name: `enclavefree_admin_session` (configurable)
    - Cookies are `httpOnly` with secure defaults.
 2. Bearer auth (CLI / non-browser clients)
    - Use `Authorization: Bearer <token>`
@@ -74,14 +74,14 @@ Admin logout and revocation:
 
 ### Cookie and CSRF Model
 
-Sanctum enforces CSRF only for cookie-authenticated unsafe requests (non-`GET/HEAD/OPTIONS/TRACE`).
+EnclaveFree enforces CSRF only for cookie-authenticated unsafe requests (non-`GET/HEAD/OPTIONS/TRACE`).
 
 Rules:
 
 - Requests using `Authorization: Bearer ...` are not subject to the cookie-CSRF check.
 - Cookie-authenticated unsafe requests must include:
   - A trusted `Origin` (or `Referer`) that matches the backend CORS allowlist.
-  - `X-CSRF-Token` header equal to the `sanctum_csrf` cookie value (double-submit).
+  - `X-CSRF-Token` header equal to the `enclavefree_csrf` cookie value (double-submit).
 
 The frontend automatically injects `X-CSRF-Token` for API requests.
 
@@ -95,9 +95,9 @@ Session signing:
 
 Cookie settings:
 
-- `USER_SESSION_COOKIE_NAME` (default `sanctum_session`)
-- `ADMIN_SESSION_COOKIE_NAME` (default `sanctum_admin_session`)
-- `CSRF_COOKIE_NAME` (default `sanctum_csrf`)
+- `USER_SESSION_COOKIE_NAME` (default `enclavefree_session`)
+- `ADMIN_SESSION_COOKIE_NAME` (default `enclavefree_admin_session`)
+- `CSRF_COOKIE_NAME` (default `enclavefree_csrf`)
 - `SESSION_COOKIE_SAMESITE` (default `lax`)
 - `SESSION_COOKIE_DOMAIN` (default unset)
 - `SESSION_COOKIE_SECURE`

@@ -75,7 +75,7 @@
       "instanceSectionDesc": "Stel de naam, het pictogram en de kleuren in die overal in je instantie worden weergegeven.",
       "branding": "Instantie-branding",
       "displayName": "Weergavenaam",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Deze naam verschijnt in de header en onboarding-schermen",
       "icon": "Pictogram",
       "accentColor": "Accentkleur",
@@ -136,7 +136,7 @@
       "chatIdentityTitle": "Chatidentiteit",
       "chatIdentityDesc": "Stel de labels in die boven chatberichten worden getoond.",
       "assistantNameLabel": "Weergavenaam assistent",
-      "assistantNamePlaceholder": "bijv. Sanctum AI",
+      "assistantNamePlaceholder": "bijv. EnclaveFree AI",
       "userLabelLabel": "Gebruikerslabel",
       "userLabelPlaceholder": "bijv. Jij",
       "chatIdentityHint": "Laat een label leeg om het te verbergen.",
@@ -514,7 +514,7 @@
       "tipRequiredDesc": "Markeer velden alleen als verplicht wanneer je de gegevens echt nodig hebt. Te veel verplichte velden kunnen aanmeldingen ontmoedigen.",
       "tipsDesc": "Houd dit in gedachten bij het instellen van je gebruikersconfiguratie.",
       "tipsTitle": "Tips en aanbevelingen",
-      "twoTier": "Sanctum gebruikt een tweetraps-systeem: Gebruikerstypen definiëren categorieën van gebruikers, en Gebruikersvelden bepalen welke gegevens elk type verzamelt.",
+      "twoTier": "EnclaveFree gebruikt een tweetraps-systeem: Gebruikerstypen definiëren categorieën van gebruikers, en Gebruikersvelden bepalen welke gegevens elk type verzamelt.",
       "typesDesc": "Maak gebruikerstypen aan wanneer je verschillende registratieformulieren of machtigingen nodig hebt voor verschillende groepen.",
       "typesExample": "Voorbeeld: een universiteit kan de typen 'Student', 'Docent' en 'Medewerker' aanmaken, elk met hun eigen velden.",
       "typesTitle": "Gebruikerstypen begrijpen",
@@ -613,7 +613,7 @@
       "checkSpam": "Niet te zien? Controleer je spammap.",
       "simulateMagicLink": "Klikken op magic link simuleren",
       "forTesting": "Voor testdoeleinden:",
-      "dataProtectionTitle": "Hoe Sanctum je gegevens beschermt",
+      "dataProtectionTitle": "Hoe EnclaveFree je gegevens beschermt",
       "noPasswordTitle": "Geen opgeslagen wachtwoorden",
       "noPasswordBody": "Je logt in met een eenmalige link, dus er is geen wachtwoorddatabase om te beheren.",
       "expiringLinkTitle": "Kortdurende inloglinks",
@@ -622,7 +622,7 @@
       "encryptionBody": "Profielvelden worden standaard versleuteld, maar de beheerder van deze instantie beheert instellingen op veldniveau en kan toestaan dat geselecteerde gegevens anders worden opgeslagen of gedeeld.",
       "adminControlNotice": "Gegevensverwerking wordt geconfigureerd door de beheerder van deze instantie, inclusief wat onversleuteld mag worden opgeslagen of gedeeld met AI-tools.",
       "retentionNotice": "Bewaar- en verwijdertermijnen worden ingesteld door de beheerder van deze instantie. Neem contact met hen op voor toegangs-, correctie- of verwijderverzoeken.",
-      "noWarrantyNotice": "Sanctum-software wordt geleverd zonder garantie. Het gebruik van deze instantie is onderworpen aan het beleid van de beheerder."
+      "noWarrantyNotice": "EnclaveFree-software wordt geleverd zonder garantie. Het gebruik van deze instantie is onderworpen aan het beleid van de beheerder."
     },
     "verify": {
       "verifying": "Je link wordt geverifieerd...",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "Beheerdashboard",
-    "subtitle": "Beheer de configuratie van je Sanctum-instantie",
+    "subtitle": "Beheer de configuratie van je EnclaveFree-instantie",
     "configureTitle": "Wat je kunt configureren",
     "configureSubtitle": "Deze secties beheren branding, verzameling van gebruikersdata, AI-gedrag, deploymentbeveiliging en opgeslagen inhoud.",
     "securityBreadcrumbTitle": "Bescherm je instantie in 3 stappen",
@@ -963,9 +963,9 @@
       "goToPage": "Ga naar pagina",
       "howItWorks": "Hoe embedding werkt:",
       "modelPerfDesc": "Grotere modellen produceren nauwkeurigere resultaten maar vereisen meer geheugen en tijd. Kies op basis van je hardware.",
-      "modelsDesc": "Sanctum ondersteunt drie meertalige E5-embeddingmodellen. Ze draaien allemaal lokaal — er verlaten geen gegevens je server.",
+      "modelsDesc": "EnclaveFree ondersteunt drie meertalige E5-embeddingmodellen. Ze draaien allemaal lokaal — er verlaten geen gegevens je server.",
       "modelsTitle": "Embeddingmodellen",
-      "overviewDesc": "Embeddings zetten tekst om in numerieke vectoren voor semantisch zoeken. Sanctum gebruikt een lokaal embeddingmodel om documenten en queries te verwerken.",
+      "overviewDesc": "Embeddings zetten tekst om in numerieke vectoren voor semantisch zoeken. EnclaveFree gebruikt een lokaal embeddingmodel om documenten en queries te verwerken.",
       "overviewNote": "Het wijzigen van het embeddingmodel vereist dat alle documenten opnieuw worden ingevoerd zodat vectoren consistent zijn.",
       "overviewTitle": "Overzicht embedding",
       "performanceDesc": "Deze instellingen bepalen het laadgedrag van het model en kunnen de opstarttijd en het resourcegebruik beïnvloeden.",
@@ -1022,9 +1022,9 @@
       "exampleConfig": "Voorbeeldconfiguratie",
       "goToPage": "Ga naar pagina",
       "mapleExtra": "Stel LLM_API_KEY in op uw Maple-sleutel van {{mapleSignupUrl}}. LLM_*-sleutels komen overeen met MAPLE_*-aliassen.",
-      "mapleHint": "Maple is de standaard LLM-backend voor Sanctum.",
+      "mapleHint": "Maple is de standaard LLM-backend voor EnclaveFree.",
       "modelField": "LLM_MODEL — Maple-modelidentificatie (bijvoorbeeld: kimi-k2.5).",
-      "overviewDesc": "Sanctum gebruikt Maple als zijn standaard LLM-service. Maple biedt onder de motorkap een OpenAI-compatibele API.",
+      "overviewDesc": "EnclaveFree gebruikt Maple als zijn standaard LLM-service. Maple biedt onder de motorkap een OpenAI-compatibele API.",
       "overviewTitle": "Maple LLM Overzicht",
       "providerField": "LLM_PROVIDER — vastgezet op \"maple\" voor compatibiliteit."
     },
@@ -1076,7 +1076,7 @@
       "overviewDesc": "SSL-instellingen bepalen HTTPS-gedrag, certificaatpaden en proxyvertrouwen. Standaardwaarden zijn geconfigureerd voor lokale HTTP-ontwikkeling.",
       "overviewNote": "Als je deployt achter een reverse proxy die TLS afhandelt, hoef je deze mogelijk helemaal niet te configureren.",
       "overviewTitle": "Overzicht SSL en HTTPS",
-      "overviewWhen": "Configureer deze bij het deployen naar productie met HTTPS, of bij het plaatsen van Sanctum achter een TLS-terminerende proxy.",
+      "overviewWhen": "Configureer deze bij het deployen naar productie met HTTPS, of bij het plaatsen van EnclaveFree achter een TLS-terminerende proxy.",
       "proxiesDesc": "TRUSTED_PROXIES — kommagescheiden lijst van IP-adressen of CIDR-bereiken voor reverse proxy's. De backend gebruikt deze om het werkelijke client-IP te bepalen."
     },
     "storageHelp": {
@@ -1087,11 +1087,11 @@
       "backupStep2Desc": "Maak een back-up van de uploadmap. Deze bevat de originele bestanden die gebruikers hebben geüpload.",
       "backupStep3": "3. Snapshot van Qdrant",
       "backupStep3Desc": "Gebruik het Qdrant-dashboard of de API om een collectie-snapshot te maken van je vectorgegevens.",
-      "backupsDesc": "Sanctum slaat gegevens op drie plaatsen op — alle drie moeten samen worden geback-upt voor een volledig herstel.",
+      "backupsDesc": "EnclaveFree slaat gegevens op drie plaatsen op — alle drie moeten samen worden geback-upt voor een volledig herstel.",
       "backupsTitle": "Back-ups en migratie",
-      "backupsWhen": "Maak regelmatig back-ups, en altijd voordat je Sanctum upgradet of opslagpaden wijzigt.",
+      "backupsWhen": "Maak regelmatig back-ups, en altijd voordat je EnclaveFree upgradet of opslagpaden wijzigt.",
       "goToPage": "Ga naar pagina",
-      "overviewDesc": "Opslaginstellingen bepalen waar Sanctum gegevens bewaart — de SQLite-database, geüploade bestanden en vector-embeddings.",
+      "overviewDesc": "Opslaginstellingen bepalen waar EnclaveFree gegevens bewaart — de SQLite-database, geüploade bestanden en vector-embeddings.",
       "overviewTitle": "Overzicht opslag",
       "overviewWhen": "Pas deze aan bij het koppelen van externe volumes, het wijzigen van back-uplocaties of het verbinden met een externe Qdrant-instantie.",
       "pathsDesc": "Deze paden bevinden zich in de Docker-container. Koppel ze aan hostmappen met Docker-volumes voor persistentie.",
@@ -1168,7 +1168,7 @@
       "completedDesc": "Alle fragmenten zijn geëmbed en opgeslagen in de vectordatabase. Het document is klaar om te doorzoeken.",
       "failedProcessing": "Document toont 'mislukt'",
       "failedProcessingFix": "Controleer de backend-logs op fouten. Veelvoorkomende oorzaken: beschadigd bestand, niet-ondersteunde codering of het embeddingmodel is niet geladen.",
-      "formatsDesc": "Sanctum accepteert de volgende bestandstypen voor opname in de kennisbank.",
+      "formatsDesc": "EnclaveFree accepteert de volgende bestandstypen voor opname in de kennisbank.",
       "formatsTitle": "Ondersteunde formaten",
       "mdDesc": ".md — Markdown-bestanden. Koppen en structuur worden behouden tijdens het opdelen.",
       "noChunks": "Voltooid maar nul fragmenten",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Configureer Maple-inferentie",
-      "hint": "Sanctum gebruikt momenteel alleen Maple voor LLM-inferentie. Configureer hier de Maple-model-/API-instellingen. Wijzigingen vereisen een herstart."
+      "hint": "EnclaveFree gebruikt momenteel alleen Maple voor LLM-inferentie. Configureer hier de Maple-model-/API-instellingen. Wijzigingen vereisen een herstart."
     },
     "embedding": {
       "label": "Tekstverwerking",
@@ -1352,7 +1352,7 @@
     "SQLITE_PATH": {
       "label": "Databasebestand",
       "description": "Pad naar SQLite-database",
-      "hint": "Pad naar het SQLite-databasebestand. Standaard: /data/sanctum.db"
+      "hint": "Pad naar het SQLite-databasebestand. Standaard: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Uploadmap",
@@ -1417,7 +1417,7 @@
     "DKIM_SELECTOR": {
       "label": "DKIM-selector",
       "description": "DKIM DNS-record selector",
-      "hint": "Selectorprefix voor je DKIM TXT-record. Standaard: sanctum. Je provider kan een specifieke selector vereisen."
+      "hint": "Selectorprefix voor je DKIM TXT-record. Standaard: enclavefree. Je provider kan een specifieke selector vereisen."
     },
     "SPF_INCLUDE": {
       "label": "SPF-include",
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Je Sanctum-instantie is ingesteld en klaar. Je kunt nu instellingen configureren, documenten uploaden en je kennisbank bevragen.",
+      "body": "Je EnclaveFree-instantie is ingesteld en klaar. Je kunt nu instellingen configureren, documenten uploaden en je kennisbank bevragen.",
       "note": "Gebruik een vertrouwd apparaat — je Nostr-sleutel wordt gebruikt om gevoelige instantiegegevens te versleutelen en ontsleutelen.",
       "title": "Je bent helemaal klaar!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "Beheer gebruikers, configureer AI-modellen, upload documenten en controleer elk aspect van je instantie.",
       "feature3Title": "Volledige controle",
       "label": "Welkom",
-      "title": "Claim je Sanctum"
+      "title": "Claim je EnclaveFree"
     },
     "step2": {
-      "body": "Sanctum gebruikt Nostr (NIP-07) voor authenticatie. Je hebt een browserextensie nodig die je Nostr-sleutels beheert.",
+      "body": "EnclaveFree gebruikt Nostr (NIP-07) voor authenticatie. Je hebt een browserextensie nodig die je Nostr-sleutels beheert.",
       "flow1": "Open je Nostr-extensie (Alby, nos2x, enz.)",
       "flow2": "Keur het verbindingsverzoek goed",
       "flow3": "Je publieke sleutel wordt geregistreerd als beheerder",
@@ -1530,7 +1530,7 @@
       "title": "Klaar om te verbinden"
     },
     "subtitle": "Stel je privé-kennisbank in met een paar stappen.",
-    "title": "Welkom bij Sanctum"
+    "title": "Welkom bij EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "rij(en) geretourneerd",
       "row_s_returned_columns_cb3f95": "rij(en) geretourneerd | Kolommen:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Voer alleen-lezen Cypher-queries uit op de kennisgraaf.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Privé RAG Systeem voor Samengestelde Kennis",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Privé RAG Systeem voor Samengestelde Kennis",
       "score_92d190": "| waardering:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Doorzoek de vectoropslag direct zonder LLM-generatie. Handig voor het debuggen van embeddings.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Zoekt in Qdrant naar semantisch vergelijkbare kennis",

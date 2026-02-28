@@ -49,7 +49,7 @@ embedding_cache/
 # Backups
 backups/
 
-# Sanctum logs
+# EnclaveFree logs
 logs/
 
 # Claude plans

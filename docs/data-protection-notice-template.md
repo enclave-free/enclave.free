@@ -1,7 +1,7 @@
 # Data Protection Notice Template
 
 Last updated: 2026-02-08
-Scope: Instance-level notice text for Sanctum operators
+Scope: Instance-level notice text for EnclaveFree operators
 
 Use this template as a starting point for the notice you display to end users.
 Edit for your jurisdiction, infrastructure, and actual data practices.
@@ -10,7 +10,7 @@ Edit for your jurisdiction, infrastructure, and actual data practices.
 
 Suggested in-product text:
 
-> This Sanctum instance is operated by [Organization/Admin Name].  
+> This EnclaveFree instance is operated by [Organization/Admin Name].  
 > Data collection, encryption settings, AI sharing settings, and retention are configured by this instance administrator.  
 > Some fields may be stored in plaintext or shared with AI services if enabled by this administrator.
 
@@ -19,13 +19,13 @@ Suggested in-product text:
 Suggested policy text:
 
 1. **Who operates this instance**
-   [Organization/Admin Name] operates this Sanctum deployment and is responsible for decisions about what data is collected and how it is processed.
+   [Organization/Admin Name] operates this EnclaveFree deployment and is responsible for decisions about what data is collected and how it is processed.
 
 2. **What data is collected**
    We collect account and profile data that users submit, plus usage and operational metadata needed to run the service.
 
 3. **Encryption and plaintext configuration**
-   Sanctum supports encrypted profile fields by default, but field-level settings are controlled by the instance administrator.
+   EnclaveFree supports encrypted profile fields by default, but field-level settings are controlled by the instance administrator.
    Depending on configuration, some fields may be stored in plaintext.
 
 4. **AI and third-party processing**

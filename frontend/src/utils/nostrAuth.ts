@@ -8,7 +8,7 @@ import type { WindowNostr } from 'nostr-tools/nip07'
 import { API_BASE } from '../types/onboarding'
 import i18n from '../i18n'
 
-// Sanctum admin auth event kind (ephemeral auth event)
+// EnclaveFree admin auth event kind (ephemeral auth event)
 const AUTH_KIND = 22242
 
 // Extend window type for NIP-07

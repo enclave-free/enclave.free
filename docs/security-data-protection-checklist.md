@@ -1,7 +1,7 @@
 # Security and Data Protection Checklist
 
 Last updated: 2026-02-08
-Scope: Sanctum current repository state (code/config review)
+Scope: EnclaveFree current repository state (code/config review)
 
 ## Purpose
 
@@ -221,7 +221,7 @@ Use this checklist to:
 
 ## 6. Configuration and Environment Hardening Checklist
 
-- [ ] Set production env indicator (`SANCTUM_ENV=production` or equivalent).
+- [ ] Set production env indicator (`ENCLAVEFREE_ENV=production` or equivalent).
 - [ ] Ensure `MOCK_EMAIL=false` in production.
 - [ ] Ensure simulation flags are disabled:
   - `SIMULATE_USER_AUTH=false`
@@ -331,7 +331,7 @@ Use these guardrails while security fixes are in progress:
   - `POST /vector-search` unauthenticated: `401`
   - `GET /query/session/test-session-id` unauthenticated: `401`
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
-  - Published ports: `sanctum-backend` and `sanctum-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
+  - Published ports: `enclavefree-backend` and `enclavefree-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
   - Smoke endpoints: `GET /test` -> `200`, `GET /llm/test` -> `200`
 - S4-5 / S4-6 manual browser verification (DevTools):
   - S4-5 (localStorage token removal): Inspected `Application > Local Storage` in browser DevTools after login — no auth/session tokens stored in `localStorage`. Tokens are transmitted exclusively via secure cookies.

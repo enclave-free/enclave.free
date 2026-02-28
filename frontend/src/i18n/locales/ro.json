@@ -57,7 +57,7 @@
       "checkSpam": "Nu îl vezi? Verifică folderul de spam.",
       "simulateMagicLink": "Simulează clic pe linkul magic",
       "forTesting": "În scopuri de testare:",
-      "dataProtectionTitle": "Cum protejează Sanctum datele tale",
+      "dataProtectionTitle": "Cum protejează EnclaveFree datele tale",
       "noPasswordTitle": "Fără parole stocate",
       "noPasswordBody": "Te autentifici cu un link de unică folosință, deci nu există nicio bază de date cu parole de administrat.",
       "expiringLinkTitle": "Linkuri de autentificare cu durată scurtă",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Criptare implicită",
       "encryptionBody": "Câmpurile profilului sunt criptate implicit, dar administratorul acestei instanțe controlează setările la nivel de câmp și poate permite ca anumite date să fie stocate sau partajate diferit.",
       "adminControlNotice": "Gestionarea datelor este configurată de administratorul acestei instanțe, inclusiv ce poate fi stocat necriptat sau partajat cu instrumente AI.",
-      "noWarrantyNotice": "Software-ul Sanctum este furnizat ca atare, fără garanție. Utilizarea acestei instanțe este supusă politicilor administratorului.",
+      "noWarrantyNotice": "Software-ul EnclaveFree este furnizat ca atare, fără garanție. Utilizarea acestei instanțe este supusă politicilor administratorului.",
       "retentionNotice": "Termenele de păstrare și ștergere a datelor sunt stabilite de administratorul acestei instanțe. Contactați-i pentru solicitări de acces, corectare sau ștergere."
     },
     "verify": {
@@ -243,7 +243,7 @@
       "subtitle": "Personalizează brandingul și experiența de înregistrare a utilizatorilor",
       "branding": "Branding instanță",
       "displayName": "Nume afișat",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Acest nume apare în antet și pe ecranele de înregistrare",
       "icon": "Pictogramă",
       "accentColor": "Culoare accent",
@@ -618,7 +618,7 @@
       "tipRequiredDesc": "Marchează câmpurile ca obligatorii doar când ai cu adevărat nevoie de date. Prea multe câmpuri obligatorii pot descuraja înregistrările.",
       "tipsDesc": "Reține aceste lucruri când configurezi utilizatorii.",
       "tipsTitle": "Sfaturi și bune practici",
-      "twoTier": "Sanctum folosește un sistem cu două niveluri: Tipurile de utilizatori definesc categoriile de utilizatori, iar Câmpurile de utilizatori definesc ce date colectează fiecare tip.",
+      "twoTier": "EnclaveFree folosește un sistem cu două niveluri: Tipurile de utilizatori definesc categoriile de utilizatori, iar Câmpurile de utilizatori definesc ce date colectează fiecare tip.",
       "typesDesc": "Creează tipuri de utilizatori când ai nevoie de formulare de înregistrare sau permisiuni diferite pentru grupuri diferite.",
       "typesExample": "Exemplu: O universitate ar putea crea tipurile 'Student', 'Facultate' și 'Personal', fiecare cu propriile câmpuri.",
       "typesTitle": "Înțelegerea tipurilor de utilizatori",
@@ -637,7 +637,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "Pictogramă asistent AI",
       "assistantNameLabel": "Nume afișat asistent",
-      "assistantNamePlaceholder": "ex., Sanctum AI",
+      "assistantNamePlaceholder": "ex., EnclaveFree AI",
       "bubbleShadowLabel": "Adaugă umbră subtilă bulelor",
       "bubbleStyleDesc": "Alege forma și adâncimea bulelor de chat.",
       "bubbleStylePill": "Capsulă",
@@ -777,7 +777,7 @@
   },
   "adminDashboard": {
     "title": "Panou de administrare",
-    "subtitle": "Gestionează configurația instanței tale Sanctum",
+    "subtitle": "Gestionează configurația instanței tale EnclaveFree",
     "instance": "Configurare instanță",
     "instanceDesc": "Personalizează brandingul, tipurile de utilizatori și câmpurile de înregistrare",
     "ai": "Configurare AI",
@@ -943,9 +943,9 @@
       "goToPage": "Accesează pagina",
       "howItWorks": "Cum funcționează încorporarea:",
       "modelPerfDesc": "Modelele mai mari produc rezultate mai precise, dar necesită mai multă memorie și timp. Alege în funcție de hardware-ul tău.",
-      "modelsDesc": "Sanctum suportă trei modele de încorporare multilingvă E5. Toate rulează local — nicio dată nu părăsește serverul tău.",
+      "modelsDesc": "EnclaveFree suportă trei modele de încorporare multilingvă E5. Toate rulează local — nicio dată nu părăsește serverul tău.",
       "modelsTitle": "Modele de încorporare",
-      "overviewDesc": "Încorporările convertesc textul în vectori numerici pentru căutare semantică. Sanctum folosește un model de încorporare local pentru a procesa documente și interogări.",
+      "overviewDesc": "Încorporările convertesc textul în vectori numerici pentru căutare semantică. EnclaveFree folosește un model de încorporare local pentru a procesa documente și interogări.",
       "overviewNote": "Schimbarea modelului de încorporare necesită re-ingestia tuturor documentelor pentru ca vectorii să fie consistenți.",
       "overviewTitle": "Prezentare generală încorporare",
       "performanceDesc": "Aceste setări controlează comportamentul de încărcare a modelului și pot afecta timpul de pornire și utilizarea resurselor.",
@@ -1002,9 +1002,9 @@
       "exampleConfig": "Exemplu de configurare",
       "goToPage": "Accesează pagina",
       "mapleExtra": "Setați LLM_API_KEY la cheia dumneavoastră Maple de la {{mapleSignupUrl}}. Cheile LLM_* se mapează la aliasuri MAPLE_*.",
-      "mapleHint": "Maple este backend-ul LLM standard pentru Sanctum.",
+      "mapleHint": "Maple este backend-ul LLM standard pentru EnclaveFree.",
       "modelField": "LLM_MODEL — identificator model Maple (de exemplu: kimi-k2.5).",
-      "overviewDesc": "Sanctum utilizează Maple ca serviciu LLM standard. Maple oferă un API compatibil OpenAI sub capotă.",
+      "overviewDesc": "EnclaveFree utilizează Maple ca serviciu LLM standard. Maple oferă un API compatibil OpenAI sub capotă.",
       "overviewTitle": "Prezentare generală Maple LLM",
       "providerField": "LLM_PROVIDER — fixat la \"maple\" pentru compatibilitate."
     },
@@ -1056,7 +1056,7 @@
       "overviewDesc": "Setările SSL controlează comportamentul HTTPS, căile certificatelor și încrederea în proxy. Valorile implicite sunt configurate pentru dezvoltare locală HTTP.",
       "overviewNote": "Dacă implementezi în spatele unui proxy invers care gestionează TLS, este posibil să nu fie nevoie să configurezi deloc acestea.",
       "overviewTitle": "Prezentare generală SSL și HTTPS",
-      "overviewWhen": "Configurează acestea când implementezi în producție cu HTTPS, sau când plasezi Sanctum în spatele unui proxy care termină TLS.",
+      "overviewWhen": "Configurează acestea când implementezi în producție cu HTTPS, sau când plasezi EnclaveFree în spatele unui proxy care termină TLS.",
       "proxiesDesc": "TRUSTED_PROXIES — listă separată prin virgulă de adrese IP sau intervale CIDR pentru proxy-uri inverse. Backend-ul le folosește pentru a determina IP-ul real al clientului."
     },
     "storageHelp": {
@@ -1067,11 +1067,11 @@
       "backupStep2Desc": "Fă o copie de siguranță a directorului de încărcări. Acesta conține fișierele originale pe care utilizatorii le-au încărcat.",
       "backupStep3": "3. Snapshot Qdrant",
       "backupStep3Desc": "Folosește panoul Qdrant sau API-ul pentru a crea un snapshot al colecției pentru datele tale vectoriale.",
-      "backupsDesc": "Sanctum stochează datele în trei locuri — toate trei ar trebui să fie salvate împreună pentru o restaurare completă.",
+      "backupsDesc": "EnclaveFree stochează datele în trei locuri — toate trei ar trebui să fie salvate împreună pentru o restaurare completă.",
       "backupsTitle": "Copii de siguranță și migrare",
-      "backupsWhen": "Fă copii de siguranță în mod regulat, și întotdeauna înainte de a actualiza Sanctum sau de a schimba căile de stocare.",
+      "backupsWhen": "Fă copii de siguranță în mod regulat, și întotdeauna înainte de a actualiza EnclaveFree sau de a schimba căile de stocare.",
       "goToPage": "Accesează pagina",
-      "overviewDesc": "Setările de stocare controlează unde persistă datele Sanctum — baza de date SQLite, fișierele încărcate și încorporările vectoriale.",
+      "overviewDesc": "Setările de stocare controlează unde persistă datele EnclaveFree — baza de date SQLite, fișierele încărcate și încorporările vectoriale.",
       "overviewTitle": "Prezentare generală stocare",
       "overviewWhen": "Ajustează acestea când montezi volume externe, schimbi locațiile de backup sau te conectezi la o instanță Qdrant la distanță.",
       "pathsDesc": "Aceste căi sunt în interiorul containerului Docker. Mapează-le la directoarele gazdei folosind volume Docker pentru persistență.",
@@ -1179,7 +1179,7 @@
       "completedDesc": "Toate fragmentele sunt încorporate și stocate în baza de date vectorială. Documentul este gata pentru căutare.",
       "failedProcessing": "Documentul afișează 'eșuat'",
       "failedProcessingFix": "Verifică jurnalele backend-ului pentru erori. Cauze comune: fișier corupt, codificare nesuportată sau modelul de încorporare nu este încărcat.",
-      "formatsDesc": "Sanctum acceptă următoarele tipuri de fișiere pentru ingestie în baza de cunoștințe.",
+      "formatsDesc": "EnclaveFree acceptă următoarele tipuri de fișiere pentru ingestie în baza de cunoștințe.",
       "formatsTitle": "Formate suportate",
       "mdDesc": ".md — Fișiere Markdown. Titlurile și structura sunt păstrate în timpul fragmentării.",
       "noChunks": "Finalizat dar zero fragmente",
@@ -1217,7 +1217,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Configurați inferența Maple",
-      "hint": "Sanctum utilizează exclusiv Maple pentru inferența LLM. Configurați modelul Maple/setările API aici. Modificările necesită o repornire."
+      "hint": "EnclaveFree utilizează exclusiv Maple pentru inferența LLM. Configurați modelul Maple/setările API aici. Modificările necesită o repornire."
     },
     "embedding": {
       "label": "Procesare text",
@@ -1380,7 +1380,7 @@
     "SQLITE_PATH": {
       "label": "Fișier bază de date",
       "description": "Calea către baza de date SQLite",
-      "hint": "Calea către fișierul bazei de date SQLite. Implicit: /data/sanctum.db"
+      "hint": "Calea către fișierul bazei de date SQLite. Implicit: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Folder încărcări",
@@ -1444,7 +1444,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "Selector înregistrare DNS DKIM",
-      "hint": "Prefix selector pentru înregistrarea TXT DKIM. Implicit: sanctum. Furnizorul dumneavoastră poate solicita un selector specific.",
+      "hint": "Prefix selector pentru înregistrarea TXT DKIM. Implicit: enclavefree. Furnizorul dumneavoastră poate solicita un selector specific.",
       "label": "Selector DKIM"
     },
     "DMARC_POLICY": {
@@ -1515,7 +1515,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Instanța ta Sanctum este configurată și pregătită. Acum poți configura setările, încărca documente și începe să interoghezi baza de cunoștințe.",
+      "body": "Instanța ta EnclaveFree este configurată și pregătită. Acum poți configura setările, încărca documente și începe să interoghezi baza de cunoștințe.",
       "note": "Folosește un dispozitiv de încredere — cheia ta Nostr este folosită pentru a cripta și decripta datele sensibile ale instanței.",
       "title": "Totul este pregătit!"
     },
@@ -1531,10 +1531,10 @@
       "feature3Desc": "Gestionează utilizatorii, configurează modelele AI, încarcă documente și controlează fiecare aspect al instanței tale.",
       "feature3Title": "Control deplin",
       "label": "Bun venit",
-      "title": "Revendică-ți Sanctum-ul"
+      "title": "Revendică-ți EnclaveFree-ul"
     },
     "step2": {
-      "body": "Sanctum folosește Nostr (NIP-07) pentru autentificare. Vei avea nevoie de o extensie de browser care gestionează cheile tale Nostr.",
+      "body": "EnclaveFree folosește Nostr (NIP-07) pentru autentificare. Vei avea nevoie de o extensie de browser care gestionează cheile tale Nostr.",
       "flow1": "Deschide extensia ta Nostr (Alby, nos2x etc.)",
       "flow2": "Aprobă cererea de conexiune",
       "flow3": "Cheia ta publică este înregistrată ca administrator",
@@ -1547,7 +1547,7 @@
       "title": "Pregătit de conectare"
     },
     "subtitle": "Configurează-ți baza de cunoștințe privată în câțiva pași.",
-    "title": "Bine ai venit la Sanctum"
+    "title": "Bine ai venit la EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1770,7 +1770,7 @@
       "row_s_returned_b2299c": "rând(uri) returnat(e)",
       "row_s_returned_columns_cb3f95": "rând(uri) returnat(e) | Coloane:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Execută interogări Cypher doar pentru citire împotriva grafului de cunoștințe.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Sistem RAG Privat pentru Cunoștințe Curate",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Sistem RAG Privat pentru Cunoștințe Curate",
       "score_92d190": "| scor:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Căutați direct în stocarea vectorială fără generare LLM. Utile pentru depanarea încorporărilor.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Cercetează Qdrant pentru cunoștințe semantic similare",

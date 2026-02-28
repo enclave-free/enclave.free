@@ -220,7 +220,7 @@ export function AdminOnboarding() {
 
       // Track if this is a new admin (first time setup)
       if (result.is_new) {
-        localStorage.setItem('sanctum_admin_is_new', 'true')
+        localStorage.setItem('enclavefree_admin_is_new', 'true')
       }
 
       setState('success')
@@ -251,7 +251,7 @@ export function AdminOnboarding() {
     localStorage.setItem(STORAGE_KEYS.ADMIN_PUBKEY, mockPubkey)
     // Note: Mock mode has no valid session token - admin API calls will fail with 401
     // Use a real Nostr extension for full functionality
-    localStorage.setItem('sanctum_admin_is_new', 'true')
+    localStorage.setItem('enclavefree_admin_is_new', 'true')
     setState('success')
 
     // Redirect after showing success
@@ -332,7 +332,7 @@ export function AdminOnboarding() {
             <div className="space-y-6 stagger-children">
               <div className="text-center">
                 <h3 className="heading-md mb-2">
-                  {t('instanceInitiation.step1.title', 'Claim your Sanctum')}
+                  {t('instanceInitiation.step1.title', 'Claim your EnclaveFree')}
                 </h3>
                 <p className="text-sm text-text-secondary leading-relaxed max-w-sm mx-auto">
                   {t(

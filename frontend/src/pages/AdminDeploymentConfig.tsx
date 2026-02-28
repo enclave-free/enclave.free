@@ -699,7 +699,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'yourname@gmail.com',
         SMTP_PASS: 'xxxx-xxxx-xxxx-xxxx',
-        SMTP_FROM: 'Sanctum <yourname@gmail.com>',
+        SMTP_FROM: 'EnclaveFree <yourname@gmail.com>',
       },
     },
     {
@@ -710,7 +710,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'postmaster@mg.yourdomain.com',
         SMTP_PASS: 'your-mailgun-smtp-password',
-        SMTP_FROM: 'Sanctum <noreply@mg.yourdomain.com>',
+        SMTP_FROM: 'EnclaveFree <noreply@mg.yourdomain.com>',
       },
     },
     {
@@ -721,7 +721,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'apikey',
         SMTP_PASS: 'SG.your-sendgrid-api-key',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'EnclaveFree <noreply@yourdomain.com>',
       },
     },
     {
@@ -732,7 +732,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'your-ses-smtp-username',
         SMTP_PASS: 'your-ses-smtp-password',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'EnclaveFree <noreply@yourdomain.com>',
       },
     },
     {
@@ -743,7 +743,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'your-server-api-token',
         SMTP_PASS: 'your-server-api-token',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'EnclaveFree <noreply@yourdomain.com>',
       },
     },
     {
@@ -754,7 +754,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'your-brevo-login-email',
         SMTP_PASS: 'your-smtp-key',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'EnclaveFree <noreply@yourdomain.com>',
       },
     },
   ]
@@ -767,7 +767,7 @@ export function AdminDeploymentConfig() {
     },
     {
       title: 'Maple',
-      hint: t('adminDeployment.llmHelp.mapleHint', 'Maple is the only supported AI backend for Sanctum.'),
+      hint: t('adminDeployment.llmHelp.mapleHint', 'Maple is the only supported AI backend for EnclaveFree.'),
       config: {
         LLM_PROVIDER: 'maple',
         LLM_API_KEY: 'your-api-key-from-trymaple.ai',
@@ -1843,7 +1843,7 @@ export function AdminDeploymentConfig() {
                 {LLM_HELP_PAGES[llmHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.llmHelp.overviewDesc', 'Sanctum uses Maple as its standard LLM service. Maple exposes an OpenAI-compatible API while keeping configuration Maple-first in the product.')}
+                      {t('adminDeployment.llmHelp.overviewDesc', 'EnclaveFree uses Maple as its standard LLM service. Maple exposes an OpenAI-compatible API while keeping configuration Maple-first in the product.')}
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
@@ -2262,7 +2262,7 @@ export function AdminDeploymentConfig() {
                 {STORAGE_HELP_PAGES[storageHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.storageHelp.overviewDesc', 'This section controls where Sanctum keeps its data. Most admins can leave the defaults. You only need to change this if you’re moving files to a new disk, using external storage, or running on custom infrastructure.')}
+                      {t('adminDeployment.storageHelp.overviewDesc', 'This section controls where EnclaveFree keeps its data. Most admins can leave the defaults. You only need to change this if you’re moving files to a new disk, using external storage, or running on custom infrastructure.')}
                     </p>
                     <div className="bg-surface-overlay border border-border rounded-lg p-3">
                       <p className="text-xs text-text-muted">
@@ -2303,7 +2303,7 @@ export function AdminDeploymentConfig() {
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">SQLITE_PATH</p>
-                        <p className="text-xs text-text-muted mt-1">/data/sanctum.db</p>
+                        <p className="text-xs text-text-muted mt-1">/data/enclavefree.db</p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">UPLOADS_DIR</p>
@@ -2337,7 +2337,7 @@ export function AdminDeploymentConfig() {
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-xs text-text-muted mb-1">{t('adminDeployment.storageHelp.backupStep2', '2) Copy data')}</p>
-                        <p className="text-xs text-text">{t('adminDeployment.storageHelp.backupStep2Desc', 'Copy /data/sanctum.db and /uploads, plus Qdrant snapshots if used.')}</p>
+                        <p className="text-xs text-text">{t('adminDeployment.storageHelp.backupStep2Desc', 'Copy /data/enclavefree.db and /uploads, plus Qdrant snapshots if used.')}</p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-xs text-text-muted mb-1">{t('adminDeployment.storageHelp.backupStep3', '3) Restore')}</p>

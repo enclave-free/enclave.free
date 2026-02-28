@@ -1,5 +1,5 @@
 """
-Sanctum Admin Key Migration Module
+EnclaveFree Admin Key Migration Module
 Handles migration of admin private key by re-encrypting all user PII.
 """
 
@@ -15,7 +15,7 @@ from nostr import verify_event_signature, AUTH_EVENT_KIND, MAX_EVENT_AGE_SECONDS
 from models import NostrEvent, SuccessResponse
 from encryption import nip04_encrypt
 
-logger = logging.getLogger("sanctum.key_migration")
+logger = logging.getLogger("enclavefree.key_migration")
 
 router = APIRouter(prefix="/admin/key-migration", tags=["key-migration"])
 

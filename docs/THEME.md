@@ -1,4 +1,4 @@
-# Sanctum Design System
+# EnclaveFree Design System
 
 A warm, human-centered design system for privacy-first applications, inspired by Linear, Notion, and Vercel.
 
@@ -6,7 +6,7 @@ A warm, human-centered design system for privacy-first applications, inspired by
 
 ## Overview
 
-Sanctum uses a **Warm Neutral** color palette with configurable **accent colors**, designed to feel trustworthy, secure, and professional. The system supports both light and dark modes with smooth transitions.
+EnclaveFree uses a **Warm Neutral** color palette with configurable **accent colors**, designed to feel trustworthy, secure, and professional. The system supports both light and dark modes with smooth transitions.
 
 **Key characteristics:**
 - Warm stone grays (not cold blue-grays)
@@ -407,7 +407,7 @@ For primary buttons, use the accent shadow utility:
 
 ### How It Works
 
-1. Theme preference stored in `localStorage` as `sanctum-theme`
+1. Theme preference stored in `localStorage` as `enclavefree-theme`
 2. Values: `'light'`, `'dark'`, or `'system'`
 3. System preference detected via `prefers-color-scheme`
 4. Dark mode applied by adding `.dark` class to `<html>`

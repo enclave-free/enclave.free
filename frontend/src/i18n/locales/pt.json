@@ -57,7 +57,7 @@
       "checkSpam": "Não encontrou? Verifique sua pasta de spam.",
       "simulateMagicLink": "Simular clique no link mágico",
       "forTesting": "Para fins de teste:",
-      "dataProtectionTitle": "Como o Sanctum protege seus dados",
+      "dataProtectionTitle": "Como o EnclaveFree protege seus dados",
       "noPasswordTitle": "Sem senhas armazenadas",
       "noPasswordBody": "Você entra com um link de uso único, então não há banco de senhas para administrar.",
       "expiringLinkTitle": "Links de acesso de curta duração",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Criptografia por padrão",
       "encryptionBody": "Os campos de perfil são criptografados por padrão, mas o administrador desta instância controla as configurações por campo e pode permitir que determinados dados sejam armazenados ou compartilhados de forma diferente.",
       "adminControlNotice": "O tratamento de dados é configurado pelo administrador desta instância, incluindo o que pode ser armazenado sem criptografia ou compartilhado com ferramentas de IA.",
-      "noWarrantyNotice": "O software Sanctum é fornecido no estado em que se encontra, sem garantia. O uso desta instância está sujeito às políticas do administrador.",
+      "noWarrantyNotice": "O software EnclaveFree é fornecido no estado em que se encontra, sem garantia. O uso desta instância está sujeito às políticas do administrador.",
       "retentionNotice": "Os prazos de retenção e exclusão de dados são definidos pelo administrador desta instância. Entre em contato com eles para solicitações de acesso, correção ou exclusão."
     },
     "verify": {
@@ -257,7 +257,7 @@
       "subtitle": "Personalize a marca e a experiência de integração do usuário",
       "branding": "Marca da instância",
       "displayName": "Nome de exibição",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Este nome aparece no cabeçalho e nas telas de integração",
       "icon": "Ícone",
       "accentColor": "Cor de destaque",
@@ -603,7 +603,7 @@
       "tipRequiredDesc": "Marque campos como obrigatórios apenas quando você realmente precisa dos dados. Muitos campos obrigatórios podem desencorajar cadastros.",
       "tipsDesc": "Tenha isso em mente ao configurar sua configuração de usuário.",
       "tipsTitle": "Dicas e Boas Práticas",
-      "twoTier": "Sanctum usa um sistema de dois níveis: Tipos de Usuário definem categorias de usuários, e Campos de Usuário definem quais dados cada tipo coleta.",
+      "twoTier": "EnclaveFree usa um sistema de dois níveis: Tipos de Usuário definem categorias de usuários, e Campos de Usuário definem quais dados cada tipo coleta.",
       "typesDesc": "Crie tipos de usuário quando precisar de formulários de cadastro ou permissões diferentes para grupos distintos.",
       "typesExample": "Exemplo: Uma universidade pode criar os tipos 'Estudante', 'Docente' e 'Funcionário', cada um com seus próprios campos.",
       "typesTitle": "Entendendo os Tipos de Usuário",
@@ -622,7 +622,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "Ícone de assistente de IA",
       "assistantNameLabel": "Nome de exibição do assistente",
-      "assistantNamePlaceholder": "ex: Sanctum AI",
+      "assistantNamePlaceholder": "ex: EnclaveFree AI",
       "bubbleShadowLabel": "Adicionar sombra sutil às bolhas",
       "bubbleStyleDesc": "Escolha a forma e profundidade das bolhas de chat.",
       "bubbleStylePill": "Pílula",
@@ -728,7 +728,7 @@
   },
   "adminDashboard": {
     "title": "Painel de Administração",
-    "subtitle": "Gerencie a configuração da sua instância Sanctum",
+    "subtitle": "Gerencie a configuração da sua instância EnclaveFree",
     "instance": "Configuração da Instância",
     "instanceDesc": "Personalize a marca, tipos de usuário e campos de integração",
     "ai": "Configuração de IA",
@@ -899,9 +899,9 @@
       "goToPage": "Ir para a página",
       "howItWorks": "Como o embedding funciona:",
       "modelPerfDesc": "Modelos maiores produzem resultados mais precisos, mas exigem mais memória e tempo. Escolha com base no seu hardware.",
-      "modelsDesc": "Sanctum suporta três modelos de embedding E5 multilíngues. Todos rodam localmente — nenhum dado sai do seu servidor.",
+      "modelsDesc": "EnclaveFree suporta três modelos de embedding E5 multilíngues. Todos rodam localmente — nenhum dado sai do seu servidor.",
       "modelsTitle": "Modelos de Embedding",
-      "overviewDesc": "Embeddings convertem texto em vetores numéricos para busca semântica. Sanctum usa um modelo de embedding local para processar documentos e consultas.",
+      "overviewDesc": "Embeddings convertem texto em vetores numéricos para busca semântica. EnclaveFree usa um modelo de embedding local para processar documentos e consultas.",
       "overviewNote": "Alterar o modelo de embedding requer re-ingestão de todos os documentos para que os vetores sejam consistentes.",
       "overviewTitle": "Visão Geral de Embedding",
       "performanceDesc": "Essas configurações controlam o comportamento de carregamento do modelo e podem afetar o tempo de inicialização e uso de recursos.",
@@ -958,9 +958,9 @@
       "exampleConfig": "Exemplo de configuração",
       "goToPage": "Ir para a página",
       "mapleExtra": "Defina LLM_API_KEY para sua chave Maple de {{mapleSignupUrl}}. As chaves LLM_* mapeiam para os apelidos MAPLE_*.",
-      "mapleHint": "Maple é o backend LLM padrão para Sanctum.",
+      "mapleHint": "Maple é o backend LLM padrão para EnclaveFree.",
       "modelField": "LLM_MODEL — identificador do modelo Maple (por exemplo: kimi-k2.5).",
-      "overviewDesc": "Sanctum usa Maple como seu serviço LLM padrão. Maple fornece uma API compatível com OpenAI por baixo dos panos.",
+      "overviewDesc": "EnclaveFree usa Maple como seu serviço LLM padrão. Maple fornece uma API compatível com OpenAI por baixo dos panos.",
       "overviewTitle": "Visão Geral do LLM Maple",
       "providerField": "LLM_PROVIDER — fixado em \"maple\" para compatibilidade."
     },
@@ -1012,7 +1012,7 @@
       "overviewDesc": "As configurações de SSL controlam o comportamento HTTPS, caminhos de certificados e confiança em proxies. Os padrões são configurados para desenvolvimento local com HTTP.",
       "overviewNote": "Se você implantar atrás de um proxy reverso que trata TLS, pode não precisar configurar nada aqui.",
       "overviewTitle": "Visão Geral de SSL e HTTPS",
-      "overviewWhen": "Configure estes ao implantar em produção com HTTPS, ou ao colocar Sanctum atrás de um proxy que termina TLS.",
+      "overviewWhen": "Configure estes ao implantar em produção com HTTPS, ou ao colocar EnclaveFree atrás de um proxy que termina TLS.",
       "proxiesDesc": "TRUSTED_PROXIES — lista separada por vírgulas de endereços IP ou intervalos CIDR para proxies reversos. O backend usa estes para determinar o IP real do cliente."
     },
     "storageHelp": {
@@ -1023,11 +1023,11 @@
       "backupStep2Desc": "Faça backup do diretório de uploads. Ele contém os arquivos originais que os usuários enviaram.",
       "backupStep3": "3. Faça snapshot do Qdrant",
       "backupStep3Desc": "Use o painel ou API do Qdrant para criar um snapshot da coleção para seus dados vetoriais.",
-      "backupsDesc": "Sanctum armazena dados em três lugares — todos os três devem ter backup juntos para uma restauração completa.",
+      "backupsDesc": "EnclaveFree armazena dados em três lugares — todos os três devem ter backup juntos para uma restauração completa.",
       "backupsTitle": "Backups e Migração",
-      "backupsWhen": "Faça backup regularmente, e sempre antes de atualizar o Sanctum ou alterar caminhos de armazenamento.",
+      "backupsWhen": "Faça backup regularmente, e sempre antes de atualizar o EnclaveFree ou alterar caminhos de armazenamento.",
       "goToPage": "Ir para a página",
-      "overviewDesc": "As configurações de armazenamento controlam onde o Sanctum persiste dados — o banco de dados SQLite, arquivos enviados e embeddings vetoriais.",
+      "overviewDesc": "As configurações de armazenamento controlam onde o EnclaveFree persiste dados — o banco de dados SQLite, arquivos enviados e embeddings vetoriais.",
       "overviewTitle": "Visão Geral do Armazenamento",
       "overviewWhen": "Ajuste ao montar volumes externos, alterar locais de backup ou conectar a uma instância remota do Qdrant.",
       "pathsDesc": "Esses caminhos estão dentro do contêiner Docker. Mapeie-os para diretórios do host usando volumes Docker para persistência.",
@@ -1164,7 +1164,7 @@
       "completedDesc": "Todos os fragmentos foram incorporados e armazenados no banco de dados vetorial. O documento está pronto para busca.",
       "failedProcessing": "O documento mostra 'falhou'",
       "failedProcessingFix": "Verifique os logs do backend para erros. Causas comuns: arquivo corrompido, codificação não suportada ou o modelo de embedding não está carregado.",
-      "formatsDesc": "Sanctum aceita os seguintes tipos de arquivo para ingestão na base de conhecimento.",
+      "formatsDesc": "EnclaveFree aceita os seguintes tipos de arquivo para ingestão na base de conhecimento.",
       "formatsTitle": "Formatos Suportados",
       "mdDesc": ".md — Arquivos Markdown. Títulos e estrutura são preservados durante a fragmentação.",
       "noChunks": "Concluído mas com zero fragmentos",
@@ -1202,7 +1202,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Configurar inferência Maple",
-      "hint": "Sanctum é somente Maple para inferência LLM. Configure as configurações de modelo/API Maple aqui. As alterações exigem uma reinicialização."
+      "hint": "EnclaveFree é somente Maple para inferência LLM. Configure as configurações de modelo/API Maple aqui. As alterações exigem uma reinicialização."
     },
     "embedding": {
       "label": "Processamento de Texto",
@@ -1365,7 +1365,7 @@
     "SQLITE_PATH": {
       "label": "Arquivo de banco de dados",
       "description": "Caminho para o banco de dados SQLite",
-      "hint": "Caminho para o arquivo de banco de dados SQLite. Padrão: /data/sanctum.db"
+      "hint": "Caminho para o arquivo de banco de dados SQLite. Padrão: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Pasta de uploads",
@@ -1429,7 +1429,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "Seletor de registro DNS DKIM",
-      "hint": "Prefixo do seletor para seu registro DKIM TXT. Padrão: sanctum. Seu provedor pode exigir um seletor específico.",
+      "hint": "Prefixo do seletor para seu registro DKIM TXT. Padrão: enclavefree. Seu provedor pode exigir um seletor específico.",
       "label": "Seletor DKIM"
     },
     "DMARC_POLICY": {
@@ -1500,7 +1500,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Sua instância Sanctum está configurada e pronta. Agora você pode definir configurações, enviar documentos e começar a consultar sua base de conhecimento.",
+      "body": "Sua instância EnclaveFree está configurada e pronta. Agora você pode definir configurações, enviar documentos e começar a consultar sua base de conhecimento.",
       "note": "Use um dispositivo confiável — sua chave Nostr é usada para criptografar e descriptografar dados sensíveis da instância.",
       "title": "Tudo pronto!"
     },
@@ -1516,10 +1516,10 @@
       "feature3Desc": "Gerencie usuários, configure modelos de IA, envie documentos e controle cada aspecto da sua instância.",
       "feature3Title": "Controle total",
       "label": "Boas-vindas",
-      "title": "Reivindique seu Sanctum"
+      "title": "Reivindique seu EnclaveFree"
     },
     "step2": {
-      "body": "Sanctum usa Nostr (NIP-07) para autenticação. Você precisará de uma extensão de navegador que gerencie suas chaves Nostr.",
+      "body": "EnclaveFree usa Nostr (NIP-07) para autenticação. Você precisará de uma extensão de navegador que gerencie suas chaves Nostr.",
       "flow1": "Abra sua extensão Nostr (Alby, nos2x, etc.)",
       "flow2": "Aprove a solicitação de conexão",
       "flow3": "Sua chave pública é registrada como administrador",
@@ -1532,7 +1532,7 @@
       "title": "Pronto para conectar"
     },
     "subtitle": "Configure sua base de conhecimento privada em poucos passos.",
-    "title": "Bem-vindo ao Sanctum"
+    "title": "Bem-vindo ao EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1755,7 +1755,7 @@
       "row_s_returned_b2299c": "linha(s) retornada(s)",
       "row_s_returned_columns_cb3f95": "linha(s) retornada(s) | Colunas:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Execute consultas Cypher somente leitura no grafo de conhecimento.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Sistema RAG Privado para Conhecimento Curado",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Sistema RAG Privado para Conhecimento Curado",
       "score_92d190": "| pontuação:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Pesquise o armazenamento de vetor diretamente sem geração LLM. Útil para depurar embeddings.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Pesquisa Qdrant por conhecimento semanticamente similar",

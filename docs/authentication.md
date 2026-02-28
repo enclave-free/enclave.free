@@ -1,6 +1,6 @@
-# Sanctum Authentication
+# EnclaveFree Authentication
 
-This document describes the two authentication systems in Sanctum:
+This document describes the two authentication systems in EnclaveFree:
 - **Admin Authentication** - Nostr NIP-07 signed events
 - **User Authentication** - Magic link email
 
@@ -8,7 +8,7 @@ For how sessions are stored and secured (cookies, bearer tokens, CSRF), see `doc
 
 ## Overview
 
-Sanctum uses a two-tier authentication model:
+EnclaveFree uses a two-tier authentication model:
 
 | Role | Auth Method | Purpose |
 |------|-------------|---------|
@@ -69,7 +69,7 @@ Admin auth uses a custom Nostr event kind `22242`:
 ```
 
 **Requirements:**
-- Kind must be `22242` (Sanctum admin auth)
+- Kind must be `22242` (EnclaveFree admin auth)
 - Must have `["action", "admin_auth"]` tag
 - Timestamp must be within 5 minutes of server time
 - Signature must be valid BIP-340 Schnorr
@@ -393,7 +393,7 @@ If `MOCK_EMAIL=true` (or `MOCK_SMTP=true` via deployment config), the response n
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USER` | (empty) | SMTP username |
 | `SMTP_PASS` | (empty) | SMTP password |
-| `SMTP_FROM` | `Sanctum <noreply@localhost>` | From address for emails |
+| `SMTP_FROM` | `EnclaveFree <noreply@localhost>` | From address for emails |
 
 ### Development Mode (Mock Email)
 
@@ -425,7 +425,7 @@ SMTP_HOST=smtp.yourdomain.com
 SMTP_PORT=587
 SMTP_USER=noreply@yourdomain.com
 SMTP_PASS=your-smtp-password
-SMTP_FROM=Sanctum <noreply@yourdomain.com>
+SMTP_FROM=EnclaveFree <noreply@yourdomain.com>
 FRONTEND_URL=https://yourdomain.com
 ```
 
@@ -441,28 +441,28 @@ Auth secrets should not be stored in localStorage. Browser authentication is coo
 
 | Key | Description |
 |-----|-------------|
-| `sanctum_admin_pubkey` | Admin Nostr pubkey (after NIP-07 auth) |
-| `sanctum_user_email` | Verified user email |
-| `sanctum_user_name` | User display name |
-| `sanctum_user_type_id` | Selected user type during onboarding |
-| `sanctum_user_profile` | Complete user profile (JSON) |
-| `sanctum_user_approved` | Whether user is approved ("true"/"false") |
-| `sanctum_custom_fields` | Cached custom field definitions (JSON) |
-| `sanctum_pending_email` | Email awaiting magic link verification |
-| `sanctum_pending_name` | Name awaiting verification |
+| `enclavefree_admin_pubkey` | Admin Nostr pubkey (after NIP-07 auth) |
+| `enclavefree_user_email` | Verified user email |
+| `enclavefree_user_name` | User display name |
+| `enclavefree_user_type_id` | Selected user type during onboarding |
+| `enclavefree_user_profile` | Complete user profile (JSON) |
+| `enclavefree_user_approved` | Whether user is approved ("true"/"false") |
+| `enclavefree_custom_fields` | Cached custom field definitions (JSON) |
+| `enclavefree_pending_email` | Email awaiting magic link verification |
+| `enclavefree_pending_name` | Name awaiting verification |
 
 Legacy keys:
 
 Some older builds used localStorage for tokens. If you see these keys, clear them:
 
-- `sanctum_admin_session_token`
-- `sanctum_session_token`
+- `enclavefree_admin_session_token`
+- `enclavefree_session_token`
 
 ---
 
 ## User Approval Workflow
 
-Sanctum supports optional manual approval of new users before they can access the system.
+EnclaveFree supports optional manual approval of new users before they can access the system.
 
 ### How It Works
 
@@ -503,7 +503,7 @@ When enabled:
   - Generates a fake 64-character hex pubkey
   - Bypasses real NIP-07 extension signing
   - Note: Admin API calls will fail (no valid session token)
-- **`SIMULATE_USER_AUTH=true`**: `/verify` can succeed without a token using `sanctum_pending_email` (testing only)
+- **`SIMULATE_USER_AUTH=true`**: `/verify` can succeed without a token using `enclavefree_pending_email` (testing only)
 
 These flags can be set via the deployment config UI (`/admin/deployment`) or environment variables.
 Database values take precedence over env vars. Keep them disabled in production.

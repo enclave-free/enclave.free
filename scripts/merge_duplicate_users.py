@@ -176,8 +176,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--db",
-        default=os.getenv("SQLITE_PATH", "/data/sanctum.db"),
-        help="Path to sanctum SQLite database (default: $SQLITE_PATH or /data/sanctum.db).",
+        default=os.getenv("SQLITE_PATH", "/data/enclavefree.db"),
+        help="Path to enclavefree SQLite database (default: $SQLITE_PATH or /data/enclavefree.db).",
     )
     parser.add_argument(
         "--apply",

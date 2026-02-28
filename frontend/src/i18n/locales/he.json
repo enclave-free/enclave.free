@@ -57,7 +57,7 @@
       "checkSpam": "לא רואה? בדוק את תיקיית הספאם.",
       "simulateMagicLink": "הדמיית לחיצה על קישור קסם",
       "forTesting": "למטרות בדיקה:",
-      "dataProtectionTitle": "כיצד Sanctum מגן על הנתונים שלך",
+      "dataProtectionTitle": "כיצד EnclaveFree מגן על הנתונים שלך",
       "noPasswordTitle": "ללא סיסמאות מאוחסנות",
       "noPasswordBody": "אתה מתחבר באמצעות קישור חד-פעמי, כך שאין מסד נתונים של סיסמאות לנהל.",
       "expiringLinkTitle": "קישורי כניסה קצרי מועד",
@@ -65,7 +65,7 @@
       "encryptionTitle": "הצפנה כברירת מחדל",
       "encryptionBody": "שדות הפרופיל מוצפנים כברירת מחדל, אך מנהל המופע הזה שולט בהגדרות ברמת השדה ועשוי לאפשר לנתונים נבחרים להישמר או להיות משותפים בצורה שונה.",
       "adminControlNotice": "הטיפול בנתונים נקבע על ידי מנהל המופע הזה, כולל מה שעשוי להישמר ללא הצפנה או להיות משותף עם כלי AI.",
-      "noWarrantyNotice": "תוכנת Sanctum מסופקת כמות שהיא ללא אחריות. השימוש במופע זה כפוף למדיניות המנהל.",
+      "noWarrantyNotice": "תוכנת EnclaveFree מסופקת כמות שהיא ללא אחריות. השימוש במופע זה כפוף למדיניות המנהל.",
       "retentionNotice": "זמני שמירת נתונים ומחיקתם נקבעים על ידי מנהל מופע זה. צור עמם קשר לבקשות גישה, תיקון או מחיקה."
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "התאם אישית את המיתוג וחוויית ההרשמה של המשתמשים",
       "branding": "מיתוג המופע",
       "displayName": "שם תצוגה",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "שם זה מופיע בכותרת ובמסכי ההרשמה",
       "icon": "אייקון",
       "accentColor": "צבע הדגשה",
@@ -601,7 +601,7 @@
       "tipRequiredDesc": "סמן שדות כחובה רק כאשר אתה באמת צריך את הנתונים. יותר מדי שדות חובה עלולים להרתיע מהרשמה.",
       "tipsDesc": "זכור את אלה בעת הגדרת תצורת המשתמש שלך.",
       "tipsTitle": "טיפים ושיטות עבודה מומלצות",
-      "twoTier": "Sanctum משתמש במערכת דו-שכבתית: סוגי משתמשים מגדירים קטגוריות של משתמשים, ושדות משתמש מגדירים אילו נתונים כל סוג אוסף.",
+      "twoTier": "EnclaveFree משתמש במערכת דו-שכבתית: סוגי משתמשים מגדירים קטגוריות של משתמשים, ושדות משתמש מגדירים אילו נתונים כל סוג אוסף.",
       "typesDesc": "צור סוגי משתמשים כאשר אתה צריך טפסי הרשמה או הרשאות שונים לקבוצות שונות.",
       "typesExample": "דוגמה: אוניברסיטה עשויה ליצור סוגים של 'סטודנט', 'סגל אקדמי' ו'צוות', כל אחד עם השדות שלו.",
       "typesTitle": "הבנת סוגי משתמשים",
@@ -620,7 +620,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "אייקון עוזר AI",
       "assistantNameLabel": "שם תצוגה של העוזר",
-      "assistantNamePlaceholder": "לדוגמה, Sanctum AI",
+      "assistantNamePlaceholder": "לדוגמה, EnclaveFree AI",
       "bubbleShadowLabel": "הוסף צל עדין לבועת צ'אט",
       "bubbleStyleDesc": "בחר את הצורה והעומק של בועות הצ'אט.",
       "bubbleStylePill": "גלולה",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "לוח בקרה למנהלים",
-    "subtitle": "נהל את הגדרות מופע Sanctum שלך",
+    "subtitle": "נהל את הגדרות מופע EnclaveFree שלך",
     "instance": "הגדרות מופע",
     "instanceDesc": "התאם אישית מיתוג, סוגי משתמשים ושדות הרשמה",
     "ai": "הגדרות AI",
@@ -926,9 +926,9 @@
       "goToPage": "עבור לעמוד",
       "howItWorks": "כיצד פועלת ההטמעה:",
       "modelPerfDesc": "מודלים גדולים יותר מפיקים תוצאות מדויקות יותר אך דורשים יותר זיכרון וזמן. בחר בהתאם לחומרה שלך.",
-      "modelsDesc": "Sanctum תומך בשלושה מודלי הטמעת E5 רב-לשוניים. כולם רצים מקומית — שום נתון לא עוזב את השרת שלך.",
+      "modelsDesc": "EnclaveFree תומך בשלושה מודלי הטמעת E5 רב-לשוניים. כולם רצים מקומית — שום נתון לא עוזב את השרת שלך.",
       "modelsTitle": "מודלי הטמעה",
-      "overviewDesc": "הטמעות ממירות טקסט לוקטורים מספריים לחיפוש סמנטי. Sanctum משתמש במודל הטמעה מקומי לעיבוד מסמכים ושאילתות.",
+      "overviewDesc": "הטמעות ממירות טקסט לוקטורים מספריים לחיפוש סמנטי. EnclaveFree משתמש במודל הטמעה מקומי לעיבוד מסמכים ושאילתות.",
       "overviewNote": "שינוי מודל ההטמעה מחייב קליטה מחדש של כל המסמכים כדי שהוקטורים יהיו עקביים.",
       "overviewTitle": "סקירת הטמעה",
       "performanceDesc": "הגדרות אלו שולטות בהתנהגות טעינת המודל ויכולות להשפיע על זמן ההפעלה ושימוש במשאבים.",
@@ -985,9 +985,9 @@
       "exampleConfig": "דוגמת הגדרה",
       "goToPage": "עבור לעמוד",
       "mapleExtra": "הגדר LLM_API_KEY למפתח ה-Maple שלך מ-{{mapleSignupUrl}}. מקשי LLM_* ממפים לכינויי MAPLE_*.",
-      "mapleHint": "Maple הוא ה-backend הסטנדרטי של LLM עבור Sanctum.",
+      "mapleHint": "Maple הוא ה-backend הסטנדרטי של LLM עבור EnclaveFree.",
       "modelField": "LLM_MODEL — מזהה מודל Maple (לדוגמה: kimi-k2.5).",
-      "overviewDesc": "Sanctum משתמש ב-Maple כשירות ה-LLM הסטנדרטי שלו. Maple מספקת API תואם OpenAI מתחת למכסה המנוע.",
+      "overviewDesc": "EnclaveFree משתמש ב-Maple כשירות ה-LLM הסטנדרטי שלו. Maple מספקת API תואם OpenAI מתחת למכסה המנוע.",
       "overviewTitle": "סקירה כללית של Maple LLM",
       "providerField": "LLM_PROVIDER — קבוע ל-\"maple\" לתאימות."
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "הגדרות SSL שולטות בהתנהגות HTTPS, נתיבי אישורים ואמון Proxy. ברירות המחדל מוגדרות לפיתוח HTTP מקומי.",
       "overviewNote": "אם אתה פורס מאחורי שרת proxy הפוך שמטפל ב-TLS, ייתכן שלא תצטרך להגדיר אלה כלל.",
       "overviewTitle": "סקירת SSL ו-HTTPS",
-      "overviewWhen": "הגדר אלה בעת פריסה לייצור עם HTTPS, או בעת הצבת Sanctum מאחורי proxy מסיים TLS.",
+      "overviewWhen": "הגדר אלה בעת פריסה לייצור עם HTTPS, או בעת הצבת EnclaveFree מאחורי proxy מסיים TLS.",
       "proxiesDesc": "TRUSTED_PROXIES — רשימה מופרדת בפסיקים של כתובות IP או טווחי CIDR עבור שרתי proxy הפוכים. השרת משתמש באלה כדי לקבוע את כתובת ה-IP האמיתית של הלקוח."
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "גבה את תיקיית ההעלאות. היא מכילה את הקבצים המקוריים שהמשתמשים העלו.",
       "backupStep3": "3. צור תמונת מצב של Qdrant",
       "backupStep3Desc": "השתמש בלוח הבקרה או ב-API של Qdrant כדי ליצור תמונת מצב של האוסף עבור נתוני הוקטורים שלך.",
-      "backupsDesc": "Sanctum מאחסן נתונים בשלושה מקומות — כל השלושה צריכים להיות מגובים יחד לשחזור מלא.",
+      "backupsDesc": "EnclaveFree מאחסן נתונים בשלושה מקומות — כל השלושה צריכים להיות מגובים יחד לשחזור מלא.",
       "backupsTitle": "גיבויים והעברה",
-      "backupsWhen": "גבה באופן קבוע, ותמיד לפני שדרוג Sanctum או שינוי נתיבי אחסון.",
+      "backupsWhen": "גבה באופן קבוע, ותמיד לפני שדרוג EnclaveFree או שינוי נתיבי אחסון.",
       "goToPage": "עבור לעמוד",
-      "overviewDesc": "הגדרות אחסון שולטות היכן Sanctum שומר נתונים — מסד הנתונים SQLite, קבצים שהועלו והטמעות וקטוריות.",
+      "overviewDesc": "הגדרות אחסון שולטות היכן EnclaveFree שומר נתונים — מסד הנתונים SQLite, קבצים שהועלו והטמעות וקטוריות.",
       "overviewTitle": "סקירת אחסון",
       "overviewWhen": "התאם אלה בעת עיגון נפחים חיצוניים, שינוי מיקומי גיבוי או חיבור למופע Qdrant מרוחק.",
       "pathsDesc": "נתיבים אלה נמצאים בתוך מכולת Docker. מפה אותם לתיקיות מארח באמצעות Docker volumes להתמדה.",
@@ -1162,7 +1162,7 @@
       "completedDesc": "כל הקטעים הוטמעו ונשמרו במסד הנתונים הוקטורי. המסמך מוכן לחיפוש.",
       "failedProcessing": "המסמך מציג 'נכשל'",
       "failedProcessingFix": "בדוק את יומני השרת לשגיאות. סיבות נפוצות: קובץ פגום, קידוד לא נתמך, או שמודל ההטמעה לא נטען.",
-      "formatsDesc": "Sanctum מקבל את סוגי הקבצים הבאים לקליטה לבסיס הידע.",
+      "formatsDesc": "EnclaveFree מקבל את סוגי הקבצים הבאים לקליטה לבסיס הידע.",
       "formatsTitle": "פורמטים נתמכים",
       "mdDesc": ".md — קבצי Markdown. כותרות ומבנה נשמרים במהלך החלוקה לקטעים.",
       "noChunks": "הושלם אך אפס קטעים",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "הגדר את הסקת Maple",
-      "hint": "Sanctum הוא Maple-בלבד עבור הסקת LLM. הגדר את מודל Maple/הגדרות API כאן. שינויים דורשים הפעלה מחדש."
+      "hint": "EnclaveFree הוא Maple-בלבד עבור הסקת LLM. הגדר את מודל Maple/הגדרות API כאן. שינויים דורשים הפעלה מחדש."
     },
     "embedding": {
       "label": "עיבוד טקסט",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "קובץ מסד נתונים",
       "description": "נתיב למסד נתונים SQLite",
-      "hint": "נתיב לקובץ מסד הנתונים SQLite. ברירת מחדל: /data/sanctum.db"
+      "hint": "נתיב לקובץ מסד הנתונים SQLite. ברירת מחדל: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "תיקיית העלאות",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "בורר רשומת DKIM DNS",
-      "hint": "קידומת בורר עבור רשומת DKIM TXT שלך. ברירת מחדל: sanctum. ייתכן שהספק שלך ידרוש בורר ספציפי.",
+      "hint": "קידומת בורר עבור רשומת DKIM TXT שלך. ברירת מחדל: enclavefree. ייתכן שהספק שלך ידרוש בורר ספציפי.",
       "label": "בורר DKIM"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "מופע Sanctum שלך מוגדר ומוכן. כעת תוכל להגדיר הגדרות, להעלות מסמכים ולהתחיל לשאול שאלות על בסיס הידע שלך.",
+      "body": "מופע EnclaveFree שלך מוגדר ומוכן. כעת תוכל להגדיר הגדרות, להעלות מסמכים ולהתחיל לשאול שאלות על בסיס הידע שלך.",
       "note": "השתמש במכשיר מהימן — מפתח ה-Nostr שלך משמש להצפנה ופענוח של נתוני מופע רגישים.",
       "title": "הכל מוכן!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "נהל משתמשים, הגדר מודלי AI, העלה מסמכים ושלוט בכל היבט של המופע שלך.",
       "feature3Title": "שליטה מלאה",
       "label": "ברוך הבא",
-      "title": "תפוס את ה-Sanctum שלך"
+      "title": "תפוס את ה-EnclaveFree שלך"
     },
     "step2": {
-      "body": "Sanctum משתמש ב-Nostr (NIP-07) לאימות. תצטרך הרחבת דפדפן שמנהלת את מפתחות ה-Nostr שלך.",
+      "body": "EnclaveFree משתמש ב-Nostr (NIP-07) לאימות. תצטרך הרחבת דפדפן שמנהלת את מפתחות ה-Nostr שלך.",
       "flow1": "פתח את הרחבת Nostr שלך (Alby, nos2x וכו')",
       "flow2": "אשר את בקשת החיבור",
       "flow3": "המפתח הציבורי שלך נרשם כמנהל",
@@ -1530,7 +1530,7 @@
       "title": "מוכן להתחברות"
     },
     "subtitle": "הגדר את בסיס הידע הפרטי שלך בכמה צעדים.",
-    "title": "ברוך הבא ל-Sanctum"
+    "title": "ברוך הבא ל-EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "שורה(ות) הוחזרו",
       "row_s_returned_columns_cb3f95": "שורה(ות) הוחזרו | עמודות:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "הרץ שאילתות Cypher לקריאה בלבד כנגד גרף הידע.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — מערכת RAG פרטית לידע מנוהל",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — מערכת RAG פרטית לידע מנוהל",
       "score_92d190": "| ציון:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "חפש ישירות בחנות הווקטורית ללא יצירת LLM. שימושי לניפוי באגים בהטמעות.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "מחפש ב-Qdrant ידע דומה סמנטית",

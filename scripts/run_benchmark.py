@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sanctum Lo-Fi Benchmark Runner
+EnclaveFree Lo-Fi Benchmark Runner
 
 Usage:
     python run_benchmark.py              # Run all 5 sessions
@@ -265,7 +265,7 @@ def run_session(session_key: str, session_data: dict) -> list:
             sources = response.get("sources", [])
             search_term = response.get("search_term")
             
-            print(f"📥 SANCTUM ({elapsed:.1f}s): {actual[:100]}...")
+            print(f"📥 ENCLAVEFREE ({elapsed:.1f}s): {actual[:100]}...")
             print(f"   Sources: {len(sources)}")
             
             # Auto-search if enabled
@@ -330,7 +330,7 @@ def main():
     
     # Header
     print("\n" + "=" * 70)
-    print("SANCTUM LO-FI BENCHMARK")
+    print("ENCLAVEFREE LO-FI BENCHMARK")
     print("=" * 70)
     
     metadata = get_metadata()

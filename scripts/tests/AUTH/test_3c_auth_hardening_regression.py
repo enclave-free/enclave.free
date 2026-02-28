@@ -43,7 +43,7 @@ COMPOSE_ARGS = [
     "-f", "docker-compose.infra.yml",
     "-f", "docker-compose.app.yml",
 ]
-DEFAULT_DB_PATH = "/data/sanctum.db"
+DEFAULT_DB_PATH = "/data/enclavefree.db"
 DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 ADMIN_SESSION_SALT = "admin-session"
 
@@ -669,8 +669,8 @@ def main() -> None:
     merged_env_values = {**repo_env_values, **backend_env_values}
 
     secret_key = resolve_runtime_secret_key(backend_env_values, repo_env_values, args.db_path)
-    csrf_cookie_name = env_setting("CSRF_COOKIE_NAME", "sanctum_csrf", backend_env_values, repo_env_values)
-    admin_cookie_name = env_setting("ADMIN_SESSION_COOKIE_NAME", "sanctum_admin_session", backend_env_values, repo_env_values)
+    csrf_cookie_name = env_setting("CSRF_COOKIE_NAME", "enclavefree_csrf", backend_env_values, repo_env_values)
+    admin_cookie_name = env_setting("ADMIN_SESSION_COOKIE_NAME", "enclavefree_admin_session", backend_env_values, repo_env_values)
     allowed_origin = resolve_allowed_origin(merged_env_values)
 
     print("=" * 70)

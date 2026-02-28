@@ -57,7 +57,7 @@
       "checkSpam": "Kan du ikke se det? Tjek din spammappe.",
       "simulateMagicLink": "Simuler klik på magisk link",
       "forTesting": "Til testformål:",
-      "dataProtectionTitle": "Sådan beskytter Sanctum dine data",
+      "dataProtectionTitle": "Sådan beskytter EnclaveFree dine data",
       "noPasswordTitle": "Ingen gemte adgangskoder",
       "noPasswordBody": "Du logger ind med et engangslink, så der er ingen adgangskodedatabase at administrere.",
       "expiringLinkTitle": "Kortlivede login-links",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Kryptering som standard",
       "encryptionBody": "Profilfelter er krypteret som standard, men denne instans' administrator styrer indstillinger på feltniveau og kan tillade, at udvalgte data gemmes eller deles anderledes.",
       "adminControlNotice": "Datahåndtering konfigureres af denne instans' administrator, herunder hvad der kan gemmes ukrypteret eller deles med AI-værktøjer.",
-      "noWarrantyNotice": "Sanctum-software leveres som den er uden garanti. Brug af denne instans er underlagt administratorens politikker.",
+      "noWarrantyNotice": "EnclaveFree-software leveres som den er uden garanti. Brug af denne instans er underlagt administratorens politikker.",
       "retentionNotice": "Datalagring og sletningstidslinjer indstilles af denne instansadministrator. Kontakt dem for adgang, rettelse eller sletningsanmodninger."
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "Tilpas branding og brugeronboarding-oplevelsen",
       "branding": "Instans-branding",
       "displayName": "Visningsnavn",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Dette navn vises i headeren og på onboarding-skærme",
       "icon": "Ikon",
       "accentColor": "Accentfarve",
@@ -601,7 +601,7 @@
       "tipRequiredDesc": "Marker kun felter som påkrævet, når du virkelig har brug for dataene. For mange påkrævede felter kan afskrække tilmeldinger.",
       "tipsDesc": "Hav disse i tankerne, når du opsætter din brugerkonfiguration.",
       "tipsTitle": "Tips og bedste praksis",
-      "twoTier": "Sanctum bruger et to-lags system: Brugertyper definerer kategorier af brugere, og Brugerfelter definerer, hvilke data hver type indsamler.",
+      "twoTier": "EnclaveFree bruger et to-lags system: Brugertyper definerer kategorier af brugere, og Brugerfelter definerer, hvilke data hver type indsamler.",
       "typesDesc": "Opret brugertyper, når du har brug for forskellige registreringsformularer eller tilladelser til forskellige grupper.",
       "typesExample": "Eksempel: Et universitet kunne oprette typerne 'Studerende', 'Fakultet' og 'Personale', hver med deres egne felter.",
       "typesTitle": "Forstå brugertyper",
@@ -620,7 +620,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "AI-assistentikon",
       "assistantNameLabel": "Assistentens visningsnavn",
-      "assistantNamePlaceholder": "f.eks. Sanctum AI",
+      "assistantNamePlaceholder": "f.eks. EnclaveFree AI",
       "bubbleShadowLabel": "Tilføj diskret bobleskygge",
       "bubbleStyleDesc": "Vælg form og dybde af chatbobler.",
       "bubbleStylePill": "Pille",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "Admin-dashboard",
-    "subtitle": "Administrer din Sanctum-instanskonfiguration",
+    "subtitle": "Administrer din EnclaveFree-instanskonfiguration",
     "instance": "Instanskonfiguration",
     "instanceDesc": "Tilpas branding, brugertyper og onboarding-felter",
     "ai": "AI-konfiguration",
@@ -926,9 +926,9 @@
       "goToPage": "Gå til side",
       "howItWorks": "Sådan fungerer embedding:",
       "modelPerfDesc": "Større modeller giver mere nøjagtige resultater, men kræver mere hukommelse og tid. Vælg baseret på din hardware.",
-      "modelsDesc": "Sanctum understøtter tre flersprogede E5 embedding-modeller. Alle kører lokalt — ingen data forlader din server.",
+      "modelsDesc": "EnclaveFree understøtter tre flersprogede E5 embedding-modeller. Alle kører lokalt — ingen data forlader din server.",
       "modelsTitle": "Embedding-modeller",
-      "overviewDesc": "Embeddings konverterer tekst til numeriske vektorer til semantisk søgning. Sanctum bruger en lokal embedding-model til at behandle dokumenter og forespørgsler.",
+      "overviewDesc": "Embeddings konverterer tekst til numeriske vektorer til semantisk søgning. EnclaveFree bruger en lokal embedding-model til at behandle dokumenter og forespørgsler.",
       "overviewNote": "Ændring af embedding-modellen kræver genindtagelse af alle dokumenter, så vektorerne er konsistente.",
       "overviewTitle": "Oversigt over embedding",
       "performanceDesc": "Disse indstillinger styrer modelindlæsningsadfærd og kan påvirke opstartstid og ressourceforbrug.",
@@ -985,9 +985,9 @@
       "exampleConfig": "Eksempelkonfiguration",
       "goToPage": "Gå til side",
       "mapleExtra": "Indstil LLM_API_KEY til din Maple-nøgle fra {{mapleSignupUrl}}. LLM_*-nøgler svarer til MAPLE_*-aliasser.",
-      "mapleHint": "Maple er den eneste LLM-backend for Sanctum.",
+      "mapleHint": "Maple er den eneste LLM-backend for EnclaveFree.",
       "modelField": "LLM_MODEL — Maple model-identifikator (for eksempel: kimi-k2.5).",
-      "overviewDesc": "Sanctum bruger Maple som sin standard LLM-tjeneste. Maple tilbyder en OpenAI-kompatibel API under motorhjelmen.",
+      "overviewDesc": "EnclaveFree bruger Maple som sin standard LLM-tjeneste. Maple tilbyder en OpenAI-kompatibel API under motorhjelmen.",
       "overviewTitle": "Maple LLM-oversigt",
       "providerField": "LLM_PROVIDER — fastsat til \"maple\" for kompatibilitet."
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "SSL-indstillinger styrer HTTPS-adfærd, certifikatstier og proxy-tillid. Standardindstillinger er konfigureret til lokal HTTP-udvikling.",
       "overviewNote": "Hvis du deployer bag en reverse proxy, der håndterer TLS, behøver du muligvis slet ikke at konfigurere disse.",
       "overviewTitle": "Oversigt over SSL og HTTPS",
-      "overviewWhen": "Konfigurer disse, når du deployer til produktion med HTTPS, eller når du placerer Sanctum bag en TLS-terminerende proxy.",
+      "overviewWhen": "Konfigurer disse, når du deployer til produktion med HTTPS, eller når du placerer EnclaveFree bag en TLS-terminerende proxy.",
       "proxiesDesc": "TRUSTED_PROXIES — kommasepareret liste over IP-adresser eller CIDR-intervaller for reverse proxyer. Backend bruger disse til at bestemme den rigtige klient-IP."
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "Tag backup af uploadmappen. Denne indeholder de originale filer, brugerne har uploadet.",
       "backupStep3": "3. Tag snapshot af Qdrant",
       "backupStep3Desc": "Brug Qdrant-dashboardet eller API'et til at oprette et samlings-snapshot til dine vektordata.",
-      "backupsDesc": "Sanctum gemmer data tre steder — alle tre bør sikkerhedskopieres sammen for en komplet gendannelse.",
+      "backupsDesc": "EnclaveFree gemmer data tre steder — alle tre bør sikkerhedskopieres sammen for en komplet gendannelse.",
       "backupsTitle": "Sikkerhedskopiering og migrering",
-      "backupsWhen": "Tag regelmæssigt backup, og altid før opgradering af Sanctum eller ændring af lagringsstier.",
+      "backupsWhen": "Tag regelmæssigt backup, og altid før opgradering af EnclaveFree eller ændring af lagringsstier.",
       "goToPage": "Gå til side",
-      "overviewDesc": "Lagringsindstillinger styrer, hvor Sanctum bevarer data — SQLite-databasen, uploadede filer og vektorembeddings.",
+      "overviewDesc": "Lagringsindstillinger styrer, hvor EnclaveFree bevarer data — SQLite-databasen, uploadede filer og vektorembeddings.",
       "overviewTitle": "Lagringsoversigt",
       "overviewWhen": "Juster disse, når du monterer eksterne volumener, ændrer backup-placeringer eller forbinder til en ekstern Qdrant-instans.",
       "pathsDesc": "Disse stier er inde i Docker-containeren. Map dem til værtsbiblioteker ved hjælp af Docker-volumener for bestandighed.",
@@ -1162,7 +1162,7 @@
       "completedDesc": "Alle dele er embeddet og gemt i vektordatabasen. Dokumentet er klar til søgning.",
       "failedProcessing": "Dokumentet viser 'mislykket'",
       "failedProcessingFix": "Tjek backend-logfilerne for fejl. Almindelige årsager: beskadiget fil, ikke-understøttet encoding eller embedding-modellen er ikke indlæst.",
-      "formatsDesc": "Sanctum accepterer følgende filtyper til indtagelse i vidensbasen.",
+      "formatsDesc": "EnclaveFree accepterer følgende filtyper til indtagelse i vidensbasen.",
       "formatsTitle": "Understøttede formater",
       "mdDesc": ".md — Markdown-filer. Overskrifter og struktur bevares under opdeling.",
       "noChunks": "Fuldført, men nul dele",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Konfigurer Maple inferens",
-      "hint": "Sanctum er kun Maple-baseret for LLM-inferens. Konfigurer Maple-model/API-indstillinger her. Ændringer kræver en genstart."
+      "hint": "EnclaveFree er kun Maple-baseret for LLM-inferens. Konfigurer Maple-model/API-indstillinger her. Ændringer kræver en genstart."
     },
     "embedding": {
       "label": "Tekstbehandling",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "Databasefil",
       "description": "Sti til SQLite-database",
-      "hint": "Sti til SQLite-databasefilen. Standard: /data/sanctum.db"
+      "hint": "Sti til SQLite-databasefilen. Standard: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Uploadmappe",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "DKIM DNS-postvælger",
-      "hint": "Vælgerpræfiks for din DKIM TXT-post. Standard: sanctum. Din udbyder kan kræve en specifik vælger.",
+      "hint": "Vælgerpræfiks for din DKIM TXT-post. Standard: enclavefree. Din udbyder kan kræve en specifik vælger.",
       "label": "DKIM-vælger"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Din Sanctum-instans er sat op og klar. Du kan nu konfigurere indstillinger, uploade dokumenter og begynde at forespørge din vidensbase.",
+      "body": "Din EnclaveFree-instans er sat op og klar. Du kan nu konfigurere indstillinger, uploade dokumenter og begynde at forespørge din vidensbase.",
       "note": "Brug en betroet enhed — din Nostr-nøgle bruges til at kryptere og dekryptere følsomme instansdata.",
       "title": "Du er klar!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "Administrer brugere, konfigurer AI-modeller, upload dokumenter og kontroller alle aspekter af din instans.",
       "feature3Title": "Fuld kontrol",
       "label": "Velkommen",
-      "title": "Gør krav på din Sanctum"
+      "title": "Gør krav på din EnclaveFree"
     },
     "step2": {
-      "body": "Sanctum bruger Nostr (NIP-07) til godkendelse. Du skal bruge en browserudvidelse, der administrerer dine Nostr-nøgler.",
+      "body": "EnclaveFree bruger Nostr (NIP-07) til godkendelse. Du skal bruge en browserudvidelse, der administrerer dine Nostr-nøgler.",
       "flow1": "Åbn din Nostr-udvidelse (Alby, nos2x osv.)",
       "flow2": "Godkend forbindelsesanmodningen",
       "flow3": "Din offentlige nøgle registreres som administrator",
@@ -1530,7 +1530,7 @@
       "title": "Klar til at forbinde"
     },
     "subtitle": "Opsæt din private vidensbase på nogle få trin.",
-    "title": "Velkommen til Sanctum"
+    "title": "Velkommen til EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "række(r) returneret",
       "row_s_returned_columns_cb3f95": "række(r) returneret | Kolonner:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Kør skrivebeskyttede Cypher-forespørgsler mod vidensgrafen.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Privat RAG-system til kurateret viden",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Privat RAG-system til kurateret viden",
       "score_92d190": "| score:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Søg direkte i vektorlageret uden LLM-generering. Nyttig til fejlfinding af indlejringer.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Søger i Qdrant efter semantisk lignende viden",

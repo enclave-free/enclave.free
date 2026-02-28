@@ -68,7 +68,7 @@ class MapleProvider(LLMProvider):
                 # Config loader unavailable or failed - keep existing config
                 if not isinstance(e, ImportError):
                     import logging
-                    logging.getLogger("sanctum.llm.maple").warning(f"Config refresh failed, using cached values: {e}")
+                    logging.getLogger("enclavefree.llm.maple").warning(f"Config refresh failed, using cached values: {e}")
 
     @property
     def name(self) -> str:

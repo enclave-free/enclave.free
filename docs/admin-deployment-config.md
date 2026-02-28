@@ -66,7 +66,7 @@ If you edit any deployment setting after validating, the banner is marked out of
 
 ### Maple LLM
 
-Sanctum is Maple-only for LLM inference. Use these keys:
+EnclaveFree is Maple-only for LLM inference. Use these keys:
 - `LLM_PROVIDER` (`maple` only; compatibility key)
 - `LLM_API_URL`
 - `LLM_MODEL`
@@ -97,7 +97,7 @@ curl -X PUT http://localhost:8000/admin/deployment/config/LLM_MODEL \
   -d '{"value":"kimi-k2.5"}'
 ```
 
-If `LLM_API_KEY` is not set in deployment config, Sanctum still falls back to `.env` Maple keys (`MAPLE_API_KEY`).
+If `LLM_API_KEY` is not set in deployment config, EnclaveFree still falls back to `.env` Maple keys (`MAPLE_API_KEY`).
 In the admin UI, saving `LLM_API_KEY` as empty clears the override and re-enables this fallback.
 
 ### Email + SMTP

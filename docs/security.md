@@ -1,6 +1,6 @@
 # Security
 
-This document describes Sanctum's current security model and the minimum hardening steps for an internet-exposed deployment.
+This document describes EnclaveFree's current security model and the minimum hardening steps for an internet-exposed deployment.
 
 For a more exhaustive engineering checklist, see `docs/security-data-protection-checklist.md`.
 
@@ -60,7 +60,7 @@ Credentialed cookies require explicit origins.
 
 Recommended:
 
-- `SESSION_COOKIE_SECURE=true` (or enable production mode via `SANCTUM_ENV=production`)
+- `SESSION_COOKIE_SECURE=true` (or enable production mode via `ENCLAVEFREE_ENV=production`)
 - `SESSION_COOKIE_SAMESITE=lax` (or `none` only when you understand the cross-site implications)
 - Set `SESSION_COOKIE_DOMAIN` only if you need cross-subdomain cookies.
 

@@ -1,14 +1,14 @@
-# Sanctum — Planned Architecture (Graph-First RAG)
+# EnclaveFree — Planned Architecture (Graph-First RAG)
 
-> **Note:** This document describes the **planned** architecture for Sanctum's future graph-first RAG system using Neo4j + Graphiti. For the **current** implementation (SQLite + Qdrant), see [ARCHITECTURE_CURRENT.md](./ARCHITECTURE_CURRENT.md).
+> **Note:** This document describes the **planned** architecture for EnclaveFree's future graph-first RAG system using Neo4j + Graphiti. For the **current** implementation (SQLite + Qdrant), see [ARCHITECTURE_CURRENT.md](./ARCHITECTURE_CURRENT.md).
 >
 > **Status:** Not implemented. The current MVP uses a simpler SQLite + Qdrant stack. This architecture represents a future evolution when graph-based knowledge representation becomes necessary.
 
 ---
 
-Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for building, maintaining, and querying curated knowledge bases. Sanctum is designed to be domain-agnostic and fully configurable for any use case requiring privacy, accuracy, and explainability.
+EnclaveFree is a privacy-first Retrieval-Augmented Generation (RAG) system for building, maintaining, and querying curated knowledge bases. EnclaveFree is designed to be domain-agnostic and fully configurable for any use case requiring privacy, accuracy, and explainability.
 
-Sanctum runs locally as a Docker Compose application. It combines a structured knowledge graph, a vector search index, and a secure Maple-backed LLM layer to produce grounded, explainable answers — without relying on public RAG services or opaque cloud infrastructure.
+EnclaveFree runs locally as a Docker Compose application. It combines a structured knowledge graph, a vector search index, and a secure Maple-backed LLM layer to produce grounded, explainable answers — without relying on public RAG services or opaque cloud infrastructure.
 
 ---
 
@@ -146,7 +146,7 @@ Typical relationships include:
 - Practice REQUIRES Concept or Tool
 - Concept RELATED_TO Concept
 
-These entity types and relationships are examples. Sanctum's ontology is fully configurable based on your domain's needs.
+These entity types and relationships are examples. EnclaveFree's ontology is fully configurable based on your domain's needs.
 
 Provenance is a first-class concern. All claims are expected to reference sources.
 
@@ -154,13 +154,13 @@ Provenance is a first-class concern. All claims are expected to reference source
 
 ## LLM Provider: Maple Proxy
 
-Sanctum uses **Maple Proxy** as its LLM service provider.
+EnclaveFree uses **Maple Proxy** as its LLM service provider.
 
 Maple Proxy:
 - Is OpenAI-compatible
 - Provides secure transport and execution
 - Supports **structured outputs**, which Graphiti depends on
-- Allows Sanctum to enforce JSON schemas and deterministic extraction
+- Allows EnclaveFree to enforce JSON schemas and deterministic extraction
 
 The backend treats Maple as a generation and extraction service, not a decision-maker.
 
@@ -168,7 +168,7 @@ The backend treats Maple as a generation and extraction service, not a decision-
 
 ## Local LLM Option
 
-Sanctum optionally supports **Ollama** for local inference.
+EnclaveFree optionally supports **Ollama** for local inference.
 
 Ollama can be used:
 - for local testing
@@ -209,7 +209,7 @@ This enables full rehydration of the system on another machine.
 
 ## Scope and Non-Goals
 
-Sanctum is not:
+EnclaveFree is not:
 
 - an autonomous agent
 - a generic chatbot
@@ -235,4 +235,4 @@ The current implementation is designed to allow this evolution when scale and co
 
 ## Embedding Model
 
-Sanctum uses local, open-source sentence embeddings (e.g., BGE/E5-class models) selected for universality, robustness, and CPU-friendly operation.
+EnclaveFree uses local, open-source sentence embeddings (e.g., BGE/E5-class models) selected for universality, robustness, and CPU-friendly operation.

@@ -57,7 +57,7 @@
       "checkSpam": "Nevidíte ho? Zkontrolujte složku spam.",
       "simulateMagicLink": "Simulovat kliknutí na magický odkaz",
       "forTesting": "Pro testovací účely:",
-      "dataProtectionTitle": "Jak Sanctum chrání vaše data",
+      "dataProtectionTitle": "Jak EnclaveFree chrání vaše data",
       "noPasswordTitle": "Žádná uložená hesla",
       "noPasswordBody": "Přihlašujete se jednorázovým odkazem, takže není třeba spravovat databázi hesel.",
       "expiringLinkTitle": "Krátkodobé přihlašovací odkazy",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Šifrování jako standard",
       "encryptionBody": "Pole profilu jsou ve výchozím stavu šifrována, ale správce této instance řídí nastavení na úrovni polí a může povolit, aby vybraná data byla uložena nebo sdílena jinak.",
       "adminControlNotice": "Nakládání s daty konfiguruje správce této instance, včetně toho, co může být uloženo nešifrovaně nebo sdíleno s AI nástroji.",
-      "noWarrantyNotice": "Software Sanctum je poskytován tak, jak je, bez záruky. Používání této instance podléhá pravidlům správce.",
+      "noWarrantyNotice": "Software EnclaveFree je poskytován tak, jak je, bez záruky. Používání této instance podléhá pravidlům správce.",
       "retentionNotice": "Časové osy uchovávání a mazání dat nastavuje administrátor této instance. Kontaktujte ho pro žádosti o přístup, opravu nebo smazání."
     },
     "verify": {
@@ -244,7 +244,7 @@
       "subtitle": "Přizpůsobte branding a proces registrace uživatelů",
       "branding": "Branding instance",
       "displayName": "Zobrazovaný název",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Tento název se zobrazuje v záhlaví a na obrazovkách registrace",
       "icon": "Ikona",
       "accentColor": "Akcentová barva",
@@ -609,7 +609,7 @@
       "tipRequiredDesc": "Označte pole jako povinná pouze tehdy, když data skutečně potřebujete. Příliš mnoho povinných polí může odradit od registrace.",
       "tipsDesc": "Mějte na paměti tyto tipy při nastavování konfigurace uživatelů.",
       "tipsTitle": "Tipy a osvědčené postupy",
-      "twoTier": "Sanctum používá dvouúrovňový systém: Typy uživatelů definují kategorie uživatelů a Uživatelská pole definují, jaká data každý typ shromažďuje.",
+      "twoTier": "EnclaveFree používá dvouúrovňový systém: Typy uživatelů definují kategorie uživatelů a Uživatelská pole definují, jaká data každý typ shromažďuje.",
       "typesDesc": "Vytvořte typy uživatelů, když potřebujete různé registrační formuláře nebo oprávnění pro různé skupiny.",
       "typesExample": "Příklad: Univerzita může vytvořit typy 'Student', 'Učitel' a 'Zaměstnanec', každý s vlastními poli.",
       "typesTitle": "Porozumění typům uživatelů",
@@ -628,7 +628,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "Ikona asistenta AI",
       "assistantNameLabel": "Zobrazované jméno asistenta",
-      "assistantNamePlaceholder": "např. Sanctum AI",
+      "assistantNamePlaceholder": "např. EnclaveFree AI",
       "bubbleShadowLabel": "Přidat jemný stín bubliny",
       "bubbleStyleDesc": "Zvolte tvar a hloubku bublin chatu.",
       "bubbleStylePill": "Pilulka",
@@ -768,7 +768,7 @@
   },
   "adminDashboard": {
     "title": "Panel správce",
-    "subtitle": "Spravujte konfiguraci vaší instance Sanctum",
+    "subtitle": "Spravujte konfiguraci vaší instance EnclaveFree",
     "instance": "Konfigurace instance",
     "instanceDesc": "Přizpůsobte branding, typy uživatelů a pole pro registraci",
     "ai": "Konfigurace AI",
@@ -934,9 +934,9 @@
       "goToPage": "Přejít na stránku",
       "howItWorks": "Jak embedding funguje:",
       "modelPerfDesc": "Větší modely produkují přesnější výsledky, ale vyžadují více paměti a času. Vybírejte podle svého hardwaru.",
-      "modelsDesc": "Sanctum podporuje tři vícejazyčné modely embeddingu E5. Všechny běží lokálně — žádná data neopouštějí váš server.",
+      "modelsDesc": "EnclaveFree podporuje tři vícejazyčné modely embeddingu E5. Všechny běží lokálně — žádná data neopouštějí váš server.",
       "modelsTitle": "Modely embeddingu",
-      "overviewDesc": "Embeddingy převádějí text na číselné vektory pro sémantické vyhledávání. Sanctum používá lokální model embeddingu pro zpracování dokumentů a dotazů.",
+      "overviewDesc": "Embeddingy převádějí text na číselné vektory pro sémantické vyhledávání. EnclaveFree používá lokální model embeddingu pro zpracování dokumentů a dotazů.",
       "overviewNote": "Změna modelu embeddingu vyžaduje opětovné načtení všech dokumentů, aby byly vektory konzistentní.",
       "overviewTitle": "Přehled embeddingu",
       "performanceDesc": "Tato nastavení řídí chování načítání modelu a mohou ovlivnit dobu spuštění a využití zdrojů.",
@@ -993,9 +993,9 @@
       "exampleConfig": "Příklad konfigurace",
       "goToPage": "Přejít na stránku",
       "mapleExtra": "Nastavte LLM_API_KEY na váš klíč Maple z {{mapleSignupUrl}}. Klíče LLM_* se mapují na aliasy MAPLE_*.",
-      "mapleHint": "Maple je standardní backend LLM pro Sanctum.",
+      "mapleHint": "Maple je standardní backend LLM pro EnclaveFree.",
       "modelField": "LLM_MODEL – identifikátor modelu Maple (například: kimi-k2.5).",
-      "overviewDesc": "Sanctum používá Maple jako svou standardní službu LLM. Maple poskytuje pod kapotou API kompatibilní s OpenAI.",
+      "overviewDesc": "EnclaveFree používá Maple jako svou standardní službu LLM. Maple poskytuje pod kapotou API kompatibilní s OpenAI.",
       "overviewTitle": "Přehled Maple LLM",
       "providerField": "LLM_PROVIDER – pevně nastaveno na \"maple\" pro kompatibilitu."
     },
@@ -1047,7 +1047,7 @@
       "overviewDesc": "Nastavení SSL řídí chování HTTPS, cesty k certifikátům a důvěryhodnost proxy. Výchozí nastavení jsou nakonfigurována pro lokální HTTP vývoj.",
       "overviewNote": "Pokud nasazujete za reverzní proxy, která řeší TLS, nemusíte tyto hodnoty konfigurovat vůbec.",
       "overviewTitle": "Přehled SSL a HTTPS",
-      "overviewWhen": "Nakonfigurujte tyto hodnoty při nasazení do produkce s HTTPS nebo při umístění Sanctum za proxy ukončující TLS.",
+      "overviewWhen": "Nakonfigurujte tyto hodnoty při nasazení do produkce s HTTPS nebo při umístění EnclaveFree za proxy ukončující TLS.",
       "proxiesDesc": "TRUSTED_PROXIES — seznam IP adres nebo CIDR rozsahů oddělených čárkami pro reverzní proxy. Backend je používá k určení skutečné IP klienta."
     },
     "storageHelp": {
@@ -1058,11 +1058,11 @@
       "backupStep2Desc": "Zálohujte adresář pro nahrávání. Obsahuje původní soubory, které uživatelé nahráli.",
       "backupStep3": "3. Vytvořte snímek Qdrant",
       "backupStep3Desc": "Použijte panel Qdrant nebo API pro vytvoření snímku kolekce vašich vektorových dat.",
-      "backupsDesc": "Sanctum ukládá data na tři místa — všechna tři by měla být zálohována společně pro kompletní obnovu.",
+      "backupsDesc": "EnclaveFree ukládá data na tři místa — všechna tři by měla být zálohována společně pro kompletní obnovu.",
       "backupsTitle": "Zálohy a migrace",
-      "backupsWhen": "Zálohujte pravidelně a vždy před aktualizací Sanctum nebo změnou cest úložiště.",
+      "backupsWhen": "Zálohujte pravidelně a vždy před aktualizací EnclaveFree nebo změnou cest úložiště.",
       "goToPage": "Přejít na stránku",
-      "overviewDesc": "Nastavení úložiště řídí, kam Sanctum ukládá data — SQLite databázi, nahrané soubory a vektorové embeddingy.",
+      "overviewDesc": "Nastavení úložiště řídí, kam EnclaveFree ukládá data — SQLite databázi, nahrané soubory a vektorové embeddingy.",
       "overviewTitle": "Přehled úložiště",
       "overviewWhen": "Upravte tyto hodnoty při připojování externích svazků, změně umístění záloh nebo připojování ke vzdálené instanci Qdrant.",
       "pathsDesc": "Tyto cesty jsou uvnitř Docker kontejneru. Namapujte je na adresáře hostitele pomocí Docker svazků pro trvalé uložení.",
@@ -1170,7 +1170,7 @@
       "completedDesc": "Všechny části mají embedding a jsou uloženy ve vektorové databázi. Dokument je připraven k vyhledávání.",
       "failedProcessing": "Dokument zobrazuje 'selhalo'",
       "failedProcessingFix": "Zkontrolujte logy backendu pro chyby. Časté příčiny: poškozený soubor, nepodporované kódování nebo model embeddingu není načten.",
-      "formatsDesc": "Sanctum přijímá následující typy souborů pro načtení do znalostní báze.",
+      "formatsDesc": "EnclaveFree přijímá následující typy souborů pro načtení do znalostní báze.",
       "formatsTitle": "Podporované formáty",
       "mdDesc": ".md — Soubory Markdown. Nadpisy a struktura jsou zachovány při dělení na části.",
       "noChunks": "Dokončeno, ale žádné části",
@@ -1208,7 +1208,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Konfigurace odvozování Maple",
-      "hint": "Sanctum je pouze Maple pro odvozování LLM. Zde nakonfigurujte model Maple/nastavení API. Změny vyžadují restart."
+      "hint": "EnclaveFree je pouze Maple pro odvozování LLM. Zde nakonfigurujte model Maple/nastavení API. Změny vyžadují restart."
     },
     "embedding": {
       "label": "Zpracování textu",
@@ -1371,7 +1371,7 @@
     "SQLITE_PATH": {
       "label": "Databázový soubor",
       "description": "Cesta k SQLite databázi",
-      "hint": "Cesta k souboru SQLite databáze. Výchozí: /data/sanctum.db"
+      "hint": "Cesta k souboru SQLite databáze. Výchozí: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Složka pro nahrávání",
@@ -1435,7 +1435,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "Selektor DNS záznamu DKIM",
-      "hint": "Prefix selektoru pro váš DKIM TXT záznam. Výchozí: sanctum. Váš poskytovatel může vyžadovat specifický selektor.",
+      "hint": "Prefix selektoru pro váš DKIM TXT záznam. Výchozí: enclavefree. Váš poskytovatel může vyžadovat specifický selektor.",
       "label": "DKIM selektor"
     },
     "DMARC_POLICY": {
@@ -1506,7 +1506,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Vaše instance Sanctum je nastavena a připravena. Nyní můžete konfigurovat nastavení, nahrávat dokumenty a začít dotazovat svou znalostní bázi.",
+      "body": "Vaše instance EnclaveFree je nastavena a připravena. Nyní můžete konfigurovat nastavení, nahrávat dokumenty a začít dotazovat svou znalostní bázi.",
       "note": "Používejte důvěryhodné zařízení — váš klíč Nostr se používá k šifrování a dešifrování citlivých dat instance.",
       "title": "Vše je připraveno!"
     },
@@ -1522,10 +1522,10 @@
       "feature3Desc": "Spravujte uživatele, konfigurujte modely AI, nahrávejte dokumenty a kontrolujte každý aspekt své instance.",
       "feature3Title": "Plná kontrola",
       "label": "Vítejte",
-      "title": "Převezměte svůj Sanctum"
+      "title": "Převezměte svůj EnclaveFree"
     },
     "step2": {
-      "body": "Sanctum používá Nostr (NIP-07) pro autentizaci. Budete potřebovat rozšíření prohlížeče, které spravuje vaše klíče Nostr.",
+      "body": "EnclaveFree používá Nostr (NIP-07) pro autentizaci. Budete potřebovat rozšíření prohlížeče, které spravuje vaše klíče Nostr.",
       "flow1": "Otevřete své rozšíření Nostr (Alby, nos2x atd.)",
       "flow2": "Schvalte požadavek na připojení",
       "flow3": "Váš veřejný klíč je zaregistrován jako správce",
@@ -1538,7 +1538,7 @@
       "title": "Připraveno k připojení"
     },
     "subtitle": "Nastavte svou soukromou znalostní bázi v několika krocích.",
-    "title": "Vítejte v Sanctum"
+    "title": "Vítejte v EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1761,7 +1761,7 @@
       "row_s_returned_b2299c": "vrácených řádků",
       "row_s_returned_columns_cb3f95": "vrácených řádků | Sloupce:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Spouštějte pouze pro čtení Cypher dotazy proti znalostnímu grafu.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Soukromý RAG systém pro kurátorované znalosti",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Soukromý RAG systém pro kurátorované znalosti",
       "score_92d190": "| skóre:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Prohledává vektorové úložiště přímo bez generování LLM. Užitečné pro ladění vložení.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Prohledává Qdrant pro sémanticky podobné znalosti",

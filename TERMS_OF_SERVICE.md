@@ -4,7 +4,7 @@
 
 ## 1. Acceptance of Terms
 
-By accessing, downloading, installing, or using this software ("Sanctum" or the "Software"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Software.
+By accessing, downloading, installing, or using this software ("EnclaveFree" or the "Software"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Software.
 
 ## 2. Nature of the Software
 
@@ -35,7 +35,7 @@ You agree to:
 
 ## 4. Data Protection Roles and Responsibilities
 
-Sanctum is distributed as self-hosted open-source software. The person or organization operating an instance ("Instance Administrator") determines what data is collected, how it is configured, where it is processed, and which third-party services are enabled.
+EnclaveFree is distributed as self-hosted open-source software. The person or organization operating an instance ("Instance Administrator") determines what data is collected, how it is configured, where it is processed, and which third-party services are enabled.
 
 By operating or using an instance, you acknowledge that:
 

@@ -1,6 +1,6 @@
 # SQLite RAG Document Tracking
 
-This document describes the SQLite-based persistence layer for tracking ingested documents in Sanctum's RAG pipeline.
+This document describes the SQLite-based persistence layer for tracking ingested documents in EnclaveFree's RAG pipeline.
 
 ---
 
@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS ingest_jobs (
 
 | Store | Data | Survives Rebuild? |
 |-------|------|-------------------|
-| SQLite (`/data/sanctum.db`) | Job metadata (filename, status, chunk counts) | ✅ Yes (Docker volume) |
+| SQLite (`/data/enclavefree.db`) | Job metadata (filename, status, chunk counts) | ✅ Yes (Docker volume) |
 | Qdrant (`qdrant_data` volume) | Vector embeddings for RAG search | ✅ Yes (Docker volume) |
 | Memory | Active chunk processing state | ❌ No (ephemeral) |
 

@@ -73,7 +73,7 @@
       "subtitle": "Sesuaikan branding dan pengalaman onboarding pengguna",
       "branding": "Branding Instance",
       "displayName": "Nama Tampilan",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Nama ini muncul di header dan layar onboarding",
       "icon": "Ikon",
       "accentColor": "Warna Aksen",
@@ -432,7 +432,7 @@
       "tipRequiredDesc": "Tandai field sebagai wajib hanya jika Anda benar-benar membutuhkan datanya. Terlalu banyak field wajib dapat mengurangi minat pendaftaran.",
       "tipsDesc": "Ingat hal-hal ini saat mengatur konfigurasi pengguna Anda.",
       "tipsTitle": "Tips & Praktik Terbaik",
-      "twoTier": "Sanctum menggunakan sistem dua tingkat: Jenis Pengguna mendefinisikan kategori pengguna, dan Field Pengguna mendefinisikan data apa yang dikumpulkan setiap jenis.",
+      "twoTier": "EnclaveFree menggunakan sistem dua tingkat: Jenis Pengguna mendefinisikan kategori pengguna, dan Field Pengguna mendefinisikan data apa yang dikumpulkan setiap jenis.",
       "typesDesc": "Buat jenis pengguna saat Anda memerlukan formulir pendaftaran atau izin yang berbeda untuk kelompok yang berbeda.",
       "typesExample": "Contoh: Universitas mungkin membuat jenis 'Mahasiswa', 'Dosen', dan 'Staf', masing-masing dengan field tersendiri.",
       "typesTitle": "Memahami Jenis Pengguna",
@@ -451,7 +451,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "Ikon asisten AI",
       "assistantNameLabel": "Nama tampilan asisten",
-      "assistantNamePlaceholder": "misalnya, Sanctum AI",
+      "assistantNamePlaceholder": "misalnya, EnclaveFree AI",
       "bubbleShadowLabel": "Tambahkan bayangan gelembung halus",
       "bubbleStyleDesc": "Pilih bentuk dan kedalaman gelembung obrolan.",
       "bubbleStylePill": "Pil",
@@ -613,7 +613,7 @@
       "checkSpam": "Tidak terlihat? Periksa folder spam Anda.",
       "simulateMagicLink": "Simulasikan klik tautan ajaib",
       "forTesting": "Untuk tujuan pengujian:",
-      "dataProtectionTitle": "Bagaimana Sanctum melindungi data Anda",
+      "dataProtectionTitle": "Bagaimana EnclaveFree melindungi data Anda",
       "noPasswordTitle": "Tanpa kata sandi tersimpan",
       "noPasswordBody": "Anda masuk dengan tautan sekali pakai, sehingga tidak ada database kata sandi yang perlu dikelola.",
       "expiringLinkTitle": "Tautan masuk berdurasi singkat",
@@ -621,7 +621,7 @@
       "encryptionTitle": "Enkripsi secara bawaan",
       "encryptionBody": "Field profil dienkripsi secara bawaan, tetapi administrator instance ini mengontrol pengaturan tingkat field dan dapat mengizinkan data tertentu disimpan atau dibagikan secara berbeda.",
       "adminControlNotice": "Penanganan data dikonfigurasi oleh administrator instance ini, termasuk data apa yang boleh disimpan tanpa enkripsi atau dibagikan dengan alat AI.",
-      "noWarrantyNotice": "Perangkat lunak Sanctum disediakan apa adanya tanpa jaminan. Penggunaan instance ini tunduk pada kebijakan administrator.",
+      "noWarrantyNotice": "Perangkat lunak EnclaveFree disediakan apa adanya tanpa jaminan. Penggunaan instance ini tunduk pada kebijakan administrator.",
       "retentionNotice": "Jangka waktu penyimpanan dan penghapusan data ditetapkan oleh administrator instans ini. Hubungi mereka untuk permintaan akses, koreksi, atau penghapusan."
     },
     "verify": {
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "Dashboard Admin",
-    "subtitle": "Kelola konfigurasi instance Sanctum Anda",
+    "subtitle": "Kelola konfigurasi instance EnclaveFree Anda",
     "instance": "Konfigurasi Instance",
     "instanceDesc": "Sesuaikan branding, tipe pengguna, dan field onboarding",
     "ai": "Konfigurasi AI",
@@ -926,9 +926,9 @@
       "goToPage": "Buka halaman",
       "howItWorks": "Cara kerja embedding:",
       "modelPerfDesc": "Model yang lebih besar menghasilkan hasil yang lebih akurat tetapi memerlukan lebih banyak memori dan waktu. Pilih berdasarkan perangkat keras Anda.",
-      "modelsDesc": "Sanctum mendukung tiga model embedding E5 multibahasa. Semuanya berjalan secara lokal — tidak ada data yang meninggalkan server Anda.",
+      "modelsDesc": "EnclaveFree mendukung tiga model embedding E5 multibahasa. Semuanya berjalan secara lokal — tidak ada data yang meninggalkan server Anda.",
       "modelsTitle": "Model Embedding",
-      "overviewDesc": "Embedding mengubah teks menjadi vektor numerik untuk pencarian semantik. Sanctum menggunakan model embedding lokal untuk memproses dokumen dan kueri.",
+      "overviewDesc": "Embedding mengubah teks menjadi vektor numerik untuk pencarian semantik. EnclaveFree menggunakan model embedding lokal untuk memproses dokumen dan kueri.",
       "overviewNote": "Mengubah model embedding memerlukan penyerapan ulang semua dokumen agar vektor konsisten.",
       "overviewTitle": "Gambaran Umum Embedding",
       "performanceDesc": "Pengaturan ini mengontrol perilaku pemuatan model dan dapat memengaruhi waktu startup dan penggunaan sumber daya.",
@@ -985,9 +985,9 @@
       "exampleConfig": "Contoh konfigurasi",
       "goToPage": "Buka halaman",
       "mapleExtra": "Setel LLM_API_KEY ke kunci Maple Anda dari {{mapleSignupUrl}}. Kunci LLM_* berpeta ke alias MAPLE_*.",
-      "mapleHint": "Maple adalah backend LLM standar untuk Sanctum.",
+      "mapleHint": "Maple adalah backend LLM standar untuk EnclaveFree.",
       "modelField": "LLM_MODEL — pengidentifikasi model Maple (misalnya: kimi-k2.5).",
-      "overviewDesc": "Sanctum menggunakan Maple sebagai layanan LLM standarnya. Maple menyediakan API yang kompatibel dengan OpenAI di balik layar.",
+      "overviewDesc": "EnclaveFree menggunakan Maple sebagai layanan LLM standarnya. Maple menyediakan API yang kompatibel dengan OpenAI di balik layar.",
       "overviewTitle": "Ikhtisar LLM Maple",
       "providerField": "LLM_PROVIDER — tetap \"maple\" untuk kompatibilitas."
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "Pengaturan SSL mengontrol perilaku HTTPS, jalur sertifikat, dan kepercayaan proxy. Default dikonfigurasi untuk pengembangan HTTP lokal.",
       "overviewNote": "Jika Anda men-deploy di belakang reverse proxy yang menangani TLS, Anda mungkin tidak perlu mengonfigurasi ini sama sekali.",
       "overviewTitle": "Gambaran Umum SSL & HTTPS",
-      "overviewWhen": "Konfigurasi ini saat men-deploy ke produksi dengan HTTPS, atau saat menempatkan Sanctum di belakang proxy yang mengakhiri TLS.",
+      "overviewWhen": "Konfigurasi ini saat men-deploy ke produksi dengan HTTPS, atau saat menempatkan EnclaveFree di belakang proxy yang mengakhiri TLS.",
       "proxiesDesc": "TRUSTED_PROXIES — daftar alamat IP atau rentang CIDR yang dipisahkan koma untuk reverse proxy. Backend menggunakan ini untuk menentukan IP klien yang sebenarnya."
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "Cadangkan direktori unggahan. Ini berisi file asli yang telah diunggah pengguna.",
       "backupStep3": "3. Snapshot Qdrant",
       "backupStep3Desc": "Gunakan dashboard atau API Qdrant untuk membuat snapshot koleksi untuk data vektor Anda.",
-      "backupsDesc": "Sanctum menyimpan data di tiga tempat — ketiganya harus dicadangkan bersama untuk pemulihan lengkap.",
+      "backupsDesc": "EnclaveFree menyimpan data di tiga tempat — ketiganya harus dicadangkan bersama untuk pemulihan lengkap.",
       "backupsTitle": "Cadangan & Migrasi",
-      "backupsWhen": "Cadangkan secara teratur, dan selalu sebelum memperbarui Sanctum atau mengubah jalur penyimpanan.",
+      "backupsWhen": "Cadangkan secara teratur, dan selalu sebelum memperbarui EnclaveFree atau mengubah jalur penyimpanan.",
       "goToPage": "Buka halaman",
-      "overviewDesc": "Pengaturan penyimpanan mengontrol tempat Sanctum menyimpan data — database SQLite, file yang diunggah, dan embedding vektor.",
+      "overviewDesc": "Pengaturan penyimpanan mengontrol tempat EnclaveFree menyimpan data — database SQLite, file yang diunggah, dan embedding vektor.",
       "overviewTitle": "Gambaran Umum Penyimpanan",
       "overviewWhen": "Sesuaikan ini saat memasang volume eksternal, mengubah lokasi cadangan, atau menghubungkan ke instance Qdrant jarak jauh.",
       "pathsDesc": "Jalur ini berada di dalam kontainer Docker. Petakan ke direktori host menggunakan volume Docker untuk persistensi.",
@@ -1162,7 +1162,7 @@
       "completedDesc": "Semua potongan telah di-embed dan disimpan di database vektor. Dokumen siap untuk pencarian.",
       "failedProcessing": "Dokumen menunjukkan 'gagal'",
       "failedProcessingFix": "Periksa log backend untuk kesalahan. Penyebab umum: file rusak, encoding tidak didukung, atau model embedding tidak dimuat.",
-      "formatsDesc": "Sanctum menerima jenis file berikut untuk diserap ke dalam basis pengetahuan.",
+      "formatsDesc": "EnclaveFree menerima jenis file berikut untuk diserap ke dalam basis pengetahuan.",
       "formatsTitle": "Format yang Didukung",
       "mdDesc": ".md — File Markdown. Heading dan struktur dipertahankan selama pemotongan.",
       "noChunks": "Selesai tetapi nol potongan",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "AI Maple",
       "description": "Konfigurasi inferensi Maple",
-      "hint": "Sanctum hanya menggunakan Maple untuk inferensi LLM. Konfigurasi pengaturan model/API Maple di sini. Perubahan memerlukan restart."
+      "hint": "EnclaveFree hanya menggunakan Maple untuk inferensi LLM. Konfigurasi pengaturan model/API Maple di sini. Perubahan memerlukan restart."
     },
     "embedding": {
       "label": "Pemrosesan Teks",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "File Database",
       "description": "Path ke database SQLite",
-      "hint": "Path ke file database SQLite. Default: /data/sanctum.db"
+      "hint": "Path ke file database SQLite. Default: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Folder Unggahan",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "Selektor catatan DNS DKIM",
-      "hint": "Prefiks selektor untuk catatan DKIM TXT Anda. Default: sanctum. Penyedia Anda mungkin memerlukan selektor tertentu.",
+      "hint": "Prefiks selektor untuk catatan DKIM TXT Anda. Default: enclavefree. Penyedia Anda mungkin memerlukan selektor tertentu.",
       "label": "Selektor DKIM"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Instance Sanctum Anda telah disiapkan dan siap digunakan. Anda sekarang dapat mengonfigurasi pengaturan, mengunggah dokumen, dan mulai mengkueri basis pengetahuan Anda.",
+      "body": "Instance EnclaveFree Anda telah disiapkan dan siap digunakan. Anda sekarang dapat mengonfigurasi pengaturan, mengunggah dokumen, dan mulai mengkueri basis pengetahuan Anda.",
       "note": "Gunakan perangkat tepercaya — kunci Nostr Anda digunakan untuk mengenkripsi dan mendekripsi data instance yang sensitif.",
       "title": "Semua sudah siap!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "Kelola pengguna, konfigurasi model AI, unggah dokumen, dan kontrol setiap aspek instance Anda.",
       "feature3Title": "Kontrol penuh",
       "label": "Selamat Datang",
-      "title": "Klaim Sanctum Anda"
+      "title": "Klaim EnclaveFree Anda"
     },
     "step2": {
-      "body": "Sanctum menggunakan Nostr (NIP-07) untuk autentikasi. Anda memerlukan ekstensi browser yang mengelola kunci Nostr Anda.",
+      "body": "EnclaveFree menggunakan Nostr (NIP-07) untuk autentikasi. Anda memerlukan ekstensi browser yang mengelola kunci Nostr Anda.",
       "flow1": "Buka ekstensi Nostr Anda (Alby, nos2x, dll.)",
       "flow2": "Setujui permintaan koneksi",
       "flow3": "Kunci publik Anda terdaftar sebagai admin",
@@ -1530,7 +1530,7 @@
       "title": "Siap terhubung"
     },
     "subtitle": "Siapkan basis pengetahuan pribadi Anda dalam beberapa langkah.",
-    "title": "Selamat Datang di Sanctum"
+    "title": "Selamat Datang di EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "baris dikembalikan",
       "row_s_returned_columns_cb3f95": "baris dikembalikan | Kolom:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Jalankan kueri Cypher hanya-baca terhadap grafik pengetahuan.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Sistem RAG Pribadi untuk Pengetahuan Terkurasi",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Sistem RAG Pribadi untuk Pengetahuan Terkurasi",
       "score_92d190": "| skor:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Cari penyimpanan vektor secara langsung tanpa generasi LLM. Berguna untuk men-debug penyematan.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Mencari Qdrant untuk pengetahuan yang semantisnya serupa",

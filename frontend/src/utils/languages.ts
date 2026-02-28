@@ -39,4 +39,4 @@ export const LANGUAGES: Language[] = [
   { code: 'hu', nativeName: 'Magyar', englishName: 'Hungarian', flag: '🇭🇺' },
 ]
 
-export const STORAGE_KEY_LANGUAGE = 'sanctum_language'
+export const STORAGE_KEY_LANGUAGE = 'enclavefree_language'

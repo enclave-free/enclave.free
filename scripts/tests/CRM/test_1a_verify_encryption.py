@@ -204,7 +204,7 @@ def test_verify_encryption(db_path: str, user_id: int, config: dict) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Test 1A: Verify Encryption")
     parser.add_argument("--api-base", default="http://localhost:8000", help="API base URL")
-    parser.add_argument("--db-path", default="/data/sanctum.db", help="Path to SQLite database")
+    parser.add_argument("--db-path", default="/data/enclavefree.db", help="Path to SQLite database")
     parser.add_argument("--skip-create", action="store_true", help="Skip user creation (use existing)")
     parser.add_argument("--user-id", type=int, help="Existing user ID to test")
     parser.add_argument("--token", help="Admin session token")

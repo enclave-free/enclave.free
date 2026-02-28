@@ -1,5 +1,5 @@
 """
-Sanctum Shared Utilities
+EnclaveFree Shared Utilities
 
 Common utility functions used across multiple modules.
 """

@@ -1,6 +1,6 @@
 # Instance Initiation (Admin-First Gating)
 
-Sanctum instances require a first admin to "initiate" the instance before users can begin the user onboarding flow.
+EnclaveFree instances require a first admin to "initiate" the instance before users can begin the user onboarding flow.
 This avoids confusing UX (users attempting to sign in to an instance that has not been set up yet) and provides a
 single, clear place to communicate instance status and next steps.
 

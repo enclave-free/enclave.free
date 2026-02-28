@@ -1,5 +1,5 @@
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE'])
-const DEFAULT_CSRF_COOKIE_NAME = 'sanctum_csrf'
+const DEFAULT_CSRF_COOKIE_NAME = 'enclavefree_csrf'
 
 let installed = false
 

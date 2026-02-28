@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sanctum</title>
+    <title>EnclaveFree</title>
     <!-- Fonts: Inter for UI, JetBrains Mono for code -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,8 +11,27 @@
     <!-- Prevent flash of wrong theme -->
     <script>
       (function() {
+        const THEME_KEY = 'enclavefree-theme';
+        const LEGACY_THEME_KEY = 'sanctum-theme';
+        const INSTANCE_CONFIG_KEY = 'enclavefree_instance_config';
+        const LEGACY_INSTANCE_CONFIG_KEY = 'sanctum_instance_config';
+
         // Apply dark mode
-        const theme = localStorage.getItem('sanctum-theme');
+        let theme;
+        try {
+          theme = localStorage.getItem(THEME_KEY);
+          if (!theme) {
+            const legacyTheme = localStorage.getItem(LEGACY_THEME_KEY);
+            if (legacyTheme) {
+              theme = legacyTheme;
+              localStorage.setItem(THEME_KEY, legacyTheme);
+              localStorage.removeItem(LEGACY_THEME_KEY);
+            }
+          }
+        } catch (e) {
+          /* localStorage throws (e.g. SecurityError in private browsing); skip theme persistence */
+          theme = null;
+        }
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (theme === 'dark' || (!theme && prefersDark)) {
           document.documentElement.classList.add('dark');
@@ -20,7 +39,16 @@
 
         // Apply accent color from cached config
         try {
-          const config = JSON.parse(localStorage.getItem('sanctum_instance_config') || '{}');
+          let configRaw = localStorage.getItem(INSTANCE_CONFIG_KEY);
+          if (!configRaw) {
+            const legacyConfig = localStorage.getItem(LEGACY_INSTANCE_CONFIG_KEY);
+            if (legacyConfig) {
+              configRaw = legacyConfig;
+              localStorage.setItem(INSTANCE_CONFIG_KEY, legacyConfig);
+              localStorage.removeItem(LEGACY_INSTANCE_CONFIG_KEY);
+            }
+          }
+          const config = JSON.parse(configRaw || '{}');
           const validColors = ['blue', 'purple', 'green', 'orange', 'pink', 'teal'];
           if (config.accentColor && validColors.includes(config.accentColor)) {
             document.documentElement.classList.add('accent-' + config.accentColor);
@@ -56,8 +84,8 @@
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-Cs_NN92s.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BI5QULHa.css">
+    <script type="module" crossorigin src="/assets/index-C1Ry-SX8.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D_H_zlDS.css">
   </head>
   <body>
     <div id="root"></div>

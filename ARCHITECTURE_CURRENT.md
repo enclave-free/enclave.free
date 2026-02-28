@@ -1,6 +1,6 @@
-# Sanctum — Current Architecture (v0.1 MVP)
+# EnclaveFree — Current Architecture (v0.1 MVP)
 
-This document describes the **current** implementation of Sanctum. For the planned graph-first architecture using Neo4j + Graphiti, see [ARCHITECTURE_PLANNED.md](./ARCHITECTURE_PLANNED.md).
+This document describes the **current** implementation of EnclaveFree. For the planned graph-first architecture using Neo4j + Graphiti, see [ARCHITECTURE_PLANNED.md](./ARCHITECTURE_PLANNED.md).
 
 ---
 
@@ -49,7 +49,7 @@ This document describes the **current** implementation of Sanctum. For the plann
 
 ## Data Storage
 
-### SQLite (`/data/sanctum.db`)
+### SQLite (`/data/enclavefree.db`)
 
 All structured data is stored in SQLite:
 
@@ -64,7 +64,7 @@ Volume: `sqlite_data:/data`
 
 Vector embeddings for semantic search:
 
-- **Collection**: `sanctum_knowledge`
+- **Collection**: `enclavefree_knowledge`
 - **Dimensions**: 768 (multilingual-e5-base)
 - **Payload**: Document metadata, chunk references
 
@@ -289,7 +289,7 @@ Key configuration options (see `.env.example`):
 | `API_BASE_URL` | `http://localhost:8000` | API base URL |
 | `ADMIN_BASE_URL` | `http://localhost:5173/admin` | Admin panel URL |
 | `EMAIL_DOMAIN` | `localhost` | Domain for email addresses |
-| `DKIM_SELECTOR` | `sanctum` | DKIM DNS selector |
+| `DKIM_SELECTOR` | `enclavefree` | DKIM DNS selector |
 | `SPF_INCLUDE` | (empty) | SPF include directive (e.g., include:_spf.google.com) |
 | `DMARC_POLICY` | `v=DMARC1; p=none` | DMARC DNS policy record |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |

@@ -1,5 +1,5 @@
 """
-Sanctum Seed Script
+EnclaveFree Seed Script
 Seeds Qdrant with a test embedding.
 Uses intfloat/multilingual-e5-base for CPU-friendly, Spanish-capable embeddings.
 Also initializes SQLite database for user/admin management.
@@ -21,7 +21,7 @@ from store import get_embedding_model, embed_texts, EMBEDDING_MODEL
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
-COLLECTION_NAME = "sanctum_smoke_test"
+COLLECTION_NAME = "enclavefree_smoke_test"
 
 # Seed data - Spanish sentence about knowledge
 SEED_CLAIM = {
@@ -127,7 +127,7 @@ def seed_sqlite():
 def main():
     """Main seeding function"""
     print("=" * 60)
-    print("Sanctum Seed Script")
+    print("EnclaveFree Seed Script")
     print("=" * 60)
 
     # Initialize SQLite first (no external service to wait for)

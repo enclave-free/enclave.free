@@ -73,7 +73,7 @@
       "subtitle": "自訂品牌和使用者入門體驗",
       "branding": "實例品牌",
       "displayName": "顯示名稱",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "此名稱顯示在標題和入門畫面中",
       "icon": "圖示",
       "accentColor": "強調色",
@@ -433,7 +433,7 @@
       "tipRequiredDesc": "只有在真正需要資料時才將欄位標記為必填。過多的必填欄位可能會降低註冊意願。",
       "tipsDesc": "在設定使用者設定時請牢記以下要點。",
       "tipsTitle": "提示與最佳實踐",
-      "twoTier": "Sanctum 使用雙層系統：使用者類型定義使用者的類別，使用者欄位定義每種類型收集的資料。",
+      "twoTier": "EnclaveFree 使用雙層系統：使用者類型定義使用者的類別，使用者欄位定義每種類型收集的資料。",
       "typesDesc": "當你需要針對不同群組使用不同的註冊表單或權限時，請建立使用者類型。",
       "typesExample": "範例：一所大學可能會建立「學生」、「教職員」和「行政人員」類型，每種類型都有各自的欄位。",
       "typesTitle": "了解使用者類型",
@@ -452,7 +452,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "AI 助理圖示",
       "assistantNameLabel": "助理顯示名稱",
-      "assistantNamePlaceholder": "例如，Sanctum AI",
+      "assistantNamePlaceholder": "例如，EnclaveFree AI",
       "bubbleShadowLabel": "新增柔和氣泡陰影",
       "bubbleStyleDesc": "選擇聊天氣泡的形狀和深度。",
       "bubbleStylePill": "藥丸狀",
@@ -614,7 +614,7 @@
       "checkSpam": "沒有看到？請檢查垃圾郵件資料夾。",
       "simulateMagicLink": "模擬點擊魔法連結",
       "forTesting": "用於測試：",
-      "dataProtectionTitle": "Sanctum 如何保護你的資料",
+      "dataProtectionTitle": "EnclaveFree 如何保護你的資料",
       "noPasswordTitle": "不儲存密碼",
       "noPasswordBody": "你透過一次性連結登入，因此不需要管理密碼資料庫。",
       "expiringLinkTitle": "短時效登入連結",
@@ -622,7 +622,7 @@
       "encryptionTitle": "預設加密",
       "encryptionBody": "個人資料欄位預設加密，但此實例管理員控制欄位層級設定，可能會允許部分資料以不同方式儲存或分享。",
       "adminControlNotice": "資料處理方式由此實例管理員設定，包括哪些資料可能以未加密形式儲存或與 AI 工具分享。",
-      "noWarrantyNotice": "Sanctum 軟體按原樣提供，不附帶任何保證。使用此實例須遵守管理員的相關政策。",
+      "noWarrantyNotice": "EnclaveFree 軟體按原樣提供，不附帶任何保證。使用此實例須遵守管理員的相關政策。",
       "retentionNotice": "資料保留和刪除時間表由本實例管理員設定。請聯絡他們以提出存取、更正或刪除請求。"
     },
     "verify": {
@@ -761,7 +761,7 @@
   },
   "adminDashboard": {
     "title": "管理員儀表板",
-    "subtitle": "管理你的 Sanctum 實例設定",
+    "subtitle": "管理你的 EnclaveFree 實例設定",
     "instance": "實例設定",
     "instanceDesc": "自訂品牌、使用者類型和入門欄位",
     "ai": "AI 設定",
@@ -927,9 +927,9 @@
       "goToPage": "前往頁面",
       "howItWorks": "嵌入的運作方式：",
       "modelPerfDesc": "較大的模型會產生更準確的結果，但需要更多記憶體和時間。請根據你的硬體選擇。",
-      "modelsDesc": "Sanctum 支援三種多語言 E5 嵌入模型。全部在本機執行——資料不會離開你的伺服器。",
+      "modelsDesc": "EnclaveFree 支援三種多語言 E5 嵌入模型。全部在本機執行——資料不會離開你的伺服器。",
       "modelsTitle": "嵌入模型",
-      "overviewDesc": "嵌入將文字轉換為數值向量以進行語意搜尋。Sanctum 使用本機嵌入模型來處理文件和查詢。",
+      "overviewDesc": "嵌入將文字轉換為數值向量以進行語意搜尋。EnclaveFree 使用本機嵌入模型來處理文件和查詢。",
       "overviewNote": "更改嵌入模型需要重新匯入所有文件以確保向量一致。",
       "overviewTitle": "嵌入概覽",
       "performanceDesc": "這些設定控制模型載入行為，可能會影響啟動時間和資源使用。",
@@ -986,9 +986,9 @@
       "exampleConfig": "設定範例",
       "goToPage": "前往頁面",
       "mapleExtra": "將 LLM_API_KEY 設定為您從 {{mapleSignupUrl}} 取得的 Maple 金鑰。LLM_* 金鑰對應至 MAPLE_* 別名。",
-      "mapleHint": "Maple 是 Sanctum 的標準 LLM 後端。",
+      "mapleHint": "Maple 是 EnclaveFree 的標準 LLM 後端。",
       "modelField": "LLM_MODEL — Maple 模型識別碼（例如：kimi-k2.5）。",
-      "overviewDesc": "Sanctum 使用 Maple 作為其標準 LLM 服務。Maple 在底層提供 OpenAI 相容的 API。",
+      "overviewDesc": "EnclaveFree 使用 Maple 作為其標準 LLM 服務。Maple 在底層提供 OpenAI 相容的 API。",
       "overviewTitle": "Maple LLM 概觀",
       "providerField": "LLM_PROVIDER — 為相容性固定為 \"maple\"。"
     },
@@ -1040,7 +1040,7 @@
       "overviewDesc": "SSL 設定控制 HTTPS 行為、憑證路徑和代理信任。預設值已為本機 HTTP 開發進行設定。",
       "overviewNote": "如果你部署在處理 TLS 的反向代理之後，可能完全不需要設定這些項目。",
       "overviewTitle": "SSL 與 HTTPS 概覽",
-      "overviewWhen": "在使用 HTTPS 部署到正式環境時，或在將 Sanctum 放置於 TLS 終止代理之後時設定這些項目。",
+      "overviewWhen": "在使用 HTTPS 部署到正式環境時，或在將 EnclaveFree 放置於 TLS 終止代理之後時設定這些項目。",
       "proxiesDesc": "TRUSTED_PROXIES — 逗號分隔的反向代理 IP 位址或 CIDR 範圍清單。後端使用這些來判斷實際的用戶端 IP。"
     },
     "storageHelp": {
@@ -1051,11 +1051,11 @@
       "backupStep2Desc": "備份上傳目錄。這包含使用者上傳的原始檔案。",
       "backupStep3": "3. 建立 Qdrant 快照",
       "backupStep3Desc": "使用 Qdrant 儀表板或 API 為你的向量資料建立集合快照。",
-      "backupsDesc": "Sanctum 將資料儲存在三個位置——三者都應一起備份以進行完整還原。",
+      "backupsDesc": "EnclaveFree 將資料儲存在三個位置——三者都應一起備份以進行完整還原。",
       "backupsTitle": "備份與遷移",
-      "backupsWhen": "定期備份，並在升級 Sanctum 或更改儲存路徑之前務必備份。",
+      "backupsWhen": "定期備份，並在升級 EnclaveFree 或更改儲存路徑之前務必備份。",
       "goToPage": "前往頁面",
-      "overviewDesc": "儲存設定控制 Sanctum 資料的持久化位置——SQLite 資料庫、上傳的檔案和向量嵌入。",
+      "overviewDesc": "儲存設定控制 EnclaveFree 資料的持久化位置——SQLite 資料庫、上傳的檔案和向量嵌入。",
       "overviewTitle": "儲存概覽",
       "overviewWhen": "在掛載外部卷、更改備份位置或連接到遠端 Qdrant 實例時調整這些設定。",
       "pathsDesc": "這些路徑位於 Docker 容器內部。使用 Docker 卷將它們映射到主機目錄以實現持久化。",
@@ -1163,7 +1163,7 @@
       "completedDesc": "所有區塊已嵌入並儲存在向量資料庫中。文件已準備好供搜尋使用。",
       "failedProcessing": "文件顯示「失敗」",
       "failedProcessingFix": "檢查後端日誌以了解錯誤原因。常見原因：檔案損壞、不支援的編碼，或嵌入模型未載入。",
-      "formatsDesc": "Sanctum 接受以下檔案類型匯入知識庫。",
+      "formatsDesc": "EnclaveFree 接受以下檔案類型匯入知識庫。",
       "formatsTitle": "支援的格式",
       "mdDesc": ".md — Markdown 檔案。分塊時會保留標題和結構。",
       "noChunks": "已完成但區塊數為零",
@@ -1201,7 +1201,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "組態 Maple 推論",
-      "hint": "Sanctum 僅限 Maple 進行 LLM 推論。在此處組態 Maple 模型/API 設定。變更需要重新啟動。"
+      "hint": "EnclaveFree 僅限 Maple 進行 LLM 推論。在此處組態 Maple 模型/API 設定。變更需要重新啟動。"
     },
     "embedding": {
       "label": "文字處理",
@@ -1364,7 +1364,7 @@
     "SQLITE_PATH": {
       "label": "資料庫檔案",
       "description": "SQLite 資料庫路徑",
-      "hint": "SQLite 資料庫檔案的路徑。預設值：/data/sanctum.db"
+      "hint": "SQLite 資料庫檔案的路徑。預設值：/data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "上傳資料夾",
@@ -1428,7 +1428,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "DKIM DNS 記錄選擇器",
-      "hint": "您的 DKIM TXT 記錄的選擇器前綴。預設：sanctum。您的提供者可能需要特定的選擇器。",
+      "hint": "您的 DKIM TXT 記錄的選擇器前綴。預設：enclavefree。您的提供者可能需要特定的選擇器。",
       "label": "DKIM 選擇器"
     },
     "DMARC_POLICY": {
@@ -1499,7 +1499,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "你的 Sanctum 實例已設定完成並準備就緒。你現在可以進行設定、上傳文件，並開始查詢知識庫。",
+      "body": "你的 EnclaveFree 實例已設定完成並準備就緒。你現在可以進行設定、上傳文件，並開始查詢知識庫。",
       "note": "請使用受信任的裝置——你的 Nostr 金鑰用於加密和解密敏感的實例資料。",
       "title": "一切就緒！"
     },
@@ -1515,10 +1515,10 @@
       "feature3Desc": "管理使用者、設定 AI 模型、上傳文件，並控制實例的每一個面向。",
       "feature3Title": "完全控制",
       "label": "歡迎",
-      "title": "認領你的 Sanctum"
+      "title": "認領你的 EnclaveFree"
     },
     "step2": {
-      "body": "Sanctum 使用 Nostr（NIP-07）進行驗證。你需要一個管理 Nostr 金鑰的瀏覽器擴充功能。",
+      "body": "EnclaveFree 使用 Nostr（NIP-07）進行驗證。你需要一個管理 Nostr 金鑰的瀏覽器擴充功能。",
       "flow1": "開啟你的 Nostr 擴充功能（Alby、nos2x 等）",
       "flow2": "批准連接請求",
       "flow3": "你的公鑰將被註冊為管理員",
@@ -1531,7 +1531,7 @@
       "title": "準備連接"
     },
     "subtitle": "只需幾個步驟即可設定你的私有知識庫。",
-    "title": "歡迎使用 Sanctum"
+    "title": "歡迎使用 EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1754,7 +1754,7 @@
       "row_s_returned_b2299c": "行已返回",
       "row_s_returned_columns_cb3f95": "行已返回 | 列：",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "對知識圖執行只讀Cypher查詢。",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — 策展知識的私有RAG系統",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — 策展知識的私有RAG系統",
       "score_92d190": "| 分數：",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "直接搜索向量存儲，無需LLM生成。適用於調試嵌入。",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "在Qdrant中搜索語義相似的知識",

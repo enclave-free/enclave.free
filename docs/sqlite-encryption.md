@@ -1,6 +1,6 @@
 # Encrypted SQLite Data Model (NIP-04)
 
-This document describes how Sanctum encrypts PII in SQLite using Nostr NIP-04 and NIP-07.
+This document describes how EnclaveFree encrypts PII in SQLite using Nostr NIP-04 and NIP-07.
 
 Scope:
 - Data at rest: SQLite fields for user PII are encrypted.
@@ -83,11 +83,11 @@ Normalization:
 The `blind_index_key` is derived in `encryption.py` via `_get_blind_index_key()`:
 
 ```python
-blind_index_key = SHA256("sanctum-blind-index:" + SECRET_KEY)
+blind_index_key = SHA256("enclavefree-blind-index:" + SECRET_KEY)
 ```
 
 Properties:
-- **Domain separation**: Prefix `"sanctum-blind-index:"` ensures this key is distinct from other uses of `SECRET_KEY`
+- **Domain separation**: Prefix `"enclavefree-blind-index:"` ensures this key is distinct from other uses of `SECRET_KEY`
 - **Output**: 32-byte key suitable for HMAC-SHA256
 - **Stability**: Key is cached for the process lifetime; changing `SECRET_KEY` invalidates all existing blind indexes
 
@@ -283,7 +283,7 @@ Important:
 
 ### Single-Admin Constraint
 
-Sanctum enforces a **single admin per instance**. The first successful NIP-07 admin auth creates the admin record; subsequent admin auth attempts are rejected. This keeps encryption tied to one pubkey.
+EnclaveFree enforces a **single admin per instance**. The first successful NIP-07 admin auth creates the admin record; subsequent admin auth attempts are rejected. This keeps encryption tied to one pubkey.
 
 **Admin transfer options:**
 - **Recommended:** Use **admin key migration** to rotate to a new keypair while preserving access to all encrypted data

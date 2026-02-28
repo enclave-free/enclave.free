@@ -1,6 +1,6 @@
 # User Type Migration
 
-User types in Sanctum control:
+User types in EnclaveFree control:
 - which onboarding fields a user is expected to answer (global + type-specific fields)
 - which AI config and document defaults apply (via per-user-type overrides)
 
@@ -39,7 +39,7 @@ The frontend chat entry (`/chat`) calls `/users/me/onboarding-status` and redire
 - `needs_user_type=true` -> `/user-type`
 - `needs_onboarding=true` -> `/profile`
 
-The frontend also overwrites `localStorage.sanctum_user_type_id` with `effective_user_type_id` from the server to keep the client cache aligned.
+The frontend also overwrites `localStorage.enclavefree_user_type_id` with `effective_user_type_id` from the server to keep the client cache aligned.
 
 ## Preflight Checklist (Before You Migrate Users)
 

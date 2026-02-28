@@ -57,7 +57,7 @@
       "checkSpam": "Không thấy? Hãy kiểm tra thư mục spam.",
       "simulateMagicLink": "Mô phỏng nhấn vào liên kết ma thuật",
       "forTesting": "Cho mục đích thử nghiệm:",
-      "dataProtectionTitle": "Sanctum bảo vệ dữ liệu của bạn như thế nào",
+      "dataProtectionTitle": "EnclaveFree bảo vệ dữ liệu của bạn như thế nào",
       "noPasswordTitle": "Không lưu trữ mật khẩu",
       "noPasswordBody": "Bạn đăng nhập bằng liên kết dùng một lần, nên không có cơ sở dữ liệu mật khẩu cần quản lý.",
       "expiringLinkTitle": "Liên kết đăng nhập ngắn hạn",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Mã hóa theo mặc định",
       "encryptionBody": "Các trường hồ sơ được mã hóa theo mặc định, nhưng quản trị viên phiên bản này kiểm soát cài đặt ở cấp trường và có thể cho phép dữ liệu được chọn được lưu trữ hoặc chia sẻ theo cách khác.",
       "adminControlNotice": "Việc xử lý dữ liệu do quản trị viên phiên bản này cấu hình, bao gồm những gì có thể được lưu trữ không mã hóa hoặc chia sẻ với các công cụ AI.",
-      "noWarrantyNotice": "Phần mềm Sanctum được cung cấp nguyên trạng mà không có bảo hành. Việc sử dụng phiên bản này tuân theo các chính sách của quản trị viên.",
+      "noWarrantyNotice": "Phần mềm EnclaveFree được cung cấp nguyên trạng mà không có bảo hành. Việc sử dụng phiên bản này tuân theo các chính sách của quản trị viên.",
       "retentionNotice": "Thời gian lưu giữ và xóa dữ liệu được đặt bởi quản trị viên thể hiện này. Liên hệ với họ để yêu cầu truy cập, chỉnh sửa hoặc xóa."
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "Tùy chỉnh thương hiệu và trải nghiệm đăng ký người dùng",
       "branding": "Thương hiệu phiên bản",
       "displayName": "Tên hiển thị",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Tên này xuất hiện trong tiêu đề và màn hình đăng ký",
       "icon": "Biểu tượng",
       "accentColor": "Màu nhấn",
@@ -603,7 +603,7 @@
       "tipRequiredDesc": "Chỉ đánh dấu trường là bắt buộc khi bạn thực sự cần dữ liệu. Quá nhiều trường bắt buộc có thể làm nản lòng đăng ký.",
       "tipsDesc": "Hãy ghi nhớ những điều này khi thiết lập cấu hình người dùng.",
       "tipsTitle": "Mẹo & Thực tiễn tốt nhất",
-      "twoTier": "Sanctum sử dụng hệ thống hai cấp: Loại người dùng xác định các danh mục người dùng, và Trường người dùng xác định dữ liệu mà mỗi loại thu thập.",
+      "twoTier": "EnclaveFree sử dụng hệ thống hai cấp: Loại người dùng xác định các danh mục người dùng, và Trường người dùng xác định dữ liệu mà mỗi loại thu thập.",
       "typesDesc": "Tạo loại người dùng khi bạn cần các biểu mẫu đăng ký hoặc quyền khác nhau cho các nhóm khác nhau.",
       "typesExample": "Ví dụ: Một trường đại học có thể tạo các loại 'Sinh viên', 'Giảng viên' và 'Nhân viên', mỗi loại có trường riêng.",
       "typesTitle": "Hiểu về loại người dùng",
@@ -622,7 +622,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "Biểu tượng trợ lý AI",
       "assistantNameLabel": "Tên hiển thị trợ lý",
-      "assistantNamePlaceholder": "Ví dụ: Sanctum AI",
+      "assistantNamePlaceholder": "Ví dụ: EnclaveFree AI",
       "bubbleShadowLabel": "Thêm bóng bong bóng tinh tế",
       "bubbleStyleDesc": "Chọn hình dạng và độ sâu của bong bóng trò chuyện.",
       "bubbleStylePill": "Viên thuốc",
@@ -762,7 +762,7 @@
   },
   "adminDashboard": {
     "title": "Bảng điều khiển quản trị",
-    "subtitle": "Quản lý cấu hình phiên bản Sanctum của bạn",
+    "subtitle": "Quản lý cấu hình phiên bản EnclaveFree của bạn",
     "instance": "Cấu hình phiên bản",
     "instanceDesc": "Tùy chỉnh thương hiệu, loại người dùng và trường đăng ký",
     "ai": "Cấu hình AI",
@@ -928,9 +928,9 @@
       "goToPage": "Đi đến trang",
       "howItWorks": "Cách nhúng hoạt động:",
       "modelPerfDesc": "Mô hình lớn hơn tạo ra kết quả chính xác hơn nhưng cần nhiều bộ nhớ và thời gian hơn. Chọn dựa trên phần cứng của bạn.",
-      "modelsDesc": "Sanctum hỗ trợ ba mô hình nhúng đa ngôn ngữ E5. Tất cả chạy cục bộ — không có dữ liệu nào rời khỏi máy chủ của bạn.",
+      "modelsDesc": "EnclaveFree hỗ trợ ba mô hình nhúng đa ngôn ngữ E5. Tất cả chạy cục bộ — không có dữ liệu nào rời khỏi máy chủ của bạn.",
       "modelsTitle": "Mô hình nhúng",
-      "overviewDesc": "Nhúng chuyển đổi văn bản thành vector số cho tìm kiếm ngữ nghĩa. Sanctum sử dụng mô hình nhúng cục bộ để xử lý tài liệu và truy vấn.",
+      "overviewDesc": "Nhúng chuyển đổi văn bản thành vector số cho tìm kiếm ngữ nghĩa. EnclaveFree sử dụng mô hình nhúng cục bộ để xử lý tài liệu và truy vấn.",
       "overviewNote": "Thay đổi mô hình nhúng yêu cầu nhập lại tất cả tài liệu để vector nhất quán.",
       "overviewTitle": "Tổng quan nhúng",
       "performanceDesc": "Các cài đặt này kiểm soát hành vi tải mô hình và có thể ảnh hưởng đến thời gian khởi động và sử dụng tài nguyên.",
@@ -987,9 +987,9 @@
       "exampleConfig": "Cấu hình mẫu",
       "goToPage": "Đi đến trang",
       "mapleExtra": "Đặt LLM_API_KEY thành khóa Maple của bạn từ {{mapleSignupUrl}}. Các khóa LLM_* ánh xạ tới các bí danh MAPLE_*.",
-      "mapleHint": "Maple là backend LLM tiêu chuẩn cho Sanctum.",
+      "mapleHint": "Maple là backend LLM tiêu chuẩn cho EnclaveFree.",
       "modelField": "LLM_MODEL — mã định danh mô hình Maple (ví dụ: kimi-k2.5).",
-      "overviewDesc": "Sanctum sử dụng Maple làm dịch vụ LLM tiêu chuẩn. Maple cung cấp API tương thích OpenAI bên dưới.",
+      "overviewDesc": "EnclaveFree sử dụng Maple làm dịch vụ LLM tiêu chuẩn. Maple cung cấp API tương thích OpenAI bên dưới.",
       "overviewTitle": "Tổng quan về Maple LLM",
       "providerField": "LLM_PROVIDER — cố định thành \"maple\" để tương thích."
     },
@@ -1041,7 +1041,7 @@
       "overviewDesc": "Cài đặt SSL kiểm soát hành vi HTTPS, đường dẫn chứng chỉ và tin cậy proxy. Mặc định được cấu hình cho phát triển HTTP cục bộ.",
       "overviewNote": "Nếu bạn triển khai sau reverse proxy xử lý TLS, có thể không cần cấu hình những cài đặt này.",
       "overviewTitle": "Tổng quan SSL & HTTPS",
-      "overviewWhen": "Cấu hình khi triển khai sản xuất với HTTPS, hoặc khi đặt Sanctum sau proxy kết thúc TLS.",
+      "overviewWhen": "Cấu hình khi triển khai sản xuất với HTTPS, hoặc khi đặt EnclaveFree sau proxy kết thúc TLS.",
       "proxiesDesc": "TRUSTED_PROXIES — danh sách IP hoặc dải CIDR phân tách bằng dấu phẩy cho reverse proxy. Backend sử dụng để xác định IP thực của client."
     },
     "storageHelp": {
@@ -1052,11 +1052,11 @@
       "backupStep2Desc": "Sao lưu thư mục tải lên. Thư mục này chứa các tệp gốc mà người dùng đã tải lên.",
       "backupStep3": "3. Tạo bản chụp Qdrant",
       "backupStep3Desc": "Sử dụng bảng điều khiển hoặc API Qdrant để tạo bản chụp bộ sưu tập cho dữ liệu vector.",
-      "backupsDesc": "Sanctum lưu trữ dữ liệu ở ba nơi — cả ba nên được sao lưu cùng nhau để khôi phục hoàn chỉnh.",
+      "backupsDesc": "EnclaveFree lưu trữ dữ liệu ở ba nơi — cả ba nên được sao lưu cùng nhau để khôi phục hoàn chỉnh.",
       "backupsTitle": "Sao lưu & Di chuyển",
-      "backupsWhen": "Sao lưu thường xuyên, và luôn trước khi nâng cấp Sanctum hoặc thay đổi đường dẫn lưu trữ.",
+      "backupsWhen": "Sao lưu thường xuyên, và luôn trước khi nâng cấp EnclaveFree hoặc thay đổi đường dẫn lưu trữ.",
       "goToPage": "Đi đến trang",
-      "overviewDesc": "Cài đặt lưu trữ kiểm soát nơi Sanctum lưu trữ dữ liệu — cơ sở dữ liệu SQLite, tệp đã tải lên và vector nhúng.",
+      "overviewDesc": "Cài đặt lưu trữ kiểm soát nơi EnclaveFree lưu trữ dữ liệu — cơ sở dữ liệu SQLite, tệp đã tải lên và vector nhúng.",
       "overviewTitle": "Tổng quan lưu trữ",
       "overviewWhen": "Điều chỉnh khi gắn volume bên ngoài, thay đổi vị trí sao lưu hoặc kết nối đến phiên bản Qdrant từ xa.",
       "pathsDesc": "Các đường dẫn này nằm bên trong container Docker. Ánh xạ chúng tới thư mục máy chủ bằng Docker volume để bền vững.",
@@ -1164,7 +1164,7 @@
       "completedDesc": "Tất cả các phần đã được nhúng và lưu trữ trong cơ sở dữ liệu vector. Tài liệu sẵn sàng cho tìm kiếm.",
       "failedProcessing": "Tài liệu hiển thị 'thất bại'",
       "failedProcessingFix": "Kiểm tra nhật ký backend để tìm lỗi. Nguyên nhân phổ biến: tệp bị hỏng, mã hóa không được hỗ trợ hoặc mô hình nhúng chưa được tải.",
-      "formatsDesc": "Sanctum chấp nhận các loại tệp sau để nhập vào cơ sở kiến thức.",
+      "formatsDesc": "EnclaveFree chấp nhận các loại tệp sau để nhập vào cơ sở kiến thức.",
       "formatsTitle": "Định dạng hỗ trợ",
       "mdDesc": ".md — Tệp Markdown. Tiêu đề và cấu trúc được giữ nguyên trong quá trình chia phần.",
       "noChunks": "Hoàn thành nhưng không có phần nào",
@@ -1202,7 +1202,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Cấu hình suy luận Maple",
-      "hint": "Sanctum chỉ sử dụng Maple để suy luận LLM. Cấu hình mô hình Maple/cài đặt API tại đây. Các thay đổi yêu cầu khởi động lại."
+      "hint": "EnclaveFree chỉ sử dụng Maple để suy luận LLM. Cấu hình mô hình Maple/cài đặt API tại đây. Các thay đổi yêu cầu khởi động lại."
     },
     "embedding": {
       "label": "Xử lý văn bản",
@@ -1365,7 +1365,7 @@
     "SQLITE_PATH": {
       "label": "Tệp cơ sở dữ liệu",
       "description": "Đường dẫn đến cơ sở dữ liệu SQLite",
-      "hint": "Đường dẫn đến tệp cơ sở dữ liệu SQLite. Mặc định: /data/sanctum.db"
+      "hint": "Đường dẫn đến tệp cơ sở dữ liệu SQLite. Mặc định: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Thư mục tải lên",
@@ -1429,7 +1429,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "Bộ chọn bản ghi DKIM DNS",
-      "hint": "Tiền tố bộ chọn cho bản ghi DKIM TXT của bạn. Mặc định: sanctum. Nhà cung cấp của bạn có thể yêu cầu một bộ chọn cụ thể.",
+      "hint": "Tiền tố bộ chọn cho bản ghi DKIM TXT của bạn. Mặc định: enclavefree. Nhà cung cấp của bạn có thể yêu cầu một bộ chọn cụ thể.",
       "label": "Bộ chọn DKIM"
     },
     "DMARC_POLICY": {
@@ -1500,7 +1500,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Phiên bản Sanctum của bạn đã được thiết lập và sẵn sàng. Bây giờ bạn có thể cấu hình cài đặt, tải lên tài liệu và bắt đầu truy vấn cơ sở kiến thức.",
+      "body": "Phiên bản EnclaveFree của bạn đã được thiết lập và sẵn sàng. Bây giờ bạn có thể cấu hình cài đặt, tải lên tài liệu và bắt đầu truy vấn cơ sở kiến thức.",
       "note": "Sử dụng thiết bị đáng tin cậy — khóa Nostr của bạn được dùng để mã hóa và giải mã dữ liệu nhạy cảm của phiên bản.",
       "title": "Bạn đã sẵn sàng!"
     },
@@ -1516,10 +1516,10 @@
       "feature3Desc": "Quản lý người dùng, cấu hình mô hình AI, tải lên tài liệu và kiểm soát mọi khía cạnh của phiên bản.",
       "feature3Title": "Toàn quyền kiểm soát",
       "label": "Chào mừng",
-      "title": "Xác nhận quyền sở hữu Sanctum"
+      "title": "Xác nhận quyền sở hữu EnclaveFree"
     },
     "step2": {
-      "body": "Sanctum sử dụng Nostr (NIP-07) để xác thực. Bạn cần tiện ích mở rộng trình duyệt quản lý khóa Nostr của bạn.",
+      "body": "EnclaveFree sử dụng Nostr (NIP-07) để xác thực. Bạn cần tiện ích mở rộng trình duyệt quản lý khóa Nostr của bạn.",
       "flow1": "Mở tiện ích mở rộng Nostr (Alby, nos2x, v.v.)",
       "flow2": "Chấp nhận yêu cầu kết nối",
       "flow3": "Khóa công khai của bạn được đăng ký làm quản trị viên",
@@ -1532,7 +1532,7 @@
       "title": "Sẵn sàng kết nối"
     },
     "subtitle": "Thiết lập cơ sở kiến thức riêng tư của bạn trong vài bước.",
-    "title": "Chào mừng đến với Sanctum"
+    "title": "Chào mừng đến với EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1755,7 +1755,7 @@
       "row_s_returned_b2299c": "hàng được trả về",
       "row_s_returned_columns_cb3f95": "hàng được trả về | Cột:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Chạy các truy vấn Cypher chỉ đọc đối với đồ thị tri thức.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Hệ thống RAG riêng tư cho kiến thức được tuyển chọn",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Hệ thống RAG riêng tư cho kiến thức được tuyển chọn",
       "score_92d190": "| điểm:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Tìm kiếm trực tiếp kho vector mà không cần tạo LLM. Hữu ích để gỡ lỗi nhúng.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Tìm kiếm Qdrant để tìm kiến thức tương tự về mặt ngữ nghĩa",

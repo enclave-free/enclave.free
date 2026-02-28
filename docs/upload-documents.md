@@ -1,6 +1,6 @@
 # Document Upload & Ingestion Guide
 
-This guide explains how to upload documents to your locally running Sanctum server and monitor the ingestion process as it populates Qdrant (vector store).
+This guide explains how to upload documents to your locally running EnclaveFree server and monitor the ingestion process as it populates Qdrant (vector store).
 
 ## Prerequisites
 
@@ -148,7 +148,7 @@ Response:
   "qdrant": {
     "status": "ok",
     "collections": {
-      "sanctum_knowledge": {
+      "enclavefree_knowledge": {
         "points": 85,
         "status": "green",
         "vector_size": 768
@@ -158,7 +158,7 @@ Response:
 }
 ```
 
-**Note:** You may also see a `sanctum_smoke_test` collection created by the `/test` endpoint.
+**Note:** You may also see a `enclavefree_smoke_test` collection created by the `/test` endpoint.
 
 ### Test Vector Search
 
@@ -170,7 +170,7 @@ curl -X POST http://localhost:8000/vector-search \
   -d '{
     "query": "example search query",
     "top_k": 5,
-    "collection": "sanctum_knowledge"
+    "collection": "enclavefree_knowledge"
   }'
 ```
 

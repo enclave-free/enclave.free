@@ -97,7 +97,7 @@ export function AdminSetup() {
         {/* Header */}
         <div className="text-center mb-10 animate-fade-in-up">
           <h1 className="heading-xl">{t('adminDashboard.title', 'Admin Dashboard')}</h1>
-          <p className="text-sm text-text-muted mt-2">{t('adminDashboard.subtitle', 'Manage your Sanctum instance configuration')}</p>
+          <p className="text-sm text-text-muted mt-2">{t('adminDashboard.subtitle', 'Manage your EnclaveFree instance configuration')}</p>
         </div>
 
         {/* Security section */}

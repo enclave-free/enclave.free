@@ -1,7 +1,7 @@
 # Admin Key Recovery and Migration Runbook
 
 Last updated: 2026-02-08
-Audience: Sanctum instance administrator
+Audience: EnclaveFree instance administrator
 
 ## Purpose
 
@@ -14,7 +14,7 @@ This complements technical notes in `docs/sqlite-encryption.md`.
 
 ## Critical Facts
 
-- Encrypted PII in Sanctum requires the admin private key (Nostr `nsec`) for decryption.
+- Encrypted PII in EnclaveFree requires the admin private key (Nostr `nsec`) for decryption.
 - If the admin private key is permanently lost and no backup exists, encrypted PII is unrecoverable.
 - Secret-at-rest encryption in `deployment_config` depends on stable `SECRET_KEY`; losing that key can also break config secret decryption.
 
@@ -24,7 +24,7 @@ Maintain at least two secure, independent backup locations for:
 
 1. Admin Nostr private key (`nsec`)
 2. `SECRET_KEY` used by backend
-3. SQLite data volume (`sanctum.db`)
+3. SQLite data volume (`enclavefree.db`)
 
 Minimum policy:
 - encrypted password manager + offline encrypted copy (for example hardware token or encrypted external drive)
@@ -35,7 +35,7 @@ Minimum policy:
 ### Scenario A: Key lost, backup exists
 
 1. Import backed-up `nsec` into trusted NIP-07 extension.
-2. Authenticate as admin in Sanctum.
+2. Authenticate as admin in EnclaveFree.
 3. Validate decryption works for encrypted user fields.
 4. If compromise is suspected, immediately run key migration to a new keypair.
 

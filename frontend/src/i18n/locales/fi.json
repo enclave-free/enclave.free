@@ -57,7 +57,7 @@
       "checkSpam": "Etkö näe sitä? Tarkista roskapostikansio.",
       "simulateMagicLink": "Simuloi taikalinkin klikkausta",
       "forTesting": "Testaustarkoituksiin:",
-      "dataProtectionTitle": "Miten Sanctum suojaa tietojasi",
+      "dataProtectionTitle": "Miten EnclaveFree suojaa tietojasi",
       "noPasswordTitle": "Ei tallennettuja salasanoja",
       "noPasswordBody": "Kirjaudut kertakäyttöisellä linkillä, joten salasanatietokantaa ei tarvitse hallita.",
       "expiringLinkTitle": "Lyhytikäiset kirjautumislinkit",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Salaus oletuksena",
       "encryptionBody": "Profilikentät salataan oletuksena, mutta tämän instanssin ylläpitäjä hallitsee kenttäkohtaisia asetuksia ja voi sallia valittujen tietojen tallentamisen tai jakamisen eri tavalla.",
       "adminControlNotice": "Tietojen käsittelyn määrittää tämän instanssin ylläpitäjä, mukaan lukien mitä voidaan tallentaa salaamattomana tai jakaa AI-työkalujen kanssa.",
-      "noWarrantyNotice": "Sanctum-ohjelmisto tarjotaan sellaisenaan ilman takuuta. Tämän instanssin käyttöön sovelletaan ylläpitäjän käytäntöjä.",
+      "noWarrantyNotice": "EnclaveFree-ohjelmisto tarjotaan sellaisenaan ilman takuuta. Tämän instanssin käyttöön sovelletaan ylläpitäjän käytäntöjä.",
       "retentionNotice": "Tietojen säilytys- ja poistoajat määrittää tämän instanssin ylläpitäjä. Ota heihin yhteyttä pääsy-, korjaus- tai poistopyyntöjen osalta."
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "Mukauta brändäys ja käyttäjien perehdytyskokemus",
       "branding": "Instanssin brändäys",
       "displayName": "Näyttönimi",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Tämä nimi näkyy ylätunnisteessa ja perehdytysnäytöissä",
       "icon": "Kuvake",
       "accentColor": "Korostusväri",
@@ -601,7 +601,7 @@
       "tipRequiredDesc": "Merkitse kentät pakollisiksi vain kun todella tarvitset tiedot. Liian monet pakolliset kentät voivat estää rekisteröitymisiä.",
       "tipsDesc": "Pidä nämä mielessä käyttäjäkonfiguraatiota määrittäessäsi.",
       "tipsTitle": "Vinkit ja parhaat käytännöt",
-      "twoTier": "Sanctum käyttää kaksitasoista järjestelmää: Käyttäjätyypit määrittelevät käyttäjäkategoriat ja Käyttäjäkentät määrittelevät, mitä tietoja kukin tyyppi kerää.",
+      "twoTier": "EnclaveFree käyttää kaksitasoista järjestelmää: Käyttäjätyypit määrittelevät käyttäjäkategoriat ja Käyttäjäkentät määrittelevät, mitä tietoja kukin tyyppi kerää.",
       "typesDesc": "Luo käyttäjätyyppejä, kun tarvitset erilaisia rekisteröintilomakkeita tai oikeuksia eri ryhmille.",
       "typesExample": "Esimerkki: Yliopisto voi luoda tyypit 'Opiskelija', 'Tiedekunta' ja 'Henkilökunta', jokaisella omat kenttänsä.",
       "typesTitle": "Käyttäjätyyppien ymmärtäminen",
@@ -620,7 +620,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "AI-avustajan kuvake",
       "assistantNameLabel": "Avustajan näyttönimi",
-      "assistantNamePlaceholder": "esim. Sanctum AI",
+      "assistantNamePlaceholder": "esim. EnclaveFree AI",
       "bubbleShadowLabel": "Lisää hienovarainen puhekuplan varjo",
       "bubbleStyleDesc": "Valitse chat-kuplien muoto ja syvyys.",
       "bubbleStylePill": "Pillerimäinen",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "Ylläpidon kojelauta",
-    "subtitle": "Hallitse Sanctum-instanssisi asetuksia",
+    "subtitle": "Hallitse EnclaveFree-instanssisi asetuksia",
     "instance": "Instanssin asetukset",
     "instanceDesc": "Mukauta brändäys, käyttäjätyypit ja perehdytyskentät",
     "ai": "Tekoälyn asetukset",
@@ -926,9 +926,9 @@
       "goToPage": "Siirry sivulle",
       "howItWorks": "Miten upotus toimii:",
       "modelPerfDesc": "Suuremmat mallit tuottavat tarkempia tuloksia mutta vaativat enemmän muistia ja aikaa. Valitse laitteistosi perusteella.",
-      "modelsDesc": "Sanctum tukee kolmea monikielistä E5-upotusmallia. Kaikki toimivat paikallisesti — tietoja ei lähetetä palvelimeltasi.",
+      "modelsDesc": "EnclaveFree tukee kolmea monikielistä E5-upotusmallia. Kaikki toimivat paikallisesti — tietoja ei lähetetä palvelimeltasi.",
       "modelsTitle": "Upotusmallit",
-      "overviewDesc": "Upotukset muuntavat tekstin numeerisiksi vektoreiksi semanttista hakua varten. Sanctum käyttää paikallista upotusmallia dokumenttien ja kyselyjen käsittelyyn.",
+      "overviewDesc": "Upotukset muuntavat tekstin numeerisiksi vektoreiksi semanttista hakua varten. EnclaveFree käyttää paikallista upotusmallia dokumenttien ja kyselyjen käsittelyyn.",
       "overviewNote": "Upotusmallin vaihtaminen vaatii kaikkien dokumenttien uudelleensyöttämisen, jotta vektorit ovat yhdenmukaisia.",
       "overviewTitle": "Upotuksen yleiskatsaus",
       "performanceDesc": "Nämä asetukset ohjaavat mallin latauskäyttäytymistä ja voivat vaikuttaa käynnistysaikaan ja resurssien käyttöön.",
@@ -985,9 +985,9 @@
       "exampleConfig": "Esimerkkikonfiguraatio",
       "goToPage": "Siirry sivulle",
       "mapleExtra": "Aseta LLM_API_KEY Maple-avaimeksesi osoitteesta {{mapleSignupUrl}}. LLM_*-avaimet vastaavat MAPLE_*-aliaksia.",
-      "mapleHint": "Maple on Sanctumin standardi LLM-taustaohjelma.",
+      "mapleHint": "Maple on EnclaveFreein standardi LLM-taustaohjelma.",
       "modelField": "LLM_MODEL – Maple-mallitunniste (esimerkiksi: kimi-k2.5).",
-      "overviewDesc": "Sanctum käyttää Maplea standardina LLM-palvelunaan. Maple tarjoaa OpenAI-yhteensopivan sovellusliittymän taustalla.",
+      "overviewDesc": "EnclaveFree käyttää Maplea standardina LLM-palvelunaan. Maple tarjoaa OpenAI-yhteensopivan sovellusliittymän taustalla.",
       "overviewTitle": "Maple LLM yleiskatsaus",
       "providerField": "LLM_PROVIDER – asetettu arvoon \"maple\" yhteensopivuuden vuoksi."
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "SSL-asetukset ohjaavat HTTPS-käyttäytymistä, varmennepolkuja ja välityspalvelimen luottamusta. Oletusarvot on määritetty paikallista HTTP-kehitystä varten.",
       "overviewNote": "Jos otat käyttöön käänteisen välityspalvelimen takana, joka käsittelee TLS:n, näitä ei välttämättä tarvitse määrittää ollenkaan.",
       "overviewTitle": "SSL & HTTPS -yleiskatsaus",
-      "overviewWhen": "Määritä nämä, kun otat käyttöön tuotantoon HTTPS:llä tai kun asetat Sanctumin TLS:ää käsittelevän välityspalvelimen taakse.",
+      "overviewWhen": "Määritä nämä, kun otat käyttöön tuotantoon HTTPS:llä tai kun asetat EnclaveFreein TLS:ää käsittelevän välityspalvelimen taakse.",
       "proxiesDesc": "TRUSTED_PROXIES — pilkuilla erotettu luettelo IP-osoitteista tai CIDR-alueista käänteisille välityspalvelimille. Taustajärjestelmä käyttää näitä todellisen asiakas-IP:n selvittämiseen."
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "Varmuuskopioi lataushakemisto. Se sisältää käyttäjien lataamat alkuperäiset tiedostot.",
       "backupStep3": "3. Ota tilannekuva Qdrantista",
       "backupStep3Desc": "Käytä Qdrantin hallintapaneelia tai API:a luodaksesi kokoelman tilannekuvan vektoritiedoistasi.",
-      "backupsDesc": "Sanctum tallentaa tietoja kolmeen paikkaan — kaikki kolme tulisi varmuuskopioida yhdessä täydellistä palautusta varten.",
+      "backupsDesc": "EnclaveFree tallentaa tietoja kolmeen paikkaan — kaikki kolme tulisi varmuuskopioida yhdessä täydellistä palautusta varten.",
       "backupsTitle": "Varmuuskopiot ja siirto",
-      "backupsWhen": "Varmuuskopioi säännöllisesti ja aina ennen Sanctumin päivitystä tai tallennuspolkujen muuttamista.",
+      "backupsWhen": "Varmuuskopioi säännöllisesti ja aina ennen EnclaveFreein päivitystä tai tallennuspolkujen muuttamista.",
       "goToPage": "Siirry sivulle",
-      "overviewDesc": "Tallennusasetukset ohjaavat, minne Sanctum tallentaa tietoja — SQLite-tietokanta, ladatut tiedostot ja vektoriupotukset.",
+      "overviewDesc": "Tallennusasetukset ohjaavat, minne EnclaveFree tallentaa tietoja — SQLite-tietokanta, ladatut tiedostot ja vektoriupotukset.",
       "overviewTitle": "Tallennuksen yleiskatsaus",
       "overviewWhen": "Säädä näitä, kun liität ulkoisia levyjä, muutat varmuuskopiointisijainteja tai yhdistät etä-Qdrant-instanssiin.",
       "pathsDesc": "Nämä polut ovat Docker-kontin sisällä. Yhdistä ne isäntähakemistoihin Docker-levyjen avulla pysyvyyttä varten.",
@@ -1162,7 +1162,7 @@
       "completedDesc": "Kaikki osat on upotettu ja tallennettu vektoritietokantaan. Dokumentti on valmis hakuun.",
       "failedProcessing": "Dokumentti näyttää 'epäonnistui'",
       "failedProcessingFix": "Tarkista taustajärjestelmän lokit virheiden varalta. Yleisiä syitä: vioittunut tiedosto, tukematon merkistökoodaus tai upotusmallia ei ole ladattu.",
-      "formatsDesc": "Sanctum hyväksyy seuraavat tiedostotyypit tietokantaan syötettäväksi.",
+      "formatsDesc": "EnclaveFree hyväksyy seuraavat tiedostotyypit tietokantaan syötettäväksi.",
       "formatsTitle": "Tuetut tiedostomuodot",
       "mdDesc": ".md — Markdown-tiedostot. Otsikot ja rakenne säilytetään pilkkomisen aikana.",
       "noChunks": "Valmis mutta nolla osaa",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Määritä Maple-päätelmät",
-      "hint": "Sanctum on vain Maple-pohjainen LLM-päätelmien osalta. Määritä Maple-malli/sovellusliittymäasetukset täällä. Muutokset vaativat uudelleenkäynnistyksen."
+      "hint": "EnclaveFree on vain Maple-pohjainen LLM-päätelmien osalta. Määritä Maple-malli/sovellusliittymäasetukset täällä. Muutokset vaativat uudelleenkäynnistyksen."
     },
     "embedding": {
       "label": "Tekstinkäsittely",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "Tietokantatiedosto",
       "description": "Polku SQLite-tietokantaan",
-      "hint": "Polku SQLite-tietokantatiedostoon. Oletus: /data/sanctum.db"
+      "hint": "Polku SQLite-tietokantatiedostoon. Oletus: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Latauskansio",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "DKIM DNS -tietueen valitsin",
-      "hint": "DKIM TXT -tietueesi valitsimen etuliite. Oletus: sanctum. Palveluntarjoajasi voi vaatia tietyn valitsimen.",
+      "hint": "DKIM TXT -tietueesi valitsimen etuliite. Oletus: enclavefree. Palveluntarjoajasi voi vaatia tietyn valitsimen.",
       "label": "DKIM-valitsin"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Sanctum-instanssisi on määritetty ja valmis. Voit nyt muokata asetuksia, ladata dokumentteja ja aloittaa tietokantasi kyselyt.",
+      "body": "EnclaveFree-instanssisi on määritetty ja valmis. Voit nyt muokata asetuksia, ladata dokumentteja ja aloittaa tietokantasi kyselyt.",
       "note": "Käytä luotettua laitetta — Nostr-avaintasi käytetään arkaluontoisten instanssitietojen salaamiseen ja purkamiseen.",
       "title": "Kaikki on valmista!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "Hallitse käyttäjiä, määritä tekoälymalleja, lataa dokumentteja ja ohjaa instanssisi jokaista osa-aluetta.",
       "feature3Title": "Täysi hallinta",
       "label": "Tervetuloa",
-      "title": "Lunasta Sanctumisi"
+      "title": "Lunasta EnclaveFreeisi"
     },
     "step2": {
-      "body": "Sanctum käyttää Nostria (NIP-07) todennukseen. Tarvitset selainlaajennuksen, joka hallitsee Nostr-avaimiasi.",
+      "body": "EnclaveFree käyttää Nostria (NIP-07) todennukseen. Tarvitset selainlaajennuksen, joka hallitsee Nostr-avaimiasi.",
       "flow1": "Avaa Nostr-laajennuksesi (Alby, nos2x jne.)",
       "flow2": "Hyväksy yhteyspyyntö",
       "flow3": "Julkinen avaimesi rekisteröidään ylläpitäjäksi",
@@ -1530,7 +1530,7 @@
       "title": "Valmis yhdistämään"
     },
     "subtitle": "Määritä yksityinen tietokantasi muutamassa vaiheessa.",
-    "title": "Tervetuloa Sanctumiin"
+    "title": "Tervetuloa EnclaveFreeiin"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "rivi(ä) palautettu",
       "row_s_returned_columns_cb3f95": "rivi(ä) palautettu | Sarakkeet:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Suorita vain luku -Cypher-kyselyjä tietograafia vastaan.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum – Yksityinen RAG-järjestelmä kuratoituun tietoon",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree – Yksityinen RAG-järjestelmä kuratoituun tietoon",
       "score_92d190": "| pisteet:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Hae vektorivarastosta suoraan ilman LLM-generointia. Hyödyllinen upotusten virheenkorjaukseen.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Hakee Qdrantista semanttisesti samankaltaista tietoa",

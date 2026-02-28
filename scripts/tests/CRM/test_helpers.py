@@ -20,7 +20,7 @@ COMPOSE_ARGS = [
 
 def run_docker_sql(
     sql: str,
-    db_path: str = "/data/sanctum.db",
+    db_path: str = "/data/enclavefree.db",
     timeout: int = 30,
     csv_mode: bool = False,
 ) -> str:

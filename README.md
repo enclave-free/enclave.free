@@ -1,4 +1,4 @@
-# Sanctum — Private RAG System
+# EnclaveFree — Private RAG System
 
 Privacy-first Retrieval-Augmented Generation system for curated knowledge bases.
 
@@ -68,7 +68,7 @@ Expected response:
 
 ### Admin Setup (First Run)
 
-Sanctum requires a NIP-07 admin login before user signups are enabled. Open the frontend at `http://localhost:5173` and complete the admin login flow. Until the first admin authenticates, `/auth/magic-link` returns `503` ("Instance not configured").
+EnclaveFree requires a NIP-07 admin login before user signups are enabled. Open the frontend at `http://localhost:5173` and complete the admin login flow. Until the first admin authenticates, `/auth/magic-link` returns `503` ("Instance not configured").
 
 After the first admin login, additional configuration is available in the admin UI:
 - `/admin/instance` - branding and instance settings

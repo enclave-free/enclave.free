@@ -245,7 +245,7 @@ client = QdrantClient(host='qdrant', port=6333)
 try:
     from qdrant_client.models import Filter, FieldCondition, MatchText
     result = client.delete(
-        collection_name='sanctum_knowledge',
+        collection_name='enclavefree_knowledge',
         points_selector=Filter(
             must=[FieldCondition(key='source_file', match=MatchText(text='{job_id}'))]
         )
@@ -267,7 +267,7 @@ except Exception as e:
     # job_id is pre-validated to 16 hex chars only, safe for interpolation
     sql_delete = f"DELETE FROM ingest_jobs WHERE job_id = '{job_id}'"
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "sqlite3", "/data/sanctum.db", sql_delete],
+        ["docker", "compose", "exec", "-T", "backend", "sqlite3", "/data/enclavefree.db", sql_delete],
         capture_output=True, text=True, cwd=repo_root
     )
     if result.returncode == 0:
@@ -449,7 +449,7 @@ def main():
     config = load_config()
     
     print("="*60)
-    print("SANCTUM RAG DOCUMENT PERSISTENCE TESTS")
+    print("ENCLAVEFREE RAG DOCUMENT PERSISTENCE TESTS")
     print("="*60)
     print(f"API Base: {args.api_base}")
     print(f"Timestamp: {datetime.now().isoformat()}")

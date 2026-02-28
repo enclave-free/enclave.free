@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Master Test Runner for Sanctum Backend Integration Tests
+Master Test Runner for EnclaveFree Backend Integration Tests
 
 Includes integrated test harness that:
 1. Backs up current database
@@ -39,7 +39,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 COMPOSE_CMD = "docker compose -f docker-compose.infra.yml -f docker-compose.app.yml"
 
 # Paths
-DOCKER_DB_PATH = "/data/sanctum.db"
+DOCKER_DB_PATH = "/data/enclavefree.db"
 LOCAL_BACKUP_DIR = SCRIPT_DIR / "backups"
 
 # Domain mapping: test number -> domain name
@@ -94,7 +94,7 @@ def backup_database() -> Optional[Path]:
     LOCAL_BACKUP_DIR.mkdir(exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = LOCAL_BACKUP_DIR / f"sanctum_backup_{timestamp}.db"
+    backup_path = LOCAL_BACKUP_DIR / f"enclavefree_backup_{timestamp}.db"
     
     print(f"  [HARNESS] Backing up database...")
     
@@ -132,7 +132,7 @@ def get_latest_backup() -> Optional[Path]:
     """Get the most recent backup file."""
     if not LOCAL_BACKUP_DIR.exists():
         return None
-    backups = sorted(LOCAL_BACKUP_DIR.glob("sanctum_backup_*.db"), reverse=True)
+    backups = sorted(LOCAL_BACKUP_DIR.glob("enclavefree_backup_*.db"), reverse=True)
     return backups[0] if backups else None
 
 
@@ -375,7 +375,7 @@ def print_header(use_harness: bool):
     """Print test run header."""
     print()
     print("╔" + "═"*62 + "╗")
-    print("║" + "SANCTUM BACKEND INTEGRATION TESTS".center(62) + "║")
+    print("║" + "ENCLAVEFREE BACKEND INTEGRATION TESTS".center(62) + "║")
     if use_harness:
         print("║" + "(with test harness)".center(62) + "║")
     print("╚" + "═"*62 + "╝")
@@ -458,7 +458,7 @@ def print_summary(results: List[Tuple[dict, bool, float]]):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run Sanctum backend integration tests with optional test harness",
+        description="Run EnclaveFree backend integration tests with optional test harness",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

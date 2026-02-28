@@ -1,5 +1,5 @@
 """
-Sanctum AI Configuration Router
+EnclaveFree AI Configuration Router
 Handles AI/LLM settings including prompt templates, parameters, and session defaults.
 """
 
@@ -21,7 +21,7 @@ from models import (
     PromptPreviewResponse,
 )
 
-logger = logging.getLogger("sanctum.ai_config")
+logger = logging.getLogger("enclavefree.ai_config")
 
 router = APIRouter(prefix="/admin/ai-config", tags=["ai-config"])
 

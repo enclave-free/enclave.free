@@ -1,6 +1,6 @@
 # Docs Index
 
-This folder contains longer-form documentation for Sanctum.
+This folder contains longer-form documentation for EnclaveFree.
 
 ## Core
 

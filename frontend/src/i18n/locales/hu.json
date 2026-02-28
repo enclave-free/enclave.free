@@ -57,7 +57,7 @@
       "checkSpam": "Nem látod? Nézd meg a spam mappát.",
       "simulateMagicLink": "Magikus link kattintásának szimulálása",
       "forTesting": "Tesztelési célokra:",
-      "dataProtectionTitle": "Hogyan védi a Sanctum az adataidat",
+      "dataProtectionTitle": "Hogyan védi a EnclaveFree az adataidat",
       "noPasswordTitle": "Nincsenek tárolt jelszavak",
       "noPasswordBody": "Egyszer használatos linkkel jelentkezel be, így nincs jelszó-adatbázis, amit kezelni kellene.",
       "expiringLinkTitle": "Rövid élettartamú bejelentkezési linkek",
@@ -65,7 +65,7 @@
       "encryptionTitle": "Alapértelmezett titkosítás",
       "encryptionBody": "A profilmezők alapértelmezetten titkosítottak, de a példány adminisztrátora szabályozza a mezőszintű beállításokat, és engedélyezheti egyes adatok eltérő tárolását vagy megosztását.",
       "adminControlNotice": "Az adatkezelést a példány adminisztrátora konfigurálja, beleértve azt is, hogy mi tárolható titkosítás nélkül, illetve mi osztható meg AI eszközökkel.",
-      "noWarrantyNotice": "A Sanctum szoftver jelenlegi állapotában, garancia nélkül kerül rendelkezésre bocsátásra. A példány használata az adminisztrátor szabályzatainak hatálya alá tartozik.",
+      "noWarrantyNotice": "A EnclaveFree szoftver jelenlegi állapotában, garancia nélkül kerül rendelkezésre bocsátásra. A példány használata az adminisztrátor szabályzatainak hatálya alá tartozik.",
       "retentionNotice": "Az adatmegőrzési és törlési időszakokat a példány adminisztrátora határozza meg. Keresse fel őket hozzáférési, javítási vagy törlési kérelmekkel."
     },
     "verify": {
@@ -242,7 +242,7 @@
       "subtitle": "Szabd testre a márkaépítést és a felhasználói bevezetési élményt",
       "branding": "Példány márkaépítés",
       "displayName": "Megjelenített név",
-      "defaultName": "Sanctum",
+      "defaultName": "EnclaveFree",
       "displayNameHint": "Ez a név jelenik meg a fejlécben és a bevezetési képernyőkön",
       "icon": "Ikon",
       "accentColor": "Kiemelő szín",
@@ -601,7 +601,7 @@
       "tipRequiredDesc": "Csak akkor jelölj meg mezőket kötelezőként, ha valóban szükséged van az adatra. A túl sok kötelező mező elriaszthatja a regisztrálókat.",
       "tipsDesc": "Tartsd szem előtt ezeket a felhasználói konfiguráció beállításakor.",
       "tipsTitle": "Tippek és bevált gyakorlatok",
-      "twoTier": "A Sanctum kétszintű rendszert használ: a Felhasználói típusok határozzák meg a felhasználók kategóriáit, a Felhasználói mezők pedig azt, hogy milyen adatokat gyűjt az egyes típusoknál.",
+      "twoTier": "A EnclaveFree kétszintű rendszert használ: a Felhasználói típusok határozzák meg a felhasználók kategóriáit, a Felhasználói mezők pedig azt, hogy milyen adatokat gyűjt az egyes típusoknál.",
       "typesDesc": "Hozz létre felhasználótípusokat, ha különböző regisztrációs űrlapokra vagy jogosultságokra van szükséged különböző csoportoknak.",
       "typesExample": "Példa: Egy egyetem létrehozhat „Hallgató”, „Oktató” és „Személyzet” típusokat, mindegyik saját mezőkkel.",
       "typesTitle": "A felhasználótípusok megértése",
@@ -620,7 +620,7 @@
       "appleTouchIconPlaceholder": "https://example.com/apple-touch-icon.png",
       "assistantIconLabel": "AI asszisztens ikon",
       "assistantNameLabel": "Asszisztens megjelenítendő neve",
-      "assistantNamePlaceholder": "pl. Sanctum AI",
+      "assistantNamePlaceholder": "pl. EnclaveFree AI",
       "bubbleShadowLabel": "Finom buborékszegély hozzáadása",
       "bubbleStyleDesc": "Válassza ki a csevegőbuborékok alakját és mélységét.",
       "bubbleStylePill": "Kapszula",
@@ -760,7 +760,7 @@
   },
   "adminDashboard": {
     "title": "Admin vezérlőpult",
-    "subtitle": "A Sanctum példány konfigurációjának kezelése",
+    "subtitle": "A EnclaveFree példány konfigurációjának kezelése",
     "instance": "Példány konfiguráció",
     "instanceDesc": "Márkaépítés, felhasználótípusok és bevezetési mezők testreszabása",
     "ai": "AI konfiguráció",
@@ -926,9 +926,9 @@
       "goToPage": "Ugrás az oldalra",
       "howItWorks": "Hogyan működik a beágyazás:",
       "modelPerfDesc": "A nagyobb modellek pontosabb eredményeket hoznak, de több memóriát és időt igényelnek. Válassz a hardvered alapján.",
-      "modelsDesc": "A Sanctum három többnyelvű E5 beágyazási modellt támogat. Mindegyik helyileg fut — semmilyen adat nem hagyja el a szerveredet.",
+      "modelsDesc": "A EnclaveFree három többnyelvű E5 beágyazási modellt támogat. Mindegyik helyileg fut — semmilyen adat nem hagyja el a szerveredet.",
       "modelsTitle": "Beágyazási modellek",
-      "overviewDesc": "A beágyazások a szöveget numerikus vektorokká alakítják a szemantikus kereséshez. A Sanctum helyi beágyazási modellt használ a dokumentumok és lekérdezések feldolgozásához.",
+      "overviewDesc": "A beágyazások a szöveget numerikus vektorokká alakítják a szemantikus kereséshez. A EnclaveFree helyi beágyazási modellt használ a dokumentumok és lekérdezések feldolgozásához.",
       "overviewNote": "A beágyazási modell megváltoztatása az összes dokumentum újbóli feldolgozását igényli a vektorok konzisztenciájának megőrzéséhez.",
       "overviewTitle": "Beágyazás áttekintése",
       "performanceDesc": "Ezek a beállítások szabályozzák a modellbetöltési viselkedést, és hatással lehetnek az indítási időre és az erőforrás-használatra.",
@@ -985,9 +985,9 @@
       "exampleConfig": "Példa konfiguráció",
       "goToPage": "Ugrás az oldalra",
       "mapleExtra": "Állítsa be az LLM_API_KEY-t a {{mapleSignupUrl}} webhelyről származó Maple kulcsára. Az LLM_* kulcsok a MAPLE_* aliasokhoz vannak hozzárendelve.",
-      "mapleHint": "A Maple a Sanctum szabványos LLM háttérrendszere.",
+      "mapleHint": "A Maple a EnclaveFree szabványos LLM háttérrendszere.",
       "modelField": "LLM_MODEL — Maple modell azonosító (például: kimi-k2.5).",
-      "overviewDesc": "A Sanctum a Maple-t használja szabványos LLM szolgáltatásként. A Maple egy OpenAI-kompatibilis API-t biztosít a háttérben.",
+      "overviewDesc": "A EnclaveFree a Maple-t használja szabványos LLM szolgáltatásként. A Maple egy OpenAI-kompatibilis API-t biztosít a háttérben.",
       "overviewTitle": "Maple LLM áttekintés",
       "providerField": "LLM_PROVIDER — kompatibilitás miatt „maple”-re rögzítve."
     },
@@ -1039,7 +1039,7 @@
       "overviewDesc": "Az SSL beállítások a HTTPS viselkedést, a tanúsítvány útvonalakat és a proxy megbízhatóságot szabályozzák. Az alapértékek helyi HTTP fejlesztéshez vannak konfigurálva.",
       "overviewNote": "Ha fordított proxy mögé telepítesz, amely kezeli a TLS-t, lehet, hogy egyáltalán nem kell ezeket konfigurálnod.",
       "overviewTitle": "SSL és HTTPS áttekintése",
-      "overviewWhen": "Konfiguráld ezeket, amikor HTTPS-sel éles környezetbe telepítesz, vagy amikor a Sanctum-ot TLS-t lezáró proxy mögé helyezed.",
+      "overviewWhen": "Konfiguráld ezeket, amikor HTTPS-sel éles környezetbe telepítesz, vagy amikor a EnclaveFree-ot TLS-t lezáró proxy mögé helyezed.",
       "proxiesDesc": "TRUSTED_PROXIES — vesszővel elválasztott lista IP-címekből vagy CIDR tartományokból fordított proxykhoz. A backend ezeket használja a valós kliens IP meghatározásához."
     },
     "storageHelp": {
@@ -1050,11 +1050,11 @@
       "backupStep2Desc": "Készíts biztonsági mentést a feltöltések könyvtáráról. Ez tartalmazza az eredeti fájlokat, amelyeket a felhasználók feltöltöttek.",
       "backupStep3": "3. Qdrant pillanatkép",
       "backupStep3Desc": "Használd a Qdrant vezérlőpultot vagy API-t egy gyűjtemény-pillanatkép létrehozásához a vektoradataidról.",
-      "backupsDesc": "A Sanctum három helyen tárolja az adatokat — mindháromról egyszerre kell biztonsági mentést készíteni a teljes visszaállításhoz.",
+      "backupsDesc": "A EnclaveFree három helyen tárolja az adatokat — mindháromról egyszerre kell biztonsági mentést készíteni a teljes visszaállításhoz.",
       "backupsTitle": "Biztonsági mentések és migrálás",
-      "backupsWhen": "Készíts rendszeresen biztonsági mentést, és mindig a Sanctum frissítése vagy a tárolási útvonalak módosítása előtt.",
+      "backupsWhen": "Készíts rendszeresen biztonsági mentést, és mindig a EnclaveFree frissítése vagy a tárolási útvonalak módosítása előtt.",
       "goToPage": "Ugrás az oldalra",
-      "overviewDesc": "A tárhely beállítások szabályozzák, hol tárolja a Sanctum az adatait — az SQLite adatbázist, a feltöltött fájlokat és a vektor beágyazásokat.",
+      "overviewDesc": "A tárhely beállítások szabályozzák, hol tárolja a EnclaveFree az adatait — az SQLite adatbázist, a feltöltött fájlokat és a vektor beágyazásokat.",
       "overviewTitle": "Tárhely áttekintése",
       "overviewWhen": "Módosítsd ezeket külső kötetek csatolásakor, biztonsági mentési helyek módosításakor vagy távoli Qdrant példányhoz való csatlakozáskor.",
       "pathsDesc": "Ezek az útvonalak a Docker konténeren belül vannak. Docker kötetekkel képezd le őket a hoszt könyvtárakra a megőrzéshez.",
@@ -1162,7 +1162,7 @@
       "completedDesc": "Minden darab beágyazva és a vektoradatbázisban tárolva. A dokumentum készen áll a keresésre.",
       "failedProcessing": "A dokumentum „sikertelen” állapotot mutat",
       "failedProcessingFix": "Ellenőrizd a backend naplókat hibákért. Gyakori okok: sérült fájl, nem támogatott kódolás, vagy a beágyazási modell nincs betöltve.",
-      "formatsDesc": "A Sanctum a következő fájltípusokat fogadja el a tudásbázisba történő feldolgozáshoz.",
+      "formatsDesc": "A EnclaveFree a következő fájltípusokat fogadja el a tudásbázisba történő feldolgozáshoz.",
       "formatsTitle": "Támogatott formátumok",
       "mdDesc": ".md — Markdown fájlok. A címsorok és a struktúra megőrződik a darabolás során.",
       "noChunks": "Befejezve, de nulla darab",
@@ -1200,7 +1200,7 @@
     "llm": {
       "label": "Maple AI",
       "description": "Maple következtetés konfigurálása",
-      "hint": "A Sanctum csak Maple-t használ az LLM következtetéshez. Itt konfigurálhatja a Maple modell/API beállításait. A változtatások újraindítást igényelnek."
+      "hint": "A EnclaveFree csak Maple-t használ az LLM következtetéshez. Itt konfigurálhatja a Maple modell/API beállításait. A változtatások újraindítást igényelnek."
     },
     "embedding": {
       "label": "Szövegfeldolgozás",
@@ -1363,7 +1363,7 @@
     "SQLITE_PATH": {
       "label": "Adatbázis fájl",
       "description": "SQLite adatbázis elérési útja",
-      "hint": "Az SQLite adatbázis fájl elérési útja. Alapértelmezett: /data/sanctum.db"
+      "hint": "Az SQLite adatbázis fájl elérési útja. Alapértelmezett: /data/enclavefree.db"
     },
     "UPLOADS_DIR": {
       "label": "Feltöltések mappa",
@@ -1427,7 +1427,7 @@
     },
     "DKIM_SELECTOR": {
       "description": "DKIM DNS rekordválasztó",
-      "hint": "Választó előtag a DKIM TXT rekordjához. Alapértelmezés: sanctum. Szolgáltatója megkövetelhet egy specifikus választót.",
+      "hint": "Választó előtag a DKIM TXT rekordjához. Alapértelmezés: enclavefree. Szolgáltatója megkövetelhet egy specifikus választót.",
       "label": "DKIM Választó"
     },
     "DMARC_POLICY": {
@@ -1498,7 +1498,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "A Sanctum példányod be van állítva és használatra kész. Most már konfigurálhatod a beállításokat, feltölthetsz dokumentumokat, és megkezdheted a tudásbázis lekérdezését.",
+      "body": "A EnclaveFree példányod be van állítva és használatra kész. Most már konfigurálhatod a beállításokat, feltölthetsz dokumentumokat, és megkezdheted a tudásbázis lekérdezését.",
       "note": "Használj megbízható eszközt — a Nostr kulcsodat titkosításra és visszafejtésre használjuk az érzékeny példányadatoknál.",
       "title": "Minden készen áll!"
     },
@@ -1514,10 +1514,10 @@
       "feature3Desc": "Kezeld a felhasználókat, konfiguráld az AI modelleket, tölts fel dokumentumokat, és irányítsd a példányod minden aspektusát.",
       "feature3Title": "Teljes irányítás",
       "label": "Üdvözöljük",
-      "title": "Foglald el a Sanctumodat"
+      "title": "Foglald el a EnclaveFreeodat"
     },
     "step2": {
-      "body": "A Sanctum a Nostr-t (NIP-07) használja hitelesítéshez. Szükséged lesz egy böngészőbővítményre, amely kezeli a Nostr kulcsaidat.",
+      "body": "A EnclaveFree a Nostr-t (NIP-07) használja hitelesítéshez. Szükséged lesz egy böngészőbővítményre, amely kezeli a Nostr kulcsaidat.",
       "flow1": "Nyisd meg a Nostr bővítményed (Alby, nos2x stb.)",
       "flow2": "Hagyd jóvá a csatlakozási kérelmet",
       "flow3": "A nyilvános kulcsod adminisztrátorként lesz regisztrálva",
@@ -1530,7 +1530,7 @@
       "title": "Készen áll a csatlakozásra"
     },
     "subtitle": "Állítsd be a privát tudásbázisodat néhány lépésben.",
-    "title": "Üdvözöl a Sanctum"
+    "title": "Üdvözöl a EnclaveFree"
   },
   "reachout": {
     "errors": {
@@ -1753,7 +1753,7 @@
       "row_s_returned_b2299c": "sor(ok) visszaadva",
       "row_s_returned_columns_cb3f95": "sor(ok) visszaadva | Oszlopok:",
       "run_read_only_cypher_queries_against_the_knowledge_99f5cd": "Csak olvasható Cypher lekérdezések futtatása a tudásgráf ellen.",
-      "sanctum_private_rag_system_for_curated_knowledge_5afbbe": "Sanctum — Privát RAG rendszer kurált tudáshoz",
+      "enclavefree_private_rag_system_for_curated_knowledge_5afbbe": "EnclaveFree — Privát RAG rendszer kurált tudáshoz",
       "score_92d190": "| pontszám:",
       "search_the_vector_store_directly_without_llm_generation_ce9e36": "Közvetlen keresés a vektor tárolóban LLM generálás nélkül. Hasznos a beágyazások hibakereséséhez.",
       "searches_qdrant_for_semantically_similar_knowledge_303a40": "Szemantikailag hasonló tudás keresése a Qdrant-ban",

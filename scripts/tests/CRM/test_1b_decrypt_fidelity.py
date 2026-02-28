@@ -324,7 +324,7 @@ def find_test_user(db_path: str, test_email: str) -> int | None:
 def main():
     parser = argparse.ArgumentParser(description="Test 1B: Decrypt and Verify Fidelity")
     parser.add_argument("--api-base", default="http://localhost:8000", help="API base URL (unused, for compatibility)")
-    parser.add_argument("--db-path", default="/data/sanctum.db", help="Path to SQLite database")
+    parser.add_argument("--db-path", default="/data/enclavefree.db", help="Path to SQLite database")
     parser.add_argument("--user-id", type=int, help="User ID to test (auto-detected if not provided)")
     parser.add_argument("--token", help="Admin session token (unused, for compatibility)")
     args = parser.parse_args()

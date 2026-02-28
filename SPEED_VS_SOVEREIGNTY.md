@@ -2,7 +2,7 @@
 
 ## The Core Tension
 
-Sanctum is designed as a **privacy-first, sovereignty-first** RAG system. In production, all processing happens on-device or on infrastructure the user controls. No data leaves the user's environment.
+EnclaveFree is designed as a **privacy-first, sovereignty-first** RAG system. In production, all processing happens on-device or on infrastructure the user controls. No data leaves the user's environment.
 
 However, during this hackathon, we face a hard constraint: **time**.
 

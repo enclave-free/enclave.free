@@ -150,7 +150,7 @@ def create_test_user(api_base: str, user_data: dict, admin_token: str) -> dict |
         return None
 
 
-def run_docker_sql(sql: str, db_path: str = "/data/sanctum.db", timeout: int = 30) -> str:
+def run_docker_sql(sql: str, db_path: str = "/data/enclavefree.db", timeout: int = 30) -> str:
     """
     Run read-only SQL inside Docker container and return output.
 
@@ -194,7 +194,7 @@ def run_docker_sql(sql: str, db_path: str = "/data/sanctum.db", timeout: int = 3
     return result.stdout.strip()
 
 
-def get_admin_pubkey_from_db(db_path: str = "/data/sanctum.db") -> str | None:
+def get_admin_pubkey_from_db(db_path: str = "/data/enclavefree.db") -> str | None:
     """Get current admin pubkey from database."""
     output = run_docker_sql("SELECT pubkey FROM admins LIMIT 1", db_path)
     if output and output != "[]":
@@ -254,7 +254,7 @@ def test_error_cases(api_base: str, admin_token: str, admin_pubkey: str, new_adm
     # Error case 3: Invalid signature (wrong private key)
     print("\n[TEST] Invalid signature (wrong private key)...")
     # Sign with the new admin key instead of current admin key
-    new_admin_privkey, _ = derive_keypair_from_seed("sanctum-test-new-admin-keypair-v1")
+    new_admin_privkey, _ = derive_keypair_from_seed("enclavefree-test-new-admin-keypair-v1")
     wrong_sig_event = create_signed_auth_event(new_admin_privkey, admin_pubkey, "admin_key_migration", new_pubkey=new_admin_pubkey)
     invalid_sig_request = {
         "new_admin_pubkey": new_admin_pubkey,

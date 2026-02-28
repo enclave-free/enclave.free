@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Sanctum Admin Endpoint Authentication Verification
+# EnclaveFree Admin Endpoint Authentication Verification
 # =============================================================================
 # This script verifies that all admin endpoints require authentication
 # by checking they return 401 Unauthorized without an Authorization header.
