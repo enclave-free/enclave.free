@@ -53,10 +53,10 @@ config_export_limiter = RateLimiter(
 # These are the keys we allow managing through the UI
 ENV_CONFIG_MAP = {
     # LLM Settings
-    "LLM_PROVIDER": {"category": "llm", "description": "LLM provider (maple only)", "requires_restart": True, "default": "maple"},
-    "LLM_MODEL": {"category": "llm", "description": "Model name/identifier", "requires_restart": False},  # Maple-translated
-    "LLM_API_URL": {"category": "llm", "description": "LLM API base URL", "requires_restart": True},  # Maple-translated
-    "LLM_API_KEY": {"category": "llm", "description": "Maple API key", "requires_restart": False, "is_secret": True},  # Maple-translated
+    "LLM_PROVIDER": {"category": "llm", "description": "LLM provider/runtime owner", "requires_restart": True, "default": "sage"},
+    "LLM_MODEL": {"category": "llm", "description": "Model name/identifier", "requires_restart": False},
+    "LLM_API_URL": {"category": "llm", "description": "LLM API base URL", "requires_restart": True},
+    "LLM_API_KEY": {"category": "llm", "description": "LLM API key", "requires_restart": False, "is_secret": True},
     # Embedding Settings
     "EMBEDDING_MODEL": {"category": "embedding", "description": "Sentence transformer model", "requires_restart": True, "default": "intfloat/multilingual-e5-base"},
     # Email Settings (no defaults - optional, user must configure)
@@ -130,7 +130,7 @@ def _sync_env_to_db() -> None:
     """
     Sync current environment variables to the database.
     Only syncs keys that are in ENV_CONFIG_MAP and don't already exist in DB.
-    Uses key translation for Maple-specific aliases.
+    Uses legacy Maple key translation for compatibility where present.
     """
     # Import key translation from config_loader
     from config_loader import KEY_TRANSLATION, EMAIL_KEY_TRANSLATION
@@ -140,18 +140,18 @@ def _sync_env_to_db() -> None:
             continue
 
         existing = database.get_deployment_config(key)
-        # Keep Maple API keys env-driven unless explicitly overridden in admin UI.
+        # Keep LLM API keys env-driven unless explicitly overridden in admin UI.
         # This preserves expected `.env` behavior while still exposing the key in admin config.
         preserve_env_fallback = key == "LLM_API_KEY"
 
-        # Try to get value from env, with Maple key translation
+        # Try to get value from env, with legacy Maple key translation
         value = None
 
         if not preserve_env_fallback:
             # 1. Try the original key
             value = os.getenv(key)
 
-            # 2. If not found, try Maple-translated key
+            # 2. If not found, try legacy Maple-translated key
             if value is None and key in KEY_TRANSLATION:
                 translated_key = KEY_TRANSLATION[key]
                 value = os.getenv(translated_key)
@@ -161,9 +161,10 @@ def _sync_env_to_db() -> None:
                 translated_key = EMAIL_KEY_TRANSLATION[key]
                 value = os.getenv(translated_key)
 
-        # Enforce Maple as the only supported provider.
         if key == "LLM_PROVIDER":
-            value = "maple"
+            value = (value or meta.get("default", "sage") or "sage").strip().lower()
+            if value not in {"sage", "maple"}:
+                value = "sage"
 
         # 4. Fall back to default from config map
         if value is None:
@@ -181,13 +182,13 @@ def _sync_env_to_db() -> None:
             should_sync_metadata = (
                 key == "MONITORING_URL" and existing.get("category") != meta["category"]
             )
-            should_force_maple_provider = (
+            should_force_supported_provider = (
                 key == "LLM_PROVIDER"
-                and str(existing_value or "").strip().lower() != "maple"
+                and str(existing_value or "").strip().lower() not in {"sage", "maple"}
             )
 
-            if should_backfill_value or should_sync_metadata or should_force_maple_provider:
-                value_to_store = "maple" if should_force_maple_provider else (existing_value if existing_value not in (None, "") else value)
+            if should_backfill_value or should_sync_metadata or should_force_supported_provider:
+                value_to_store = "sage" if should_force_supported_provider else (existing_value if existing_value not in (None, "") else value)
                 database.upsert_deployment_config(
                     key=key,
                     value=value_to_store,
@@ -200,8 +201,8 @@ def _sync_env_to_db() -> None:
                     logger.debug(f"Backfilled empty config: {key} (value: {'***' if meta.get('is_secret') else value_to_store})")
                 elif should_sync_metadata:
                     logger.debug(f"Synchronized config metadata: {key} (category -> {meta['category']})")
-                elif should_force_maple_provider:
-                    logger.info("Normalized LLM_PROVIDER to maple during startup sync")
+                elif should_force_supported_provider:
+                    logger.info("Normalized LLM_PROVIDER to sage during startup sync")
             continue
 
         database.upsert_deployment_config(
@@ -386,7 +387,7 @@ async def update_deployment_config_value(
     value_to_save = update.value
 
     # For secret keys, preserve existing value if new value is empty/whitespace.
-    # Exception: LLM_API_KEY allows clearing so runtime can fall back to .env MAPLE_API_KEY.
+    # Exception: LLM_API_KEY allows clearing so runtime can fall back to .env.
     if meta.get("is_secret") and (not value_to_save or not value_to_save.strip()):
         if key == "LLM_API_KEY":
             value_to_save = ""
@@ -470,9 +471,9 @@ async def update_deployment_config_value(
 
     if key == "LLM_PROVIDER":
         normalized = str(value_to_save or "").strip().lower()
-        if normalized not in ("", "maple"):
-            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "maple"')
-        value_to_save = "maple"
+        if normalized not in ("", "sage", "maple"):
+            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage" or legacy "maple"')
+        value_to_save = normalized or "sage"
 
     # Get admin pubkey for audit log
     admin_pubkey = admin.get("pubkey")
@@ -625,17 +626,10 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             error="Connection failed",
         ))
 
-    # Check Maple LLM service
-    llm_url = (
-        config_dict.get("LLM_API_URL")
-        or os.getenv("LLM_API_URL", "")
-        or config_dict.get("MAPLE_BASE_URL")
-        or os.getenv("MAPLE_BASE_URL", "")
-    )
-    base_url = (llm_url or "http://maple-proxy:8080").rstrip("/")
-    if base_url.endswith("/v1"):
-        base_url = base_url[:-3]
-    llm_health_url = base_url + "/health"
+    # Check AI runtime / router
+    provider = (config_dict.get("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage")).strip().lower() or "sage"
+    runtime_url = (os.getenv("SAGE_WEB_URL", "http://sage:3000")).rstrip("/")
+    llm_health_url = runtime_url + "/health"
 
     try:
         start = time.time()
@@ -643,19 +637,43 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             resp = await client.get(llm_health_url)
         response_time = int((time.time() - start) * 1000)
         services.append(ServiceHealthItem(
-            name="LLM (maple)",
+            name=f"AI Runtime ({provider})",
             status="healthy" if resp.status_code == 200 else "unhealthy",
             response_time_ms=response_time,
             last_checked=datetime.now(timezone.utc).isoformat(),
         ))
     except httpx.RequestError as e:
-        logger.warning(f"LLM (maple) health check failed: {e}")
+        logger.warning(f"AI runtime ({provider}) health check failed: {e}")
         services.append(ServiceHealthItem(
-            name="LLM (maple)",
+            name=f"AI Runtime ({provider})",
             status="unhealthy",
             last_checked=datetime.now(timezone.utc).isoformat(),
             error="Connection failed",
         ))
+
+    # Check Tinfoil proxy when configured
+    tinfoil_url = config_dict.get("LLM_API_URL") or os.getenv("LLM_API_URL", "")
+    if tinfoil_url:
+        try:
+            start = time.time()
+            tinfoil_models_url = f"{tinfoil_url.rstrip('/')}/models"
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(tinfoil_models_url)
+            response_time = int((time.time() - start) * 1000)
+            services.append(ServiceHealthItem(
+                name="Tinfoil Proxy",
+                status="healthy" if resp.status_code == 200 else "unhealthy",
+                response_time_ms=response_time,
+                last_checked=datetime.now(timezone.utc).isoformat(),
+            ))
+        except Exception as e:
+            logger.warning(f"Tinfoil proxy health check failed: {e}")
+            services.append(ServiceHealthItem(
+                name="Tinfoil Proxy",
+                status="unhealthy",
+                last_checked=datetime.now(timezone.utc).isoformat(),
+                error="Connection failed",
+            ))
 
     # Check SearXNG
     searxng_url = config_dict.get("SEARXNG_URL") or os.getenv("SEARXNG_URL", "")

@@ -77,6 +77,7 @@ from query import router as query_router
 from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
+from internal_agent import router as internal_agent_router
 
 logger.info("Starting Sanctum API...")
 
@@ -249,6 +250,7 @@ app.include_router(query_router)
 app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(key_migration_router)
+app.include_router(internal_agent_router)
 
 
 @app.on_event("startup")

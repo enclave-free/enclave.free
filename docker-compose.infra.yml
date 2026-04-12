@@ -1,17 +1,43 @@
 services:
-  maple-proxy:
-    image: ghcr.io/opensecretcloud/maple-proxy:latest
-    container_name: sanctum-maple-proxy
-    restart: unless-stopped
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: enclave-sage-postgres
     environment:
-      - MAPLE_BACKEND_URL=https://enclave.trymaple.ai
-      - MAPLE_API_KEY=${MAPLE_API_KEY}
+      POSTGRES_USER: sage
+      POSTGRES_PASSWORD: sage
+      POSTGRES_DB: sage
+    volumes:
+      - sage_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U sage -d sage"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sanctum-net
+
+  tinfoil-proxy:
+    image: ghcr.io/tinfoilsh/tinfoil-cli:latest
+    container_name: enclave-tinfoil-proxy
+    command:
+      - proxy
+      - -e
+      - ${TINFOIL_ROUTER_HOST:-inference.tinfoil.sh}
+      - -r
+      - ${TINFOIL_ROUTER_REPO:-tinfoilsh/confidential-model-router}
+      - -p
+      - "8089"
+      - -b
+      - 0.0.0.0
+    environment:
+      - TINFOIL_API_KEY=${TINFOIL_API_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8089/v1/models >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 15s
     networks:
       - sanctum-net
 
@@ -47,6 +73,7 @@ services:
 
 volumes:
   qdrant_data:
+  sage_postgres_data:
 
 networks:
   sanctum-net:

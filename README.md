@@ -1,6 +1,6 @@
-# Sanctum — Private RAG System
+# enclave.free-prototype
 
-Privacy-first Retrieval-Augmented Generation system for curated knowledge bases.
+Prototype fork of `enclave.free` that hard-cuts the AI runtime from the legacy Maple request/response flow to Sage + Tinfoil.
 
 ## Quick Start
 
@@ -13,7 +13,7 @@ Privacy-first Retrieval-Augmented Generation system for curated knowledge bases.
 
 ```bash
 cp .env.example .env
-# Set MAPLE_API_KEY in .env (required for LLM features)
+# Set TINFOIL_API_KEY and INTERNAL_AGENT_TOKEN in .env
 # For production email auth, set MOCK_EMAIL=false and configure SMTP_* + FRONTEND_URL
 # You can also manage LLM/SMTP/domain settings later in the admin UI at /admin/deployment
 ```
@@ -21,8 +21,8 @@ cp .env.example .env
 ### Start the Stack
 
 Docker Compose is split into two files:
-- **`docker-compose.infra.yml`** — Infrastructure services (Qdrant, maple-proxy, SearXNG)
-- **`docker-compose.app.yml`** — Application services (backend, frontend)
+- **`docker-compose.infra.yml`** — Infrastructure services (Postgres, Tinfoil proxy, Qdrant, SearXNG)
+- **`docker-compose.app.yml`** — Application services (gateway, core-backend, Sage, frontend)
 
 This separation lets you keep infrastructure running while rebuilding just the app, avoiding database restarts when only code changes.
 
@@ -30,15 +30,15 @@ This separation lets you keep infrastructure running while rebuilding just the a
 # First time or full restart: start everything
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d
 
-# Rebuild only app (keeps infra services running: qdrant, maple-proxy, searxng)
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d backend frontend
+# Rebuild only app (keeps infra services running: postgres, tinfoil-proxy, qdrant, searxng)
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d backend core-backend sage frontend
 ```
 
 First startup will:
-1. Pull Qdrant and other service images
-2. Build the FastAPI backend
+1. Pull Postgres/Qdrant/Tinfoil/SearXNG images
+2. Build the FastAPI backend, Sage web runtime, and gateway
 3. Download the embedding model (~500MB)
-4. Initialize SQLite database
+4. Initialize SQLite and Sage Postgres state
 
 ### Verify Setup
 
@@ -89,16 +89,16 @@ See `docs/security.md` and `docs/security-data-protection-checklist.md` for prod
 | `GET /` | API info |
 | `GET /health` | Service health check |
 | `GET /test` | Smoke test (Qdrant + health check) |
-| `GET /llm/test` | Maple LLM connectivity test |
+| `GET /llm/test` | LLM connectivity test |
 
 ### Service URLs
 
 | Service | URL |
 |---------|-----|
 | Vite Frontend | http://localhost:5173 |
-| FastAPI Backend | http://localhost:8000 |
+| API Gateway | http://localhost:8000 |
 | Qdrant Dashboard | http://localhost:6333/dashboard |
-| maple-proxy (LLM) | http://localhost:8080 |
+| Tinfoil Proxy | http://localhost:8089 |
 
 ### Stop the Stack
 
@@ -113,16 +113,16 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   Backend   │────▶│   SQLite    │
+│   Frontend  │────▶│  API Gate   │────▶│   SQLite    │
 │   (Vite)    │     │  (FastAPI)  │     │   (Data)    │
 └─────────────┘     └──────┬──────┘     └─────────────┘
                            │
-                ┌──────────┼──────────┐
-                ▼          ▼          ▼
-         ┌──────────┐ ┌────────┐ ┌────────┐
-         │  Qdrant  │ │ maple  │ │SearXNG │
-         │(Vectors) │ │ proxy  │ │(Search)│
-         └──────────┘ └────────┘ └────────┘
+                ┌──────────┼───────────────┬─────────────┐
+                ▼          ▼               ▼             ▼
+         ┌──────────┐ ┌────────────┐ ┌────────┐ ┌────────────┐
+         │  Qdrant  │ │ Sage Web   │ │SearXNG │ │ Tinfoil    │
+         │(Vectors) │ │  Runtime   │ │(Search)│ │  Proxy     │
+         └──────────┘ └────────────┘ └────────┘ └────────────┘
 ```
 
 ## Embedding Model
@@ -139,12 +139,14 @@ Uses `intfloat/multilingual-e5-base`:
 
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f backend
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f core-backend
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f sage
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f qdrant
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f maple-proxy
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f tinfoil-proxy
 ```
 
 ### Rebuild Backend
 
 ```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build backend
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build backend core-backend sage
 ```

@@ -762,20 +762,20 @@ export function AdminDeploymentConfig() {
   // LLM help pages data
   const LLM_HELP_PAGES = [
     {
-      title: t('adminDeployment.llmHelp.overviewTitle', 'Maple LLM Overview'),
+      title: t('adminDeployment.llmHelp.overviewTitle', 'Sage Runtime Overview'),
       content: 'overview',
     },
     {
-      title: 'Maple',
-      hint: t('adminDeployment.llmHelp.mapleHint', 'Maple is the only supported AI backend for Sanctum.'),
+      title: 'Sage + Tinfoil',
+      hint: t('adminDeployment.llmHelp.mapleHint', 'This prototype routes AI traffic through Sage and uses Tinfoil for model inference.'),
       config: {
-        LLM_PROVIDER: 'maple',
-        LLM_API_KEY: 'your-api-key-from-trymaple.ai',
+        LLM_PROVIDER: 'sage',
+        LLM_API_KEY: 'your-tinfoil-api-key',
         LLM_MODEL: DEFAULT_MAPLE_MODEL,
       },
       extra: t('adminDeployment.llmHelp.mapleExtra', {
         mapleSignupUrl: MAPLE_SIGNUP_URL,
-        defaultValue: 'Set LLM_API_KEY to your Maple key from {{mapleSignupUrl}}. LLM_* keys map to MAPLE_* env aliases.',
+        defaultValue: 'Set LLM_API_KEY to your Tinfoil key. Sage reads the generic LLM_* settings and the stack forwards them to the local Tinfoil proxy.',
       }),
     },
   ]
@@ -1843,25 +1843,25 @@ export function AdminDeploymentConfig() {
                 {LLM_HELP_PAGES[llmHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.llmHelp.overviewDesc', 'Sanctum uses Maple as its standard LLM service. Maple exposes an OpenAI-compatible API while keeping configuration Maple-first in the product.')}
+                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public AI runtime and Tinfoil as the model backend. The web app keeps the same user-facing API surface while the gateway routes AI requests to Sage.')}
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_PROVIDER</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.providerField', 'Fixed to "maple". This key exists for compatibility and should not be changed.')}
+                          {t('adminDeployment.llmHelp.providerField', 'Set this to "sage". Legacy "maple" remains only for compatibility with older config paths.')}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_MODEL</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.modelField', `Maple model identifier to use (for example: ${DEFAULT_MAPLE_MODEL}).`)}
+                          {t('adminDeployment.llmHelp.modelField', `Tinfoil model identifier Sage should use (for example: ${DEFAULT_MAPLE_MODEL}).`)}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-medium text-text">{t('adminDeployment.llmHelp.apiKeyLabel', 'Maple API Key')}</p>
+                        <p className="text-sm font-medium text-text">{t('adminDeployment.llmHelp.apiKeyLabel', 'Tinfoil API Key')}</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for Maple. Set LLM_API_KEY (maps to MAPLE_API_KEY).')}
+                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for the Tinfoil proxy. Set LLM_API_KEY or leave it empty to fall back to TINFOIL_API_KEY from .env.')}
                         </p>
                       </div>
                     </div>

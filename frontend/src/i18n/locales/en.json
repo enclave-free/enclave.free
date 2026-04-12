@@ -227,7 +227,7 @@
       "compact": "Compact",
       "expand": "Expand",
       "shareSecretsTitle": "Share secret env vars",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Maple.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Sensitive",
       "emptyPrompt": "Ask questions about any admin configuration. If you want the assistant to propose and apply changes, ask it to include a JSON change set.",
       "pendingChanges": "Pending changes",
@@ -1049,19 +1049,19 @@
       "usersToMigrate": "Users to migrate",
       "warning": "This is an advanced operation. Incorrect migration can lock you out of encrypted data. Proceed only if you understand the implications."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear override and use .env MAPLE_API_KEY fallback.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Maple API key. Maps to MAPLE_API_KEY.",
-      "apiKeyLabel": "Maple API Key",
-      "ariaLabel": "Maple LLM configuration help",
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
-      "mapleExtra": "Set LLM_API_KEY to your Maple key from {{mapleSignupUrl}}. LLM_* keys map to MAPLE_* aliases.",
-      "mapleHint": "Maple is the only supported LLM backend for Sanctum.",
-      "modelField": "LLM_MODEL — Maple model identifier (for example: kimi-k2.5).",
-      "overviewDesc": "Sanctum uses Maple as its only supported LLM service. Maple provides an OpenAI-compatible API under the hood.",
-      "overviewTitle": "Maple LLM Overview",
-      "providerField": "LLM_PROVIDER — fixed to \"maple\" for compatibility."
+      "mapleExtra": "Set LLM_API_KEY to your Tinfoil key. Sage reads the generic LLM_* settings and uses the local Tinfoil proxy.",
+      "mapleHint": "This prototype routes AI traffic through Sage and uses Tinfoil as the model backend.",
+      "modelField": "LLM_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-5).",
+      "overviewDesc": "This prototype uses Sage as the public AI runtime and Tinfoil as the model backend.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "Failed to reveal the value. Check your Nostr extension connection.",
     "searchHelp": {
@@ -1232,9 +1232,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "Configure Maple inference",
-      "hint": "Sanctum is Maple-only for LLM inference. Configure Maple model/API settings here. Changes require a restart."
+      "label": "Sage AI Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes AI traffic through Sage and uses Tinfoil as the model backend. Changes require a restart."
     },
     "embedding": {
       "label": "Text Processing",
@@ -1325,18 +1325,18 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "AI Service",
-      "description": "LLM provider (Maple only)",
-      "hint": "Maple is the only supported value. This key remains for compatibility."
+      "description": "LLM runtime owner",
+      "hint": "Use \"sage\" for this prototype. Legacy \"maple\" remains only for compatibility."
     },
     "LLM_MODEL": {
       "label": "Model Name",
       "description": "Model name/identifier",
-      "hint": "The Maple model identifier to use (e.g., \"kimi-k2.5\")."
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-5\")."
     },
     "LLM_API_URL": {
       "label": "API Endpoint",
       "description": "Base URL for API requests",
-      "hint": "Maple API base URL. Default: http://maple-proxy:8080/v1."
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "Context Chunks",
@@ -1515,8 +1515,8 @@
     },
     "LLM_API_KEY": {
       "label": "API Key",
-      "description": "Maple API key (secret)",
-      "hint": "Maps to MAPLE_API_KEY. Leave empty to clear override and use .env fallback."
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     }
   },
   "colors": {
@@ -1605,7 +1605,7 @@
       "get_test_b58003": "GET /test",
       "retrieves_the_spanish_udhr_claim_from_neo4j_and_3bbddf": "— Retrieves the Spanish UDHR claim from Neo4j and its embedding from Qdrant.",
       "3_llm_provider_test_f3cd3d": "3. LLM Provider Test",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the Maple LLM service.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured LLM service.",
       "get_llm_test_86edd0": "GET /llm/test",
       "sends_say_hello_to_the_llm_and_returns_9da964": "— Sends \"Say 'hello'\" to the LLM and returns its response. Shows which model and provider are active.",
       "4_rag_query_full_pipeline_8ea01b": "4. RAG Query (Full Pipeline)",

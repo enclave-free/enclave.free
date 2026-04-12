@@ -1,7 +1,7 @@
 """
 LLM Provider Base Class and Factory
 
-Provides an abstract interface for the Maple OpenAI-compatible LLM service.
+Provides an abstract interface for the configured OpenAI-compatible LLM service.
 """
 
 import os
@@ -15,7 +15,7 @@ logger = logging.getLogger("sanctum.llm.provider")
 
 @dataclass
 class LLMResponse:
-    """Unified response from the configured Maple-backed LLM service."""
+    """Unified response from the configured OpenAI-compatible LLM service."""
     content: str
     model: str
     provider: str
@@ -28,7 +28,7 @@ class LLMProvider(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Service identifier (currently always 'maple')."""
+        """Service identifier."""
         pass
 
     @abstractmethod
@@ -52,12 +52,13 @@ def get_provider(provider_name: Optional[str] = None) -> LLMProvider:
     Returns:
         Configured LLMProvider instance.
     """
-    requested = (provider_name or os.getenv("LLM_PROVIDER", "maple")).strip().lower()
-    if requested and requested != "maple":
-        logger.warning("Unsupported LLM provider %r requested; forcing maple", requested)
+    requested = (provider_name or os.getenv("LLM_PROVIDER", "sage")).strip().lower()
+    if requested not in {"", "sage", "maple"}:
+        logger.warning("Unsupported LLM provider %r requested; forcing sage-compatible provider", requested)
+        requested = "sage"
 
     from .maple import MapleProvider
-    return MapleProvider()
+    return MapleProvider(provider_name=requested or "sage")
 
 
 def get_maple_provider() -> LLMProvider:

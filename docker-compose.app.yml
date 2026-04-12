@@ -1,23 +1,25 @@
 services:
-  backend:
+  core-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sanctum-backend
-    ports:
-      - "127.0.0.1:8000:8000"
+    container_name: enclave-core-backend
+    expose:
+      - "8000"
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat/multilingual-e5-base}
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - TRANSFORMERS_OFFLINE=${TRANSFORMERS_OFFLINE:-0}
-      - LLM_PROVIDER=maple
-      - MAPLE_BASE_URL=http://maple-proxy:8080/v1
-      - MAPLE_API_KEY=${MAPLE_API_KEY:-}
-      - MAPLE_MODEL=kimi-k2.5
+      - LLM_PROVIDER=${LLM_PROVIDER:-sage}
+      - LLM_API_URL=${LLM_API_URL:-http://tinfoil-proxy:8089/v1}
+      - LLM_API_KEY=${TINFOIL_API_KEY:-}
+      - LLM_MODEL=${TINFOIL_MODEL:-kimi-k2-5}
+      - SAGE_WEB_URL=http://sage:3000
       - SEARXNG_URL=http://searxng:8080
       - SQLITE_PATH=/data/sanctum.db
+      - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       # Magic Link Auth configuration
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
@@ -40,7 +42,7 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy
-      maple-proxy:
+      tinfoil-proxy:
         condition: service_healthy
       searxng:
         condition: service_healthy
@@ -49,6 +51,74 @@ services:
       - ./uploads:/uploads
       - embedding_cache:/root/.cache/huggingface
       - sqlite_data:/data
+    networks:
+      - sanctum-net
+
+  sage:
+    build:
+      context: ./runtime/sage
+      dockerfile: Dockerfile
+    container_name: enclave-sage-web
+    command: ["/app/enclave_web"]
+    expose:
+      - "3000"
+    volumes:
+      - sage_workspace:/workspace
+    environment:
+      - DATABASE_URL=postgres://sage:sage@postgres:5432/sage
+      - TINFOIL_API_URL=http://tinfoil-proxy:8089/v1
+      - TINFOIL_API_KEY=${TINFOIL_API_KEY}
+      - TINFOIL_MODEL=${TINFOIL_MODEL:-kimi-k2-5}
+      - TINFOIL_EMBEDDING_MODEL=${TINFOIL_EMBEDDING_MODEL:-nomic-embed-text}
+      - SAGE_WORKSPACE=/workspace
+      - ENCLAVE_WEB_PORT=3000
+      - ENCLAVE_BACKEND_URL=http://core-backend:8000
+      - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - SEARXNG_URL=http://searxng:8080
+      - USER_SESSION_COOKIE_NAME=${USER_SESSION_COOKIE_NAME:-sanctum_session}
+      - ADMIN_SESSION_COOKIE_NAME=${ADMIN_SESSION_COOKIE_NAME:-sanctum_admin_session}
+      - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-sanctum_csrf}
+      - RUST_LOG=${RUST_LOG:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      tinfoil-proxy:
+        condition: service_healthy
+      core-backend:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      searxng:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - sanctum-net
+
+  backend:
+    image: nginx:1.27-alpine
+    container_name: enclave-api-gateway
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      core-backend:
+        condition: service_healthy
+      sage:
+        condition: service_healthy
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - sanctum-net
 
@@ -76,6 +146,7 @@ services:
 volumes:
   embedding_cache:
   sqlite_data:
+  sage_workspace:
 
 networks:
   sanctum-net:

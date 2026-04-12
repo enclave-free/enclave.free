@@ -1,8 +1,7 @@
 """
-Maple Proxy LLM Provider
+OpenAI-Compatible LLM Provider
 
-OpenAI-compatible provider for Maple's encrypted LLM service.
-IMPORTANT: Maple Proxy only supports streaming responses.
+OpenAI-compatible provider for Sage/Tinfoil and legacy Maple-style runtimes.
 """
 
 import os
@@ -16,27 +15,27 @@ from .provider import LLMProvider, LLMResponse
 
 class MapleProvider(LLMProvider):
     """
-    Maple Proxy - streaming-only OpenAI-compatible endpoint.
-
-    Maple provides end-to-end encrypted LLM inference via hardware TEEs.
-    The proxy exposes an OpenAI-compatible API at /v1.
+    Generic OpenAI-compatible endpoint used by the prototype backend's legacy
+    utility endpoints. Despite the class name, this now supports Sage/Tinfoil
+    config through the generic LLM_* keys as well as legacy MAPLE_* aliases.
     """
 
-    def __init__(self):
+    def __init__(self, provider_name: str = "sage"):
         self._lock = threading.RLock()
+        self.provider_name = provider_name if provider_name in {"sage", "maple"} else "sage"
 
         # Use config_loader for runtime config, with env fallback
         try:
             from config_loader import get_config
-            self.base_url = get_config("LLM_API_URL") or get_config("MAPLE_BASE_URL") or "http://maple-proxy:8080/v1"
+            self.base_url = get_config("LLM_API_URL") or get_config("MAPLE_BASE_URL") or "http://tinfoil-proxy:8089/v1"
             self.api_key = get_config("LLM_API_KEY") or get_config("MAPLE_API_KEY") or ""
-            self.default_model = get_config("LLM_MODEL") or get_config("MAPLE_MODEL") or "kimi-k2.5"
+            self.default_model = get_config("LLM_MODEL") or get_config("MAPLE_MODEL") or "kimi-k2-5"
         except ImportError:
             # Fallback to env vars if config_loader not available
             # Use same order as try block: LLM_* first, then MAPLE_*
-            self.base_url = os.getenv("LLM_API_URL") or os.getenv("MAPLE_BASE_URL", "http://maple-proxy:8080/v1")
+            self.base_url = os.getenv("LLM_API_URL") or os.getenv("MAPLE_BASE_URL", "http://tinfoil-proxy:8089/v1")
             self.api_key = os.getenv("LLM_API_KEY") or os.getenv("MAPLE_API_KEY", "")
-            self.default_model = os.getenv("LLM_MODEL") or os.getenv("MAPLE_MODEL", "kimi-k2.5")
+            self.default_model = os.getenv("LLM_MODEL") or os.getenv("MAPLE_MODEL", "kimi-k2-5")
 
         # Initialize OpenAI client with Maple endpoint
         self._init_client()
@@ -72,24 +71,27 @@ class MapleProvider(LLMProvider):
 
     @property
     def name(self) -> str:
-        return "maple"
+        return self.provider_name
 
     def health_check(self) -> bool:
-        """Check Maple Proxy health endpoint at /health"""
+        """Check an OpenAI-compatible runtime via /health or /v1/models."""
         try:
-            # Health endpoint is at base URL without /v1
             base = self.base_url.replace("/v1", "")
-            resp = httpx.get(f"{base}/health", timeout=5.0)
-            return resp.status_code == 200
+            health_resp = httpx.get(f"{base}/health", timeout=5.0)
+            if health_resp.status_code == 200:
+                return True
+        except Exception:
+            pass
+
+        try:
+            models_resp = httpx.get(f"{self.base_url.rstrip('/')}/models", timeout=5.0)
+            return models_resp.status_code == 200
         except Exception:
             return False
 
     def complete(self, prompt: str, model: Optional[str] = None, temperature: float = 0.1) -> LLMResponse:
         """
-        Generate completion using Maple Proxy.
-
-        IMPORTANT: Maple requires stream=True - it only supports streaming responses.
-        This method collects the streamed chunks into a single response.
+        Generate completion using a streaming OpenAI-compatible endpoint.
         """
         # Refresh config before each request to pick up runtime changes
         self._refresh_config()
@@ -99,7 +101,6 @@ class MapleProvider(LLMProvider):
             client = self.client
             model = model or self.default_model
 
-        # Must use streaming for Maple
         stream = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],

@@ -283,9 +283,9 @@ export type ConfigCategory = typeof CONFIG_CATEGORY_KEYS[number]
 export function getConfigCategories(t: TFunction): Record<ConfigCategory, ConfigCategoryMeta> {
   return {
     llm: {
-      label: t('configCategories.llm.label', 'Maple AI'),
-      description: t('configCategories.llm.description', 'Configure Maple inference'),
-      hint: t('configCategories.llm.hint', 'Sanctum is Maple-only for LLM inference. Set Maple model/API settings here. Changes require a service restart to take effect.'),
+      label: t('configCategories.llm.label', 'Sage AI Runtime'),
+      description: t('configCategories.llm.description', 'Configure Sage + Tinfoil inference'),
+      hint: t('configCategories.llm.hint', 'This prototype routes AI traffic through Sage and uses Tinfoil as the model backend. Configure the shared LLM_* settings here. Changes require a service restart to take effect.'),
     },
     embedding: {
       label: t('configCategories.embedding.label', 'Text Processing'),
@@ -478,23 +478,23 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
   return {
     LLM_PROVIDER: {
       label: t('deploymentConfigItems.LLM_PROVIDER.label', 'AI Service'),
-      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'LLM provider (Maple only)'),
-      hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Maple is the only supported value. This key is retained for compatibility.'),
+      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'LLM runtime owner'),
+      hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Use "sage" for this prototype. Legacy "maple" is retained only for compatibility.'),
     },
     LLM_MODEL: {
       label: t('deploymentConfigItems.LLM_MODEL.label', 'Model Name'),
       description: t('deploymentConfigItems.LLM_MODEL.description', 'Model name/identifier'),
-      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Maple model identifier to use (e.g., "${DEFAULT_MAPLE_MODEL}").`),
+      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_MAPLE_MODEL}").`),
     },
     LLM_API_URL: {
       label: t('deploymentConfigItems.LLM_API_URL.label', 'API Endpoint'),
       description: t('deploymentConfigItems.LLM_API_URL.description', 'Base URL for API requests'),
-      hint: t('deploymentConfigItems.LLM_API_URL.hint', 'The Maple API base URL. Default: http://maple-proxy:8080/v1.'),
+      hint: t('deploymentConfigItems.LLM_API_URL.hint', 'The Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1.'),
     },
     LLM_API_KEY: {
       label: t('deploymentConfigItems.LLM_API_KEY.label', 'API Key'),
-      description: t('deploymentConfigItems.LLM_API_KEY.description', 'Maple API key (secret)'),
-      hint: t('deploymentConfigItems.LLM_API_KEY.hint', 'Maps to MAPLE_API_KEY. Leave empty to clear the override and use .env fallback.'),
+      description: t('deploymentConfigItems.LLM_API_KEY.description', 'Tinfoil API key (secret)'),
+      hint: t('deploymentConfigItems.LLM_API_KEY.hint', 'Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.'),
     },
     RAG_TOP_K: {
       label: t('deploymentConfigItems.RAG_TOP_K.label', 'Context Chunks'),

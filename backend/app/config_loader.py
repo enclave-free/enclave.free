@@ -24,8 +24,8 @@ _cache_time: float = 0
 _cache_lock = threading.Lock()
 CACHE_TTL = 60  # seconds
 
-# Key translation map for Maple-backed LLM config.
-# UI uses generic keys, runtime also supports Maple-specific env aliases.
+# Key translation map for legacy Maple-backed LLM config.
+# The prototype prefers generic LLM_* keys but still honors old aliases.
 KEY_TRANSLATION = {
     "LLM_API_URL": "MAPLE_BASE_URL",
     "LLM_MODEL": "MAPLE_MODEL",
@@ -39,7 +39,7 @@ EMAIL_KEY_TRANSLATION = {
 
 
 def _get_provider() -> str:
-    """Get current LLM provider from config or env (Maple only)."""
+    """Get current LLM provider from config or env."""
     # Use cache to avoid repeated DB queries
     _refresh_cache_if_needed()
     configured = None
@@ -49,10 +49,11 @@ def _get_provider() -> str:
             if value and value != MASKED_VALUE_PLACEHOLDER:
                 configured = str(value).strip().lower()
     if not configured:
-        configured = os.getenv("LLM_PROVIDER", "maple").strip().lower()
-    if configured and configured != "maple":
-        logger.warning("Unsupported LLM_PROVIDER=%r detected; using maple", configured)
-    return "maple"
+        configured = os.getenv("LLM_PROVIDER", "sage").strip().lower()
+    if configured not in {"", "sage", "maple"}:
+        logger.warning("Unsupported LLM_PROVIDER=%r detected; using sage", configured)
+        return "sage"
+    return configured or "sage"
 
 
 def _refresh_cache_if_needed():
@@ -144,7 +145,7 @@ def get_config(key: str, default: Any = None) -> Any:
             if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
                 return value
 
-    # Try key translation for Maple-specific aliases.
+    # Try key translation for legacy Maple-specific aliases.
     if key in KEY_TRANSLATION:
         translated_key = KEY_TRANSLATION[key]
         # Check cache for translated key (thread-safe read)
@@ -181,7 +182,7 @@ def get_config(key: str, default: Any = None) -> Any:
 def get_llm_config() -> dict:
     """
     Get all LLM-related configuration.
-    Returns Maple-backed generic keys mapped to current values.
+    Returns generic keys mapped to current values.
     """
     return {
         "provider": _get_provider(),
