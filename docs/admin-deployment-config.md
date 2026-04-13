@@ -1,167 +1,124 @@
 # Admin Deployment Configuration
 
-This guide covers the deployment configuration system available to admins at `/admin/deployment`. It lets you manage LLM, email, domains, SSL, and other environment-level settings without editing `.env` files.
+The admin deployment UI at `/admin/deployment` still exists on this prototype, but it no longer controls the whole runtime by itself. Current deployment behavior is split across:
 
-## Overview
+- Python deployment config stored in SQLite
+- Sage runtime environment variables
+- gateway route config
+- Tinfoil proxy environment
 
-Deployment config values are stored in SQLite (`deployment_config` table) and take precedence over environment variables at runtime. On startup, the backend syncs known environment variables into the database if they’re missing.
+This doc describes that split so operators know which setting changes what.
 
-**Precedence order:**
-1. `deployment_config` (SQLite)
-2. Environment variables
-3. Built‑in defaults (where defined)
+## What The Admin UI Still Owns
 
-## Where It Lives
+The public admin deployment API is still Python-owned:
 
 - UI: `/admin/deployment`
-- API base: `/admin/deployment/*` (admin auth required)
-- Storage: `deployment_config` + `config_audit_log`
+- API: `/admin/deployment/*`
+- storage: SQLite `deployment_config` and `config_audit_log`
 
-## Key Behaviors
+It remains the canonical place for:
 
-- **Secret values are masked** in list views.
-- **Reveal secrets** via `GET /admin/deployment/config/{key}/reveal`.
-- **Empty secret updates are ignored** to avoid accidental credential wipe (exception: `LLM_API_KEY` can be cleared to fall back to `.env`).
-- **Config changes are audited** in `config_audit_log`.
-- Some keys **require restart** to take effect (see `requires_restart`).
+- SMTP and email settings
+- frontend/domain/CORS settings exposed through Python
+- deployment health checks
+- LLM metadata used by Python-side health reporting and remaining legacy paths
 
-## API Endpoints
+It is no longer the owner of runtime AI config. `/admin/ai-config/*` now belongs to Sage and is stored in Sage Postgres.
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/admin/deployment/config` | GET | List all config values grouped by category |
-| `/admin/deployment/config/{key}` | GET | Read one config key (masked if secret) |
-| `/admin/deployment/config/{key}/reveal` | GET | Reveal a secret value |
-| `/admin/deployment/config/{key}` | PUT | Update a config value |
-| `/admin/deployment/config/export` | GET | Export `.env`‑style text (includes secrets) |
-| `/admin/deployment/config/validate` | POST | Validate config and return errors/warnings |
-| `/admin/deployment/health` | GET | Health checks for Qdrant/LLM/SearXNG/SMTP |
-| `/admin/deployment/restart-required` | GET | Keys changed since service start that require restart |
-| `/admin/deployment/audit-log` | GET | Recent config changes |
+## Current Ownership Split
 
-## Validation Rules
+| Concern | Current owner | Notes |
+| --- | --- | --- |
+| public route forwarding | gateway | `gateway/nginx.conf` routes AI paths to Sage |
+| auth issuance, admin UI, ingest, deployment config storage | Python | `core-backend` + SQLite |
+| AI config and prompt preview | Sage | Postgres + `sage` runtime |
+| `enclave_web` startup, Postgres memory, AI turn execution | Sage | `sage` container env |
+| model transport | Tinfoil proxy | `tinfoil-proxy` container |
 
-The validation endpoint enforces guardrails, including:
-- `SMTP_PORT`, `QDRANT_PORT`: integer 1‑65535
-- `RAG_TOP_K`: integer 1‑100
-- URL fields must include protocol (e.g., `https://`)
-- Domain fields must be valid DNS names
-- `FORCE_HTTPS`: boolean
-- `HSTS_MAX_AGE`: non‑negative integer
+Important consequence: changing admin deployment config does not automatically rewrite the Sage container environment.
 
-It also warns if `INSTANCE_URL` is missing from `CORS_ORIGINS`.
+## LLM Settings On This Prototype
 
-## Validation UI
+Recommended current values in admin deployment config:
 
-Click **Validate Config** to run server-side checks and display results in the admin UI.
-The validation banner includes:
-- The timestamp of the last validation.
-- A summary count and detailed lists of errors and warnings.
-- An **Out-of-date** indicator if configuration changes after validation.
-- A dismiss button, plus a quick **Revalidate** action when results are stale.
+- `LLM_PROVIDER=sage`
+- `LLM_API_URL=http://tinfoil-proxy:8089/v1`
+- `LLM_MODEL=kimi-k2-5`
+- `LLM_API_KEY=<tinfoil key or matching override>`
 
-If you edit any deployment setting after validating, the banner is marked out of date until you validate again.
+What those keys affect today:
 
-## Common Workflows
+| Key | Primary effect |
+| --- | --- |
+| `LLM_PROVIDER` | Python-side runtime labeling and compatibility logic |
+| `LLM_API_URL` | Python health checks and legacy Python LLM client config |
+| `LLM_MODEL` | Python-side model metadata / remaining legacy client paths |
+| `LLM_API_KEY` | Python-side LLM auth unless left empty for env fallback |
 
-### Maple LLM
+What actually drives Sage:
 
-Sanctum is Maple-only for LLM inference. Use these keys:
-- `LLM_PROVIDER` (`maple` only; compatibility key)
-- `LLM_API_URL`
-- `LLM_MODEL`
-- `LLM_API_KEY` (secret; maps to `MAPLE_API_KEY`)
+- `TINFOIL_API_URL`
+- `TINFOIL_API_KEY`
+- `TINFOIL_MODEL`
+- `TINFOIL_EMBEDDING_MODEL`
+- `DATABASE_URL`
+- `ENCLAVE_BACKEND_URL`
+- `INTERNAL_AGENT_TOKEN`
 
-Maple alias keys (`MAPLE_BASE_URL`, `MAPLE_MODEL`, `MAPLE_API_KEY`) are also supported and mapped internally.
+Those are currently supplied to the `sage` container through compose or environment, not through the admin deployment UI.
 
-Example (set Maple model and base URL):
-```bash
-curl -X PUT http://localhost:8000/admin/deployment/config/LLM_PROVIDER \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value":"maple"}'
+## Health Checks
 
-curl -X PUT http://localhost:8000/admin/deployment/config/LLM_API_KEY \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value":"your-api-key-from-trymaple.ai"}'
+`GET /admin/deployment/health` currently reports across the split system:
 
-curl -X PUT http://localhost:8000/admin/deployment/config/LLM_API_URL \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value":"http://maple-proxy:8080/v1"}'
+- Qdrant health
+- AI runtime health via `SAGE_WEB_URL/health`
+- Tinfoil proxy health via `LLM_API_URL/models`
+- SearXNG health
+- SMTP health
 
-curl -X PUT http://localhost:8000/admin/deployment/config/LLM_MODEL \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value":"kimi-k2.5"}'
-```
+This makes the page useful for the prototype even though config ownership is split.
 
-If `LLM_API_KEY` is not set in deployment config, Sanctum still falls back to `.env` Maple keys (`MAPLE_API_KEY`).
-In the admin UI, saving `LLM_API_KEY` as empty clears the override and re-enables this fallback.
+## Other Important Settings
 
-### Email + SMTP
+### Shared Security And Routing Values
 
-Set `SMTP_*` values, then use the test email endpoint to verify delivery.
-`MOCK_SMTP` is the deployment UI alias for `MOCK_EMAIL` (if both are set, `MOCK_EMAIL` wins).
-SMTP is used by magic-link sign-in and any email-based instance features (for example: authenticated User Reachout; see `docs/user-reachout.md`).
+These values need to stay aligned across services:
 
-```bash
-curl -X PUT http://localhost:8000/admin/deployment/config/SMTP_HOST \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"value":"smtp.mailgun.org"}'
-```
+- `FRONTEND_URL`
+- `CORS_ORIGINS`
+- `INTERNAL_AGENT_TOKEN`
+- `USER_SESSION_COOKIE_NAME`
+- `ADMIN_SESSION_COOKIE_NAME`
+- `CSRF_COOKIE_NAME`
 
-Send a test email:
-```bash
-curl -X POST http://localhost:8000/auth/test-email \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com"}'
-```
+The admin UI stores some of these on the Python side, but the Sage container still needs matching env values for the public AI routes to behave correctly.
 
-The SMTP health check reports:
-- **Healthy** if the last test succeeded
-- **Unknown** if not tested yet
-- **Unknown (Mock mode)** if `MOCK_SMTP=true`
+### Storage And Search
 
-### Domains & SSL
+Python deployment config still owns:
 
-Typical domain setup:
-- `BASE_DOMAIN`, `INSTANCE_URL`, `API_BASE_URL`, `ADMIN_BASE_URL`
-- `EMAIL_DOMAIN`, `DKIM_SELECTOR`, `SPF_INCLUDE`, `DMARC_POLICY`
-- `CORS_ORIGINS` (include `INSTANCE_URL`)
+- `SQLITE_PATH`
+- `UPLOADS_DIR`
+- `QDRANT_HOST`
+- `QDRANT_PORT`
+- `SEARXNG_URL`
 
-SSL/HTTPS:
-- `FORCE_HTTPS`, `HSTS_MAX_AGE`
-- `SSL_CERT_PATH`, `SSL_KEY_PATH`, `TRUSTED_PROXIES`
+Sage depends on Enclave Python for document retrieval, so mismatches here can break `/query` even when Sage itself is healthy.
 
-Some of these require restart; use `/admin/deployment/restart-required` to see what changed.
+## Common Operator Workflow
 
-### Simulation Flags (Testing Only)
+1. use the admin deployment UI to inspect health and manage Python-owned settings
+2. keep Sage env and Python deployment config aligned for shared values
+3. restart affected services when changing any setting marked `requires_restart`
+4. if the actual Sage runtime model/backend changes, update the `sage` container env as well as the admin config view
 
-For local development:
-- `SIMULATE_ADMIN_AUTH=true` shows a mock Nostr login button
-- `SIMULATE_USER_AUTH=true` allows token‑less verify on `/verify`
+## Known Temporary State
 
-These flags are read by the frontend via `/config/public`. Keep them off in production.
+- the deployment UI is not yet a single source of truth for the whole stack
+- Sage runtime config is still partly compose/env-driven
+- gateway behavior is still file-configured in `gateway/nginx.conf`
+- AI config is no longer part of the Python deployment-config story; it is Sage-owned and Postgres-backed
 
-## Restart Required
-
-Config entries include a `requires_restart` flag. When such keys change, the service won’t fully apply them until restart. Use:
-
-```bash
-curl http://localhost:8000/admin/deployment/restart-required \
-  -H "Authorization: Bearer <admin-token>"
-```
-
-## Exporting `.env`
-
-`/admin/deployment/config/export` returns an `.env`‑style file with **secrets included**. Treat it as sensitive.
-
-## Related Docs
-
-- `docs/email-auth.md` for provider‑specific SMTP setup
-- `docs/authentication.md` for magic link behavior and simulation flags
-- `docs/sqlite-admin-system.md` for schema and admin endpoints
+That split is expected on this prototype. The point of this doc is to make the split obvious instead of hiding it behind legacy Maple-era assumptions.

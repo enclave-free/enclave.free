@@ -1314,7 +1314,7 @@ async def get_current_user(
         authenticated=True,
         user=AuthUserResponse(
             id=user["id"],
-            email=user.get("email", data["email"]),
+            email=user.get("email") or data["email"],
             name=user.get("name"),
             user_type_id=user.get("user_type_id"),
             approved=bool(user.get("approved", 1)),

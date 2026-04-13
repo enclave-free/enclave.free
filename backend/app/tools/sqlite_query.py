@@ -167,14 +167,21 @@ class SQLiteQueryTool(BaseTool):
 
         return sql.strip()
 
+    def _normalize_query(self, query: str) -> str:
+        """Accept direct SQL for admin flows and fall back to text-to-SQL otherwise."""
+        stripped = query.strip()
+        if stripped.upper().startswith("SELECT"):
+            return stripped
+        return self._generate_sql(query)
+
     async def execute(self, query: str) -> ToolResult:
         """Execute a natural language query against the database."""
         # Import here to avoid circular imports
         import database
 
         try:
-            # Step 1: Convert natural language to SQL
-            sql = self._generate_sql(query)
+            # Step 1: Convert natural language to SQL or accept validated raw SQL.
+            sql = self._normalize_query(query)
 
             # Step 2: Validate the generated SQL
             is_valid, error = self._validate_query(sql)

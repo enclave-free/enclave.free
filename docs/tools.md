@@ -1,519 +1,119 @@
-# AI Tools System
+# AI Tool Semantics
 
-Sanctum supports tool calling for the AI chat, allowing the LLM to access external data sources. Tools can be used independently or combined with RAG (knowledge base queries).
+This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which route owns execution and whether the turn is stateless or session-backed.
 
-## Available Tools
+## Route-Level Behavior
 
-| Tool ID | Name | Description | Access |
-|---------|------|-------------|--------|
-| `web-search` | Web Search | Search the web via self-hosted SearXNG | All users |
-| `db-query` | Database | Execute read-only SQL queries | Admin only |
-| `admin-config` | Config | Inject admin configuration snapshot and enable config change-set apply flow | Admin only (UI meta-tool) |
+| Route | Runtime mode | Tool behavior |
+| --- | --- | --- |
+| `/llm/chat` | stateless | optional server-side `web_search`; optional admin-only `db_query`; optional admin `tool_context` injection |
+| `/query` | stateful and memory-backed | always retrieval-first; always has internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
 
-## Architecture
+Current rule of thumb:
 
-```
-User message + selectedTools
-        │
-        ▼
-┌─────────────────────┐
-│  Tool Orchestrator  │
-│  - Execute tools    │
-│  - Format results   │
-└─────────────────────┘
-        │
-        ▼
-┌─────────────────────┐
-│  Build Prompt       │
-│  - Tool context     │
-│  - RAG context (if) │
-│  - User message     │
-└─────────────────────┘
-        │
-        ▼
-┌─────────────────────┐
-│  LLM Provider       │
-└─────────────────────┘
-```
+- use `/llm/chat` for assistant-style turns, admin chat, and config-assistant flows
+- use `/query` for document-grounded, session-continuous user conversations
 
-Tools are executed **before** the LLM call for `/llm/chat`. `/query` does not execute tools server-side; it only uses selected tool IDs to enable auto-search hints in the prompt.
+## Public Tool IDs
 
-## Usage
+| Public tool ID | Sage runtime tool | Access | Notes |
+| --- | --- | --- | --- |
+| `web-search` | `web_search` | all users | hits SearXNG for current/external information |
+| `db-query` | `db_query` | admins only | delegates to Python safe read-only admin DB query |
+| `admin-config` | none directly | admins only | frontend-side meta-tool that injects config snapshot into `tool_context` |
 
-### Frontend
+`knowledge_search` is not a public frontend toggle. Sage registers it internally for `/query` so the agent can revisit Enclave document retrieval during the turn.
 
-In the chat interface, click the **"Web"** button in the toolbar to enable web search. The tool can be used:
-- **Alone**: Pure LLM chat with web search context
-- **With RAG**: Combined with knowledge base documents
+## `/llm/chat`
 
-Admins have two UI entry points that now share the same chat tool runtime:
-- Full chat page (`/chat`)
-- Admin configuration assistant bubble (mounted on admin routes)
+`/llm/chat` is the stateless route:
 
-Current frontend behavior:
-- Admin `/chat` uses `/llm/chat` for assistant turns (same as admin bubble).
-- Admin configuration snapshot context + config apply flow are enabled when the `admin-config` tool toggle is on.
-- Non-admin `/chat` may use `/query` when document scope is selected.
+- no Sage memory or `web_sessions`
+- effective AI config is loaded from Sage Postgres per request
+- selected tools may execute server-side before or during the agent turn
+- `tool_context` is accepted only for admins
 
-### API
+### Admin `tool_context`
 
-`/llm/chat` executes tools server-side. `/query` accepts `tools` only to enable auto-search hints (no tool execution).
+Admins can send extra context in `tool_context` to help the model reason over client-side material such as:
 
-When an admin sends `tool_context`, the backend also accepts:
-- `client_executed_tools`: optional list of tool IDs already executed client-side and represented inside `tool_context`.
+- decrypted DB rows
+- admin config snapshots
+- other trusted precomputed context
 
-Behavior:
-- Tools in `client_executed_tools` are not re-executed server-side.
-- Remaining selected tools still execute server-side.
-- Non-admin users cannot use `tool_context` (the server returns HTTP 403 with `"Tool context override is admin-only"`).
+When `tool_context` is present, clients should also send `client_executed_tools` so Sage does not re-run tools that have already been executed client-side.
+
+Current frontend pattern:
+
+1. optional client-side call to `POST /admin/tools/execute`
+2. decrypt or format the returned data in the browser
+3. send the formatted text in `tool_context`
+4. include `client_executed_tools`, usually `["db-query"]`
+
+Non-admin use of `tool_context` is rejected with `403`.
+
+### Example
 
 ```bash
-# Pure LLM chat with web search (server-side tool execution)
 curl -X POST http://localhost:8000/llm/chat \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{
-    "message": "What is the latest Bitcoin price?",
+    "message": "What changed in Bitcoin price today?",
     "tools": ["web-search"]
   }'
+```
 
-# RAG with auto-search hints (no tool execution)
+## `/query`
+
+`/query` is the retrieval-first route:
+
+- Sage verifies auth natively and then hydrates Enclave-owned actor metadata from Python
+- Sage loads or creates a durable `web_session`
+- Sage fetches initial document context from Python
+- Sage stores user and assistant turns in Postgres-backed memory
+- Sage always has internal `knowledge_search` available
+
+If the request also enables `web-search`, Sage may run SearXNG during the turn. If an admin enables `db-query`, Sage may also call the Python-backed read-only DB tool during the turn.
+
+### Example
+
+```bash
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{
-    "question": "How does this relate to current events?",
+    "question": "How do these uploaded docs relate to recent regulation changes?",
     "tools": ["web-search"],
-    "top_k": 5
-  }'
-
-```
-
-### Auto-Search Hints
-
-If `web-search` is included in the `tools` array for `/query`, the LLM may identify queries that would benefit from live web data. When this happens, the response includes a `search_term` field.
-
-**Example response with search_term:**
-```json
-{
-  "answer": "Based on the knowledge base, I can explain the general concepts...",
-  "search_term": "Bitcoin price January 2025",
-  "sources": [...],
-  "clarifying_questions": []
-}
-```
-
-**Client workflow:**
-```text
-┌────────────────┐
-│ POST /query    │
-│ tools: ["web-  │
-│   search"]     │
-└───────┬────────┘
-        ▼
-┌────────────────┐      search_term present?
-│ Response with  │ ─────────────────────────┐
-│ answer         │                          │
-└───────┬────────┘                          ▼
-        │                           ┌───────────────┐
-        │ No search_term            │ Option A:     │
-        │                           │ Display hint  │
-        ▼                           │ to user       │
-┌────────────────┐                  └───────────────┘
-│ Done - display │                          │
-│ answer         │                          ▼
-└────────────────┘                  ┌───────────────┐
-                                    │ Option B:     │
-                                    │ Auto-execute  │
-                                    │ POST /llm/chat│
-                                    │ with search   │
-                                    └───────┬───────┘
-                                            ▼
-                                    ┌───────────────┐
-                                    │ Final answer  │
-                                    │ with live data│
-                                    └───────────────┘
-```
-
-When `search_term` is present, the client can:
-1. **Display as suggestion** - Show the search term to the user and let them decide whether to search
-2. **Auto-execute** - Call `/llm/chat` with `tools: ["web-search"]` using the original question to get an answer with live web data
-
-### Response Format
-
-Responses include a `tools_used` array showing which tools were executed:
-
-```json
-{
-  "message": "Based on current search results...",
-  "model": "kimi-k2.5",
-  "provider": "maple",
-  "tools_used": [
-    {
-      "tool_id": "web-search",
-      "tool_name": "web-search",
-      "query": "Bitcoin price"
-    }
-  ]
-}
-```
-
-`/query` responses include additional fields for session continuity and debugging:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `session_id` | string (UUID v4) | Session identifier for conversation continuity |
-| `sources` | array | Retrieved chunks with `{score, type, text, chunk_id, source_file}` |
-| `graph_context` | object | Placeholder for future graph features (currently empty) |
-| `clarifying_questions` | array | Questions extracted from LLM response for follow-up |
-| `context_used` | string | Debug field showing prompt sent to LLM (user profile redacted) |
-| `temperature` | number | Model temperature parameter used for generation |
-
-**Example response:**
-```json
-{
-  "answer": "Based on the knowledge base...",
-  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "sources": [
-    {
-      "score": 0.89,
-      "type": "document",
-      "text": "Relevant chunk text...",
-      "chunk_id": "doc123_chunk_0",
-      "source_file": "guide.pdf"
-    }
-  ],
-  "graph_context": {},
-  "clarifying_questions": ["Would you like more details about X?"],
-  "context_used": "[DEBUG] System prompt + retrieved context...",
-  "temperature": 0.7
-}
-```
-
-> **Note**: The `context_used` field exposes conversation history and is intended for debugging purposes. It should not be displayed to end users in production.
-
-## SearXNG Configuration
-
-SearXNG is a privacy-respecting metasearch engine that aggregates results from multiple search engines.
-
-### Docker Service
-
-SearXNG runs as a Docker container on the internal network (not exposed to host):
-
-```yaml
-# docker-compose.infra.yml
-searxng:
-  image: searxng/searxng:latest
-  container_name: sanctum-searxng
-  volumes:
-    - ./searxng:/etc/searxng:ro
-  environment:
-    - SEARXNG_BASE_URL=http://searxng:8080/
-```
-
-### Settings
-
-Configuration is in `searxng/settings.yml`:
-
-```yaml
-search:
-  formats:
-    - html
-    - json  # Required for API access
-
-server:
-  limiter: false  # Disabled for internal use
-
-engines:
-  - name: google
-    disabled: false
-  - name: duckduckgo
-    disabled: false
-  - name: bing
-    disabled: false
-  - name: wikipedia
-    disabled: false
-```
-
-### Environment Variable
-
-The backend connects via:
-```
-SEARXNG_URL=http://searxng:8080
-```
-
-## SQLite Query Tool (Admin Only)
-
-The `db-query` tool allows admins to ask natural language questions about the database. The AI will generate and execute SQL queries, then explain the results.
-
-> Note: the `db-query` tool runs only via `/llm/chat`; other tools referenced in `/query` examples may still execute as documented.
-
-### Security
-
-This tool is **read-only** with multiple layers of protection:
-
-1. **SELECT Only**: Queries must start with `SELECT`
-2. **Dangerous Keywords Blocked**: DROP, DELETE, INSERT, UPDATE, ALTER, CREATE, TRUNCATE, ATTACH, DETACH, PRAGMA
-3. **Table Whitelist**: Only allowed tables can be queried:
-   - `admins` - Admin accounts
-   - `instance_settings` - Instance configuration
-   - `user_types` - User type definitions
-   - `user_field_definitions` - Custom field schemas
-   - `users` - User accounts
-   - `user_field_values` - User custom field data
-4. **Row Limit**: Results capped at 100 rows
-5. **Frontend Gating**: Tool button only visible to authenticated admins
-
-### Encryption Behavior
-
-- PII fields are encrypted at rest. Query results include `encrypted_*` columns plus matching `ephemeral_pubkey_*` columns.
-- Legacy plaintext columns (`email`, `name`, `value`) are deprecated and should not be queried.
-- Email lookups must use the `email_blind_index` field for exact matches.
-
-### Decrypted Admin Chat (NIP-07)
-
-Admins with a NIP-07 extension can decrypt query results client-side and pass decrypted context to the chat endpoint.
-This keeps private key usage in the browser while allowing the LLM to see plaintext for that request.
-If other tools are selected (e.g., web-search), the backend still executes those tools and merges their context.
-`db-query` is skipped server-side only when the request includes `client_executed_tools: ["db-query"]`.
-
-> **What is NIP-07?** NIP-07 is a Nostr protocol specification that allows web applications to request cryptographic operations (signing, encryption, decryption) from a browser extension without exposing the user's private key. Extensions like nos2x and Alby implement NIP-07. See [NIP-07 spec](https://github.com/nostr-protocol/nips/blob/master/07.md) for details.
-
-Flow:
-1. Call `/admin/tools/execute` with `tool_id: "db-query"` and the natural-language question.
-2. Decrypt `encrypted_*` values with `window.nostr.nip04.decrypt(ephemeral_pubkey, ciphertext)`.
-3. Send the decrypted tool context to `/llm/chat` using:
-   - `tool_context`: formatted decrypted context text
-   - `client_executed_tools: ["db-query"]`
-
-If no fields can be decrypted (e.g., admin lacks the correct private key), the frontend falls back to the standard encrypted tool path so ciphertext is still available.
-`tool_context` is admin-only and will be rejected for non-admin users.
-
-#### Privacy and Security Warnings
-
-> **⚠️ PII Exposure to Maple LLM**: When you use `tool_context` to send decrypted data to `/llm/chat`, that plaintext PII (emails, names, custom field values) is transmitted to Maple. This bypasses the at-rest encryption protections.
-
-**Compliance considerations (GDPR, CCPA, etc.):**
-- Decrypted PII sent to Maple may constitute a data transfer requiring user consent
-- Ensure your Maple agreement/policy posture meets your compliance requirements
-- Consider whether decrypted queries fall under "legitimate interest" or require explicit consent
-- Document this data flow in your privacy policy
-
-**Audit and logging recommendations:**
-- Log when `tool_context` is used (without logging the actual PII content)
-- Mark decrypted-context requests with `tool_context_decrypted=true` (recommended pattern — not yet implemented in the current system) (request field) or `X-Tool-Context-Decrypted: true` (recommended pattern — not yet implemented in the current system) (header), and never log raw `tool_context` values
-- After decryption in `/llm/chat`, enqueue those requests for async/manual compliance review and correlate events with `/admin/tools/execute` for rate-limiting and investigation workflows
-- Consider separate retention policies for decrypted vs. encrypted query logs
-- Implement rate limiting on `/admin/tools/execute` to detect anomalous bulk decryption
-
-**Mitigations:**
-- Use [maple-proxy](https://blog.trymaple.ai/maple-proxy-documentation) (a local bridge/agent that handles attestation with Maple's secure infrastructure). LLM inference runs in TEEs with end-to-end encrypted prompts/responses that Maple cannot access, but traffic still egresses to `enclave.trymaple.ai` (so data is not fully on-premises)
-- Limit which admins have access to the `db-query` tool
-- Prefer aggregate queries ("count users by type") over queries that return individual PII
-- Review Maple logs and data retention settings
-
-### Usage
-
-The Database tool button only appears in the chat toolbar when logged in as an admin.
-If you have knowledge-base documents selected, the UI will clear those selections when you enable the Database tool so it can run against the live SQLite database.
-
-Example queries:
-- "How many users are registered?"
-- "Show me all user types"
-- "List the most recent users"
-
-### API
-
-```bash
-curl -X POST http://localhost:8000/llm/chat \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <admin-token>" \
-  -d '{
-    "message": "How many users are in the system?",
-    "tools": ["db-query"]
+    "job_ids": ["job_123"],
+    "session_id": "existing-session-id-if-any"
   }'
 ```
 
-#### Admin Tool Execution (Raw Results)
+### Response Notes
 
-```bash
-curl -X POST http://localhost:8000/admin/tools/execute \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <admin-token>" \
-  -d '{
-    "tool_id": "db-query",
-    "query": "List the most recent users"
-  }'
-```
+Current `/query` responses include:
 
-Example response:
-```json
-{
-  "success": true,
-  "tool_id": "db-query",
-  "tool_name": "db-query",
-  "data": {
-    "sql": "SELECT id, encrypted_email, created_at FROM users ORDER BY created_at DESC LIMIT 10",
-    "columns": ["id", "encrypted_email", "created_at"],
-    "rows": [
-      { "id": 1, "encrypted_email": "...", "created_at": "2026-02-04T12:34:56" }
-    ],
-    "row_count": 1,
-    "truncated": false
-  }
-}
-```
+- `session_id`
+- `sources`
+- `graph_context`
+- `clarifying_questions`
+- `context_used`
+- `temperature`
 
-#### Chat with Decrypted Tool Context (Admin Only)
+`search_term` is still present in the response shape for compatibility, but on the current Sage path it is reserved and returned as `null`.
 
-```bash
-curl -X POST http://localhost:8000/llm/chat \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <admin-token>" \
-  -d '{
-    "message": "Summarize the most recent users",
-    "tools": ["db-query"],
-    "tool_context": "Executed SQL: ...\nDatabase query results (3 rows):\nname | email | created_at\n...",
-    "client_executed_tools": ["db-query"]
-  }'
-```
+## Admin DB Query Safety
 
-If `tool_context` is used for non-tool snapshot context (for example, admin configuration snapshot) and no tool was pre-executed client-side, send:
+`db_query` eventually delegates to Python's safe admin DB query path. Current protections include:
 
-```json
-{
-  "message": "Help me tune onboarding config",
-  "tools": ["web-search", "db-query"],
-  "tool_context": "ADMIN CONFIG SNAPSHOT ...",
-  "client_executed_tools": []
-}
-```
+- admin auth required
+- `SELECT` only
+- dangerous SQL keywords blocked
+- Enclave-side validation still owns the trust decision
 
-This keeps server-side tool execution enabled for the selected tools.
+Use it as an admin troubleshooting/config tool, not as a generic data plane.
 
-## Parity Check Script
+## SearXNG Notes
 
-Use this quick integration script to verify `tools_used` parity between:
-- full-chat payload shape, and
-- admin-bubble payload shape (`tool_context` + `client_executed_tools: []`)
-
-```bash
-python scripts/tests/TOOLS/test_4a_unified_chat_tools_parity.py --admin-token <ADMIN_TOKEN>
-```
-
-Optional cookie-based auth:
-
-```bash
-python scripts/tests/TOOLS/test_4a_unified_chat_tools_parity.py --cookie-header "admin_session_cookie=..."
-```
-
-## Adding New Tools
-
-Tools are defined in `backend/app/tools/`. To add a new tool:
-
-### 1. Create Tool Class
-
-```python
-# backend/app/tools/my_tool.py
-from .base import BaseTool, ToolDefinition, ToolResult
-
-class MyTool(BaseTool):
-    @property
-    def definition(self) -> ToolDefinition:
-        return ToolDefinition(
-            name="my-tool",
-            description="Description for the LLM",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "The query"}
-                },
-                "required": ["query"]
-            }
-        )
-
-    async def execute(self, query: str) -> ToolResult:
-        # Implement tool logic
-        try:
-            data = await fetch_data(query)
-            return ToolResult(success=True, data=data)
-        except Exception as e:
-            return ToolResult(success=False, data=None, error=str(e))
-
-    def _format_data(self, data) -> str:
-        # Format data for LLM context
-        return f"Results:\n{data}"
-```
-
-### 2. Register Tool
-
-```python
-# backend/app/tools/__init__.py
-from .my_tool import MyTool
-
-def init_tools() -> ToolRegistry:
-    registry = get_registry()
-    registry.register(WebSearchTool())
-    registry.register(MyTool())  # Add here
-    return registry
-```
-
-### 3. Add Frontend Button
-
-```typescript
-// frontend/src/components/chat/ToolSelector.tsx
-const defaultTools: Tool[] = [
-  {
-    id: 'web-search',
-    name: 'Web',
-    description: 'Search the web',
-    icon: <SearchIcon />,
-  },
-  {
-    id: 'my-tool',
-    name: 'My Tool',
-    description: 'Description',
-    icon: <MyIcon />,
-  },
-]
-```
-
-## File Structure
-
-```
-backend/app/tools/
-├── __init__.py      # Module exports, init_tools()
-├── base.py          # BaseTool, ToolDefinition, ToolResult
-├── registry.py      # ToolRegistry, get_registry()
-├── orchestrator.py  # ToolOrchestrator
-├── web_search.py    # WebSearchTool (SearXNG)
-└── sqlite_query.py  # SQLiteQueryTool (admin only)
-
-searxng/
-└── settings.yml     # SearXNG configuration
-```
-
-## Troubleshooting
-
-### SearXNG not responding
-
-Check if the container is healthy:
-```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs searxng
-docker exec sanctum-backend curl -s "http://searxng:8080/search?q=test&format=json"
-```
-
-### Tool not appearing in frontend
-
-Ensure the tool ID in `ToolSelector.tsx` matches the tool's `definition.name`.
-
-### 500 errors on /query with tools
-
-Check backend logs for the actual error:
-```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs backend --tail 50
-```
-
-Common issues:
-- SearXNG not reachable (check network)
-- Tool execution timeout (increase httpx timeout)
+`web_search` uses the internal SearXNG service at `http://searxng:8080/search?format=json`. It is intended for current or external information, not as a replacement for Enclave document retrieval.

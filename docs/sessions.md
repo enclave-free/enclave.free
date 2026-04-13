@@ -1,153 +1,112 @@
 # Sessions
 
-Sanctum has two distinct "session" concepts:
+This prototype has two different session concepts:
 
-- Auth sessions: browser/API authentication for admins and users (signed tokens, usually via cookies).
-- RAG sessions: conversation continuity for `/query` (`session_id`), used to keep chat history and extracted context.
+- auth sessions: browser or API authentication for admins and users
+- query sessions: Sage-owned conversation continuity for `/query`
 
-This doc explains both, plus the CSRF model used with cookie-based auth.
+## Auth Sessions
 
-## Auth Sessions (Admin and User)
+The public auth model is still Enclave's Python auth system for issuing tokens and cookies.
 
-### What A Session Token Is
+On this branch, Sage independently verifies the same contract for Sage-owned public routes. The gateway does not transform auth anymore.
 
-Sanctum issues signed, time-limited tokens using `itsdangerous.URLSafeTimedSerializer` with `SECRET_KEY`:
+### Token Format
 
-- User session token salt: `session`
-- Admin session token salt: `admin-session`
-- Default lifetime: 7 days (user and admin)
+Session tokens are signed with `itsdangerous.URLSafeTimedSerializer` using `SECRET_KEY`:
 
-Session tokens are signed (integrity protected) but not encrypted, so treat them as secrets.
+- user salt: `session`
+- admin salt: `admin-session`
+- default lifetime: 7 days
 
-### How Tokens Are Carried
+They are signed but not encrypted, so treat them as secrets.
 
-Sanctum supports two ways to authenticate requests:
+### How Requests Authenticate
 
-1. Cookie auth (browser default)
-   - User cookie name: `sanctum_session` (configurable)
-   - Admin cookie name: `sanctum_admin_session` (configurable)
-   - Cookies are `httpOnly` with secure defaults.
-2. Bearer auth (CLI / non-browser clients)
-   - Use `Authorization: Bearer <token>`
-   - When a Bearer token is present, cookie-based CSRF checks are not enforced.
+Two modes are supported:
 
-Both modes use the same token format. Browser clients typically use cookie auth so the token is not accessible to JavaScript.
+1. cookie auth for browser clients
+2. bearer auth for CLI or non-browser clients
 
-### Quick Curl Examples
+Bearer requests are not subject to cookie CSRF checks.
 
-Validate a user session token (Bearer):
+### Cookie Names
 
-```bash
-curl http://localhost:8000/auth/me \
-  -H "Authorization: Bearer <session_token>"
-```
+- `USER_SESSION_COOKIE_NAME` default: `sanctum_session`
+- `ADMIN_SESSION_COOKIE_NAME` default: `sanctum_admin_session`
+- `CSRF_COOKIE_NAME` default: `sanctum_csrf`
 
-Validate an admin session token (Bearer):
+Those names must stay aligned across Python, Sage, and the frontend.
 
-```bash
-curl http://localhost:8000/admin/session \
-  -H "Authorization: Bearer <admin_session_token>"
-```
+The same is true for `SECRET_KEY`, because Sage verifies the same `itsdangerous` session format Python issues.
 
-### Login and Logout
+## CSRF Model
 
-User login:
+Both Python and Sage enforce the same high-level rules for unsafe cookie-authenticated requests:
 
-- Frontend receives a magic link token (from `/verify?token=...`).
-- Frontend calls `POST /auth/verify` with JSON `{ "token": "..." }`.
-- Backend sets the user session cookie and a CSRF cookie.
+- trusted `Origin` or `Referer` required
+- `X-CSRF-Token` must match the CSRF cookie
+- bearer-authenticated requests skip this check
 
-User logout:
+The gateway simply forwards cookies, `Authorization`, and `X-CSRF-Token` to Sage. It does not synthesize auth or participate in CSRF decisions.
 
-- `POST /auth/logout` clears auth cookies for the browser.
-- User session tokens are otherwise stateless; there is no server-side per-token revocation (expiry or `SECRET_KEY` rotation ends validity).
+## Sage Query Sessions
 
-Admin login:
+### What A Query Session Is
 
-- Frontend signs a Nostr NIP-07 event and calls `POST /admin/auth`.
-- Backend sets the admin session cookie and a CSRF cookie.
+`/query` uses a public `session_id` for conversation continuity. On this prototype, that continuity is owned by Sage, not by the legacy Python in-memory session store.
 
-Admin logout and revocation:
+Current Sage persistence model:
 
-- `POST /admin/logout` clears auth cookies.
-- If the request includes a valid admin token, the backend rotates `admins.session_nonce` to invalidate previously issued admin tokens.
+- `web_sessions` stores the public session record and ownership
+- Sage memory tables store the actual conversation history and derived memory state
+- `external_identities` keeps a durable mapping between Enclave identities and Sage-side session ownership metadata
 
-### Cookie and CSRF Model
+### Persistence Guarantees
 
-Sanctum enforces CSRF only for cookie-authenticated unsafe requests (non-`GET/HEAD/OPTIONS/TRACE`).
+Query sessions persist as long as Sage Postgres persists.
 
-Rules:
+That means:
 
-- Requests using `Authorization: Bearer ...` are not subject to the cookie-CSRF check.
-- Cookie-authenticated unsafe requests must include:
-  - A trusted `Origin` (or `Referer`) that matches the backend CORS allowlist.
-  - `X-CSRF-Token` header equal to the `sanctum_csrf` cookie value (double-submit).
+- sessions survive Sage process restarts
+- sessions can be resumed across requests
+- durability is no longer tied to one Python process memory map
 
-The frontend automatically injects `X-CSRF-Token` for API requests.
+### Ownership Rules
 
-### Relevant Configuration
+- admins can inspect or delete any query session
+- non-admin users can only access their own sessions
 
-Session signing:
-
-- `SECRET_KEY`
-  - If not set, the backend generates one and persists it to the SQLite data directory as `.secret_key`.
-  - Rotating `SECRET_KEY` invalidates all existing session tokens.
-
-Cookie settings:
-
-- `USER_SESSION_COOKIE_NAME` (default `sanctum_session`)
-- `ADMIN_SESSION_COOKIE_NAME` (default `sanctum_admin_session`)
-- `CSRF_COOKIE_NAME` (default `sanctum_csrf`)
-- `SESSION_COOKIE_SAMESITE` (default `lax`)
-- `SESSION_COOKIE_DOMAIN` (default unset)
-- `SESSION_COOKIE_SECURE`
-  - Defaults to secure in production mode, and is forced to secure when `SameSite=None`.
-
-Origins:
-
-- `CORS_ALLOW_ORIGINS` or `CORS_ORIGINS` sets the allowlist.
-- `FRONTEND_URL` is appended to the allowlist if set.
-- Wildcard `*` is ignored (credentialed cookies require explicit origins).
-
-## RAG Sessions (`/query` session_id)
-
-### What It Is (And Is Not)
-
-The `/query` API supports a `session_id` field used for conversation continuity:
-
-- It is not an authentication token.
-- It is not stored as a cookie by default.
-- It links multiple `/query` calls together (chat history, extracted facts, jurisdiction, etc.).
-
-The backend currently stores RAG sessions in an in-memory dictionary (per backend process). This means:
-
-- RAG sessions are lost on backend restart.
-- RAG session continuity is not reliable across multiple backend replicas.
-
-> **Production warning:** In-memory storage means sessions have no durability guarantees. A process restart or OOM kill silently discards all active RAG sessions. For deployments requiring session continuity, plan to migrate to a persistent store (e.g., Redis or SQLite).
-
-### Ownership and Access Control
-
-RAG sessions are owner-scoped:
-
-- Admins can access any RAG session.
-- Non-admin users can only access sessions they created.
-
-Enforcement:
-
-- Reusing an existing `session_id` checks ownership and returns `403` if it does not belong to the caller.
-- `GET /query/session/{session_id}` and `DELETE /query/session/{session_id}` require auth and enforce the same access checks.
+Sage verifies the session token itself, hydrates the user/admin record from Python's private control-plane endpoints, and then applies session ownership checks against `web_sessions`.
 
 ### API Behavior
 
-- `POST /query` returns `session_id` in the response. Clients should reuse it for follow-up questions.
-- `GET /query/session/{session_id}` returns session state (messages and derived state) for debugging/admin workflows.
-- `DELETE /query/session/{session_id}` deletes the session (best-effort; deleting a missing session still returns deleted).
+- `POST /query` creates or resumes a session and returns `session_id`
+- `GET /query/session/{session_id}` returns the stored conversation view for that session
+- `DELETE /query/session/{session_id}` deletes the session record
 
-## Debugging and Verification
+Current nuance:
 
-Useful endpoints:
+- deleting a session removes the `web_sessions` row
+- it does not currently serve as a full purge of all underlying Sage memory rows tied to that session's agent
 
-- `GET /auth/me` (cookie or Bearer) to validate a user session.
-- `GET /admin/session` (cookie or Bearer) to validate an admin session.
-- `GET /query/session/{session_id}` to inspect RAG session state (requires auth and ownership).
+## Debugging
+
+Useful checks:
+
+```bash
+curl http://localhost:8000/auth/me \
+  -H "Authorization: Bearer <user-session-token>"
+
+curl http://localhost:8000/admin/session \
+  -H "Authorization: Bearer <admin-session-token>"
+
+curl http://localhost:8000/query/session/<session-id> \
+  -H "Authorization: Bearer <session-token>"
+```
+
+If query-session continuity looks wrong, check:
+
+1. the user really received the same `session_id`
+2. the request is still reaching Sage through the gateway
+3. Sage Postgres state was not reset
