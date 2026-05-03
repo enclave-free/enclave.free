@@ -21,7 +21,7 @@ services:
       - SQLITE_PATH=/data/sanctum.db
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       # Magic Link Auth configuration
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - SECRET_KEY=${SECRET_KEY}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - MOCK_EMAIL=${MOCK_EMAIL:-true}
       # SMTP configuration (optional, not needed if MOCK_EMAIL=true)
@@ -76,6 +76,7 @@ services:
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - SECRET_KEY=${SECRET_KEY}
       - SEARXNG_URL=http://searxng:8080
       - USER_SESSION_COOKIE_NAME=${USER_SESSION_COOKIE_NAME:-sanctum_session}
       - ADMIN_SESSION_COOKIE_NAME=${ADMIN_SESSION_COOKIE_NAME:-sanctum_admin_session}
@@ -114,7 +115,7 @@ services:
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

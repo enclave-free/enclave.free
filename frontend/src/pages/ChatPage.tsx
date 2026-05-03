@@ -11,7 +11,7 @@ import { AppHeader } from '../components/shared/AppHeader'
 import { Message } from '../components/chat/ChatMessage'
 import { ReachoutModal, type ReachoutMode } from '../components/reachout/ReachoutModal'
 import { API_BASE, STORAGE_KEYS, getSelectedUserTypeId, saveSelectedUserTypeId } from '../types/onboarding'
-import { getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
+import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../types/config'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
@@ -198,7 +198,8 @@ export function ChatPage() {
       version: 1,
       summary: 'One sentence summary of what will change',
       requests: [
-        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'maple' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'sage' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_MODEL', body: { value: DEFAULT_TINFOIL_MODEL } },
       ],
     }, null, 2))
     lines.push('```')

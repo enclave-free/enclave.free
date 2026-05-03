@@ -4,8 +4,8 @@
 
 import type { TFunction } from 'i18next'
 
-export const DEFAULT_MAPLE_MODEL = 'kimi-k2.5'
-export const MAPLE_SIGNUP_URL = 'https://trymaple.ai'
+export const DEFAULT_TINFOIL_MODEL = 'kimi-k2-5'
+export const TINFOIL_SIGNUP_URL = 'https://tinfoil.sh'
 
 // --- AI Configuration Types ---
 
@@ -484,7 +484,7 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
     LLM_MODEL: {
       label: t('deploymentConfigItems.LLM_MODEL.label', 'Model Name'),
       description: t('deploymentConfigItems.LLM_MODEL.description', 'Model name/identifier'),
-      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_MAPLE_MODEL}").`),
+      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_TINFOIL_MODEL}").`),
     },
     LLM_API_URL: {
       label: t('deploymentConfigItems.LLM_API_URL.label', 'API Endpoint'),

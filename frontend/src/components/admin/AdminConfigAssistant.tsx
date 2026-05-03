@@ -6,7 +6,7 @@ import { adminFetch } from '../../utils/adminApi'
 import { ChatInput } from '../chat/ChatInput'
 import { ChatMessage, type Message } from '../chat/ChatMessage'
 import { ToolSelector, type Tool } from '../chat/ToolSelector'
-import { getConfigCategories, getDeploymentConfigItemMeta } from '../../types/config'
+import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta } from '../../types/config'
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../../types/config'
 import { API_BASE } from '../../types/onboarding'
 import { extractAdminAssistantChangeSetStrict, redactSecrets, type AdminAssistantChangeSet } from '../../utils/adminAssistant'
@@ -218,7 +218,8 @@ export function AdminConfigAssistant() {
       version: 1,
       summary: 'One sentence summary of what will change',
       requests: [
-        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'maple' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'sage' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_MODEL', body: { value: DEFAULT_TINFOIL_MODEL } },
       ],
     }, null, 2))
     lines.push('```')

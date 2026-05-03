@@ -385,7 +385,7 @@ If `MOCK_EMAIL=true` (or `MOCK_SMTP=true` via deployment config), the response n
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SECRET_KEY` | (auto-generated) | Key for signing tokens. If not set, auto-generates and persists to `/data/.secret_key` |
+| `SECRET_KEY` | Required in Compose | Key for signing tokens. Compose requires it; non-Compose backend runs can auto-generate and persist `/data/.secret_key` if unset |
 | `FRONTEND_URL` | `http://localhost:5173` | Base URL for magic link emails |
 | `MOCK_EMAIL` | `false` | Log magic links instead of sending emails (note: `.env.example` sets this to `true` for local dev) |
 | `MOCK_SMTP` | (alias) | Deployment-config alias for `MOCK_EMAIL` |
@@ -429,7 +429,7 @@ SMTP_FROM=Sanctum <noreply@yourdomain.com>
 FRONTEND_URL=https://yourdomain.com
 ```
 
-> **Note:** `SECRET_KEY` is auto-generated on first run and persisted to `/data/.secret_key`. See `.env.example` for all configuration options.
+> **Note:** Compose requires `SECRET_KEY` in `.env` so Sage and Python verify the same sessions. Only non-Compose backend runs auto-generate `/data/.secret_key` when `SECRET_KEY` is unset.
 
 ---
 
@@ -553,12 +553,12 @@ The following security features are implemented:
 - **Endpoint authentication** - All admin endpoints require valid session token
 - **Rate limiting** - Auth endpoints are rate-limited (5/min for magic-link, 10/min for admin auth)
 - **Simulated auth disabled by default** - Requires `SIMULATE_*` flags to enable
-- **Auto-generated SECRET_KEY** - Persisted to `/data/.secret_key` on first run
+- **Stable SECRET_KEY support** - Compose requires an explicit shared key; non-Compose backend runs can persist `/data/.secret_key`
 
 ### Production Hardening
 
 Recommended production steps:
-- Set a stable `SECRET_KEY` in your environment or ensure `/data/` is persisted
+- Set a stable `SECRET_KEY` in your environment and provide the same value to Python and Sage
 - Configure SMTP with a verified domain and SPF/DKIM/DMARC
 - Disable `SIMULATE_*` flags and `MOCK_EMAIL` in production
 - Restrict admin access to trusted networks

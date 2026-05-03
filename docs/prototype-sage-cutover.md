@@ -1,48 +1,93 @@
 # Sage Hard-Cut Prototype
 
-This repo is the `enclave.free-prototype` experiment branch for replacing the legacy Enclave AI path with Sage + Tinfoil.
+This repo is the Enclave experiment that moved the public AI runtime from the old Python path to Sage while keeping the public API origin stable at `:8000`.
 
-## Repo Layout
+On `proto/dumb-gateway-foundation`, the cutover is still the same hard cut, but the integration boundary is cleaner than the first prototype pass: the gateway only routes, and Sage owns public AI-route correctness itself.
 
-- `origin` points at `enclave-free/enclave.free-prototype`
-- `upstream` points at `enclave-free/enclave.free`
-- `runtime/sage` is a pinned git submodule of the Sage fork
-- implementation branch: `proto/sage-hard-cut`
+## What Changed
 
-## Runtime Topology
+- the public AI routes no longer terminate in FastAPI
+- `backend` is now a compatibility gateway only
+- `sage` runs `enclave_web` and owns the public AI runtime path
+- `core-backend` remains the Enclave control plane for auth issuance, config, ingest, and business logic
+- Tinfoil replaces the old Maple-centered runtime story
+- AI config is now stored and served by Sage, not proxied through Python
+- Sage no longer depends on Python `auth-context` resolution
 
-- `frontend` still talks to `backend:8000`
-- `backend` is now the API gateway
-- `core-backend` is the original FastAPI product/control plane
-- `sage` runs the new `enclave_web` binary and owns:
-  - `POST /llm/chat`
-  - `POST /query`
-  - `GET /query/session/{session_id}`
-  - `DELETE /query/session/{session_id}`
-  - `GET /session-defaults`
-  - `POST /admin/tools/execute`
-  - `/admin/ai-config/*`
-- `tinfoil-proxy` is the OpenAI-compatible model backend
-- `postgres` stores Sage web sessions and memory
-- `qdrant` remains the Enclave document vector store
+## Runtime Ownership
 
-## Python Control Plane
+| Component | Current role |
+| --- | --- |
+| `frontend` | UI entrypoint |
+| `backend` | boring gateway and route splitter |
+| `core-backend` | auth issuance, admin/product APIs, ingest, private support APIs |
+| `sage` | AI orchestration, auth/CORS/CSRF, tool execution, session continuity, AI config, memory persistence |
+| `tinfoil-proxy` | model backend |
+| `postgres` | Sage runtime state |
+| `qdrant` | Enclave document retrieval |
 
-The FastAPI backend now exposes private Sage support routes under `/internal/agent/*`:
+## Public Routes (Sage-owned)
 
-- `POST /internal/agent/auth-context`
-- `POST /internal/agent/document-search`
+Sage owns the public route, auth, CORS/CSRF, and session boundary for these paths. Some operations still call Python internally for existing product logic, most notably safe DB execution.
+
+- `POST /llm/chat`
+- `POST /query`
+- `GET /query/session/{session_id}`
+- `DELETE /query/session/{session_id}`
+- `GET /session-defaults`
+- `POST /admin/tools/execute`
+- `/admin/ai-config/*`
+
+Route ownership now matches the public runtime boundary. `POST /llm/chat`, `POST /query`, `GET /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only DB access.
+
+## Sage To Python Contract
+
+Active private control-plane endpoints used by Sage:
+
+- `GET /internal/agent/users/{user_id}`
+- `GET /internal/agent/admins/by-pubkey/{pubkey}`
+- `GET /internal/agent/user-types/{user_type_id}`
 - `GET /internal/agent/document-access`
-- `GET /internal/agent/session-defaults`
 - `GET /internal/agent/user-profile-context/{user_id}`
+- `POST /internal/agent/document-search`
 - `POST /internal/agent/admin-db-query`
-- `GET /internal/agent/ai-config/effective`
 
-These endpoints are protected with `INTERNAL_AGENT_TOKEN` and are intended only for the Sage service.
+These endpoints are protected by `INTERNAL_AGENT_TOKEN` and are the real integration seam of the prototype.
 
-## Current Prototype Boundaries
+## What This Branch Finished
 
-- Admin AI config CRUD is publicly owned by Sage but currently proxied through to the Python backend for storage.
-- Prompt preview is generated in Sage from the compiled Enclave web profile.
-- Query sessions are persisted in Sage Postgres.
-- Legacy Python `/llm/chat` and `/query` code still exists in the repo but is bypassed by the gateway.
+- gateway no longer performs auth/cookie bridging
+- gateway no longer performs route-specific CORS behavior for Sage
+- Sage verifies Enclave bearer and cookie sessions natively
+- Sage enforces CSRF for its own unsafe cookie-authenticated routes
+- Sage stores AI config and user-type overrides in Postgres
+- Sage handles public admin AI config routes directly
+
+## Why The Coupling Still Matters
+
+The gateway itself is now mechanically simple.
+
+The stronger long-term coupling is that Sage still relies on Enclave Python for:
+
+- user/admin records after token verification
+- document-access filtering and retrieval
+- user profile context
+- admin SQLite query safety rules
+
+If this prototype gets productized, the biggest architecture decision is no longer "keep nginx or not." It is whether the `/internal/agent/*` contract becomes a stable internal API, gets consolidated into shared services, or is collapsed into one runtime later.
+
+## Current Temporary Pieces
+
+- deployment/runtime config is still split across Python deployment config, Sage env, and gateway config
+- legacy Python `/llm/chat` and `/query` code still exists in-repo even though the gateway bypasses it
+- deleting a query session deletes the session record, not the full underlying Sage memory history
+- compatibility internal endpoints such as `/internal/agent/auth-context` and `/internal/agent/ai-config/effective` still exist in Python even though Sage no longer needs them on this branch
+
+## Branch Note
+
+The pinned Sage runtime lives in `runtime/sage`.
+
+For the current branch-specific direction, pair this file with:
+
+- [dumb-gateway-foundation.md](dumb-gateway-foundation.md)
+- [../ARCHITECTURE_CURRENT.md](../ARCHITECTURE_CURRENT.md)

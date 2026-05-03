@@ -3,14 +3,10 @@
 import re
 from typing import List, Dict, Any
 
+from sql_safety import ALLOWED_TABLES, validate_sql_allowed_tables
+
 from .base import BaseTool, ToolDefinition, ToolResult
 
-
-# Tables that can be queried (same as /admin/db/query endpoint)
-ALLOWED_TABLES = {
-    'admins', 'instance_settings', 'user_types',
-    'user_field_definitions', 'users', 'user_field_values'
-}
 
 # Dangerous SQL keywords to block
 DANGEROUS_PATTERNS = [
@@ -125,7 +121,7 @@ class SQLiteQueryTool(BaseTool):
             if re.search(pattern, sql, re.IGNORECASE):
                 return False, f"Query contains forbidden keyword"
 
-        return True, ""
+        return validate_sql_allowed_tables(sql)
 
     def _extract_emails(self, natural_query: str) -> List[str]:
         """Extract email addresses from a natural language query."""
@@ -147,9 +143,9 @@ class SQLiteQueryTool(BaseTool):
 
     def _generate_sql(self, natural_query: str) -> str:
         """Use LLM to convert natural language to SQL."""
-        from llm import get_maple_provider
+        from llm import get_sage_provider
 
-        provider = get_maple_provider()
+        provider = get_sage_provider()
         extra_context = self._build_extra_context(natural_query)
         prompt = TEXT_TO_SQL_PROMPT.format(question=natural_query, extra_context=extra_context)
         response = provider.complete(prompt)
@@ -167,14 +163,24 @@ class SQLiteQueryTool(BaseTool):
 
         return sql.strip()
 
+    def _normalize_query(self, query: str) -> str:
+        """Accept direct SQL for admin flows and fall back to text-to-SQL otherwise."""
+        stripped = query.strip()
+        if stripped.upper().startswith("SELECT"):
+            is_allowed, error = validate_sql_allowed_tables(stripped)
+            if not is_allowed:
+                raise ValueError(error)
+            return stripped
+        return self._generate_sql(query)
+
     async def execute(self, query: str) -> ToolResult:
         """Execute a natural language query against the database."""
         # Import here to avoid circular imports
         import database
 
         try:
-            # Step 1: Convert natural language to SQL
-            sql = self._generate_sql(query)
+            # Step 1: Convert natural language to SQL or accept validated raw SQL.
+            sql = self._normalize_query(query)
 
             # Step 2: Validate the generated SQL
             is_valid, error = self._validate_query(sql)

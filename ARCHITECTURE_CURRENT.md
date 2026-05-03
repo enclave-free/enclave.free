@@ -1,328 +1,185 @@
-# Sanctum — Current Architecture (v0.1 MVP)
+# enclave.free-prototype Current Architecture
 
-This document describes the **current** implementation of Sanctum. For the planned graph-first architecture using Neo4j + Graphiti, see [ARCHITECTURE_PLANNED.md](./ARCHITECTURE_PLANNED.md).
+This document describes the active architecture on `proto/dumb-gateway-foundation`.
 
----
+The hard cut to Sage is still in place, but the important refinement on this branch is that the gateway is no longer part of the application logic. nginx is now just the stable public entrypoint and path router.
 
-## Stack Overview
+## Service Map
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Backend** | FastAPI (Python 3.11) | API orchestration, ingest pipeline, RAG queries |
-| **Frontend** | Vite + React + TypeScript | Admin dashboard, user chat interface |
-| **Database** | SQLite | Users, documents, settings, jobs, sessions |
-| **Vector Store** | Qdrant | Semantic search embeddings (768-dim) |
-| **Web Search** | SearXNG | Privacy-preserving metasearch for web tool |
-| **LLM Proxy** | maple-proxy | OpenAI-compatible LLM gateway |
-| **Deployment** | Docker Compose | Container orchestration |
+| Service | Runtime | Responsibility |
+| --- | --- | --- |
+| `frontend` | Vite + React | User and admin UI |
+| `backend` | nginx | Public gateway on `:8000`; routes AI paths to Sage and everything else to Python |
+| `core-backend` | FastAPI + SQLite | Auth issuance, users/admins/settings, ingest, document visibility, deployment config, and Sage support endpoints |
+| `sage` | Axum + Rust | `enclave_web` runtime; native auth/CORS/CSRF; AI config; tool orchestration; query-session ownership |
+| `postgres` | Postgres + pgvector | Sage memory tables, `web_sessions`, `external_identities`, `ai_config`, `ai_config_user_type_overrides` |
+| `qdrant` | Qdrant | Enclave document embeddings and retrieval index |
+| `tinfoil-proxy` | Tinfoil CLI proxy | OpenAI-compatible chat, embedding, and vision backend |
+| `searxng` | SearXNG | Web-search backend for Sage tools |
 
----
+## Public Topology
 
-## Service Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   Backend   │────▶│   SQLite    │
-│   (Vite)    │     │  (FastAPI)  │     │   (Data)    │
-└─────────────┘     └──────┬──────┘     └─────────────┘
-                           │
-                ┌──────────┼──────────┐
-                ▼          ▼          ▼
-         ┌──────────┐ ┌────────┐ ┌────────┐
-         │  Qdrant  │ │ maple  │ │SearXNG │
-         │(Vectors) │ │ proxy  │ │(Search)│
-         └──────────┘ └────────┘ └────────┘
+```text
+frontend
+  -> backend (nginx gateway, host port 8000)
+      -> core-backend (FastAPI control plane)
+      -> sage (Axum AI runtime)
 ```
 
-### Service Ports
+The public origin stays the same. The browser still talks to `:8000`. The difference is that nginx no longer compensates for auth or browser semantics on Sage-owned routes.
+
+## Public Route Ownership
+
+Routes forwarded to Sage by `gateway/nginx.conf`:
+
+| Route family | Current owner | Notes |
+| --- | --- | --- |
+| `/health` | core-backend | public stack health target |
+| `/llm/chat` | Sage | stateless assistant-style route |
+| `/query` | Sage | stateful retrieval-first route |
+| `/query/session/*` | Sage | session inspection and delete |
+| `/session-defaults` | Sage | local AI defaults + Python document access defaults |
+| `/admin/tools/execute` | Sage | admin-only public route; Python executes the safe DB action privately |
+| `/admin/ai-config/*` | Sage | public ownership and storage both live in Sage |
+| everything else | core-backend | existing Enclave product/control-plane APIs |
 
-| Service | Port | URL |
-|---------|------|-----|
-| Frontend (Vite) | 5173 | http://localhost:5173 |
-| Backend (FastAPI) | 8000 | http://localhost:8000 |
-| Qdrant Dashboard | 6333 | http://localhost:6333/dashboard |
-| Qdrant gRPC | 6334 | - |
-| maple-proxy | 8080 | http://localhost:8080 |
-| SearXNG | 8080 (internal) | - |
+Legacy Python implementations of `/llm/chat` and `/query` still exist in the repo, but they are not the public path on this branch because nginx routes those requests to Sage.
 
----
+## Gateway Role
 
-## Data Storage
+The gateway now does only:
 
-### SQLite (`/data/sanctum.db`)
+- path routing
+- generic proxy headers
+- stable public origin exposure
 
-All structured data is stored in SQLite:
+The gateway does not do:
 
-- **Users**: Nostr pubkeys (admin), email users, sessions
-- **Documents**: Uploaded files metadata, ingest jobs (including `ontology_id` — taxonomy for categorizing documents; valid values: `general`, `bitcoin`; see `/ingest/ontologies`)
-- **Settings**: Instance configuration (branding, SMTP, LLM settings)
-- **Custom Fields**: Admin-defined user profile fields
+- cookie-to-bearer auth synthesis
+- route-specific CORS responses
+- route-specific preflight handling
+- CSRF logic
+- session semantics
 
-Volume: `sqlite_data:/data`
+That logic lives in Sage for Sage-owned routes.
 
-### Qdrant
+## Sage To Python Private Contract
 
-Vector embeddings for semantic search:
+Sage does not reimplement Enclave data ownership rules. It calls private FastAPI endpoints under `/internal/agent/*`, protected by `INTERNAL_AGENT_TOKEN`.
 
-- **Collection**: `sanctum_knowledge`
-- **Dimensions**: 768 (multilingual-e5-base)
-- **Payload**: Document metadata, chunk references
+Active endpoints in the current Sage call graph:
 
-Volume: `qdrant_data:/qdrant/storage`
+| Endpoint | Used for |
+| --- | --- |
+| `GET /internal/agent/users/{user_id}` | hydrate user identity after Sage verifies a user token |
+| `GET /internal/agent/admins/by-pubkey/{pubkey}` | hydrate admin identity and current session nonce |
+| `GET /internal/agent/user-types/{user_type_id}` | user-type metadata for AI config and admin responses |
+| `GET /internal/agent/document-access` | available/default documents for a user type |
+| `GET /internal/agent/user-profile-context/{user_id}` | user profile context for prompts |
+| `POST /internal/agent/document-search` | document retrieval with Enclave access control |
+| `POST /internal/agent/admin-db-query` | safe read-only admin DB access |
 
-### File Storage
+Compatibility endpoints still exist in Python but are not part of the main branch call graph:
 
-- **Uploads**: `./uploads` (bind mount)
-- **Model Cache**: `embedding_cache:/root/.cache/huggingface`
+- `POST /internal/agent/auth-context`
+- `GET /internal/agent/session-defaults`
+- `GET /internal/agent/ai-config/effective`
 
----
+## Request Flows
 
-## Authentication
+### `/llm/chat`
 
-### Admin Authentication (Nostr NIP-07)
+1. frontend calls `http://localhost:8000/llm/chat`
+2. gateway forwards to Sage
+3. Sage verifies auth natively from bearer or cookie session state
+4. Sage enforces CSRF if the request is cookie-authenticated and unsafe
+5. Sage loads effective AI config from Postgres
+6. Sage optionally runs server-side tools:
+   - `web_search` via SearXNG
+   - `db_query` via Python private endpoint, admin only
+7. Sage calls Tinfoil and returns the answer
 
-1. Admin clicks "Login with Nostr"
-2. Browser extension signs challenge
-3. Backend verifies the signed event (kind `22242`) and registers the **first** admin
-4. Signed session token issued (single-admin instance)
+This route is intentionally stateless. It uses `SageAgent::new_without_memory(...)`.
 
-### User Authentication (Email Magic Link)
+### `/query`
 
-1. User enters email address
-2. Backend sends magic link via SMTP
-3. User clicks link, verifies token
-4. Signed session token issued
+1. frontend calls `http://localhost:8000/query`
+2. gateway forwards to Sage
+3. Sage verifies auth natively from bearer or cookie session state
+4. Sage loads effective AI config from Postgres
+5. Sage loads or creates a durable `web_session` in Postgres
+6. Sage fetches document-access metadata and initial document context from Python
+7. Sage updates memory blocks, stores the user turn, and runs the agent
+8. Sage may call:
+   - `knowledge_search` for additional document retrieval
+   - `web_search` when enabled
+   - `db_query` when enabled by an admin
+9. Sage stores the assistant turn and returns `session_id`, `sources`, and the answer
 
-> User onboarding is blocked until an admin has authenticated at least once (instance setup complete).
+This route is retrieval-first and session-backed.
 
-See [docs/authentication.md](./docs/authentication.md) for details.
+## Data Ownership
 
----
+| Data | Current owner | Storage |
+| --- | --- | --- |
+| auth sessions, admins, users, deployment config, ingest metadata | core-backend | SQLite |
+| document embeddings | core-backend ingest path | Qdrant |
+| document visibility/default rules | core-backend | SQLite |
+| Sage conversation memory (`messages`, `blocks`, `passages`, `summaries`) | Sage | Postgres |
+| query-session ownership (`web_sessions`) | Sage | Postgres |
+| external identity records | Sage | Postgres |
+| AI config and user-type overrides | Sage | Postgres |
 
-## RAG Pipeline
+Notes:
 
-### Ingest Flow
+- Python still issues the auth tokens and cookies Sage verifies.
+- `DELETE /query/session/{session_id}` currently deletes the `web_sessions` record only. It does not act as a full Sage-memory purge contract.
 
-```
-Document Upload → Text Extraction → Chunking → Embedding → Qdrant Storage
-                                       │
-                                       └──→ SQLite (job metadata)
-```
+## Auth, Cookies, And CSRF
 
-1. Document uploaded via `/ingest/upload`
-2. Text extracted (PyMuPDF via `PDF_EXTRACT_MODE=fast` default; Docling via `PDF_EXTRACT_MODE=quality`)
-3. Text split into chunks (~1500 chars with overlap)
-4. Chunks embedded using `intfloat/multilingual-e5-base`
-5. Vectors stored in Qdrant with metadata
-6. Job status tracked in SQLite
+The public auth model stays aligned across Python and Sage:
 
-### Query Flow
+- Python issues the session tokens and cookies.
+- Sage independently verifies the same `itsdangerous` contract.
+- bearer auth bypasses CSRF checks
+- cookie-authenticated unsafe requests require:
+  - trusted `Origin` or `Referer`
+  - `X-CSRF-Token` matching the CSRF cookie
 
-```
-User Query → Embed → Qdrant Search → Top-K Results → LLM Context → Response
-```
+Shared cookie/env values must stay aligned across Python, Sage, and the frontend:
 
-1. User submits question via chat
-2. Query embedded using same model
-3. Qdrant returns semantically similar chunks
-4. Chunks assembled into context
-5. LLM generates response with sources (returned as `sources` in the `/query` response)
-6. Response returned to user
+- `SECRET_KEY`
+- `USER_SESSION_COOKIE_NAME`
+- `ADMIN_SESSION_COOKIE_NAME`
+- `CSRF_COOKIE_NAME`
+- `FRONTEND_URL`
+- `CORS_ORIGINS`
 
----
+The gateway simply forwards `Authorization`, `Cookie`, and `X-CSRF-Token`. It does not interpret them.
 
-## Embedding Model
+## Deployment And Config Ownership
 
-- **Model**: `intfloat/multilingual-e5-base`
-- **Dimensions**: 768
-- **Prefix Convention**: "passage: " for documents, "query: " for search
-- **Languages**: 100+ (including Spanish, optimized for multilingual use)
-- **Size**: ~500MB (cached in Docker volume)
+Current config ownership is intentionally split:
 
----
+| Concern | Current owner | Where it lives |
+| --- | --- | --- |
+| public route forwarding | gateway | `gateway/nginx.conf` |
+| auth issuance, deployment config UI, ingest config | Python | SQLite + `core-backend` env |
+| AI config CRUD and prompt preview | Sage | Postgres + `sage` runtime |
+| Sage runtime startup, Tinfoil access, Postgres memory, CSRF/origin checks | Sage | `sage` env |
+| model transport | Tinfoil proxy | `tinfoil-proxy` container |
 
-## LLM Integration
+Important shared values still need coordinated configuration:
 
-### maple-proxy (Default)
+- `INTERNAL_AGENT_TOKEN`
+- cookie names
+- `FRONTEND_URL`
+- `CORS_ORIGINS`
+- Tinfoil connection details
 
-- OpenAI-compatible API at `/v1/chat/completions`
-- Supports structured outputs
-- Privacy-preserving proxy layer
+## Temporary Boundaries To Keep In Mind
 
----
-
-## Tools
-
-The RAG system supports tool use for enhanced responses:
-
-| Tool | Description | Access |
-|------|-------------|--------|
-| `web-search` | SearXNG metasearch | All users |
-| `db-query` | Direct database queries | Admin only |
-
-See [docs/tools.md](./docs/tools.md) for details.
-
----
-
-## Key API Endpoints
-
-### Health & Testing
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Service health check (Qdrant status) |
-| `/test` | GET | Smoke test (verifies Qdrant seeded data) |
-| `/llm/test` | GET | Maple LLM connectivity test |
-
-### Public Config
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/instance/status` | GET | Instance setup status for frontend routing |
-| `/settings/public` | GET | Public instance branding settings |
-| `/config/public` | GET | Simulation flags (`SIMULATE_*`). Note: These flags default to `false` and control frontend UI behavior. They must be disabled in production. |
-| `/session-defaults` | GET | Chat session defaults (optional `user_type_id`) |
-
-### Ingest
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/ingest/upload` | POST | Upload document for processing |
-| `/ingest/ontologies` | GET | List valid ontology IDs |
-| `/ingest/jobs` | GET | List ingest jobs (admin or approved user — see [authentication.md](./docs/authentication.md#user-approval-workflow)) |
-| `/ingest/status/{job_id}` | GET | Get job status |
-| `/ingest/jobs/{job_id}` | DELETE | Delete document + vectors (admin only) |
-| `/ingest/stats` | GET | Qdrant collection statistics |
-| `/ingest/wipe` | POST | Delete Qdrant collections (dev only) |
-
-### Query
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/query` | POST | RAG query with document context |
-| `/vector-search` | POST | Direct vector similarity search |
-
----
-
-## What's Different from Planned Architecture
-
-The current MVP uses a simpler stack than the planned graph-first architecture:
-
-| Aspect | Current (MVP) | Planned |
-|--------|--------------|---------|
-| **Structured Data** | SQLite | Neo4j |
-| **Knowledge Graph** | None | Graphiti |
-| **Entity Extraction** | Manual via ontologies | Automatic via Graphiti |
-| **Relationship Modeling** | Flat document references | Graph traversal |
-| **Query Expansion** | Vector similarity only | Graph + vector hybrid |
-
-### Why SQLite for MVP?
-
-1. **Simpler deployment**: No additional services to manage
-2. **Sufficient for MVP**: Document-level RAG doesn't require graph
-3. **Faster iteration**: Schema changes are trivial
-4. **Migration path exists**: SQLite data can export to Neo4j
-
-### When to Migrate to Graph
-
-Consider migrating to the planned Neo4j + Graphiti architecture when:
-
-- Complex entity relationships become important
-- Query expansion via graph traversal is needed
-- Automatic entity extraction is required
-- Knowledge base exceeds SQLite performance limits
-
----
-
-## Docker Compose Services
-
-```yaml
-services:
-  backend:     # FastAPI + SQLite
-  frontend:    # Vite dev server
-  qdrant:      # Vector database
-  maple-proxy: # LLM gateway
-  searxng:     # Web search
-```
-
-### Commands
-
-```bash
-# Start all services
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build
-
-# View logs
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f backend
-
-# Reset all data
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v
-```
-
----
-
-## Environment Variables
-
-**Configuration Precedence**: Values in SQLite (set via `/admin/deployment`) take priority over environment variables. This allows runtime configuration changes without container restarts.
-
-To use environment-variable-only mode, leave the SQLite config values empty (they will fall back to env vars). See `docs/admin-deployment-config.md` for override management.
-
-Key configuration options (see `.env.example`):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LLM_PROVIDER` | `maple` | LLM backend (Maple only) |
-| `LLM_API_URL` | `http://maple-proxy:8080/v1` | Base URL for Maple-compatible chat completions (alias: `MAPLE_BASE_URL`) |
-| `LLM_MODEL` | `kimi-k2.5` | Maple model identifier (alias: `MAPLE_MODEL`) |
-| `LLM_API_KEY` | (required) | API key for maple-proxy (alias: `MAPLE_API_KEY`) |
-| `QDRANT_HOST` | `qdrant` | Qdrant hostname |
-| `QDRANT_PORT` | `6333` | Qdrant port |
-| `EMBEDDING_MODEL` | `intfloat/multilingual-e5-base` | Embedding model name |
-| `SEARXNG_URL` | `http://searxng:8080` | SearXNG endpoint |
-| `FRONTEND_URL` | `http://localhost:5173` | Base URL for magic links |
-| `MOCK_EMAIL` | `true` | Log magic links instead of sending (alias: `MOCK_SMTP`) |
-| `SMTP_TIMEOUT` | `10` | SMTP connection timeout (seconds) |
-| `SIMULATE_USER_AUTH` | `false` | ⚠️ **NEVER enable in production** — Bypasses magic link verification |
-| `SIMULATE_ADMIN_AUTH` | `false` | ⚠️ **NEVER enable in production** — Shows mock Nostr auth option |
-| `PDF_EXTRACT_MODE` | `fast` | PDF extraction mode (`fast` for PyMuPDF, `quality` for Docling) |
-| `BASE_DOMAIN` | `localhost` | Root domain name |
-| `INSTANCE_URL` | `http://localhost:5173` | Full app URL with protocol |
-| `API_BASE_URL` | `http://localhost:8000` | API base URL |
-| `ADMIN_BASE_URL` | `http://localhost:5173/admin` | Admin panel URL |
-| `EMAIL_DOMAIN` | `localhost` | Domain for email addresses |
-| `DKIM_SELECTOR` | `sanctum` | DKIM DNS selector |
-| `SPF_INCLUDE` | (empty) | SPF include directive (e.g., include:_spf.google.com) |
-| `DMARC_POLICY` | `v=DMARC1; p=none` | DMARC DNS policy record |
-| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
-| `WEBHOOK_BASE_URL` | `http://localhost:8000` | Webhook callback base URL |
-| `FORCE_HTTPS` | `false` | Redirect HTTP to HTTPS |
-| `HSTS_MAX_AGE` | `31536000` | HSTS max-age in seconds |
-| `MONITORING_URL` | `http://localhost:8000/health` | Health monitoring endpoint |
-| `SSL_CERT_PATH` | (empty) | SSL certificate file path |
-| `SSL_KEY_PATH` | (empty) | SSL private key file path |
-| `TRUSTED_PROXIES` | (empty) | Trusted reverse proxies |
-
-### Production Checklist
-
-Before deploying to production, ensure these variables are configured:
-
-| Variable | Requirement | Notes |
-|----------|-------------|-------|
-| `CORS_ORIGINS` | **Required** | Replace localhost with production domain(s) |
-| `FORCE_HTTPS` | **Required** | Set to `true` |
-| `MOCK_EMAIL` | **Required** | Set to `false` and configure SMTP |
-| `SIMULATE_USER_AUTH` | **Required** | Must be `false` or unset |
-| `SIMULATE_ADMIN_AUTH` | **Required** | Must be `false` or unset |
-| `DMARC_POLICY` | Recommended | Use `p=quarantine` or `p=reject` |
-| `TRUSTED_PROXIES` | Required if behind proxy | Configure to prevent IP spoofing |
-| `SSL_CERT_PATH` / `SSL_KEY_PATH` | If terminating TLS | Provide paths to certificates |
-
----
-
-## Related Documentation
-
-- [ARCHITECTURE_PLANNED.md](./ARCHITECTURE_PLANNED.md) — Future graph-first architecture
-- [docs/authentication.md](./docs/authentication.md) — Auth flows
-- [docs/tools.md](./docs/tools.md) — Tool system documentation
-- [docs/upload-documents.md](./docs/upload-documents.md) — Ingest guide
-- [docs/admin-deployment-config.md](./docs/admin-deployment-config.md) — Deployment config guide
-- [docs/sqlite-rag-docs-tracking.md](./docs/sqlite-rag-docs-tracking.md) — SQLite schema
+- Python still contains legacy AI route implementations because the cutover is done at the gateway, not by deleting old code yet.
+- The strongest long-term coupling is now the private `/internal/agent/*` contract, not nginx.
+- Deployment config is still not a single source of truth for the entire stack.
+- Query-session deletion is still a session-record delete, not a full-memory purge contract.

@@ -10,7 +10,7 @@ Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for build
 
 ### Start/Stop Services
 
-Docker Compose is split into `docker-compose.infra.yml` (Qdrant, maple-proxy, SearXNG) and `docker-compose.app.yml` (backend, frontend). This allows rebuilding the app without restarting infrastructure services.
+Docker Compose is split into `docker-compose.infra.yml` (Qdrant, Tinfoil proxy, SearXNG) and `docker-compose.app.yml` (core backend, Gateway, Sage, frontend). This allows rebuilding the app without restarting infrastructure services.
 
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build          # Start all services (blocking)
@@ -34,9 +34,10 @@ curl http://localhost:8000/health  # Health check
 ## Architecture
 
 **Services** (all on Docker network `sanctum-net`):
-- **Backend** (port 8000): FastAPI app with uvicorn hot-reload
+- **Core backend** (internal port 8000): FastAPI control plane with uvicorn hot-reload
+- **Gateway** (host port 8000): nginx route splitter for the stable public API
 - **Qdrant** (ports 6333/6334): Vector database for semantic search
-- **Maple-proxy** (port 8080): LLM proxy for privacy-preserving inference
+- **Tinfoil proxy** (internal port 8089): OpenAI-compatible proxy for model inference
 - **SearXNG**: Metasearch engine for web search tool
 
 **Data Flow**:
