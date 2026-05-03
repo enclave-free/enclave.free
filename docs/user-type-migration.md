@@ -2,7 +2,7 @@
 
 User types in Sanctum control:
 - which onboarding fields a user is expected to answer (global + type-specific fields)
-- which AI config and document defaults apply (via per-user-type overrides)
+- which Agent Settings and document defaults apply (via per-user-type overrides)
 
 User type migration is the admin workflow for moving existing users from one user type to another without deleting their account.
 

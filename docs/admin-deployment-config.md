@@ -4,7 +4,7 @@ The admin deployment UI at `/admin/deployment` still exists on this prototype, b
 
 - Python deployment config stored in SQLite
 - Sage runtime environment variables
-- gateway route config
+- Gateway route config
 - Tinfoil proxy environment
 
 This doc describes that split so operators know which setting changes what.
@@ -22,23 +22,23 @@ It remains the canonical place for:
 - SMTP and email settings
 - frontend/domain/CORS settings exposed through Python
 - deployment health checks
-- LLM metadata used by Python-side health reporting and remaining legacy paths
+- Model Provider metadata used by Python-side health reporting and remaining legacy paths
 
-It is no longer the owner of runtime AI config. `/admin/ai-config/*` now belongs to Sage and is stored in Sage Postgres.
+It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to Sage and is stored in Sage Postgres.
 
 ## Current Ownership Split
 
 | Concern | Current owner | Notes |
 | --- | --- | --- |
-| public route forwarding | gateway | `gateway/nginx.conf` routes AI paths to Sage |
+| public route forwarding | Gateway | `gateway/nginx.conf` routes AI paths to Sage |
 | auth issuance, admin UI, ingest, deployment config storage | Python | `core-backend` + SQLite |
-| AI config and prompt preview | Sage | Postgres + `sage` runtime |
+| Agent Settings and prompt preview | Sage | Postgres + `sage` runtime |
 | `enclave_web` startup, Postgres memory, AI turn execution | Sage | `sage` container env |
-| model transport | Tinfoil proxy | `tinfoil-proxy` container |
+| Model Provider transport | Tinfoil proxy | `tinfoil-proxy` container |
 
 Important consequence: changing admin deployment config does not automatically rewrite the Sage container environment.
 
-## LLM Settings On This Prototype
+## Model Provider Compatibility Settings On This Prototype
 
 Recommended current values in admin deployment config:
 
@@ -47,14 +47,14 @@ Recommended current values in admin deployment config:
 - `LLM_MODEL=kimi-k2-5`
 - `LLM_API_KEY=<tinfoil key or matching override>`
 
-What those keys affect today:
+These compatibility keys keep existing environment names and UI labels stable. What they affect today:
 
 | Key | Primary effect |
 | --- | --- |
-| `LLM_PROVIDER` | Python-side runtime labeling and compatibility logic |
-| `LLM_API_URL` | Python health checks and legacy Python LLM client config |
+| `LLM_PROVIDER` | Python-side Model Provider labeling and compatibility logic |
+| `LLM_API_URL` | Python health checks and legacy Python Model Provider client config |
 | `LLM_MODEL` | Python-side model metadata / remaining legacy client paths |
-| `LLM_API_KEY` | Python-side LLM auth unless left empty for env fallback |
+| `LLM_API_KEY` | Python-side Model Provider auth unless left empty for env fallback |
 
 What actually drives Sage:
 
@@ -73,7 +73,7 @@ Those are currently supplied to the `sage` container through compose or environm
 `GET /admin/deployment/health` currently reports across the split system:
 
 - Qdrant health
-- AI runtime health via `SAGE_WEB_URL/health`
+- Agent Runtime health via `SAGE_WEB_URL/health`
 - Tinfoil proxy health via `LLM_API_URL/models`
 - SearXNG health
 - SMTP health
@@ -112,13 +112,13 @@ Sage depends on Enclave Python for document retrieval, so mismatches here can br
 1. use the admin deployment UI to inspect health and manage Python-owned settings
 2. keep Sage env and Python deployment config aligned for shared values
 3. restart affected services when changing any setting marked `requires_restart`
-4. if the actual Sage runtime model/backend changes, update the `sage` container env as well as the admin config view
+4. if the actual Sage Model Provider path changes, update the `sage` container env as well as the admin config view
 
 ## Known Temporary State
 
 - the deployment UI is not yet a single source of truth for the whole stack
 - Sage runtime config is still partly compose/env-driven
-- gateway behavior is still file-configured in `gateway/nginx.conf`
-- AI config is no longer part of the Python deployment-config story; it is Sage-owned and Postgres-backed
+- Gateway behavior is still file-configured in `gateway/nginx.conf`
+- Agent Settings are no longer part of the Python deployment-config story; they are Sage-owned and Postgres-backed
 
 That split is expected on this prototype. The point of this doc is to make the split obvious instead of hiding it behind legacy Maple-era assumptions.

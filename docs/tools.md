@@ -1,6 +1,6 @@
-# AI Tool Semantics
+# Agent Runtime Tool Semantics
 
-This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which route owns execution and whether the turn is stateless or session-backed.
+This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which route owns execution and whether the turn is stateless or backed by Session Memory.
 
 ## Route-Level Behavior
 
@@ -28,8 +28,8 @@ Current rule of thumb:
 
 `/llm/chat` is the stateless route:
 
-- no Sage memory or `web_sessions`
-- effective AI config is loaded from Sage Postgres per request
+- no Session Memory or `web_sessions`
+- effective Agent Settings are loaded from Sage Postgres per request
 - selected tools may execute server-side before or during the agent turn
 - `tool_context` is accepted only for admins
 
@@ -68,13 +68,13 @@ curl -X POST http://localhost:8000/llm/chat \
 
 `/query` is the retrieval-first route:
 
-- Sage verifies auth natively and then hydrates Enclave-owned actor metadata from Python
-- Sage loads or creates a durable `web_session`
-- Sage fetches initial document context from Python
-- Sage stores user and assistant turns in Postgres-backed memory
+- Sage verifies auth natively and then hydrates Enclave Control Plane actor metadata from Python
+- Sage loads or creates a durable public query-session record in `web_sessions`
+- Sage fetches initial Document context from Python
+- Sage stores user and assistant turns in Session Memory
 - Sage always has internal `knowledge_search` available
 
-If the request also enables `web-search`, Sage may run SearXNG during the turn. If an admin enables `db-query`, Sage may also call the Python-backed read-only DB tool during the turn.
+If the request also enables `web-search`, Sage may run SearXNG during the turn. If an admin enables `db-query`, Sage may also call the Enclave Control Plane read-only DB tool during the turn.
 
 ### Example
 

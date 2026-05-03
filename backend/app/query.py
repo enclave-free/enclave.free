@@ -1,8 +1,8 @@
 """
-Sanctum RAG Query Module
+Sanctum Retrieval Query Module
 
-Session-aware RAG for querying knowledge bases.
-Pipeline: Query → Embed → Vector Search → LLM → Answer
+Session-aware Retrieval for querying the Document Library.
+Pipeline: Query → Embed → Vector Search → Model Provider → Answer
 
 Key principles:
 - Provide clear, helpful responses
@@ -96,13 +96,13 @@ async def query(
     _: None = Depends(query_limiter),
 ):
     """
-    RAG query with session support.
+    Retrieval query with session support.
     Requires authenticated admin OR approved user.
 
     1. Load/create session for conversation history
     2. Embed query with conversation context
     3. Vector search for relevant chunks
-    4. Send context + history + query to LLM
+    4. Send context + history + query to the Model Provider
     5. Return answer with clarifying questions if needed
     """
     from ai_config import get_llm_parameters

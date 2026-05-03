@@ -156,8 +156,8 @@ export function AdminSetup() {
             <DashboardCard
               to="/admin/ai"
               icon={<Brain className="w-5 h-5" />}
-              title={t('adminDashboard.ai', 'AI Configuration')}
-              description={t('adminDashboard.aiDesc', 'Configure prompts, LLM parameters, and document defaults')}
+              title={t('adminDashboard.ai', 'Agent Settings')}
+              description={t('adminDashboard.aiDesc', 'Configure prompts, Model Provider parameters, and document defaults')}
             />
             <DashboardCard
               to="/admin/deployment"

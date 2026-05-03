@@ -1,18 +1,18 @@
 # enclave.free-prototype
 
-Prototype fork of `enclave.free` that keeps the public API at `:8000` while hard-cutting AI orchestration from the legacy Python path to Sage + Tinfoil.
+Prototype fork of `enclave.free` that keeps the public API at `:8000` while hard-cutting Agent Runtime behavior from the legacy Python path to Sage + Tinfoil.
 
-On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx only routes requests. Sage now owns auth verification, CORS, CSRF, AI config, and the public AI-route contract directly.
+On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx only routes requests. Sage now owns auth verification, CORS, CSRF, Agent Settings, and the public Agent Runtime route contract directly.
 
 ## System Summary
 
 - `frontend` still talks to `http://localhost:8000`.
 - `backend` is an nginx gateway, not the product backend.
-- `core-backend` remains the FastAPI control plane for auth issuance, admin/product APIs, ingest, document access, and the private Sage support contract.
-- `sage` runs the `enclave_web` Axum binary and owns the public AI routes, route auth, CSRF, CORS, AI config, and session continuity.
-- `tinfoil-proxy` is the OpenAI-compatible inference backend used by Sage.
-- `postgres` stores Sage memory and `web_sessions`.
-- `qdrant` stays the Enclave document vector store.
+- `core-backend` remains the FastAPI Enclave Control Plane for auth issuance, admin/product APIs, ingest, document access, and the private Sage control-plane contract.
+- `sage` runs the `enclave_web` Axum binary and owns the Agent Runtime: public AI routes, route auth, CSRF, CORS, Agent Settings, and Conversation continuity.
+- `tinfoil-proxy` is the OpenAI-compatible Tinfoil transport used by Sage's preferred Model Provider path.
+- `postgres` stores Sage Session Memory and `web_sessions`.
+- `qdrant` stays the Enclave document retrieval index.
 
 ## Topology
 
@@ -32,7 +32,7 @@ Public route ownership on this branch:
 | `/admin/ai-config/*` | Sage |
 | everything else | `core-backend` |
 
-The short version is: Sage is the AI runtime, Python is still the app/control plane, and the gateway keeps the public API stable without owning application behavior.
+The short version is: Sage is the Agent Runtime, Python is still the Enclave Control Plane, and the Gateway keeps the public API stable without owning application behavior.
 
 ## Quick Start
 
@@ -114,7 +114,7 @@ Until the first admin authenticates, public user signup remains gated.
 - [docs/internal-agent-contract.md](docs/internal-agent-contract.md): private Sage-to-Python contract used by this prototype
 - [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md): service topology and request/data flow
 - [docs/tools.md](docs/tools.md): `/llm/chat` vs `/query` tool behavior
-- [docs/sessions.md](docs/sessions.md): auth, CSRF, and Sage-backed query sessions
+- [docs/sessions.md](docs/sessions.md): auth, CSRF, and Sage-backed public query-session records plus Session Memory
 - [docs/admin-deployment-config.md](docs/admin-deployment-config.md): config ownership split across gateway, Python, Sage, and Tinfoil
 
 ## Development

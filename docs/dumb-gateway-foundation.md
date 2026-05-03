@@ -2,7 +2,7 @@
 
 This document describes the current `proto/dumb-gateway-foundation` direction in `enclave.free-prototype`.
 
-The goal of this branch is not to add more gateway behavior. It is to keep the public API stable while making the gateway boring and moving request correctness into Sage.
+The goal of this branch is not to add more Gateway behavior. It is to keep the public API stable while making the Gateway boring and moving request correctness into Sage.
 
 ## What This Branch Changed
 
@@ -13,7 +13,7 @@ Compared with the original Sage hard-cut prototype:
 - nginx no longer owns Sage-specific preflight behavior
 - Sage now verifies Enclave bearer and cookie sessions natively
 - Sage now enforces CSRF for its own unsafe cookie-authenticated routes
-- Sage now stores AI config and per-user-type overrides in Postgres
+- Sage now stores Agent Settings and per-user-type overrides in Postgres
 - Sage no longer depends on `POST /internal/agent/auth-context`
 
 The public route surface is unchanged:
@@ -30,7 +30,7 @@ The public route surface is unchanged:
 
 ### Gateway
 
-The gateway is now just a router.
+The Gateway is now just a router.
 
 It does:
 
@@ -47,21 +47,21 @@ It does not do:
 
 ### Sage
 
-Sage is now responsible for public AI-route correctness:
+Sage is now responsible for public Agent Runtime route correctness:
 
 - bearer auth verification
 - cookie auth verification
 - CSRF validation
 - CORS for Sage-owned routes
 - admin/user authorization on Sage-owned routes
-- AI config CRUD and prompt preview
+- Agent Settings CRUD and prompt preview
 - `/llm/chat`
 - `/query`
-- query-session ownership and persistence
+- public query-session record ownership and Session Memory persistence
 
 ### Python
 
-Python remains the Enclave control plane:
+Python remains the Enclave Control Plane:
 
 - issuing auth tokens and cookies
 - users, admins, onboarding, and approvals
@@ -71,7 +71,7 @@ Python remains the Enclave control plane:
 - safe admin DB query execution
 - deployment config and non-AI product/admin routes
 
-## Internal Sage To Python Contract
+## Sage To Python Private Control-Plane Contract
 
 Active internal endpoints used by Sage on this branch:
 
@@ -91,7 +91,7 @@ Compatibility endpoints still exist in Python, but they are no longer part of th
 - `GET /internal/agent/ai-config/effective`
 - `POST /internal/agent/auth-context`
 
-The important point is that Sage now resolves the actor itself and only asks Python for Enclave-owned facts and actions.
+The important point is that Sage now resolves the actor itself and only asks Python for Enclave Control Plane facts and actions.
 
 ## Auth Model
 
@@ -112,16 +112,16 @@ Practical result:
 - cookie admin auth works on Sage-owned routes
 - the gateway does not need to synthesize `Authorization` from cookies
 
-## AI Config Ownership
+## Agent Settings Ownership
 
-AI config is now Sage-owned end-to-end for the public runtime API:
+Agent Settings are now Sage-owned end-to-end for the public Agent Runtime API:
 
 - storage lives in Sage Postgres
 - global config lives in `ai_config`
 - per-user-type overrides live in `ai_config_user_type_overrides`
 - prompt preview is assembled in Sage
 
-Python still owns deployment config, but not runtime AI config on this branch.
+Python still owns Deployment Settings, but not runtime Agent Settings on this branch.
 
 ## Smoke-Tested Behaviors
 
@@ -186,7 +186,7 @@ This branch is the foundation, not the end state.
 Best remaining productization tasks:
 
 - make the internal `/internal/agent/*` contract explicit and versioned
-- decide whether Python deployment config should eventually control Sage runtime env too
-- define whether deleting a query session should also purge underlying Sage memory rows
+- decide whether Python Deployment Settings should eventually control Sage runtime env too
+- define whether deleting a public query-session record should also perform Session Memory Deletion
 - add browser-level automated tests for cookie auth + CSRF on Sage-owned routes
 - remove or clearly quarantine legacy Python AI implementations that are no longer public

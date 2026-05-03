@@ -1,0 +1,3 @@
+# Model Providers Must Support Encrypted Verifiable Inference
+
+Enclave Free requires Model Providers to support Encrypted Inference and Verifiable Inference. Encrypted Inference protects full Conversation Content from surrounding infrastructure, not only the latest user message. Verifiable Inference lets the Operator verify meaningful claims about where and how inference ran. A Trusted Execution Environment is the preferred mechanism today, and Tinfoil is the current preferred Model Provider because it satisfies this requirement. Other providers should not be treated as interchangeable drop-ins unless they meet the same privacy and verifiability bar.

@@ -1,9 +1,10 @@
 # Sessions
 
-This prototype has two different session concepts:
+This prototype has three related session and memory concepts:
 
 - auth sessions: browser or API authentication for admins and users
-- query sessions: Sage-owned conversation continuity for `/query`
+- public query-session records: Sage-owned `web_sessions` records for `/query` continuity
+- Session Memory: Sage-owned Conversation history and derived memory state
 
 ## Auth Sessions
 
@@ -50,21 +51,21 @@ Both Python and Sage enforce the same high-level rules for unsafe cookie-authent
 
 The gateway simply forwards cookies, `Authorization`, and `X-CSRF-Token` to Sage. It does not synthesize auth or participate in CSRF decisions.
 
-## Sage Query Sessions
+## Sage Public Query-Session Records
 
-### What A Query Session Is
+### What A Public Query-Session Record Is
 
-`/query` uses a public `session_id` for conversation continuity. On this prototype, that continuity is owned by Sage, not by the legacy Python in-memory session store.
+`/query` uses a public `session_id` for Conversation continuity. On this prototype, the public session record and the underlying Session Memory are owned by Sage, not by the legacy Python in-memory session store.
 
 Current Sage persistence model:
 
-- `web_sessions` stores the public session record and ownership
-- Sage memory tables store the actual conversation history and derived memory state
+- `web_sessions` stores the public query-session record and ownership
+- Sage Session Memory tables store the actual Conversation history and derived Session Memory state
 - `external_identities` keeps a durable mapping between Enclave identities and Sage-side session ownership metadata
 
 ### Persistence Guarantees
 
-Query sessions persist as long as Sage Postgres persists.
+Public query-session records and Sage Session Memory persist as long as Sage Postgres persists.
 
 That means:
 
@@ -74,7 +75,7 @@ That means:
 
 ### Ownership Rules
 
-- admins can inspect or delete any query session
+- admins can inspect or delete any public query-session record
 - non-admin users can only access their own sessions
 
 Sage verifies the session token itself, hydrates the user/admin record from Python's private control-plane endpoints, and then applies session ownership checks against `web_sessions`.
@@ -83,12 +84,12 @@ Sage verifies the session token itself, hydrates the user/admin record from Pyth
 
 - `POST /query` creates or resumes a session and returns `session_id`
 - `GET /query/session/{session_id}` returns the stored conversation view for that session
-- `DELETE /query/session/{session_id}` deletes the session record
+- `DELETE /query/session/{session_id}` deletes the public query-session record
 
 Current nuance:
 
 - deleting a session removes the `web_sessions` row
-- it does not currently serve as a full purge of all underlying Sage memory rows tied to that session's agent
+- it does not currently serve as full Session Memory Deletion for all underlying Session Memory rows tied to that session's agent
 
 ## Debugging
 
@@ -105,7 +106,7 @@ curl http://localhost:8000/query/session/<session-id> \
   -H "Authorization: Bearer <session-token>"
 ```
 
-If query-session continuity looks wrong, check:
+If `/query` continuity looks wrong, check:
 
 1. the user really received the same `session_id`
 2. the request is still reaching Sage through the gateway

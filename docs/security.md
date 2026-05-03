@@ -75,8 +75,8 @@ Recommended:
 - Define retention and deletion policies for:
   - Uploaded documents and derived chunks
   - Logs
-  - Sage `/query` session state and memory rows
-    - **Note:** current public `/query` sessions are Sage/Postgres-backed, but deleting a query session only deletes the public `web_sessions` row. It is not yet a full Sage-memory purge contract.
+  - Sage `/query` public session records and Session Memory rows
+    - **Note:** current public `/query` continuity is Sage/Postgres-backed, but deleting a public query-session record only deletes the `web_sessions` row. It is not yet full Session Memory Deletion.
   - Python in-memory runtime state that still exists outside the public Sage query path, such as rate-limit buckets and in-progress ingest chunks.
 
 ## Operational References

@@ -629,10 +629,10 @@ async def smoke_test():
 @app.get("/llm/test", response_model=LLMTestResult)
 async def llm_smoke_test():
     """
-    Smoke test Sage/Tinfoil LLM connectivity.
+    Smoke test Sage/Tinfoil Model Provider connectivity.
 
     Tests the OpenAI-compatible service endpoint:
-    - Checks Sage/Tinfoil health endpoint
+    - Checks Sage/Tinfoil Model Provider health endpoint
     - Sends a simple test prompt
     - Returns the response
     """
@@ -768,13 +768,13 @@ async def chat(
                 if tool_context:
                     tool_context_parts.append(tool_context)
 
-        # Import AI config functions for dynamic prompt building
+        # Import Agent Settings compatibility functions for dynamic prompt building
         from ai_config import build_chat_prompt, get_llm_parameters
 
         # Get user_type_id from authenticated user for per-type config
         user_type_id = user.get("user_type_id")
 
-        # Get LLM parameters from config (with user-type overrides if applicable)
+        # Get Model Provider parameters from Agent Settings (with user-type overrides if applicable)
         llm_params = get_llm_parameters(user_type_id=user_type_id)
         temperature = llm_params.get("temperature", 0.1)
 
@@ -790,7 +790,7 @@ async def chat(
             if not user_profile_context:
                 user_profile_context = None
 
-        # Build prompt using AI config (with user-type overrides if applicable)
+        # Build prompt using Agent Settings (with user-type overrides if applicable)
         combined_context = "\n\n".join(tool_context_parts) if tool_context_parts else ""
         prompt = build_chat_prompt(
             message=request.message,
@@ -1864,7 +1864,7 @@ async def get_session_defaults_public(
 ) -> SessionDefaultsResponse:
     """
     Public endpoint: Get session defaults for chat initialization.
-    No authentication required - returns safe defaults for new chat sessions.
+    No authentication required - returns safe defaults for new Conversations.
 
     If user_type_id is provided, returns defaults with user-type-specific overrides applied.
     """

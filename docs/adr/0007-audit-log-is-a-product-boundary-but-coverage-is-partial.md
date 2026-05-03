@@ -1,0 +1,3 @@
+# Audit Log Is A Product Boundary But Coverage Is Partial
+
+Enclave Free treats the Audit Log as part of Operator-Controlled Privacy: the Operator should be able to review security-relevant and state-changing actions within an Instance. The current prototype has tamper-evident audit coverage for configuration-oriented paths, including Deployment Settings, Agent Settings, and document defaults, but audit coverage is not complete. Future work should not assume that Admin Conversation writes, User Approval changes, User Type migration, Data Deletion, document actions, or direct database mutations are audited until those paths explicitly write audit events.

@@ -1,7 +1,9 @@
 """
-LLM Provider Base Class and Factory
+Model Provider base class and compatibility factory.
 
-Provides an abstract interface for the configured OpenAI-compatible LLM service.
+Provides an abstract interface for the configured OpenAI-compatible Model
+Provider path used by Python compatibility checks and legacy utility routes.
+The LLM* names remain as public import compatibility aliases.
 """
 
 import os
@@ -15,7 +17,7 @@ logger = logging.getLogger("sanctum.llm.provider")
 
 @dataclass
 class LLMResponse:
-    """Unified response from the configured OpenAI-compatible LLM service."""
+    """Unified response from the configured OpenAI-compatible Model Provider."""
     content: str
     model: str
     provider: str
@@ -23,7 +25,7 @@ class LLMResponse:
 
 
 class LLMProvider(ABC):
-    """Abstract base class for OpenAI-compatible LLM services."""
+    """Abstract base class for OpenAI-compatible Model Provider adapters."""
 
     @property
     @abstractmethod
@@ -42,30 +44,34 @@ class LLMProvider(ABC):
         pass
 
 
-def get_provider(provider_name: Optional[str] = None) -> LLMProvider:
+ModelProviderResponse = LLMResponse
+ModelProvider = LLMProvider
+
+
+def get_provider(provider_name: Optional[str] = None) -> ModelProvider:
     """
-    Factory function to get the configured LLM service.
+    Factory function to get the configured Model Provider adapter.
 
     Args:
         provider_name: Optional service name override.
 
     Returns:
-        Configured LLMProvider instance.
+        Configured ModelProvider instance.
     """
     requested = (provider_name or os.getenv("LLM_PROVIDER", "sage")).strip().lower()
     if requested not in {"", "sage", "maple"}:
-        logger.warning("Unsupported LLM provider %r requested; forcing sage-compatible provider", requested)
+        logger.warning("Unsupported Model Provider compatibility label %r requested; forcing sage-compatible provider", requested)
         requested = "sage"
 
     from .sage_tinfoil import SageTinfoilProvider
     return SageTinfoilProvider(provider_name=requested or "sage")
 
 
-def get_sage_provider() -> LLMProvider:
+def get_sage_provider() -> ModelProvider:
     """Explicit Sage/Tinfoil-compatible provider accessor."""
     return get_provider("sage")
 
 
-def get_maple_provider() -> LLMProvider:
+def get_maple_provider() -> ModelProvider:
     """Deprecated compatibility accessor for old Maple-era imports."""
     return get_provider("maple")

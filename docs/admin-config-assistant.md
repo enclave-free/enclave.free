@@ -10,7 +10,7 @@ This document describes the admin configuration assistant workflow used by:
 - Give the assistant full awareness of current configuration state:
   - Instance settings
   - Deployment configuration (env-var backed keys stored in SQLite)
-  - AI config (prompt sections, parameters, defaults), including per-user-type effective values
+  - Agent Settings (prompt sections, parameters, defaults), including per-user-type effective values
   - User types and onboarding field definitions
   - Document defaults (global + per-user-type effective values)
 - Allow the assistant to propose and apply changes (with explicit confirmation).
@@ -31,7 +31,7 @@ The admin's Nostr private key (`nsec`) is custodied by the browser extension via
 - The admin UI can reveal a secret value with:
   - `GET /admin/deployment/config/{key}/reveal`
 - The assistant bubble follows a strict rule:
-  - Secrets are NOT fetched and NOT sent to the AI runtime unless the admin flips the "Share secret env vars" toggle.
+  - Secrets are NOT fetched and NOT sent to the Agent Runtime unless the admin flips the "Share secret env vars" toggle.
 
 Defense-in-depth:
 - When secret sharing is enabled, the frontend keeps the revealed secret values locally and redacts any exact matches from rendered assistant messages (to prevent accidental echoing).
@@ -53,7 +53,7 @@ Defense-in-depth:
 
 Tool defaults:
 - Reads `/session-defaults` and applies `web_search_enabled` default on load (same default source as full chat).
-- In current frontend behavior, admin `/chat` uses this assistant pipeline (snapshot context + changeset review/apply) and does not use document-scope RAG mode.
+- In current frontend behavior, admin `/chat` uses this assistant pipeline (snapshot context + changeset review/apply) and does not use document-scope Retrieval mode.
 
 Panel sizing:
 - The bubble header includes an explicit `Expand` / `Compact` control.
@@ -69,7 +69,7 @@ On each send (and on manual refresh), the assistant builds a snapshot from:
   - `GET /admin/deployment/config`
 - Optional service health:
   - `GET /admin/deployment/health`
-- AI config:
+- Agent Settings:
   - `GET /admin/ai-config`
   - `GET /admin/ai-config/user-type/{user_type_id}` for each user type
 - User types + fields:
@@ -119,7 +119,7 @@ Allowed mutation targets include:
 
 - Deployment config: `PUT /admin/deployment/config/{key}`
 - Instance settings: `PUT /admin/settings`
-- AI config: `PUT /admin/ai-config/{key}`, `PUT /admin/ai-config/user-type/{id}/{key}`
+- Agent Settings: `PUT /admin/ai-config/{key}`, `PUT /admin/ai-config/user-type/{id}/{key}`
 - User types: `POST/PUT/DELETE /admin/user-types...`
 - User fields: `POST/PUT/DELETE /admin/user-fields...`
 - Document defaults: `PUT/DELETE /ingest/admin/documents/...`
@@ -138,7 +138,7 @@ Before allowlist validation, the frontend normalizes common LLM output drift:
 
 ### User Type Placeholders (Single Change Set)
 
-Sometimes you want one change set to both create user types and then reference them (for fields, AI config overrides, or document defaults overrides) without guessing numeric IDs.
+Sometimes you want one change set to both create user types and then reference them (for fields, Agent Settings overrides, or document defaults overrides) without guessing numeric IDs.
 
 The admin assistant UI supports a placeholder token in paths and request bodies:
 

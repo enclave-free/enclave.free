@@ -89,7 +89,7 @@
       "instanceBrandingDesc": "Branding and theme options",
       "userConfig": "User Configuration",
       "userConfigDesc": "User types and onboarding questions",
-      "aiConfig": "AI Configuration",
+      "aiConfig": "Agent Settings",
       "aiConfigDesc": "Prompts, parameters, defaults",
       "deploymentConfig": "Deployment Config",
       "deploymentConfigDesc": "Services, SMTP, storage"
@@ -775,7 +775,7 @@
     "verificationFailed": "Verification failed",
     "failedToFetchFields": "Failed to fetch fields",
     "errorFetchingFields": "Error fetching fields",
-    "failedToFetchAIConfig": "Failed to fetch AI config",
+    "failedToFetchAIConfig": "Failed to fetch Agent Settings",
     "failedToPreviewPrompt": "Failed to preview prompt",
     "failedToFetchDocumentDefaults": "Failed to fetch document defaults",
     "failedToUpdateDocument": "Failed to update document",
@@ -817,8 +817,8 @@
     "instanceDesc": "Branding, chat style, and theme settings",
     "user": "User Configuration",
     "userDesc": "Define user types and onboarding questions",
-    "ai": "AI Configuration",
-    "aiDesc": "Configure prompts, LLM parameters, and document defaults",
+    "ai": "Agent Settings",
+    "aiDesc": "Configure prompts, Model Provider parameters, and document defaults",
     "deployment": "Deployment Configuration",
     "deploymentDesc": "Manage environment settings and service health",
     "upload": "Document Upload",
@@ -829,8 +829,8 @@
     "dataSectionLabel": "Data & Content"
   },
   "adminAI": {
-    "title": "AI Configuration",
-    "subtitle": "Control how the AI behaves and responds to your users",
+    "title": "Agent Settings",
+    "subtitle": "Control how Sage behaves and responds to your users",
     "promptTemplate": "Prompt Template",
     "promptTemplateDesc": "Shape how the AI communicates with your users",
     "promptTemplateHint": "These settings define the AI's personality and boundaries. Changes take effect immediately for new conversations.",
@@ -840,7 +840,7 @@
     "parametersHint": "These technical settings affect response speed and quality. The defaults work well for most use cases — only adjust if you notice issues.",
     "sessionDefaults": "Feature Defaults",
     "sessionDefaultsDesc": "Set which features are on by default",
-    "sessionDefaultsHint": "Control which AI capabilities are enabled when users start a new chat session.",
+    "sessionDefaultsHint": "Control which Agent Runtime capabilities are enabled when users start a new Conversation.",
     "documentDefaults": "Document Access",
     "documentDefaultsDesc": "Control which documents the AI can reference",
     "documentDefaultsHint": "Documents marked \"Available\" can be selected by users. Documents marked \"Active by Default\" are automatically included in new conversations.",
@@ -1057,9 +1057,9 @@
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
       "sageExtra": "Set LLM_API_KEY to your Tinfoil key from {{tinfoilSignupUrl}}. Sage reads the generic LLM_* settings and uses the local Tinfoil proxy.",
-      "sageHint": "This prototype routes AI traffic through Sage and uses Tinfoil as the model backend.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport.",
       "modelField": "LLM_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-5).",
-      "overviewDesc": "This prototype uses Sage as the public AI runtime and Tinfoil as the model backend.",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport.",
       "overviewTitle": "Sage Runtime Overview",
       "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
@@ -1232,9 +1232,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Sage AI Runtime",
+      "label": "Sage Agent Runtime",
       "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes AI traffic through Sage and uses Tinfoil as the model backend. Changes require a restart."
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "Text Processing",
@@ -1324,8 +1324,8 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "AI Service",
-      "description": "LLM runtime owner",
+      "label": "Model Provider",
+      "description": "Model Provider compatibility label",
       "hint": "Use \"sage\" for this prototype. Legacy \"maple\" remains only for compatibility."
     },
     "LLM_MODEL": {
@@ -1335,7 +1335,7 @@
     },
     "LLM_API_URL": {
       "label": "API Endpoint",
-      "description": "Base URL for API requests",
+      "description": "Model Provider API base URL",
       "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
@@ -1604,10 +1604,10 @@
       "verifies_seeded_test_data_exists_in_both_databases_3ac1d4": "Verifies seeded test data exists in both databases.",
       "get_test_b58003": "GET /test",
       "retrieves_the_spanish_udhr_claim_from_neo4j_and_3bbddf": "— Retrieves the Spanish UDHR claim from Neo4j and its embedding from Qdrant.",
-      "3_llm_provider_test_f3cd3d": "3. LLM Provider Test",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured LLM service.",
+      "3_llm_provider_test_f3cd3d": "3. Model Provider Test",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "get_llm_test_86edd0": "GET /llm/test",
-      "sends_say_hello_to_the_llm_and_returns_9da964": "— Sends \"Say 'hello'\" to the LLM and returns its response. Shows which model and provider are active.",
+      "sends_say_hello_to_the_llm_and_returns_9da964": "— Sends \"Say 'hello'\" to the Model Provider and returns its response. Shows which model and provider are active.",
       "4_rag_query_full_pipeline_8ea01b": "4. RAG Query (Full Pipeline)",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "The complete RAG pipeline: embed → search → retrieve → generate.",
       "post_query_1e40bd": "POST /query",
@@ -1668,7 +1668,7 @@
       "get_ingest_stats_48d91e": "GET /ingest/stats",
       "overall_statistics_for_jobs_and_chunks_3111a8": "— Overall statistics for jobs and chunks.",
       "7_vector_search_direct_qdrant_049447": "7. Vector Search (Direct Qdrant)",
-      "search_the_vector_store_directly_without_llm_generation_ce9e36": "Search the vector store directly without LLM generation. Useful for debugging embeddings.",
+      "search_the_vector_store_directly_without_llm_generation_ce9e36": "Search the retrieval index directly without Model Provider generation. Useful for debugging embeddings.",
       "post_vector_search_da9f62": "POST /vector-search",
       "embeds_your_query_and_searches_qdrant_directly_returns_eeff55": "— Embeds your query and searches Qdrant directly. Returns matching vectors with similarity scores (no LLM call).",
       "enter_search_query_87a0d2": "Enter search query...",

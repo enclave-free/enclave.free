@@ -1,6 +1,6 @@
 """
-Sanctum AI Configuration Router
-Handles AI/LLM settings including prompt templates, parameters, and session defaults.
+Sanctum Agent Settings compatibility router.
+Handles prompt templates, Model Provider parameters, and session defaults.
 """
 
 import json
@@ -55,7 +55,7 @@ def _config_to_inheritance_item(config: dict) -> AIConfigWithInheritance:
 @router.get("", response_model=AIConfigResponse)
 async def get_ai_config(admin: dict = Depends(auth.require_admin)):
     """
-    Get all AI configuration grouped by category.
+    Get all Agent Settings grouped by category.
     Requires admin authentication.
     """
     all_config = database.get_all_ai_config()
@@ -76,7 +76,7 @@ async def get_ai_config(admin: dict = Depends(auth.require_admin)):
 @router.get("/{key}", response_model=AIConfigItem)
 async def get_ai_config_by_key(key: str, admin: dict = Depends(auth.require_admin)):
     """
-    Get a single AI config value by key.
+    Get a single Agent Settings value by key.
     Requires admin authentication.
     """
     config = database.get_ai_config(key)
@@ -93,7 +93,7 @@ async def update_ai_config_value(
     admin: dict = Depends(auth.require_admin)
 ):
     """
-    Update an AI config value.
+    Update an Agent Settings value.
     Requires admin authentication.
     """
     # Verify key exists
@@ -184,7 +184,7 @@ async def get_ai_config_for_user_type(
     admin: dict = Depends(auth.require_admin)
 ) -> AIConfigUserTypeResponse:
     """
-    Get AI configuration with inheritance applied for a user type.
+    Get Agent Settings with inheritance applied for a user type.
     Shows which values are overridden vs inherited from global defaults.
     Requires admin authentication.
     """
@@ -221,7 +221,7 @@ async def set_ai_config_override(
     admin: dict = Depends(auth.require_admin)
 ) -> AIConfigWithInheritance:
     """
-    Set an AI config override for a user type.
+    Set an Agent Settings override for a user type.
     This value will override the global default for users of this type.
     Requires admin authentication.
     """
@@ -311,7 +311,7 @@ async def delete_ai_config_override(
     admin: dict = Depends(auth.require_admin)
 ) -> dict:
     """
-    Remove an AI config override for a user type (revert to global default).
+    Remove an Agent Settings override for a user type (revert to global default).
     Requires admin authentication.
     """
     # Verify user type exists
@@ -613,7 +613,7 @@ def build_chat_prompt(
     user_profile_context: dict[str, str] | None = None
 ) -> str:
     """
-    Build a chat prompt using AI config settings.
+    Build a chat prompt using Agent Settings.
     Assembles the prompt from configured sections.
 
     Args:

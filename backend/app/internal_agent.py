@@ -1,9 +1,10 @@
 """
-Private control-plane endpoints for the Sage enclave web runtime.
+Private Enclave Control Plane endpoints for the Sage Agent Runtime.
 
 These endpoints are intentionally not exposed through the public gateway.
-They let Sage reuse Enclave's existing auth, document access, AI config, and
-admin DB safety rules without reimplementing that business logic in Rust.
+They let Sage reuse Enclave Control Plane facts and actions such as auth
+hydration, Document Access, User Profile context, Retrieval, and safe admin DB
+reads without reimplementing those product rules in Rust.
 """
 
 import os

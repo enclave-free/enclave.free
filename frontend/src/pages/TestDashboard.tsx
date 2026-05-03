@@ -1436,12 +1436,12 @@ export function TestDashboard() {
 
         {/* LLM Test */}
         <Card className="mb-6">
-          <h3 className="text-lg font-semibold text-text mb-2">{t('testDashboard.extracted.3_llm_provider_test_f3cd3d', '3. LLM Provider Test')}</h3>
+          <h3 className="text-lg font-semibold text-text mb-2">{t('testDashboard.extracted.3_llm_provider_test_f3cd3d', '3. Model Provider Test')}</h3>
           <p className="text-sm text-text-secondary mb-4">
-            {t('testDashboard.extracted.tests_connectivity_to_the_llm_provider_maple_or_e91a9f', 'Tests connectivity to the Sage + Tinfoil LLM service.')}
+            {t('testDashboard.extracted.tests_connectivity_to_the_llm_provider_maple_or_e91a9f', 'Tests connectivity to the Sage + Tinfoil Model Provider path.')}
           </p>
           <InfoBox>
-            <strong className="text-text">{t('testDashboard.extracted.get_llm_test_86edd0', 'GET /llm/test')}</strong> {t('testDashboard.extracted.sends_say_hello_to_the_llm_and_returns_9da964', '— Sends "Say \'hello\'" to the LLM and returns its response. Shows which model and provider are active.')}
+            <strong className="text-text">{t('testDashboard.extracted.get_llm_test_86edd0', 'GET /llm/test')}</strong> {t('testDashboard.extracted.sends_say_hello_to_the_llm_and_returns_9da964', '— Sends "Say \'hello\'" to the Model Provider and returns its response. Shows which model and provider are active.')}
           </InfoBox>
           <Button onClick={runLlmTest} disabled={llmTestLoading}>
             {llmTestLoading ? 'Testing LLM...' : 'Test LLM'}
@@ -1891,7 +1891,7 @@ export function TestDashboard() {
         <Card className="mt-6">
           <h3 className="text-lg font-semibold text-text mb-2">{t('testDashboard.extracted.7_vector_search_direct_qdrant_049447', '7. Vector Search (Direct Qdrant)')}</h3>
           <p className="text-sm text-text-secondary mb-4">
-            {t('testDashboard.extracted.search_the_vector_store_directly_without_llm_generation_ce9e36', 'Search the vector store directly without LLM generation. Useful for debugging embeddings.')}
+            {t('testDashboard.extracted.search_the_vector_store_directly_without_llm_generation_ce9e36', 'Search the retrieval index directly without Model Provider generation. Useful for debugging embeddings.')}
           </p>
           <InfoBox>
             <strong className="text-text">{t('testDashboard.extracted.post_vector_search_da9f62', 'POST /vector-search')}</strong> {t('testDashboard.extracted.embeds_your_query_and_searches_qdrant_directly_returns_eeff55', '— Embeds your query and searches Qdrant directly. Returns matching vectors with similarity scores (no LLM call).')}
