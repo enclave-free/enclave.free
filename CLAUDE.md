@@ -10,7 +10,7 @@ Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for build
 
 ### Start/Stop Services
 
-Docker Compose is split into `docker-compose.infra.yml` (Qdrant, maple-proxy, SearXNG) and `docker-compose.app.yml` (backend, frontend). This allows rebuilding the app without restarting infrastructure services.
+Docker Compose is split into `docker-compose.infra.yml` (Qdrant, Tinfoil proxy, SearXNG) and `docker-compose.app.yml` (core backend, Gateway, Sage, frontend). This allows rebuilding the app without restarting infrastructure services.
 
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build          # Start all services (blocking)

@@ -45,8 +45,9 @@ The short version is: Sage is the AI runtime, Python is still the app/control pl
 
 ```bash
 cp .env.example .env
-# required: TINFOIL_API_KEY
+# required: LLM_API_KEY and TINFOIL_API_KEY for Compose
 # required: INTERNAL_AGENT_TOKEN
+# required: SECRET_KEY
 # optional: SMTP_* and FRONTEND_URL for real email auth flows
 ```
 
@@ -77,6 +78,7 @@ First startup will:
 ```bash
 curl http://localhost:8000/test
 curl http://localhost:8000/health
+curl http://localhost:8000/llm/test
 ```
 
 Only two services are exposed to the host by default:

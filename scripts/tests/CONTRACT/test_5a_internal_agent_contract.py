@@ -157,14 +157,15 @@ def main() -> int:
 
     failures = 0
 
-    unauthorized_cases: list[tuple[str, str, str, dict[str, Any] | None]] = [
-        ("GET user record rejects missing token", "GET", "/internal/agent/users/1", None),
-        ("GET admin record rejects missing token", "GET", "/internal/agent/admins/by-pubkey/missing", None),
-        ("GET user type rejects missing token", "GET", "/internal/agent/user-types/1", None),
-        ("GET document access rejects missing token", "GET", "/internal/agent/document-access", None),
-        ("GET user profile rejects missing token", "GET", "/internal/agent/user-profile-context/1", None),
+    protected_routes: list[tuple[str, str, str, dict[str, Any] | None]] = [
+        ("GET health", "GET", "/internal/agent/health", None),
+        ("GET user record", "GET", "/internal/agent/users/1", None),
+        ("GET admin record", "GET", "/internal/agent/admins/by-pubkey/missing", None),
+        ("GET user type", "GET", "/internal/agent/user-types/1", None),
+        ("GET document access", "GET", "/internal/agent/document-access", None),
+        ("GET user profile", "GET", "/internal/agent/user-profile-context/1", None),
         (
-            "POST document search rejects missing token",
+            "POST document search",
             "POST",
             "/internal/agent/document-search",
             {
@@ -173,11 +174,16 @@ def main() -> int:
                 "top_k": 1,
             },
         ),
-        ("POST admin DB query rejects missing token", "POST", "/internal/agent/admin-db-query", {"sql": "SELECT 1"}),
+        ("POST admin DB query", "POST", "/internal/agent/admin-db-query", {"sql": "SELECT 1"}),
     ]
 
-    for label, method, path, payload in unauthorized_cases:
-        response = post_json(args.api_base, path, None, payload or {}) if method == "POST" else get_json(args.api_base, path, None)
+    unauthorized_cases: list[tuple[str, str, str, dict[str, Any] | None, str | None]] = []
+    for label, method, path, payload in protected_routes:
+        unauthorized_cases.append((f"{label} rejects missing token", method, path, payload, None))
+        unauthorized_cases.append((f"{label} rejects invalid token", method, path, payload, "invalid-internal-agent-token"))
+
+    for label, method, path, payload, token in unauthorized_cases:
+        response = post_json(args.api_base, path, token, payload or {}) if method == "POST" else get_json(args.api_base, path, token)
         failures += 0 if expect_status(label, response, {403}) else 1
 
     health = get_json(args.api_base, "/internal/agent/health", internal_token)

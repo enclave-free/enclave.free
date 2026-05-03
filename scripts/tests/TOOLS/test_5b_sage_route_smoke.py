@@ -33,7 +33,6 @@ COMPOSE_ARGS = [
     "docker-compose.app.yml",
 ]
 DEFAULT_DB_PATH = "/data/sanctum.db"
-DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 
 
 def load_container_env(service: str = "core-backend") -> dict[str, str]:
@@ -55,6 +54,13 @@ def load_container_env(service: str = "core-backend") -> dict[str, str]:
             key, value = line.split("=", 1)
             values[key] = value
     return values
+
+
+def require_env(values: dict[str, str], key: str, service: str) -> str:
+    value = values.get(key)
+    if not value:
+        raise RuntimeError(f"{service} did not expose required {key}; smoke test cannot mint matching auth cookies")
+    return value
 
 
 def run_sqlite_json(sql: str, db_path: str) -> list[dict[str, Any]]:
@@ -174,12 +180,17 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=120.0)
     args = parser.parse_args()
 
-    env_values = load_container_env()
-    db_path = env_values.get("SQLITE_PATH", DEFAULT_DB_PATH)
-    secret_key = env_values.get("SECRET_KEY") or os.getenv("SECRET_KEY") or DEFAULT_SECRET_KEY
-    csrf_cookie_name = env_values.get("CSRF_COOKIE_NAME", "sanctum_csrf")
-    admin_cookie_name = env_values.get("ADMIN_SESSION_COOKIE_NAME", "sanctum_admin_session")
-    origin = resolve_origin(env_values)
+    backend_env_values = load_container_env("core-backend")
+    sage_env_values = load_container_env("sage")
+    db_path = backend_env_values.get("SQLITE_PATH", DEFAULT_DB_PATH)
+    try:
+        secret_key = require_env(sage_env_values, "SECRET_KEY", "sage")
+        csrf_cookie_name = require_env(sage_env_values, "CSRF_COOKIE_NAME", "sage")
+        admin_cookie_name = require_env(sage_env_values, "ADMIN_SESSION_COOKIE_NAME", "sage")
+    except RuntimeError as exc:
+        print(f"[ERROR] {exc}")
+        return 2
+    origin = resolve_origin(sage_env_values)
 
     admin = first_row(
         run_sqlite_json(

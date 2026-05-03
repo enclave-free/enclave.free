@@ -33,7 +33,7 @@ from typing import List, Tuple, Optional
 
 try:
     from coincurve import PrivateKey
-except Exception:
+except ImportError:
     PrivateKey = None
 
 
@@ -187,7 +187,7 @@ def create_test_admin() -> bool:
     seed = config["test_admin"]["keypair_seed"]
     try:
         pubkey = derive_pubkey_from_seed(seed)
-    except Exception as exc:
+    except (RuntimeError, ValueError) as exc:
         print(f"  [HARNESS] ✗ Admin key derivation failed: {exc}")
         return False
 

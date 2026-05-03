@@ -35,7 +35,7 @@ See `docs/admin-deployment-config.md` for UI behavior, validation, and restart r
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SECRET_KEY` | Token signing key (auto-generated if not set) | Auto-generated |
+| `SECRET_KEY` | Token signing key; required in Compose, auto-generated only for non-Compose runs if unset | Required for Compose |
 | `SMTP_TIMEOUT` | SMTP connection timeout (seconds) | `10` |
 
 > **Note:** `MOCK_SMTP` is a deployment config UI alias for `MOCK_EMAIL`. If both are set, `MOCK_EMAIL` takes precedence. Use `MOCK_EMAIL` when setting environment variables directly.
@@ -169,13 +169,13 @@ Generate SMTP key in: Brevo > Settings > SMTP & API
 The `SECRET_KEY` is used to sign magic link and session tokens. If it changes, all existing tokens become invalid.
 
 **Behavior:**
-1. If `SECRET_KEY` environment variable is set, it's used
-2. Otherwise, checks for `/data/.secret_key` file (persisted across restarts)
-3. If neither exists, generates a new key and saves it to `/data/.secret_key`
+1. Compose requires `SECRET_KEY` to be provided to both the Python backend and Sage.
+2. Non-Compose backend runs use `SECRET_KEY` when set.
+3. If a non-Compose backend run has no `SECRET_KEY`, it checks `/data/.secret_key`, then generates and persists one if needed.
 
 **For production:**
-- Either set `SECRET_KEY` explicitly in your environment
-- Or ensure `/data/` is a persistent volume so the auto-generated key survives deployments
+- Set `SECRET_KEY` explicitly through your deployment secret manager.
+- Keep the value stable across backend and Sage restarts.
 
 ### Token Expiration
 

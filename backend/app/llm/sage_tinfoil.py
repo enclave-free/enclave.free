@@ -23,7 +23,7 @@ logger = logging.getLogger("sanctum.llm.sage_tinfoil")
 class SageTinfoilProvider(LLMProvider):
     """Generic OpenAI-compatible endpoint used by Python compatibility paths."""
 
-    def __init__(self, provider_name: str = "sage"):
+    def __init__(self, provider_name: str = "sage") -> None:
         self._lock = threading.RLock()
         self.provider_name = provider_name if provider_name in {"sage", "maple"} else "sage"
 
@@ -46,11 +46,11 @@ class SageTinfoilProvider(LLMProvider):
 
         self._init_client()
 
-    def _init_client(self):
+    def _init_client(self) -> None:
         """Initialize or reinitialize the OpenAI client."""
         self.client = OpenAI(base_url=self.base_url, api_key=self.api_key or "not-required")
 
-    def _refresh_config(self):
+    def _refresh_config(self) -> None:
         """Refresh config from config_loader if available."""
         with self._lock:
             try:
@@ -76,16 +76,20 @@ class SageTinfoilProvider(LLMProvider):
 
     def health_check(self) -> bool:
         """Check an OpenAI-compatible runtime via /health or /v1/models."""
+        self._refresh_config()
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        base = self.base_url.rstrip("/")
+        health_base = base[:-3] if base.endswith("/v1") else base
+
         try:
-            base = self.base_url.replace("/v1", "")
-            health_resp = httpx.get(f"{base}/health", timeout=5.0)
+            health_resp = httpx.get(f"{health_base}/health", headers=headers, timeout=5.0)
             if health_resp.status_code == 200:
                 return True
         except Exception:
             pass
 
         try:
-            models_resp = httpx.get(f"{self.base_url.rstrip('/')}/models", timeout=5.0)
+            models_resp = httpx.get(f"{base}/models", headers=headers, timeout=5.0)
             return models_resp.status_code == 200
         except Exception:
             return False

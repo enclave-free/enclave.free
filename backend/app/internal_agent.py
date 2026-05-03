@@ -236,7 +236,7 @@ async def get_user_record(user_id: int) -> InternalUserRecordResponse:
         email=user.get("email"),
         name=user.get("name"),
         user_type_id=user.get("user_type_id"),
-        dev_mode=False,
+        dev_mode=bool(user.get("dev_mode", False)),
     )
 
 
