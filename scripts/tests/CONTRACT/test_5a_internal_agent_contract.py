@@ -65,11 +65,17 @@ def run_sqlite_json(sql: str, db_path: str) -> list[dict[str, Any]]:
         timeout=30,
     )
     if result.returncode != 0:
-        return []
+        raise RuntimeError(
+            "sqlite3 JSON query failed "
+            f"(returncode={result.returncode}, stderr={result.stderr!r}, stdout={result.stdout!r})"
+        )
     try:
         return json.loads(result.stdout or "[]")
-    except json.JSONDecodeError:
-        return []
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            "sqlite3 JSON query returned invalid JSON "
+            f"(stdout={result.stdout!r}, stderr={result.stderr!r})"
+        ) from exc
 
 
 class SimpleResponse:
@@ -129,6 +135,14 @@ def expect_keys(label: str, data: dict[str, Any], keys: set[str]) -> bool:
         print(f"[PASS] {label}: schema keys present")
         return True
     print(f"[FAIL] {label}: missing keys {missing}; got {sorted(data)}")
+    return False
+
+
+def expect(name: str, condition: Any, details: str = "") -> bool:
+    if condition:
+        return True
+    suffix = f": {details}" if details else ""
+    print(f"[FAIL] {name}{suffix}")
     return False
 
 
