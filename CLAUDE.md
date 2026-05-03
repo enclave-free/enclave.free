@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs for this repo live in GitHub Issues for `enclave-free/enclave.free-prototype`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a multi-context layout rooted one level up at `/Users/plebdev/Desktop/code/enclave-free`, covering `enclave.free`, `sage`, and `enclave.free-prototype`. See `docs/agents/domain.md`.
+
 ## Project Overview
 
 Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for building and querying curated knowledge bases. The stack uses FastAPI (Python 3.11) and Qdrant for vector search.

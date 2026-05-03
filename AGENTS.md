@@ -1,5 +1,19 @@
 # Repository Guidelines
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs for this repo live in GitHub Issues for `enclave-free/enclave.free-prototype`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a multi-context layout rooted one level up at `/Users/plebdev/Desktop/code/enclave-free`, covering `enclave.free`, `sage`, and `enclave.free-prototype`. See `docs/agents/domain.md`.
+
 ## Project Structure & Module Organization
 Sanctum is a Docker Compose stack. The root includes `docker-compose.infra.yml`, `docker-compose.app.yml`, environment files, and `docs/` for longer guides. The FastAPI backend lives in `backend/app/` (LLM providers in `backend/app/llm/`). The Vite + React frontend lives in `frontend/src/` with pages, components, and i18n files under `frontend/src/i18n/locales/`. Runtime ingest artifacts are stored in `uploads/` (mounted into the backend container).
 
