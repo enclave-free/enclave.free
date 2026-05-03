@@ -107,6 +107,7 @@ Until the first admin authenticates, public user signup remains gated.
 
 - [docs/prototype-sage-cutover.md](docs/prototype-sage-cutover.md): cutover story, route ownership, and private contract
 - [docs/dumb-gateway-foundation.md](docs/dumb-gateway-foundation.md): current branch design, native Sage auth, and remaining productization work
+- [docs/internal-agent-contract.md](docs/internal-agent-contract.md): private Sage-to-Python contract used by this prototype
 - [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md): service topology and request/data flow
 - [docs/tools.md](docs/tools.md): `/llm/chat` vs `/query` tool behavior
 - [docs/sessions.md](docs/sessions.md): auth, CSRF, and Sage-backed query sessions

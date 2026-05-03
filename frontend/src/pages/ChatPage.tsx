@@ -198,7 +198,8 @@ export function ChatPage() {
       version: 1,
       summary: 'One sentence summary of what will change',
       requests: [
-        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'maple' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'sage' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_MODEL', body: { value: 'kimi-k2-5' } },
       ],
     }, null, 2))
     lines.push('```')

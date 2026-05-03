@@ -11,6 +11,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [tools.md](tools.md): current `/llm/chat` and `/query` tool semantics.
 - [sessions.md](sessions.md): current auth, CSRF, and Sage-backed query session behavior.
 - [admin-deployment-config.md](admin-deployment-config.md): current deployment config split across gateway, Python, Sage, and Tinfoil.
+- [internal-agent-contract.md](internal-agent-contract.md): private Sage-to-Python contract used by the prototype.
 
 ## Core Product Docs
 

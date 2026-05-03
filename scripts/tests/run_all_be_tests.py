@@ -31,7 +31,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Tuple, Optional
 
-from coincurve import PrivateKey
+try:
+    from coincurve import PrivateKey
+except Exception:
+    PrivateKey = None
 
 
 SCRIPT_DIR = Path(__file__).parent
@@ -48,6 +51,7 @@ DOMAIN_MAP = {
     "2": "RAG",
     "3": "AUTH",
     "4": "TOOLS",
+    "5": "CONTRACT",
 }
 
 # Config paths
@@ -167,6 +171,8 @@ def reset_database() -> bool:
 
 def derive_pubkey_from_seed(seed: str) -> str:
     """Derive x-only public key from a seed string."""
+    if PrivateKey is None:
+        raise RuntimeError("coincurve is required for harness admin key derivation")
     privkey_hex = hashlib.sha256(seed.encode()).hexdigest()
     privkey = PrivateKey(bytes.fromhex(privkey_hex))
     pubkey_compressed = privkey.public_key.format(compressed=True)
@@ -179,7 +185,11 @@ def create_test_admin() -> bool:
 
     config = load_crm_config()
     seed = config["test_admin"]["keypair_seed"]
-    pubkey = derive_pubkey_from_seed(seed)
+    try:
+        pubkey = derive_pubkey_from_seed(seed)
+    except Exception as exc:
+        print(f"  [HARNESS] ✗ Admin key derivation failed: {exc}")
+        return False
 
     sql = f"""
     INSERT OR REPLACE INTO admins (pubkey, created_at)
@@ -290,7 +300,10 @@ def discover_tests(pattern: str = "test_*.py") -> List[Path]:
     
     for subdir in SCRIPT_DIR.iterdir():
         if subdir.is_dir() and not subdir.name.startswith(("__", "backups")):
-            test_files = list(subdir.glob(pattern))
+            test_files = [
+                path for path in subdir.glob(pattern)
+                if not path.name.endswith("_helpers.py")
+            ]
             tests.extend(test_files)
     
     def sort_key(path: Path) -> str:

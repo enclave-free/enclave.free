@@ -57,10 +57,15 @@ def get_provider(provider_name: Optional[str] = None) -> LLMProvider:
         logger.warning("Unsupported LLM provider %r requested; forcing sage-compatible provider", requested)
         requested = "sage"
 
-    from .maple import MapleProvider
-    return MapleProvider(provider_name=requested or "sage")
+    from .sage_tinfoil import SageTinfoilProvider
+    return SageTinfoilProvider(provider_name=requested or "sage")
+
+
+def get_sage_provider() -> LLMProvider:
+    """Explicit Sage/Tinfoil-compatible provider accessor."""
+    return get_provider("sage")
 
 
 def get_maple_provider() -> LLMProvider:
-    """Explicit Maple-only provider accessor."""
+    """Deprecated compatibility accessor for old Maple-era imports."""
     return get_provider("maple")

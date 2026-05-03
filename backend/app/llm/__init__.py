@@ -1,9 +1,11 @@
-"""
-Sanctum LLM Provider Module
+"""Sanctum OpenAI-compatible LLM provider module."""
 
-Maple-first OpenAI-compatible LLM interface.
-"""
+from .provider import LLMProvider, LLMResponse, get_maple_provider, get_provider, get_sage_provider
 
-from .provider import LLMProvider, LLMResponse, get_provider, get_maple_provider
-
-__all__ = ["LLMProvider", "LLMResponse", "get_maple_provider", "get_provider"]
+__all__ = [
+    "LLMProvider",
+    "LLMResponse",
+    "get_maple_provider",
+    "get_provider",
+    "get_sage_provider",
+]

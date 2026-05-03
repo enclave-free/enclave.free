@@ -13,7 +13,7 @@ However, during this hackathon, we face a hard constraint: **time**.
 |-----------|----------|----------|-------|
 | PDF Extraction | Docling | Local CPU | ~2-3 min/100 pages |
 | Embeddings | SentenceTransformer | Local CPU | ~2-13 sec/chunk |
-| LLM Extraction | Local LLM / Maple | Self-hosted | ~10-30 sec/chunk |
+| LLM Extraction | Local LLM (self-hosted) | User-controlled infrastructure | ~10-30 sec/chunk |
 | Vector Store | Qdrant | Local container | Fast |
 | Database | SQLite | Local container | Fast |
 
@@ -24,7 +24,7 @@ However, during this hackathon, we face a hard constraint: **time**.
 |-----------|----------|----------|-------|
 | PDF Extraction | PyMuPDF | Local | ~1 sec total |
 | Embeddings | SentenceTransformer | Local CPU | ~2-13 sec/chunk |
-| LLM Extraction | Maple Proxy | HRF-hosted | ~10-20 sec/chunk |
+| LLM Extraction | Sage + Tinfoil proxy | Confidential compute | ~10-20 sec/chunk |
 | Vector Store | Qdrant | Local container | Fast |
 | Database | SQLite | Local container | Fast |
 
@@ -33,9 +33,9 @@ However, during this hackathon, we face a hard constraint: **time**.
 ## What Data Leaves the Environment?
 
 ### In Hackathon Mode:
-1. **Maple Proxy** (HRF-controlled) receives:
+1. **Tinfoil proxy** receives:
    - Chunk text for entity/relationship extraction
-   - ✅ This stays within HRF infrastructure
+   - This is routed through the prototype's confidential-compute model backend
 
 ### In Production Mode:
 - **Nothing leaves the user's device/infrastructure**
@@ -73,7 +73,7 @@ To return to full privacy mode:
 
 1. Switch to the larger embedding model for better accuracy: `EMBEDDING_MODEL=intfloat/multilingual-e5-large`
 2. Set `PDF_EXTRACT_MODE=quality` for better document parsing
-3. Configure a local or self-hosted LLM (remove reliance on the HRF Maple proxy)
+3. Configure a local or self-hosted LLM so no production inference data leaves user-controlled infrastructure
 4. Consider GPU acceleration for acceptable local performance
 
 ## The Bottom Line

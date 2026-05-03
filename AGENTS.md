@@ -35,4 +35,4 @@ No automated test framework is configured yet. Validate changes via the smoke te
 Commit history favors short, action-oriented messages (often lowercase, e.g., “smoke test successful”). Keep messages concise; use `WIP` only for clearly unfinished work. PRs should include a brief summary, linked issues (if any), testing evidence, and screenshots for UI changes.
 
 ## Security & Configuration Tips
-Copy `.env.example` to `.env` and set `MAPLE_API_KEY`. Never commit secrets. The embedding model cache is stored in a Docker volume, and `uploads/` contains local ingest data that should not be checked in.
+Copy `.env.example` to `.env` and set `TINFOIL_API_KEY`. Never commit secrets. The embedding model cache is stored in a Docker volume, and `uploads/` contains local ingest data that should not be checked in.

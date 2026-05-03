@@ -83,6 +83,8 @@ Active internal endpoints used by Sage on this branch:
 - `POST /internal/agent/document-search`
 - `POST /internal/agent/admin-db-query`
 
+The endpoint shapes are documented in [internal-agent-contract.md](internal-agent-contract.md).
+
 Compatibility endpoints still exist in Python, but they are no longer part of the main Sage call graph:
 
 - `GET /internal/agent/session-defaults`
