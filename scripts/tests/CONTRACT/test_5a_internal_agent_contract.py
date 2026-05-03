@@ -229,7 +229,14 @@ def main() -> int:
     else:
         failures += 1
 
-    admin = first_row(run_sqlite_json("SELECT id, pubkey FROM admins ORDER BY id ASC LIMIT 1", db_path))
+    admin_lookup_failed = False
+    try:
+        admin = first_row(run_sqlite_json("SELECT id, pubkey FROM admins ORDER BY id ASC LIMIT 1", db_path))
+    except RuntimeError as exc:
+        print(f"[SKIP] admin row unavailable: {exc}")
+        admin = None
+        admin_lookup_failed = True
+        failures += 1
     if admin:
         admin_res = get_json(args.api_base, f"/internal/agent/admins/by-pubkey/{admin['pubkey']}", internal_token)
         if expect_status("GET admin record with token", admin_res, {200}):
@@ -238,20 +245,34 @@ def main() -> int:
             failures += 0 if expect("admin record type discriminator", admin_data.get("type") == "admin", str(admin_data)) else 1
         else:
             failures += 1
-    else:
+    elif not admin_lookup_failed:
         print("[SKIP] no admin row available for admin schema check")
 
-    user_type = first_row(run_sqlite_json("SELECT id FROM user_types ORDER BY id ASC LIMIT 1", db_path))
+    user_type_lookup_failed = False
+    try:
+        user_type = first_row(run_sqlite_json("SELECT id FROM user_types ORDER BY id ASC LIMIT 1", db_path))
+    except RuntimeError as exc:
+        print(f"[SKIP] user type row unavailable: {exc}")
+        user_type = None
+        user_type_lookup_failed = True
+        failures += 1
     if user_type:
         type_res = get_json(args.api_base, f"/internal/agent/user-types/{user_type['id']}", internal_token)
         if expect_status("GET user type with token", type_res, {200}):
             failures += 0 if expect_keys("user type", type_res.json(), {"id", "name", "description", "icon", "display_order", "created_at"}) else 1
         else:
             failures += 1
-    else:
+    elif not user_type_lookup_failed:
         print("[SKIP] no user_type row available for user-type schema check")
 
-    user = first_row(run_sqlite_json("SELECT id FROM users ORDER BY id ASC LIMIT 1", db_path))
+    user_lookup_failed = False
+    try:
+        user = first_row(run_sqlite_json("SELECT id FROM users ORDER BY id ASC LIMIT 1", db_path))
+    except RuntimeError as exc:
+        print(f"[SKIP] user row unavailable: {exc}")
+        user = None
+        user_lookup_failed = True
+        failures += 1
     if user:
         user_res = get_json(args.api_base, f"/internal/agent/users/{user['id']}", internal_token)
         if expect_status("GET user record with token", user_res, {200}):
@@ -266,7 +287,7 @@ def main() -> int:
             failures += 0 if expect_keys("user profile context", profile_res.json(), {"user_id", "user_type_id", "profile"}) else 1
         else:
             failures += 1
-    else:
+    elif not user_lookup_failed:
         print("[SKIP] no user row available for user/profile schema checks")
 
     doc_search = post_json(
