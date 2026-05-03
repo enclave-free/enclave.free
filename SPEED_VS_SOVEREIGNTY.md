@@ -72,7 +72,7 @@ PDF_EXTRACT_MODE=fast
 
 # PRODUCTION MODE — self-hosted/local inference, larger embeddings, quality PDF parsing
 # Switching LLM providers may require changing both LLM_PROVIDER and LLM_API_URL.
-# LLM_PROVIDER=sage
+# LLM_PROVIDER=local-openai-compatible
 # LLM_API_URL=http://your-local-openai-compatible-endpoint/v1
 # LLM_API_KEY=your-local-provider-key-or-placeholder
 # TINFOIL_API_KEY=your-compose-tinfoil-key-if-still-using-tinfoil

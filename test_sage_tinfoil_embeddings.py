@@ -42,7 +42,7 @@ def list_models():
 
 def test_embedding(model: str, text: str):
     """Attempt to create an embedding using raw HTTP (OpenAI SDK has issues with the OpenAI-compatible proxy)."""
-    print(f"\n=== Testing Embedding ===")
+    print("\n=== Testing Embedding ===")
     print(f"Model: {model}")
     print(f"Text: {text[:50]}...")
     

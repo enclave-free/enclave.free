@@ -181,18 +181,18 @@ def derive_pubkey_from_seed(seed: str) -> str:
 
 def test_admin_pubkey() -> Optional[str]:
     """Derive the configured test admin pubkey before mutating harness state."""
-    config = load_crm_config()
-    seed = config["test_admin"]["keypair_seed"]
     try:
+        config = load_crm_config()
+        seed = config["test_admin"]["keypair_seed"]
         return derive_pubkey_from_seed(seed)
-    except (RuntimeError, ValueError) as exc:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         print(f"  [HARNESS] ✗ Admin key derivation failed: {exc}")
         return None
 
 
 def create_test_admin(pubkey: str) -> bool:
     """Create a test admin using keypair derived from seed in CRM config."""
-    print(f"  [HARNESS] Creating test admin...")
+    print("  [HARNESS] Creating test admin...")
 
     sql = f"""
     INSERT OR REPLACE INTO admins (pubkey, created_at)

@@ -19,12 +19,13 @@ ALLOWED_TABLES = {
 def referenced_sql_tables(sql: str) -> set[str]:
     """Extract simple FROM/JOIN table identifiers for allowlist checks."""
     tables = set()
-    pattern = r'\b(?:FROM|JOIN)\s+(?:"([^"]+)"|`([^`]+)`|\[([^\]]+)\]|([A-Za-z_][A-Za-z0-9_\.]*))'
-    for match in re.finditer(pattern, sql, re.IGNORECASE):
-        identifier = next(group for group in match.groups() if group)
-        identifier = identifier.split(".")[-1]
-        if identifier:
-            tables.add(identifier.lower())
+    source_pattern = r"\b(FROM|JOIN)\s+(.+?)(?=\b(?:JOIN|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|EXCEPT|INTERSECT|ON)\b|$)"
+    for match in re.finditer(source_pattern, sql, re.IGNORECASE | re.DOTALL):
+        for source in match.group(2).split(","):
+            identifier = source.strip().split()[0] if source.strip() else ""
+            identifier = identifier.strip('"`[]').split(".")[-1].strip('"`[]')
+            if identifier:
+                tables.add(identifier.lower())
     return tables
 
 

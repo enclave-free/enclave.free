@@ -154,7 +154,9 @@ Provenance is a first-class concern. All claims are expected to reference source
 
 ## LLM Provider
 
-Sanctum uses a secure OpenAI-compatible LLM service provider. In the current prototype, public AI runtime calls are owned by Sage and transported through Tinfoil.
+Sanctum uses a secure OpenAI-compatible LLM service provider. In the current prototype, Sage is the public route owner for AI runtime ingress and policy enforcement.
+
+The backend orchestrator invokes the OpenAI-compatible provider for generation and structured extraction on Sage's behalf where the service layer still owns that workflow.
 
 The provider:
 - Is OpenAI-compatible
@@ -162,7 +164,7 @@ The provider:
 - Supports **structured outputs**, which Graphiti depends on
 - Allows Sanctum to enforce JSON schemas and deterministic extraction
 
-The backend treats the LLM provider as a generation and extraction service, not a decision-maker.
+Sage and the backend orchestrator both treat the LLM provider as a generation and extraction service, not a decision-maker.
 
 ---
 
@@ -187,7 +189,7 @@ The planned deployment includes containers for:
 - Vite frontend
 - Neo4j
 - Qdrant
-- OpenAI-compatible provider configuration
+- OpenAI-compatible provider proxy
 - Optional Ollama
 
 All stateful services use persistent volumes.

@@ -80,18 +80,6 @@ def run_sqlite_json(sql: str, db_path: str) -> list[dict[str, Any]]:
         return []
 
 
-def run_sqlite_write(sql: str, db_path: str) -> bool:
-    result = subprocess.run(
-        [*COMPOSE_ARGS, "exec", "-T", "core-backend", "sqlite3", db_path],
-        input=sql.strip(),
-        capture_output=True,
-        text=True,
-        cwd=REPO_ROOT,
-        timeout=30,
-    )
-    return result.returncode == 0
-
-
 def first_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
@@ -137,25 +125,9 @@ def user_token(secret_key: str, user: dict[str, Any]) -> str:
 
 
 def ensure_user(db_path: str) -> dict[str, Any] | None:
-    existing = first_row(
-        run_sqlite_json(
-            "SELECT id, COALESCE(email, '') AS email, user_type_id FROM users WHERE approved = 1 ORDER BY id ASC LIMIT 1",
-            db_path,
-        )
-    )
-    if existing:
-        return existing
-
-    email = f"sage-smoke-{secrets.token_hex(4)}@example.test"
-    sql = f"""
-    INSERT INTO users (email, name, approved, created_at)
-    VALUES ('{email}', 'Sage Smoke User', 1, datetime('now'));
-    """
-    if not run_sqlite_write(sql, db_path):
-        return None
     return first_row(
         run_sqlite_json(
-            "SELECT id, COALESCE(email, '') AS email, user_type_id FROM users WHERE email LIKE 'sage-smoke-%' ORDER BY id DESC LIMIT 1",
+            "SELECT id, COALESCE(email, '') AS email, user_type_id FROM users WHERE approved = 1 ORDER BY id ASC LIMIT 1",
             db_path,
         )
     )
@@ -307,7 +279,7 @@ def main() -> int:
         else:
             failures += 1
     else:
-        print("[SKIP] user-token checks skipped; no approved user could be discovered or created")
+        print("[SKIP] user-token checks skipped; no approved user fixture exists")
 
     print("-" * 72)
     if failures:

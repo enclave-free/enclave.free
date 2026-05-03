@@ -219,7 +219,9 @@ def main() -> int:
     if admin:
         admin_res = get_json(args.api_base, f"/internal/agent/admins/by-pubkey/{admin['pubkey']}", internal_token)
         if expect_status("GET admin record with token", admin_res, {200}):
-            failures += 0 if expect_keys("admin record", admin_res.json(), {"id", "pubkey", "session_nonce"}) else 1
+            admin_data = admin_res.json()
+            failures += 0 if expect_keys("admin record", admin_data, {"id", "type", "pubkey", "session_nonce"}) else 1
+            failures += 0 if expect("admin record type discriminator", admin_data.get("type") == "admin", str(admin_data)) else 1
         else:
             failures += 1
     else:
@@ -239,7 +241,9 @@ def main() -> int:
     if user:
         user_res = get_json(args.api_base, f"/internal/agent/users/{user['id']}", internal_token)
         if expect_status("GET user record with token", user_res, {200}):
-            failures += 0 if expect_keys("user record", user_res.json(), {"id", "approved", "email", "name", "user_type_id", "dev_mode"}) else 1
+            user_data = user_res.json()
+            failures += 0 if expect_keys("user record", user_data, {"id", "type", "approved", "email", "name", "user_type_id", "dev_mode"}) else 1
+            failures += 0 if expect("user record type discriminator", user_data.get("type") == "user", str(user_data)) else 1
         else:
             failures += 1
 

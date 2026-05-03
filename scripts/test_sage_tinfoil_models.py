@@ -8,7 +8,7 @@ import sys
 import requests
 
 
-def main():
+def main() -> None:
     api_key = os.environ.get("LLM_API_KEY") or os.environ.get("TINFOIL_API_KEY")
 
     if not api_key:

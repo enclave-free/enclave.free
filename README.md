@@ -81,6 +81,8 @@ curl http://localhost:8000/health
 curl http://localhost:8000/llm/test
 ```
 
+Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the frontend Test Dashboard. Open `http://localhost:5173/` after startup and confirm the dashboard loads and responds.
+
 Only two services are exposed to the host by default:
 
 - frontend: `http://localhost:5173`

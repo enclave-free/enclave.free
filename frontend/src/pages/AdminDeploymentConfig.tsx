@@ -775,7 +775,7 @@ export function AdminDeploymentConfig() {
       },
       extra: t('adminDeployment.llmHelp.sageExtra', {
         tinfoilSignupUrl: TINFOIL_SIGNUP_URL,
-        defaultValue: 'Set LLM_API_KEY to your Tinfoil key. Sage reads the generic LLM_* settings and the stack forwards them to the local Tinfoil proxy.',
+        defaultValue: 'Set LLM_API_KEY to your Tinfoil key from {{tinfoilSignupUrl}}. Sage reads the generic LLM_* settings and the stack forwards them to the local Tinfoil proxy.',
       }),
     },
   ]

@@ -114,7 +114,7 @@ Practical result:
 
 ## AI Config Ownership
 
-AI config is now Sage-owned end to end for the public runtime API:
+AI config is now Sage-owned end-to-end for the public runtime API:
 
 - storage lives in Sage Postgres
 - global config lives in `ai_config`
@@ -125,17 +125,57 @@ Python still owns deployment config, but not runtime AI config on this branch.
 
 ## Smoke-Tested Behaviors
 
-The current checkpoint was verified in Docker:
+The current checkpoint was verified in Docker with the public origin set to `http://localhost:8000` and frontend origin set to `http://localhost:5173`.
 
-- `GET /health` through the stable public origin
-- user bearer `POST /llm/chat`
-- user cookie `POST /llm/chat`
-- admin bearer `GET /admin/ai-config`
-- admin cookie `POST /admin/ai-config/prompts/preview`
-- admin `POST /admin/tools/execute`
-- non-admin rejection on admin tools
-- untyped user gets no document-backed `/query` sources
-- typed user gets grounded `/query` sources from allowed docs
+```bash
+API=http://localhost:8000
+FRONTEND_ORIGIN=http://localhost:5173
+ADMIN_TOKEN="<admin session token>"
+USER_TOKEN="<approved user session token>"
+ADMIN_COOKIE="sanctum_admin_session=${ADMIN_TOKEN}; sanctum_csrf=<csrf-token>"
+
+curl -i "$API/health"
+curl -i "$API/llm/chat" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"message":"Reply with OK.","tools":[]}'
+curl -i "$API/llm/chat" \
+  -H "Origin: $FRONTEND_ORIGIN" \
+  -H "X-CSRF-Token: <csrf-token>" \
+  -H "Cookie: $ADMIN_COOKIE" \
+  -H "Content-Type: application/json" \
+  --data '{"message":"Reply with OK.","tools":[]}'
+curl -i "$API/admin/ai-config" -H "Authorization: Bearer $ADMIN_TOKEN"
+curl -i "$API/admin/ai-config/prompts/preview" \
+  -H "Origin: $FRONTEND_ORIGIN" \
+  -H "X-CSRF-Token: <csrf-token>" \
+  -H "Cookie: $ADMIN_COOKIE" \
+  -H "Content-Type: application/json" \
+  --data '{"message":"Preview this prompt."}'
+curl -i "$API/admin/tools/execute" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"tool_id":"db-query","query":"SELECT 1 AS one"}'
+curl -i "$API/admin/tools/execute" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"tool_id":"db-query","query":"SELECT 1 AS one"}'
+```
+
+For typed vs untyped user behavior, use two approved user tokens: one for a user with `user_type_id` unset and one with a user type that has allowed default documents. Then run:
+
+```bash
+curl -i "$API/query" \
+  -H "Authorization: Bearer <untyped-user-token>" \
+  -H "Content-Type: application/json" \
+  --data '{"question":"Use only available documents and summarize the source context.","top_k":3,"tools":[]}'
+curl -i "$API/query" \
+  -H "Authorization: Bearer <typed-user-token>" \
+  -H "Content-Type: application/json" \
+  --data '{"question":"Use only available documents and summarize the source context.","top_k":3,"tools":[]}'
+```
+
+The expected result is that the untyped user gets no document-backed sources, while the typed user gets grounded `/query` sources from allowed docs. UI verification uses the frontend Test Dashboard at `http://localhost:5173/`.
 
 That means the branch already demonstrates the intended long-term gateway model in practice, not just in code structure.
 
