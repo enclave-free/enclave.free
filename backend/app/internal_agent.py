@@ -19,6 +19,7 @@ from pydantic import BaseModel
 import database
 from ai_config import get_session_defaults
 from query import _build_context, _build_search_query, _process_search_results
+from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
 
 logger = logging.getLogger("sanctum.internal_agent")
@@ -68,6 +69,7 @@ class InternalAIConfigResponse(BaseModel):
 
 class InternalUserRecordResponse(BaseModel):
     id: int
+    type: Literal["user"] = "user"
     approved: bool = True
     email: Optional[str] = None
     name: Optional[str] = None
@@ -77,6 +79,7 @@ class InternalUserRecordResponse(BaseModel):
 
 class InternalAdminRecordResponse(BaseModel):
     id: int
+    type: Literal["admin"] = "admin"
     pubkey: str
     session_nonce: int = 0
 
@@ -198,6 +201,16 @@ def _execute_safe_select(sql: str) -> dict:
                 "executionTimeMs": 0,
                 "error": "Query contains forbidden keyword",
             }
+
+    is_allowed, error = validate_sql_allowed_tables(normalized)
+    if not is_allowed:
+        return {
+            "success": False,
+            "columns": [],
+            "rows": [],
+            "executionTimeMs": 0,
+            "error": error,
+        }
 
     start_time = time.time()
     try:

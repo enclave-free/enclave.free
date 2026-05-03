@@ -26,7 +26,9 @@ On `proto/dumb-gateway-foundation`, the cutover is still the same hard cut, but 
 | `postgres` | Sage runtime state |
 | `qdrant` | Enclave document retrieval |
 
-## Public Routes Sage Owns
+## Public Routes (Sage-owned)
+
+Sage owns the public route, auth, CORS/CSRF, and session boundary for these paths. Some operations still call Python internally for existing product logic, most notably safe DB execution.
 
 - `POST /llm/chat`
 - `POST /query`
@@ -36,7 +38,7 @@ On `proto/dumb-gateway-foundation`, the cutover is still the same hard cut, but 
 - `POST /admin/tools/execute`
 - `/admin/ai-config/*`
 
-Public ownership now matches actual runtime ownership. The main exception is still `POST /admin/tools/execute`, where Sage owns the public route and authorization but Python remains the internal executor for safe read-only DB access.
+Route ownership now matches the public runtime boundary. `POST /llm/chat`, `POST /query`, `GET /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only DB access.
 
 ## Sage To Python Contract
 

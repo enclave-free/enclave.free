@@ -46,8 +46,10 @@ However, during this hackathon, we face a hard constraint: **time**.
 
 1. **Test Data Only**: We're using public documents (guides, whitepapers) - no sensitive data
 2. **One-Time Ingestion**: This is a build/demo phase, not production use
-3. **Reversible**: Switching embedding models is a single env var change:
+3. **Reversible**: Switching runtime providers and models is env-var driven:
    ```bash
+   LLM_PROVIDER=sage
+   LLM_API_URL=http://tinfoil-proxy:8089/v1
    EMBEDDING_MODEL=intfloat/multilingual-e5-base
    ```
 4. **Architecture Unchanged**: The sovereignty-first design remains intact; we're just swapping providers
@@ -55,14 +57,25 @@ However, during this hackathon, we face a hard constraint: **time**.
 ## Configuration Quick Reference
 
 ```bash
-# .env file
+# Copy defaults, then fill in secrets:
+cp .env.example .env
+
+# Required for the current Docker Compose Sage + Tinfoil stack
+LLM_API_KEY=your-tinfoil-api-key
+TINFOIL_API_KEY=your-tinfoil-api-key
 
 # HACKATHON MODE (current default) — smaller model, faster PDF parsing
+LLM_PROVIDER=sage
+LLM_API_URL=http://tinfoil-proxy:8089/v1
 EMBEDDING_MODEL=intfloat/multilingual-e5-base
 PDF_EXTRACT_MODE=fast
 
-# PRODUCTION MODE — larger model for better accuracy, quality PDF parsing
-# Both modes use local SentenceTransformer; the trade-off is speed vs. accuracy.
+# PRODUCTION MODE — self-hosted/local inference, larger embeddings, quality PDF parsing
+# Switching LLM providers may require changing both LLM_PROVIDER and LLM_API_URL.
+# LLM_PROVIDER=sage
+# LLM_API_URL=http://your-local-openai-compatible-endpoint/v1
+# LLM_API_KEY=your-local-provider-key-or-placeholder
+# TINFOIL_API_KEY=your-compose-tinfoil-key-if-still-using-tinfoil
 # EMBEDDING_MODEL=intfloat/multilingual-e5-large
 # PDF_EXTRACT_MODE=quality
 ```

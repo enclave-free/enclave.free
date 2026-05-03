@@ -767,13 +767,13 @@ export function AdminDeploymentConfig() {
     },
     {
       title: 'Sage + Tinfoil',
-      hint: t('adminDeployment.llmHelp.mapleHint', 'This prototype routes AI traffic through Sage and uses Tinfoil for model inference.'),
+      hint: t('adminDeployment.llmHelp.sageHint', 'This prototype routes AI traffic through Sage and uses Tinfoil for model inference.'),
       config: {
         LLM_PROVIDER: 'sage',
         LLM_API_KEY: 'your-tinfoil-api-key',
         LLM_MODEL: DEFAULT_TINFOIL_MODEL,
       },
-      extra: t('adminDeployment.llmHelp.mapleExtra', {
+      extra: t('adminDeployment.llmHelp.sageExtra', {
         tinfoilSignupUrl: TINFOIL_SIGNUP_URL,
         defaultValue: 'Set LLM_API_KEY to your Tinfoil key. Sage reads the generic LLM_* settings and the stack forwards them to the local Tinfoil proxy.',
       }),

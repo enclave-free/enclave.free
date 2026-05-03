@@ -44,7 +44,7 @@ def main():
     except requests.exceptions.ConnectionError as exc:
         print(f"Connection failed - is the Tinfoil proxy running? {exc}")
         sys.exit(1)
-    except Exception as exc:
+    except requests.exceptions.RequestException as exc:
         print(f"Error: {exc}")
         sys.exit(1)
 

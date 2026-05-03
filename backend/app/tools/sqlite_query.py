@@ -3,14 +3,10 @@
 import re
 from typing import List, Dict, Any
 
+from sql_safety import ALLOWED_TABLES, validate_sql_allowed_tables
+
 from .base import BaseTool, ToolDefinition, ToolResult
 
-
-# Tables that can be queried (same as /admin/db/query endpoint)
-ALLOWED_TABLES = {
-    'admins', 'instance_settings', 'user_types',
-    'user_field_definitions', 'users', 'user_field_values'
-}
 
 # Dangerous SQL keywords to block
 DANGEROUS_PATTERNS = [
@@ -125,27 +121,7 @@ class SQLiteQueryTool(BaseTool):
             if re.search(pattern, sql, re.IGNORECASE):
                 return False, f"Query contains forbidden keyword"
 
-        disallowed_tables = self._disallowed_tables(sql)
-        if disallowed_tables:
-            return False, f"Query references disallowed table(s): {', '.join(disallowed_tables)}"
-
-        return True, ""
-
-    def _referenced_tables(self, sql: str) -> set[str]:
-        """Extract simple FROM/JOIN table identifiers for allowlist checks."""
-        tables = set()
-        pattern = r'\b(?:FROM|JOIN)\s+(?:"([^"]+)"|`([^`]+)`|\[([^\]]+)\]|([A-Za-z_][A-Za-z0-9_\.]*))'
-        for match in re.finditer(pattern, sql, re.IGNORECASE):
-            identifier = next(group for group in match.groups() if group)
-            identifier = identifier.split(".")[-1]
-            if identifier:
-                tables.add(identifier.lower())
-        return tables
-
-    def _disallowed_tables(self, sql: str) -> list[str]:
-        referenced = self._referenced_tables(sql)
-        allowed = {table.lower() for table in ALLOWED_TABLES}
-        return sorted(table for table in referenced if table not in allowed)
+        return validate_sql_allowed_tables(sql)
 
     def _extract_emails(self, natural_query: str) -> List[str]:
         """Extract email addresses from a natural language query."""
@@ -191,9 +167,9 @@ class SQLiteQueryTool(BaseTool):
         """Accept direct SQL for admin flows and fall back to text-to-SQL otherwise."""
         stripped = query.strip()
         if stripped.upper().startswith("SELECT"):
-            disallowed_tables = self._disallowed_tables(stripped)
-            if disallowed_tables:
-                raise ValueError(f"Query references disallowed table(s): {', '.join(disallowed_tables)}")
+            is_allowed, error = validate_sql_allowed_tables(stripped)
+            if not is_allowed:
+                raise ValueError(error)
             return stripped
         return self._generate_sql(query)
 

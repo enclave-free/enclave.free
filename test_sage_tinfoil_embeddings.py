@@ -19,8 +19,8 @@ from openai import OpenAI
 load_dotenv()
 
 # Configuration
-TINFOIL_API_URL = os.getenv("TINFOIL_API_URL", os.getenv("LLM_API_URL", "http://localhost:8089/v1"))
-TINFOIL_API_KEY = os.getenv("TINFOIL_API_KEY", os.getenv("LLM_API_KEY", "not-required"))
+TINFOIL_API_URL = os.getenv("LLM_API_URL", os.getenv("TINFOIL_API_URL", "http://localhost:8089/v1"))
+TINFOIL_API_KEY = os.getenv("LLM_API_KEY", os.getenv("TINFOIL_API_KEY", "not-required"))
 
 # Initialize client pointing to Sage/Tinfoil proxy (for listing models)
 client = OpenAI(
