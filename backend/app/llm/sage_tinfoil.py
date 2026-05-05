@@ -97,7 +97,8 @@ class SageTinfoilProvider(LLMProvider):
         try:
             models_resp = httpx.get(f"{base}/models", headers=headers, timeout=5.0)
             return models_resp.status_code == 200
-        except Exception:
+        except Exception as exc:
+            logger.error("Sage/Tinfoil models probe failed for %s/models: %s", base, exc, exc_info=True)
             return False
 
     def complete(

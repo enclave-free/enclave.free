@@ -85,6 +85,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         )
 
     def complete_job(self, job_id: str) -> None:
+        """Mark a job completed for state-machine tests; does not exercise process_document."""
         job = self.ingest.JOBS[job_id]
         job["status"] = "completed"
         job["total_chunks"] = 1

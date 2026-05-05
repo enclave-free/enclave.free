@@ -51,6 +51,7 @@ MAX_CONCURRENT_CHUNKS = int(os.getenv("MAX_CONCURRENT_CHUNKS", "3"))
 UPLOAD_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_UPLOAD_PER_MINUTE", "20"))
 MAX_BATCH_FILES = int(os.getenv("MAX_BATCH_FILES", "100"))
 MAX_BATCH_BYTES = int(os.getenv("MAX_BATCH_BYTES", str(250 * 1024 * 1024)))
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".txt", ".md"}
 
 # Valid ontology IDs for document extraction
 VALID_ONTOLOGIES = {"general", "bitcoin"}
@@ -562,7 +563,13 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
         if failed == 0 and JOBS[job_id].get("replacement_for_job_id"):
-            await promote_replacement(job_id)
+            try:
+                await promote_replacement(job_id)
+            except Exception as e:
+                logger.error(f"[{job_id}] Document replacement promotion failed: {e}", exc_info=True)
+                JOBS[job_id]["promotion_error"] = str(e)
+                JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+                _sync_job_to_db(job_id)
 
     except Exception as e:
         logger.error(f"[{job_id}] Document processing failed: {e}", exc_info=True)
@@ -595,7 +602,17 @@ async def promote_replacement(job_id: str) -> None:
         logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
         raise
 
-    database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
+    try:
+        database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to transfer document access from {old_job_id}: {e}", exc_info=True)
+        now = datetime.utcnow().isoformat()
+        if old_job_id in JOBS:
+            JOBS[old_job_id]["transfer_failed"] = True
+            JOBS[old_job_id]["updated_at"] = now
+        if job_id in JOBS:
+            JOBS[job_id]["transfer_failed"] = True
+            JOBS[job_id]["updated_at"] = now
 
     try:
         await delete_document_chunks(old_job_id)
@@ -778,7 +795,6 @@ async def upload_document(
     - Chunks and stores embeddings to Qdrant
     - Returns job_id to track progress
     """
-    allowed_extensions = {".pdf", ".txt", ".md"}
     original_filename = file.filename or "document"
     try:
         canonical_name = canonical_name_for_upload(original_filename)
@@ -786,10 +802,10 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=str(e)) from e
     suffix = Path(canonical_name).suffix.lower()
 
-    if suffix not in allowed_extensions:
+    if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {suffix}. Allowed: {allowed_extensions}"
+            detail=f"Unsupported file type: {suffix}. Allowed: {ALLOWED_UPLOAD_EXTENSIONS}"
         )
 
     validate_ingest_options(ontology_id, sample_percent)
@@ -829,7 +845,6 @@ async def upload_document_batch(
             detail=f"Batch may contain at most {MAX_BATCH_FILES} files"
         )
 
-    allowed_extensions = {".pdf", ".txt", ".md"}
     accepted: list[UploadResponse] = []
     rejected: list[BatchRejectedItem] = []
     seen_names: set[str] = set()
@@ -854,10 +869,10 @@ async def upload_document_batch(
         seen_names.add(canonical_name)
 
         suffix = Path(canonical_name).suffix.lower()
-        if suffix not in allowed_extensions:
+        if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
             rejected.append(BatchRejectedItem(
                 filename=canonical_name,
-                reason=f"Unsupported file type: {suffix}. Allowed: {allowed_extensions}",
+                reason=f"Unsupported file type: {suffix}. Allowed: {ALLOWED_UPLOAD_EXTENSIONS}",
             ))
             continue
 
@@ -934,11 +949,13 @@ async def list_jobs(user: dict = Depends(auth.require_admin_or_approved_user)) -
     # Read directly from SQLite to ensure we get persisted data
     jobs_from_db = ingest_db.list_jobs(limit=500)
 
-    # Admins see all jobs
+    # Admins see current jobs, in-flight replacements, and retired replacement history.
     if user.get("type") == "admin":
         filtered_jobs = [
             j for j in jobs_from_db
-            if bool(j.get("is_current", 1)) or j.get("replacement_for_job_id")
+            if bool(j.get("is_current", 1))
+            or j.get("replacement_for_job_id")
+            or j.get("replaced_by_job_id")
         ]
     else:
         # Regular users only see available documents for their type
