@@ -94,7 +94,7 @@ describe('AdminAIConfig', () => {
 
     await screen.findByText('Max Tokens')
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
     fireEvent.change(screen.getByRole('slider'), { target: { value: '4096' } })
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -181,6 +181,45 @@ describe('AdminAIConfig', () => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/web_search_default', expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ value: 'false' }),
+      }))
+    })
+  })
+
+  it('lets an admin configure the AI System Prompt', async () => {
+    aiConfigResponse = {
+      ...baseAIConfigResponse,
+      prompt_sections: [
+        {
+          key: 'prompt_system',
+          value: 'You are Sage, a private assistant for this instance.',
+          value_type: 'string',
+          category: 'prompt_section',
+          description: 'Core system prompt',
+        },
+      ],
+    }
+
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('System Prompt')).toBeInTheDocument()
+
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
+    await user.clear(screen.getByRole('textbox'))
+    await user.type(screen.getByRole('textbox'), 'You are Sage for a legal aid enclave.')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/prompt_system', expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ value: 'You are Sage for a legal aid enclave.' }),
       }))
     })
   })

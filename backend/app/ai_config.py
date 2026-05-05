@@ -377,8 +377,15 @@ async def preview_prompt_for_user_type(
     parts = []
     sections_used = list(prompt_sections.keys())
 
+    # System prompt section
+    if prompt_sections.get("prompt_system"):
+        parts.append("=== SYSTEM PROMPT ===")
+        parts.append(prompt_sections["prompt_system"])
+
     # Known facts section
     if request.sample_facts:
+        if parts:
+            parts.append("")
         facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
         if facts_lines:
             parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
@@ -463,8 +470,15 @@ async def preview_prompt(
     # Build the assembled prompt
     parts = []
 
+    # System prompt section
+    if sections.get("prompt_system"):
+        parts.append("=== SYSTEM PROMPT ===")
+        parts.append(sections["prompt_system"])
+
     # Known facts section
     if request.sample_facts:
+        if parts:
+            parts.append("")
         facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
         if facts_lines:
             parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
@@ -649,8 +663,15 @@ def build_chat_prompt(
     sections = get_prompt_sections(user_type_id=user_type_id)
     parts = []
 
+    # Core system prompt section
+    if sections.get("prompt_system"):
+        parts.append("=== SYSTEM PROMPT ===")
+        parts.append(sections["prompt_system"])
+
     # Style/tone section
     if sections.get("prompt_tone"):
+        if parts:
+            parts.append("")
         parts.append("=== STYLE ===")
         parts.append(sections["prompt_tone"])
 

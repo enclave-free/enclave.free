@@ -555,7 +555,9 @@ Do NOT tell them to "look up" or "search for" something - just trigger the searc
 Make search terms specific: "[SEARCH: local library hours downtown]"
 """
 
-    # Build style section from config
+    # Build system prompt and style sections from config
+    system_prompt = prompt_sections.get("prompt_system", "You are a helpful, knowledgeable assistant.")
+    system_section = f"=== SYSTEM PROMPT ===\n{system_prompt}"
     prompt_tone = prompt_sections.get("prompt_tone", "Be helpful, concise, and professional.")
     style_section = f"=== STYLE ===\n{prompt_tone}"
     if search_instruction:
@@ -583,7 +585,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
         forbidden_section = "\n\n=== FORBIDDEN TOPICS ===\nIf asked about these topics, politely decline:\n"
         forbidden_section += "\n".join([f"- {topic}" for topic in prompt_forbidden])
 
-    prompt = f"""You are a helpful, knowledgeable assistant.
+    prompt = f"""{system_section}
 
 {known_facts_section}{user_profile_section}
 

@@ -339,7 +339,7 @@ export interface PromptSectionMeta {
   placeholder: string
 }
 
-export const PROMPT_SECTION_KEY_LIST = ['prompt_tone', 'prompt_rules', 'prompt_forbidden', 'prompt_greeting'] as const
+export const PROMPT_SECTION_KEY_LIST = ['prompt_system', 'prompt_tone', 'prompt_rules', 'prompt_forbidden', 'prompt_greeting'] as const
 
 export type PromptSectionKey = typeof PROMPT_SECTION_KEY_LIST[number]
 
@@ -348,6 +348,12 @@ export type PromptSectionKey = typeof PROMPT_SECTION_KEY_LIST[number]
  */
 export function getPromptSectionMeta(t: TFunction): Record<PromptSectionKey, PromptSectionMeta> {
   return {
+    prompt_system: {
+      label: t('promptSections.prompt_system.label', 'System Prompt'),
+      description: t('promptSections.prompt_system.description', 'Core identity and operating instructions for the AI'),
+      hint: t('promptSections.prompt_system.hint', 'Use this for the assistant identity, mission, and top-level boundaries that should apply before tone, rules, tools, or document context. Changes affect new conversations.'),
+      placeholder: t('promptSections.prompt_system.placeholder', 'You are Sage, a private assistant for this instance...'),
+    },
     prompt_tone: {
       label: t('promptSections.prompt_tone.label', 'Tone & Personality'),
       description: t('promptSections.prompt_tone.description', 'How the AI should sound when responding'),
