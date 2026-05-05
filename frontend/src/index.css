@@ -652,6 +652,7 @@ input:focus-visible {
 
 .btn-danger {
   @apply bg-error text-white;
+
   box-shadow: var(--shadow-sm);
 }
 .btn-danger:hover:not(:disabled) {
@@ -662,7 +663,9 @@ input:focus-visible {
 .btn-secondary:disabled,
 .btn-ghost:disabled {
   @apply opacity-50 cursor-not-allowed;
+
   transform: none;
+  box-shadow: none;
 }
 
 /* =============================================================================

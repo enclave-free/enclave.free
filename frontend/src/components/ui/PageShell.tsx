@@ -1,7 +1,7 @@
-import { type HTMLAttributes, type ReactNode } from 'react'
-import { cx } from './Button'
+import { type ComponentPropsWithoutRef, type ReactNode } from 'react'
+import { cx } from './utils'
 
-export interface PageShellProps extends HTMLAttributes<HTMLDivElement> {
+export interface PageShellProps extends ComponentPropsWithoutRef<'main'> {
   header?: ReactNode
   footer?: ReactNode
   width?: 'md' | 'lg' | 'xl' | 'full'

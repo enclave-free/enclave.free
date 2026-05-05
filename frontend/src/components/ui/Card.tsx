@@ -1,5 +1,5 @@
 import { type HTMLAttributes } from 'react'
-import { cx } from './Button'
+import { cx } from './utils'
 
 type CardPadding = 'none' | 'sm' | 'md' | 'lg'
 

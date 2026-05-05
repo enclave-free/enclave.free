@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppHeader } from './AppHeader'
 import { InstanceConfigProvider } from '../../context/InstanceConfigContext'
@@ -30,16 +31,20 @@ function stubLocalStorage() {
   })
 }
 
-function renderHeader(ui = <AppHeader />) {
-  return render(
+function AppHeaderTestWrapper({ children }: { children: ReactNode }) {
+  return (
     <MemoryRouter>
       <ThemeProvider>
         <InstanceConfigProvider>
-          {ui}
+          {children}
         </InstanceConfigProvider>
       </ThemeProvider>
     </MemoryRouter>
   )
+}
+
+function renderHeader(ui = <AppHeader />) {
+  return render(ui, { wrapper: AppHeaderTestWrapper })
 }
 
 describe('AppHeader', () => {
@@ -60,6 +65,7 @@ describe('AppHeader', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: false,
+        json: vi.fn().mockResolvedValue({}),
       })
     )
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
@@ -105,15 +111,7 @@ describe('AppHeader', () => {
     expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument()
 
     mockIsAdminAuthenticated.mockReturnValue(true)
-    rerender(
-      <MemoryRouter>
-        <ThemeProvider>
-          <InstanceConfigProvider>
-            <AppHeader />
-          </InstanceConfigProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    )
+    rerender(<AppHeader />)
 
     expect(await screen.findByRole('button', { name: 'Settings' })).toBeInTheDocument()
   })

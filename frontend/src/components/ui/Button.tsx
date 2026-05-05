@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { cx } from './utils'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'sm' | 'md' | 'lg'
@@ -21,10 +22,6 @@ const sizeClasses: Record<ButtonSize, string> = {
   sm: 'btn-sm min-h-10',
   md: 'btn-md min-h-10',
   lg: 'btn-lg min-h-11',
-}
-
-export function cx(...classes: Array<string | undefined | false>) {
-  return classes.filter(Boolean).join(' ')
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

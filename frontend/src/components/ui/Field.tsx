@@ -4,7 +4,7 @@ import {
   type InputHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react'
-import { cx } from './Button'
+import { cx } from './utils'
 
 interface FieldChromeProps {
   id?: string

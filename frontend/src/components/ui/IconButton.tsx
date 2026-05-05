@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
-import { cx } from './Button'
+import { cx } from './utils'
 
 type IconButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type IconButtonSize = 'sm' | 'md' | 'lg'
