@@ -556,7 +556,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 """
 
     # Build system prompt and style sections from config
-    system_prompt = prompt_sections.get("prompt_system", "You are a helpful, knowledgeable assistant.")
+    system_prompt = prompt_sections.get("prompt_system") or "You are a helpful, knowledgeable assistant."
     system_section = f"=== SYSTEM PROMPT ===\n{system_prompt}"
     prompt_tone = prompt_sections.get("prompt_tone", "Be helpful, concise, and professional.")
     style_section = f"=== STYLE ===\n{prompt_tone}"

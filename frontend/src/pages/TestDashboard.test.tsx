@@ -66,4 +66,38 @@ describe('TestDashboard', () => {
     })
     expect(screen.getByText(/"qdrant": "ok"/)).toBeInTheDocument()
   })
+
+  it('toggles migrated admin dashboard sections through their accessible header', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', vi.fn())
+
+    renderDashboard()
+
+    const sectionHeader = screen.getByRole('button', { name: /10\..*Authentication Testing/ })
+    expect(sectionHeader).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Magic Link Authentication')).not.toBeInTheDocument()
+
+    await user.click(sectionHeader)
+
+    expect(sectionHeader).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Magic Link Authentication')).toBeInTheDocument()
+
+    await user.click(sectionHeader)
+
+    expect(sectionHeader).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Magic Link Authentication')).not.toBeInTheDocument()
+  })
+
+  it('keeps the dashboard theme toggle reachable by accessible name', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', vi.fn())
+
+    renderDashboard()
+
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'Toggle theme' }))
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+  })
 })

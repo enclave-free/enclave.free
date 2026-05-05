@@ -1147,12 +1147,13 @@ export function AdminUserConfig() {
                 <input
                   type="checkbox"
                   checked={!autoApproveUsers}
+                  disabled={!userApprovalLoaded}
                   onChange={(e) => {
                     setAutoApproveUsers(!e.target.checked)
                     setUserApprovalSaveError(null)
                     setUserApprovalSaveSuccess(null)
                   }}
-                  className="mt-0.5 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                  className="mt-0.5 h-4 w-4 rounded border-border text-accent focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span>
                   <span className="font-medium">
@@ -1176,7 +1177,7 @@ export function AdminUserConfig() {
                 <button
                   type="button"
                   onClick={handleSaveUserApproval}
-                  disabled={userApprovalSaving}
+                  disabled={userApprovalSaving || !userApprovalLoaded}
                   className="inline-flex items-center justify-center gap-2 bg-accent text-accent-text rounded-lg px-4 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {userApprovalSaving && <Loader2 className="w-4 h-4 animate-spin" />}

@@ -72,7 +72,7 @@ export function ChatInput({ onSend, disabled, placeholder, toolbar }: ChatInputP
               variant="primary"
               className="rounded-xl shadow-sm hover:shadow-md hover:glow-accent disabled:shadow-none"
             >
-              <Send className="h-5 w-5" aria-hidden="true" fill="currentColor" />
+              <Send className="h-5 w-5" aria-hidden="true" />
             </IconButton>
           </div>
         </div>

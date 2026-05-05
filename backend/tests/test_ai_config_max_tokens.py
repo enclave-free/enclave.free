@@ -55,7 +55,7 @@ class AIConfigMaxTokensTest(unittest.TestCase):
         else:
             os.environ[name] = value
 
-    def test_max_tokens_is_seeded_as_agent_setting(self):
+    def test_max_tokens_is_seeded_as_agent_setting(self) -> None:
         response = self.client.get("/admin/ai-config")
 
         self.assertEqual(response.status_code, 200)
@@ -64,7 +64,7 @@ class AIConfigMaxTokensTest(unittest.TestCase):
         self.assertEqual(max_tokens["value"], "2048")
         self.assertEqual(max_tokens["value_type"], "number")
 
-    def test_max_tokens_rejects_values_outside_supported_range(self):
+    def test_max_tokens_rejects_values_outside_supported_range(self) -> None:
         response = self.client.put(
             "/admin/ai-config/max_tokens",
             json={"value": "128"},

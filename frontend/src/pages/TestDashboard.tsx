@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Sun, Moon, Settings, Database, Key, Shield, Users, Sliders, FileText, Zap, Lock, Unlock } from 'lucide-react'
 import { useTheme } from '../theme'
-import { Badge, Button, Card, CodeBlockSurface, DisclosureCard, NumericValue } from '../components/ui'
+import { Badge, Button, Card, CodeBlockSurface, DisclosureCard, IconButton, NumericValue } from '../components/ui'
 import {
   API_BASE,
   AdminResponse,
@@ -118,17 +118,17 @@ function ThemeToggle() {
 
   return (
     <div className="flex items-center gap-2">
-      <button
+      <IconButton
         onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-        className="p-2 rounded-lg bg-surface-raised border border-border hover:bg-surface-overlay transition-colors"
-        aria-label={t('testDashboard.extracted.toggle_theme_9b0eaf', 'Toggle theme')}
+        label={t('testDashboard.extracted.toggle_theme_9b0eaf', 'Toggle theme')}
+        variant="secondary"
       >
         {resolvedTheme === 'dark' ? (
           <Sun className="w-5 h-5 text-text" />
         ) : (
           <Moon className="w-5 h-5 text-text" />
         )}
-      </button>
+      </IconButton>
       <select
         value={theme}
         onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}

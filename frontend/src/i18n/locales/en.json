@@ -726,6 +726,7 @@
       "description": "Select sources to include in context",
       "noSources": "No sources available",
       "clearAll": "Clear all",
+      "clearAllSelectedAria": "Clear all selected documents",
       "docsLabel": "Docs"
     },
     "messages": {

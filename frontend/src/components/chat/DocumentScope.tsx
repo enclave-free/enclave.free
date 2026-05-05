@@ -161,7 +161,7 @@ export function DocumentScope({
         <div className="px-3 py-2 border-t border-border shrink-0">
           <button
             onClick={() => selectedDocuments.forEach((id) => onToggle(id))}
-            aria-label="Clear all selected documents"
+            aria-label={t('chat.documentScope.clearAllSelectedAria', 'Clear all selected documents')}
             className="text-[10px] text-text-muted hover:text-text transition-colors"
           >
             {t('chat.documentScope.clearAll')}
@@ -177,7 +177,7 @@ export function DocumentScope({
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-label={triggerLabel}
         variant={selectedCount > 0 ? 'primary' : 'ghost'}
         size="sm"

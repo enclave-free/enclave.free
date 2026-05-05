@@ -7,6 +7,7 @@ import { ThemeProvider } from '../../theme'
 import { DEFAULT_INSTANCE_CONFIG, INSTANCE_CONFIG_KEY } from '../../types/instance'
 
 let clipboardWriteText: ReturnType<typeof vi.fn>
+const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(window.navigator, 'clipboard')
 
 function stubLocalStorage() {
   const store = new Map<string, string>()
@@ -60,6 +61,11 @@ describe('ChatMessage', () => {
 
   afterEach(() => {
     cleanup()
+    if (originalClipboardDescriptor) {
+      Object.defineProperty(window.navigator, 'clipboard', originalClipboardDescriptor)
+    } else {
+      delete (window.navigator as unknown as { clipboard?: Clipboard }).clipboard
+    }
     vi.unstubAllGlobals()
     vi.clearAllMocks()
     document.documentElement.classList.remove('dark')

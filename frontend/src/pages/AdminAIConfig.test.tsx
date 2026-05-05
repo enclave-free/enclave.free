@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,6 +12,12 @@ vi.mock('../utils/adminApi', () => ({
 }))
 
 const mockAdminFetch = vi.mocked(adminFetch)
+
+function getConfigCard(label: string): HTMLElement {
+  const card = screen.getByText(label).closest('div.bg-surface')
+  expect(card).not.toBeNull()
+  return card as HTMLElement
+}
 
 const baseAIConfigResponse: AIConfigResponse = {
   prompt_sections: [],
@@ -94,9 +100,10 @@ describe('AdminAIConfig', () => {
 
     await screen.findByText('Max Tokens')
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
-    fireEvent.change(screen.getByRole('slider'), { target: { value: '4096' } })
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    const maxTokensCard = getConfigCard('Max Tokens')
+    await user.click(within(maxTokensCard).getByRole('button', { name: 'Edit' }))
+    fireEvent.change(within(maxTokensCard).getByRole('slider'), { target: { value: '4096' } })
+    await user.click(within(maxTokensCard).getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/max_tokens', expect.objectContaining({
@@ -169,13 +176,10 @@ describe('AdminAIConfig', () => {
 
     await screen.findByText('Web Search')
 
-    const defaultToolCard = screen.getByText('Allow AI to search the internet').closest('div')
-    expect(defaultToolCard).not.toBeNull()
-
-    const editButtons = screen.getAllByRole('button', { name: 'Edit' })
-    await user.click(editButtons[editButtons.length - 1])
-    await user.click(screen.getByRole('switch', { name: 'Web Search' }))
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    const defaultToolCard = getConfigCard('Web Search')
+    await user.click(within(defaultToolCard).getByRole('button', { name: 'Edit' }))
+    await user.click(within(defaultToolCard).getByRole('switch', { name: 'Web Search' }))
+    await user.click(within(defaultToolCard).getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/web_search_default', expect.objectContaining({
@@ -211,10 +215,11 @@ describe('AdminAIConfig', () => {
 
     expect(await screen.findByText('System Prompt')).toBeInTheDocument()
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
-    await user.clear(screen.getByRole('textbox'))
-    await user.type(screen.getByRole('textbox'), 'You are Sage for a legal aid enclave.')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    const systemPromptCard = getConfigCard('System Prompt')
+    await user.click(within(systemPromptCard).getByRole('button', { name: 'Edit' }))
+    await user.clear(within(systemPromptCard).getByRole('textbox'))
+    await user.type(within(systemPromptCard).getByRole('textbox'), 'You are Sage for a legal aid enclave.')
+    await user.click(within(systemPromptCard).getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/prompt_system', expect.objectContaining({
