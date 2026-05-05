@@ -58,11 +58,14 @@ describe('TestDashboard', () => {
 
     renderDashboard()
 
+    const endpointNotes = screen.getAllByRole('note', { name: 'Endpoint guidance' })
+    expect(endpointNotes[0]).toHaveTextContent('GET /health')
+
     await user.click(screen.getByRole('button', { name: 'Check Health' }))
 
     expect(fetchMock).toHaveBeenCalledWith('/api/health')
     await waitFor(() => {
-      expect(screen.getByText(/"neo4j": "ok"/)).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Health response output' })).toHaveTextContent('"neo4j": "ok"')
     })
     expect(screen.getByText(/"qdrant": "ok"/)).toBeInTheDocument()
   })
@@ -99,5 +102,36 @@ describe('TestDashboard', () => {
     await user.click(screen.getByRole('button', { name: 'Toggle theme' }))
 
     expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(screen.getByRole('combobox', { name: 'Theme preference' })).toHaveValue('dark')
+  })
+
+  it('keeps migrated dashboard selects labelled and wired to their controls', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValue(new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderDashboard()
+
+    await user.click(screen.getByRole('button', { name: /16\..*Rate Limiting Test/ }))
+
+    const testType = screen.getByRole('combobox', { name: 'Rate limit test type' })
+    expect(testType).toHaveValue('magic_link')
+    expect(screen.getByRole('button', { name: 'Send 6 Rapid Requests' })).toBeInTheDocument()
+
+    await user.selectOptions(testType, 'admin_auth')
+
+    expect(testType).toHaveValue('admin_auth')
+    expect(screen.getByRole('button', { name: 'Send 11 Rapid Requests' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Send 11 Rapid Requests' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('group', { name: 'Successful requests' })).toHaveTextContent('10')
+    })
+    expect(screen.getByRole('group', { name: 'Blocked requests' })).toHaveTextContent('1')
+    expect(fetchMock).toHaveBeenCalledTimes(11)
   })
 })

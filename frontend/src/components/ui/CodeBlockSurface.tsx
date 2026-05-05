@@ -11,10 +11,16 @@ export function CodeBlockSurface({
   className,
   label,
   actions,
+  role,
+  'aria-label': ariaLabel,
   ...props
 }: CodeBlockSurfaceProps) {
+  const labelledRegionName = typeof label === 'string' ? label : undefined
+
   return (
     <div
+      role={role ?? (labelledRegionName ? 'region' : undefined)}
+      aria-label={ariaLabel ?? labelledRegionName}
       className={cx(
         'overflow-hidden rounded-lg border border-border bg-surface text-sm shadow-sm',
         className

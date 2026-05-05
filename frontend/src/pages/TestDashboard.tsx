@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Sun, Moon, Settings, Database, Key, Shield, Users, Sliders, FileText, Zap, Lock, Unlock } from 'lucide-react'
 import { useTheme } from '../theme'
-import { Badge, Button, Card, CodeBlockSurface, DisclosureCard, IconButton, NumericValue } from '../components/ui'
+import { Badge, Button, Callout, Card, CodeBlockSurface, DisclosureCard, IconButton, MetricCard, NumericValue, SelectField, SectionHeader as UiSectionHeader } from '../components/ui'
 import {
   API_BASE,
   AdminResponse,
@@ -129,30 +129,32 @@ function ThemeToggle() {
           <Moon className="w-5 h-5 text-text" />
         )}
       </IconButton>
-      <select
+      <SelectField
+        label="Theme preference"
+        hideLabel
         value={theme}
         onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
-        className="text-sm bg-surface-raised border border-border rounded-lg px-2 py-1.5 text-text-secondary focus:border-accent focus:ring-1 focus:ring-accent"
+        className="w-28"
       >
         <option value="system">System</option>
         <option value="light">Light</option>
         <option value="dark">Dark</option>
-      </select>
+      </SelectField>
     </div>
   )
 }
 
 function InfoBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-surface-overlay border-l-4 border-accent rounded-r-lg px-4 py-3 text-sm text-text-secondary mb-4">
+    <Callout label="Endpoint guidance" className="mb-4">
       {children}
-    </div>
+    </Callout>
   )
 }
 
-function CodeBlock({ children }: { children: React.ReactNode }) {
+function CodeBlock({ children, label }: { children: React.ReactNode; label?: string }) {
   return (
-    <CodeBlockSurface className="max-h-72">
+    <CodeBlockSurface label={label} className="max-h-72">
       <pre className="whitespace-pre-wrap">{children}</pre>
     </CodeBlockSurface>
   )
@@ -189,10 +191,11 @@ function CollapsibleSection({
 
 function SectionHeader({ title, icon: Icon }: { title: string; icon?: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="flex items-center gap-2 mb-4 mt-8">
-      {Icon && <Icon className="w-5 h-5 text-accent" />}
-      <h2 className="text-xl font-bold text-text">{title}</h2>
-    </div>
+    <UiSectionHeader
+      title={title}
+      icon={Icon ? <Icon className="h-5 w-5" aria-hidden="true" /> : undefined}
+      className="mb-4 mt-8"
+    />
   )
 }
 
@@ -1366,7 +1369,7 @@ export function TestDashboard() {
             </Button>
             {health && (
               <div className="mt-4">
-                <CodeBlock>{JSON.stringify(health, null, 2)}</CodeBlock>
+                <CodeBlock label="Health response output">{JSON.stringify(health, null, 2)}</CodeBlock>
               </div>
             )}
           </Card>
@@ -1815,9 +1818,7 @@ export function TestDashboard() {
             </Button>
             {ingestStats && (
               <div className="mt-4 grid md:grid-cols-2 gap-4">
-                <div className="bg-surface-overlay rounded-lg p-4">
-                  <p className="font-medium text-text mb-2">Jobs</p>
-                  <NumericValue className="block text-2xl font-bold text-accent">{ingestStats.jobs.total}</NumericValue>
+                <MetricCard label="Jobs" value={ingestStats.jobs.total}>
                   <div className="mt-2 space-y-1">
                     {Object.entries(ingestStats.jobs.by_status).map(([status, count]) => (
                       <div key={status} className="flex justify-between text-sm">
@@ -1826,10 +1827,8 @@ export function TestDashboard() {
                       </div>
                     ))}
                   </div>
-                </div>
-                <div className="bg-surface-overlay rounded-lg p-4">
-                  <p className="font-medium text-text mb-2">Chunks</p>
-                  <NumericValue className="block text-2xl font-bold text-accent">{ingestStats.chunks.total}</NumericValue>
+                </MetricCard>
+                <MetricCard label="Chunks" value={ingestStats.chunks.total}>
                   <div className="mt-2 space-y-1">
                     {Object.entries(ingestStats.chunks.by_status).map(([status, count]) => (
                       <div key={status} className="flex justify-between text-sm">
@@ -1838,7 +1837,7 @@ export function TestDashboard() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </MetricCard>
               </div>
             )}
           </div>
@@ -2360,14 +2359,16 @@ export function TestDashboard() {
             <strong className="text-text">{t('testDashboard.extracted.magic_link_9d2e96', 'Magic Link:')}</strong> {t('testDashboard.extracted.5_requests_minute_2110bd', '5 requests/minute |')} <strong className="text-text">{t('testDashboard.extracted.admin_auth_2d5ed1', 'Admin Auth:')}</strong> {t('testDashboard.extracted.10_requests_minute_4ddd60', '10 requests/minute')}
           </InfoBox>
           <div className="flex flex-wrap gap-3 items-center mb-4">
-            <select
+            <SelectField
+              label="Rate limit test type"
+              hideLabel
               value={rateLimitTestType}
               onChange={(e) => setRateLimitTestType(e.target.value as 'magic_link' | 'admin_auth')}
-              className="px-3 py-2 bg-surface border border-border rounded-lg text-text text-sm focus:border-accent focus:ring-1 focus:ring-accent"
+              className="w-56"
             >
               <option value="magic_link">{t('testDashboard.extracted.magic_link_5_min_6decbc', 'Magic Link (5/min)')}</option>
               <option value="admin_auth">{t('testDashboard.extracted.admin_auth_10_min_e15503', 'Admin Auth (10/min)')}</option>
-            </select>
+            </SelectField>
             <Button onClick={runRateLimitTest} disabled={rateLimitTesting}>
               {rateLimitTesting ? 'Testing...' : `Send ${rateLimitTestType === 'magic_link' ? '6' : '11'} Rapid Requests`}
             </Button>
@@ -2375,14 +2376,8 @@ export function TestDashboard() {
           {rateLimitResults.responses.length > 0 && (
             <div className="space-y-4">
               <div className="flex gap-4">
-                <div className="bg-success-subtle border border-success/20 rounded-lg p-3 flex-1 text-center">
-                  <NumericValue className="block text-2xl font-bold text-success">{rateLimitResults.success}</NumericValue>
-                  <p className="text-xs text-text-secondary">Successful</p>
-                </div>
-                <div className="bg-error-subtle border border-error/20 rounded-lg p-3 flex-1 text-center">
-                  <NumericValue className="block text-2xl font-bold text-error">{rateLimitResults.blocked}</NumericValue>
-                  <p className="text-xs text-text-secondary">{t('testDashboard.extracted.blocked_429_04c78f', 'Blocked (429)')}</p>
-                </div>
+                <MetricCard className="flex-1 text-center" label="Successful requests" value={rateLimitResults.success} tone="success" description="Successful" />
+                <MetricCard className="flex-1 text-center" label="Blocked requests" value={rateLimitResults.blocked} tone="error" description={t('testDashboard.extracted.blocked_429_04c78f', 'Blocked (429)')} />
               </div>
               <div className="max-h-40 overflow-y-auto bg-surface-overlay rounded-lg p-3">
                 {rateLimitResults.responses.map((r, i) => (
