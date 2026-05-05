@@ -468,6 +468,8 @@ export const DEPLOYMENT_CONFIG_KEY_LIST = [
   'SEARXNG_URL',
   // Security
   'FRONTEND_URL', 'SIMULATE_USER_AUTH', 'SIMULATE_ADMIN_AUTH',
+  'RATE_LIMIT_CHAT_PER_MINUTE', 'RATE_LIMIT_QUERY_PER_MINUTE', 'RATE_LIMIT_UPLOAD_PER_MINUTE',
+  'RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE', 'RATE_LIMIT_CONFIG_EXPORT_PER_HOUR',
   // Domain & URLs
   'BASE_DOMAIN', 'INSTANCE_URL', 'API_BASE_URL', 'ADMIN_BASE_URL',
   'EMAIL_DOMAIN', 'DKIM_SELECTOR', 'SPF_INCLUDE', 'DMARC_POLICY',
@@ -588,6 +590,31 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
       label: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.label', 'Simulate Admin Auth'),
       description: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.description', 'Show mock Nostr connection button for admin auth (testing only)'),
       hint: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.hint', 'Enable for development/testing. Shows a "Mock Connection" button on admin login that bypasses Nostr extension requirement. Should be disabled in production.'),
+    },
+    RATE_LIMIT_CHAT_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.label', 'Chat Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.description', 'Chat requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.hint', 'Maximum /llm/chat requests per minute per stable user, admin, token, or client IP. Requires restart. Default: 120.'),
+    },
+    RATE_LIMIT_QUERY_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.label', 'Retrieval Query Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.description', 'Retrieval query requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.hint', 'Maximum /query requests per minute per stable user, token, or client IP. Requires restart. Default: 90.'),
+    },
+    RATE_LIMIT_UPLOAD_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.label', 'Upload Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.description', 'Document upload requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.hint', 'Maximum document upload requests per minute per stable admin, token, or client IP. Requires restart. Default: 20.'),
+    },
+    RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.label', 'Vector Search Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.description', 'Vector search requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.hint', 'Maximum vector search requests per minute per stable user, token, or client IP. Requires restart. Default: 30.'),
+    },
+    RATE_LIMIT_CONFIG_EXPORT_PER_HOUR: {
+      label: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.label', 'Config Export Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.description', 'Deployment config exports per hour'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.hint', 'Maximum .env exports per hour per admin session or client IP. Requires restart. Default: 5.'),
     },
     // Domain & URLs
     BASE_DOMAIN: {
