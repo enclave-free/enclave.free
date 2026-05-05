@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Sun, Moon, Settings, Database, ChevronDown, Key, Shield, Users, Sliders, FileText, Zap, Lock, Unlock } from 'lucide-react'
+import { ArrowLeft, Sun, Moon, Settings, Database, Key, Shield, Users, Sliders, FileText, Zap, Lock, Unlock } from 'lucide-react'
 import { useTheme } from '../theme'
+import { Badge, Button, Card, CodeBlockSurface, DisclosureCard, NumericValue } from '../components/ui'
 import {
   API_BASE,
   AdminResponse,
@@ -141,37 +142,6 @@ function ThemeToggle() {
   )
 }
 
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`bg-surface-raised border border-border rounded-xl p-6 shadow-sm ${className}`}>
-      {children}
-    </div>
-  )
-}
-
-function Button({
-  children,
-  onClick,
-  disabled = false,
-  variant = 'primary'
-}: {
-  children: React.ReactNode
-  onClick?: () => void
-  disabled?: boolean
-  variant?: 'primary' | 'secondary'
-}) {
-  const baseClasses = "px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface"
-  const variantClasses = variant === 'primary'
-    ? "bg-accent text-accent-text hover:bg-accent-hover disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
-    : "bg-surface-raised text-text border border-border hover:bg-surface-overlay disabled:opacity-50 disabled:cursor-not-allowed"
-
-  return (
-    <button onClick={onClick} disabled={disabled} className={`${baseClasses} ${variantClasses}`}>
-      {children}
-    </button>
-  )
-}
-
 function InfoBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-surface-overlay border-l-4 border-accent rounded-r-lg px-4 py-3 text-sm text-text-secondary mb-4">
@@ -182,9 +152,9 @@ function InfoBox({ children }: { children: React.ReactNode }) {
 
 function CodeBlock({ children }: { children: React.ReactNode }) {
   return (
-    <pre className="bg-surface-overlay rounded-lg p-4 overflow-auto text-sm font-mono text-text-secondary max-h-72">
-      {children}
-    </pre>
+    <CodeBlockSurface className="max-h-72">
+      <pre className="whitespace-pre-wrap">{children}</pre>
+    </CodeBlockSurface>
   )
 }
 
@@ -203,29 +173,17 @@ function CollapsibleSection({
   icon?: React.ComponentType<{ className?: string }>
   children: React.ReactNode
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
-
   return (
-    <Card className="mb-6">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between text-left"
-      >
-        <div className="flex items-center gap-2">
-          {Icon && <Icon className="w-5 h-5 text-accent" />}
-          <span className="text-lg font-semibold text-text">
-            {moduleNumber}. {title}
-          </span>
-          {badge && (
-            <span className="text-xs px-2 py-0.5 rounded bg-accent-subtle text-accent">
-              {badge}
-            </span>
-          )}
-        </div>
-        <ChevronDown className={`w-5 h-5 text-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      {isOpen && <div className="mt-4 pt-4 border-t border-border">{children}</div>}
-    </Card>
+    <DisclosureCard
+      title={title}
+      eyebrow={`${moduleNumber}.`}
+      badge={badge}
+      defaultOpen={defaultOpen}
+      icon={Icon ? <Icon className="h-5 w-5 text-accent" aria-hidden="true" /> : undefined}
+      className="mb-6"
+    >
+      {children}
+    </DisclosureCard>
   )
 }
 
@@ -239,17 +197,18 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon?: React.Comp
 }
 
 function StatusBadge({ status }: { status: 'success' | 'warning' | 'error' | 'info' }) {
-  const classes = {
-    success: 'bg-success-subtle text-success',
-    warning: 'bg-warning-subtle text-warning',
-    error: 'bg-error-subtle text-error',
-    info: 'bg-accent-subtle text-accent'
+  const dotClasses = {
+    success: 'bg-success',
+    warning: 'bg-warning',
+    error: 'bg-error',
+    info: 'bg-accent',
   }
+  const tone = status === 'info' ? 'accent' : status
+
   return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${classes[status]}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${status === 'success' ? 'bg-success' : status === 'warning' ? 'bg-warning' : status === 'error' ? 'bg-error' : 'bg-accent'}`} />
+    <Badge tone={tone} leadingIcon={<span className={`h-1.5 w-1.5 rounded-full ${dotClasses[status]}`} />}>
       {status}
-    </span>
+    </Badge>
   )
 }
 
@@ -1367,9 +1326,7 @@ export function TestDashboard() {
               className="p-2 -ml-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-overlay transition-all"
               title={t('testDashboard.extracted.back_to_chat_e2991f', 'Back to Chat')}
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-              </svg>
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </Link>
             <div>
               <h1 className="text-2xl font-semibold text-text">{t('testDashboard.extracted.test_dashboard_7349f9', 'Test Dashboard')}</h1>
@@ -1860,24 +1817,24 @@ export function TestDashboard() {
               <div className="mt-4 grid md:grid-cols-2 gap-4">
                 <div className="bg-surface-overlay rounded-lg p-4">
                   <p className="font-medium text-text mb-2">Jobs</p>
-                  <p className="text-2xl font-bold text-accent">{ingestStats.jobs.total}</p>
+                  <NumericValue className="block text-2xl font-bold text-accent">{ingestStats.jobs.total}</NumericValue>
                   <div className="mt-2 space-y-1">
                     {Object.entries(ingestStats.jobs.by_status).map(([status, count]) => (
                       <div key={status} className="flex justify-between text-sm">
                         <span className="text-text-secondary">{status}</span>
-                        <span className="text-text">{count}</span>
+                        <NumericValue className="text-text">{count}</NumericValue>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="bg-surface-overlay rounded-lg p-4">
                   <p className="font-medium text-text mb-2">Chunks</p>
-                  <p className="text-2xl font-bold text-accent">{ingestStats.chunks.total}</p>
+                  <NumericValue className="block text-2xl font-bold text-accent">{ingestStats.chunks.total}</NumericValue>
                   <div className="mt-2 space-y-1">
                     {Object.entries(ingestStats.chunks.by_status).map(([status, count]) => (
                       <div key={status} className="flex justify-between text-sm">
                         <span className="text-text-secondary">{status}</span>
-                        <span className="text-text">{count}</span>
+                        <NumericValue className="text-text">{count}</NumericValue>
                       </div>
                     ))}
                   </div>
@@ -2419,11 +2376,11 @@ export function TestDashboard() {
             <div className="space-y-4">
               <div className="flex gap-4">
                 <div className="bg-success-subtle border border-success/20 rounded-lg p-3 flex-1 text-center">
-                  <p className="text-2xl font-bold text-success">{rateLimitResults.success}</p>
+                  <NumericValue className="block text-2xl font-bold text-success">{rateLimitResults.success}</NumericValue>
                   <p className="text-xs text-text-secondary">Successful</p>
                 </div>
                 <div className="bg-error-subtle border border-error/20 rounded-lg p-3 flex-1 text-center">
-                  <p className="text-2xl font-bold text-error">{rateLimitResults.blocked}</p>
+                  <NumericValue className="block text-2xl font-bold text-error">{rateLimitResults.blocked}</NumericValue>
                   <p className="text-xs text-text-secondary">{t('testDashboard.extracted.blocked_429_04c78f', 'Blocked (429)')}</p>
                 </div>
               </div>
