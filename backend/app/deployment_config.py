@@ -52,11 +52,12 @@ config_export_limiter = RateLimiter(
 # Environment variable to config key mapping
 # These are the keys we allow managing through the UI
 ENV_CONFIG_MAP = {
-    # LLM Settings
-    "LLM_PROVIDER": {"category": "llm", "description": "LLM provider/runtime owner", "requires_restart": True, "default": "sage"},
-    "LLM_MODEL": {"category": "llm", "description": "Model name/identifier", "requires_restart": False},
-    "LLM_API_URL": {"category": "llm", "description": "LLM API base URL", "requires_restart": True},
-    "LLM_API_KEY": {"category": "llm", "description": "LLM API key", "requires_restart": False, "is_secret": True},
+    # Model Provider compatibility settings.
+    # LLM_* names are public/deployment compatibility keys, not Sage Agent Settings.
+    "LLM_PROVIDER": {"category": "llm", "description": "Model Provider label for Python compatibility paths", "requires_restart": True, "default": "sage"},
+    "LLM_MODEL": {"category": "llm", "description": "Model identifier for Python compatibility paths", "requires_restart": False},
+    "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python compatibility paths", "requires_restart": True},
+    "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python compatibility paths", "requires_restart": False, "is_secret": True},
     # Embedding Settings
     "EMBEDDING_MODEL": {"category": "embedding", "description": "Sentence transformer model", "requires_restart": True, "default": "intfloat/multilingual-e5-base"},
     # Email Settings (no defaults - optional, user must configure)
@@ -81,8 +82,8 @@ ENV_CONFIG_MAP = {
     "FRONTEND_URL": {"category": "security", "description": "Frontend application URL", "requires_restart": False, "default": "http://localhost:5173"},
     "SIMULATE_USER_AUTH": {"category": "security", "description": "Allow user verification without magic link token (testing only)", "requires_restart": False, "default": "false"},
     "SIMULATE_ADMIN_AUTH": {"category": "security", "description": "Show mock Nostr connection button for admin auth (testing only)", "requires_restart": False, "default": "false"},
-    # RAG Settings
-    "RAG_TOP_K": {"category": "llm", "description": "Default RAG retrieval count", "requires_restart": False, "default": "8"},
+    # Retrieval compatibility settings. RAG_* names remain stable public config keys.
+    "RAG_TOP_K": {"category": "llm", "description": "Default Retrieval count", "requires_restart": False, "default": "8"},
     "PDF_EXTRACT_MODE": {"category": "llm", "description": "PDF extraction mode (fast/quality)", "requires_restart": False, "default": "fast"},
     # Domain & URLs Settings
     "BASE_DOMAIN": {"category": "domains", "description": "Root domain name", "requires_restart": False, "default": "localhost"},
@@ -626,7 +627,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             error="Connection failed",
         ))
 
-    # Check AI runtime / router
+    # Check Sage Agent Runtime / router.
     provider = (config_dict.get("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage")).strip().lower() or "sage"
     runtime_url = (os.getenv("SAGE_WEB_URL", "http://sage:3000")).rstrip("/")
     llm_health_url = runtime_url + "/health"
@@ -643,7 +644,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             last_checked=datetime.now(timezone.utc).isoformat(),
         ))
     except httpx.RequestError as e:
-        logger.warning(f"AI runtime ({provider}) health check failed: {e}")
+        logger.warning(f"Agent Runtime ({provider}) health check failed: {e}")
         services.append(ServiceHealthItem(
             name=f"AI Runtime ({provider})",
             status="unhealthy",

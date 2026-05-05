@@ -11,7 +11,7 @@ import { AppHeader } from '../components/shared/AppHeader'
 import { Message } from '../components/chat/ChatMessage'
 import { ReachoutModal, type ReachoutMode } from '../components/reachout/ReachoutModal'
 import { API_BASE, STORAGE_KEYS, getSelectedUserTypeId, saveSelectedUserTypeId } from '../types/onboarding'
-import { getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
+import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../types/config'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
@@ -81,7 +81,7 @@ export function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
-  const [ragSessionId, setRagSessionId] = useState<string | null>(null)
+  const [conversationSessionId, setConversationSessionId] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentSource[]>([])
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false)
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([])
@@ -198,7 +198,8 @@ export function ChatPage() {
       version: 1,
       summary: 'One sentence summary of what will change',
       requests: [
-        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'maple' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'sage' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_MODEL', body: { value: DEFAULT_TINFOIL_MODEL } },
       ],
     }, null, 2))
     lines.push('```')
@@ -517,7 +518,7 @@ export function ChatPage() {
           top_k: 8,
           tools: backendTools,
           job_ids: selectedDocuments,
-          ...(ragSessionId && { session_id: ragSessionId }),
+          ...(conversationSessionId && { session_id: conversationSessionId }),
         }
 
         response = await fetch(`${API_BASE}/query`, {
@@ -544,6 +545,7 @@ export function ChatPage() {
           tools: backendTools,
           t,
           baseToolContext,
+          sessionId: conversationSessionId,
         })
       }
 
@@ -572,10 +574,13 @@ export function ChatPage() {
         
         // Save session_id for conversation continuity
         if (data.session_id) {
-          setRagSessionId(data.session_id)
+          setConversationSessionId(data.session_id)
         }
       } else {
         responseContent = data.message
+        if (data.session_id) {
+          setConversationSessionId(data.session_id)
+        }
 
         if (hasConfigTool) {
           const raw = String(data.message || '')
@@ -601,7 +606,7 @@ export function ChatPage() {
       
       // Handle auto-search if backend returned a search term
       if (responseIsRag && data.search_term) {
-        await triggerAutoSearch(data.search_term)
+        await triggerAutoSearch(data.search_term, data.session_id ?? conversationSessionId)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('errors.failedToSendMessage'))
@@ -790,7 +795,7 @@ export function ChatPage() {
   }, [adminApplyState])
   
   // Auto-search triggered by backend - injects results back into RAG session
-  const triggerAutoSearch = async (searchTerm: string) => {
+  const triggerAutoSearch = async (searchTerm: string, sessionId?: string | null) => {
     try {
       // Show searching indicator
       const searchingMessage: Message = {
@@ -815,6 +820,7 @@ IMPORTANT: Return a CONDENSED response:
         content: searchPrompt,
         tools: ['web-search'],
         t,
+        sessionId,
       })
       
       if (!searchRes.ok) {
@@ -822,6 +828,9 @@ IMPORTANT: Return a CONDENSED response:
       }
       
       const searchData = await searchRes.json()
+      if (searchData.session_id) {
+        setConversationSessionId(searchData.session_id)
+      }
       const searchResults = searchData.message
       
       // Replace searching message with condensed results
@@ -840,7 +849,8 @@ IMPORTANT: Return a CONDENSED response:
       })
       
       // Inject search results back into RAG session for context continuity
-      if (ragSessionId && selectedDocuments.length > 0) {
+      const injectionSessionId = searchData.session_id ?? sessionId
+      if (injectionSessionId && selectedDocuments.length > 0) {
         // Send a silent update to the RAG session with search results
         await fetch(`${API_BASE}/query`, {
           method: 'POST',
@@ -850,7 +860,7 @@ IMPORTANT: Return a CONDENSED response:
           credentials: 'include',
           body: JSON.stringify({
             question: `[SYSTEM: Search results for "${searchTerm}" have been provided to the user. The results included: ${searchResults.slice(0, 500)}...]`,
-            session_id: ragSessionId,
+            session_id: injectionSessionId,
             top_k: 1,  // Minimal retrieval since this is just context injection
             tools: []  // No tools for this update
           }),
@@ -869,7 +879,7 @@ IMPORTANT: Return a CONDENSED response:
   const handleNewChat = () => {
     setMessages([])
     setError(null)
-    setRagSessionId(null) // Reset session for new conversation
+    setConversationSessionId(null) // Reset session for new conversation
     setAdminApplyState({ state: 'idle' })
     setAdminSnapshotInfo(null)
   }

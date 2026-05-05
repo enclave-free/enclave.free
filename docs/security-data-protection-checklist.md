@@ -33,7 +33,7 @@ Use this checklist to:
 |---|---|---|---|---|---|
 | S4-1 | Protect ingest endpoints with auth | P0 | - | done | `backend/app/ingest.py` (Section 11 evidence) |
 | S4-2 | Restrict `/vector-search` and remove unsafe payload exposure | P0 | - | done | `backend/app/main.py` (Section 11 evidence) |
-| S4-3 | Enforce query session ownership checks | P0 | - | done | `backend/app/query.py` (Section 11 evidence) |
+| S4-3 | Enforce public query-session record ownership checks | P0 | - | done | `backend/app/query.py` (Section 11 evidence) |
 | S4-4 | Replace wildcard CORS with explicit allowlist | P0 | - | done | `backend/app/main.py` (Section 11 evidence) |
 | S4-5 | Move bearer tokens out of `localStorage` | P0 | - | done | `frontend/src/utils/adminApi.ts`, `frontend/src/pages/VerifyMagicLink.tsx` (Section 11 evidence) |
 | S4-6 | Remove query-param token usage | P0 | - | done | `backend/app/main.py`, `frontend/src/pages/VerifyMagicLink.tsx` (Section 11 evidence) |
@@ -239,7 +239,7 @@ Use this checklist to:
 - [x] Add regression tests specifically for:
   - ingest endpoint authorization
   - vector-search authorization/scope
-  - query session ownership
+  - public query-session record ownership
 - [ ] Add SAST/dependency scanning in CI.
 - [ ] Add runtime alerting for:
   - repeated auth failures

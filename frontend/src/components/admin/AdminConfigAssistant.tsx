@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
-import { X, MessageCircle, RefreshCw, ShieldAlert, Play, EyeOff, Maximize2, Minimize2 } from 'lucide-react'
+import { X, MessageCircle, RefreshCw, ShieldAlert, Play, EyeOff } from 'lucide-react'
 import { adminFetch } from '../../utils/adminApi'
 import { ChatInput } from '../chat/ChatInput'
 import { ChatMessage, type Message } from '../chat/ChatMessage'
 import { ToolSelector, type Tool } from '../chat/ToolSelector'
-import { getConfigCategories, getDeploymentConfigItemMeta } from '../../types/config'
+import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta } from '../../types/config'
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../../types/config'
 import { API_BASE } from '../../types/onboarding'
 import { extractAdminAssistantChangeSetStrict, redactSecrets, type AdminAssistantChangeSet } from '../../utils/adminAssistant'
@@ -26,6 +25,13 @@ type ApplyState =
   | { state: 'applying'; changeSet: AdminAssistantChangeSet }
   | { state: 'applied'; message: string }
   | { state: 'error'; message: string }
+
+interface AdminConfigAssistantProps {
+  variant?: 'sidebar' | 'drawer'
+  onCollapse?: () => void
+  onClose?: () => void
+  collapseIcon?: ReactNode
+}
 
 const CONFIG_TOOL_ID = 'admin-config'
 
@@ -69,12 +75,16 @@ async function readErrorDetail(res: Response): Promise<string> {
   return detail
 }
 
-export function AdminConfigAssistant() {
+export function AdminConfigAssistant({
+  variant = 'sidebar',
+  onCollapse,
+  onClose,
+  collapseIcon,
+}: AdminConfigAssistantProps) {
   const { t } = useTranslation()
-  const location = useLocation()
-  const [open, setOpen] = useState(false)
   const [shareSecrets, setShareSecrets] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
+  const [conversationSessionId, setConversationSessionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [snapshotInfo, setSnapshotInfo] = useState<{ generatedAtIso: string } | null>(null)
@@ -218,7 +228,8 @@ export function AdminConfigAssistant() {
       version: 1,
       summary: 'One sentence summary of what will change',
       requests: [
-        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'maple' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_PROVIDER', body: { value: 'sage' } },
+        { method: 'PUT', path: '/admin/deployment/config/LLM_MODEL', body: { value: DEFAULT_TINFOIL_MODEL } },
       ],
     }, null, 2))
     lines.push('```')
@@ -358,6 +369,7 @@ export function AdminConfigAssistant() {
         tools: backendTools,
         baseToolContext,
         t,
+        sessionId: conversationSessionId,
       })
       if (res.status === 401) {
         window.location.href = '/admin'
@@ -366,7 +378,10 @@ export function AdminConfigAssistant() {
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
       }
-      const data = await res.json() as { message?: string }
+      const data = await res.json() as { message?: string; session_id?: string }
+      if (data.session_id) {
+        setConversationSessionId(data.session_id)
+      }
       const raw = String(data?.message || '')
 
       const assistantId = generateMessageId()
@@ -393,7 +408,7 @@ export function AdminConfigAssistant() {
     } finally {
       setIsLoading(false)
     }
-  }, [buildSnapshot, hasConfigTool, selectedTools, shareSecrets, t])
+  }, [buildSnapshot, conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
 
   const handleApply = useCallback(async (changeSet: AdminAssistantChangeSet) => {
     setApplyState({ state: 'applying', changeSet })
@@ -588,13 +603,13 @@ export function AdminConfigAssistant() {
     }
   }, [applyState])
 
-  const closePanel = () => {
-    setOpen(false)
+  const closeDrawer = () => {
     setError(null)
     setApplyState({ state: 'idle' })
     // Secrets are opt-in and should not persist beyond the session UI.
     setShareSecrets(false)
     secretsForRedactionRef.current = []
+    onClose?.()
   }
 
   const inputToolbar = (
@@ -606,48 +621,12 @@ export function AdminConfigAssistant() {
     />
   )
 
-  const prefersLargeByRoute = useMemo(() => {
-    const path = location.pathname
-    return (
-      path.startsWith('/admin/setup') ||
-      path.startsWith('/admin/instance') ||
-      path.startsWith('/admin/users') ||
-      path.startsWith('/admin/ai') ||
-      path.startsWith('/admin/deployment') ||
-      path === '/admin'
-    )
-  }, [location.pathname])
-
-  const [isExpanded, setIsExpanded] = useState(prefersLargeByRoute)
-
-  useEffect(() => {
-    // When panel is closed, follow route-based default size.
-    if (!open) {
-      setIsExpanded(prefersLargeByRoute)
-    }
-  }, [open, prefersLargeByRoute])
-
-  const panelSizeClass = isExpanded
-    ? 'w-[96vw] max-w-[980px] h-[88vh] max-h-[920px]'
-    : 'w-[92vw] max-w-[420px] h-[72vh] max-h-[640px]'
+  const containerClass = variant === 'drawer'
+    ? 'ml-auto h-full w-[min(92vw,400px)] bg-surface border-l border-border shadow-2xl'
+    : 'h-full w-full bg-surface'
 
   return (
-    <>
-      {/* Bubble button */}
-      {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-50 w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent-hover shadow-lg ring-1 ring-white/10 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95 flex items-center justify-center"
-          aria-label={t('admin.configAssistant.openAria')}
-          title={t('admin.configAssistant.openTitle')}
-        >
-          <MessageCircle className="w-5 h-5 text-white" />
-        </button>
-      )}
-
-      {/* Panel */}
-      {open && (
-        <div className={`fixed bottom-5 right-5 z-50 rounded-2xl bg-surface border border-border shadow-2xl overflow-hidden flex flex-col ${panelSizeClass}`}>
+    <div className={`${containerClass} overflow-hidden flex flex-col`}>
           <div className="px-4 py-3 border-b border-border bg-surface-raised flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -686,23 +665,26 @@ export function AdminConfigAssistant() {
               >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
-              <button
-                onClick={() => setIsExpanded((prev) => !prev)}
-                className="px-2.5 py-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors flex items-center gap-1.5"
-                title={isExpanded ? t('admin.configAssistant.switchToCompact') : t('admin.configAssistant.switchToExpanded')}
-                aria-label={isExpanded ? t('admin.configAssistant.switchToCompact') : t('admin.configAssistant.switchToExpanded')}
-              >
-                {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                <span className="text-xs font-medium">{isExpanded ? t('admin.configAssistant.compact') : t('admin.configAssistant.expand')}</span>
-              </button>
-              <button
-                onClick={closePanel}
-                className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors"
-                title={t('common.close')}
-                aria-label={t('common.close')}
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {variant === 'sidebar' && onCollapse && (
+                <button
+                  onClick={onCollapse}
+                  className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors"
+                  title={t('admin.configAssistant.collapseSidebar', 'Collapse assistant sidebar')}
+                  aria-label={t('admin.configAssistant.collapseSidebar', 'Collapse assistant sidebar')}
+                >
+                  {collapseIcon}
+                </button>
+              )}
+              {variant === 'drawer' && (
+                <button
+                  onClick={closeDrawer}
+                  className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors"
+                  title={t('common.close')}
+                  aria-label={t('common.close')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -836,7 +818,5 @@ export function AdminConfigAssistant() {
             toolbar={inputToolbar}
           />
         </div>
-      )}
-    </>
   )
 }

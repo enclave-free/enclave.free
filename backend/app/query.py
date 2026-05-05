@@ -1,8 +1,8 @@
 """
-Sanctum RAG Query Module
+Sanctum Retrieval Query Module
 
-Session-aware RAG for querying knowledge bases.
-Pipeline: Query → Embed → Vector Search → LLM → Answer
+Session-aware Retrieval for querying the Document Library.
+Pipeline: Query → Embed → Vector Search → Model Provider → Answer
 
 Key principles:
 - Provide clear, helpful responses
@@ -28,7 +28,7 @@ from store import (
     QDRANT_HOST,
     QDRANT_PORT,
 )
-from llm import get_maple_provider
+from llm import get_sage_provider
 from utils import sanitize_profile_value
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
@@ -96,13 +96,13 @@ async def query(
     _: None = Depends(query_limiter),
 ):
     """
-    RAG query with session support.
+    Retrieval query with session support.
     Requires authenticated admin OR approved user.
 
     1. Load/create session for conversation history
     2. Embed query with conversation context
     3. Vector search for relevant chunks
-    4. Send context + history + query to LLM
+    4. Send context + history + query to the Model Provider
     5. Return answer with clarifying questions if needed
     """
     from ai_config import get_llm_parameters
@@ -352,7 +352,7 @@ def _extract_facts_from_conversation(session: dict) -> dict:
     Uses a focused prompt to reliably extract structured facts from conversation.
     """
     import json as json_module
-    llm = get_maple_provider()
+    llm = get_sage_provider()
     
     # Format conversation for fact extraction
     messages = session.get("messages", [])
@@ -492,7 +492,7 @@ def _call_llm_contextual(
     """
     import re
     from ai_config import get_prompt_sections, get_llm_parameters
-    llm = get_maple_provider()
+    llm = get_sage_provider()
     tools = tools or []
 
     # Get prompt sections from database with user-type overrides if applicable

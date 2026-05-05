@@ -75,12 +75,12 @@ Recommended:
 - Define retention and deletion policies for:
   - Uploaded documents and derived chunks
   - Logs
-  - RAG session state (see `docs/sessions.md` for current in-memory behavior)
-    - **Note:** In-memory only — lost on process restart and not shared across replicas. Plan for persistent storage before multi-worker deployments.
+  - Sage `/query` public session records and Session Memory rows
+    - **Note:** current public `/query` continuity is Sage/Postgres-backed, but deleting a public query-session record only deletes the `web_sessions` row. It is not yet full Session Memory Deletion.
+  - Python in-memory runtime state that still exists outside the public Sage query path, such as rate-limit buckets and in-progress ingest chunks.
 
 ## Operational References
 
 - `docs/security-data-protection-checklist.md` - status and remediation tracker.
 - `docs/admin-deployment-config.md` - deployment-time security settings and validation.
 - `docs/sessions.md` - cookie/bearer auth sessions and CSRF model.
-

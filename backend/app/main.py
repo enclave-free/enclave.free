@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from sentence_transformers import SentenceTransformer
 
-from llm import get_maple_provider
+from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
 from models import (
@@ -410,6 +410,7 @@ class ToolCallInfoResponse(BaseModel):
 class ChatRequest(BaseModel):
     """Request model for chat endpoint"""
     message: str
+    session_id: Optional[str] = None
     tools: List[str] = []
     tool_context: Optional[str] = None
     # Optional explicit list of tools already executed client-side and embedded in tool_context.
@@ -420,6 +421,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
     message: str
+    session_id: Optional[str] = None
     model: str
     provider: str
     tools_used: List[ToolCallInfoResponse] = []
@@ -629,17 +631,17 @@ async def smoke_test():
 @app.get("/llm/test", response_model=LLMTestResult)
 async def llm_smoke_test():
     """
-    Smoke test Maple LLM connectivity.
+    Smoke test Sage/Tinfoil Model Provider connectivity.
 
-    Tests the Maple service endpoint:
-    - Checks Maple health endpoint
+    Tests the OpenAI-compatible service endpoint:
+    - Checks Sage/Tinfoil Model Provider health endpoint
     - Sends a simple test prompt
     - Returns the response
     """
-    provider_name = "maple"
+    provider_name = "sage"
 
     try:
-        provider = get_maple_provider()
+        provider = get_sage_provider()
 
         # Check health first
         health = provider.health_check()
@@ -648,7 +650,7 @@ async def llm_smoke_test():
                 success=False,
                 provider=provider.name,
                 health=False,
-                error=f"Maple health check failed (provider='{provider.name}')"
+                error=f"Sage/Tinfoil health check failed (provider='{provider.name}')"
             )
 
         # Send a simple test prompt
@@ -768,13 +770,13 @@ async def chat(
                 if tool_context:
                     tool_context_parts.append(tool_context)
 
-        # Import AI config functions for dynamic prompt building
+        # Import Agent Settings compatibility functions for dynamic prompt building
         from ai_config import build_chat_prompt, get_llm_parameters
 
         # Get user_type_id from authenticated user for per-type config
         user_type_id = user.get("user_type_id")
 
-        # Get LLM parameters from config (with user-type overrides if applicable)
+        # Get Model Provider parameters from Agent Settings (with user-type overrides if applicable)
         llm_params = get_llm_parameters(user_type_id=user_type_id)
         temperature = llm_params.get("temperature", 0.1)
 
@@ -790,7 +792,7 @@ async def chat(
             if not user_profile_context:
                 user_profile_context = None
 
-        # Build prompt using AI config (with user-type overrides if applicable)
+        # Build prompt using Agent Settings (with user-type overrides if applicable)
         combined_context = "\n\n".join(tool_context_parts) if tool_context_parts else ""
         prompt = build_chat_prompt(
             message=request.message,
@@ -799,20 +801,20 @@ async def chat(
             user_profile_context=user_profile_context,
         )
 
-        provider = get_maple_provider()
+        provider = get_sage_provider()
         # Convert low-level provider connection failures into a user-friendly 503.
         # This is especially common in local dev if the LLM container is restarting.
         try:
             if not provider.health_check():
                 raise HTTPException(
                     status_code=503,
-                    detail=f"Maple service '{provider.name}' is unavailable (health check failed).",
+                    detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (health check failed).",
                 )
             result = provider.complete(prompt, temperature=temperature)
         except HTTPException:
             raise
         except Exception as e:
-            logger.exception("Maple LLM error (%s)", provider.name)
+            logger.exception("Sage/Tinfoil LLM error (%s)", provider.name)
             connection_error_types: tuple[type[BaseException], ...] = ()
             try:
                 import httpx
@@ -831,7 +833,7 @@ async def chat(
             if connection_error_types and isinstance(e, connection_error_types):
                 raise HTTPException(
                     status_code=503,
-                    detail=f"Maple service '{provider.name}' is unavailable (connection error).",
+                    detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (connection error).",
                 )
             raise
         return ChatResponse(
@@ -1314,7 +1316,7 @@ async def get_current_user(
         authenticated=True,
         user=AuthUserResponse(
             id=user["id"],
-            email=user.get("email", data["email"]),
+            email=user.get("email") or data["email"],
             name=user.get("name"),
             user_type_id=user.get("user_type_id"),
             approved=bool(user.get("approved", 1)),
@@ -1864,7 +1866,7 @@ async def get_session_defaults_public(
 ) -> SessionDefaultsResponse:
     """
     Public endpoint: Get session defaults for chat initialization.
-    No authentication required - returns safe defaults for new chat sessions.
+    No authentication required - returns safe defaults for new Conversations.
 
     If user_type_id is provided, returns defaults with user-type-specific overrides applied.
     """

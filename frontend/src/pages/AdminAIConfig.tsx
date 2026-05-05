@@ -190,7 +190,7 @@ export function AdminAIConfig() {
     }
   }
 
-  // Handle reverting an AI config override
+  // Handle reverting an Agent Settings override
   const handleRevertOverride = async (key: string) => {
     setSaveError(null)
     setSaving(true)
@@ -490,8 +490,8 @@ export function AdminAIConfig() {
   return (
     <OnboardingCard
       size="xl"
-      title={t('adminAI.title', 'AI Configuration')}
-      subtitle={t('adminAI.subtitle', 'Configure AI behavior, prompts, and session defaults')}
+      title={t('adminAI.title', 'Agent Settings')}
+      subtitle={t('adminAI.subtitle', 'Configure Sage behavior, prompts, and session defaults')}
       footer={footer}
     >
       <div className="space-y-6">
@@ -636,7 +636,7 @@ export function AdminAIConfig() {
             {t('adminAI.sessionDefaultsDesc', 'Set which features are on by default')}
           </p>
           <p className="text-xs text-text-muted mb-4">
-            {t('adminAI.sessionDefaultsHint', 'Control which AI capabilities are enabled when users start a new chat session.')}
+            {t('adminAI.sessionDefaultsHint', 'Control which Agent Runtime capabilities are enabled when users start a new Conversation.')}
           </p>
 
           <div className="space-y-3">

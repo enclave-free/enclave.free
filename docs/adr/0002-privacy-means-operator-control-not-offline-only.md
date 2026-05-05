@@ -1,0 +1,3 @@
+# Privacy Means Operator Control, Not Offline-Only Operation
+
+Enclave Free treats privacy as Operator-Controlled Privacy: the Operator controls the Instance data boundary, configuration, document library, and approved external integrations. This does not require the prototype to be fully local or offline-only; a Deployment may use configured external services such as Tinfoil for model access, SMTP for email, or hosted infrastructure. The important constraint is that those integrations are visible and configurable parts of the Operator's Instance and Deployment choices, not hidden platform-owned data flows.

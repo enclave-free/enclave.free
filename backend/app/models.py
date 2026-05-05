@@ -421,10 +421,10 @@ class RowMutationResponse(BaseModel):
     error: Optional[str] = None
 
 
-# --- AI Configuration Models ---
+# --- Agent Settings Compatibility Models ---
 
 class AIConfigItem(BaseModel):
-    """Single AI config item"""
+    """Single Agent Settings item"""
     key: str
     value: str
     value_type: str  # 'string', 'number', 'boolean', 'json'
@@ -434,14 +434,14 @@ class AIConfigItem(BaseModel):
 
 
 class AIConfigResponse(BaseModel):
-    """Response model for AI config grouped by category"""
+    """Response model for Agent Settings grouped by category"""
     prompt_sections: list[AIConfigItem] = []
     parameters: list[AIConfigItem] = []
     defaults: list[AIConfigItem] = []
 
 
 class AIConfigUpdate(BaseModel):
-    """Request model for updating an AI config value"""
+    """Request model for updating an Agent Settings value"""
     value: str
 
 
@@ -463,10 +463,10 @@ class SessionDefaultsResponse(BaseModel):
     default_document_ids: list[str] = []
 
 
-# --- AI Config User-Type Override Models ---
+# --- Agent Settings User-Type Override Models ---
 
 class AIConfigWithInheritance(BaseModel):
-    """AI config item with inheritance information"""
+    """Agent Settings item with inheritance information"""
     key: str
     value: str
     value_type: str  # 'string', 'number', 'boolean', 'json'
@@ -478,7 +478,7 @@ class AIConfigWithInheritance(BaseModel):
 
 
 class AIConfigOverrideItem(BaseModel):
-    """Single AI config override for a user type"""
+    """Single Agent Settings override for a user type"""
     key: str
     value: str
     user_type_id: int
@@ -486,7 +486,7 @@ class AIConfigOverrideItem(BaseModel):
 
 
 class AIConfigUserTypeResponse(BaseModel):
-    """Response model for AI config with user-type inheritance"""
+    """Response model for Agent Settings with user-type inheritance"""
     user_type_id: int
     user_type_name: Optional[str] = None
     prompt_sections: list[AIConfigWithInheritance] = []
@@ -495,7 +495,7 @@ class AIConfigUserTypeResponse(BaseModel):
 
 
 class AIConfigOverrideUpdate(BaseModel):
-    """Request model for updating an AI config override"""
+    """Request model for updating an Agent Settings override"""
     value: str
 
 

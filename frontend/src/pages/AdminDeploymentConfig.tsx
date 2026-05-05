@@ -33,7 +33,7 @@ import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
-import { DEFAULT_MAPLE_MODEL, MAPLE_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
+import { DEFAULT_TINFOIL_MODEL, TINFOIL_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
 import { normalizePubkey } from '../utils/nostrKeys'
@@ -767,15 +767,15 @@ export function AdminDeploymentConfig() {
     },
     {
       title: 'Sage + Tinfoil',
-      hint: t('adminDeployment.llmHelp.mapleHint', 'This prototype routes AI traffic through Sage and uses Tinfoil for model inference.'),
+      hint: t('adminDeployment.llmHelp.sageHint', 'This prototype routes AI traffic through Sage and uses Tinfoil for model inference.'),
       config: {
         LLM_PROVIDER: 'sage',
         LLM_API_KEY: 'your-tinfoil-api-key',
-        LLM_MODEL: DEFAULT_MAPLE_MODEL,
+        LLM_MODEL: DEFAULT_TINFOIL_MODEL,
       },
-      extra: t('adminDeployment.llmHelp.mapleExtra', {
-        mapleSignupUrl: MAPLE_SIGNUP_URL,
-        defaultValue: 'Set LLM_API_KEY to your Tinfoil key. Sage reads the generic LLM_* settings and the stack forwards them to the local Tinfoil proxy.',
+      extra: t('adminDeployment.llmHelp.sageExtra', {
+        tinfoilSignupUrl: TINFOIL_SIGNUP_URL,
+        defaultValue: 'Set LLM_API_KEY to your Tinfoil key from {{tinfoilSignupUrl}}. Sage reads the generic LLM_* settings and the stack forwards them to the local Tinfoil proxy.',
       }),
     },
   ]
@@ -1113,7 +1113,7 @@ export function AdminDeploymentConfig() {
             <button
               onClick={() => setShowLlmHelpModal(true)}
               className="ml-1 text-text-muted hover:text-accent transition-colors"
-              aria-label={t('adminDeployment.llmHelp.ariaLabel', 'Maple LLM configuration help')}
+              aria-label={t('adminDeployment.llmHelp.ariaLabel', 'Sage + Tinfoil configuration help')}
               title={helpText}
             >
               <HelpCircle className="w-5 h-5" />
@@ -1843,7 +1843,7 @@ export function AdminDeploymentConfig() {
                 {LLM_HELP_PAGES[llmHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public AI runtime and Tinfoil as the model backend. The web app keeps the same user-facing API surface while the gateway routes AI requests to Sage.')}
+                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side compatibility shims. The web app keeps the same user-facing API surface while the Gateway routes AI requests to Sage.')}
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
@@ -1855,7 +1855,7 @@ export function AdminDeploymentConfig() {
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_MODEL</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.modelField', `Tinfoil model identifier Sage should use (for example: ${DEFAULT_MAPLE_MODEL}).`)}
+                          {t('adminDeployment.llmHelp.modelField', `Tinfoil model identifier Sage should use (for example: ${DEFAULT_TINFOIL_MODEL}).`)}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">

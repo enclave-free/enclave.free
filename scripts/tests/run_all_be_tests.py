@@ -31,7 +31,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Tuple, Optional
 
-from coincurve import PrivateKey
+try:
+    from coincurve import PrivateKey
+except ImportError:
+    PrivateKey = None
 
 
 SCRIPT_DIR = Path(__file__).parent
@@ -48,6 +51,7 @@ DOMAIN_MAP = {
     "2": "RAG",
     "3": "AUTH",
     "4": "TOOLS",
+    "5": "CONTRACT",
 }
 
 # Config paths
@@ -167,19 +171,28 @@ def reset_database() -> bool:
 
 def derive_pubkey_from_seed(seed: str) -> str:
     """Derive x-only public key from a seed string."""
+    if PrivateKey is None:
+        raise RuntimeError("coincurve is required for harness admin key derivation")
     privkey_hex = hashlib.sha256(seed.encode()).hexdigest()
     privkey = PrivateKey(bytes.fromhex(privkey_hex))
     pubkey_compressed = privkey.public_key.format(compressed=True)
     return pubkey_compressed[1:].hex()  # x-only (32 bytes)
 
 
-def create_test_admin() -> bool:
-    """Create a test admin using keypair derived from seed in CRM config."""
-    print(f"  [HARNESS] Creating test admin...")
+def test_admin_pubkey() -> Optional[str]:
+    """Derive the configured test admin pubkey before mutating harness state."""
+    try:
+        config = load_crm_config()
+        seed = config["test_admin"]["keypair_seed"]
+        return derive_pubkey_from_seed(seed)
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
+        print(f"  [HARNESS] ✗ Admin key derivation failed: {exc}")
+        return None
 
-    config = load_crm_config()
-    seed = config["test_admin"]["keypair_seed"]
-    pubkey = derive_pubkey_from_seed(seed)
+
+def create_test_admin(pubkey: str) -> bool:
+    """Create a test admin using keypair derived from seed in CRM config."""
+    print("  [HARNESS] Creating test admin...")
 
     sql = f"""
     INSERT OR REPLACE INTO admins (pubkey, created_at)
@@ -268,9 +281,12 @@ def restart_backend() -> bool:
 
 def setup_test_environment() -> bool:
     """Full test environment setup (reads from CRM/test-config.json)."""
+    pubkey = test_admin_pubkey()
+    if not pubkey:
+        return False
     if not reset_database():
         return False
-    if not create_test_admin():
+    if not create_test_admin(pubkey):
         return False
     if not create_user_fields_from_config():
         return False
@@ -290,7 +306,10 @@ def discover_tests(pattern: str = "test_*.py") -> List[Path]:
     
     for subdir in SCRIPT_DIR.iterdir():
         if subdir.is_dir() and not subdir.name.startswith(("__", "backups")):
-            test_files = list(subdir.glob(pattern))
+            test_files = [
+                path for path in subdir.glob(pattern)
+                if not path.name.endswith("_helpers.py")
+            ]
             tests.extend(test_files)
     
     def sort_key(path: Path) -> str:

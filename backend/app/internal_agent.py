@@ -1,9 +1,10 @@
 """
-Private control-plane endpoints for the Sage enclave web runtime.
+Private Enclave Control Plane endpoints for the Sage Agent Runtime.
 
 These endpoints are intentionally not exposed through the public gateway.
-They let Sage reuse Enclave's existing auth, document access, AI config, and
-admin DB safety rules without reimplementing that business logic in Rust.
+They let Sage reuse Enclave Control Plane facts and actions such as auth
+hydration, Document Access, User Profile context, Retrieval, and safe admin DB
+reads without reimplementing those product rules in Rust.
 """
 
 import os
@@ -13,13 +14,13 @@ import logging
 from typing import Optional, Literal
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
-import auth
 import database
 from ai_config import get_session_defaults
 from query import _build_context, _build_search_query, _process_search_results
+from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
 
 logger = logging.getLogger("sanctum.internal_agent")
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 INTERNAL_AGENT_TOKEN = os.getenv("INTERNAL_AGENT_TOKEN", "").strip()
 
 
-class InternalAuthContextResponse(BaseModel):
+class InternalActorContext(BaseModel):
     id: int
     type: Literal["admin", "user"]
     approved: bool = True
@@ -42,7 +43,7 @@ class InternalAuthContextResponse(BaseModel):
 
 class InternalDocumentSearchRequest(BaseModel):
     query: str
-    user: InternalAuthContextResponse
+    user: InternalActorContext
     top_k: int = 8
     job_ids: Optional[list[str]] = None
     jurisdiction: Optional[str] = None
@@ -65,6 +66,32 @@ class InternalAIConfigResponse(BaseModel):
     parameters: dict[str, object]
     defaults: dict[str, object]
     compiled_prompt: str
+
+
+class InternalUserRecordResponse(BaseModel):
+    id: int
+    type: Literal["user"] = "user"
+    approved: bool = True
+    email: Optional[str] = None
+    name: Optional[str] = None
+    user_type_id: Optional[int] = None
+    dev_mode: bool = False
+
+
+class InternalAdminRecordResponse(BaseModel):
+    id: int
+    type: Literal["admin"] = "admin"
+    pubkey: str
+    session_nonce: int = 0
+
+
+class InternalUserTypeResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    display_order: int = 0
+    created_at: Optional[str] = None
 
 
 def _require_internal_token(x_internal_agent_token: Optional[str] = Header(None)) -> None:
@@ -130,20 +157,7 @@ def _build_compiled_prompt(user_type_id: Optional[int]) -> str:
     return "\n".join(lines)
 
 
-def _auth_to_response(user: dict) -> InternalAuthContextResponse:
-    return InternalAuthContextResponse(
-        id=int(user.get("id")),
-        type="admin" if user.get("type") == "admin" else "user",
-        approved=bool(user.get("approved", True)),
-        pubkey=user.get("pubkey"),
-        email=user.get("email"),
-        name=user.get("name"),
-        user_type_id=user.get("user_type_id"),
-        dev_mode=bool(user.get("dev_mode", False)),
-    )
-
-
-def _build_accessible_job_ids(user: InternalAuthContextResponse, requested_job_ids: Optional[list[str]]) -> list[str]:
+def _build_accessible_job_ids(user: InternalActorContext, requested_job_ids: Optional[list[str]]) -> list[str]:
     if user.type == "admin":
         return list(requested_job_ids or [])
 
@@ -189,6 +203,16 @@ def _execute_safe_select(sql: str) -> dict:
                 "error": "Query contains forbidden keyword",
             }
 
+    is_allowed, error = validate_sql_allowed_tables(normalized)
+    if not is_allowed:
+        return {
+            "success": False,
+            "columns": [],
+            "rows": [],
+            "executionTimeMs": 0,
+            "error": error,
+        }
+
     start_time = time.time()
     try:
         conn = database.get_connection()
@@ -214,22 +238,49 @@ def _execute_safe_select(sql: str) -> dict:
         }
 
 
-@router.post("/auth-context", response_model=InternalAuthContextResponse, dependencies=[Depends(_require_internal_token)])
-async def get_auth_context(request: Request):
-    """
-    Resolve the current Enclave auth context from forwarded auth headers/cookies.
-    Sage uses this instead of reimplementing Python token verification in the prototype.
-    """
-    authorization = request.headers.get("authorization")
-    admin_cookie = request.cookies.get(auth.ADMIN_SESSION_COOKIE_NAME)
-    user_cookie = request.cookies.get(auth.USER_SESSION_COOKIE_NAME)
+@router.get("/users/{user_id}", response_model=InternalUserRecordResponse, dependencies=[Depends(_require_internal_token)])
+async def get_user_record(user_id: int) -> InternalUserRecordResponse:
+    user = database.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found: {user_id}")
 
-    resolved = await auth.require_admin_or_approved_user(
-        authorization=authorization,
-        admin_session_cookie=admin_cookie,
-        user_session_cookie=user_cookie,
+    return InternalUserRecordResponse(
+        id=int(user["id"]),
+        approved=bool(user.get("approved", True)),
+        email=user.get("email"),
+        name=user.get("name"),
+        user_type_id=user.get("user_type_id"),
+        dev_mode=bool(user.get("dev_mode", False)),
     )
-    return _auth_to_response(resolved)
+
+
+@router.get("/admins/by-pubkey/{pubkey}", response_model=InternalAdminRecordResponse, dependencies=[Depends(_require_internal_token)])
+async def get_admin_record(pubkey: str) -> InternalAdminRecordResponse:
+    admin = database.get_admin_by_pubkey(pubkey)
+    if not admin:
+        raise HTTPException(status_code=404, detail=f"Admin not found: {pubkey}")
+
+    return InternalAdminRecordResponse(
+        id=int(admin["id"]),
+        pubkey=admin["pubkey"],
+        session_nonce=int(admin.get("session_nonce", 0) or 0),
+    )
+
+
+@router.get("/user-types/{user_type_id}", response_model=InternalUserTypeResponse, dependencies=[Depends(_require_internal_token)])
+async def get_user_type_record(user_type_id: int) -> InternalUserTypeResponse:
+    user_type = database.get_user_type(user_type_id)
+    if not user_type:
+        raise HTTPException(status_code=404, detail=f"User type not found: {user_type_id}")
+
+    return InternalUserTypeResponse(
+        id=int(user_type["id"]),
+        name=user_type["name"],
+        description=user_type.get("description"),
+        icon=user_type.get("icon"),
+        display_order=int(user_type.get("display_order", 0) or 0),
+        created_at=user_type.get("created_at"),
+    )
 
 
 @router.post("/document-search", response_model=InternalDocumentSearchResponse, dependencies=[Depends(_require_internal_token)])

@@ -1,152 +1,136 @@
 # enclave.free-prototype
 
-Prototype fork of `enclave.free` that hard-cuts the AI runtime from the legacy Maple request/response flow to Sage + Tinfoil.
+Prototype fork of `enclave.free` that keeps the public API at `:8000` while hard-cutting Agent Runtime behavior from the legacy Python path to Sage + Tinfoil.
+
+On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx only routes requests. Sage now owns auth verification, CORS, CSRF, Agent Settings, and the public Agent Runtime route contract directly.
+
+## System Summary
+
+- `frontend` still talks to `http://localhost:8000`.
+- `backend` is an nginx gateway, not the product backend.
+- `core-backend` remains the FastAPI Enclave Control Plane for auth issuance, admin/product APIs, ingest, document access, and the private Sage control-plane contract.
+- `sage` runs the `enclave_web` Axum binary and owns the Agent Runtime: public AI routes, route auth, CSRF, CORS, Agent Settings, and Conversation continuity.
+- `tinfoil-proxy` is the OpenAI-compatible Tinfoil transport used by Sage's preferred Model Provider path.
+- `postgres` stores Sage Session Memory and `web_sessions`.
+- `qdrant` stays the Enclave document retrieval index.
+
+## Topology
+
+```text
+frontend -> gateway(:8000) -> { core-backend(:8000 internal), sage(:3000 internal) }
+```
+
+Public route ownership on this branch:
+
+| Route family | Owner |
+| --- | --- |
+| `/llm/chat` | Sage |
+| `/query` | Sage |
+| `/query/session/*` | Sage |
+| `/session-defaults` | Sage |
+| `/admin/tools/execute` | Sage public entry, executed through Python private control-plane endpoint |
+| `/admin/ai-config/*` | Sage |
+| everything else | `core-backend` |
+
+The short version is: Sage is the Agent Runtime, Python is still the Enclave Control Plane, and the Gateway keeps the public API stable without owning application behavior.
 
 ## Quick Start
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- ~4GB disk space (for embedding model cache)
+- Docker and Docker Compose
+- around 4 GB free disk for model cache and containers
 
-### Configure Environment (Recommended)
+### Configure Environment
 
 ```bash
 cp .env.example .env
-# Set TINFOIL_API_KEY and INTERNAL_AGENT_TOKEN in .env
-# For production email auth, set MOCK_EMAIL=false and configure SMTP_* + FRONTEND_URL
-# You can also manage LLM/SMTP/domain settings later in the admin UI at /admin/deployment
+# required: LLM_API_KEY and TINFOIL_API_KEY for Compose
+# required: INTERNAL_AGENT_TOKEN
+# required: SECRET_KEY
+# optional: SMTP_* and FRONTEND_URL for real email auth flows
 ```
 
-### Start the Stack
+### Start The Stack
 
-Docker Compose is split into two files:
-- **`docker-compose.infra.yml`** — Infrastructure services (Postgres, Tinfoil proxy, Qdrant, SearXNG)
-- **`docker-compose.app.yml`** — Application services (gateway, core-backend, Sage, frontend)
+Compose is split into infrastructure and app layers:
 
-This separation lets you keep infrastructure running while rebuilding just the app, avoiding database restarts when only code changes.
+- `docker-compose.infra.yml`: `postgres`, `tinfoil-proxy`, `qdrant`, `searxng`
+- `docker-compose.app.yml`: `core-backend`, `sage`, `backend` gateway, `frontend`
 
 ```bash
-# First time or full restart: start everything
+# full startup
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d
 
-# Rebuild only app (keeps infra services running: postgres, tinfoil-proxy, qdrant, searxng)
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d backend core-backend sage frontend
+# rebuild only the app layer
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d core-backend sage backend frontend
 ```
 
 First startup will:
-1. Pull Postgres/Qdrant/Tinfoil/SearXNG images
-2. Build the FastAPI backend, Sage web runtime, and gateway
-3. Download the embedding model (~500MB)
-4. Initialize SQLite and Sage Postgres state
+
+1. pull Postgres, Tinfoil, Qdrant, and SearXNG images
+2. build the FastAPI backend, Sage runtime, gateway, and frontend
+3. download the embedding model cache
+4. initialize SQLite and Sage Postgres state
 
 ### Verify Setup
 
-Once running, test the smoke test endpoint:
-
 ```bash
 curl http://localhost:8000/test
+curl http://localhost:8000/health
+curl http://localhost:8000/llm/test
 ```
 
-Expected response:
-```json
-{
-  "qdrant": {
-    "status": "ok",
-    "vector_id": "6437e612-5e33-5e2e-99ee-b40fa6a6b018",
-    "payload": {
-      "claim_id": "claim_udhr_1948",
-      "text": "La Declaración Universal de Derechos Humanos fue adoptada en 1948.",
-      "language": "es"
-    },
-    "vector_dimension": 768
-  },
-  "message": "Smoke test passed!",
-  "success": true
-}
-```
+Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the frontend Test Dashboard. Open `http://localhost:5173/` after startup and confirm the dashboard loads and responds.
 
-### Admin Setup (First Run)
+Only two services are exposed to the host by default:
 
-Sanctum requires a NIP-07 admin login before user signups are enabled. Open the frontend at `http://localhost:5173` and complete the admin login flow. Until the first admin authenticates, `/auth/magic-link` returns `503` ("Instance not configured").
+- frontend: `http://localhost:5173`
+- public API gateway: `http://localhost:8000`
 
-After the first admin login, additional configuration is available in the admin UI:
-- `/admin/instance` - branding and instance settings
-- `/admin/users` - user types, user type migration, and onboarding fields
-- `/admin/ai` - prompt and LLM parameters
-- `/admin/deployment` - deployment config (LLM, SMTP, domains, SSL)
+Everything else stays on the internal Docker network:
 
-See `docs/admin-deployment-config.md` for deployment config details.
-See `docs/user-reachout.md` for configuring the optional authenticated user reachout email flow.
-See `docs/data-protection-notice-template.md` for instance-level data protection notice language you can adapt for users.
-See `docs/sessions.md` for cookie/bearer session behavior and `/query` conversation `session_id`s.
-See `docs/security.md` and `docs/security-data-protection-checklist.md` for production hardening.
+- Sage runtime: `http://sage:3000`
+- core backend: `http://core-backend:8000`
+- Tinfoil proxy: `http://tinfoil-proxy:8089/v1`
+- Qdrant: `http://qdrant:6333`
+- Postgres: `postgres://sage:sage@postgres:5432/sage`
+- SearXNG: `http://searxng:8080`
 
-### Available Endpoints
+### First Admin Setup
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /` | API info |
-| `GET /health` | Service health check |
-| `GET /test` | Smoke test (Qdrant + health check) |
-| `GET /llm/test` | LLM connectivity test |
+The prototype still uses the Enclave admin bootstrap flow:
 
-### Service URLs
+1. open `http://localhost:5173`
+2. complete the first NIP-07 admin login
+3. configure instance, user, AI, and deployment settings from the admin UI
 
-| Service | URL |
-|---------|-----|
-| Vite Frontend | http://localhost:5173 |
-| API Gateway | http://localhost:8000 |
-| Qdrant Dashboard | http://localhost:6333/dashboard |
-| Tinfoil Proxy | http://localhost:8089 |
+Until the first admin authenticates, public user signup remains gated.
 
-### Stop the Stack
+## Where To Read Next
 
-```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down
-
-# To also remove volumes (clears all data)
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v
-```
-
-## Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│  API Gate   │────▶│   SQLite    │
-│   (Vite)    │     │  (FastAPI)  │     │   (Data)    │
-└─────────────┘     └──────┬──────┘     └─────────────┘
-                           │
-                ┌──────────┼───────────────┬─────────────┐
-                ▼          ▼               ▼             ▼
-         ┌──────────┐ ┌────────────┐ ┌────────┐ ┌────────────┐
-         │  Qdrant  │ │ Sage Web   │ │SearXNG │ │ Tinfoil    │
-         │(Vectors) │ │  Runtime   │ │(Search)│ │  Proxy     │
-         └──────────┘ └────────────┘ └────────┘ └────────────┘
-```
-
-## Embedding Model
-
-Uses `intfloat/multilingual-e5-base`:
-- 768-dimensional embeddings
-- Multilingual support (including Spanish)
-- CPU-friendly operation
-- ~500MB model size
+- [docs/prototype-sage-cutover.md](docs/prototype-sage-cutover.md): cutover story, route ownership, and private contract
+- [docs/dumb-gateway-foundation.md](docs/dumb-gateway-foundation.md): current branch design, native Sage auth, and remaining productization work
+- [docs/internal-agent-contract.md](docs/internal-agent-contract.md): private Sage-to-Python contract used by this prototype
+- [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md): service topology and request/data flow
+- [docs/tools.md](docs/tools.md): `/llm/chat` vs `/query` tool behavior
+- [docs/sessions.md](docs/sessions.md): auth, CSRF, and Sage-backed public query-session records plus Session Memory
+- [docs/admin-deployment-config.md](docs/admin-deployment-config.md): config ownership split across gateway, Python, Sage, and Tinfoil
 
 ## Development
 
-### View Logs
+Useful logs:
 
 ```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f backend
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f core-backend
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f sage
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f qdrant
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f backend
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f tinfoil-proxy
 ```
 
-### Rebuild Backend
+Stop the stack:
 
 ```bash
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build backend core-backend sage
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v
 ```

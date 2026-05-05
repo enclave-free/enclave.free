@@ -4,10 +4,10 @@
 
 import type { TFunction } from 'i18next'
 
-export const DEFAULT_MAPLE_MODEL = 'kimi-k2.5'
-export const MAPLE_SIGNUP_URL = 'https://trymaple.ai'
+export const DEFAULT_TINFOIL_MODEL = 'kimi-k2-6'
+export const TINFOIL_SIGNUP_URL = 'https://tinfoil.sh'
 
-// --- AI Configuration Types ---
+// --- Agent Settings Compatibility Types ---
 
 export interface AIConfigItem {
   key: string
@@ -38,7 +38,7 @@ export interface AIConfigUpdate {
   value: string
 }
 
-// --- AI Config User-Type Override Types ---
+// --- Agent Settings User-Type Override Types ---
 
 export interface AIConfigWithInheritance {
   key: string
@@ -283,9 +283,9 @@ export type ConfigCategory = typeof CONFIG_CATEGORY_KEYS[number]
 export function getConfigCategories(t: TFunction): Record<ConfigCategory, ConfigCategoryMeta> {
   return {
     llm: {
-      label: t('configCategories.llm.label', 'Sage AI Runtime'),
+      label: t('configCategories.llm.label', 'Sage Agent Runtime'),
       description: t('configCategories.llm.description', 'Configure Sage + Tinfoil inference'),
-      hint: t('configCategories.llm.hint', 'This prototype routes AI traffic through Sage and uses Tinfoil as the model backend. Configure the shared LLM_* settings here. Changes require a service restart to take effect.'),
+      hint: t('configCategories.llm.hint', 'This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Configure the shared LLM_* compatibility settings here. Changes require a service restart to take effect.'),
     },
     embedding: {
       label: t('configCategories.embedding.label', 'Text Processing'),
@@ -477,18 +477,18 @@ export type DeploymentConfigItemKey = typeof DEPLOYMENT_CONFIG_KEY_LIST[number]
 export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConfigItemKey, DeploymentConfigItemMeta> {
   return {
     LLM_PROVIDER: {
-      label: t('deploymentConfigItems.LLM_PROVIDER.label', 'AI Service'),
-      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'LLM runtime owner'),
+      label: t('deploymentConfigItems.LLM_PROVIDER.label', 'Model Provider'),
+      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'Model Provider compatibility label'),
       hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Use "sage" for this prototype. Legacy "maple" is retained only for compatibility.'),
     },
     LLM_MODEL: {
       label: t('deploymentConfigItems.LLM_MODEL.label', 'Model Name'),
       description: t('deploymentConfigItems.LLM_MODEL.description', 'Model name/identifier'),
-      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_MAPLE_MODEL}").`),
+      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_TINFOIL_MODEL}").`),
     },
     LLM_API_URL: {
       label: t('deploymentConfigItems.LLM_API_URL.label', 'API Endpoint'),
-      description: t('deploymentConfigItems.LLM_API_URL.description', 'Base URL for API requests'),
+      description: t('deploymentConfigItems.LLM_API_URL.description', 'Model Provider API base URL'),
       hint: t('deploymentConfigItems.LLM_API_URL.hint', 'The Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1.'),
     },
     LLM_API_KEY: {

@@ -1,6 +1,6 @@
 # Document Upload & Ingestion Guide
 
-This guide explains how to upload documents to your locally running Sanctum server and monitor the ingestion process as it populates Qdrant (vector store).
+This guide explains how to upload documents to your locally running Sanctum server and monitor the ingestion process as it populates Qdrant (the document retrieval index).
 
 ## Prerequisites
 

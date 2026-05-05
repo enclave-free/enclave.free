@@ -8,7 +8,7 @@
 
 Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for building, maintaining, and querying curated knowledge bases. Sanctum is designed to be domain-agnostic and fully configurable for any use case requiring privacy, accuracy, and explainability.
 
-Sanctum runs locally as a Docker Compose application. It combines a structured knowledge graph, a vector search index, and a secure Maple-backed LLM layer to produce grounded, explainable answers — without relying on public RAG services or opaque cloud infrastructure.
+Sanctum runs locally as a Docker Compose application. It combines a structured knowledge graph, a vector search index, and a secure OpenAI-compatible LLM layer to produce grounded, explainable answers — without relying on public RAG services or opaque cloud infrastructure.
 
 ---
 
@@ -30,7 +30,7 @@ The planned architecture includes the following runtime components:
 - **Graph Store**: Neo4j (canonical structured knowledge)
 - **Vector Store**: Qdrant (semantic recall)
 - **Knowledge Engine**: Graphiti (graph ingestion + retrieval)
-- **LLM Provider**: Maple Proxy (secure, OpenAI-compatible, structured outputs)
+- **LLM Provider**: Sage + Tinfoil or another secure OpenAI-compatible backend
 - **Optional Local LLM**: Ollama (local inference alternative)
 - **Deployment**: Docker Compose
 
@@ -79,7 +79,7 @@ It performs four core roles:
 
 3. **Generation orchestration**
    - Assemble a bounded, structured context packet
-   - Call the LLM via Maple Proxy
+   - Call the LLM via Sage + Tinfoil or another secure OpenAI-compatible backend
    - Enforce structured outputs and citation requirements
 
 4. **System operations**
@@ -118,7 +118,7 @@ In this model, Neo4j is the source of truth. Qdrant is a recall accelerator.
 4. The backend resolves these to graph entities and relationships
 5. Graphiti expands and filters the relevant subgraph
 6. A structured context packet is assembled
-7. The context packet is sent to the LLM via Maple Proxy
+7. The context packet is sent to the LLM via Sage + Tinfoil or another secure OpenAI-compatible backend
 8. The LLM composes a response using retrieved context only
 9. The backend returns the answer with citations
 
@@ -152,17 +152,19 @@ Provenance is a first-class concern. All claims are expected to reference source
 
 ---
 
-## LLM Provider: Maple Proxy
+## LLM Provider
 
-Sanctum uses **Maple Proxy** as its LLM service provider.
+Sanctum uses a secure OpenAI-compatible LLM service provider. In the current prototype, Sage is the public route owner for AI runtime ingress and policy enforcement.
 
-Maple Proxy:
+The backend orchestrator invokes the OpenAI-compatible provider for generation and structured extraction on Sage's behalf where the service layer still owns that workflow.
+
+The provider:
 - Is OpenAI-compatible
 - Provides secure transport and execution
 - Supports **structured outputs**, which Graphiti depends on
 - Allows Sanctum to enforce JSON schemas and deterministic extraction
 
-The backend treats Maple as a generation and extraction service, not a decision-maker.
+Sage and the backend orchestrator both treat the LLM provider as a generation and extraction service, not a decision-maker.
 
 ---
 
@@ -173,7 +175,7 @@ Sanctum optionally supports **Ollama** for local inference.
 Ollama can be used:
 - for local testing
 - for offline scenarios
-- as an alternative to Maple in trusted environments
+- as an alternative to remote or confidential-compute inference in trusted environments
 
 This is optional and configurable via Docker Compose profiles.
 
@@ -187,7 +189,7 @@ The planned deployment includes containers for:
 - Vite frontend
 - Neo4j
 - Qdrant
-- Maple Proxy client configuration
+- OpenAI-compatible provider proxy
 - Optional Ollama
 
 All stateful services use persistent volumes.

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Simple test script to check if Maple Proxy supports embeddings.
+Simple test script to check if Sage/Tinfoil proxy supports embeddings.
 
 Usage:
-    python test_maple_embeddings.py
+    python test_sage_tinfoil_embeddings.py
 
 Requires:
-    - Maple Proxy running (desktop app or docker)
-    - MAPLE_API_KEY in .env file (or desktop app handles it)
+    - Sage/Tinfoil proxy running (desktop app or docker)
+    - API key in .env: LLM_API_KEY is preferred, falling back to TINFOIL_API_KEY
+      (or desktop app handles it)
 """
 
 import os
@@ -19,13 +20,15 @@ from openai import OpenAI
 load_dotenv()
 
 # Configuration
-MAPLE_BASE_URL = os.getenv("MAPLE_BASE_URL", "http://localhost:8080/v1")
-MAPLE_API_KEY = os.getenv("MAPLE_API_KEY", "not-required")
+TINFOIL_API_URL: str = (
+    os.getenv("LLM_API_URL") or os.getenv("TINFOIL_API_URL") or "http://localhost:8089/v1"
+).rstrip("/")
+TINFOIL_API_KEY: str = os.getenv("LLM_API_KEY") or os.getenv("TINFOIL_API_KEY") or "not-required"
 
-# Initialize client pointing to Maple (for listing models)
+# Initialize client pointing to Sage/Tinfoil proxy (for listing models)
 client = OpenAI(
-    base_url=MAPLE_BASE_URL,
-    api_key=MAPLE_API_KEY
+    base_url=TINFOIL_API_URL,
+    api_key=TINFOIL_API_KEY
 )
 
 def list_models():
@@ -41,16 +44,16 @@ def list_models():
         return []
 
 def test_embedding(model: str, text: str):
-    """Attempt to create an embedding using raw HTTP (OpenAI SDK has issues with Maple)."""
-    print(f"\n=== Testing Embedding ===")
+    """Attempt to create an embedding using raw HTTP (OpenAI SDK has issues with the OpenAI-compatible proxy)."""
+    print("\n=== Testing Embedding ===")
     print(f"Model: {model}")
     print(f"Text: {text[:50]}...")
     
     try:
         response = httpx.post(
-            f"{MAPLE_BASE_URL}/embeddings",
+            f"{TINFOIL_API_URL}/embeddings",
             headers={
-                "Authorization": f"Bearer {MAPLE_API_KEY}",
+                "Authorization": f"Bearer {TINFOIL_API_KEY}",
                 "Content-Type": "application/json"
             },
             json={"model": model, "input": [text]},
@@ -79,9 +82,9 @@ def benchmark_embeddings(model: str, sentences: list[str]):
     for i, sentence in enumerate(sentences):
         try:
             response = httpx.post(
-                f"{MAPLE_BASE_URL}/embeddings",
+                f"{TINFOIL_API_URL}/embeddings",
                 headers={
-                    "Authorization": f"Bearer {MAPLE_API_KEY}",
+                    "Authorization": f"Bearer {TINFOIL_API_KEY}",
                     "Content-Type": "application/json"
                 },
                 json={"model": model, "input": [sentence]},
@@ -106,8 +109,12 @@ def benchmark_embeddings(model: str, sentences: list[str]):
     print(f"\n=== Results ===")
     print(f"Total time: {total_time:.2f}s")
     print(f"Successful: {successful}/{len(sentences)}")
-    print(f"Avg per sentence: {total_time/len(sentences)*1000:.1f}ms")
-    print(f"Throughput: {len(sentences)/total_time:.1f} sentences/sec")
+    if sentences:
+        print(f"Avg per sentence: {total_time/len(sentences)*1000:.1f}ms")
+        throughput = len(sentences) / total_time if total_time > 0 else 0
+        print(f"Throughput: {throughput:.1f} sentences/sec")
+    else:
+        print("No sentences to benchmark")
     
     return embeddings, total_time
 
@@ -221,7 +228,7 @@ All you need is an internet connection and curiosity.
 """.strip().split('\n')
 
 if __name__ == "__main__":
-    print(f"Maple Proxy URL: {MAPLE_BASE_URL}\n")
+    print(f"Sage/Tinfoil proxy URL: {TINFOIL_API_URL}\n")
     
     # First, list available models
     available_models = list_models()

@@ -42,6 +42,11 @@ def init_ingest_schema():
             status TEXT NOT NULL DEFAULT 'pending',
             ontology_id TEXT NOT NULL,
             sample_percent REAL DEFAULT 100.0,
+            canonical_name TEXT,
+            replacement_for_job_id TEXT,
+            replaced_by_job_id TEXT,
+            is_current INTEGER DEFAULT 1,
+            content_sha256 TEXT,
             total_chunks INTEGER DEFAULT 0,
             processed_chunks INTEGER DEFAULT 0,
             failed_chunks INTEGER DEFAULT 0,
@@ -71,14 +76,59 @@ def init_ingest_schema():
     #     )
     # """)
 
-    # Index for faster job lookups by status
+    conn.commit()
+    cursor.close()
+
+    _migrate_add_replacement_columns()
+
+    # Index for faster job lookups by status. Keep this after migrations so
+    # upgraded SQLite volumes have replacement columns before indexes use them.
+    cursor = conn.cursor()
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ingest_jobs_status ON ingest_jobs(status)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ingest_jobs_canonical_current
+        ON ingest_jobs(canonical_name, is_current)
     """)
 
     conn.commit()
     cursor.close()
     logger.info("Ingest schema initialized")
+
+
+def _migrate_add_replacement_columns() -> None:
+    """Add document replacement lifecycle columns to existing ingest_jobs tables."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(ingest_jobs)")
+    columns = {row[1] for row in cursor.fetchall()}
+
+    migrations = {
+        "canonical_name": "ALTER TABLE ingest_jobs ADD COLUMN canonical_name TEXT",
+        "replacement_for_job_id": "ALTER TABLE ingest_jobs ADD COLUMN replacement_for_job_id TEXT",
+        "replaced_by_job_id": "ALTER TABLE ingest_jobs ADD COLUMN replaced_by_job_id TEXT",
+        "is_current": "ALTER TABLE ingest_jobs ADD COLUMN is_current INTEGER DEFAULT 1",
+        "content_sha256": "ALTER TABLE ingest_jobs ADD COLUMN content_sha256 TEXT",
+    }
+
+    for column, sql in migrations.items():
+        if column not in columns:
+            cursor.execute(sql)
+            logger.info(f"Migration: Added '{column}' column to ingest_jobs")
+
+    cursor.execute("""
+        UPDATE ingest_jobs
+        SET canonical_name = filename
+        WHERE canonical_name IS NULL OR canonical_name = ''
+    """)
+    cursor.execute("""
+        UPDATE ingest_jobs
+        SET is_current = 1
+        WHERE is_current IS NULL
+    """)
+    conn.commit()
+    cursor.close()
 
 
 # =============================================================================
@@ -91,6 +141,10 @@ def create_job(
     file_path: str,
     ontology_id: str,
     sample_percent: float = 100.0,
+    canonical_name: str | None = None,
+    replacement_for_job_id: str | None = None,
+    content_sha256: str | None = None,
+    is_current: bool = True,
 ) -> int:
     """
     Create a new ingest job record.
@@ -101,15 +155,32 @@ def create_job(
         file_path: Path to saved file
         ontology_id: Ontology used for extraction
         sample_percent: Percentage of chunks to process (for testing)
+        canonical_name: Optional operator-facing document name. Defaults to filename when omitted.
+        replacement_for_job_id: Optional job ID this job is replacing. Defaults to None.
+        content_sha256: Optional SHA-256 digest of the uploaded content. Defaults to None.
+        is_current: Whether this job is the active current document. Defaults to True and is stored as 1/0.
     
     Returns:
         SQLite row ID of created job
     """
     with get_cursor() as cursor:
         cursor.execute("""
-            INSERT INTO ingest_jobs (job_id, filename, file_path, ontology_id, sample_percent)
-            VALUES (?, ?, ?, ?, ?)
-        """, (job_id, filename, file_path, ontology_id, sample_percent))
+            INSERT INTO ingest_jobs (
+                job_id, filename, file_path, ontology_id, sample_percent,
+                canonical_name, replacement_for_job_id, is_current, content_sha256
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            job_id,
+            filename,
+            file_path,
+            ontology_id,
+            sample_percent,
+            canonical_name or filename,
+            replacement_for_job_id,
+            int(is_current),
+            content_sha256,
+        ))
         logger.info(f"Created ingest job: {job_id} ({filename})")
         return cursor.lastrowid
 
@@ -179,6 +250,7 @@ def list_completed_jobs() -> list[dict]:
     cursor.execute("""
         SELECT * FROM ingest_jobs 
         WHERE status IN ('completed', 'completed_with_errors')
+          AND is_current = 1
         ORDER BY created_at DESC
     """)
     rows = cursor.fetchall()
@@ -194,6 +266,56 @@ def job_exists(job_id: str) -> bool:
     exists = cursor.fetchone() is not None
     cursor.close()
     return exists
+
+
+def get_current_job_by_canonical_name(canonical_name: str) -> Optional[dict]:
+    """Get the current completed job for a canonical document name."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM ingest_jobs
+        WHERE canonical_name = ?
+          AND is_current = 1
+          AND status IN ('completed', 'completed_with_errors')
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (canonical_name,))
+    row = cursor.fetchone()
+    cursor.close()
+    return dict(row) if row else None
+
+
+def get_inflight_replacement_by_canonical_name(canonical_name: str) -> Optional[dict]:
+    """Get a pending/processing replacement for a canonical document name."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM ingest_jobs
+        WHERE canonical_name = ?
+          AND replacement_for_job_id IS NOT NULL
+          AND status IN ('pending', 'processing')
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (canonical_name,))
+    row = cursor.fetchone()
+    cursor.close()
+    return dict(row) if row else None
+
+
+def list_current_jobs(limit: int = 500) -> list[dict]:
+    """List current completed jobs only."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM ingest_jobs
+        WHERE is_current = 1
+          AND status IN ('completed', 'completed_with_errors')
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    cursor.close()
+    return [dict(row) for row in rows]
 
 
 # =============================================================================
@@ -247,6 +369,39 @@ def update_job_status(
             params
         )
         return cursor.rowcount > 0
+
+
+def promote_replacement(new_job_id: str, old_job_id: str) -> bool:
+    """Mark a successful replacement as current and retire the old job."""
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM ingest_jobs WHERE job_id IN (?, ?)",
+            (new_job_id, old_job_id),
+        )
+        if cursor.fetchone()["count"] != 2:
+            raise ValueError("Both replacement jobs must exist before promotion")
+
+        cursor.execute("""
+            UPDATE ingest_jobs
+            SET is_current = 0,
+                replaced_by_job_id = ?,
+                updated_at = ?
+            WHERE job_id = ?
+        """, (new_job_id, datetime.utcnow().isoformat(), old_job_id))
+        old_updated = cursor.rowcount > 0
+
+        cursor.execute("""
+            UPDATE ingest_jobs
+            SET is_current = 1,
+                updated_at = ?
+            WHERE job_id = ?
+        """, (datetime.utcnow().isoformat(), new_job_id))
+        new_updated = cursor.rowcount > 0
+
+        if not old_updated or not new_updated:
+            raise RuntimeError("Failed to atomically promote replacement jobs")
+
+        return old_updated and new_updated
 
 
 # =============================================================================

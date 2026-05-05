@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Upload, FileText, X, CloudUpload, Loader2, Clock, ArrowLeft, HelpCircle, ChevronLeft, ChevronRight, CheckCircle2, Trash2, AlertTriangle, Layers } from 'lucide-react'
+import { Upload, FileText, X, CloudUpload, Loader2, Clock, ArrowLeft, HelpCircle, ChevronLeft, ChevronRight, CheckCircle2, Trash2, AlertTriangle, Layers, FolderOpen, Files } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import {
   UploadResponse,
+  BatchUploadResponse,
   JobStatus,
   JobsListResponse,
   isAllowedFileType,
@@ -12,17 +13,32 @@ import {
 } from '../types/ingest'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 
+type UploadQueueItem = {
+  id: string
+  file: File
+  displayName: string
+  relativePath: string
+  status: 'ready' | 'invalid' | 'duplicate'
+  reason?: string
+}
+
+type FileWithPath = File & { webkitRelativePath?: string }
+
+const fileRelativePath = (file: File) => (file as FileWithPath).webkitRelativePath || ''
+
 export function AdminDocumentUpload() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
   // State
   const [isDragging, setIsDragging] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<UploadQueueItem[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadSuccess, setUploadSuccess] = useState<{ filename: string; jobId: string } | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState<{ label: string; count: number; rejected: number } | null>(null)
   const [recentJobs, setRecentJobs] = useState<JobStatus[]>([])
   const [isLoadingJobs, setIsLoadingJobs] = useState(true)
   const [isRefreshingJobs, setIsRefreshingJobs] = useState(false)
@@ -44,14 +60,85 @@ export function AdminDocumentUpload() {
 
   // Timeout ref for cleanup
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const currentUploadPageUrlRef = useRef(`${location.pathname}${location.search}${location.hash}`)
   const isFetchingJobsRef = useRef(false)
   const recentJobsRef = useRef<JobStatus[]>([])
 
   const JOBS_FETCH_TIMEOUT_MS = 30000
+  const validSelectedFiles = selectedFiles.filter((item) => item.status === 'ready')
+  const rejectedSelectedFiles = selectedFiles.filter((item) => item.status !== 'ready')
   const fixedT = i18n.getFixedT(i18n.language)
+  const uploadNavigationWarning = t(
+    'upload.navigationWarning',
+    'Your document is still being transferred. Leave only after processing has started, or the upload may not be saved.'
+  )
   const translateErrorMessage = (message: string) => (
     message.startsWith('errors.') && i18n.exists(message) ? fixedT(message) : message
   )
+
+  useEffect(() => {
+    currentUploadPageUrlRef.current = `${location.pathname}${location.search}${location.hash}`
+  }, [location])
+
+  useEffect(() => {
+    folderInputRef.current?.setAttribute('webkitdirectory', '')
+    folderInputRef.current?.setAttribute('directory', '')
+  }, [])
+
+  useEffect(() => {
+    if (!isUploading) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = uploadNavigationWarning
+    }
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.shiftKey
+      ) {
+        return
+      }
+
+      const target = event.target
+      if (!(target instanceof Element)) return
+
+      const anchor = target.closest('a[href]')
+      if (!(anchor instanceof HTMLAnchorElement)) return
+
+      const destination = new URL(anchor.href, window.location.href)
+      const destinationUrl = `${destination.pathname}${destination.search}${destination.hash}`
+      if (destinationUrl === currentUploadPageUrlRef.current) return
+
+      if (!window.confirm(uploadNavigationWarning)) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+
+    const handlePopState = () => {
+      if (!isUploading) return
+
+      if (!window.confirm(uploadNavigationWarning)) {
+        window.history.pushState(null, '', currentUploadPageUrlRef.current)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('click', handleDocumentClick, true)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('click', handleDocumentClick, true)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [isUploading, uploadNavigationWarning])
 
   // Cleanup success timeout on unmount
   useEffect(() => {
@@ -113,6 +200,11 @@ export function AdminDocumentUpload() {
             updated_at: job.created_at, // Best guess from list data
             total_chunks: job.total_chunks,
             processed_chunks: 0, // Unknown, default to 0
+            canonical_name: job.canonical_name,
+            replacement_for_job_id: job.replacement_for_job_id,
+            replacement_for_filename: job.replacement_for_filename,
+            replaced_by_job_id: job.replaced_by_job_id,
+            is_current: job.is_current,
           }
 
           try {
@@ -246,17 +338,56 @@ export function AdminDocumentUpload() {
     }
   }, [recentJobs, fetchJobs])
 
-  // Handle file selection
-  const handleFileSelect = (file: File) => {
-    setUploadError(null)
+  const buildQueueItems = (files: File[]) => {
+    const seen = new Set<string>()
+    return files.map((file, index): UploadQueueItem => {
+      const relativePath = fileRelativePath(file)
+      const displayName = relativePath || file.name
+      const id = `${displayName}:${file.size}:${file.lastModified}:${index}`
 
-    // TODO: Add file size validation (check backend MAX_UPLOAD_SIZE)
-    if (!isAllowedFileType(file.name)) {
-      setUploadError(t('upload.invalidFileType', { extensions: getAllowedExtensionsDisplay() }))
+      if (!isAllowedFileType(displayName)) {
+        return {
+          id,
+          file,
+          displayName,
+          relativePath,
+          status: 'invalid',
+          reason: t('upload.invalidFileType', { extensions: getAllowedExtensionsDisplay() }),
+        }
+      }
+
+      if (seen.has(displayName)) {
+        return {
+          id,
+          file,
+          displayName,
+          relativePath,
+          status: 'duplicate',
+          reason: t('upload.duplicateInBatch', 'Duplicate document name in this batch'),
+        }
+      }
+
+      seen.add(displayName)
+      return {
+        id,
+        file,
+        displayName,
+        relativePath,
+        status: 'ready',
+      }
+    })
+  }
+
+  // Handle file selection
+  const handleFilesSelect = (files: File[]) => {
+    setUploadError(null)
+    setUploadSuccess(null)
+
+    if (files.length === 0) {
       return
     }
 
-    setSelectedFile(file)
+    setSelectedFiles(buildQueueItems(files))
   }
 
   // Handle drag events
@@ -274,54 +405,71 @@ export function AdminDocumentUpload() {
     e.preventDefault()
     setIsDragging(false)
 
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleFileSelect(file)
-    }
+    handleFilesSelect(Array.from(e.dataTransfer.files))
   }
 
   // Handle file input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleFileSelect(file)
-    }
+    handleFilesSelect(Array.from(e.target.files || []))
   }
 
   // Handle upload
   const handleUpload = async () => {
-    if (!selectedFile) return
+    if (validSelectedFiles.length === 0) return
 
     setIsUploading(true)
     setUploadError(null)
     setUploadSuccess(null)
 
-    const filename = selectedFile.name
+    const uploadLabel = validSelectedFiles.length === 1
+      ? validSelectedFiles[0].displayName
+      : t('upload.documentsSelected', '{{count}} documents', { count: validSelectedFiles.length })
 
     try {
       const formData = new FormData()
-      formData.append('file', selectedFile)
+      const useBatchEndpoint = validSelectedFiles.length > 1 || validSelectedFiles.some((item) => item.relativePath)
+      let response: Response
 
-      const response = await adminFetch('/ingest/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      if (useBatchEndpoint) {
+        validSelectedFiles.forEach((item) => {
+          formData.append('files', item.file)
+          formData.append('relative_paths', item.relativePath)
+        })
+        response = await adminFetch('/ingest/upload/batch', {
+          method: 'POST',
+          body: formData,
+        })
+      } else {
+        formData.append('file', validSelectedFiles[0].file)
+        response = await adminFetch('/ingest/upload', {
+          method: 'POST',
+          body: formData,
+        })
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.detail || 'Upload failed')
       }
 
-      const data: UploadResponse = await response.json()
+      const data: UploadResponse | BatchUploadResponse = await response.json()
       console.log('Upload successful:', data)
 
-      // Show success state
-      setUploadSuccess({ filename, jobId: data.job_id })
+      // Once the backend returns a job_id, ingestion is durable and navigation is safe.
+      setIsUploading(false)
 
-      // Clear selected file
-      setSelectedFile(null)
+      // Show success state
+      const acceptedCount = 'accepted' in data ? data.accepted.length : 1
+      const rejectedCount = ('rejected' in data ? data.rejected.length : 0) + rejectedSelectedFiles.length
+      setUploadSuccess({ label: uploadLabel, count: acceptedCount, rejected: rejectedCount })
+
+      // Clear selected files
+      setSelectedFiles([])
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
+      }
+      if (folderInputRef.current) {
+        folderInputRef.current.value = ''
       }
 
       // Refresh job list
@@ -346,11 +494,18 @@ export function AdminDocumentUpload() {
 
   // Cancel file selection
   const handleCancelFile = () => {
-    setSelectedFile(null)
+    setSelectedFiles([])
     setUploadError(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    if (folderInputRef.current) {
+      folderInputRef.current.value = ''
+    }
+  }
+
+  const removeQueuedFile = (id: string) => {
+    setSelectedFiles((current) => buildQueueItems(current.filter((item) => item.id !== id).map((item) => item.file)))
   }
 
   // Get status display info
@@ -364,6 +519,8 @@ export function AdminDocumentUpload() {
         return { label: t('upload.status.chunked'), color: 'text-info', icon: <Layers className="w-3.5 h-3.5" /> }
       case 'completed':
         return { label: t('upload.status.complete'), color: 'text-success', icon: <CheckCircle2 className="w-3.5 h-3.5" /> }
+      case 'completed_with_errors':
+        return { label: t('upload.status.completedWithErrors', 'Completed with errors'), color: 'text-warning', icon: <AlertTriangle className="w-3.5 h-3.5" /> }
       case 'failed':
         return { label: t('upload.status.failed'), color: 'text-error', icon: <AlertTriangle className="w-3.5 h-3.5" /> }
       default:
@@ -429,13 +586,22 @@ export function AdminDocumentUpload() {
           <input
             ref={fileInputRef}
             type="file"
+            multiple
+            accept=".pdf,.txt,.md"
+            onChange={handleInputChange}
+            className="hidden"
+          />
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
             accept=".pdf,.txt,.md"
             onChange={handleInputChange}
             className="hidden"
           />
 
-          {/* Drop zone, selected file, or success state */}
-          {selectedFile ? (
+          {/* Drop zone, selected files, or success state */}
+          {selectedFiles.length > 0 ? (
             <div className="border border-border bg-surface rounded-xl p-4 animate-fade-in">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -450,12 +616,15 @@ export function AdminDocumentUpload() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-text truncate">
-                      {selectedFile.name}
+                      {t('upload.documentsSelected', '{{count}} documents selected', { count: selectedFiles.length })}
                     </p>
                     <p className="text-xs text-text-muted">
                       {isUploading
                         ? t('upload.uploadingStatus', 'Uploading to server...')
-                        : `${(selectedFile.size / 1024).toFixed(1)} KB`
+                        : t('upload.queueSummary', '{{valid}} ready, {{rejected}} skipped', {
+                          valid: validSelectedFiles.length,
+                          rejected: rejectedSelectedFiles.length,
+                        })
                       }
                     </p>
                   </div>
@@ -470,6 +639,50 @@ export function AdminDocumentUpload() {
                     <X className="w-5 h-5" />
                   </button>
                 )}
+              </div>
+
+              <div className="mt-4 max-h-56 overflow-y-auto space-y-2 pr-1">
+                {selectedFiles.map((item) => {
+                  const isReady = item.status === 'ready'
+                  const isDuplicate = item.status === 'duplicate'
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${
+                        isReady ? 'bg-surface-overlay' : 'bg-warning/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className={`w-4 h-4 shrink-0 ${
+                          isReady ? 'text-text-muted' : 'text-warning'
+                        }`} />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-text truncate">
+                            {item.displayName}
+                          </p>
+                          <p className={`text-[11px] truncate ${
+                            isReady ? 'text-text-muted' : 'text-warning'
+                          }`}>
+                            {isReady
+                              ? `${(item.file.size / 1024).toFixed(1)} KB`
+                              : item.reason || (isDuplicate ? t('upload.duplicateInBatch', 'Duplicate document name in this batch') : t('upload.skipped', 'Skipped'))
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      {!isUploading && (
+                        <button
+                          onClick={() => removeQueuedFile(item.id)}
+                          className="min-w-10 min-h-10 inline-flex items-center justify-center rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-colors"
+                          title={t('upload.removeFile')}
+                          aria-label={t('upload.removeFile')}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Upload progress indicator */}
@@ -492,10 +705,16 @@ export function AdminDocumentUpload() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-text truncate">
-                    {uploadSuccess.filename}
+                    {uploadSuccess.label}
                   </p>
                   <p className="text-xs text-success">
-                    {t('upload.uploadedSuccess', 'Uploaded successfully — processing started')}
+                    {uploadSuccess.rejected > 0
+                      ? t('upload.uploadedPartialSuccess', '{{count}} queued, {{rejected}} skipped', {
+                        count: uploadSuccess.count,
+                        rejected: uploadSuccess.rejected,
+                      })
+                      : t('upload.uploadedSuccess', 'Uploaded successfully — processing started')
+                    }
                   </p>
                 </div>
               </div>
@@ -527,6 +746,30 @@ export function AdminDocumentUpload() {
               <p className="text-xs text-text-muted">
                 {t('upload.supported', { extensions: getAllowedExtensionsDisplay() })}
               </p>
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    fileInputRef.current?.click()
+                  }}
+                  className="min-h-10 inline-flex items-center gap-2 rounded-lg bg-accent text-accent-text px-3 py-2 text-xs font-medium hover:bg-accent-hover active-press transition-colors"
+                >
+                  <Files className="w-4 h-4" />
+                  {t('upload.chooseFiles', 'Choose files')}
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    folderInputRef.current?.click()
+                  }}
+                  className="min-h-10 inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-text hover:border-accent/50 active-press transition-colors"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  {t('upload.chooseFolder', 'Choose folder')}
+                </button>
+              </div>
             </div>
           )}
 
@@ -538,10 +781,10 @@ export function AdminDocumentUpload() {
           )}
 
           {/* Upload button */}
-          {selectedFile && (
+          {selectedFiles.length > 0 && (
             <button
               onClick={handleUpload}
-              disabled={isUploading}
+              disabled={isUploading || validSelectedFiles.length === 0}
               className="w-full mt-4 bg-accent text-accent-text rounded-xl px-6 py-3 font-medium hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all active-press flex items-center justify-center gap-2"
             >
               {isUploading ? (
@@ -552,7 +795,10 @@ export function AdminDocumentUpload() {
               ) : (
                 <>
                   <Upload className="w-4 h-4" />
-                  {t('upload.uploadDocument')}
+                  {validSelectedFiles.length > 1
+                    ? t('upload.uploadDocuments', 'Upload documents')
+                    : t('upload.uploadDocument')
+                  }
                 </>
               )}
             </button>
@@ -631,6 +877,11 @@ export function AdminDocumentUpload() {
                             {statusInfo.icon}
                             <span>{statusInfo.label}</span>
                           </span>
+                          {job.replacement_for_filename && (
+                            <span className="text-xs text-warning truncate">
+                              {t('upload.replacingDocument', 'Replacing {{filename}}', { filename: job.replacement_for_filename })}
+                            </span>
+                          )}
                           {job.total_chunks > 0 && (
                             <span className="text-xs text-text-muted">
                               {t('upload.chunks', { processed: job.processed_chunks, total: job.total_chunks })}

@@ -109,13 +109,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Test 4A: Unified admin chat tools parity")
     parser.add_argument("--api-base", default="http://localhost:8000", help="API base URL (default: http://localhost:8000)")
     parser.add_argument("--admin-token", help="Admin bearer token")
+    parser.add_argument("--token", help="Alias for --admin-token used by run_all_be_tests.py")
     parser.add_argument("--cookie-header", help="Raw Cookie header value")
     parser.add_argument("--message", default=DEFAULT_MESSAGE, help="Prompt sent to /llm/chat")
     parser.add_argument("--timeout", type=float, default=90.0, help="HTTP timeout seconds")
     args = parser.parse_args()
 
-    if not args.admin_token and not args.cookie_header:
-        print("[ERROR] Provide either --admin-token or --cookie-header")
+    admin_token = args.admin_token or args.token
+
+    if not admin_token and not args.cookie_header:
+        print("[ERROR] Provide --admin-token, --token, or --cookie-header")
         return 2
 
     parsed = urlparse(args.api_base)
@@ -124,8 +127,8 @@ def main() -> int:
         return 2
 
     headers = {"Content-Type": "application/json"}
-    if args.admin_token:
-        headers["Authorization"] = f"Bearer {args.admin_token}"
+    if admin_token:
+        headers["Authorization"] = f"Bearer {admin_token}"
     if args.cookie_header:
         headers["Cookie"] = args.cookie_header
 

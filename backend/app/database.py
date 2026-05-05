@@ -291,7 +291,7 @@ def init_schema():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_field_definitions_type ON user_field_definitions(user_type_id)")
     # Note: idx_user_field_definitions_encryption created in _migrate_add_encryption_enabled_column()
 
-    # AI Configuration table - stores AI/LLM settings
+    # Agent Settings table - keeps the compatibility table name ai_config.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -346,7 +346,7 @@ def init_schema():
         )
     """)
 
-    # AI config user-type overrides - stores per-user-type AI config overrides
+    # Agent Settings user-type overrides - keeps the compatibility table name.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config_user_type_overrides (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -398,7 +398,7 @@ def init_schema():
     from ingest_db import init_ingest_schema
     init_ingest_schema()
 
-    # Seed default AI config values
+    # Seed default Agent Settings values
     _seed_default_ai_config()
 
 
@@ -1729,19 +1729,19 @@ def migrate_encrypt_existing_data():
         conn.close()
 
 
-# --- AI Configuration Operations ---
+# --- Agent Settings Operations ---
 
 def _seed_default_ai_config() -> None:
-    """Seed default AI configuration values if not present"""
+    """Seed default Agent Settings values if not present"""
     defaults = [
         # Prompt sections
         ("prompt_tone", "Be helpful, concise, and professional. Acknowledge the user's question before answering.", "string", "prompt_section", "Voice and personality instructions"),
         ("prompt_rules", '["ONE action per response when providing step-by-step guidance", "NEVER invent sources, organization names, or contact information", "If asked about topics outside your knowledge base, acknowledge limitations"]', "json", "prompt_section", "Array of behavioral rules"),
         ("prompt_forbidden", '[]', "json", "prompt_section", "Topics to avoid or redirect"),
         ("prompt_greeting", "greeting_style", "string", "prompt_section", "Initial response style"),
-        # LLM Parameters
-        ("temperature", "0.1", "number", "parameter", "LLM temperature (0.0-1.0)"),
-        ("top_k", "8", "number", "parameter", "RAG retrieval count"),
+        # Model Provider parameters
+        ("temperature", "0.1", "number", "parameter", "Model Provider temperature (0.0-1.0)"),
+        ("top_k", "8", "number", "parameter", "Retrieval count"),
         # Session defaults
         ("web_search_default", "false", "boolean", "default", "Web search active by default for new sessions"),
     ]
@@ -1753,11 +1753,11 @@ def _seed_default_ai_config() -> None:
                 VALUES (?, ?, ?, ?, ?)
             """, (key, value, value_type, category, description))
 
-    logger.info("Default AI configuration seeded")
+    logger.info("Default Agent Settings seeded")
 
 
 def get_ai_config(key: str) -> dict | None:
-    """Get a single AI config value"""
+    """Get a single Agent Settings value"""
     with get_cursor() as cursor:
         cursor.execute("SELECT * FROM ai_config WHERE key = ?", (key,))
         row = cursor.fetchone()
@@ -1765,21 +1765,21 @@ def get_ai_config(key: str) -> dict | None:
 
 
 def get_all_ai_config() -> list[dict]:
-    """Get all AI config values"""
+    """Get all Agent Settings values"""
     with get_cursor() as cursor:
         cursor.execute("SELECT * FROM ai_config ORDER BY category, key")
         return [dict(row) for row in cursor.fetchall()]
 
 
 def get_ai_config_by_category(category: str) -> list[dict]:
-    """Get AI config values for a specific category"""
+    """Get Agent Settings values for a specific category"""
     with get_cursor() as cursor:
         cursor.execute("SELECT * FROM ai_config WHERE category = ? ORDER BY key", (category,))
         return [dict(row) for row in cursor.fetchall()]
 
 
 def update_ai_config(key: str, value: str, changed_by: str) -> bool:
-    """Update an AI config value with audit logging"""
+    """Update an Agent Settings value with audit logging"""
     with get_write_cursor() as cursor:
         # Get old value inside transaction to avoid TOCTOU race
         cursor.execute("SELECT value FROM ai_config WHERE key = ?", (key,))
@@ -1798,10 +1798,10 @@ def update_ai_config(key: str, value: str, changed_by: str) -> bool:
         return False
 
 
-# --- AI Config User-Type Override Operations ---
+# --- Agent Settings User-Type Override Operations ---
 
 def get_ai_config_override(key: str, user_type_id: int) -> dict | None:
-    """Get a single AI config override for a user type"""
+    """Get a single Agent Settings override for a user type"""
     with get_cursor() as cursor:
         cursor.execute("""
             SELECT * FROM ai_config_user_type_overrides
@@ -1812,7 +1812,7 @@ def get_ai_config_override(key: str, user_type_id: int) -> dict | None:
 
 
 def get_ai_config_overrides_by_type(user_type_id: int) -> list[dict]:
-    """Get all AI config overrides for a user type"""
+    """Get all Agent Settings overrides for a user type"""
     with get_cursor() as cursor:
         cursor.execute("""
             SELECT * FROM ai_config_user_type_overrides
@@ -1823,7 +1823,7 @@ def get_ai_config_overrides_by_type(user_type_id: int) -> list[dict]:
 
 
 def upsert_ai_config_override(key: str, user_type_id: int, value: str, changed_by: str) -> bool:
-    """Create or update an AI config override for a user type"""
+    """Create or update an Agent Settings override for a user type"""
     with get_write_cursor() as cursor:
         # Get old value for audit log
         cursor.execute("""
@@ -1856,7 +1856,7 @@ def upsert_ai_config_override(key: str, user_type_id: int, value: str, changed_b
 
 
 def delete_ai_config_override(key: str, user_type_id: int, changed_by: str = "") -> bool:
-    """Delete an AI config override (revert to global). Returns True if deleted."""
+    """Delete an Agent Settings override (revert to global). Returns True if deleted."""
     with get_write_cursor() as cursor:
         # Get old value for audit log
         cursor.execute("""
@@ -1889,7 +1889,7 @@ def delete_ai_config_override(key: str, user_type_id: int, changed_by: str = "")
 
 def get_effective_ai_config(user_type_id: int | None = None) -> list[dict]:
     """
-    Get all AI config values with inheritance applied.
+    Get all Agent Settings values with inheritance applied.
 
     If user_type_id is provided, returns global config merged with user-type overrides.
     Override values replace global values for matching keys.
@@ -1942,6 +1942,7 @@ def list_document_defaults() -> list[dict]:
             SELECT dd.*, ij.filename, ij.status, ij.total_chunks
             FROM document_defaults dd
             JOIN ingest_jobs ij ON dd.job_id = ij.job_id
+            WHERE ij.is_current = 1
             ORDER BY dd.display_order, ij.created_at DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
@@ -1979,13 +1980,98 @@ def upsert_document_defaults(
         return True
 
 
+def transfer_document_access(old_job_id: str, new_job_id: str, changed_by: str = "") -> None:
+    """Copy global and user-type Document Access rows from one job to another."""
+    with get_write_cursor() as cursor:
+        cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (old_job_id,))
+        old_default = cursor.fetchone()
+        if old_default:
+            cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (new_job_id,))
+            existing_default = cursor.fetchone()
+            old_value = json.dumps({
+                "is_available": bool(existing_default["is_available"]),
+                "is_default_active": bool(existing_default["is_default_active"]),
+                "display_order": existing_default["display_order"],
+            }) if existing_default else None
+
+            cursor.execute("""
+                INSERT INTO document_defaults (job_id, is_available, is_default_active, display_order)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    is_available = excluded.is_available,
+                    is_default_active = excluded.is_default_active,
+                    display_order = excluded.display_order,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                new_job_id,
+                old_default["is_available"],
+                old_default["is_default_active"],
+                old_default["display_order"],
+            ))
+            if changed_by:
+                new_value = json.dumps({
+                    "is_available": bool(old_default["is_available"]),
+                    "is_default_active": bool(old_default["is_default_active"]),
+                })
+                _insert_config_audit_log(cursor, "document_defaults", new_job_id, old_value, new_value, changed_by)
+
+        cursor.execute("""
+            SELECT * FROM document_defaults_user_type_overrides
+            WHERE job_id = ?
+        """, (old_job_id,))
+        old_overrides = cursor.fetchall()
+        for override in old_overrides:
+            cursor.execute("""
+                SELECT * FROM document_defaults_user_type_overrides
+                WHERE job_id = ? AND user_type_id = ?
+            """, (new_job_id, override["user_type_id"]))
+            existing_override = cursor.fetchone()
+            old_value = json.dumps({
+                "is_available": bool(existing_override["is_available"]) if existing_override["is_available"] is not None else None,
+                "is_default_active": bool(existing_override["is_default_active"]) if existing_override["is_default_active"] is not None else None,
+            }) if existing_override else None
+
+            cursor.execute("""
+                INSERT INTO document_defaults_user_type_overrides (
+                    job_id, user_type_id, is_available, is_default_active
+                )
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(job_id, user_type_id) DO UPDATE SET
+                    is_available = excluded.is_available,
+                    is_default_active = excluded.is_default_active,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                new_job_id,
+                override["user_type_id"],
+                override["is_available"],
+                override["is_default_active"],
+            ))
+            if changed_by:
+                new_value = json.dumps({
+                    "is_available": bool(override["is_available"]) if override["is_available"] is not None else None,
+                    "is_default_active": bool(override["is_default_active"]) if override["is_default_active"] is not None else None,
+                })
+                _insert_config_audit_log(
+                    cursor,
+                    "document_defaults_user_type_overrides",
+                    f"{new_job_id}:type_{override['user_type_id']}",
+                    old_value,
+                    new_value,
+                    changed_by,
+                )
+
+
 def get_default_active_documents() -> list[str]:
     """Get list of job_ids that are default active"""
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT job_id FROM document_defaults
-            WHERE is_available = 1 AND is_default_active = 1
-            ORDER BY display_order
+            SELECT dd.job_id FROM document_defaults dd
+            JOIN ingest_jobs ij ON dd.job_id = ij.job_id
+            WHERE dd.is_available = 1
+              AND dd.is_default_active = 1
+              AND ij.is_current = 1
+              AND ij.status IN ('completed', 'completed_with_errors')
+            ORDER BY dd.display_order
         """)
         return [row["job_id"] for row in cursor.fetchall()]
 
@@ -1994,9 +2080,12 @@ def get_available_documents() -> list[str]:
     """Get list of job_ids that are available for use"""
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT job_id FROM document_defaults
-            WHERE is_available = 1
-            ORDER BY display_order
+            SELECT dd.job_id FROM document_defaults dd
+            JOIN ingest_jobs ij ON dd.job_id = ij.job_id
+            WHERE dd.is_available = 1
+              AND ij.is_current = 1
+              AND ij.status IN ('completed', 'completed_with_errors')
+            ORDER BY dd.display_order
         """)
         return [row["job_id"] for row in cursor.fetchall()]
 
@@ -2172,7 +2261,10 @@ def get_effective_document_defaults(user_type_id: int | None = None) -> list[dic
             with get_cursor() as cursor:
                 cursor.execute("""
                     SELECT job_id, filename, status, total_chunks
-                    FROM ingest_jobs WHERE job_id = ?
+                    FROM ingest_jobs
+                    WHERE job_id = ?
+                      AND is_current = 1
+                      AND status IN ('completed', 'completed_with_errors')
                 """, (job_id,))
                 job_row = cursor.fetchone()
                 if job_row:

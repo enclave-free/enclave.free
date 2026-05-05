@@ -15,14 +15,15 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-sage}
       - LLM_API_URL=${LLM_API_URL:-http://tinfoil-proxy:8089/v1}
       - LLM_API_KEY=${TINFOIL_API_KEY:-}
-      - LLM_MODEL=${TINFOIL_MODEL:-kimi-k2-5}
+      - LLM_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - SAGE_WEB_URL=http://sage:3000
       - SEARXNG_URL=http://searxng:8080
       - SQLITE_PATH=/data/sanctum.db
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       # Magic Link Auth configuration
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       - MOCK_EMAIL=${MOCK_EMAIL:-true}
       # SMTP configuration (optional, not needed if MOCK_EMAIL=true)
       - SMTP_HOST=${SMTP_HOST:-}
@@ -68,14 +69,15 @@ services:
       - DATABASE_URL=postgres://sage:sage@postgres:5432/sage
       - TINFOIL_API_URL=http://tinfoil-proxy:8089/v1
       - TINFOIL_API_KEY=${TINFOIL_API_KEY}
-      - TINFOIL_MODEL=${TINFOIL_MODEL:-kimi-k2-5}
+      - TINFOIL_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - TINFOIL_EMBEDDING_MODEL=${TINFOIL_EMBEDDING_MODEL:-nomic-embed-text}
       - SAGE_WORKSPACE=/workspace
       - ENCLAVE_WEB_PORT=3000
       - ENCLAVE_BACKEND_URL=http://core-backend:8000
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - SEARXNG_URL=http://searxng:8080
       - USER_SESSION_COOKIE_NAME=${USER_SESSION_COOKIE_NAME:-sanctum_session}
       - ADMIN_SESSION_COOKIE_NAME=${ADMIN_SESSION_COOKIE_NAME:-sanctum_admin_session}
@@ -114,7 +116,7 @@ services:
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

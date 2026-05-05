@@ -1,0 +1,3 @@
+# Sage Owns Agent Runtime While Python Retains Enclave Control Plane
+
+The Enclave Free Prototype integrates Sage directly as the Agent Runtime while retaining Python as the Enclave Control Plane. Sage owns Conversations, Session Memory, prompt behavior, tool choice, and Agent Settings; Python retains operator-controlled facts and actions such as the Instance, Admin, Users, User Types, Onboarding Questions, User Profiles, the Document Library, Instance Settings, Deployment Settings, ingestion, and safe database execution. This lets the prototype validate direct Sage integration without rewriting the whole Enclave control plane at once.

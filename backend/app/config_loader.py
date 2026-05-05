@@ -24,7 +24,7 @@ _cache_time: float = 0
 _cache_lock = threading.Lock()
 CACHE_TTL = 60  # seconds
 
-# Key translation map for legacy Maple-backed LLM config.
+# Key translation map for legacy Maple-backed Model Provider config.
 # The prototype prefers generic LLM_* keys but still honors old aliases.
 KEY_TRANSLATION = {
     "LLM_API_URL": "MAPLE_BASE_URL",
@@ -39,7 +39,7 @@ EMAIL_KEY_TRANSLATION = {
 
 
 def _get_provider() -> str:
-    """Get current LLM provider from config or env."""
+    """Get current Model Provider compatibility label from config or env."""
     # Use cache to avoid repeated DB queries
     _refresh_cache_if_needed()
     configured = None

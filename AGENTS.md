@@ -1,5 +1,19 @@
 # Repository Guidelines
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs for this repo live in GitHub Issues for `enclave-free/enclave.free-prototype`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a multi-context layout rooted one level up at `/Users/plebdev/Desktop/code/enclave-free`, covering `enclave.free`, `sage`, and `enclave.free-prototype`. See `docs/agents/domain.md`.
+
 ## Project Structure & Module Organization
 Sanctum is a Docker Compose stack. The root includes `docker-compose.infra.yml`, `docker-compose.app.yml`, environment files, and `docs/` for longer guides. The FastAPI backend lives in `backend/app/` (LLM providers in `backend/app/llm/`). The Vite + React frontend lives in `frontend/src/` with pages, components, and i18n files under `frontend/src/i18n/locales/`. Runtime ingest artifacts are stored in `uploads/` (mounted into the backend container).
 
@@ -35,4 +49,4 @@ No automated test framework is configured yet. Validate changes via the smoke te
 Commit history favors short, action-oriented messages (often lowercase, e.g., “smoke test successful”). Keep messages concise; use `WIP` only for clearly unfinished work. PRs should include a brief summary, linked issues (if any), testing evidence, and screenshots for UI changes.
 
 ## Security & Configuration Tips
-Copy `.env.example` to `.env` and set `MAPLE_API_KEY`. Never commit secrets. The embedding model cache is stored in a Docker volume, and `uploads/` contains local ingest data that should not be checked in.
+Copy `.env.example` to `.env` and set `LLM_API_KEY` plus `TINFOIL_API_KEY` when using Compose; Compose maps `TINFOIL_API_KEY` into the backend's canonical `LLM_API_KEY`, but non-Compose runs read `LLM_API_KEY` directly and will miss provider authentication if it is unset. Never commit secrets. The embedding model cache is stored in a Docker volume, and `uploads/` contains local ingest data that should not be checked in.

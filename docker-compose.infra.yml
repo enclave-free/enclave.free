@@ -33,7 +33,7 @@ services:
     environment:
       - TINFOIL_API_KEY=${TINFOIL_API_KEY}
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8089/v1/models >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/v1/models >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

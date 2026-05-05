@@ -12,7 +12,7 @@ SQLite provides persistent storage for:
 - **Instance settings** - Configurable instance branding/settings
 - **Instance state** - Setup completion and admin initialization flags
 - **Deployment configuration** - Environment-level settings (LLM, email, storage) + audit log
-- **AI configuration** - Prompt sections, parameters, and session defaults (with per-user-type overrides)
+- **Agent Settings** - Prompt sections, parameters, and session defaults (with per-user-type overrides)
 - **Document defaults** - Per-document availability/defaults (with per-user-type overrides)
 - **User types** - Groups of users with different onboarding question sets
 - **User management** - Onboarded users with dynamic custom fields
@@ -182,7 +182,7 @@ Dynamic field values for users (EAV pattern).
 | `value` | TEXT | **Legacy** (deprecated, always NULL) |
 
 #### `ai_config`
-Global AI configuration values (prompt sections, parameters, defaults).
+Global Agent Settings values (prompt sections, parameters, defaults).
 
 | Column | Type | Description |
 | -------- | ------ | ------------- |
@@ -195,7 +195,7 @@ Global AI configuration values (prompt sections, parameters, defaults).
 | `updated_at` | TIMESTAMP | Last update timestamp |
 
 #### `ai_config_user_type_overrides`
-Per-user-type overrides for AI config values.
+Per-user-type overrides for Agent Settings values.
 
 | Column | Type | Description |
 | -------- | ------ | ------------- |
@@ -244,7 +244,7 @@ Deployment-level configuration values (LLM, email, storage, etc.).
 | `updated_at` | TIMESTAMP | Last update timestamp |
 
 #### `config_audit_log`
-Audit trail for deployment and AI config changes.
+Audit trail for Deployment Settings and Agent Settings changes.
 
 | Column | Type | Description |
 | -------- | ------ | ------------- |
@@ -357,21 +357,21 @@ Recent config changes (default 50, up to 1000).
 
 ---
 
-### AI Configuration (Admin)
+### Agent Settings (Admin)
 
-Manage prompt sections, LLM parameters, and session defaults stored in `ai_config`, with optional per-user-type overrides.
+Manage prompt sections, Model Provider parameters, and session defaults stored in `ai_config`, with optional per-user-type overrides.
 
 #### `GET /admin/ai-config`
-Get all AI config values grouped by category.
+Get all Agent Settings values grouped by category.
 
 #### `GET /admin/ai-config/{key}`
-Get a single AI config item.
+Get a single Agent Settings item.
 
 #### `PUT /admin/ai-config/{key}`
 Update a config value (type-checked).
 
 #### `GET /admin/ai-config/user-type/{user_type_id}`
-Get effective AI config for a user type (shows overrides vs inherited values).
+Get effective Agent Settings for a user type (shows overrides vs inherited values).
 
 #### `PUT /admin/ai-config/user-type/{user_type_id}/{key}`
 Set an override value for a user type.
@@ -769,10 +769,10 @@ The frontend uses localStorage for temporary state during onboarding:
 - Validate config and check service health
 - Export `.env` and review recent config changes
 
-### AI Configuration
-- Edit prompt sections, LLM parameters, and session defaults
+### Agent Settings
+- Edit prompt sections, Model Provider parameters, and session defaults
 - Preview assembled prompts
-- Override AI config per user type
+- Override Agent Settings per user type
 
 ### User Types Section
 - Create new user types with name and description

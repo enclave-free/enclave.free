@@ -49,6 +49,9 @@ router = APIRouter(prefix="/ingest", tags=["ingest"])
 # Processing configuration
 MAX_CONCURRENT_CHUNKS = int(os.getenv("MAX_CONCURRENT_CHUNKS", "3"))
 UPLOAD_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_UPLOAD_PER_MINUTE", "20"))
+MAX_BATCH_FILES = int(os.getenv("MAX_BATCH_FILES", "100"))
+MAX_BATCH_BYTES = int(os.getenv("MAX_BATCH_BYTES", str(250 * 1024 * 1024)))
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".txt", ".md"}
 
 # Valid ontology IDs for document extraction
 VALID_ONTOLOGIES = {"general", "bitcoin"}
@@ -67,6 +70,7 @@ PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 # Jobs are persisted to SQLite; CHUNKS remain in-memory during processing
 JOBS: dict = {}  # Loaded from SQLite on startup
 CHUNKS: dict = {}  # In-memory only (not persisted for now)
+TASKS: dict[str, asyncio.Task] = {}
 
 
 def _rate_limit_key(request: Request) -> str:
@@ -92,6 +96,11 @@ def _load_jobs_from_db() -> dict:
             "status": job["status"],
             "ontology_id": job.get("ontology_id", "general"),
             "sample_percent": job.get("sample_percent", 100.0),
+            "canonical_name": job.get("canonical_name") or job["filename"],
+            "replacement_for_job_id": job.get("replacement_for_job_id"),
+            "replaced_by_job_id": job.get("replaced_by_job_id"),
+            "is_current": bool(job.get("is_current", 1)),
+            "content_sha256": job.get("content_sha256"),
             "created_at": job["created_at"],
             "updated_at": job["updated_at"],
             "total_chunks": job["total_chunks"],
@@ -117,6 +126,10 @@ def _sync_job_to_db(job_id: str) -> None:
             file_path=job["file_path"],
             ontology_id=job.get("ontology_id", "general"),
             sample_percent=job.get("sample_percent", 100.0),
+            canonical_name=job.get("canonical_name") or job["filename"],
+            replacement_for_job_id=job.get("replacement_for_job_id"),
+            content_sha256=job.get("content_sha256"),
+            is_current=bool(job.get("is_current", True)),
         )
     
     # Update status
@@ -135,6 +148,28 @@ def _clear_job_chunks(job_id: str) -> None:
     to_delete = [cid for cid, c in CHUNKS.items() if c.get("job_id") == job_id]
     for cid in to_delete:
         CHUNKS.pop(cid, None)
+
+
+def schedule_document_processing(job_id: str, file_path: Path, sample_percent: float) -> None:
+    """Schedule background document processing."""
+    task = asyncio.create_task(process_document(job_id, file_path, sample_percent))
+    TASKS[job_id] = task
+
+    def _finish_task(done_task: asyncio.Task) -> None:
+        TASKS.pop(job_id, None)
+        try:
+            done_task.result()
+        except asyncio.CancelledError:
+            logger.info(f"[{job_id}] Background document processing task was cancelled")
+        except Exception as exc:
+            logger.error(f"[{job_id}] Background document processing task failed: {exc}", exc_info=True)
+            if job_id in JOBS:
+                JOBS[job_id]["status"] = "failed"
+                JOBS[job_id]["error"] = str(exc)
+                JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+                _sync_job_to_db(job_id)
+
+    task.add_done_callback(_finish_task)
 
 
 @router.on_event("startup")
@@ -172,12 +207,10 @@ async def load_jobs_and_resume():
                 continue
             logger.warning(f"[{job_id}] Resuming job after restart")
             _clear_job_chunks(job_id)
-            asyncio.create_task(
-                process_document(
-                    job_id=job_id,
-                    file_path=file_path,
-                    sample_percent=float(job.get("sample_percent", 100.0)),
-                )
+            schedule_document_processing(
+                job_id=job_id,
+                file_path=file_path,
+                sample_percent=float(job.get("sample_percent", 100.0)),
             )
 
 
@@ -190,6 +223,18 @@ class UploadResponse(BaseModel):
     filename: str
     status: str
     message: str
+    replacement_for_job_id: Optional[str] = None
+    replacement_for_filename: Optional[str] = None
+
+
+class BatchRejectedItem(BaseModel):
+    filename: str
+    reason: str
+
+
+class BatchUploadResponse(BaseModel):
+    accepted: list[UploadResponse]
+    rejected: list[BatchRejectedItem]
 
 
 class JobStatus(BaseModel):
@@ -202,6 +247,11 @@ class JobStatus(BaseModel):
     total_chunks: int
     processed_chunks: int
     error: Optional[str] = None
+    canonical_name: Optional[str] = None
+    replacement_for_job_id: Optional[str] = None
+    replacement_for_filename: Optional[str] = None
+    replaced_by_job_id: Optional[str] = None
+    is_current: bool = True
 
 
 class OntologiesResponse(BaseModel):
@@ -241,6 +291,124 @@ def generate_job_id(filename: str) -> str:
 def generate_chunk_id(job_id: str, index: int) -> str:
     """Generate a unique chunk ID"""
     return f"{job_id}_chunk_{index:04d}"
+
+
+def sanitize_document_name(name: str) -> str:
+    """Normalize an operator-facing document name without trusting it as a path."""
+    raw = (name or "").replace("\\", "/").strip()
+    if raw.startswith("/") or raw.startswith("~"):
+        raise ValueError("Document path must be relative")
+
+    parts: list[str] = []
+    for part in raw.split("/"):
+        clean = part.strip()
+        if not clean or clean in (".", ".."):
+            if clean == "..":
+                raise ValueError("Document path cannot contain '..'")
+            continue
+        parts.append(clean)
+
+    normalized = "/".join(parts)
+    if not normalized:
+        raise ValueError("Document name cannot be empty")
+    return normalized
+
+
+def canonical_name_for_upload(filename: str, relative_path: str | None = None) -> str:
+    """Resolve the canonical document name used for deduplication."""
+    source_name = relative_path or Path(filename).name
+    return sanitize_document_name(source_name)
+
+
+def safe_storage_filename(filename: str) -> str:
+    """Return a filesystem-safe basename while preserving the original extension."""
+    name = Path((filename or "document").replace("\\", "/")).name
+    sanitized = "".join(ch if ch.isalnum() or ch in ("-", "_", ".") else "_" for ch in name)
+    return sanitized or "document"
+
+
+def replacement_filename(job: dict) -> str | None:
+    """Resolve the filename of the document being replaced, if any."""
+    old_job_id = job.get("replacement_for_job_id")
+    if not old_job_id:
+        return None
+    old_job = JOBS.get(old_job_id) or ingest_db.get_job(old_job_id)
+    return old_job.get("filename") if old_job else None
+
+
+def validate_ingest_options(ontology_id: str, sample_percent: float) -> None:
+    """Validate shared upload form options."""
+    if sample_percent <= 0 or sample_percent > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="sample_percent must be > 0 and <= 100"
+        )
+
+    if ontology_id not in VALID_ONTOLOGIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ontology_id: {ontology_id}. Valid options: {sorted(VALID_ONTOLOGIES)}"
+        )
+
+
+async def queue_document_ingestion(
+    *,
+    original_filename: str,
+    canonical_name: str,
+    content: bytes,
+    ontology_id: str,
+    sample_percent: float,
+) -> UploadResponse:
+    """Create a durable ingest job and start background processing."""
+    current_job = ingest_db.get_current_job_by_canonical_name(canonical_name)
+    inflight_replacement = ingest_db.get_inflight_replacement_by_canonical_name(canonical_name)
+    if inflight_replacement:
+        raise ValueError("Replacement already in progress for this document")
+
+    replacement_for_job_id = current_job["job_id"] if current_job else None
+    replacement_for_filename = current_job["filename"] if current_job else None
+
+    content_sha256 = hashlib.sha256(content).hexdigest()
+    job_id = generate_job_id(canonical_name)
+    file_path = UPLOADS_DIR / f"{job_id}_{safe_storage_filename(original_filename)}"
+    file_path.write_bytes(content)
+
+    now = datetime.utcnow().isoformat()
+    JOBS[job_id] = {
+        "job_id": job_id,
+        "filename": canonical_name,
+        "file_path": str(file_path),
+        "status": "pending",
+        "ontology_id": ontology_id,
+        "sample_percent": sample_percent,
+        "canonical_name": canonical_name,
+        "replacement_for_job_id": replacement_for_job_id,
+        "replaced_by_job_id": None,
+        "is_current": replacement_for_job_id is None,
+        "content_sha256": content_sha256,
+        "created_at": now,
+        "updated_at": now,
+        "total_chunks": 0,
+        "processed_chunks": 0,
+        "failed_chunks": 0,
+        "error": None,
+    }
+    _sync_job_to_db(job_id)
+
+    schedule_document_processing(job_id, file_path, sample_percent)
+
+    return UploadResponse(
+        job_id=job_id,
+        filename=canonical_name,
+        status="pending",
+        message=(
+            "Document replacement queued for processing"
+            if replacement_for_job_id
+            else "Document queued for processing"
+        ),
+        replacement_for_job_id=replacement_for_job_id,
+        replacement_for_filename=replacement_for_filename,
+    )
 
 
 def chunk_text(text: str, chunk_size: int = 1500, overlap: int = 200) -> list[str]:
@@ -290,6 +458,13 @@ async def store_chunk(chunk_id: str, chunk_text_content: str, source_file: str) 
     return result
 
 
+async def delete_document_chunks(job_id: str) -> int:
+    """Delete stored vector chunks for a document job."""
+    from store import delete_chunks_from_qdrant
+
+    return await delete_chunks_from_qdrant(job_id)
+
+
 async def process_document(job_id: str, file_path: Path, sample_percent: float):
     """
     Process an uploaded document: convert to text, chunk, and store to Qdrant.
@@ -334,6 +509,7 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
             )
 
         # Store chunks metadata
+        source_file = JOBS[job_id].get("filename") or file_path.name
         for i, chunk_text_content in enumerate(chunks):
             chunk_id = generate_chunk_id(job_id, i)
             CHUNKS[chunk_id] = {
@@ -343,7 +519,7 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
                 "text": chunk_text_content,
                 "char_count": len(chunk_text_content),
                 "status": "pending",
-                "source_file": file_path.name,
+                "source_file": source_file,
                 "created_at": datetime.utcnow().isoformat(),
             }
 
@@ -386,6 +562,14 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["status"] = "completed_with_errors" if failed > 0 else "completed"
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
+        if failed == 0 and JOBS[job_id].get("replacement_for_job_id"):
+            try:
+                await promote_replacement(job_id)
+            except Exception as e:
+                logger.error(f"[{job_id}] Document replacement promotion failed: {e}", exc_info=True)
+                JOBS[job_id]["promotion_error"] = str(e)
+                JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+                _sync_job_to_db(job_id)
 
     except Exception as e:
         logger.error(f"[{job_id}] Document processing failed: {e}", exc_info=True)
@@ -393,6 +577,62 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["error"] = str(e)
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
+
+
+async def promote_replacement(job_id: str) -> None:
+    """Promote a successful replacement job and retire its previous current job."""
+    job = JOBS.get(job_id) or ingest_db.get_job(job_id)
+    if not job:
+        return
+
+    old_job_id = job.get("replacement_for_job_id")
+    if not old_job_id:
+        return
+
+    old_job = JOBS.get(old_job_id) or ingest_db.get_job(old_job_id)
+    if not old_job:
+        return
+
+    logger.info(f"[{job_id}] Promoting replacement for {old_job_id}")
+    try:
+        promoted = ingest_db.promote_replacement(job_id, old_job_id)
+        if not promoted:
+            raise RuntimeError("promote_replacement returned False")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
+        raise
+
+    try:
+        database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to transfer document access from {old_job_id}: {e}", exc_info=True)
+        now = datetime.utcnow().isoformat()
+        if old_job_id in JOBS:
+            JOBS[old_job_id]["transfer_failed"] = True
+            JOBS[old_job_id]["updated_at"] = now
+        if job_id in JOBS:
+            JOBS[job_id]["transfer_failed"] = True
+            JOBS[job_id]["updated_at"] = now
+
+    try:
+        await delete_document_chunks(old_job_id)
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to delete replaced chunks for {old_job_id}: {e}")
+
+    old_file_path = Path(old_job.get("file_path", ""))
+    if old_file_path.exists():
+        try:
+            old_file_path.unlink()
+        except Exception as e:
+            logger.error(f"[{job_id}] Failed to delete replaced file {old_file_path}: {e}")
+
+    if old_job_id in JOBS:
+        JOBS[old_job_id]["is_current"] = False
+        JOBS[old_job_id]["replaced_by_job_id"] = job_id
+        JOBS[old_job_id]["updated_at"] = datetime.utcnow().isoformat()
+    if job_id in JOBS:
+        JOBS[job_id]["is_current"] = True
+        JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
 
 
 # PDF extraction mode: "fast" (PyMuPDF) or "quality" (Docling)
@@ -555,63 +795,121 @@ async def upload_document(
     - Chunks and stores embeddings to Qdrant
     - Returns job_id to track progress
     """
-    # Validate file type
-    allowed_extensions = {".pdf", ".txt", ".md"}
-    suffix = Path(file.filename).suffix.lower()
+    original_filename = file.filename or "document"
+    try:
+        canonical_name = canonical_name_for_upload(original_filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    suffix = Path(canonical_name).suffix.lower()
 
-    if suffix not in allowed_extensions:
+    if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {suffix}. Allowed: {allowed_extensions}"
+            detail=f"Unsupported file type: {suffix}. Allowed: {ALLOWED_UPLOAD_EXTENSIONS}"
         )
 
-    # Validate sample percent
-    if sample_percent <= 0 or sample_percent > 100:
-        raise HTTPException(
-            status_code=400,
-            detail="sample_percent must be > 0 and <= 100"
-        )
-
-    # Validate ontology_id
-    if ontology_id not in VALID_ONTOLOGIES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid ontology_id: {ontology_id}. Valid options: {sorted(VALID_ONTOLOGIES)}"
-        )
-
-    # Generate job ID and save file
-    job_id = generate_job_id(file.filename)
-    file_path = UPLOADS_DIR / f"{job_id}_{file.filename}"
-
-    # Save uploaded file
+    validate_ingest_options(ontology_id, sample_percent)
     content = await file.read()
-    file_path.write_bytes(content)
+    try:
+        return await queue_document_ingestion(
+            original_filename=original_filename,
+            canonical_name=canonical_name,
+            content=content,
+            ontology_id=ontology_id,
+            sample_percent=sample_percent,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
-    # Create job record (in memory and SQLite)
-    JOBS[job_id] = {
-        "job_id": job_id,
-        "filename": file.filename,
-        "file_path": str(file_path),
-        "status": "pending",
-        "ontology_id": ontology_id,
-        "sample_percent": sample_percent,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat(),
-        "total_chunks": 0,
-        "processed_chunks": 0,
-        "failed_chunks": 0,
-        "error": None,
-    }
-    _sync_job_to_db(job_id)
 
-    # Process document in background (fire-and-forget)
-    asyncio.create_task(process_document(job_id, file_path, sample_percent))
+@router.post("/upload/batch", response_model=BatchUploadResponse)
+async def upload_document_batch(
+    files: list[UploadFile] = File(...),
+    relative_paths: list[str] = Form(default=[]),
+    ontology_id: str = Form(default="general"),
+    sample_percent: float = Form(default=100.0),
+    admin: dict = Depends(auth.require_admin),
+    _: None = Depends(upload_limiter),
+):
+    """
+    Upload multiple documents for processing.
 
-    return UploadResponse(
-        job_id=job_id,
-        filename=file.filename,
-        status="pending",
-        message="Document queued for processing"
+    Valid files are queued independently. Invalid files are reported in the
+    rejected list so a batch can partially succeed.
+    """
+    validate_ingest_options(ontology_id, sample_percent)
+
+    if len(files) > MAX_BATCH_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Batch may contain at most {MAX_BATCH_FILES} files"
+        )
+
+    accepted: list[UploadResponse] = []
+    rejected: list[BatchRejectedItem] = []
+    seen_names: set[str] = set()
+    total_bytes = 0
+    staged: list[tuple[UploadFile, str, str]] = []
+
+    for index, upload in enumerate(files):
+        original_filename = upload.filename or "document"
+        relative_path = relative_paths[index] if index < len(relative_paths) else None
+        try:
+            canonical_name = canonical_name_for_upload(original_filename, relative_path)
+        except ValueError as e:
+            rejected.append(BatchRejectedItem(filename=original_filename, reason=str(e)))
+            continue
+
+        if canonical_name in seen_names:
+            rejected.append(BatchRejectedItem(
+                filename=canonical_name,
+                reason="Duplicate document name in this batch",
+            ))
+            continue
+        seen_names.add(canonical_name)
+
+        suffix = Path(canonical_name).suffix.lower()
+        if suffix not in ALLOWED_UPLOAD_EXTENSIONS:
+            rejected.append(BatchRejectedItem(
+                filename=canonical_name,
+                reason=f"Unsupported file type: {suffix}. Allowed: {ALLOWED_UPLOAD_EXTENSIONS}",
+            ))
+            continue
+
+        try:
+            upload.file.seek(0, os.SEEK_END)
+            size = upload.file.tell()
+            upload.file.seek(0)
+        except (AttributeError, OSError):
+            content = await upload.read()
+            size = len(content)
+            await upload.seek(0)
+
+        total_bytes += size
+        if total_bytes > MAX_BATCH_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Batch upload exceeds {MAX_BATCH_BYTES} bytes"
+            )
+        staged.append((upload, original_filename, canonical_name))
+
+    for upload, original_filename, canonical_name in staged:
+        try:
+            await upload.seek(0)
+            content = await upload.read()
+            accepted.append(await queue_document_ingestion(
+                original_filename=original_filename,
+                canonical_name=canonical_name,
+                content=content,
+                ontology_id=ontology_id,
+                sample_percent=sample_percent,
+            ))
+        except ValueError as e:
+            rejected.append(BatchRejectedItem(filename=canonical_name, reason=str(e)))
+
+    return BatchUploadResponse(
+        accepted=accepted,
+        rejected=rejected,
     )
 
 
@@ -637,6 +935,11 @@ async def get_job_status(job_id: str, admin: dict = Depends(auth.require_admin))
         total_chunks=job["total_chunks"],
         processed_chunks=processed,
         error=job.get("error"),
+        canonical_name=job.get("canonical_name") or job.get("filename"),
+        replacement_for_job_id=job.get("replacement_for_job_id"),
+        replacement_for_filename=replacement_filename(job),
+        replaced_by_job_id=job.get("replaced_by_job_id"),
+        is_current=bool(job.get("is_current", True)),
     )
 
 
@@ -646,9 +949,14 @@ async def list_jobs(user: dict = Depends(auth.require_admin_or_approved_user)) -
     # Read directly from SQLite to ensure we get persisted data
     jobs_from_db = ingest_db.list_jobs(limit=500)
 
-    # Admins see all jobs
+    # Admins see current jobs, in-flight replacements, and retired replacement history.
     if user.get("type") == "admin":
-        filtered_jobs = jobs_from_db
+        filtered_jobs = [
+            j for j in jobs_from_db
+            if bool(j.get("is_current", 1))
+            or j.get("replacement_for_job_id")
+            or j.get("replaced_by_job_id")
+        ]
     else:
         # Regular users only see available documents for their type
         user_type_id = user.get("user_type_id")
@@ -657,7 +965,12 @@ async def list_jobs(user: dict = Depends(auth.require_admin_or_approved_user)) -
             filtered_jobs = []
         else:
             available_job_ids = set(database.get_available_documents_for_user_type(user_type_id))
-            filtered_jobs = [j for j in jobs_from_db if j["job_id"] in available_job_ids]
+            filtered_jobs = [
+                j for j in jobs_from_db
+                if j["job_id"] in available_job_ids
+                and bool(j.get("is_current", 1))
+                and j.get("status") in ("completed", "completed_with_errors")
+            ]
 
     return {
         "total": len(filtered_jobs),
@@ -668,6 +981,11 @@ async def list_jobs(user: dict = Depends(auth.require_admin_or_approved_user)) -
                 "status": j["status"],
                 "total_chunks": j["total_chunks"],
                 "created_at": j["created_at"],
+                "canonical_name": j.get("canonical_name") or j["filename"],
+                "replacement_for_job_id": j.get("replacement_for_job_id"),
+                "replacement_for_filename": replacement_filename(j),
+                "replaced_by_job_id": j.get("replaced_by_job_id"),
+                "is_current": bool(j.get("is_current", 1)),
             }
             for j in filtered_jobs
         ]
