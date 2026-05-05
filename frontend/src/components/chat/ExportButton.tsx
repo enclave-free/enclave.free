@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Message } from './ChatMessage'
 import { downloadExport, ExportFormat } from '../../utils/exportChat'
 import { useInstanceConfig } from '../../context/InstanceConfigContext'
+import { IconButton } from '../ui'
 
 interface ExportButtonProps {
   messages: Message[]
@@ -44,26 +45,40 @@ export function ExportButton({ messages, disabled, iconOnly = false }: ExportBut
   }
 
   const isDisabled = disabled || messages.length === 0
+  const buttonTitle = isDisabled ? t('chat.export.disabled') : t('chat.export.title')
+  const exportIcon = (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+  )
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => !isDisabled && setIsOpen(!isOpen)}
-        disabled={isDisabled}
-        className={`btn-ghost inline-flex items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all ${
-          iconOnly ? 'p-2' : 'px-2.5 py-1.5'
-        } ${
-          isDisabled
-            ? 'text-text-muted! cursor-not-allowed'
-            : ''
-        }`}
-        title={isDisabled ? t('chat.export.disabled') : t('chat.export.title')}
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-        </svg>
-        {!iconOnly && t('chat.export.button')}
-      </button>
+      {iconOnly ? (
+        <IconButton
+          label={buttonTitle}
+          onClick={() => !isDisabled && setIsOpen(!isOpen)}
+          disabled={isDisabled}
+          pressed={isOpen}
+          className={isDisabled ? 'text-text-muted! cursor-not-allowed' : undefined}
+        >
+          {exportIcon}
+        </IconButton>
+      ) : (
+        <button
+          onClick={() => !isDisabled && setIsOpen(!isOpen)}
+          disabled={isDisabled}
+          className={`btn-ghost inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+            isDisabled
+              ? 'text-text-muted! cursor-not-allowed'
+              : ''
+          }`}
+          title={buttonTitle}
+        >
+          {exportIcon}
+          {t('chat.export.button')}
+        </button>
+      )}
 
       {isOpen && (
         <div className="absolute top-full right-0 mt-1.5 w-44 bg-surface-raised border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-scale backdrop-blur-dropdown">

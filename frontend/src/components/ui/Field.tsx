@@ -1,0 +1,141 @@
+import {
+  forwardRef,
+  useId,
+  type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react'
+import { cx } from './Button'
+
+interface FieldChromeProps {
+  id?: string
+  label: string
+  description?: string
+  error?: string
+  className?: string
+}
+
+export interface TextFieldProps
+  extends FieldChromeProps,
+    Omit<InputHTMLAttributes<HTMLInputElement>, 'className' | 'id'> {}
+
+export interface TextareaProps
+  extends FieldChromeProps,
+    Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className' | 'id'> {}
+
+function FieldText({
+  descriptionId,
+  description,
+  errorId,
+  error,
+}: {
+  descriptionId: string
+  description?: string
+  errorId: string
+  error?: string
+}) {
+  if (error) {
+    return (
+      <p id={errorId} className="text-xs text-error">
+        {error}
+      </p>
+    )
+  }
+
+  if (description) {
+    return (
+      <p id={descriptionId} className="text-xs text-text-muted">
+        {description}
+      </p>
+    )
+  }
+
+  return null
+}
+
+export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
+  {
+    id,
+    label,
+    description,
+    error,
+    className,
+    type = 'text',
+    ...props
+  },
+  ref
+) {
+  const generatedId = useId()
+  const inputId = id ?? generatedId
+  const descriptionId = `${inputId}-description`
+  const errorId = `${inputId}-error`
+  const describedBy = error ? errorId : description ? descriptionId : undefined
+
+  return (
+    <div className={cx('flex flex-col gap-2', className)}>
+      <label className="text-sm font-medium text-text" htmlFor={inputId}>
+        {label}
+      </label>
+      <span className={cx('input-container flex min-h-10 items-center px-3', error && 'has-error')}>
+        <input
+          ref={ref}
+          id={inputId}
+          type={type}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : undefined}
+          className="input-field text-sm"
+          {...props}
+        />
+      </span>
+      <FieldText
+        descriptionId={descriptionId}
+        description={description}
+        errorId={errorId}
+        error={error}
+      />
+    </div>
+  )
+})
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  {
+    id,
+    label,
+    description,
+    error,
+    className,
+    rows = 4,
+    ...props
+  },
+  ref
+) {
+  const generatedId = useId()
+  const textareaId = id ?? generatedId
+  const descriptionId = `${textareaId}-description`
+  const errorId = `${textareaId}-error`
+  const describedBy = error ? errorId : description ? descriptionId : undefined
+
+  return (
+    <div className={cx('flex flex-col gap-2', className)}>
+      <label className="text-sm font-medium text-text" htmlFor={textareaId}>
+        {label}
+      </label>
+      <span className={cx('input-container flex px-3 py-2.5', error && 'has-error')}>
+        <textarea
+          ref={ref}
+          id={textareaId}
+          rows={rows}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : undefined}
+          className="input-field min-h-24 resize-y text-sm"
+          {...props}
+        />
+      </span>
+      <FieldText
+        descriptionId={descriptionId}
+        description={description}
+        errorId={errorId}
+        error={error}
+      />
+    </div>
+  )
+})
