@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminAIConfig } from './AdminAIConfig'
 import { adminFetch } from '../utils/adminApi'
-import type { AIConfigResponse } from '../types/config'
+import type { AIConfigResponse, DocumentDefaultsResponse } from '../types/config'
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -28,17 +28,30 @@ const baseAIConfigResponse: AIConfigResponse = {
 }
 
 let aiConfigResponse = baseAIConfigResponse
+let documentDefaultsResponse: DocumentDefaultsResponse = { documents: [] }
 
 describe('AdminAIConfig', () => {
   beforeEach(() => {
     aiConfigResponse = baseAIConfigResponse
+    documentDefaultsResponse = { documents: [] }
 
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/user-types') {
         return Promise.resolve(Response.json({ types: [] }))
       }
       if (endpoint === '/ingest/admin/documents/defaults') {
-        return Promise.resolve(Response.json({ documents: [] }))
+        return Promise.resolve(Response.json(documentDefaultsResponse))
+      }
+      if (endpoint === '/ingest/admin/documents/doc-1/defaults' && options?.method === 'PUT') {
+        return Promise.resolve(Response.json({
+          job_id: 'doc-1',
+          filename: 'ops-guide.pdf',
+          total_chunks: 12,
+          status: 'completed',
+          is_available: true,
+          is_default_active: true,
+          display_order: 0,
+        }))
       }
       if (endpoint === '/admin/ai-config/max_tokens' && options?.method === 'PUT') {
         return Promise.resolve(Response.json({
@@ -89,6 +102,43 @@ describe('AdminAIConfig', () => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/max_tokens', expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ value: '4096' }),
+      }))
+    })
+  })
+
+  it('lets an admin make a document active by default for new conversations', async () => {
+    documentDefaultsResponse = {
+      documents: [
+        {
+          job_id: 'doc-1',
+          filename: 'ops-guide.pdf',
+          total_chunks: 12,
+          status: 'completed',
+          is_available: true,
+          is_default_active: false,
+          display_order: 0,
+        },
+      ],
+    }
+
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('ops-guide.pdf')
+
+    await user.click(screen.getByRole('switch', { name: 'ops-guide.pdf Active by Default' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/ingest/admin/documents/doc-1/defaults', expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ is_default_active: true }),
       }))
     })
   })
