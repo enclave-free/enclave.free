@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { AlertCircle, Database, Mail, Plus, Search, Settings2, X } from 'lucide-react'
 import { ChatContainer } from '../components/chat/ChatContainer'
 import { MessageList } from '../components/chat/MessageList'
 import { ChatInput } from '../components/chat/ChatInput'
@@ -15,6 +16,7 @@ import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../types/config'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
+import { Button, IconButton } from '../components/ui'
 import {
   extractAdminAssistantChangeSetStrict,
   type AdminAssistantChangeSet,
@@ -108,11 +110,7 @@ export function ChatPage() {
         id: 'web-search',
         name: t('chat.tools.webSearchName'),
         description: t('chat.tools.webSearch'),
-        icon: (
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-        ),
+        icon: <Search className="h-3.5 w-3.5" aria-hidden="true" />,
       },
     ]
 
@@ -122,21 +120,13 @@ export function ChatPage() {
         id: CONFIG_TOOL_ID,
         name: t('chat.tools.configName', 'Config'),
         description: t('chat.tools.config', 'Read and update admin configuration'),
-        icon: (
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9m-9 6h9m-9 6h9M4.5 6h.008v.008H4.5V6zm0 6h.008v.008H4.5V12zm0 6h.008v.008H4.5V18z" />
-          </svg>
-        ),
+        icon: <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />,
       })
       tools.push({
         id: 'db-query',
         name: t('chat.tools.databaseName'),
         description: t('chat.tools.database'),
-        icon: (
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-          </svg>
-        ),
+        icon: <Database className="h-3.5 w-3.5" aria-hidden="true" />,
       })
     }
 
@@ -887,33 +877,27 @@ IMPORTANT: Return a CONDENSED response:
   const rightActions = (
     <>
       {reachoutEnabled && (
-        <button
+        <IconButton
+          label={t(
+            `reachout.mode.${reachoutMode}.openButton`,
+            reachoutMode === 'feedback' ? 'Send feedback' : reachoutMode === 'help' ? 'Get help' : 'Contact support'
+          )}
           onClick={() => setReachoutOpen(true)}
-          className="btn-ghost p-2 rounded-lg transition-all"
           title={t(
             `reachout.mode.${reachoutMode}.openButton`,
             reachoutMode === 'feedback' ? 'Send feedback' : reachoutMode === 'help' ? 'Get help' : 'Contact support'
           )}
-          aria-label={t(
-            `reachout.mode.${reachoutMode}.openButton`,
-            reachoutMode === 'feedback' ? 'Send feedback' : reachoutMode === 'help' ? 'Get help' : 'Contact support'
-          )}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25H4.5A2.25 2.25 0 012.25 17.25V6.75A2.25 2.25 0 014.5 4.5h15A2.25 2.25 0 0121.75 6.75z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 7.5l-8.91 5.94a2.25 2.25 0 01-2.48 0L2.25 7.5" />
-          </svg>
-        </button>
+          <Mail className="h-4 w-4" aria-hidden="true" />
+        </IconButton>
       )}
-      <button
+      <IconButton
+        label={t('chat.messages.newConversation')}
         onClick={handleNewChat}
-        className="btn-ghost p-2 rounded-lg transition-all"
         title={t('chat.messages.newConversation')}
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </button>
+        <Plus className="h-4 w-4" aria-hidden="true" />
+      </IconButton>
       <ExportButton messages={messages} iconOnly />
     </>
   )
@@ -952,19 +936,18 @@ IMPORTANT: Return a CONDENSED response:
           <div className="max-w-3xl mx-auto">
             <div className="bg-error-subtle border border-error/20 text-error rounded-xl px-4 py-3 text-sm flex items-center gap-3 animate-fade-in shadow-sm">
               <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                </svg>
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
               </div>
               <span className="flex-1">{error}</span>
-              <button
+              <IconButton
+                label={t('common.close', 'Close')}
                 onClick={() => setError(null)}
-                className="p-1.5 hover:bg-error/10 rounded-lg transition-colors"
+                variant="ghost"
+                size="sm"
+                className="text-error hover:bg-error/10"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                <X className="h-4 w-4" aria-hidden="true" />
+              </IconButton>
             </div>
           </div>
         </div>
@@ -992,7 +975,7 @@ IMPORTANT: Return a CONDENSED response:
 
       {isAdmin && selectedTools.includes(CONFIG_TOOL_ID) && adminApplyState.state === 'review' && adminApplyPreview && (
         <div className="px-3 sm:px-4 pb-2">
-          <div className="max-w-3xl mx-auto border border-border rounded-2xl bg-surface-raised overflow-hidden">
+          <div className="max-w-3xl mx-auto border border-warning/35 rounded-2xl bg-surface-raised overflow-hidden shadow-md">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
               <div className="text-sm font-medium text-text truncate">
                 {adminApplyPreview.summary
@@ -1000,21 +983,23 @@ IMPORTANT: Return a CONDENSED response:
                   : t('admin.configAssistant.pendingChanges')}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
+                <Button
                   onClick={() => setAdminApplyState({ state: 'idle' })}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:text-text hover:bg-surface-overlay transition-colors"
+                  variant="ghost"
+                  size="sm"
                 >
                   {t('admin.configAssistant.dismiss')}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleAdminApply(adminApplyState.changeSet)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-accent-text hover:bg-accent-hover transition-colors"
+                  variant="primary"
+                  size="sm"
                 >
                   {t('admin.configAssistant.apply')}
-                </button>
+                </Button>
               </div>
             </div>
-            <div className="px-4 py-2 text-xs text-text-muted border-b border-border">
+            <div className="px-4 py-2 text-xs text-text-muted border-b border-border bg-warning-subtle/40">
               {t('admin.configAssistant.reviewMaskedSecrets')}
             </div>
             <div className="px-4 py-3 space-y-2 max-h-64 overflow-y-auto">

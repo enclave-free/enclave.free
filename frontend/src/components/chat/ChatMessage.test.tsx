@@ -86,6 +86,15 @@ describe('ChatMessage', () => {
         '- First point',
         '- Second point',
         '',
+        '1. Review requested changes',
+        '2. Confirm the Change Confirmation',
+        '',
+        '> Keep secrets masked.',
+        '',
+        '| Setting | Value |',
+        '| --- | --- |',
+        '| Model Provider | Tinfoil |',
+        '',
         '```ts',
         'const answer = 42',
         '```',
@@ -97,6 +106,10 @@ describe('ChatMessage', () => {
     expect(screen.getByText('inline code')).toBeInTheDocument()
     expect(screen.getByText('First point')).toBeInTheDocument()
     expect(screen.getByText('Second point')).toBeInTheDocument()
+    expect(screen.getByText('Review requested changes')).toBeInTheDocument()
+    expect(screen.getByText('Keep secrets masked.')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toHaveTextContent('Model Provider')
+    expect(screen.getByRole('table')).toHaveTextContent('Tinfoil')
     expect(screen.getByText('ts')).toBeInTheDocument()
     expect(document.body).toHaveTextContent('const answer = 42')
   })

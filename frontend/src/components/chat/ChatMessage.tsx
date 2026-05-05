@@ -75,9 +75,7 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
               <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             )
           }
-          className="text-xs
-            opacity-0 group-hover:opacity-100 transition-all duration-200
-            focus:opacity-100"
+          className="text-xs"
           aria-label={copied ? t('chat.code.copied') : t('chat.code.copyCode')}
         >
           {copied ? t('chat.code.copied') : t('chat.code.copy')}
@@ -128,8 +126,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   const bubbleRadius = bubbleStyles[config.chatBubbleStyle] || bubbleStyles.soft
   const bubbleShadow = config.chatBubbleShadow ? 'shadow-md' : ''
-  const userBubbleClass = `inline-block max-w-[85%] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
-  const assistantBubbleClass = `inline-block max-w-[85%] bg-surface-raised border border-border px-4 py-2.5 ${bubbleRadius.assistant} ${bubbleShadow}`
+  const userBubbleClass = `inline-block max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
+  const assistantBubbleClass = `inline-block max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 ${bubbleRadius.assistant} ${bubbleShadow}`
 
   return (
     <div className="animate-fade-in-up mb-4 last:mb-0">
@@ -196,17 +194,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     )
                   },
                   ul({ children }) {
-                    return <ul className="mb-3 last:mb-0 space-y-1.5 text-[15px]">{children}</ul>
+                    return <ul className="mb-3 last:mb-0 list-disc space-y-1.5 pl-5 text-[15px]">{children}</ul>
                   },
                   ol({ children }) {
-                    return <ol className="mb-3 last:mb-0 space-y-1.5 text-[15px] list-decimal list-inside">{children}</ol>
+                    return <ol className="mb-3 last:mb-0 list-decimal space-y-1.5 pl-5 text-[15px]">{children}</ol>
                   },
                   li({ children }) {
                     return (
-                      <li className="flex gap-2 leading-relaxed">
-                        <span className="text-accent mt-1.5 text-xs">•</span>
-                        <span className="flex-1">{children}</span>
-                      </li>
+                      <li className="pl-1 leading-relaxed marker:text-accent">{children}</li>
                     )
                   },
                   blockquote({ children }) {

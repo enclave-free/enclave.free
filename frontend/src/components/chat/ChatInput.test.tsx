@@ -34,4 +34,20 @@ describe('ChatInput', () => {
 
     expect(onSend).not.toHaveBeenCalled()
   })
+
+  it('keeps Shift+Enter as multiline input and submits with Enter', async () => {
+    const user = userEvent.setup()
+    const onSend = vi.fn()
+
+    render(<ChatInput onSend={onSend} />)
+
+    const composer = screen.getByRole('textbox', { name: 'Ask anything...' })
+    await user.type(composer, 'Line one{Shift>}{Enter}{/Shift}Line two')
+    expect(composer).toHaveValue('Line one\nLine two')
+
+    await user.keyboard('{Enter}')
+
+    expect(onSend).toHaveBeenCalledWith('Line one\nLine two')
+    expect(composer).toHaveValue('')
+  })
 })
