@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminDeploymentConfig } from './AdminDeploymentConfig'
@@ -83,5 +83,8 @@ describe('AdminDeploymentConfig', () => {
 
     expect(await screen.findByText('Chat Rate Limit')).toBeInTheDocument()
     expect(screen.getByText('Chat requests per minute')).toBeInTheDocument()
+
+    const securitySettings = screen.getByRole('group', { name: 'Security & URLs Settings' })
+    expect(within(securitySettings).getByText('Chat Rate Limit')).toBeInTheDocument()
   })
 })

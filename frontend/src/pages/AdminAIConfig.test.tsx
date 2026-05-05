@@ -75,6 +75,12 @@ describe('AdminAIConfig', () => {
           category: 'default',
         }))
       }
+      if (endpoint === '/admin/ai-config/prompts/preview' && options?.method === 'POST') {
+        return Promise.resolve(Response.json({
+          assembled_prompt: 'System: You are Sage.\nQuestion: What should I know about this topic?',
+          sections_used: ['prompt_system'],
+        }))
+      }
       if (endpoint === '/admin/ai-config') {
         return Promise.resolve(Response.json(aiConfigResponse))
       }
@@ -227,5 +233,43 @@ describe('AdminAIConfig', () => {
         body: JSON.stringify({ value: 'You are Sage for a legal aid enclave.' }),
       }))
     })
+  })
+
+  it('previews the assembled Agent Settings prompt as named technical output', async () => {
+    aiConfigResponse = {
+      ...baseAIConfigResponse,
+      prompt_sections: [
+        {
+          key: 'prompt_system',
+          value: 'You are Sage.',
+          value_type: 'string',
+          category: 'prompt_section',
+          description: 'Core system prompt',
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('System Prompt')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
+
+    const output = await screen.findByRole('region', { name: 'Assembled prompt output' })
+    expect(output).toHaveTextContent('System: You are Sage.')
+    expect(output).toHaveTextContent('Question: What should I know about this topic?')
+    expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/prompts/preview', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        sample_question: 'What should I know about this topic?',
+        sample_facts: {},
+      }),
+    }))
   })
 })

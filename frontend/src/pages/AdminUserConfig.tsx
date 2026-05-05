@@ -7,6 +7,7 @@ import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { FieldEditor } from '../components/onboarding/FieldEditor'
 import { IconPicker } from '../components/onboarding/IconPicker'
 import { DynamicIcon } from '../components/shared/DynamicIcon'
+import { Button, Callout, Card } from '../components/ui'
 import { CustomField, UserType, FieldType } from '../types/onboarding'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 
@@ -1130,7 +1131,7 @@ export function AdminUserConfig() {
           )}
 
           {/* User Approval Section */}
-          <div className="card card-sm p-5! bg-surface-overlay!">
+          <Card className="bg-surface-overlay">
             <h3 className="heading-sm mb-2 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-text-muted" />
               {t('admin.userApproval.title', 'User Approval')}
@@ -1174,24 +1175,30 @@ export function AdminUserConfig() {
               </label>
 
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
+                <Button
                   onClick={handleSaveUserApproval}
                   disabled={userApprovalSaving || !userApprovalLoaded}
-                  className="inline-flex items-center justify-center gap-2 bg-accent text-accent-text rounded-lg px-4 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  leadingIcon={userApprovalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
                 >
-                  {userApprovalSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {t('admin.userApproval.saveButton', 'Save user approval')}
-                </button>
+                </Button>
                 {userApprovalSaveSuccess && (
-                  <span className="text-sm text-success">{userApprovalSaveSuccess}</span>
+                  <Callout
+                    label={t('admin.userApproval.savedCalloutLabel', 'User approval saved')}
+                    tone="success"
+                    className="py-2"
+                  >
+                    <p className="text-sm text-success">{userApprovalSaveSuccess}</p>
+                  </Callout>
                 )}
               </div>
               {userApprovalSaveError && (
-                <p className="text-sm text-error">{userApprovalSaveError}</p>
+                <Callout label={t('admin.userApproval.errorCalloutLabel', 'User approval error')} tone="error">
+                  <p className="text-sm text-error">{userApprovalSaveError}</p>
+                </Callout>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* User Types Section */}
           <div className="card card-sm p-5! bg-surface-overlay!">

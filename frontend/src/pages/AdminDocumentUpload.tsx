@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Upload, FileText, X, CloudUpload, Loader2, Clock, ArrowLeft, HelpCircle, ChevronLeft, ChevronRight, CheckCircle2, Trash2, AlertTriangle, Layers, FolderOpen, Files } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Button, Callout } from '../components/ui'
 import {
   UploadResponse,
   BatchUploadResponse,
@@ -1170,37 +1171,30 @@ export function AdminDocumentUpload() {
 
               {/* Error message */}
               {deleteError && (
-                <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg">
+                <Callout label="Document deletion error" tone="error" className="mb-4">
                   <p className="text-sm text-error">{deleteError}</p>
-                </div>
+                </Callout>
               )}
 
               {/* Action buttons */}
               <div className="flex gap-3">
-                <button
+                <Button
+                  variant="secondary"
                   onClick={closeDeleteModal}
                   disabled={isDeleting}
-                  className="flex-1 border border-border hover:border-accent/50 text-text rounded-xl px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface-overlay disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1"
                 >
                   {t('common.cancel')}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
                   onClick={() => handleDeleteJob(deleteJobId)}
                   disabled={isDeleting}
-                  className="flex-1 bg-error text-white rounded-xl px-4 py-2.5 text-sm font-medium hover:bg-error/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  className="flex-1"
+                  leadingIcon={isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {t('upload.deleting')}
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4" />
-                      {t('common.delete')}
-                    </>
-                  )}
-                </button>
+                  {isDeleting ? t('upload.deleting') : t('common.delete')}
+                </Button>
               </div>
             </div>
           </div>

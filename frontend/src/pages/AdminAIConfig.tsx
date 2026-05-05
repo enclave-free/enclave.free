@@ -22,6 +22,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { CodeBlockSurface } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useAIConfig, useDocumentDefaults } from '../hooks/useAdminConfig'
 import type { AIConfigItem, AIConfigWithInheritance, DocumentDefaultItem, DocumentDefaultWithInheritance, PromptSectionKey, ParameterKey, DefaultKey } from '../types/config'
@@ -804,9 +805,9 @@ export function AdminAIConfig() {
               </button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[60vh]">
-              <pre className="text-xs text-text whitespace-pre-wrap font-mono bg-surface-overlay rounded-lg p-4">
-                {previewContent}
-              </pre>
+              <CodeBlockSurface label="Assembled prompt output">
+                <pre className="whitespace-pre-wrap">{previewContent}</pre>
+              </CodeBlockSurface>
             </div>
           </div>
         </div>

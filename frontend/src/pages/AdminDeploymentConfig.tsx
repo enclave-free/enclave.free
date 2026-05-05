@@ -29,6 +29,7 @@ import {
   Lock,
 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Card } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -1095,7 +1096,14 @@ export function AdminDeploymentConfig() {
     const hasModalHelp = category === 'email' || category === 'llm' || category === 'embedding' || category === 'domains' || category === 'storage' || category === 'search' || category === 'security' || category === 'ssl'
 
     return (
-      <div key={category} className="card card-sm p-5! bg-surface-overlay!">
+      <Card
+        key={category}
+        role="group"
+        aria-label={t('adminDeployment.categorySettingsAria', '{{category}} Settings', {
+          category: meta.label,
+        })}
+        className="bg-surface-overlay"
+      >
         <h3 className="heading-sm mb-2 flex items-center gap-2">
           {getCategoryIcon(category)}
           {meta.label}
@@ -1193,7 +1201,7 @@ export function AdminDeploymentConfig() {
         <div className="space-y-2">
           {items.map(renderConfigItem)}
         </div>
-      </div>
+      </Card>
     )
   }
 

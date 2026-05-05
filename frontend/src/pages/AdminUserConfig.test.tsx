@@ -70,5 +70,7 @@ describe('AdminUserConfig', () => {
         body: JSON.stringify({ auto_approve_users: 'true' }),
       }))
     })
+
+    expect(await screen.findByRole('note', { name: /user approval saved/i })).toHaveTextContent('Saved')
   })
 })

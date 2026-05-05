@@ -12,6 +12,7 @@ import {
 } from '../types/database'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 import { decryptField, hasNip04Support } from '../utils/encryption'
+import { Button, Callout, CodeBlockSurface } from '../components/ui'
 
 export function AdminDatabaseExplorer() {
   const { t } = useTranslation()
@@ -932,11 +933,12 @@ export function AdminDatabaseExplorer() {
             <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
               {/* Query Input */}
               <div className="card card-sm !p-4">
-                <label className="heading-sm mb-3 block">
+                <label htmlFor="admin-sql-query" className="heading-sm mb-3 block">
                   {t('admin.database.sqlQueryLabel')}
                 </label>
                 <div className="input-container !rounded-xl p-0 overflow-hidden">
                   <textarea
+                    id="admin-sql-query"
                     value={sqlQuery}
                     onChange={(e) => setSqlQuery(e.target.value)}
                     placeholder={t('admin.database.sqlPlaceholder')}
@@ -952,47 +954,39 @@ export function AdminDatabaseExplorer() {
                   <p className="text-xs text-text-muted">
                     {t('admin.database.runHint')}
                   </p>
-                  <button
+                  <Button
                     onClick={runQuery}
                     disabled={isRunningQuery || !sqlQuery.trim()}
-                    className="btn btn-primary btn-md inline-flex items-center gap-2"
+                    size="md"
+                    leadingIcon={isRunningQuery
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Play className="w-4 h-4" />}
                   >
-                    {isRunningQuery ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {t('admin.database.running')}
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        {t('admin.database.runQuery')}
-                      </>
-                    )}
-                  </button>
+                    {isRunningQuery ? t('admin.database.running') : t('admin.database.runQuery')}
+                  </Button>
                 </div>
               </div>
 
               {/* Query Results */}
               {queryResult && (
-                <div className="flex-1 card overflow-hidden flex flex-col !p-0">
-                  <div className="px-4 py-3 border-b border-border bg-surface-overlay flex items-center justify-between">
-                    <span className="heading-sm">
-                      {queryResult.success ? t('admin.database.results') : t('admin.database.error')}
+                <CodeBlockSurface
+                  className="flex-1"
+                  label={queryResult.success
+                    ? t('admin.database.safeQueryResults', 'Safe query results')
+                    : t('admin.database.queryError', 'Query error')}
+                  actions={queryResult.executionTimeMs !== undefined && (
+                    <span className="text-xs text-text-muted">
+                      {queryResult.executionTimeMs}ms
                     </span>
-                    {queryResult.executionTimeMs !== undefined && (
-                      <span className="text-xs text-text-muted">
-                        {queryResult.executionTimeMs}ms
-                      </span>
-                    )}
-                  </div>
-
+                  )}
+                >
                   {queryResult.error ? (
-                    <div className="p-4 bg-error-subtle">
-                      <p className="text-sm text-error font-mono">{queryResult.error}</p>
-                    </div>
+                    <Callout label={t('admin.database.queryError', 'Query error')} tone="error">
+                      <p className="break-words font-mono text-xs text-error">{queryResult.error}</p>
+                    </Callout>
                   ) : queryResult.rowsAffected !== undefined ? (
-                    <div className="p-4">
-                      <p className="text-sm text-success">
+                    <Callout label={t('admin.database.writeResult', 'Database write result')} tone="success">
+                      <p>
                         {queryResult.rowsAffected} {t('admin.database.rowsAffected')}
                         {queryResult.lastInsertId !== undefined && (
                           <span className="text-text-muted ml-2">
@@ -1000,9 +994,9 @@ export function AdminDatabaseExplorer() {
                           </span>
                         )}
                       </p>
-                    </div>
+                    </Callout>
                   ) : queryResult.rows && queryResult.rows.length > 0 ? (
-                    <div className="flex-1 overflow-auto">
+                    <div className="max-h-[40vh] overflow-auto">
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-surface-overlay">
                           <tr>
@@ -1030,11 +1024,11 @@ export function AdminDatabaseExplorer() {
                       </table>
                     </div>
                   ) : (
-                    <div className="p-4 text-center text-text-muted text-sm">
+                    <Callout label={t('admin.database.emptyQueryResult', 'Empty query result')} tone="accent">
                       {t('admin.database.noResults')}
-                    </div>
+                    </Callout>
                   )}
-                </div>
+                </CodeBlockSurface>
               )}
 
               {/* TODO: Add query history feature */}
@@ -1138,16 +1132,22 @@ export function AdminDatabaseExplorer() {
                   </div>
                 ) : tableError ? (
                   <div className="flex flex-col items-center justify-center h-full text-text-muted px-6">
-                    <div className="bg-error/10 border border-error/20 rounded-lg p-4 max-w-xl">
+                    <Callout
+                      className="max-w-xl"
+                      label={t('admin.database.tableLoadError', 'Table load error')}
+                      tone="error"
+                    >
                       <p className="text-sm text-error font-medium">{t('admin.database.error')}</p>
                       <p className="text-xs text-text-muted mt-1 break-words">{tableError}</p>
-                      <button
+                      <Button
                         onClick={() => selectedTable && fetchTableData(selectedTable, currentPage)}
-                        className="mt-3 btn btn-ghost btn-sm"
+                        className="mt-3"
+                        size="sm"
+                        variant="ghost"
                       >
                         {t('common.retry', 'Retry')}
-                      </button>
-                    </div>
+                      </Button>
+                    </Callout>
                   </div>
                 ) : tableData.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-text-muted">
