@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminAIConfig } from './AdminAIConfig'
 import { adminFetch } from '../utils/adminApi'
+import type { AIConfigResponse } from '../types/config'
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -12,7 +13,7 @@ vi.mock('../utils/adminApi', () => ({
 
 const mockAdminFetch = vi.mocked(adminFetch)
 
-const aiConfigResponse = {
+const baseAIConfigResponse: AIConfigResponse = {
   prompt_sections: [],
   parameters: [
     {
@@ -26,8 +27,12 @@ const aiConfigResponse = {
   defaults: [],
 }
 
+let aiConfigResponse = baseAIConfigResponse
+
 describe('AdminAIConfig', () => {
   beforeEach(() => {
+    aiConfigResponse = baseAIConfigResponse
+
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/user-types') {
         return Promise.resolve(Response.json({ types: [] }))
@@ -41,6 +46,14 @@ describe('AdminAIConfig', () => {
           value: '4096',
           value_type: 'number',
           category: 'parameter',
+        }))
+      }
+      if (endpoint === '/admin/ai-config/web_search_default' && options?.method === 'PUT') {
+        return Promise.resolve(Response.json({
+          key: 'web_search_default',
+          value: 'false',
+          value_type: 'boolean',
+          category: 'default',
         }))
       }
       if (endpoint === '/admin/ai-config') {
@@ -76,6 +89,48 @@ describe('AdminAIConfig', () => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/max_tokens', expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ value: '4096' }),
+      }))
+    })
+  })
+
+  it('lets an admin configure whether the Web Search tool is active by default', async () => {
+    aiConfigResponse = {
+      ...baseAIConfigResponse,
+      defaults: [
+        {
+          key: 'web_search_default',
+          value: 'true',
+          value_type: 'boolean',
+          category: 'default',
+          description: 'Web search active by default for new sessions',
+        },
+      ],
+    }
+
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Web Search')
+
+    const defaultToolCard = screen.getByText('Allow AI to search the internet').closest('div')
+    expect(defaultToolCard).not.toBeNull()
+
+    const editButtons = screen.getAllByRole('button', { name: 'Edit' })
+    await user.click(editButtons[editButtons.length - 1])
+    await user.click(screen.getByRole('switch', { name: 'Web Search' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/ai-config/web_search_default', expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ value: 'false' }),
       }))
     })
   })
