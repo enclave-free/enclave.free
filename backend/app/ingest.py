@@ -69,6 +69,7 @@ PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 # Jobs are persisted to SQLite; CHUNKS remain in-memory during processing
 JOBS: dict = {}  # Loaded from SQLite on startup
 CHUNKS: dict = {}  # In-memory only (not persisted for now)
+TASKS: dict[str, asyncio.Task] = {}
 
 
 def _rate_limit_key(request: Request) -> str:
@@ -150,7 +151,24 @@ def _clear_job_chunks(job_id: str) -> None:
 
 def schedule_document_processing(job_id: str, file_path: Path, sample_percent: float) -> None:
     """Schedule background document processing."""
-    asyncio.create_task(process_document(job_id, file_path, sample_percent))
+    task = asyncio.create_task(process_document(job_id, file_path, sample_percent))
+    TASKS[job_id] = task
+
+    def _finish_task(done_task: asyncio.Task) -> None:
+        TASKS.pop(job_id, None)
+        try:
+            done_task.result()
+        except asyncio.CancelledError:
+            logger.info(f"[{job_id}] Background document processing task was cancelled")
+        except Exception as exc:
+            logger.error(f"[{job_id}] Background document processing task failed: {exc}", exc_info=True)
+            if job_id in JOBS:
+                JOBS[job_id]["status"] = "failed"
+                JOBS[job_id]["error"] = str(exc)
+                JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+                _sync_job_to_db(job_id)
+
+    task.add_done_callback(_finish_task)
 
 
 @router.on_event("startup")
@@ -569,6 +587,14 @@ async def promote_replacement(job_id: str) -> None:
         return
 
     logger.info(f"[{job_id}] Promoting replacement for {old_job_id}")
+    try:
+        promoted = ingest_db.promote_replacement(job_id, old_job_id)
+        if not promoted:
+            raise RuntimeError("promote_replacement returned False")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
+        raise
+
     database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
 
     try:
@@ -583,7 +609,6 @@ async def promote_replacement(job_id: str) -> None:
         except Exception as e:
             logger.error(f"[{job_id}] Failed to delete replaced file {old_file_path}: {e}")
 
-    ingest_db.promote_replacement(job_id, old_job_id)
     if old_job_id in JOBS:
         JOBS[old_job_id]["is_current"] = False
         JOBS[old_job_id]["replaced_by_job_id"] = job_id
@@ -809,7 +834,7 @@ async def upload_document_batch(
     rejected: list[BatchRejectedItem] = []
     seen_names: set[str] = set()
     total_bytes = 0
-    staged: list[tuple[UploadFile, str, str, bytes]] = []
+    staged: list[tuple[UploadFile, str, str]] = []
 
     for index, upload in enumerate(files):
         original_filename = upload.filename or "document"
@@ -836,17 +861,27 @@ async def upload_document_batch(
             ))
             continue
 
-        content = await upload.read()
-        total_bytes += len(content)
+        try:
+            upload.file.seek(0, os.SEEK_END)
+            size = upload.file.tell()
+            upload.file.seek(0)
+        except (AttributeError, OSError):
+            content = await upload.read()
+            size = len(content)
+            await upload.seek(0)
+
+        total_bytes += size
         if total_bytes > MAX_BATCH_BYTES:
             raise HTTPException(
                 status_code=413,
                 detail=f"Batch upload exceeds {MAX_BATCH_BYTES} bytes"
             )
-        staged.append((upload, original_filename, canonical_name, content))
+        staged.append((upload, original_filename, canonical_name))
 
-    for _upload, original_filename, canonical_name, content in staged:
+    for upload, original_filename, canonical_name in staged:
         try:
+            await upload.seek(0)
+            content = await upload.read()
             accepted.append(await queue_document_ingestion(
                 original_filename=original_filename,
                 canonical_name=canonical_name,

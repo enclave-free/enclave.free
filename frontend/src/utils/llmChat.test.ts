@@ -27,11 +27,13 @@ describe('sendLlmChatWithUnifiedTools', () => {
     expect(fetch).toHaveBeenCalledWith('/api/llm/chat', expect.objectContaining({
       method: 'POST',
       credentials: 'include',
-      body: JSON.stringify({
-        message: 'What was the secret word?',
-        tools: [],
-        session_id: 'session-123',
-      }),
+      body: expect.any(String),
     }))
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'What was the secret word?',
+      tools: [],
+      session_id: 'session-123',
+    })
   })
 })

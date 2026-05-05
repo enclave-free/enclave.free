@@ -20,6 +20,9 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.tmp.name) / "sanctum.db"
         self.uploads_dir = Path(self.tmp.name) / "uploads"
+        self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
+        self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self._orig_secret_key = os.environ.get("SECRET_KEY")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["UPLOADS_DIR"] = str(self.uploads_dir)
         os.environ["SECRET_KEY"] = "test-secret"
@@ -60,7 +63,17 @@ class IngestBatchReplacementTest(unittest.TestCase):
         if self.database._connection is not None:
             self.database._connection.close()
             self.database._connection = None
+        self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
+        self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        self._restore_env("SECRET_KEY", self._orig_secret_key)
         self.tmp.cleanup()
+
+    @staticmethod
+    def _restore_env(name: str, value: str | None) -> None:
+        if value is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = value
 
     async def noop_chunk_delete(self) -> int:
         return 0

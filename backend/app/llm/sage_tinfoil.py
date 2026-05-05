@@ -48,7 +48,11 @@ class SageTinfoilProvider(LLMProvider):
 
     def _init_client(self) -> None:
         """Initialize or reinitialize the OpenAI client."""
-        self.client = OpenAI(base_url=self.base_url, api_key=self.api_key or "not-required")
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key or "not-required",
+            timeout=httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0),
+        )
 
     def _refresh_config(self) -> None:
         """Refresh config from config_loader if available."""
@@ -77,16 +81,18 @@ class SageTinfoilProvider(LLMProvider):
     def health_check(self) -> bool:
         """Check an OpenAI-compatible runtime via /health or /v1/models."""
         self._refresh_config()
-        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        base = self.base_url.rstrip("/")
+        base_url = self.base_url
+        api_key = self.api_key
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        base = base_url.rstrip("/")
         health_base = base[:-3] if base.endswith("/v1") else base
 
         try:
             health_resp = httpx.get(f"{health_base}/health", headers=headers, timeout=5.0)
             if health_resp.status_code == 200:
                 return True
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Sage/Tinfoil health probe failed for %s: %s", health_base, exc)
 
         try:
             models_resp = httpx.get(f"{base}/models", headers=headers, timeout=5.0)
@@ -111,11 +117,16 @@ class SageTinfoilProvider(LLMProvider):
             model=model,
             messages=[{"role": "user", "content": prompt}],
             stream=True,
+            stream_options={"include_usage": True},
             temperature=temperature,
         )
 
         content_parts = []
+        usage = None
         for chunk in stream:
+            if not chunk.choices and getattr(chunk, "usage", None) is not None:
+                usage_obj = chunk.usage
+                usage = usage_obj.model_dump() if hasattr(usage_obj, "model_dump") else getattr(usage_obj, "__dict__", usage_obj)
             if chunk.choices and chunk.choices[0].delta.content:
                 content_parts.append(chunk.choices[0].delta.content)
 
@@ -123,5 +134,5 @@ class SageTinfoilProvider(LLMProvider):
             content="".join(content_parts),
             model=model,
             provider=self.name,
-            usage=None,
+            usage=usage,
         )

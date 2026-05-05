@@ -460,7 +460,7 @@ export function AdminDocumentUpload() {
 
       // Show success state
       const acceptedCount = 'accepted' in data ? data.accepted.length : 1
-      const rejectedCount = 'rejected' in data ? data.rejected.length : rejectedSelectedFiles.length
+      const rejectedCount = ('rejected' in data ? data.rejected.length : 0) + rejectedSelectedFiles.length
       setUploadSuccess({ label: uploadLabel, count: acceptedCount, rejected: rejectedCount })
 
       // Clear selected files

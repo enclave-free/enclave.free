@@ -1986,6 +1986,14 @@ def transfer_document_access(old_job_id: str, new_job_id: str, changed_by: str =
         cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (old_job_id,))
         old_default = cursor.fetchone()
         if old_default:
+            cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (new_job_id,))
+            existing_default = cursor.fetchone()
+            old_value = json.dumps({
+                "is_available": bool(existing_default["is_available"]),
+                "is_default_active": bool(existing_default["is_default_active"]),
+                "display_order": existing_default["display_order"],
+            }) if existing_default else None
+
             cursor.execute("""
                 INSERT INTO document_defaults (job_id, is_available, is_default_active, display_order)
                 VALUES (?, ?, ?, ?)
@@ -2005,7 +2013,7 @@ def transfer_document_access(old_job_id: str, new_job_id: str, changed_by: str =
                     "is_available": bool(old_default["is_available"]),
                     "is_default_active": bool(old_default["is_default_active"]),
                 })
-                _insert_config_audit_log(cursor, "document_defaults", new_job_id, None, new_value, changed_by)
+                _insert_config_audit_log(cursor, "document_defaults", new_job_id, old_value, new_value, changed_by)
 
         cursor.execute("""
             SELECT * FROM document_defaults_user_type_overrides
@@ -2013,6 +2021,16 @@ def transfer_document_access(old_job_id: str, new_job_id: str, changed_by: str =
         """, (old_job_id,))
         old_overrides = cursor.fetchall()
         for override in old_overrides:
+            cursor.execute("""
+                SELECT * FROM document_defaults_user_type_overrides
+                WHERE job_id = ? AND user_type_id = ?
+            """, (new_job_id, override["user_type_id"]))
+            existing_override = cursor.fetchone()
+            old_value = json.dumps({
+                "is_available": bool(existing_override["is_available"]) if existing_override["is_available"] is not None else None,
+                "is_default_active": bool(existing_override["is_default_active"]) if existing_override["is_default_active"] is not None else None,
+            }) if existing_override else None
+
             cursor.execute("""
                 INSERT INTO document_defaults_user_type_overrides (
                     job_id, user_type_id, is_available, is_default_active
@@ -2037,7 +2055,7 @@ def transfer_document_access(old_job_id: str, new_job_id: str, changed_by: str =
                     cursor,
                     "document_defaults_user_type_overrides",
                     f"{new_job_id}:type_{override['user_type_id']}",
-                    None,
+                    old_value,
                     new_value,
                     changed_by,
                 )

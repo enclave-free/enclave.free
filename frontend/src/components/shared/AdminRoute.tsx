@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MessageCircle, PanelRightClose } from 'lucide-react'
@@ -22,6 +22,8 @@ export function AdminRoute({ children }: AdminRouteProps) {
   const [retryNonce, setRetryNonce] = useState(0)
   const [assistantCollapsed, setAssistantCollapsed] = useState(false)
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false)
+  const mobileDialogRef = useRef<HTMLDivElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     let active = true
@@ -50,6 +52,58 @@ export function AdminRoute({ children }: AdminRouteProps) {
       active = false
     }
   }, [retryNonce])
+
+  useEffect(() => {
+    if (!mobileAssistantOpen) return
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+
+    const focusDialog = window.setTimeout(() => {
+      mobileDialogRef.current?.focus()
+    }, 0)
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileAssistantOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab' || !mobileDialogRef.current) return
+
+      const focusable = Array.from(
+        mobileDialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden'))
+
+      if (focusable.length === 0) {
+        event.preventDefault()
+        mobileDialogRef.current.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.clearTimeout(focusDialog)
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocusRef.current?.focus()
+      previousFocusRef.current = null
+    }
+  }, [mobileAssistantOpen])
 
   if (state === 'checking') {
     return (
@@ -137,11 +191,24 @@ export function AdminRoute({ children }: AdminRouteProps) {
       </div>
 
       {mobileAssistantOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex justify-end bg-black/30">
-          <AdminConfigAssistant
-            variant="drawer"
-            onClose={() => setMobileAssistantOpen(false)}
-          />
+        <div
+          className="lg:hidden fixed inset-0 z-50 flex justify-end bg-black/30"
+          onClick={() => setMobileAssistantOpen(false)}
+        >
+          <div
+            ref={mobileDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('admin.configAssistant.title', 'Admin Configuration Assistant')}
+            tabIndex={-1}
+            className="h-full outline-none"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <AdminConfigAssistant
+              variant="drawer"
+              onClose={() => setMobileAssistantOpen(false)}
+            />
+          </div>
         </div>
       )}
     </div>

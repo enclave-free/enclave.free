@@ -606,7 +606,7 @@ export function ChatPage() {
       
       // Handle auto-search if backend returned a search term
       if (responseIsRag && data.search_term) {
-        await triggerAutoSearch(data.search_term)
+        await triggerAutoSearch(data.search_term, data.session_id ?? conversationSessionId)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('errors.failedToSendMessage'))
@@ -795,7 +795,7 @@ export function ChatPage() {
   }, [adminApplyState])
   
   // Auto-search triggered by backend - injects results back into RAG session
-  const triggerAutoSearch = async (searchTerm: string) => {
+  const triggerAutoSearch = async (searchTerm: string, sessionId?: string | null) => {
     try {
       // Show searching indicator
       const searchingMessage: Message = {
@@ -820,7 +820,7 @@ IMPORTANT: Return a CONDENSED response:
         content: searchPrompt,
         tools: ['web-search'],
         t,
-        sessionId: conversationSessionId,
+        sessionId,
       })
       
       if (!searchRes.ok) {
@@ -849,7 +849,8 @@ IMPORTANT: Return a CONDENSED response:
       })
       
       // Inject search results back into RAG session for context continuity
-      if (conversationSessionId && selectedDocuments.length > 0) {
+      const injectionSessionId = searchData.session_id ?? sessionId
+      if (injectionSessionId && selectedDocuments.length > 0) {
         // Send a silent update to the RAG session with search results
         await fetch(`${API_BASE}/query`, {
           method: 'POST',
@@ -859,7 +860,7 @@ IMPORTANT: Return a CONDENSED response:
           credentials: 'include',
           body: JSON.stringify({
             question: `[SYSTEM: Search results for "${searchTerm}" have been provided to the user. The results included: ${searchResults.slice(0, 500)}...]`,
-            session_id: conversationSessionId,
+            session_id: injectionSessionId,
             top_k: 1,  // Minimal retrieval since this is just context injection
             tools: []  // No tools for this update
           }),

@@ -127,10 +127,6 @@ def _migrate_add_replacement_columns() -> None:
         SET is_current = 1
         WHERE is_current IS NULL
     """)
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_ingest_jobs_canonical_current
-        ON ingest_jobs(canonical_name, is_current)
-    """)
     conn.commit()
     cursor.close()
 
@@ -159,6 +155,10 @@ def create_job(
         file_path: Path to saved file
         ontology_id: Ontology used for extraction
         sample_percent: Percentage of chunks to process (for testing)
+        canonical_name: Optional operator-facing document name. Defaults to filename when omitted.
+        replacement_for_job_id: Optional job ID this job is replacing. Defaults to None.
+        content_sha256: Optional SHA-256 digest of the uploaded content. Defaults to None.
+        is_current: Whether this job is the active current document. Defaults to True and is stored as 1/0.
     
     Returns:
         SQLite row ID of created job
@@ -374,6 +374,13 @@ def update_job_status(
 def promote_replacement(new_job_id: str, old_job_id: str) -> bool:
     """Mark a successful replacement as current and retire the old job."""
     with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM ingest_jobs WHERE job_id IN (?, ?)",
+            (new_job_id, old_job_id),
+        )
+        if cursor.fetchone()["count"] != 2:
+            raise ValueError("Both replacement jobs must exist before promotion")
+
         cursor.execute("""
             UPDATE ingest_jobs
             SET is_current = 0,
@@ -390,6 +397,9 @@ def promote_replacement(new_job_id: str, old_job_id: str) -> bool:
             WHERE job_id = ?
         """, (datetime.utcnow().isoformat(), new_job_id))
         new_updated = cursor.rowcount > 0
+
+        if not old_updated or not new_updated:
+            raise RuntimeError("Failed to atomically promote replacement jobs")
 
         return old_updated and new_updated
 
