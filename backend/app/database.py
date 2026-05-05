@@ -1742,6 +1742,7 @@ def _seed_default_ai_config() -> None:
         # Model Provider parameters
         ("temperature", "0.1", "number", "parameter", "Model Provider temperature (0.0-1.0)"),
         ("top_k", "8", "number", "parameter", "Retrieval count"),
+        ("max_tokens", "2048", "number", "parameter", "Maximum generated response tokens"),
         # Session defaults
         ("web_search_default", "false", "boolean", "default", "Web search active by default for new sessions"),
     ]

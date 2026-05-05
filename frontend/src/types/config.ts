@@ -386,7 +386,7 @@ export interface ParameterMeta {
   step: number
 }
 
-export const PARAMETER_KEY_LIST = ['temperature', 'top_k'] as const
+export const PARAMETER_KEY_LIST = ['temperature', 'top_k', 'max_tokens'] as const
 
 export type ParameterKey = typeof PARAMETER_KEY_LIST[number]
 
@@ -410,6 +410,14 @@ export function getParameterMeta(t: TFunction): Record<ParameterKey, ParameterMe
       min: 1,
       max: 100,
       step: 1,
+    },
+    max_tokens: {
+      label: t('parameters.max_tokens.label', 'Max Tokens'),
+      description: t('parameters.max_tokens.description', 'Maximum length for each AI response'),
+      hint: t('parameters.max_tokens.hint', 'Caps how long a response can be. Lower values keep answers brief and reduce cost; higher values allow longer explanations. Default: 2048'),
+      min: 256,
+      max: 8192,
+      step: 256,
     },
   }
 }

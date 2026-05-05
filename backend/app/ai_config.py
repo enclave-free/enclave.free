@@ -150,6 +150,19 @@ async def update_ai_config_value(
                     status_code=400,
                     detail="Top-K must be between 1 and 100"
                 )
+        elif key == "max_tokens":
+            max_tokens_float = float(update.value)
+            if not max_tokens_float.is_integer():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Max tokens must be a whole number"
+                )
+            max_tokens = int(max_tokens_float)
+            if max_tokens < 256 or max_tokens > 8192:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Max tokens must be between 256 and 8192"
+                )
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 
@@ -274,6 +287,13 @@ async def set_ai_config_override(
             top_k = int(top_k_float)
             if top_k < 1 or top_k > 100:
                 raise HTTPException(status_code=400, detail="Top-K must be between 1 and 100")
+        elif key == "max_tokens":
+            max_tokens_float = float(update.value)
+            if not max_tokens_float.is_integer():
+                raise HTTPException(status_code=400, detail="Max tokens must be a whole number")
+            max_tokens = int(max_tokens_float)
+            if max_tokens < 256 or max_tokens > 8192:
+                raise HTTPException(status_code=400, detail="Max tokens must be between 256 and 8192")
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 

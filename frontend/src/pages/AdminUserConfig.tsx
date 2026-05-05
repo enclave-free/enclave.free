@@ -118,6 +118,13 @@ export function AdminUserConfig() {
   const [isReordering, setIsReordering] = useState(false)
   const [reorderError, setReorderError] = useState<string | null>(null)
 
+  // User Approval settings
+  const [userApprovalLoaded, setUserApprovalLoaded] = useState(false)
+  const [autoApproveUsers, setAutoApproveUsers] = useState(true)
+  const [userApprovalSaving, setUserApprovalSaving] = useState(false)
+  const [userApprovalSaveError, setUserApprovalSaveError] = useState<string | null>(null)
+  const [userApprovalSaveSuccess, setUserApprovalSaveSuccess] = useState<string | null>(null)
+
   // Reachout settings (stored in instance_settings; only reachout_* public keys are exposed via /settings/public)
   const [reachoutLoaded, setReachoutLoaded] = useState(false)
   const [reachoutEnabled, setReachoutEnabled] = useState(false)
@@ -240,7 +247,10 @@ export function AdminUserConfig() {
       try {
         const res = await adminFetch('/admin/settings')
         if (!res.ok) {
-          if (!isCancelled) setReachoutLoaded(true)
+          if (!isCancelled) {
+            setUserApprovalLoaded(true)
+            setReachoutLoaded(true)
+          }
           return
         }
         const data = await res.json()
@@ -248,6 +258,8 @@ export function AdminUserConfig() {
 
         if (isCancelled) return
 
+        setAutoApproveUsers(String(s.auto_approve_users ?? 'true').toLowerCase() !== 'false')
+        setUserApprovalLoaded(true)
         setReachoutEnabled(String(s.reachout_enabled ?? 'false').toLowerCase() === 'true')
         const mode = String(s.reachout_mode ?? 'support').toLowerCase()
         if (mode === 'feedback' || mode === 'help' || mode === 'support') {
@@ -266,8 +278,11 @@ export function AdminUserConfig() {
         setReachoutIncludeIp(String(s.reachout_include_ip ?? 'false').toLowerCase() === 'true')
         setReachoutLoaded(true)
       } catch (err) {
-        console.warn('Failed to fetch reachout settings:', err)
-        if (!isCancelled) setReachoutLoaded(true)
+        console.warn('Failed to fetch admin settings:', err)
+        if (!isCancelled) {
+          setUserApprovalLoaded(true)
+          setReachoutLoaded(true)
+        }
       }
     }
 
@@ -279,6 +294,33 @@ export function AdminUserConfig() {
       isCancelled = true
     }
   }, [])
+
+  const handleSaveUserApproval = async () => {
+    setUserApprovalSaveError(null)
+    setUserApprovalSaveSuccess(null)
+    setUserApprovalSaving(true)
+
+    try {
+      const res = await adminFetch('/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          auto_approve_users: String(autoApproveUsers),
+        }),
+      })
+
+      if (!res.ok) {
+        setUserApprovalSaveError(t('admin.errors.saveFailed', 'Failed to save settings. Please try again.'))
+        return
+      }
+
+      setUserApprovalSaveSuccess(t('common.saved', 'Saved'))
+      setTimeout(() => setUserApprovalSaveSuccess(null), 2000)
+    } catch (err) {
+      setUserApprovalSaveError(err instanceof Error ? err.message : t('admin.errors.saveFailed', 'Failed to save settings. Please try again.'))
+    } finally {
+      setUserApprovalSaving(false)
+    }
+  }
 
   const handleSaveReachout = async () => {
     setReachoutSaveError(null)
@@ -1086,6 +1128,69 @@ export function AdminUserConfig() {
               <p className="text-sm text-error">{loadError}</p>
             </div>
           )}
+
+          {/* User Approval Section */}
+          <div className="card card-sm p-5! bg-surface-overlay!">
+            <h3 className="heading-sm mb-2 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-text-muted" />
+              {t('admin.userApproval.title', 'User Approval')}
+            </h3>
+            <p className="text-xs text-text-muted mb-4">
+              {t(
+                'admin.userApproval.subtitle',
+                'Choose whether new authenticated Users can enter chat immediately or wait for Admin approval.',
+              )}
+            </p>
+
+            <div className="space-y-4">
+              <label className="flex items-start gap-3 text-sm text-text">
+                <input
+                  type="checkbox"
+                  checked={!autoApproveUsers}
+                  onChange={(e) => {
+                    setAutoApproveUsers(!e.target.checked)
+                    setUserApprovalSaveError(null)
+                    setUserApprovalSaveSuccess(null)
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                />
+                <span>
+                  <span className="font-medium">
+                    {t('admin.userApproval.requireManualLabel', 'Require manual approval for new users')}
+                  </span>
+                  <span className="block text-xs text-text-muted mt-0.5">
+                    {t(
+                      'admin.userApproval.requireManualHint',
+                      'When enabled, new Users land on the pending approval screen until an Admin approves them.',
+                    )}
+                    {!userApprovalLoaded && (
+                      <span className="ml-1">
+                        {t('admin.userApproval.loadingHint', 'Loading...')}
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </label>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSaveUserApproval}
+                  disabled={userApprovalSaving}
+                  className="inline-flex items-center justify-center gap-2 bg-accent text-accent-text rounded-lg px-4 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {userApprovalSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {t('admin.userApproval.saveButton', 'Save user approval')}
+                </button>
+                {userApprovalSaveSuccess && (
+                  <span className="text-sm text-success">{userApprovalSaveSuccess}</span>
+                )}
+              </div>
+              {userApprovalSaveError && (
+                <p className="text-sm text-error">{userApprovalSaveError}</p>
+              )}
+            </div>
+          </div>
 
           {/* User Types Section */}
           <div className="card card-sm p-5! bg-surface-overlay!">

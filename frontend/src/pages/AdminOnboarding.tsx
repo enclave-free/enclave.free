@@ -342,6 +342,21 @@ export function AdminOnboarding() {
                 </p>
               </div>
 
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-warning-subtle border border-warning/20">
+                <ShieldCheck className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-text">
+                    {t('instanceInitiation.keySafety.title', 'Use an Instance-specific Nostr key')}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                    {t(
+                      'instanceInitiation.keySafety.body',
+                      'Do not use your personal Nostr key. Create or choose a dedicated admin key for this Instance to reduce surveillance risk and keep operational access separate.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-overlay/50 hover-lift">
                   <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
