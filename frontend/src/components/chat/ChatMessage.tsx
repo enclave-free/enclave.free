@@ -5,9 +5,11 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, Copy } from 'lucide-react'
 import { useTheme } from '../../theme'
 import { useInstanceConfig } from '../../context/InstanceConfigContext'
 import { DynamicIcon } from '../shared/DynamicIcon'
+import { Button } from '../ui'
 
 export interface Message {
   id: string
@@ -62,30 +64,24 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
             {language || 'code'}
           </span>
         </div>
-        <button
+        <Button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md
-            text-text-muted hover:text-text-secondary hover:bg-surface-overlay
+          variant="ghost"
+          size="sm"
+          leadingIcon={
+            copied ? (
+              <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            )
+          }
+          className="text-xs
             opacity-0 group-hover:opacity-100 transition-all duration-200
-            focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-accent/50"
+            focus:opacity-100"
           aria-label={copied ? t('chat.code.copied') : t('chat.code.copyCode')}
         >
-          {copied ? (
-            <>
-              <svg className="w-3.5 h-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>{t('chat.code.copied')}</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span>{t('chat.code.copy')}</span>
-            </>
-          )}
-        </button>
+          {copied ? t('chat.code.copied') : t('chat.code.copy')}
+        </Button>
       </div>
       <SyntaxHighlighter
         style={codeStyle as { [key: string]: CSSProperties }}
