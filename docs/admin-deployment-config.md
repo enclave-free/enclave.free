@@ -44,7 +44,7 @@ Recommended current values in admin deployment config:
 
 - `LLM_PROVIDER=sage`
 - `LLM_API_URL=http://tinfoil-proxy:8089/v1`
-- `LLM_MODEL=kimi-k2-5`
+- `LLM_MODEL=kimi-k2-6`
 - `LLM_API_KEY=<tinfoil key or matching override>`
 
 These compatibility keys keep existing environment names and UI labels stable. What they affect today:

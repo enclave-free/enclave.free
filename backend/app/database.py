@@ -1942,6 +1942,7 @@ def list_document_defaults() -> list[dict]:
             SELECT dd.*, ij.filename, ij.status, ij.total_chunks
             FROM document_defaults dd
             JOIN ingest_jobs ij ON dd.job_id = ij.job_id
+            WHERE ij.is_current = 1
             ORDER BY dd.display_order, ij.created_at DESC
         """)
         return [dict(row) for row in cursor.fetchall()]
@@ -1979,13 +1980,80 @@ def upsert_document_defaults(
         return True
 
 
+def transfer_document_access(old_job_id: str, new_job_id: str, changed_by: str = "") -> None:
+    """Copy global and user-type Document Access rows from one job to another."""
+    with get_write_cursor() as cursor:
+        cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (old_job_id,))
+        old_default = cursor.fetchone()
+        if old_default:
+            cursor.execute("""
+                INSERT INTO document_defaults (job_id, is_available, is_default_active, display_order)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    is_available = excluded.is_available,
+                    is_default_active = excluded.is_default_active,
+                    display_order = excluded.display_order,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                new_job_id,
+                old_default["is_available"],
+                old_default["is_default_active"],
+                old_default["display_order"],
+            ))
+            if changed_by:
+                new_value = json.dumps({
+                    "is_available": bool(old_default["is_available"]),
+                    "is_default_active": bool(old_default["is_default_active"]),
+                })
+                _insert_config_audit_log(cursor, "document_defaults", new_job_id, None, new_value, changed_by)
+
+        cursor.execute("""
+            SELECT * FROM document_defaults_user_type_overrides
+            WHERE job_id = ?
+        """, (old_job_id,))
+        old_overrides = cursor.fetchall()
+        for override in old_overrides:
+            cursor.execute("""
+                INSERT INTO document_defaults_user_type_overrides (
+                    job_id, user_type_id, is_available, is_default_active
+                )
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(job_id, user_type_id) DO UPDATE SET
+                    is_available = excluded.is_available,
+                    is_default_active = excluded.is_default_active,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (
+                new_job_id,
+                override["user_type_id"],
+                override["is_available"],
+                override["is_default_active"],
+            ))
+            if changed_by:
+                new_value = json.dumps({
+                    "is_available": bool(override["is_available"]) if override["is_available"] is not None else None,
+                    "is_default_active": bool(override["is_default_active"]) if override["is_default_active"] is not None else None,
+                })
+                _insert_config_audit_log(
+                    cursor,
+                    "document_defaults_user_type_overrides",
+                    f"{new_job_id}:type_{override['user_type_id']}",
+                    None,
+                    new_value,
+                    changed_by,
+                )
+
+
 def get_default_active_documents() -> list[str]:
     """Get list of job_ids that are default active"""
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT job_id FROM document_defaults
-            WHERE is_available = 1 AND is_default_active = 1
-            ORDER BY display_order
+            SELECT dd.job_id FROM document_defaults dd
+            JOIN ingest_jobs ij ON dd.job_id = ij.job_id
+            WHERE dd.is_available = 1
+              AND dd.is_default_active = 1
+              AND ij.is_current = 1
+              AND ij.status IN ('completed', 'completed_with_errors')
+            ORDER BY dd.display_order
         """)
         return [row["job_id"] for row in cursor.fetchall()]
 
@@ -1994,9 +2062,12 @@ def get_available_documents() -> list[str]:
     """Get list of job_ids that are available for use"""
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT job_id FROM document_defaults
-            WHERE is_available = 1
-            ORDER BY display_order
+            SELECT dd.job_id FROM document_defaults dd
+            JOIN ingest_jobs ij ON dd.job_id = ij.job_id
+            WHERE dd.is_available = 1
+              AND ij.is_current = 1
+              AND ij.status IN ('completed', 'completed_with_errors')
+            ORDER BY dd.display_order
         """)
         return [row["job_id"] for row in cursor.fetchall()]
 
@@ -2172,7 +2243,10 @@ def get_effective_document_defaults(user_type_id: int | None = None) -> list[dic
             with get_cursor() as cursor:
                 cursor.execute("""
                     SELECT job_id, filename, status, total_chunks
-                    FROM ingest_jobs WHERE job_id = ?
+                    FROM ingest_jobs
+                    WHERE job_id = ?
+                      AND is_current = 1
+                      AND status IN ('completed', 'completed_with_errors')
                 """, (job_id,))
                 job_row = cursor.fetchone()
                 if job_row:

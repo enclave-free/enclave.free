@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { MessageCircle, PanelRightClose } from 'lucide-react'
 import { isAdminAuthenticated, validateAdminSession, type AdminSessionValidationState } from '../../utils/adminApi'
 import { AdminConfigAssistant } from '../admin/AdminConfigAssistant'
 
@@ -19,6 +20,8 @@ export function AdminRoute({ children }: AdminRouteProps) {
   const { t } = useTranslation()
   const [state, setState] = useState<GuardState>('checking')
   const [retryNonce, setRetryNonce] = useState(0)
+  const [assistantCollapsed, setAssistantCollapsed] = useState(false)
+  const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -86,9 +89,61 @@ export function AdminRoute({ children }: AdminRouteProps) {
   }
 
   return (
-    <>
-      {children}
-      <AdminConfigAssistant />
-    </>
+    <div className="min-h-screen bg-surface lg:h-screen lg:overflow-hidden">
+      <div className="lg:hidden fixed top-1/2 right-0 -translate-y-1/2 z-50">
+        <button
+          onClick={() => setMobileAssistantOpen(true)}
+          className="h-14 w-11 rounded-l-2xl bg-accent text-accent-text shadow-lg ring-1 ring-white/10 hover:bg-accent-hover hover:shadow-xl transition-all active:scale-95 flex items-center justify-center"
+          aria-label={t('admin.configAssistant.openAria', 'Open admin assistant')}
+          title={t('admin.configAssistant.openTitle', 'Admin assistant')}
+        >
+          <MessageCircle className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="lg:flex lg:h-full">
+        <div className="min-w-0 flex-1 lg:h-full lg:overflow-y-auto">
+          {children}
+        </div>
+
+        <aside
+          className={`hidden lg:flex border-l border-border bg-surface-raised shrink-0 transition-[width] duration-200 ease-in-out right-0 overflow-hidden ${
+            assistantCollapsed ? 'w-16' : 'w-96'
+          }`}
+          aria-label={t('admin.configAssistant.title', 'Admin Configuration Assistant')}
+        >
+          <div className={`${assistantCollapsed ? 'flex' : 'hidden'} w-16 shrink-0 justify-center`}>
+            <button
+              onClick={() => setAssistantCollapsed(false)}
+              className="mt-4 flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-surface text-text-muted shadow-sm ring-1 ring-border/70 transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-surface-overlay hover:text-accent hover:shadow-md active:scale-[0.96]"
+              aria-label={t('admin.configAssistant.expandSidebar', 'Open admin assistant sidebar')}
+              title={t('admin.configAssistant.expandSidebar', 'Open admin assistant sidebar')}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </button>
+          </div>
+          <div
+            className={`${assistantCollapsed ? 'w-0 overflow-hidden' : 'w-96'} shrink-0 transition-[width] duration-200 ease-in-out`}
+            aria-hidden={assistantCollapsed}
+            hidden={assistantCollapsed}
+          >
+            <AdminConfigAssistant
+              variant="sidebar"
+              onCollapse={() => setAssistantCollapsed(true)}
+              collapseIcon={<PanelRightClose className="w-4 h-4" />}
+            />
+          </div>
+        </aside>
+      </div>
+
+      {mobileAssistantOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex justify-end bg-black/30">
+          <AdminConfigAssistant
+            variant="drawer"
+            onClose={() => setMobileAssistantOpen(false)}
+          />
+        </div>
+      )}
+    </div>
   )
 }

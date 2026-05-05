@@ -410,6 +410,7 @@ class ToolCallInfoResponse(BaseModel):
 class ChatRequest(BaseModel):
     """Request model for chat endpoint"""
     message: str
+    session_id: Optional[str] = None
     tools: List[str] = []
     tool_context: Optional[str] = None
     # Optional explicit list of tools already executed client-side and embedded in tool_context.
@@ -420,6 +421,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
     message: str
+    session_id: Optional[str] = None
     model: str
     provider: str
     tools_used: List[ToolCallInfoResponse] = []

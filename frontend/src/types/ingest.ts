@@ -9,18 +9,33 @@ export interface UploadResponse {
   filename: string
   status: string
   message: string
+  replacement_for_job_id?: string | null
+  replacement_for_filename?: string | null
+}
+
+export interface BatchUploadResponse {
+  accepted: UploadResponse[]
+  rejected: {
+    filename: string
+    reason: string
+  }[]
 }
 
 // Job status
 export interface JobStatus {
   job_id: string
   filename: string
-  status: 'pending' | 'processing' | 'chunked' | 'completed' | 'failed'
+  status: 'pending' | 'processing' | 'chunked' | 'completed' | 'completed_with_errors' | 'failed'
   created_at: string
   updated_at: string
   total_chunks: number
   processed_chunks: number
   error?: string
+  canonical_name?: string
+  replacement_for_job_id?: string | null
+  replacement_for_filename?: string | null
+  replaced_by_job_id?: string | null
+  is_current?: boolean
 }
 
 // Jobs list response
@@ -32,6 +47,11 @@ export interface JobsListResponse {
     status: string
     total_chunks: number
     created_at: string
+    canonical_name?: string
+    replacement_for_job_id?: string | null
+    replacement_for_filename?: string | null
+    replaced_by_job_id?: string | null
+    is_current?: boolean
   }[]
 }
 

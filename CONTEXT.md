@@ -140,6 +140,18 @@ _Avoid_: RAG database, vector store
 An operator-provided knowledge source in the **Document Library**.
 _Avoid_: file, upload, source
 
+**Document Ingestion**:
+The process that turns an uploaded **Document** into searchable knowledge in the **Document Library** after the backend returns a durable job identifier.
+_Avoid_: upload, file transfer, import
+
+**Document Batch Ingestion**:
+An admin workflow that starts **Document Ingestion** for multiple independent **Documents** in one action.
+_Avoid_: folder document, bulk file, import folder
+
+**Document Replacement**:
+A **Document Ingestion** workflow where a newly uploaded **Document** supersedes an existing **Document** with the same canonical document name after successful ingestion.
+_Avoid_: duplicate upload, overwrite file, reimport
+
 **Document Access**:
 Operator rules that determine which **Documents** are available to a **User** or **User Type**.
 _Avoid_: permissions, RAG defaults
@@ -200,6 +212,10 @@ _Avoid_: user query
 A **Conversation** between the **Admin** and **Sage** for configuring or operating an **Instance**.
 _Avoid_: admin query
 
+**Admin Configuration Assistant**:
+An admin-only **Admin Conversation** surface for configuration questions and confirmed **Enclave Control Plane** changes.
+_Avoid_: support widget, floating chat bubble
+
 ## Relationships
 
 - **Enclave Free Prototype** succeeds the first version of **Enclave Free** if the prototype direction is validated
@@ -241,6 +257,14 @@ _Avoid_: admin query
 - The **Enclave Control Plane** owns the **Document Library**
 - A **Document Library** contains zero or more **Documents**
 - The **Enclave Control Plane** owns document ingestion
+- **Document Ingestion** starts when the backend returns a durable job identifier for an uploaded **Document**
+- **Document Batch Ingestion** creates multiple independent **Document Ingestion** jobs
+- **Document Batch Ingestion** may partially succeed when some selected files can become **Documents** and others cannot
+- **Document Batch Ingestion** rejects later files in the same action when they resolve to an already-selected canonical document name
+- **Document Replacement** preserves the Operator's intended **Document Access** for the canonical document name
+- During **Document Replacement**, the existing **Document** remains current unless the replacement succeeds
+- **Document Replacement** applies consistently to single-document and batch-document admin workflows
+- Only current completed **Documents** are visible to **Users** for **Document Access** and **Retrieval**
 - **Document Access** determines which **Documents** are available before **Retrieval** or **Required Context** is applied
 - **Retrieval** is an **Agent Runtime** capability over the **Document Library**, even when the current implementation asks the **Enclave Control Plane** to execute the search
 - **Required Context** is selected outside the agent's discretion and passed to **Sage** for use in the conversation
@@ -345,6 +369,27 @@ _Avoid_: admin query
 > **Dev:** "Is an uploaded PDF the RAG database?"
 > **Domain expert:** "No. The PDF is a **Document**. The operator's collection of documents is the **Document Library**. **Retrieval** selects knowledge from that library."
 
+> **Dev:** "If an admin uploads a folder, is the folder itself a Document?"
+> **Domain expert:** "No. That is **Document Batch Ingestion**: each supported file becomes its own **Document**, while the folder is only a selection convenience."
+
+> **Dev:** "Should one unsupported file make a whole folder upload fail?"
+> **Domain expert:** "No. **Document Batch Ingestion** may partially succeed: supported files begin **Document Ingestion**, while unsupported files are reported back to the Admin."
+
+> **Dev:** "If the same folder upload contains two files with the same canonical document name, do both ingest?"
+> **Domain expert:** "No. The first file is accepted and later same-action duplicates are rejected so the Admin can resolve the ambiguity."
+
+> **Dev:** "If the admin uploads a new Policies/Handbook.md, is that a duplicate?"
+> **Domain expert:** "No. It is **Document Replacement**: the new **Document** supersedes the existing Document with the same canonical document name."
+
+> **Dev:** "Does replacing a Document depend on whether the Admin uploaded one file or a folder?"
+> **Domain expert:** "No. **Document Replacement** applies consistently to single-document and batch-document admin workflows."
+
+> **Dev:** "Does the old Handbook disappear while the replacement is processing?"
+> **Domain expert:** "No. During **Document Replacement**, the existing **Document** remains current unless the replacement succeeds."
+
+> **Dev:** "Can users select an in-progress replacement document?"
+> **Domain expert:** "No. Only current completed **Documents** are visible to **Users** for **Document Access** and **Retrieval**."
+
 > **Dev:** "Does User Type mean document permission group?"
 > **Domain expert:** "No. **User Type** is onboarding segmentation. **Document Access** is the rule set that may use User Type as an input."
 
@@ -416,6 +461,9 @@ _Avoid_: admin query
 - "user-type AI config" is implementation language; resolved: use **Agent Personalization** for operator rules that tailor Sage behavior by User or User Type.
 - "RAG" is overloaded between storage, search, and answer generation; resolved: use **Document Library** for the operator-owned corpus and **Retrieval** for selecting knowledge for the agent.
 - "document defaults" is implementation/UI language; resolved: use **Document Access** for operator rules that determine which **Documents** are available.
+- "folder upload" can imply the folder is a knowledge source; resolved: use **Document Batch Ingestion** for the admin workflow, while each supported file remains an independent **Document**.
+- "batch upload failed" can hide partial progress; resolved: **Document Batch Ingestion** reports accepted and rejected files separately.
+- "duplicate document" can mean identical bytes or same operator-facing source; resolved: **Document Replacement** is based on canonical document name, not content hash.
 - "forced RAG" was resolved as **Required Context** because the requirement comes from product policy or route behavior, not from the agent's tool choice.
 - "User Type" currently appears in implementation surfaces for onboarding, document defaults, and AI config overrides; resolved: its domain meaning is onboarding segmentation, while other per-type behavior is an extension point rather than the definition.
 - "custom field" is an implementation phrase; resolved: use **Onboarding Question** for the admin-defined prompt and **User Profile** for the user's structured answers.

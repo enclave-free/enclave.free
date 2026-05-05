@@ -1,17 +1,17 @@
 # Agent Runtime Tool Semantics
 
-This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which route owns execution and whether the turn is stateless or backed by Session Memory.
+This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which route owns execution and whether the turn is assistant-style or retrieval-first.
 
 ## Route-Level Behavior
 
 | Route | Runtime mode | Tool behavior |
 | --- | --- | --- |
-| `/llm/chat` | stateless | optional server-side `web_search`; optional admin-only `db_query`; optional admin `tool_context` injection |
+| `/llm/chat` | stateful and memory-backed | optional server-side `web_search`; optional admin-only `db_query`; optional admin `tool_context` injection |
 | `/query` | stateful and memory-backed | always retrieval-first; always has internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
 
 Current rule of thumb:
 
-- use `/llm/chat` for assistant-style turns, admin chat, and config-assistant flows
+- use `/llm/chat` for assistant-style turns, admin chat, config-assistant flows, and no-document user conversations
 - use `/query` for document-grounded, session-continuous user conversations
 
 ## Public Tool IDs
@@ -26,9 +26,10 @@ Current rule of thumb:
 
 ## `/llm/chat`
 
-`/llm/chat` is the stateless route:
+`/llm/chat` is the assistant-style session route:
 
-- no Session Memory or `web_sessions`
+- creates or resumes a `web_sessions` Conversation when `session_id` is provided
+- stores user and assistant turns in Session Memory
 - effective Agent Settings are loaded from Sage Postgres per request
 - selected tools may execute server-side before or during the agent turn
 - `tool_context` is accepted only for admins
@@ -60,7 +61,8 @@ curl -X POST http://localhost:8000/llm/chat \
   -H "Authorization: Bearer <token>" \
   -d '{
     "message": "What changed in Bitcoin price today?",
-    "tools": ["web-search"]
+    "tools": ["web-search"],
+    "session_id": "existing-session-id-if-any"
   }'
 ```
 

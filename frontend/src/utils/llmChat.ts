@@ -127,6 +127,7 @@ interface SendLlmChatOptions {
   tools: string[]
   t: TranslateFn
   baseToolContext?: string
+  sessionId?: string | null
 }
 
 export async function sendLlmChatWithUnifiedTools({
@@ -134,6 +135,7 @@ export async function sendLlmChatWithUnifiedTools({
   tools,
   t,
   baseToolContext,
+  sessionId,
 }: SendLlmChatOptions): Promise<Response> {
   const toolContextParts: string[] = []
   if (baseToolContext && baseToolContext.trim()) {
@@ -179,6 +181,9 @@ export async function sendLlmChatWithUnifiedTools({
   const body: Record<string, unknown> = {
     message: content,
     tools,
+  }
+  if (sessionId) {
+    body.session_id = sessionId
   }
 
   if (toolContextParts.length > 0) {

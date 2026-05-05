@@ -81,7 +81,7 @@ export function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
-  const [ragSessionId, setRagSessionId] = useState<string | null>(null)
+  const [conversationSessionId, setConversationSessionId] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentSource[]>([])
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false)
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([])
@@ -518,7 +518,7 @@ export function ChatPage() {
           top_k: 8,
           tools: backendTools,
           job_ids: selectedDocuments,
-          ...(ragSessionId && { session_id: ragSessionId }),
+          ...(conversationSessionId && { session_id: conversationSessionId }),
         }
 
         response = await fetch(`${API_BASE}/query`, {
@@ -545,6 +545,7 @@ export function ChatPage() {
           tools: backendTools,
           t,
           baseToolContext,
+          sessionId: conversationSessionId,
         })
       }
 
@@ -573,10 +574,13 @@ export function ChatPage() {
         
         // Save session_id for conversation continuity
         if (data.session_id) {
-          setRagSessionId(data.session_id)
+          setConversationSessionId(data.session_id)
         }
       } else {
         responseContent = data.message
+        if (data.session_id) {
+          setConversationSessionId(data.session_id)
+        }
 
         if (hasConfigTool) {
           const raw = String(data.message || '')
@@ -816,6 +820,7 @@ IMPORTANT: Return a CONDENSED response:
         content: searchPrompt,
         tools: ['web-search'],
         t,
+        sessionId: conversationSessionId,
       })
       
       if (!searchRes.ok) {
@@ -823,6 +828,9 @@ IMPORTANT: Return a CONDENSED response:
       }
       
       const searchData = await searchRes.json()
+      if (searchData.session_id) {
+        setConversationSessionId(searchData.session_id)
+      }
       const searchResults = searchData.message
       
       // Replace searching message with condensed results
@@ -841,7 +849,7 @@ IMPORTANT: Return a CONDENSED response:
       })
       
       // Inject search results back into RAG session for context continuity
-      if (ragSessionId && selectedDocuments.length > 0) {
+      if (conversationSessionId && selectedDocuments.length > 0) {
         // Send a silent update to the RAG session with search results
         await fetch(`${API_BASE}/query`, {
           method: 'POST',
@@ -851,7 +859,7 @@ IMPORTANT: Return a CONDENSED response:
           credentials: 'include',
           body: JSON.stringify({
             question: `[SYSTEM: Search results for "${searchTerm}" have been provided to the user. The results included: ${searchResults.slice(0, 500)}...]`,
-            session_id: ragSessionId,
+            session_id: conversationSessionId,
             top_k: 1,  // Minimal retrieval since this is just context injection
             tools: []  // No tools for this update
           }),
@@ -870,7 +878,7 @@ IMPORTANT: Return a CONDENSED response:
   const handleNewChat = () => {
     setMessages([])
     setError(null)
-    setRagSessionId(null) // Reset session for new conversation
+    setConversationSessionId(null) // Reset session for new conversation
     setAdminApplyState({ state: 'idle' })
     setAdminSnapshotInfo(null)
   }

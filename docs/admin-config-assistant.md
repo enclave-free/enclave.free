@@ -1,7 +1,7 @@
 # Admin Configuration Assistant
 
 This document describes the admin configuration assistant workflow used by:
-- the admin-only configuration assistant bubble (bottom-right), and
+- the admin-only configuration assistant sidebar on authenticated admin pages, and
 - the full chat page (`/chat`) when the caller is an authenticated admin.
 
 ## Goals
@@ -55,9 +55,11 @@ Tool defaults:
 - Reads `/session-defaults` and applies `web_search_enabled` default on load (same default source as full chat).
 - In current frontend behavior, admin `/chat` uses this assistant pipeline (snapshot context + changeset review/apply) and does not use document-scope Retrieval mode.
 
-Panel sizing:
-- The bubble header includes an explicit `Expand` / `Compact` control.
-- On admin setup/configuration routes, the bubble defaults to the larger size when opened.
+Sidebar behavior:
+- On desktop admin pages, the assistant appears as a right sidebar by default.
+- Desktop supports open and collapsed states; collapse is a layout action only, so the current assistant conversation and session-local secret sharing persist.
+- Mobile/tablet dismissal closes the drawer and clears session-local secret sharing.
+- On smaller screens, the assistant is closed by default and opens as a right-side drawer.
 
 ### Context Snapshot Contents
 

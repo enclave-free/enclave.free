@@ -222,6 +222,9 @@
       "contextRefreshed": "Admin config context refreshed: {{timestamp}}",
       "refreshContext": "Refresh context",
       "refreshFailed": "Failed to refresh context",
+      "collapseSidebar": "Collapse assistant sidebar",
+      "expandSidebar": "Open admin assistant sidebar",
+      "railLabel": "Assistant",
       "switchToCompact": "Switch to compact size",
       "switchToExpanded": "Switch to expanded size",
       "compact": "Compact",
@@ -1058,7 +1061,7 @@
       "goToPage": "Go to page",
       "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side compatibility shims.",
       "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys only support Python compatibility paths.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-5).",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
       "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side compatibility shims.",
       "overviewTitle": "Sage Runtime Overview",
       "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
@@ -1331,7 +1334,7 @@
     "LLM_MODEL": {
       "label": "Model Name",
       "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-5\")."
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
       "label": "API Endpoint",
