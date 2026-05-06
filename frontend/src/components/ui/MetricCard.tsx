@@ -26,6 +26,7 @@ export function MetricCard({
   label,
   tone = 'accent',
   value,
+  'aria-label': ariaLabel,
   ...props
 }: MetricCardProps) {
   const accessibleName = typeof label === 'string' ? label : undefined
@@ -33,7 +34,7 @@ export function MetricCard({
   return (
     <div
       role="group"
-      aria-label={props['aria-label'] ?? accessibleName}
+      aria-label={ariaLabel ?? accessibleName}
       className={cx('rounded-lg bg-surface-overlay p-4', className)}
       {...props}
     >

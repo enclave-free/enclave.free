@@ -6,6 +6,7 @@ import { ChatPage, SANCTUM_USER_EMAIL_KEY } from './ChatPage'
 import { InstanceConfigProvider } from '../context/InstanceConfigContext'
 import { ThemeProvider } from '../theme'
 import { DEFAULT_INSTANCE_CONFIG, INSTANCE_CONFIG_KEY } from '../types/instance'
+import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -95,6 +96,7 @@ describe('ChatPage', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     }))
+    HTMLElement.prototype.scrollIntoView = vi.fn()
   })
 
   afterEach(() => {
@@ -125,5 +127,24 @@ describe('ChatPage', () => {
 
     expect(screen.getByRole('button', { name: /operator-handbook/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /user-faq/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('contains chat request failures in a named error note', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    vi.mocked(sendLlmChatWithUnifiedTools).mockRejectedValueOnce(new Error('Model gateway unavailable'))
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: 'Docs 1' }))
+    await user.click(screen.getByRole('button', { name: /operator-handbook/ }))
+
+    await user.type(screen.getByRole('textbox', { name: 'Ask anything...' }), 'Hello')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    const errorNote = await screen.findByRole('note', { name: 'Chat request error' })
+    expect(errorNote).toHaveTextContent('Model gateway unavailable')
   })
 })

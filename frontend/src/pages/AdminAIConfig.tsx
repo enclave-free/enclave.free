@@ -805,7 +805,7 @@ export function AdminAIConfig() {
               </button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[60vh]">
-              <CodeBlockSurface label="Assembled prompt output">
+              <CodeBlockSurface label={t('adminAI.assembledPromptOutput', 'Assembled prompt output')}>
                 <pre className="whitespace-pre-wrap">{previewContent}</pre>
               </CodeBlockSurface>
             </div>

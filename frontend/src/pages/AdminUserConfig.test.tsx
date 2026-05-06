@@ -81,11 +81,17 @@ describe('AdminUserConfig', () => {
     const manualApproval = await screen.findByRole('checkbox', {
       name: /require manual approval for new users/i,
     })
+    const saveUserApproval = await screen.findByRole('button', { name: /save user approval/i })
+
+    await waitFor(() => {
+      expect(manualApproval).toBeEnabled()
+      expect(saveUserApproval).toBeEnabled()
+    })
 
     expect(manualApproval).toBeChecked()
 
     await user.click(manualApproval)
-    await user.click(screen.getByRole('button', { name: /save user approval/i }))
+    await user.click(saveUserApproval)
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({

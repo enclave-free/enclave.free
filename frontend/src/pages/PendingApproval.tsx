@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Clock, LogOut } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Button } from '../components/ui'
 import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
 
 export function PendingApproval() {
@@ -49,13 +50,14 @@ export function PendingApproval() {
         <p className="text-xs text-text-muted mb-6">
           {t('onboarding.pending.checkBack')}
         </p>
-        <button
+        <Button
           onClick={handleLogout}
-          className="btn btn-ghost btn-md inline-flex items-center gap-2"
+          variant="ghost"
+          size="md"
+          leadingIcon={<LogOut className="w-4 h-4" aria-hidden="true" />}
         >
-          <LogOut className="w-4 h-4" />
           {t('common.logout')}
-        </button>
+        </Button>
       </div>
     </OnboardingCard>
   )

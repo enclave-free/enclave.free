@@ -12,13 +12,21 @@ vi.mock('../utils/adminApi', () => ({
 
 vi.mock('../components/onboarding/IconPicker', () => ({
   IconPicker: ({ 'aria-labelledby': ariaLabelledby }: { 'aria-labelledby'?: string }) => (
-    <div role="group" aria-labelledby={ariaLabelledby} />
+    <div
+      role="group"
+      aria-labelledby={ariaLabelledby}
+      aria-label={ariaLabelledby ? undefined : 'mock-icon-picker'}
+    />
   ),
 }))
 
 vi.mock('../components/onboarding/ColorPicker', () => ({
   ColorPicker: ({ 'aria-labelledby': ariaLabelledby }: { 'aria-labelledby'?: string }) => (
-    <div role="group" aria-labelledby={ariaLabelledby} />
+    <div
+      role="group"
+      aria-labelledby={ariaLabelledby}
+      aria-label={ariaLabelledby ? undefined : 'mock-color-picker'}
+    />
   ),
 }))
 

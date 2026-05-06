@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CustomField } from '../../types/onboarding'
+import { SelectField, Textarea, TextField } from '../ui'
 
 interface DynamicFieldProps {
   field: CustomField
@@ -10,8 +11,7 @@ interface DynamicFieldProps {
 
 export function DynamicField({ field, value, onChange, error }: DynamicFieldProps) {
   const { t } = useTranslation()
-  const baseInputClasses = `input-field text-sm`
-  const containerClasses = `input-container px-4 py-3 ${error ? 'has-error' : ''}`
+  const placeholder = field.placeholder || t('onboarding.profile.enterField', { field: field.name.toLowerCase() })
 
   const renderInput = () => {
     switch (field.type) {
@@ -19,71 +19,71 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
       case 'email':
       case 'url':
         return (
-          <div className={containerClasses}>
-            <input
-              type={field.type}
-              value={value as string}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={field.placeholder || t('onboarding.profile.enterField', { field: field.name.toLowerCase() })}
-              className={baseInputClasses}
-            />
-          </div>
+          <TextField
+            label={field.name}
+            type={field.type}
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            required={field.required}
+            error={error}
+          />
         )
 
       case 'number':
         return (
-          <div className={containerClasses}>
-            <input
-              type="number"
-              value={value as string}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={field.placeholder || t('onboarding.profile.enterField', { field: field.name.toLowerCase() })}
-              className={baseInputClasses}
-            />
-          </div>
+          <TextField
+            label={field.name}
+            type="number"
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            required={field.required}
+            error={error}
+          />
         )
 
       case 'date':
         return (
-          <div className={containerClasses}>
-            <input
-              type="date"
-              value={value as string}
-              onChange={(e) => onChange(e.target.value)}
-              className={baseInputClasses}
-            />
-          </div>
+          <TextField
+            label={field.name}
+            type="date"
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            required={field.required}
+            error={error}
+          />
         )
 
       case 'textarea':
         return (
-          <div className={containerClasses}>
-            <textarea
-              value={value as string}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={field.placeholder || t('onboarding.profile.enterField', { field: field.name.toLowerCase() })}
-              rows={3}
-              className={`${baseInputClasses} resize-none`}
-            />
-          </div>
+          <Textarea
+            label={field.name}
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={3}
+            required={field.required}
+            error={error}
+          />
         )
 
       case 'select':
         return (
-          <div className={containerClasses}>
-            <select
-              value={value as string}
-              onChange={(e) => onChange(e.target.value)}
-              className={`${baseInputClasses} cursor-pointer`}
-            >
-              <option value="">{t('onboarding.profile.selectOption')}</option>
-              {field.options?.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectField
+            label={field.name}
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            required={field.required}
+            error={error}
+          >
+            <option value="">{t('onboarding.profile.selectOption')}</option>
+            {field.options?.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </SelectField>
         )
 
       case 'checkbox':
@@ -119,15 +119,8 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
   }
 
   return (
-    <div className="space-y-1.5">
-      {field.type !== 'checkbox' && (
-        <label className="text-sm font-medium text-text block">
-          {field.name}
-          {field.required && <span className="text-error ml-1">*</span>}
-        </label>
-      )}
+    <div>
       {renderInput()}
-      {error && <p className="text-xs text-error">{error}</p>}
     </div>
   )
 }

@@ -130,7 +130,7 @@ function ThemeToggle() {
         )}
       </IconButton>
       <SelectField
-        label="Theme preference"
+        label={t('testDashboard.labels.themePreference', 'Theme preference')}
         hideLabel
         value={theme}
         onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
@@ -145,8 +145,10 @@ function ThemeToggle() {
 }
 
 function InfoBox({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation()
+
   return (
-    <Callout label="Endpoint guidance" className="mb-4">
+    <Callout label={t('testDashboard.labels.endpointGuidance', 'Endpoint guidance')} className="mb-4">
       {children}
     </Callout>
   )
@@ -1369,7 +1371,7 @@ export function TestDashboard() {
             </Button>
             {health && (
               <div className="mt-4">
-                <CodeBlock label="Health response output">{JSON.stringify(health, null, 2)}</CodeBlock>
+                <CodeBlock label={t('testDashboard.labels.healthResponseOutput', 'Health response output')}>{JSON.stringify(health, null, 2)}</CodeBlock>
               </div>
             )}
           </Card>
@@ -1818,7 +1820,7 @@ export function TestDashboard() {
             </Button>
             {ingestStats && (
               <div className="mt-4 grid md:grid-cols-2 gap-4">
-                <MetricCard label="Jobs" value={ingestStats.jobs.total}>
+                <MetricCard label={t('testDashboard.labels.jobs', 'Jobs')} value={ingestStats.jobs.total}>
                   <div className="mt-2 space-y-1">
                     {Object.entries(ingestStats.jobs.by_status).map(([status, count]) => (
                       <div key={status} className="flex justify-between text-sm">
@@ -1828,7 +1830,7 @@ export function TestDashboard() {
                     ))}
                   </div>
                 </MetricCard>
-                <MetricCard label="Chunks" value={ingestStats.chunks.total}>
+                <MetricCard label={t('testDashboard.labels.chunks', 'Chunks')} value={ingestStats.chunks.total}>
                   <div className="mt-2 space-y-1">
                     {Object.entries(ingestStats.chunks.by_status).map(([status, count]) => (
                       <div key={status} className="flex justify-between text-sm">
@@ -2360,7 +2362,7 @@ export function TestDashboard() {
           </InfoBox>
           <div className="flex flex-wrap gap-3 items-center mb-4">
             <SelectField
-              label="Rate limit test type"
+              label={t('testDashboard.labels.rateLimitTestType', 'Rate limit test type')}
               hideLabel
               value={rateLimitTestType}
               onChange={(e) => setRateLimitTestType(e.target.value as 'magic_link' | 'admin_auth')}
@@ -2376,8 +2378,8 @@ export function TestDashboard() {
           {rateLimitResults.responses.length > 0 && (
             <div className="space-y-4">
               <div className="flex gap-4">
-                <MetricCard className="flex-1 text-center" label="Successful requests" value={rateLimitResults.success} tone="success" description="Successful" />
-                <MetricCard className="flex-1 text-center" label="Blocked requests" value={rateLimitResults.blocked} tone="error" description={t('testDashboard.extracted.blocked_429_04c78f', 'Blocked (429)')} />
+                <MetricCard className="flex-1 text-center" label={t('testDashboard.labels.successfulRequests', 'Successful requests')} value={rateLimitResults.success} tone="success" description={t('testDashboard.labels.successful', 'Successful')} />
+                <MetricCard className="flex-1 text-center" label={t('testDashboard.labels.blockedRequests', 'Blocked requests')} value={rateLimitResults.blocked} tone="error" description={t('testDashboard.extracted.blocked_429_04c78f', 'Blocked (429)')} />
               </div>
               <div className="max-h-40 overflow-y-auto bg-surface-overlay rounded-lg p-3">
                 {rateLimitResults.responses.map((r, i) => (

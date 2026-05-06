@@ -1235,7 +1235,7 @@ export function AdminDeploymentConfig() {
         )}
 
         {/* Service Health Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
+        <Card>
           <div className="flex items-center justify-between mb-2">
             <h3 className="heading-sm flex items-center gap-2">
               <Server className="w-4 h-4 text-text-muted" />
@@ -1310,7 +1310,7 @@ export function AdminDeploymentConfig() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Actions Section */}
         <div className="flex gap-3">
@@ -1487,7 +1487,7 @@ export function AdminDeploymentConfig() {
 
         {/* Audit Log */}
         {showAuditLog && (
-          <div className="card card-sm p-5! bg-surface-overlay!">
+          <Card>
             <div className="flex items-center justify-between mb-4">
               <h3 className="heading-sm flex items-center gap-2">
                 <History className="w-4 h-4 text-text-muted" />
@@ -1531,7 +1531,7 @@ export function AdminDeploymentConfig() {
             ) : (
               <p className="text-xs text-text-muted text-center py-4">{t('adminDeployment.noRecentChanges', 'No recent changes')}</p>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Configuration Categories */}
@@ -1550,7 +1550,7 @@ export function AdminDeploymentConfig() {
         )}
 
         {/* Admin Key Migration Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
+        <Card>
           <h3 className="heading-sm mb-2 flex items-center gap-2">
             <Key className="w-4 h-4 text-text-muted" />
             {t('adminDeployment.keyMigration.title', 'Admin Key Migration')}
@@ -1584,7 +1584,7 @@ export function AdminDeploymentConfig() {
               </Button>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Navigation */}
         <div className="flex gap-3">

@@ -249,8 +249,9 @@ export function AdminUserConfig() {
         const res = await adminFetch('/admin/settings')
         if (!res.ok) {
           if (!isCancelled) {
-            setUserApprovalLoaded(true)
-            setReachoutLoaded(true)
+            const message = t('admin.errors.loadSettingsFailed', 'Failed to load settings')
+            setUserApprovalSaveError(message)
+            setReachoutSaveError(message)
           }
           return
         }
@@ -281,8 +282,11 @@ export function AdminUserConfig() {
       } catch (err) {
         console.warn('Failed to fetch admin settings:', err)
         if (!isCancelled) {
-          setUserApprovalLoaded(true)
-          setReachoutLoaded(true)
+          const message = err instanceof Error
+            ? err.message
+            : t('admin.errors.loadSettingsFailed', 'Failed to load settings')
+          setUserApprovalSaveError(message)
+          setReachoutSaveError(message)
         }
       }
     }
@@ -1539,7 +1543,7 @@ export function AdminUserConfig() {
               {t('admin.reachout.subtitle', 'Optionally let authenticated users send a message to your team via email.')}
             </p>
 
-            <div className="space-y-4">
+            <fieldset disabled={!reachoutLoaded} className="space-y-4">
               <label className="flex items-center gap-2 text-sm text-text">
                 <input
                   type="checkbox"
@@ -1875,14 +1879,14 @@ export function AdminUserConfig() {
                 <button
                   type="button"
                   onClick={handleSaveReachout}
-                  disabled={reachoutSaving}
+                  disabled={reachoutSaving || !reachoutLoaded}
                   className="inline-flex items-center gap-2 bg-accent text-accent-text rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {reachoutSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {reachoutSaving ? t('common.saving', 'Saving...') : t('common.save', 'Save')}
                 </button>
               </div>
-            </div>
+            </fieldset>
           </div>
 
           {/* User Migration Section */}

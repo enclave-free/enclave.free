@@ -1171,7 +1171,7 @@ export function AdminDocumentUpload() {
 
               {/* Error message */}
               {deleteError && (
-                <Callout label="Document deletion error" tone="error" className="mb-4">
+                <Callout label={t('upload.documentDeletionError', 'Document deletion error')} tone="error" className="mb-4">
                   <p className="text-sm text-error">{deleteError}</p>
                 </Callout>
               )}

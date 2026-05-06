@@ -16,7 +16,7 @@ import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../types/config'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
-import { Button, IconButton } from '../components/ui'
+import { Button, Callout, IconButton } from '../components/ui'
 import {
   extractAdminAssistantChangeSetStrict,
   type AdminAssistantChangeSet,
@@ -935,10 +935,12 @@ IMPORTANT: Return a CONDENSED response:
       {error && (
         <div className="px-3 sm:px-4 pb-2">
           <div className="max-w-3xl mx-auto">
-            <div className="bg-error-subtle border border-error/20 text-error rounded-xl px-4 py-3 text-sm flex items-center gap-3 animate-fade-in shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center shrink-0">
-                <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              </div>
+            <Callout
+              label={t('chat.errors.requestLabel', 'Chat request error')}
+              tone="error"
+              className="flex items-center gap-3 animate-fade-in shadow-sm"
+            >
+              <AlertCircle className="h-4 w-4 text-error shrink-0" aria-hidden="true" />
               <span className="flex-1">{error}</span>
               <IconButton
                 label={t('common.close', 'Close')}
@@ -949,7 +951,7 @@ IMPORTANT: Return a CONDENSED response:
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </IconButton>
-            </div>
+            </Callout>
           </div>
         </div>
       )}
@@ -967,9 +969,9 @@ IMPORTANT: Return a CONDENSED response:
       {isAdmin && selectedTools.includes(CONFIG_TOOL_ID) && adminApplyState.state === 'error' && (
         <div className="px-3 sm:px-4 pb-2">
           <div className="max-w-3xl mx-auto">
-            <div className="text-sm text-error bg-error/10 border border-error/20 rounded-xl px-4 py-3">
+            <Callout label={t('admin.configAssistant.applyErrorLabel', 'Config apply error')} tone="error">
               {adminApplyState.message}
-            </div>
+            </Callout>
           </div>
         </div>
       )}

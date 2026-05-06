@@ -624,7 +624,7 @@ export function AdminInstanceConfig() {
 
         {/* Save Error display */}
         {saveError && (
-          <Callout label={t('admin.errors.saveFailed', 'Failed to save settings. Please try again.')} tone="error">
+          <Callout label={t('common.error', 'Error')} tone="error">
             <p className="text-sm text-error">{saveError}</p>
           </Callout>
         )}
