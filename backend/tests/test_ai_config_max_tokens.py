@@ -73,6 +73,27 @@ class AIConfigMaxTokensTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "Max tokens must be between 256 and 8192")
 
+    def test_max_tokens_accepts_supported_boundaries(self) -> None:
+        for value in ("256", "8192"):
+            with self.subTest(value=value):
+                response = self.client.put(
+                    "/admin/ai-config/max_tokens",
+                    json={"value": value},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["key"], "max_tokens")
+                self.assertEqual(response.json()["value"], value)
+
+    def test_max_tokens_rejects_non_integer_values(self) -> None:
+        response = self.client.put(
+            "/admin/ai-config/max_tokens",
+            json={"value": "not-an-int"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "Invalid value for type 'number'")
+
 
 if __name__ == "__main__":
     unittest.main()
