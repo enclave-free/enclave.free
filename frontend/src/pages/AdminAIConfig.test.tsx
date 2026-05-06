@@ -35,11 +35,13 @@ const baseAIConfigResponse: AIConfigResponse = {
 
 let aiConfigResponse = baseAIConfigResponse
 let documentDefaultsResponse: DocumentDefaultsResponse = { documents: [] }
+let previewShouldFail = false
 
 describe('AdminAIConfig', () => {
   beforeEach(() => {
     aiConfigResponse = baseAIConfigResponse
     documentDefaultsResponse = { documents: [] }
+    previewShouldFail = false
 
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/user-types') {
@@ -76,6 +78,9 @@ describe('AdminAIConfig', () => {
         }))
       }
       if (endpoint === '/admin/ai-config/prompts/preview' && options?.method === 'POST') {
+        if (previewShouldFail) {
+          return Promise.resolve(Response.json({ detail: 'Preview unavailable' }, { status: 500 }))
+        }
         return Promise.resolve(Response.json({
           assembled_prompt: 'System: You are Sage.\nQuestion: What should I know about this topic?',
           sections_used: ['prompt_system'],
@@ -271,5 +276,36 @@ describe('AdminAIConfig', () => {
         sample_facts: {},
       }),
     }))
+  })
+
+  it('shows prompt preview failures as a named Agent Settings error note', async () => {
+    previewShouldFail = true
+    aiConfigResponse = {
+      ...baseAIConfigResponse,
+      prompt_sections: [
+        {
+          key: 'prompt_system',
+          value: 'You are Sage.',
+          value_type: 'string',
+          category: 'prompt_section',
+          description: 'Core system prompt',
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('System Prompt')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
+
+    const error = await screen.findByRole('note', { name: 'Agent Settings preview error' })
+    expect(error).toHaveTextContent('Failed to preview prompt')
   })
 })

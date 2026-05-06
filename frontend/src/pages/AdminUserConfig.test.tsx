@@ -12,17 +12,40 @@ vi.mock('../utils/adminApi', () => ({
 
 const mockAdminFetch = vi.mocked(adminFetch)
 
+let userTypesResponse: unknown[] = []
+let usersResponse: unknown[] = []
+
 describe('AdminUserConfig', () => {
   beforeEach(() => {
+    userTypesResponse = []
+    usersResponse = []
+
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/user-types') {
-        return Promise.resolve(Response.json({ types: [] }))
+        return Promise.resolve(Response.json({ types: userTypesResponse }))
       }
       if (endpoint === '/admin/user-fields') {
         return Promise.resolve(Response.json({ fields: [] }))
       }
       if (endpoint === '/admin/users') {
-        return Promise.resolve(Response.json({ users: [] }))
+        return Promise.resolve(Response.json({ users: usersResponse }))
+      }
+      if (endpoint === '/admin/users/migrate-type/batch' && options?.method === 'POST') {
+        return Promise.resolve(Response.json({
+          success: true,
+          migrated: 1,
+          failed: 0,
+          results: [
+            {
+              user_id: 42,
+              success: true,
+              previous_user_type_id: null,
+              target_user_type_id: 1,
+              missing_required_count: 1,
+              missing_required_fields: ['Company'],
+            },
+          ],
+        }))
       }
       if (endpoint === '/admin/settings' && options?.method === 'PUT') {
         return Promise.resolve(Response.json({ settings: { auto_approve_users: 'true' } }))
@@ -72,5 +95,52 @@ describe('AdminUserConfig', () => {
     })
 
     expect(await screen.findByRole('note', { name: /user approval saved/i })).toHaveTextContent('Saved')
+  })
+
+  it('shows User Type migration results as a named status note after a batch migration', async () => {
+    userTypesResponse = [
+      { id: 1, name: 'Member', description: 'Community member', icon: 'User' },
+    ]
+    usersResponse = [
+      {
+        id: 42,
+        pubkey: null,
+        user_type_id: null,
+        user_type: null,
+        approved: true,
+        created_at: '2026-05-01T12:00:00Z',
+      },
+    ]
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('User Type Migration')
+
+    await user.click(screen.getByRole('button', { name: 'Select visible' }))
+    const migrateButton = screen.getByRole('button', { name: 'Migrate selected (1)' })
+    expect(migrateButton).toHaveClass('btn-primary')
+
+    await user.click(migrateButton)
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/users/migrate-type/batch', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          user_ids: [42],
+          target_user_type_id: 1,
+          allow_incomplete: true,
+        }),
+      }))
+    })
+
+    expect(await screen.findByRole('note', { name: 'User type migration summary' }))
+      .toHaveTextContent('Migration complete. Migrated: 1. Failed: 0.')
   })
 })

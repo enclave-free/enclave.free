@@ -29,7 +29,7 @@ import {
   Lock,
 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
-import { Card } from '../components/ui'
+import { Button, Callout, Card, TextField } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -1574,13 +1574,14 @@ export function AdminDeploymentConfig() {
                     : t('adminDeployment.keyMigration.unknown', 'Unknown')}
                 </p>
               </div>
-              <button
+              <Button
                 onClick={handleOpenMigrationModal}
-                className="flex items-center gap-2 bg-warning/10 border border-warning/30 text-warning rounded-lg px-4 py-2 text-sm font-medium hover:bg-warning/20 transition-all"
+                variant="secondary"
+                size="sm"
+                leadingIcon={<Key className="w-4 h-4" />}
               >
-                <Key className="w-4 h-4" />
                 {t('adminDeployment.keyMigration.migrateButton', 'Migrate to New Key')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -2789,47 +2790,43 @@ export function AdminDeploymentConfig() {
               {/* Input Step */}
               {migrationStep === 'input' && (
                 <div className="space-y-4">
-                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+                  <Callout
+                    label={t('adminDeployment.keyMigration.inputWarningLabel', 'Admin key migration warning')}
+                    tone="warning"
+                  >
                     <p className="text-xs text-warning">
                       {t('adminDeployment.keyMigration.warning', 'This operation is irreversible. Make sure you have access to the new private key before proceeding.')}
                     </p>
-                  </div>
+                  </Callout>
 
-                  <div>
-                    <label className="block text-sm font-medium text-text mb-1">
-                      {t('adminDeployment.keyMigration.newPubkeyLabel', 'New Admin Pubkey')}
-                    </label>
-                    <input
-                      type="text"
-                      value={newAdminPubkey}
-                      onChange={(e) => setNewAdminPubkey(e.target.value)}
-                      placeholder={t('adminDeployment.extracted.npub1_or_64_char_hex_b8e906', 'npub1... or 64-char hex')}
-                      className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm font-mono focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                    />
-                    <p className="text-xs text-text-muted mt-1">
-                      {t('adminDeployment.keyMigration.pubkeyHint', 'Enter the public key (npub or hex) of the new admin')}
-                    </p>
-                  </div>
+                  <TextField
+                    className="font-mono"
+                    label={t('adminDeployment.keyMigration.newPubkeyLabel', 'New Admin Pubkey')}
+                    value={newAdminPubkey}
+                    onChange={(e) => setNewAdminPubkey(e.target.value)}
+                    placeholder={t('adminDeployment.extracted.npub1_or_64_char_hex_b8e906', 'npub1... or 64-char hex')}
+                    description={t('adminDeployment.keyMigration.pubkeyHint', 'Enter the public key (npub or hex) of the new admin')}
+                  />
 
                   <div className="flex gap-3">
-                    <button
+                    <Button
                       onClick={handleCloseMigrationModal}
-                      className="flex-1 bg-surface-overlay border border-border text-text rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-surface transition-all"
+                      className="flex-1"
+                      variant="secondary"
                     >
                       {t('common.cancel', 'Cancel')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleMigrationPrepare}
                       disabled={!newAdminPubkey.trim() || migrationLoading}
-                      className="flex-1 bg-warning text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-warning/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1"
+                      variant="secondary"
+                      leadingIcon={migrationLoading
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Key className="w-4 h-4" />}
                     >
-                      {migrationLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Key className="w-4 h-4" />
-                      )}
                       {t('common.continue', 'Continue')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -2856,29 +2853,34 @@ export function AdminDeploymentConfig() {
                     </div>
                   </div>
 
-                  <div className="bg-error/10 border border-error/20 rounded-lg p-3">
+                  <Callout
+                    label={t('adminDeployment.keyMigration.destructiveWarningLabel', 'Admin key migration destructive warning')}
+                    tone="error"
+                  >
                     <p className="text-xs text-error font-medium mb-1">
                       {t('adminDeployment.keyMigration.confirmWarningTitle', 'This action cannot be undone')}
                     </p>
                     <p className="text-xs text-error">
                       {t('adminDeployment.keyMigration.confirmWarning', 'You will be signed out after migration and must log in with the new key.')}
                     </p>
-                  </div>
+                  </Callout>
 
                   <div className="flex gap-3">
-                    <button
+                    <Button
                       onClick={() => setMigrationStep('input')}
-                      className="flex-1 bg-surface-overlay border border-border text-text rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-surface transition-all"
+                      className="flex-1"
+                      variant="secondary"
                     >
                       {t('common.back', 'Back')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleMigrationExecute}
-                      className="flex-1 bg-error text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-error/90 transition-all flex items-center justify-center gap-2"
+                      className="flex-1"
+                      variant="danger"
+                      leadingIcon={<Key className="w-4 h-4" />}
                     >
-                      <Key className="w-4 h-4" />
                       {t('adminDeployment.keyMigration.confirmButton', 'Migrate Now')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

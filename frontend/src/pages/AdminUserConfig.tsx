@@ -7,7 +7,7 @@ import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { FieldEditor } from '../components/onboarding/FieldEditor'
 import { IconPicker } from '../components/onboarding/IconPicker'
 import { DynamicIcon } from '../components/shared/DynamicIcon'
-import { Button, Callout, Card } from '../components/ui'
+import { Button, Callout, Card, SelectField } from '../components/ui'
 import { CustomField, UserType, FieldType } from '../types/onboarding'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 
@@ -1902,62 +1902,52 @@ export function AdminUserConfig() {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-              <div>
-                <label className="text-xs font-medium text-text mb-1 block">
-                  {t('admin.userMigration.sourceFilter')}
-                </label>
-                <select
-                  value={typeof sourceTypeFilter === 'number' ? String(sourceTypeFilter) : sourceTypeFilter}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    if (value === 'all' || value === 'untyped') {
-                      setSourceTypeFilter(value)
-                      return
-                    }
-                    const parsed = Number(value)
-                    setSourceTypeFilter(Number.isNaN(parsed) ? 'all' : parsed)
-                  }}
-                  className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                >
-                  <option value="all">{t('admin.userMigration.filterAll')}</option>
-                  <option value="untyped">{t('admin.userMigration.filterUntyped')}</option>
-                  {userTypes.map((type) => (
-                    <option key={type.id} value={String(type.id)}>
+              <SelectField
+                label={t('admin.userMigration.sourceFilter')}
+                value={typeof sourceTypeFilter === 'number' ? String(sourceTypeFilter) : sourceTypeFilter}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value === 'all' || value === 'untyped') {
+                    setSourceTypeFilter(value)
+                    return
+                  }
+                  const parsed = Number(value)
+                  setSourceTypeFilter(Number.isNaN(parsed) ? 'all' : parsed)
+                }}
+              >
+                <option value="all">{t('admin.userMigration.filterAll')}</option>
+                <option value="untyped">{t('admin.userMigration.filterUntyped')}</option>
+                {userTypes.map((type) => (
+                  <option key={type.id} value={String(type.id)}>
+                    {type.name}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                label={t('admin.userMigration.targetType')}
+                value={targetMigrationTypeId ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value === '') {
+                    setTargetMigrationTypeId(null)
+                    return
+                  }
+                  const parsed = Number(value)
+                  setTargetMigrationTypeId(Number.isNaN(parsed) ? null : parsed)
+                }}
+                disabled={userTypes.length === 0}
+              >
+                {userTypes.length === 0 ? (
+                  <option value="">{t('admin.userMigration.noTypes')}</option>
+                ) : (
+                  userTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
                       {type.name}
                     </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-text mb-1 block">
-                  {t('admin.userMigration.targetType')}
-                </label>
-                <select
-                  value={targetMigrationTypeId ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    if (value === '') {
-                      setTargetMigrationTypeId(null)
-                      return
-                    }
-                    const parsed = Number(value)
-                    setTargetMigrationTypeId(Number.isNaN(parsed) ? null : parsed)
-                  }}
-                  disabled={userTypes.length === 0}
-                  className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text text-sm disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                >
-                  {userTypes.length === 0 ? (
-                    <option value="">{t('admin.userMigration.noTypes')}</option>
-                  ) : (
-                    userTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
+                  ))
+                )}
+              </SelectField>
 
               <label className="flex items-center gap-2 mt-6 md:mt-0 md:self-end text-sm text-text">
                 <input
@@ -1971,35 +1961,37 @@ export function AdminUserConfig() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <button
+              <Button
                 onClick={fetchUsers}
                 disabled={usersLoading || isBatchMigrating}
-                className="inline-flex items-center gap-2 border border-border text-text rounded-lg px-3 py-2 text-sm hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="secondary"
+                size="sm"
+                leadingIcon={<RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />}
               >
-                <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
                 {t('common.refresh', 'Refresh')}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={handleToggleSelectAllFilteredUsers}
                 disabled={filteredUsers.length === 0 || isBatchMigrating}
-                className="inline-flex items-center gap-2 border border-border text-text rounded-lg px-3 py-2 text-sm hover:bg-surface transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="secondary"
+                size="sm"
               >
                 {allFilteredSelected
                   ? t('admin.userMigration.clearVisible')
                   : t('admin.userMigration.selectVisible')}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={handleMigrateSelectedUsers}
                 disabled={isBatchMigrating || selectedUserIds.size === 0 || !targetMigrationTypeId}
-                className="inline-flex items-center gap-2 bg-accent text-accent-text rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                size="sm"
+                leadingIcon={isBatchMigrating ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
               >
-                {isBatchMigrating && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t('admin.userMigration.migrateSelected', {
                   count: selectedUserIds.size,
                 })}
-              </button>
+              </Button>
             </div>
 
             <p className="text-xs text-text-muted mb-3">
@@ -2010,21 +2002,21 @@ export function AdminUserConfig() {
             </p>
 
             {usersError && (
-              <div className="bg-error/10 border border-error/20 rounded-lg p-3 mb-3">
+              <Callout className="mb-3" label={t('admin.userMigration.usersErrorLabel', 'User type migration users error')} tone="error">
                 <p className="text-xs text-error">{usersError}</p>
-              </div>
+              </Callout>
             )}
 
             {migrationError && (
-              <div className="bg-error/10 border border-error/20 rounded-lg p-3 mb-3">
+              <Callout className="mb-3" label={t('admin.userMigration.errorLabel', 'User type migration error')} tone="error">
                 <p className="text-xs text-error">{migrationError}</p>
-              </div>
+              </Callout>
             )}
 
             {migrationSummary && (
-              <div className="bg-accent/10 border border-accent/20 rounded-lg p-3 mb-3">
+              <Callout className="mb-3" label={t('admin.userMigration.summaryLabel', 'User type migration summary')} tone="success">
                 <p className="text-xs text-accent">{migrationSummary}</p>
-              </div>
+              </Callout>
             )}
 
             {usersLoading ? (
@@ -2144,15 +2136,16 @@ export function AdminUserConfig() {
                             )}
                           </div>
 
-                          <button
+                          <Button
                             onClick={() => handleMigrateSingleUser(user.id)}
                             disabled={isMigratingUser || isBatchMigrating || !targetMigrationTypeId || alreadyTarget}
-                            className="inline-flex items-center gap-2 border border-border text-text rounded-lg px-2.5 py-1.5 text-xs hover:bg-surface-overlay transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            variant="secondary"
+                            size="sm"
                             title={alreadyTarget ? t('admin.userMigration.alreadyTarget') : t('admin.userMigration.migrateUser')}
+                            leadingIcon={isMigratingUser ? <Loader2 className="w-3 h-3 animate-spin" /> : undefined}
                           >
-                            {isMigratingUser && <Loader2 className="w-3 h-3 animate-spin" />}
                             {t('admin.userMigration.migrateOne')}
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     )
