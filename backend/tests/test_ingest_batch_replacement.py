@@ -42,7 +42,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.original_scheduler = self.ingest.schedule_document_processing
         self.ingest.schedule_document_processing = lambda *_args, **_kwargs: None
         self.original_chunk_deleter = self.ingest.delete_document_chunks
-        self.ingest.delete_document_chunks = lambda _job_id: self.noop_chunk_delete()
+        self.ingest.delete_document_chunks = self.noop_chunk_delete
 
         app = FastAPI()
         app.include_router(self.ingest.router)
@@ -75,7 +75,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         else:
             os.environ[name] = value
 
-    async def noop_chunk_delete(self) -> int:
+    async def noop_chunk_delete(self, _job_id: str) -> int:
         return 0
 
     def upload_text(self, filename: str, content: str = "operator knowledge"):
@@ -128,9 +128,12 @@ class IngestBatchReplacementTest(unittest.TestCase):
         asyncio.run(self.ingest.promote_replacement(new_job_id))
 
         jobs = self.client.get("/ingest/jobs").json()["jobs"]
-        job_ids = {job["job_id"] for job in jobs}
+        jobs_by_id = {job["job_id"]: job for job in jobs}
+        job_ids = set(jobs_by_id)
         self.assertIn(new_job_id, job_ids)
-        self.assertNotIn(old_job_id, job_ids)
+        self.assertIn(old_job_id, job_ids)
+        self.assertFalse(jobs_by_id[old_job_id]["is_current"])
+        self.assertEqual(jobs_by_id[old_job_id]["replaced_by_job_id"], new_job_id)
 
         defaults = self.client.get("/ingest/admin/documents/defaults").json()["documents"]
         new_defaults = next(doc for doc in defaults if doc["job_id"] == new_job_id)

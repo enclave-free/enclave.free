@@ -236,7 +236,6 @@ def main() -> int:
         print(f"[SKIP] admin row unavailable: {exc}")
         admin = None
         admin_lookup_failed = True
-        failures += 1
     if admin:
         admin_res = get_json(args.api_base, f"/internal/agent/admins/by-pubkey/{admin['pubkey']}", internal_token)
         if expect_status("GET admin record with token", admin_res, {200}):

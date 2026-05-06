@@ -371,7 +371,7 @@ async def queue_document_ingestion(
     content_sha256 = hashlib.sha256(content).hexdigest()
     job_id = generate_job_id(canonical_name)
     file_path = UPLOADS_DIR / f"{job_id}_{safe_storage_filename(original_filename)}"
-    file_path.write_bytes(content)
+    await asyncio.to_thread(file_path.write_bytes, content)
 
     now = datetime.utcnow().isoformat()
     JOBS[job_id] = {
@@ -593,15 +593,6 @@ async def promote_replacement(job_id: str) -> None:
     if not old_job:
         return
 
-    logger.info(f"[{job_id}] Promoting replacement for {old_job_id}")
-    try:
-        promoted = ingest_db.promote_replacement(job_id, old_job_id)
-        if not promoted:
-            raise RuntimeError("promote_replacement returned False")
-    except Exception as e:
-        logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
-        raise
-
     try:
         database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
     except Exception as e:
@@ -613,6 +604,19 @@ async def promote_replacement(job_id: str) -> None:
         if job_id in JOBS:
             JOBS[job_id]["transfer_failed"] = True
             JOBS[job_id]["updated_at"] = now
+            _sync_job_to_db(job_id)
+        if old_job_id in JOBS:
+            _sync_job_to_db(old_job_id)
+        raise
+
+    logger.info(f"[{job_id}] Promoting replacement for {old_job_id}")
+    try:
+        promoted = ingest_db.promote_replacement(job_id, old_job_id)
+        if not promoted:
+            raise RuntimeError("promote_replacement returned False")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
+        raise
 
     try:
         await delete_document_chunks(old_job_id)

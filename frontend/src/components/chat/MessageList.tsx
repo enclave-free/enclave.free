@@ -95,7 +95,7 @@ export function MessageList({ messages, isLoading, onSuggestedPrompt }: MessageL
 
   return (
     <div className="flex-1 overflow-y-auto px-3 py-6 sm:px-4">
-      <div className="w-[calc(100vw-1.5rem)] max-w-3xl mx-auto sm:w-full">
+      <div className="w-full max-w-3xl mx-auto">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
