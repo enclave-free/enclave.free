@@ -20,7 +20,7 @@ function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string
 
   return (
     <div className="flex-1 flex items-center justify-center p-4">
-      <div className="text-center max-w-lg animate-fade-in">
+      <div className="text-center w-full max-w-lg min-w-0 animate-fade-in">
         {/* Icon */}
         <div className="relative mx-auto mb-8 w-20 h-20">
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 rotate-6 scale-95" />
@@ -30,8 +30,8 @@ function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string
         </div>
 
         {/* Text */}
-        <h2 className="heading-xl mb-2">{t('chat.emptyState.title')}</h2>
-        <p className="text-text-secondary text-sm mb-8">
+        <h2 className="heading-xl mb-2 text-balance">{t('chat.emptyState.title')}</h2>
+        <p className="text-text-secondary text-sm mb-8 mx-auto max-w-xs sm:max-w-prose text-pretty">
           {t('chat.emptyState.description')}
         </p>
 
@@ -95,7 +95,7 @@ export function MessageList({ messages, isLoading, onSuggestedPrompt }: MessageL
 
   return (
     <div className="flex-1 overflow-y-auto px-3 py-6 sm:px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="w-[calc(100vw-1.5rem)] max-w-3xl mx-auto sm:w-full">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}

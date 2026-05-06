@@ -73,7 +73,9 @@ describe('AdminDatabaseExplorer', () => {
       </MemoryRouter>
     )
 
-    await screen.findByText('users')
+    await waitFor(() => {
+      expect(screen.getAllByText('users').length).toBeGreaterThan(0)
+    })
 
     await user.click(screen.getByRole('button', { name: 'SQL Query' }))
     await user.type(

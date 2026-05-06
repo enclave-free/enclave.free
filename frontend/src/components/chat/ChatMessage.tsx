@@ -126,8 +126,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   const bubbleRadius = bubbleStyles[config.chatBubbleStyle] || bubbleStyles.soft
   const bubbleShadow = config.chatBubbleShadow ? 'shadow-md' : ''
-  const userBubbleClass = `inline-block max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
-  const assistantBubbleClass = `inline-block max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 ${bubbleRadius.assistant} ${bubbleShadow}`
+  const userBubbleClass = `inline-block max-w-72 sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
+  const assistantBubbleClass = `inline-block max-w-72 sm:max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 ${bubbleRadius.assistant} ${bubbleShadow}`
 
   return (
     <div className="animate-fade-in-up mb-4 last:mb-0">
@@ -146,11 +146,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
           )}
           {isUser ? (
             <div className={userBubbleClass}>
-              <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{message.content}</p>
             </div>
           ) : (
             <div className={assistantBubbleClass}>
-              <div className="text-text [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
+              <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
