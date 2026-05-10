@@ -509,7 +509,7 @@ def get_tool_orchestrator() -> ToolOrchestrator:
 
 
 # Admin-only tools that require additional authorization
-ADMIN_ONLY_TOOLS = {"db-query"}
+ADMIN_ONLY_TOOLS = {"db-query", "admin-config"}
 
 
 def filter_tools_for_user(tools: List[str], user: dict) -> List[str]:
@@ -521,7 +521,7 @@ def filter_tools_for_user(tools: List[str], user: dict) -> List[str]:
         return tools
 
     user_pubkey = user.get("pubkey")
-    is_admin = user_pubkey and database.is_admin(user_pubkey)
+    is_admin = user.get("type") == "admin" or (user_pubkey and database.is_admin(user_pubkey))
 
     if is_admin:
         return tools  # Admins can use all tools

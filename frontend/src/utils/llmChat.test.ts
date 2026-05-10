@@ -52,4 +52,18 @@ describe('sendLlmChatWithUnifiedTools', () => {
     const [, options] = vi.mocked(fetch).mock.calls[0]
     expect(JSON.parse(String(options?.body))).not.toHaveProperty('session_id')
   })
+
+  it('sends admin-config as a backend tool instead of requiring client tool context', async () => {
+    await sendLlmChatWithUnifiedTools({
+      content: 'Check my deployment config',
+      tools: ['admin-config'],
+      t: (key) => key,
+    })
+
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'Check my deployment config',
+      tools: ['admin-config'],
+    })
+  })
 })

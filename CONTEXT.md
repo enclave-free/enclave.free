@@ -216,6 +216,10 @@ _Avoid_: admin query
 An admin-only **Admin Conversation** surface for configuration questions and confirmed **Enclave Control Plane** changes.
 _Avoid_: support widget, floating chat bubble
 
+**Scoped Config Context**:
+A focused slice of admin configuration state provided to **Sage** during an **Admin Configuration Assistant** turn.
+_Avoid_: full snapshot, config dump
+
 ## Relationships
 
 - **Enclave Free Prototype** succeeds the first version of **Enclave Free** if the prototype direction is validated
@@ -282,6 +286,7 @@ _Avoid_: support widget, floating chat bubble
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - An **Admin Conversation** may directly perform **Enclave Control Plane** actions after **Change Confirmation**
 - Every admin-conversation write that changes **Instance** or **Agent Runtime** state requires **Change Confirmation**
+- The **Admin Configuration Assistant** uses **Scoped Config Context** so configuration reads can stay focused while preserving **Change Confirmation** for writes
 - A **User Conversation** must not perform admin-only **Enclave Control Plane** actions
 - **User Conversations** are read/assistive in the current prototype and do not have general write-capable tool authority
 - **Ordinary Product Flows** may still let **Users** or **Admins** change data directly through the product outside a **Conversation**

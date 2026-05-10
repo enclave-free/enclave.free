@@ -8,11 +8,8 @@ This document describes the admin configuration assistant workflow used by:
 
 - Provide an in-product, admin-only AI assistant for configuration questions.
 - Give the assistant full awareness of current configuration state:
-  - Instance settings
-  - Deployment configuration (env-var backed keys stored in SQLite)
-  - Agent Settings (prompt sections, parameters, defaults), including per-user-type effective values
-  - User types and onboarding field definitions
-  - Document defaults (global + per-user-type effective values)
+  - Always include the control contract needed to propose safe confirmed changes.
+  - Include current configuration state by scoped read, rather than by always fetching every admin surface.
 - Allow the assistant to propose and apply changes (with explicit confirmation).
 - Keep tool behavior unified with the full chat page (`/chat`) so admins get the same tool pipeline from either entry point.
 - Keep secret environment variables opt-in:
@@ -47,13 +44,13 @@ Defense-in-depth:
   - `frontend/src/utils/llmChat.ts` (`sendLlmChatWithUnifiedTools`)
 - Transport: uses `POST /llm/chat` with:
   - `tools` (same admin-visible tool IDs as full chat: `web-search`, `db-query`, `admin-config`)
-  - `admin-config` UI meta-tool toggle (enables/disables config snapshot context + change-set workflow)
-  - `tool_context` (admin-only override) for the admin config snapshot
+  - `admin-config` admin-only Sage runtime tool (enables scoped config context + change-set workflow)
+  - `tool_context` only for trusted client-executed context, such as decrypted DB rows
   - `client_executed_tools` (explicitly communicates any tools already run client-side)
 
 Tool defaults:
 - Reads `/session-defaults` and applies `web_search_enabled` default on load (same default source as full chat).
-- In current frontend behavior, admin `/chat` uses this assistant pipeline (snapshot context + changeset review/apply) and does not use document-scope Retrieval mode.
+- In current frontend behavior, admin `/chat` uses this assistant pipeline (runtime tools + changeset review/apply) and does not use document-scope Retrieval mode.
 
 Sidebar behavior:
 - On desktop admin pages, the assistant appears as a right sidebar by default.
@@ -61,9 +58,39 @@ Sidebar behavior:
 - Mobile/tablet dismissal closes the drawer and clears session-local secret sharing.
 - On smaller screens, the assistant is closed by default and opens as a right-side drawer.
 
-### Context Snapshot Contents
+### Scoped Config Context
 
-On each send (and on manual refresh), the assistant builds a snapshot from:
+`admin-config` remains one visible tool toggle for admins. It is implemented as an admin-only Sage runtime tool that returns **Scoped Config Context**. This keeps admin turns responsive and prevents one slow or failing config area from blocking unrelated configuration questions.
+
+Every scoped config context includes:
+
+- Admin-assistant rules
+- Change-set format and mutation constraints
+- Secret-handling rules
+- Generation timestamp
+
+When scope selection is unsure, the tool should return `overview` only. The assistant should ask a focused follow-up or name the missing config area if the provided context is insufficient.
+
+Available scopes:
+
+- `overview`: small summary suitable for ambiguous configuration questions
+- `instance-settings`: instance branding, public behavior, and other Instance Settings
+- `deployment-settings`: Deployment Settings, grouped by config category, with secrets masked by default
+- `agent-settings`: Agent Settings, including prompt sections, parameters, defaults, and per-user-type effective values when relevant
+- `user-types`: user types and onboarding field definitions
+- `document-defaults`: global and per-user-type document defaults
+- `health`: deployment health, validation, and restart-related context
+
+Scope selection starts as deterministic runtime-tool classification:
+
+- Email, SMTP, domains, SSL, provider, model, SearXNG, env, or restart questions use `deployment-settings`.
+- Prompt, temperature, max tokens, model behavior, user-type AI, or personalization questions use `agent-settings`.
+- User type, onboarding question, or field questions use `user-types`.
+- Document, default document, access, or ingestion-default questions use `document-defaults`.
+- Broken, validate, health, restart, or service-status questions use `health` plus the relevant config scope.
+- Ambiguous admin configuration questions use `overview`.
+
+The former full snapshot behavior fetched:
 
 - Instance settings:
   - `GET /admin/settings`
@@ -85,6 +112,54 @@ If secret sharing is enabled, it additionally fetches:
 
 - For every deployment config item with `is_secret=true`:
   - `GET /admin/deployment/config/{key}/reveal`
+
+The former full snapshot behavior is retained only as a manual/debug behavior.
+
+### Scoped Read Resilience
+
+Scoped config reads are best-effort. A slow or failing supporting endpoint should not block the admin assistant turn unless the failure means the admin is not authorized.
+
+Blocking failures:
+
+- `401 Unauthorized`
+- `403 Forbidden`
+
+Non-blocking failures:
+
+- Timeout
+- Network failure
+- `5xx`
+- `404` for optional scope endpoints
+
+When a non-blocking read fails, the runtime tool should still return the available context and include a warning section:
+
+```text
+CONFIG CONTEXT WARNINGS
+- health scope failed: timed out after 2500ms
+```
+
+If every requested scope fails, the runtime tool should still return the small control contract plus warnings. The assistant should ask a focused follow-up or explain which config area could not be inspected.
+
+Timeout budget:
+
+- Each individual scoped endpoint gets 2.5 seconds.
+- The full config-context builder gets a 4 second total budget.
+- Fan-out reads, such as per-user-type Agent Settings or document defaults, should stop once the total budget is exhausted.
+
+The chat request should proceed once the context budget is spent.
+
+### Scoped Read Cache
+
+The runtime tool may cache successful scoped reads briefly during an admin assistant conversation:
+
+- Cache successful scope reads for 30 seconds.
+- Do not cache failed scope reads.
+- Clear the cache when the admin manually refreshes assistant context.
+- Invalidate all cached scopes after a change set apply succeeds or partially succeeds.
+- Invalidate affected scopes after ordinary admin UI changes when the page knows which config area changed.
+- Keep revealed secret values session-local; do not store them in the general scoped config cache.
+
+This cache is a latency optimization only. It must not replace server-side authorization or validation.
 
 ### Change Application (Confirm-Then-Apply)
 

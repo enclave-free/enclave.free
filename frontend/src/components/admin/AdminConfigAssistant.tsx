@@ -351,15 +351,8 @@ export function AdminConfigAssistant({
     setError(null)
 
     try {
-      const backendTools = selectedTools.filter((toolId) => toolId !== CONFIG_TOOL_ID)
-      let baseToolContext: string | undefined
-      if (hasConfigTool) {
-        const snapshot = await buildSnapshot()
-        setSnapshotInfo({ generatedAtIso: snapshot.generatedAtIso })
-        secretsForRedactionRef.current = snapshot.secretValues
-        deploymentSecretKeysRef.current = snapshot.deploymentSecretKeys
-        baseToolContext = snapshot.context
-      } else {
+      const backendTools = selectedTools
+      if (!hasConfigTool) {
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
       }
@@ -367,7 +360,6 @@ export function AdminConfigAssistant({
       const res = await sendLlmChatWithUnifiedTools({
         content,
         tools: backendTools,
-        baseToolContext,
         t,
         sessionId: conversationSessionId,
       })
@@ -408,7 +400,7 @@ export function AdminConfigAssistant({
     } finally {
       setIsLoading(false)
     }
-  }, [buildSnapshot, conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
+  }, [conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
 
   const handleApply = useCallback(async (changeSet: AdminAssistantChangeSet) => {
     setApplyState({ state: 'applying', changeSet })
