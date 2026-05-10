@@ -352,15 +352,23 @@ export function AdminConfigAssistant({
 
     try {
       const backendTools = selectedTools
+      let baseToolContext: string | undefined
       if (!hasConfigTool) {
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
+      } else {
+        const snap = await buildSnapshot()
+        baseToolContext = snap.context
+        setSnapshotInfo({ generatedAtIso: snap.generatedAtIso })
+        secretsForRedactionRef.current = snap.secretValues
+        deploymentSecretKeysRef.current = snap.deploymentSecretKeys
       }
 
       const res = await sendLlmChatWithUnifiedTools({
         content,
         tools: backendTools,
         t,
+        baseToolContext,
         sessionId: conversationSessionId,
       })
       if (res.status === 401) {
@@ -400,7 +408,7 @@ export function AdminConfigAssistant({
     } finally {
       setIsLoading(false)
     }
-  }, [conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
+  }, [buildSnapshot, conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
 
   const handleApply = useCallback(async (changeSet: AdminAssistantChangeSet) => {
     setApplyState({ state: 'applying', changeSet })

@@ -1668,7 +1668,7 @@ def create_user_memory(
             return int(existing["id"])
 
         cursor.execute("""
-            INSERT INTO user_memories (
+            INSERT OR IGNORE INTO user_memories (
                 subject_user_id,
                 kind,
                 content,
@@ -1693,7 +1693,22 @@ def create_user_memory(
             source_conversation_id,
             author_actor.strip(),
         ))
-        return int(cursor.lastrowid)
+        if cursor.rowcount == 1:
+            return int(cursor.lastrowid)
+
+        cursor.execute("""
+            SELECT id
+            FROM user_memories
+            WHERE subject_user_id = ?
+              AND normalized_kind = ?
+              AND normalized_content = ?
+              AND status = 'active'
+            LIMIT 1
+        """, (subject_user_id, normalized_kind, normalized_content))
+        existing = cursor.fetchone()
+        if existing:
+            return int(existing["id"])
+        raise RuntimeError("User Memory insert was ignored but no active duplicate was found")
 
 
 def list_active_user_memories(subject_user_id: int, limit: int = 20) -> list[dict]:

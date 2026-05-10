@@ -143,7 +143,7 @@ If every requested scope fails, the runtime tool should still return the small c
 Timeout budget:
 
 - Each individual scoped endpoint gets 2.5 seconds.
-- The full config-context builder gets a 4 second total budget.
+- The full config-context builder gets a 4-second total budget.
 - Fan-out reads, such as per-user-type Agent Settings or document defaults, should stop once the total budget is exhausted.
 
 The chat request should proceed once the context budget is spent.
@@ -157,7 +157,7 @@ The runtime tool may cache successful scoped reads briefly during an admin assis
 - Clear the cache when the admin manually refreshes assistant context.
 - Invalidate all cached scopes after a change set apply succeeds or partially succeeds.
 - Invalidate affected scopes after ordinary admin UI changes when the page knows which config area changed.
-- Keep revealed secret values session-local; do not store them in the general scoped config cache.
+- Keep revealed secret values session-local; do not store them in the general scoped-config cache.
 
 This cache is a latency optimization only. It must not replace server-side authorization or validation.
 

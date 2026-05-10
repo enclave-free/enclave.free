@@ -734,12 +734,14 @@ def build_chat_prompt(
     if pending_user_memory_change:
         parts.append("")
         action = pending_user_memory_change.get("action")
+        sanitized_content = sanitize_profile_value(str(pending_user_memory_change.get("content", "")))
+        sanitized_reason = sanitize_profile_value(str(pending_user_memory_change.get("reason", "")))
         if action == "supersede":
             parts.append("=== PENDING USER MEMORY SUPERSEDE ===")
             parts.append("This User Memory supersede has not been written yet. Present it for Change Confirmation.")
             parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
             parts.append(f"Memory ID: {pending_user_memory_change.get('memory_id')}")
-            parts.append(f"Content: {pending_user_memory_change.get('content')}")
+            parts.append(f"Content: {sanitized_content}")
             parts.append(f"Importance: {pending_user_memory_change.get('importance')}")
             parts.append(f"Confidence: {pending_user_memory_change.get('confidence')}")
         elif action == "delete":
@@ -747,13 +749,13 @@ def build_chat_prompt(
             parts.append("This User Memory deletion has not been written yet. Present it for Change Confirmation.")
             parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
             parts.append(f"Memory ID: {pending_user_memory_change.get('memory_id')}")
-            parts.append(f"Reason: {pending_user_memory_change.get('reason')}")
+            parts.append(f"Reason: {sanitized_reason}")
         else:
             parts.append("=== PENDING USER MEMORY WRITE ===")
             parts.append("This User Memory change has not been written yet. Present it for Change Confirmation.")
             parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
             parts.append(f"Kind: {pending_user_memory_change.get('kind')}")
-            parts.append(f"Content: {pending_user_memory_change.get('content')}")
+            parts.append(f"Content: {sanitized_content}")
             parts.append(f"Importance: {pending_user_memory_change.get('importance')}")
             parts.append(f"Confidence: {pending_user_memory_change.get('confidence')}")
 
@@ -764,11 +766,12 @@ def build_chat_prompt(
 
     if rejected_user_memory_change:
         parts.append("")
+        sanitized_rejected_content = sanitize_profile_value(str(rejected_user_memory_change.get("content", "")))
         parts.append("=== USER MEMORY WRITE REJECTED ===")
         parts.append("Reject this as User Memory because it is sensitive, critical, structured, or operator-defined.")
         parts.append("Redirect the Admin to encrypted User Profile or Onboarding Question design.")
         parts.append(f"Subject User ID: {rejected_user_memory_change.get('subject_user_id')}")
-        parts.append(f"Rejected Content: {rejected_user_memory_change.get('content')}")
+        parts.append(f"Rejected Content: {sanitized_rejected_content}")
 
     # Rules section
     rules = sections.get("prompt_rules", [])

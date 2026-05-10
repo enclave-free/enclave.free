@@ -53,11 +53,13 @@ export function DisclosureCard({
           aria-hidden="true"
         />
       </button>
-      {isOpen && (
-        <div id={contentId} className="mt-4 border-t border-border pt-4">
-          {children}
-        </div>
-      )}
+      <div
+        id={contentId}
+        aria-hidden={!isOpen}
+        className={cx('mt-4 border-t border-border pt-4', !isOpen && 'hidden')}
+      >
+        {children}
+      </div>
     </Card>
   )
 }

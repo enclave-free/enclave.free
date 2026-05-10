@@ -727,7 +727,8 @@
       "noSources": "No sources available",
       "clearAll": "Clear all",
       "clearAllSelectedAria": "Clear all selected documents",
-      "docsLabel": "Docs"
+      "docsLabel": "Docs",
+      "docsLabelWithCount": "Docs {{count}}"
     },
     "messages": {
       "searching": "Searching for \"{{term}}\"...",

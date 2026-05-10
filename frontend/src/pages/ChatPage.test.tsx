@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -113,7 +114,7 @@ describe('ChatPage', () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper })
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/session-defaults')
+      expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/session-defaults(?:\?|$)/))
     })
 
     expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute('aria-pressed', 'true')
@@ -126,7 +127,7 @@ describe('ChatPage', () => {
       expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument()
     })
 
-    await screen.getByRole('button', { name: 'Docs 1' }).click()
+    await userEvent.click(screen.getByRole('button', { name: 'Docs 1' }))
 
     expect(screen.getByRole('button', { name: /operator-handbook/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /user-faq/ })).toHaveAttribute('aria-pressed', 'false')

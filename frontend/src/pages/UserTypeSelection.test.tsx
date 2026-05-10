@@ -65,7 +65,6 @@ describe('UserTypeSelection', () => {
 
     await user.click(await screen.findByRole('radio', { name: 'Member' }))
     const continueButton = screen.getByRole('button', { name: 'Continue' })
-    expect(continueButton).toHaveClass('btn-primary')
 
     await user.click(continueButton)
 

@@ -618,7 +618,7 @@ def _extract_admin_memory_delete(message: str, subject_user_id: int | None) -> d
 def _extract_admin_memory_supersede(message: str, subject_user_id: int | None) -> dict | None:
     if subject_user_id is None:
         return None
-    match = re.search(r"\bsupersede\s+memory\s+(\d+)\s+with:\s*(.*?)(?:\s+Importance:|$)", message, flags=re.IGNORECASE)
+    match = re.search(r"\bsupersede\s+memory\s+(\d+)\s+with:\s*(.*?)(?:\s+Importance:|\s+Confidence:|$)", message, flags=re.IGNORECASE)
     if not match:
         return None
     memory_id = int(match.group(1))
@@ -648,7 +648,7 @@ def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> di
         return None
 
     content_match = re.search(
-        r"(?:remember|memory)\s+(?:for\s+the\s+subject\s+user\s*:\s*)?(.*?)(?:\s+Kind:|\s+Importance:|$)",
+        r"(?:remember|memory)\s+(?:for\s+the\s+subject\s+user\s*:\s*)?(.*?)(?:\s+Kind:|\s+Importance:|\s+Confidence:|$)",
         message,
         flags=re.IGNORECASE,
     )
@@ -1086,7 +1086,7 @@ async def chat(
             provider=result.provider,
             tools_used=tools_used
         )
-        if user.get("type") == "user" and user_id and user_id != -1 and not request.tools and not tool_context_parts:
+        if user.get("type") == "user" and user_id and user_id != -1 and not tools_used and not tool_context_parts:
             from user_memory import capture_ambient_user_memory
 
             background_tasks.add_task(

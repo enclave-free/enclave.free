@@ -79,7 +79,7 @@ export function DocumentScope({
 
   const selectedCount = selectedDocuments.length
   const triggerLabel = selectedCount > 0
-    ? `${t('chat.documentScope.docsLabel')} ${selectedCount}`
+    ? t('chat.documentScope.docsLabelWithCount', { count: selectedCount })
     : t('chat.documentScope.docsLabel')
 
   const dropdownContent = isOpen ? (

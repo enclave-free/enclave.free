@@ -137,4 +137,12 @@ def _ambient_memory_allowed(memory: dict) -> bool:
     normalized_content = content.lower()
     if any(term in normalized_content for term in SENSITIVE_TERMS):
         return False
+    if re.search(r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", normalized_content):
+        return False
+    if re.search(r"(?:\+?\d[\s().-]*){7,15}", normalized_content):
+        return False
+    if re.search(r"\b\d{3}-\d{2}-\d{4}\b", normalized_content):
+        return False
+    if re.search(r"\b\d+\s+[\w\s.-]+?\b(?:st|street|ave|avenue|road|rd|lane|ln|apt|suite)\b", normalized_content):
+        return False
     return True

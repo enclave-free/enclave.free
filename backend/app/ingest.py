@@ -616,6 +616,9 @@ async def promote_replacement(job_id: str) -> None:
             raise RuntimeError("promote_replacement returned False")
     except Exception as e:
         logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
+        now = datetime.utcnow().isoformat()
+        promotion_error = str(e)
+        rollback_message = promotion_error
         try:
             database.transfer_document_access(job_id, old_job_id, changed_by="system:rollback")
         except Exception as rollback_error:
@@ -623,19 +626,17 @@ async def promote_replacement(job_id: str) -> None:
                 f"[{job_id}] Failed to roll back document access transfer to {old_job_id}: {rollback_error}",
                 exc_info=True,
             )
-            now = datetime.utcnow().isoformat()
-            promotion_error = str(e)
             rollback_message = str(rollback_error)
-            if job_id in JOBS:
-                JOBS[job_id]["promotion_error"] = promotion_error
-                JOBS[job_id]["error"] = rollback_message
-                JOBS[job_id]["updated_at"] = now
-                _sync_job_to_db(job_id)
-            if old_job_id in JOBS:
-                JOBS[old_job_id]["promotion_error"] = promotion_error
-                JOBS[old_job_id]["error"] = rollback_message
-                JOBS[old_job_id]["updated_at"] = now
-                _sync_job_to_db(old_job_id)
+        if job_id in JOBS:
+            JOBS[job_id]["promotion_error"] = promotion_error
+            JOBS[job_id]["error"] = rollback_message
+            JOBS[job_id]["updated_at"] = now
+            _sync_job_to_db(job_id)
+        if old_job_id in JOBS:
+            JOBS[old_job_id]["promotion_error"] = promotion_error
+            JOBS[old_job_id]["error"] = rollback_message
+            JOBS[old_job_id]["updated_at"] = now
+            _sync_job_to_db(old_job_id)
         raise
 
     try:

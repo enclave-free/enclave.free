@@ -54,5 +54,20 @@ describe('generateExport', () => {
     expect(exported).not.toContain('Prefers concise answers.')
     expect(exported).not.toContain('Prefers high detail answers.')
     expect(exported).not.toContain('importance')
+
+    const exportedTxt = generateExport({
+      messages,
+      format: 'txt',
+      translations,
+    })
+
+    expect(exportedTxt).toContain('Can you help me plan this?')
+    expect(exportedTxt).toContain('Yes. Let us make a short plan.')
+    expect(exportedTxt).not.toContain('USER MEMORY')
+    expect(exportedTxt).not.toContain('user_memory')
+    expect(exportedTxt).not.toContain('userMemory')
+    expect(exportedTxt).not.toContain('Prefers concise answers.')
+    expect(exportedTxt).not.toContain('Prefers high detail answers.')
+    expect(exportedTxt).not.toContain('importance')
   })
 })

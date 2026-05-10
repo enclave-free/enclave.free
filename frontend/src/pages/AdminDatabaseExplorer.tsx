@@ -40,6 +40,7 @@ export function AdminDatabaseExplorer() {
   const [sqlQuery, setSqlQuery] = useState('')
   const [queryResult, setQueryResult] = useState<QueryResponse | null>(null)
   const [isRunningQuery, setIsRunningQuery] = useState(false)
+  const isRunningQueryRef = useRef(false)
 
   // Record editor state
   const [editingRecord, setEditingRecord] = useState<Record<string, unknown> | null>(null)
@@ -414,8 +415,10 @@ export function AdminDatabaseExplorer() {
 
   // Run SQL query
   const runQuery = async () => {
+    if (isRunningQueryRef.current) return
     if (!sqlQuery.trim()) return
 
+    isRunningQueryRef.current = true
     setIsRunningQuery(true)
     setQueryResult(null)
 
@@ -432,6 +435,7 @@ export function AdminDatabaseExplorer() {
         error: error instanceof Error ? error.message : 'Query execution failed',
       })
     } finally {
+      isRunningQueryRef.current = false
       setIsRunningQuery(false)
     }
   }
@@ -945,6 +949,8 @@ export function AdminDatabaseExplorer() {
                     className="input-field w-full h-32 px-4 py-3 font-mono text-sm resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault()
+                        if (isRunningQueryRef.current) return
                         runQuery()
                       }
                     }}

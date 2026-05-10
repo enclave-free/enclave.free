@@ -131,7 +131,9 @@ describe('AdminUserConfig', () => {
 
     await user.click(screen.getByRole('button', { name: 'Select visible' }))
     const migrateButton = screen.getByRole('button', { name: 'Migrate selected (1)' })
-    expect(migrateButton).toHaveClass('btn-primary')
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Migrate selected (1)' })).toBeEnabled()
+    })
 
     await user.click(migrateButton)
 

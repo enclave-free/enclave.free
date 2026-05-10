@@ -452,7 +452,9 @@ async def update_deployment_config_value(
         except ValueError:
             raise HTTPException(status_code=400, detail="RAG_TOP_K must be between 1 and 100")
 
-    if key in RATE_LIMIT_KEYS and value_to_save:
+    if key in RATE_LIMIT_KEYS:
+        if not value_to_save or value_to_save.strip() == "":
+            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer")
         try:
             rate_limit = int(value_to_save)
             if rate_limit < 1:

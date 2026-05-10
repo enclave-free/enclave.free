@@ -275,12 +275,18 @@ async def query(
 
         logger.info(f"RAG complete. Answer: {len(answer)} chars, {len(clarifying_questions)} clarifying Qs, search_term={search_term}, facts={session.get('facts_gathered', {})}")
 
-        # Redact user profile section from debug output to avoid exposing sensitive data
+        # Redact user profile and memory sections from debug output to avoid exposing sensitive data
         # Use line-anchored pattern to avoid stopping at === inside values
         debug_prompt = re.sub(
             r'^=== USER PROFILE ===.*?(?=^===|\Z)',
             '=== USER PROFILE ===\n[REDACTED]\n\n',
             full_prompt,
+            flags=re.MULTILINE | re.DOTALL
+        )
+        debug_prompt = re.sub(
+            r'^=== USER MEMORY ===.*?(?=^===|\Z)',
+            '=== USER MEMORY ===\n[REDACTED]\n\n',
+            debug_prompt,
             flags=re.MULTILINE | re.DOTALL
         )
 

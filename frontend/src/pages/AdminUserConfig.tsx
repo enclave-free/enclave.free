@@ -371,7 +371,7 @@ export function AdminUserConfig() {
       })
 
       if (!res.ok) {
-        setReachoutSaveError(t('admin.errors.saveFailed', 'Failed to save settings. Please try again.'))
+        setReachoutSaveError(await parseErrorMessage(res, t('admin.errors.saveFailed', 'Failed to save settings. Please try again.')))
         return
       }
 

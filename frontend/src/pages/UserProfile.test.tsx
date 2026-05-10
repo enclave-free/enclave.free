@@ -74,7 +74,9 @@ describe('UserProfile', () => {
     await waitFor(() => {
       const userRequest = fetchMock.mock.calls.find(([input]) => String(input).endsWith('/users'))
       expect(userRequest).toBeDefined()
-      expect(JSON.parse(String(userRequest?.[1]?.body))).toMatchObject({
+      expect(userRequest?.[1]?.body).toBeDefined()
+      expect(typeof userRequest?.[1]?.body).toBe('string')
+      expect(JSON.parse(userRequest?.[1]?.body as string)).toMatchObject({
         email: 'ada@example.com',
         name: 'Ada',
         user_type_id: 7,

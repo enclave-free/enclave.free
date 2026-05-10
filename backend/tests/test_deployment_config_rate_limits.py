@@ -57,7 +57,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             os.environ[name] = value
 
     def test_rate_limit_config_rejects_non_positive_and_non_integer_values(self) -> None:
-        for value in ("0", "-1", "abc"):
+        for value in ("", "   ", "0", "-1", "abc"):
             with self.subTest(value=value):
                 response = self.client.put(
                     "/admin/deployment/config/RATE_LIMIT_CHAT_PER_MINUTE",

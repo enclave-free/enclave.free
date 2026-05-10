@@ -295,6 +295,8 @@ export function UserAuth() {
                 value={formData.name}
                 onChange={(name) => {
                   setFormData((prev) => ({ ...prev, name }))
+                  setFormError(null)
+                  setFormState('idle')
                   if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
                 }}
                 placeholder={t('onboarding.auth.namePlaceholder')}
@@ -309,6 +311,8 @@ export function UserAuth() {
               value={formData.email}
               onChange={(email) => {
                 setFormData((prev) => ({ ...prev, email }))
+                setFormError(null)
+                setFormState('idle')
                 if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }))
               }}
               placeholder={t('onboarding.auth.emailPlaceholder')}
