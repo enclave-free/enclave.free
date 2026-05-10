@@ -85,6 +85,12 @@ class AIConfigMaxTokensTest(unittest.TestCase):
                 self.assertEqual(response.json()["key"], "max_tokens")
                 self.assertEqual(response.json()["value"], value)
 
+                get_response = self.client.get("/admin/ai-config")
+                self.assertEqual(get_response.status_code, 200)
+                parameters = get_response.json()["parameters"]
+                max_tokens = next(item for item in parameters if item["key"] == "max_tokens")
+                self.assertEqual(max_tokens["value"], value)
+
     def test_max_tokens_rejects_non_integer_values(self) -> None:
         response = self.client.put(
             "/admin/ai-config/max_tokens",

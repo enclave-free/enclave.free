@@ -132,6 +132,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         job_ids = set(jobs_by_id)
         self.assertIn(new_job_id, job_ids)
         self.assertIn(old_job_id, job_ids)
+        self.assertTrue(jobs_by_id[new_job_id]["is_current"])
         self.assertFalse(jobs_by_id[old_job_id]["is_current"])
         self.assertEqual(jobs_by_id[old_job_id]["replaced_by_job_id"], new_job_id)
 

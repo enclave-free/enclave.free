@@ -28,6 +28,8 @@ describe('ChatInput', () => {
 
     render(<ChatInput onSend={onSend} disabled />)
 
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
+
     const composer = screen.getByRole('textbox', { name: 'Ask anything...' })
     await user.type(composer, 'Can this send?')
     await user.click(screen.getByRole('button', { name: 'Send message' }))

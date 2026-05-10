@@ -17,6 +17,8 @@ vi.mock('../utils/llmChat', () => ({
   sendLlmChatWithUnifiedTools: vi.fn(),
 }))
 
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
+
 function ChatPageTestWrapper({ children }: { children: ReactNode }) {
   return (
     <MemoryRouter initialEntries={['/']}>
@@ -102,6 +104,7 @@ describe('ChatPage', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView
     vi.clearAllMocks()
     document.documentElement.classList.remove('dark')
   })

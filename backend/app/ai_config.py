@@ -170,6 +170,7 @@ async def update_ai_config_value(
                 )
         elif key == "max_tokens":
             max_tokens = validate_max_tokens(update.value)
+            update.value = str(max_tokens)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 
@@ -296,6 +297,7 @@ async def set_ai_config_override(
                 raise HTTPException(status_code=400, detail="Top-K must be between 1 and 100")
         elif key == "max_tokens":
             max_tokens = validate_max_tokens(update.value)
+            update.value = str(max_tokens)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 

@@ -118,6 +118,14 @@ FORBIDDEN_KEYS = {"SECRET_KEY", "DATABASE_URL", "ADMIN_PRIVATE_KEY"}
 # Allowed table names for audit log queries (prevents SQL injection)
 ALLOWED_AUDIT_TABLES = {"deployment_config", "ai_config", "document_defaults"}
 
+RATE_LIMIT_KEYS = {
+    "RATE_LIMIT_CHAT_PER_MINUTE",
+    "RATE_LIMIT_QUERY_PER_MINUTE",
+    "RATE_LIMIT_UPLOAD_PER_MINUTE",
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE",
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR",
+}
+
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
     """Convert database row to DeploymentConfigItem"""
@@ -443,6 +451,14 @@ async def update_deployment_config_value(
                 raise ValueError()
         except ValueError:
             raise HTTPException(status_code=400, detail="RAG_TOP_K must be between 1 and 100")
+
+    if key in RATE_LIMIT_KEYS and value_to_save:
+        try:
+            rate_limit = int(value_to_save)
+            if rate_limit < 1:
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer")
 
     # URL validation for URL-type fields
     URL_KEYS = {"INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "CUSTOM_SEARXNG_URL",
