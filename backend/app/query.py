@@ -227,6 +227,7 @@ async def query(
         # Get user profile context for chat personalization (unencrypted fields only)
         # Skip for dev mode (id=-1) and admin accounts (no user profile in users table)
         user_profile_context = None
+        user_memory_context = None
         user_id = user.get("id")
         if user_id and user_id != -1 and user.get("type") != "admin":
             user_profile_context = database.get_user_chat_context_values(
@@ -236,10 +237,14 @@ async def query(
             # Only pass if there's actual data
             if not user_profile_context:
                 user_profile_context = None
+            user_memory_context = database.list_active_user_memories(user_id, limit=20)
+            if not user_memory_context:
+                user_memory_context = None
 
         answer, clarifying_questions, full_prompt, search_term = _call_llm_contextual(
             question, context, session, tools=request.tools, user_type_id=user_type_id,
-            user_profile_context=user_profile_context
+            user_profile_context=user_profile_context,
+            user_memory_context=user_memory_context,
         )
         
         # Add assistant response to history
@@ -476,7 +481,8 @@ def _call_llm_contextual(
     session: dict,
     tools: Optional[list[str]] = None,
     user_type_id: int | None = None,
-    user_profile_context: dict[str, str] | None = None
+    user_profile_context: dict[str, str] | None = None,
+    user_memory_context: list[dict] | None = None,
 ) -> tuple[str, list[str], str, Optional[str]]:
     """
     Call LLM with context-aware prompt.
@@ -489,6 +495,7 @@ def _call_llm_contextual(
         tools: List of enabled tool IDs
         user_type_id: If provided, uses user-type-specific prompt sections and parameters
         user_profile_context: Optional dict of {field_name: value} for user profile data
+        user_memory_context: Optional active User Memory records for Sage-owned context
     """
     import re
     from ai_config import get_prompt_sections, get_llm_parameters
@@ -541,6 +548,18 @@ def _call_llm_contextual(
         profile_lines = [f"  - {field_name}: {sanitize_profile_value(value)}" for field_name, value in user_profile_context.items()]
         user_profile_section = "\n\n=== USER PROFILE ===\nThe following information is known about the user:\n" + "\n".join(profile_lines)
 
+    # Build User Memory section separately from User Profile and Session Memory.
+    user_memory_section = ""
+    if user_memory_context:
+        memory_lines = []
+        for memory in user_memory_context:
+            kind = sanitize_profile_value(str(memory.get("kind", "")))
+            content = sanitize_profile_value(str(memory.get("content", "")))
+            importance = memory.get("importance")
+            confidence = memory.get("confidence")
+            memory_lines.append(f"  - {kind}: {content} (importance: {importance}, confidence: {confidence})")
+        user_memory_section = "\n\n=== USER MEMORY ===\nThe following low-sensitivity Sage-owned context is known about the user:\n" + "\n".join(memory_lines)
+
     # Auto-search instruction if web-search tool is enabled
     search_instruction = ""
     if "web-search" in tools:
@@ -587,7 +606,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 
     prompt = f"""{system_section}
 
-{known_facts_section}{user_profile_section}
+{known_facts_section}{user_profile_section}{user_memory_section}
 
 {style_section}
 

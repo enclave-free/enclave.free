@@ -18,9 +18,15 @@ interface ExportOptions {
   instanceName?: string
 }
 
+type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp'>
+
 function formatTimestamp(date?: Date): string {
   if (!date) return ''
   return date.toLocaleString()
+}
+
+function toConversationExportMessages(messages: Message[]): ConversationExportMessage[] {
+  return messages.map(({ role, content, timestamp }) => ({ role, content, timestamp }))
 }
 
 export function generateExport({ messages, format, title, translations, instanceName = 'Sanctum' }: ExportOptions): string {
@@ -28,12 +34,13 @@ export function generateExport({ messages, format, title, translations, instance
   const exportTitle = title || translations.defaultTitle
   const footerText = translations.footer.replace('{{instanceName}}', instanceName)
   const exportedOnText = translations.exportedOn.replace('{{timestamp}}', timestamp)
+  const conversationMessages = toConversationExportMessages(messages)
 
   if (format === 'md') {
     let content = `# ${exportTitle}\n\n`
     content += `*${exportedOnText}*\n\n---\n\n`
 
-    messages.forEach((message) => {
+    conversationMessages.forEach((message) => {
       const role = message.role === 'user' ? `**${translations.roleUser}**` : `**${translations.roleAssistant}**`
       const time = message.timestamp ? ` *(${formatTimestamp(message.timestamp)})*` : ''
 
@@ -60,7 +67,7 @@ export function generateExport({ messages, format, title, translations, instance
   content += `${exportedOnText}\n\n`
   content += `${'─'.repeat(40)}\n\n`
 
-  messages.forEach((message) => {
+  conversationMessages.forEach((message) => {
     const role = message.role === 'user' ? translations.roleUser : translations.roleAssistant
     const time = message.timestamp ? ` (${formatTimestamp(message.timestamp)})` : ''
 

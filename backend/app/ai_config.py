@@ -646,7 +646,12 @@ def build_chat_prompt(
     message: str,
     context: str = "",
     user_type_id: int | None = None,
-    user_profile_context: dict[str, str] | None = None
+    user_profile_context: dict[str, str] | None = None,
+    user_memory_context: list[dict] | None = None,
+    subject_user_context: dict | None = None,
+    pending_user_memory_change: dict | None = None,
+    subject_user_required: bool = False,
+    rejected_user_memory_change: dict | None = None,
 ) -> str:
     """
     Build a chat prompt using Agent Settings.
@@ -658,6 +663,13 @@ def build_chat_prompt(
         user_type_id: If provided, uses user-type-specific prompt sections.
         user_profile_context: Optional dict of {field_name: value} for user profile
             data to include in the prompt for personalization.
+        user_memory_context: Optional active User Memory records to include as Sage-owned
+            personalization context.
+        subject_user_context: Optional Admin Conversation Subject User state and memory.
+        pending_user_memory_change: Optional staged admin-confirmed User Memory change.
+        subject_user_required: Whether an Admin tried a User Memory write without
+            exactly one resolved Subject User.
+        rejected_user_memory_change: Optional rejected admin User Memory write.
 
     Returns:
         Assembled prompt string for the LLM
@@ -685,6 +697,76 @@ def build_chat_prompt(
         for field_name, value in user_profile_context.items():
             safe_value = sanitize_profile_value(value)
             parts.append(f"- {field_name}: {safe_value}")
+
+    # User Memory section (Sage-owned personalization, separate from User Profile)
+    if user_memory_context:
+        parts.append("")
+        parts.append("=== USER MEMORY ===")
+        parts.append("The following low-sensitivity Sage-owned context is known about the user:")
+        for memory in user_memory_context:
+            kind = sanitize_profile_value(str(memory.get("kind", "")))
+            content = sanitize_profile_value(str(memory.get("content", "")))
+            importance = memory.get("importance")
+            confidence = memory.get("confidence")
+            parts.append(f"- {kind}: {content} (importance: {importance}, confidence: {confidence})")
+
+    # Admin Conversation Subject User context.
+    if subject_user_context:
+        subject_user = subject_user_context.get("user") or {}
+        subject_memories = subject_user_context.get("memories") or []
+        parts.append("")
+        parts.append("=== SUBJECT USER ===")
+        parts.append(f"Subject User ID: {subject_user.get('id')}")
+        parts.append("This Admin Conversation is about exactly this Subject User.")
+        if subject_memories:
+            parts.append("")
+            parts.append("=== SUBJECT USER MEMORY ===")
+            parts.append("This User Memory is about the Subject User, not the Admin.")
+            for memory in subject_memories:
+                kind = sanitize_profile_value(str(memory.get("kind", "")))
+                content = sanitize_profile_value(str(memory.get("content", "")))
+                importance = memory.get("importance")
+                confidence = memory.get("confidence")
+                parts.append(f"- {kind}: {content} (importance: {importance}, confidence: {confidence})")
+
+    if pending_user_memory_change:
+        parts.append("")
+        action = pending_user_memory_change.get("action")
+        if action == "supersede":
+            parts.append("=== PENDING USER MEMORY SUPERSEDE ===")
+            parts.append("This User Memory supersede has not been written yet. Present it for Change Confirmation.")
+            parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
+            parts.append(f"Memory ID: {pending_user_memory_change.get('memory_id')}")
+            parts.append(f"Content: {pending_user_memory_change.get('content')}")
+            parts.append(f"Importance: {pending_user_memory_change.get('importance')}")
+            parts.append(f"Confidence: {pending_user_memory_change.get('confidence')}")
+        elif action == "delete":
+            parts.append("=== PENDING USER MEMORY DELETE ===")
+            parts.append("This User Memory deletion has not been written yet. Present it for Change Confirmation.")
+            parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
+            parts.append(f"Memory ID: {pending_user_memory_change.get('memory_id')}")
+            parts.append(f"Reason: {pending_user_memory_change.get('reason')}")
+        else:
+            parts.append("=== PENDING USER MEMORY WRITE ===")
+            parts.append("This User Memory change has not been written yet. Present it for Change Confirmation.")
+            parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
+            parts.append(f"Kind: {pending_user_memory_change.get('kind')}")
+            parts.append(f"Content: {pending_user_memory_change.get('content')}")
+            parts.append(f"Importance: {pending_user_memory_change.get('importance')}")
+            parts.append(f"Confidence: {pending_user_memory_change.get('confidence')}")
+
+    if subject_user_required:
+        parts.append("")
+        parts.append("=== SUBJECT USER REQUIRED ===")
+        parts.append("Ask the Admin to resolve exactly one Subject User before writing User Memory.")
+
+    if rejected_user_memory_change:
+        parts.append("")
+        parts.append("=== USER MEMORY WRITE REJECTED ===")
+        parts.append("Reject this as User Memory because it is sensitive, critical, structured, or operator-defined.")
+        parts.append("Redirect the Admin to encrypted User Profile or Onboarding Question design.")
+        parts.append(f"Subject User ID: {rejected_user_memory_change.get('subject_user_id')}")
+        parts.append(f"Rejected Content: {rejected_user_memory_change.get('content')}")
 
     # Rules section
     rules = sections.get("prompt_rules", [])

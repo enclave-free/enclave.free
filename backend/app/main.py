@@ -28,6 +28,7 @@ from sentence_transformers import SentenceTransformer
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
+from user_memory import SENSITIVE_TERMS
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
     AdminAuthRequest, AdminAuthResponse,
@@ -70,6 +71,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("sanctum.main")
+
+admin_conversation_states: dict[str, dict] = {}
 
 # Import routers
 from ingest import router as ingest_router
@@ -530,6 +533,207 @@ def filter_tools_for_user(tools: List[str], user: dict) -> List[str]:
     return [t for t in tools if t not in ADMIN_ONLY_TOOLS]
 
 
+def _resolve_admin_subject_user_id(message: str) -> int | None:
+    match = re.search(r"\bsubject user\b\s*(?:to|is|=|:)?\s*(?:user\s*)?(\d+)\b", message, flags=re.IGNORECASE)
+    if not match:
+        match = re.search(r"\b(?:set|switch)\s+(?:the\s+)?subject\s+user\s+to\s+user\s+(\d+)\b", message, flags=re.IGNORECASE)
+    return int(match.group(1)) if match else None
+
+
+def _message_clears_subject_user(message: str) -> bool:
+    return bool(re.search(r"\b(clear|unset|remove)\s+(the\s+)?subject user\b", message, flags=re.IGNORECASE))
+
+
+def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
+    state = admin_conversation_states.setdefault(session_id, {})
+    if _message_clears_subject_user(message):
+        state.pop("subject_user_id", None)
+        return None
+
+    requested_user_id = _resolve_admin_subject_user_id(message)
+    if requested_user_id is not None:
+        if not database.get_user(requested_user_id):
+            raise HTTPException(status_code=404, detail="Subject User not found")
+        state["subject_user_id"] = requested_user_id
+
+    subject_user_id = state.get("subject_user_id")
+    if not subject_user_id:
+        return None
+
+    subject_user = database.get_user(subject_user_id)
+    if not subject_user:
+        state.pop("subject_user_id", None)
+        return None
+
+    return {
+        "user": subject_user,
+        "memories": database.list_active_user_memories(subject_user_id, limit=20),
+    }
+
+
+def _message_confirms_user_memory_change(message: str) -> bool:
+    return bool(re.search(r"\bconfirm\b.*\buser memory\b|\bconfirm\b.*\bmemory\b", message, flags=re.IGNORECASE))
+
+
+def _message_requests_user_memory_write(message: str) -> bool:
+    return bool(
+        re.search(
+            r"\bremember\b.*\b(?:user|subject user)\b|\bwrite\b.*\buser memory\b|\bmemory\b.*\bKind:",
+            message,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def _admin_user_memory_rejection_reason(change: dict) -> str | None:
+    content = str(change.get("content", "")).lower()
+    if any(term in content for term in SENSITIVE_TERMS):
+        return "sensitive"
+    return None
+
+
+def _memory_belongs_to_subject(memory_id: int, subject_user_id: int) -> bool:
+    memory = database.get_user_memory(memory_id)
+    return bool(memory and memory.get("subject_user_id") == subject_user_id)
+
+
+def _extract_admin_memory_delete(message: str, subject_user_id: int | None) -> dict | None:
+    if subject_user_id is None:
+        return None
+    match = re.search(r"\bdelete\s+memory\s+(\d+)\b", message, flags=re.IGNORECASE)
+    if not match:
+        return None
+    memory_id = int(match.group(1))
+    if not _memory_belongs_to_subject(memory_id, subject_user_id):
+        return None
+    reason_match = re.search(r"\bReason:\s*(.*)$", message, flags=re.IGNORECASE)
+    return {
+        "action": "delete",
+        "subject_user_id": subject_user_id,
+        "memory_id": memory_id,
+        "reason": reason_match.group(1).strip() if reason_match else "admin-confirmed deletion",
+    }
+
+
+def _extract_admin_memory_supersede(message: str, subject_user_id: int | None) -> dict | None:
+    if subject_user_id is None:
+        return None
+    match = re.search(r"\bsupersede\s+memory\s+(\d+)\s+with:\s*(.*?)(?:\s+Importance:|$)", message, flags=re.IGNORECASE)
+    if not match:
+        return None
+    memory_id = int(match.group(1))
+    if not _memory_belongs_to_subject(memory_id, subject_user_id):
+        return None
+    content = match.group(2).strip()
+    if not content:
+        return None
+    if content[-1] not in ".!?":
+        content += "."
+    importance_match = re.search(r"\bImportance:\s*(\d+)", message, flags=re.IGNORECASE)
+    confidence_match = re.search(r"\bConfidence:\s*(0(?:\.\d+)?|1(?:\.0+)?)", message, flags=re.IGNORECASE)
+    return {
+        "action": "supersede",
+        "subject_user_id": subject_user_id,
+        "memory_id": memory_id,
+        "content": content,
+        "importance": int(importance_match.group(1)) if importance_match else 5,
+        "confidence": float(confidence_match.group(1)) if confidence_match else 1.0,
+    }
+
+
+def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> dict | None:
+    if subject_user_id is None:
+        return None
+    if not re.search(r"\bremember\b|\bwrite\b.*\bmemory\b", message, flags=re.IGNORECASE):
+        return None
+
+    content_match = re.search(
+        r"(?:remember|memory)\s+(?:for\s+the\s+subject\s+user\s*:\s*)?(.*?)(?:\s+Kind:|\s+Importance:|$)",
+        message,
+        flags=re.IGNORECASE,
+    )
+    if not content_match:
+        return None
+    content = content_match.group(1).strip()
+    content = re.sub(r"^for\s+the\s+subject\s+user\s*:\s*", "", content, flags=re.IGNORECASE).strip()
+    if not content:
+        return None
+    if content[-1] not in ".!?":
+        content += "."
+
+    kind_match = re.search(r"\bKind:\s*([A-Za-z_-]+)", message, flags=re.IGNORECASE)
+    importance_match = re.search(r"\bImportance:\s*(\d+)", message, flags=re.IGNORECASE)
+    confidence_match = re.search(r"\bConfidence:\s*(0(?:\.\d+)?|1(?:\.0+)?)", message, flags=re.IGNORECASE)
+    return {
+        "action": "create",
+        "subject_user_id": subject_user_id,
+        "kind": (kind_match.group(1).strip().lower() if kind_match else "preference"),
+        "content": content,
+        "importance": int(importance_match.group(1)) if importance_match else 5,
+        "confidence": float(confidence_match.group(1)) if confidence_match else 1.0,
+    }
+
+
+def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | None:
+    state = admin_conversation_states.setdefault(session_id, {})
+    pending = state.pop("pending_user_memory_change", None)
+    if not pending:
+        return None
+
+    if pending.get("action") == "supersede":
+        memory_id = database.supersede_user_memory(
+            pending["memory_id"],
+            content=pending["content"],
+            importance=pending["importance"],
+            confidence=pending["confidence"],
+            source_kind="admin-confirmed",
+            source_conversation_id=session_id,
+            author_actor="admin",
+        )
+        database.log_config_audit_event(
+            table_name="user_memories",
+            config_key=str(pending["memory_id"]),
+            old_value=f"active memory_id={pending['memory_id']}",
+            new_value=f"supersede subject_user_id={pending['subject_user_id']}; replacement_id={memory_id}; content={pending['content']}; importance={pending['importance']}",
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        return database.get_user_memory(memory_id)
+
+    if pending.get("action") == "delete":
+        database.soft_delete_user_memory(
+            pending["memory_id"],
+            deleted_by_actor="admin",
+            deletion_reason=pending["reason"],
+        )
+        database.log_config_audit_event(
+            table_name="user_memories",
+            config_key=str(pending["memory_id"]),
+            old_value=f"active memory_id={pending['memory_id']}",
+            new_value=f"delete subject_user_id={pending['subject_user_id']}; reason={pending['reason']}",
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        return database.get_user_memory(pending["memory_id"])
+
+    memory_id = database.create_user_memory(
+        subject_user_id=pending["subject_user_id"],
+        kind=pending["kind"],
+        content=pending["content"],
+        importance=pending["importance"],
+        confidence=pending["confidence"],
+        source_kind="admin-confirmed",
+        source_conversation_id=session_id,
+        author_actor="admin",
+    )
+    database.log_config_audit_event(
+        table_name="user_memories",
+        config_key=str(memory_id),
+        old_value=None,
+        new_value=f"create subject_user_id={pending['subject_user_id']}; kind={pending['kind']}; content={pending['content']}; importance={pending['importance']}",
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return database.get_user_memory(memory_id)
+
+
 def get_qdrant_client():
     """Create Qdrant client connection"""
     return QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
@@ -676,6 +880,7 @@ async def llm_smoke_test():
 @app.post("/llm/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(auth.require_admin_or_approved_user),
     _: None = Depends(chat_limiter),
 ):
@@ -687,6 +892,7 @@ async def chat(
     Requires authenticated admin OR approved user.
     """
     try:
+        active_session_id = request.session_id or str(uuid.uuid4())
         tools_used = []
         prompt = request.message
         seen_tool_keys = set()
@@ -782,6 +988,11 @@ async def chat(
 
         # Get user profile context for chat personalization (unencrypted fields only)
         user_profile_context = None
+        user_memory_context = None
+        subject_user_context = None
+        pending_user_memory_change = None
+        subject_user_required = False
+        rejected_user_memory_change = None
         user_id = user.get("id")
         if user_id and user_id != -1:  # Skip dev mode mock user (id=-1)
             user_profile_context = database.get_user_chat_context_values(
@@ -791,6 +1002,33 @@ async def chat(
             # Only pass if there's actual data
             if not user_profile_context:
                 user_profile_context = None
+            if user.get("type") != "admin":
+                user_memory_context = database.list_active_user_memories(user_id, limit=20)
+                if not user_memory_context:
+                    user_memory_context = None
+        if user.get("type") == "admin":
+            subject_user_context = _admin_subject_user_context(active_session_id, request.message)
+            state = admin_conversation_states.setdefault(active_session_id, {})
+            if _message_confirms_user_memory_change(request.message):
+                _confirm_pending_user_memory_change(active_session_id, user)
+                subject_user_context = _admin_subject_user_context(active_session_id, "")
+            else:
+                subject_user_id = (subject_user_context or {}).get("user", {}).get("id")
+                extracted_change = (
+                    _extract_admin_memory_delete(request.message, subject_user_id)
+                    or _extract_admin_memory_supersede(request.message, subject_user_id)
+                    or _extract_admin_memory_write(request.message, subject_user_id)
+                )
+                if extracted_change:
+                    rejection_reason = _admin_user_memory_rejection_reason(extracted_change)
+                    if rejection_reason:
+                        state.pop("pending_user_memory_change", None)
+                        rejected_user_memory_change = {**extracted_change, "reason": rejection_reason}
+                    else:
+                        state["pending_user_memory_change"] = extracted_change
+                elif subject_user_id is None and _message_requests_user_memory_write(request.message):
+                    subject_user_required = True
+            pending_user_memory_change = state.get("pending_user_memory_change")
 
         # Build prompt using Agent Settings (with user-type overrides if applicable)
         combined_context = "\n\n".join(tool_context_parts) if tool_context_parts else ""
@@ -799,6 +1037,11 @@ async def chat(
             context=combined_context,
             user_type_id=user_type_id,
             user_profile_context=user_profile_context,
+            user_memory_context=user_memory_context,
+            subject_user_context=subject_user_context,
+            pending_user_memory_change=pending_user_memory_change,
+            subject_user_required=subject_user_required,
+            rejected_user_memory_change=rejected_user_memory_change,
         )
 
         provider = get_sage_provider()
@@ -836,12 +1079,24 @@ async def chat(
                     detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (connection error).",
                 )
             raise
-        return ChatResponse(
+        response_payload = ChatResponse(
             message=result.content,
+            session_id=active_session_id,
             model=result.model,
             provider=result.provider,
             tools_used=tools_used
         )
+        if user.get("type") == "user" and user_id and user_id != -1 and not request.tools and not tool_context_parts:
+            from user_memory import capture_ambient_user_memory
+
+            background_tasks.add_task(
+                capture_ambient_user_memory,
+                subject_user_id=user_id,
+                user_message=request.message,
+                assistant_message=result.content,
+                provider=provider,
+            )
+        return response_payload
     except HTTPException:
         raise
     except Exception as e:

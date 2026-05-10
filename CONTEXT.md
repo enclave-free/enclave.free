@@ -176,6 +176,10 @@ _Avoid_: custom field
 The structured information a **User** provides in response to **Onboarding Questions**.
 _Avoid_: user fields, profile fields
 
+**User Memory**:
+Sage-owned durable context about a specific **User** that supports subtle personalization across **Conversations**.
+_Avoid_: user profile, session memory, profile fields, user-facing memory manager
+
 **Session Memory**:
 The conversation-specific information **Sage** retains to support an ongoing agent interaction.
 _Avoid_: user profile, chat history
@@ -211,6 +215,10 @@ _Avoid_: user query
 **Admin Conversation**:
 A **Conversation** between the **Admin** and **Sage** for configuring or operating an **Instance**.
 _Avoid_: admin query
+
+**Subject User**:
+The specific **User** an **Admin Conversation** is currently about.
+_Avoid_: current user, target user
 
 **Admin Configuration Assistant**:
 An admin-only **Admin Conversation** surface for configuration questions and confirmed **Enclave Control Plane** changes.
@@ -277,6 +285,58 @@ _Avoid_: full snapshot, config dump
 - A **User Type** may become an extension point for tailored product behavior, but its core meaning is onboarding segmentation
 - A **User Profile** contains answers to **Onboarding Questions**
 - **Sage** may use a **User Profile** as context, but the **User Profile** is owned by the **Enclave Control Plane**
+- **User Memory** is about one **User** even when it is written during another actor's **Conversation**
+- **User Memory** belongs to **Sage** and must remain distinct from **User Profile**
+- **User Memory** is not a user-facing product surface in the current product posture
+- Admin-authored **User Memory** requires **Change Confirmation** because it changes durable state about a **User**
+- **User Memory** may only be written after the subject **User** has been resolved unambiguously
+- Initial **User Memory** should be limited to preferences, operational notes, context notes, and relationship notes
+- **User Memory** records should keep human-readable prose with lightweight metadata rather than replacing prose with rigid profile fields
+- **User Memory** should record simple source metadata
+- **User Memory** source metadata should refer to the **Conversation** rather than internal agent identifiers
+- Initial **User Memory** source metadata does not need exact message-level provenance
+- **User Memory** changes should supersede or soft-delete prior records rather than overwriting them destructively
+- **User Memory** should be deleted when its subject **User** is deleted
+- **User Memory** should be stored separately from session-scoped archival memory
+- User-authored **User Memory** about the current **User** may be captured ambiently when allowed
+- Proposed **User Memory** writes are exposed only as an admin confirmation step in an **Admin Conversation**
+- Ambient **User Memory** capture should be limited to clear, low-risk personalization facts
+- Ambient **User Memory** capture should happen outside the user-facing response path
+- Ambient **User Memory** capture should not block the user-facing response
+- Ambient **User Memory** extraction should use the configured **Model Provider** in the first version
+- Failed ambient **User Memory** capture should be logged but not surfaced in product UI in the first version
+- Ambient **User Memory** extraction should run only after a simple prefilter indicates likely personalization content
+- Ambient **User Memory** should be grounded in the **User's** message even when the extractor also sees Sage's response
+- Ambient **User Memory** should not be created from tool results or **Retrieval** outputs in the first version
+- Ambient **User Memory** capture should insert or skip duplicates rather than superseding existing records in the first version
+- **User Conversations** should not support natural-language **User Memory** deletion in the first version
+- Admin-authored **User Memory** writes are explicit confirmed actions, not ambient capture
+- Admin-authored **User Memory** may be informed by admin-visible context when the **Admin** confirms the exact write
+- **Session Memory** summaries should not duplicate **User Memory**
+- **User Memory** retrieval should load a bounded set of active records for the subject **User**
+- **User Memory** may use a simple importance value for bounded retrieval ordering
+- Ambient **User Memory** capture should not create high-importance records
+- **User Memory** writes should prevent obvious duplicate active records
+- Admin-authored **User Memory** writes should create **Audit Log** entries
+- Ambient **User Memory** capture should keep source metadata without creating **Audit Log** entries in the first version
+- **Admins** may inspect **User Memory** for **Users** in admin-only surfaces or **Admin Conversations**
+- Initial admin inspection of **User Memory** should be scoped to one **User** at a time
+- **User Memory** should be included in operational backups but not ordinary **Conversation** exports in the first version
+- Initial **User Memory** should be limited to low-sensitivity personalization and operational context
+- Initial **User Memory** may be stored without content encryption to keep **Sage** context assembly simple
+- Sensitive or critical user facts should be captured through encrypted **User Profile** fields when needed, not **User Memory**
+- **Sage** should redirect sensitive or critical proposed **User Memory** into **User Profile** design instead
+- Higher-sensitivity **User Memory** requires a separate encryption, retention, and access-control decision
+- Initial **User Memory** should avoid tags so metadata stays minimal
+- Initial **User Memory** is implicitly scoped to the current **Instance**
+- **User Memory** may be loaded into both **User Conversations** and **Admin Conversations** when relevant
+- **Admin Conversations** may use a **Subject User** to inspect or propose **User Memory**
+- A **Subject User** is **Conversation** state, not **User Memory**
+- A **Subject User** remains active until the **Admin** switches it, clears it, or starts a new **Conversation**
+- A **Subject User** does not change **Document Access** in the first version
+- **User Memory** for a **Subject User** may be loaded into an **Admin Conversation** when clearly labeled
+- **User Profile** and **User Memory** may both inform a **Conversation** but should be labeled separately
+- Ambient **User Memory** capture should be controlled by a simple **Instance Setting**
 - **Session Memory** belongs to the **Agent Runtime**
 - **Session Memory Deletion** must remove the **Session Memory** associated with a **Conversation**
 - A **Conversation** may have **Session Memory**
@@ -284,6 +344,7 @@ _Avoid_: full snapshot, config dump
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
 - **Sage** may invoke **Tools** during a **Conversation**
 - **User Conversations** and **Admin Conversations** are both **Conversations**
+- An **Admin Conversation** may have a **Subject User**
 - An **Admin Conversation** may directly perform **Enclave Control Plane** actions after **Change Confirmation**
 - Every admin-conversation write that changes **Instance** or **Agent Runtime** state requires **Change Confirmation**
 - The **Admin Configuration Assistant** uses **Scoped Config Context** so configuration reads can stay focused while preserving **Change Confirmation** for writes
