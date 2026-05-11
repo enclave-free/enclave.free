@@ -9,6 +9,7 @@ import sqlite3
 import logging
 import hashlib
 import hmac
+import re
 from typing import Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
@@ -379,6 +380,43 @@ def init_schema():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_ai_config_overrides_key ON ai_config_user_type_overrides(ai_config_key)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_defaults_overrides_type ON document_defaults_user_type_overrides(user_type_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_defaults_overrides_job ON document_defaults_user_type_overrides(job_id)")
+
+    # Sage-owned durable context for low-sensitivity User Memory.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject_user_id INTEGER NOT NULL,
+            kind TEXT NOT NULL,
+            content TEXT NOT NULL,
+            normalized_kind TEXT NOT NULL,
+            normalized_content TEXT NOT NULL,
+            importance INTEGER NOT NULL DEFAULT 5,
+            confidence REAL NOT NULL DEFAULT 1.0,
+            status TEXT NOT NULL DEFAULT 'active',
+            source_kind TEXT NOT NULL,
+            source_conversation_id TEXT,
+            author_actor TEXT NOT NULL,
+            supersedes_id INTEGER,
+            superseded_by_id INTEGER,
+            deleted_at TIMESTAMP,
+            deleted_by_actor TEXT,
+            deletion_reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (subject_user_id) REFERENCES users(id),
+            FOREIGN KEY (supersedes_id) REFERENCES user_memories(id),
+            FOREIGN KEY (superseded_by_id) REFERENCES user_memories(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_memories_active_dedupe
+        ON user_memories(subject_user_id, normalized_kind, normalized_content)
+        WHERE status = 'active'
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_user_memories_active_retrieval
+        ON user_memories(subject_user_id, status, importance DESC, updated_at DESC, id DESC)
+    """)
 
     conn.commit()
     logger.info("SQLite schema initialized")
@@ -1581,9 +1619,295 @@ def get_user_chat_context_values(user_id: int, user_type_id: int | None = None) 
         return {row["field_name"]: row["value"] for row in cursor.fetchall()}
 
 
+def _normalize_user_memory_text(value: str) -> str:
+    """Normalize User Memory text for obvious duplicate detection."""
+    return re.sub(r"\s+", " ", value.strip().lower())
+
+
+def _validate_user_memory_scores(importance: int, confidence: float) -> tuple[int, float]:
+    try:
+        normalized_importance = int(importance)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("User Memory importance must be an integer") from exc
+    try:
+        normalized_confidence = float(confidence)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("User Memory confidence must be a number") from exc
+    if not 0 <= normalized_importance <= 10:
+        raise ValueError("User Memory importance must be between 0 and 10")
+    if not 0.0 <= normalized_confidence <= 1.0:
+        raise ValueError("User Memory confidence must be between 0.0 and 1.0")
+    return normalized_importance, normalized_confidence
+
+
+def _user_memory_row_to_dict(row: sqlite3.Row) -> dict:
+    memory = dict(row)
+    memory["confidence"] = float(memory["confidence"])
+    return memory
+
+
+def create_user_memory(
+    *,
+    subject_user_id: int,
+    kind: str,
+    content: str,
+    importance: int = 5,
+    confidence: float = 1.0,
+    source_kind: str,
+    source_conversation_id: str | None = None,
+    author_actor: str,
+) -> int:
+    """Create active Sage-owned User Memory, skipping obvious active duplicates."""
+    normalized_kind = _normalize_user_memory_text(kind)
+    normalized_content = _normalize_user_memory_text(content)
+    if not normalized_kind:
+        raise ValueError("User Memory kind is required")
+    if not normalized_content:
+        raise ValueError("User Memory content is required")
+    if not source_kind.strip():
+        raise ValueError("User Memory source_kind is required")
+    if not author_actor.strip():
+        raise ValueError("User Memory author_actor is required")
+    normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
+
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT id
+            FROM user_memories
+            WHERE subject_user_id = ?
+              AND normalized_kind = ?
+              AND normalized_content = ?
+              AND status = 'active'
+            LIMIT 1
+        """, (subject_user_id, normalized_kind, normalized_content))
+        existing = cursor.fetchone()
+        if existing:
+            return int(existing["id"])
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO user_memories (
+                subject_user_id,
+                kind,
+                content,
+                normalized_kind,
+                normalized_content,
+                importance,
+                confidence,
+                status,
+                source_kind,
+                source_conversation_id,
+                author_actor
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+        """, (
+            subject_user_id,
+            kind.strip(),
+            content.strip(),
+            normalized_kind,
+            normalized_content,
+            normalized_importance,
+            normalized_confidence,
+            source_kind.strip(),
+            source_conversation_id,
+            author_actor.strip(),
+        ))
+        if cursor.rowcount == 1:
+            return int(cursor.lastrowid)
+
+        cursor.execute("""
+            SELECT id
+            FROM user_memories
+            WHERE subject_user_id = ?
+              AND normalized_kind = ?
+              AND normalized_content = ?
+              AND status = 'active'
+            LIMIT 1
+        """, (subject_user_id, normalized_kind, normalized_content))
+        existing = cursor.fetchone()
+        if existing:
+            return int(existing["id"])
+        raise RuntimeError("User Memory insert was ignored but no active duplicate was found")
+
+
+def list_active_user_memories(subject_user_id: int, limit: int = 20) -> list[dict]:
+    """List active User Memory for one User, capped and ordered by importance then recency."""
+    bounded_limit = max(0, min(int(limit), 100))
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                id,
+                subject_user_id,
+                kind,
+                content,
+                importance,
+                confidence,
+                status,
+                source_kind,
+                source_conversation_id,
+                author_actor,
+                supersedes_id,
+                superseded_by_id,
+                deleted_at,
+                deleted_by_actor,
+                deletion_reason,
+                created_at,
+                updated_at
+            FROM user_memories
+            WHERE subject_user_id = ?
+              AND status = 'active'
+            ORDER BY importance DESC, updated_at DESC, id DESC
+            LIMIT ?
+        """, (subject_user_id, bounded_limit))
+        return [_user_memory_row_to_dict(row) for row in cursor.fetchall()]
+
+
+def get_user_memory(memory_id: int) -> dict | None:
+    """Get one User Memory record, including inactive records."""
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                id,
+                subject_user_id,
+                kind,
+                content,
+                importance,
+                confidence,
+                status,
+                source_kind,
+                source_conversation_id,
+                author_actor,
+                supersedes_id,
+                superseded_by_id,
+                deleted_at,
+                deleted_by_actor,
+                deletion_reason,
+                created_at,
+                updated_at
+            FROM user_memories
+            WHERE id = ?
+        """, (memory_id,))
+        row = cursor.fetchone()
+        return _user_memory_row_to_dict(row) if row else None
+
+
+def soft_delete_user_memory(
+    memory_id: int,
+    *,
+    deleted_by_actor: str,
+    deletion_reason: str | None = None,
+) -> bool:
+    """Soft-delete a User Memory record without destroying its audit metadata."""
+    if not deleted_by_actor.strip():
+        raise ValueError("deleted_by_actor is required")
+
+    with get_cursor() as cursor:
+        cursor.execute("""
+            UPDATE user_memories
+            SET status = 'deleted',
+                deleted_at = CURRENT_TIMESTAMP,
+                deleted_by_actor = ?,
+                deletion_reason = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND status != 'deleted'
+        """, (deleted_by_actor.strip(), deletion_reason, memory_id))
+        return cursor.rowcount > 0
+
+
+def supersede_user_memory(
+    memory_id: int,
+    *,
+    content: str,
+    importance: int = 5,
+    confidence: float = 1.0,
+    source_kind: str,
+    source_conversation_id: str | None = None,
+    author_actor: str,
+) -> int:
+    """Create a replacement User Memory and mark the original as superseded."""
+    normalized_content = _normalize_user_memory_text(content)
+    if not normalized_content:
+        raise ValueError("User Memory content is required")
+    if not source_kind.strip():
+        raise ValueError("User Memory source_kind is required")
+    if not author_actor.strip():
+        raise ValueError("User Memory author_actor is required")
+    normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
+
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT subject_user_id, kind, normalized_kind
+            FROM user_memories
+            WHERE id = ?
+              AND status = 'active'
+        """, (memory_id,))
+        old_memory = cursor.fetchone()
+        if not old_memory:
+            raise ValueError("Active User Memory record not found")
+
+        cursor.execute("""
+            UPDATE user_memories
+            SET status = 'superseded',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND status = 'active'
+        """, (memory_id,))
+        if cursor.rowcount == 0:
+            raise ValueError("Active User Memory record was already superseded")
+
+        cursor.execute("""
+            INSERT INTO user_memories (
+                subject_user_id,
+                kind,
+                content,
+                normalized_kind,
+                normalized_content,
+                importance,
+                confidence,
+                status,
+                source_kind,
+                source_conversation_id,
+                author_actor,
+                supersedes_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+        """, (
+            old_memory["subject_user_id"],
+            old_memory["kind"],
+            content.strip(),
+            old_memory["normalized_kind"],
+            normalized_content,
+            normalized_importance,
+            normalized_confidence,
+            source_kind.strip(),
+            source_conversation_id,
+            author_actor.strip(),
+            memory_id,
+        ))
+        new_id = int(cursor.lastrowid)
+
+        cursor.execute("""
+            UPDATE user_memories
+            SET superseded_by_id = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (new_id, memory_id))
+        return new_id
+
+
+def _purge_user_memories_for_subject_user_tx(cursor: sqlite3.Cursor, subject_user_id: int) -> int:
+    cursor.execute("DELETE FROM user_memories WHERE subject_user_id = ?", (subject_user_id,))
+    return cursor.rowcount
+
+
+def purge_user_memories_for_subject_user(subject_user_id: int) -> int:
+    """Permanently remove User Memory for a subject User after that User is deleted."""
+    with get_cursor() as cursor:
+        return _purge_user_memories_for_subject_user_tx(cursor, subject_user_id)
+
+
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
     with get_cursor() as cursor:
+        _purge_user_memories_for_subject_user_tx(cursor, user_id)
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
         return cursor.rowcount > 0
 
@@ -1735,6 +2059,7 @@ def _seed_default_ai_config() -> None:
     """Seed default Agent Settings values if not present"""
     defaults = [
         # Prompt sections
+        ("prompt_system", "You are a helpful, knowledgeable assistant for this private Sanctum instance.", "string", "prompt_section", "Core system prompt"),
         ("prompt_tone", "Be helpful, concise, and professional. Acknowledge the user's question before answering.", "string", "prompt_section", "Voice and personality instructions"),
         ("prompt_rules", '["ONE action per response when providing step-by-step guidance", "NEVER invent sources, organization names, or contact information", "If asked about topics outside your knowledge base, acknowledge limitations"]', "json", "prompt_section", "Array of behavioral rules"),
         ("prompt_forbidden", '[]', "json", "prompt_section", "Topics to avoid or redirect"),
@@ -1742,6 +2067,7 @@ def _seed_default_ai_config() -> None:
         # Model Provider parameters
         ("temperature", "0.1", "number", "parameter", "Model Provider temperature (0.0-1.0)"),
         ("top_k", "8", "number", "parameter", "Retrieval count"),
+        ("max_tokens", "2048", "number", "parameter", "Maximum generated response tokens"),
         # Session defaults
         ("web_search_default", "false", "boolean", "default", "Web search active by default for new sessions"),
     ]

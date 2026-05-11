@@ -339,7 +339,7 @@ export interface PromptSectionMeta {
   placeholder: string
 }
 
-export const PROMPT_SECTION_KEY_LIST = ['prompt_tone', 'prompt_rules', 'prompt_forbidden', 'prompt_greeting'] as const
+export const PROMPT_SECTION_KEY_LIST = ['prompt_system', 'prompt_tone', 'prompt_rules', 'prompt_forbidden', 'prompt_greeting'] as const
 
 export type PromptSectionKey = typeof PROMPT_SECTION_KEY_LIST[number]
 
@@ -348,6 +348,12 @@ export type PromptSectionKey = typeof PROMPT_SECTION_KEY_LIST[number]
  */
 export function getPromptSectionMeta(t: TFunction): Record<PromptSectionKey, PromptSectionMeta> {
   return {
+    prompt_system: {
+      label: t('promptSections.prompt_system.label', 'System Prompt'),
+      description: t('promptSections.prompt_system.description', 'Core identity and operating instructions for the AI'),
+      hint: t('promptSections.prompt_system.hint', 'Use this for the assistant identity, mission, and top-level boundaries that should apply before tone, rules, tools, or document context. Changes affect new conversations.'),
+      placeholder: t('promptSections.prompt_system.placeholder', 'You are Sage, a private assistant for this instance...'),
+    },
     prompt_tone: {
       label: t('promptSections.prompt_tone.label', 'Tone & Personality'),
       description: t('promptSections.prompt_tone.description', 'How the AI should sound when responding'),
@@ -386,7 +392,7 @@ export interface ParameterMeta {
   step: number
 }
 
-export const PARAMETER_KEY_LIST = ['temperature', 'top_k'] as const
+export const PARAMETER_KEY_LIST = ['temperature', 'top_k', 'max_tokens'] as const
 
 export type ParameterKey = typeof PARAMETER_KEY_LIST[number]
 
@@ -410,6 +416,14 @@ export function getParameterMeta(t: TFunction): Record<ParameterKey, ParameterMe
       min: 1,
       max: 100,
       step: 1,
+    },
+    max_tokens: {
+      label: t('parameters.max_tokens.label', 'Max Tokens'),
+      description: t('parameters.max_tokens.description', 'Maximum length for each AI response'),
+      hint: t('parameters.max_tokens.hint', 'Caps how long a response can be. Lower values keep answers brief and reduce cost; higher values allow longer explanations. Default: 2048'),
+      min: 256,
+      max: 8192,
+      step: 256,
     },
   }
 }
@@ -460,6 +474,8 @@ export const DEPLOYMENT_CONFIG_KEY_LIST = [
   'SEARXNG_URL',
   // Security
   'FRONTEND_URL', 'SIMULATE_USER_AUTH', 'SIMULATE_ADMIN_AUTH',
+  'RATE_LIMIT_CHAT_PER_MINUTE', 'RATE_LIMIT_QUERY_PER_MINUTE', 'RATE_LIMIT_UPLOAD_PER_MINUTE',
+  'RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE', 'RATE_LIMIT_CONFIG_EXPORT_PER_HOUR',
   // Domain & URLs
   'BASE_DOMAIN', 'INSTANCE_URL', 'API_BASE_URL', 'ADMIN_BASE_URL',
   'EMAIL_DOMAIN', 'DKIM_SELECTOR', 'SPF_INCLUDE', 'DMARC_POLICY',
@@ -580,6 +596,31 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
       label: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.label', 'Simulate Admin Auth'),
       description: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.description', 'Show mock Nostr connection button for admin auth (testing only)'),
       hint: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.hint', 'Enable for development/testing. Shows a "Mock Connection" button on admin login that bypasses Nostr extension requirement. Should be disabled in production.'),
+    },
+    RATE_LIMIT_CHAT_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.label', 'Chat Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.description', 'Chat requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.hint', 'Maximum /llm/chat requests per minute per stable user, admin, token, or client IP. Requires restart. Default: 120.'),
+    },
+    RATE_LIMIT_QUERY_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.label', 'Retrieval Query Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.description', 'Retrieval query requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.hint', 'Maximum /query requests per minute per stable user, token, or client IP. Requires restart. Default: 90.'),
+    },
+    RATE_LIMIT_UPLOAD_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.label', 'Upload Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.description', 'Document upload requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.hint', 'Maximum document upload requests per minute per stable admin, token, or client IP. Requires restart. Default: 20.'),
+    },
+    RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE: {
+      label: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.label', 'Vector Search Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.description', 'Vector search requests per minute'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.hint', 'Maximum vector search requests per minute per stable user, token, or client IP. Requires restart. Default: 30.'),
+    },
+    RATE_LIMIT_CONFIG_EXPORT_PER_HOUR: {
+      label: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.label', 'Config Export Rate Limit'),
+      description: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.description', 'Deployment config exports per hour'),
+      hint: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.hint', 'Maximum .env exports per hour per admin session or client IP. Requires restart. Default: 5.'),
     },
     // Domain & URLs
     BASE_DOMAIN: {

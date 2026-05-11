@@ -52,6 +52,24 @@ def _config_to_inheritance_item(config: dict) -> AIConfigWithInheritance:
     )
 
 
+def validate_max_tokens(value: str) -> int:
+    numeric_value = float(value)
+    if not numeric_value.is_integer():
+        raise HTTPException(
+            status_code=400,
+            detail="Max tokens must be a whole number"
+        )
+
+    validated = int(numeric_value)
+    if validated < 256 or validated > 8192:
+        raise HTTPException(
+            status_code=400,
+            detail="Max tokens must be between 256 and 8192"
+        )
+
+    return validated
+
+
 @router.get("", response_model=AIConfigResponse)
 async def get_ai_config(admin: dict = Depends(auth.require_admin)):
     """
@@ -150,6 +168,9 @@ async def update_ai_config_value(
                     status_code=400,
                     detail="Top-K must be between 1 and 100"
                 )
+        elif key == "max_tokens":
+            max_tokens = validate_max_tokens(update.value)
+            update.value = str(max_tokens)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 
@@ -274,6 +295,9 @@ async def set_ai_config_override(
             top_k = int(top_k_float)
             if top_k < 1 or top_k > 100:
                 raise HTTPException(status_code=400, detail="Top-K must be between 1 and 100")
+        elif key == "max_tokens":
+            max_tokens = validate_max_tokens(update.value)
+            update.value = str(max_tokens)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 
@@ -334,6 +358,64 @@ async def delete_ai_config_override(
     return {"success": True, "message": f"Override for '{key}' reverted to global default"}
 
 
+def _assemble_prompt_preview(
+    sections: dict,
+    request: PromptPreviewRequest,
+    sections_used: list[str],
+) -> PromptPreviewResponse:
+    parts = []
+
+    if sections.get("prompt_system"):
+        parts.append("=== SYSTEM PROMPT ===")
+        parts.append(sections["prompt_system"])
+
+    if request.sample_facts:
+        if parts:
+            parts.append("")
+        facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
+        if facts_lines:
+            parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
+            parts.append("\n".join(facts_lines))
+        else:
+            parts.append("=== NO FACTS CONFIRMED YET ===")
+            parts.append("Ask about location and context early, but only once per conversation.")
+
+    if sections.get("prompt_tone"):
+        parts.append("")
+        parts.append("=== STYLE ===")
+        parts.append(sections["prompt_tone"])
+
+    rules = sections.get("prompt_rules", [])
+    if rules:
+        parts.append("")
+        parts.append("=== RULES ===")
+        for i, rule in enumerate(rules, 1):
+            parts.append(f"{i}. {rule}")
+
+    forbidden = sections.get("prompt_forbidden", [])
+    if forbidden:
+        parts.append("")
+        parts.append("=== FORBIDDEN TOPICS ===")
+        parts.append("If asked about these topics, politely decline:")
+        for topic in forbidden:
+            parts.append(f"- {topic}")
+
+    parts.append("")
+    parts.append("=== QUESTION ===")
+    if request.sample_question:
+        parts.append(request.sample_question)
+    else:
+        parts.append("(No sample question provided)")
+
+    parts.append("")
+    parts.append("=== RESPOND ===")
+
+    return PromptPreviewResponse(
+        assembled_prompt="\n".join(parts),
+        sections_used=sections_used,
+    )
+
+
 @router.post("/user-type/{user_type_id}/prompts/preview", response_model=PromptPreviewResponse)
 async def preview_prompt_for_user_type(
     user_type_id: int,
@@ -353,60 +435,7 @@ async def preview_prompt_for_user_type(
     # Get prompt sections with inheritance for this user type
     prompt_sections = get_prompt_sections(user_type_id=user_type_id)
 
-    # Build the assembled prompt (same logic as global preview)
-    parts = []
-    sections_used = list(prompt_sections.keys())
-
-    # Known facts section
-    if request.sample_facts:
-        facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
-        if facts_lines:
-            parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
-            parts.append("\n".join(facts_lines))
-        else:
-            parts.append("=== NO FACTS CONFIRMED YET ===")
-            parts.append("Ask about location and context early, but only once per conversation.")
-
-    # Tone section
-    if prompt_sections.get("prompt_tone"):
-        parts.append("")
-        parts.append("=== STYLE ===")
-        parts.append(prompt_sections["prompt_tone"])
-
-    # Rules section
-    rules = prompt_sections.get("prompt_rules", [])
-    if rules:
-        parts.append("")
-        parts.append("=== RULES ===")
-        for i, rule in enumerate(rules, 1):
-            parts.append(f"{i}. {rule}")
-
-    # Forbidden topics
-    forbidden = prompt_sections.get("prompt_forbidden", [])
-    if forbidden:
-        parts.append("")
-        parts.append("=== FORBIDDEN TOPICS ===")
-        parts.append("If asked about these topics, politely decline:")
-        for topic in forbidden:
-            parts.append(f"- {topic}")
-
-    # Question
-    parts.append("")
-    parts.append("=== QUESTION ===")
-    if request.sample_question:
-        parts.append(request.sample_question)
-    else:
-        parts.append("(No sample question provided)")
-
-    parts.append("")
-    parts.append("=== RESPOND ===")
-
-    assembled = "\n".join(parts)
-
-    return PromptPreviewResponse(
-        assembled_prompt=assembled,
-        sections_used=sections_used
-    )
+    return _assemble_prompt_preview(prompt_sections, request, list(prompt_sections.keys()))
 
 
 @router.post("/prompts/preview", response_model=PromptPreviewResponse)
@@ -440,59 +469,7 @@ async def preview_prompt(
         sections[key] = value
         sections_used.append(key)
 
-    # Build the assembled prompt
-    parts = []
-
-    # Known facts section
-    if request.sample_facts:
-        facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
-        if facts_lines:
-            parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
-            parts.append("\n".join(facts_lines))
-        else:
-            parts.append("=== NO FACTS CONFIRMED YET ===")
-            parts.append("Ask about location and context early, but only once per conversation.")
-
-    # Tone section
-    if sections.get("prompt_tone"):
-        parts.append("")
-        parts.append("=== STYLE ===")
-        parts.append(sections["prompt_tone"])
-
-    # Rules section
-    rules = sections.get("prompt_rules", [])
-    if rules:
-        parts.append("")
-        parts.append("=== RULES ===")
-        for i, rule in enumerate(rules, 1):
-            parts.append(f"{i}. {rule}")
-
-    # Forbidden topics
-    forbidden = sections.get("prompt_forbidden", [])
-    if forbidden:
-        parts.append("")
-        parts.append("=== FORBIDDEN TOPICS ===")
-        parts.append("If asked about these topics, politely decline:")
-        for topic in forbidden:
-            parts.append(f"- {topic}")
-
-    # Question
-    parts.append("")
-    parts.append("=== QUESTION ===")
-    if request.sample_question:
-        parts.append(request.sample_question)
-    else:
-        parts.append("(No sample question provided)")
-
-    parts.append("")
-    parts.append("=== RESPOND ===")
-
-    assembled = "\n".join(parts)
-
-    return PromptPreviewResponse(
-        assembled_prompt=assembled,
-        sections_used=sections_used
-    )
+    return _assemble_prompt_preview(sections, request, sections_used)
 
 
 # Helper functions for use by other modules
@@ -556,7 +533,8 @@ def get_llm_parameters(user_type_id: int | None = None) -> dict:
 
         if value_type == "number":
             try:
-                result[key] = float(value)
+                numeric_value = float(value)
+                result[key] = int(numeric_value) if numeric_value.is_integer() else numeric_value
             except (ValueError, TypeError):
                 logger.warning(f"Invalid numeric value for config key {key}: {value}")
                 # Provide safe defaults for critical parameters instead of omitting
@@ -610,7 +588,12 @@ def build_chat_prompt(
     message: str,
     context: str = "",
     user_type_id: int | None = None,
-    user_profile_context: dict[str, str] | None = None
+    user_profile_context: dict[str, str] | None = None,
+    user_memory_context: list[dict] | None = None,
+    subject_user_context: dict | None = None,
+    pending_user_memory_change: dict | None = None,
+    subject_user_required: bool = False,
+    rejected_user_memory_change: dict | None = None,
 ) -> str:
     """
     Build a chat prompt using Agent Settings.
@@ -622,6 +605,13 @@ def build_chat_prompt(
         user_type_id: If provided, uses user-type-specific prompt sections.
         user_profile_context: Optional dict of {field_name: value} for user profile
             data to include in the prompt for personalization.
+        user_memory_context: Optional active User Memory records to include as Sage-owned
+            personalization context.
+        subject_user_context: Optional Admin Conversation Subject User state and memory.
+        pending_user_memory_change: Optional staged admin-confirmed User Memory change.
+        subject_user_required: Whether an Admin tried a User Memory write without
+            exactly one resolved Subject User.
+        rejected_user_memory_change: Optional rejected admin User Memory write.
 
     Returns:
         Assembled prompt string for the LLM
@@ -629,8 +619,15 @@ def build_chat_prompt(
     sections = get_prompt_sections(user_type_id=user_type_id)
     parts = []
 
+    # Core system prompt section
+    if sections.get("prompt_system"):
+        parts.append("=== SYSTEM PROMPT ===")
+        parts.append(sections["prompt_system"])
+
     # Style/tone section
     if sections.get("prompt_tone"):
+        if parts:
+            parts.append("")
         parts.append("=== STYLE ===")
         parts.append(sections["prompt_tone"])
 
@@ -642,6 +639,85 @@ def build_chat_prompt(
         for field_name, value in user_profile_context.items():
             safe_value = sanitize_profile_value(value)
             parts.append(f"- {field_name}: {safe_value}")
+
+    # User Memory section (Sage-owned personalization, separate from User Profile)
+    if user_memory_context:
+        parts.append("")
+        parts.append("=== USER MEMORY ===")
+        parts.append("The following low-sensitivity Sage-owned context is known about the user:")
+        for memory in user_memory_context:
+            kind = sanitize_profile_value(str(memory.get("kind", "")))
+            content = sanitize_profile_value(str(memory.get("content", "")))
+            importance = memory.get("importance")
+            confidence = memory.get("confidence")
+            parts.append(f"- {kind}: {content} (importance: {importance}, confidence: {confidence})")
+
+    # Admin Conversation Subject User context.
+    if subject_user_context:
+        subject_user = subject_user_context.get("user") or {}
+        subject_memories = subject_user_context.get("memories") or []
+        parts.append("")
+        parts.append("=== SUBJECT USER ===")
+        parts.append(f"Subject User ID: {subject_user.get('id')}")
+        parts.append("This Admin Conversation is about exactly this Subject User.")
+        if subject_memories:
+            parts.append("")
+            parts.append("=== SUBJECT USER MEMORY ===")
+            parts.append("This User Memory is about the Subject User, not the Admin.")
+            for memory in subject_memories:
+                kind = sanitize_profile_value(str(memory.get("kind", "")))
+                content = sanitize_profile_value(str(memory.get("content", "")))
+                importance = memory.get("importance")
+                confidence = memory.get("confidence")
+                parts.append(f"- {kind}: {content} (importance: {importance}, confidence: {confidence})")
+
+    if pending_user_memory_change:
+        parts.append("")
+        action = pending_user_memory_change.get("action")
+        sanitized_subject_user_id = sanitize_profile_value(str(pending_user_memory_change.get("subject_user_id", "")))
+        sanitized_memory_id = sanitize_profile_value(str(pending_user_memory_change.get("memory_id", "")))
+        sanitized_kind = sanitize_profile_value(str(pending_user_memory_change.get("kind", "")))
+        sanitized_content = sanitize_profile_value(str(pending_user_memory_change.get("content", "")))
+        sanitized_reason = sanitize_profile_value(str(pending_user_memory_change.get("reason", "")))
+        sanitized_importance = sanitize_profile_value(str(pending_user_memory_change.get("importance", "")))
+        sanitized_confidence = sanitize_profile_value(str(pending_user_memory_change.get("confidence", "")))
+        if action == "supersede":
+            parts.append("=== PENDING USER MEMORY SUPERSEDE ===")
+            parts.append("This User Memory supersede has not been written yet. Present it for Change Confirmation.")
+            parts.append(f"Subject User ID: {sanitized_subject_user_id}")
+            parts.append(f"Memory ID: {sanitized_memory_id}")
+            parts.append(f"Content: {sanitized_content}")
+            parts.append(f"Importance: {sanitized_importance}")
+            parts.append(f"Confidence: {sanitized_confidence}")
+        elif action == "delete":
+            parts.append("=== PENDING USER MEMORY DELETE ===")
+            parts.append("This User Memory deletion has not been written yet. Present it for Change Confirmation.")
+            parts.append(f"Subject User ID: {sanitized_subject_user_id}")
+            parts.append(f"Memory ID: {sanitized_memory_id}")
+            parts.append(f"Reason: {sanitized_reason}")
+        else:
+            parts.append("=== PENDING USER MEMORY WRITE ===")
+            parts.append("This User Memory change has not been written yet. Present it for Change Confirmation.")
+            parts.append(f"Subject User ID: {sanitized_subject_user_id}")
+            parts.append(f"Kind: {sanitized_kind}")
+            parts.append(f"Content: {sanitized_content}")
+            parts.append(f"Importance: {sanitized_importance}")
+            parts.append(f"Confidence: {sanitized_confidence}")
+
+    if subject_user_required:
+        parts.append("")
+        parts.append("=== SUBJECT USER REQUIRED ===")
+        parts.append("Ask the Admin to resolve exactly one Subject User before writing User Memory.")
+
+    if rejected_user_memory_change:
+        parts.append("")
+        sanitized_rejected_subject_user_id = sanitize_profile_value(str(rejected_user_memory_change.get("subject_user_id", "")))
+        sanitized_rejected_content = sanitize_profile_value(str(rejected_user_memory_change.get("content", "")))
+        parts.append("=== USER MEMORY WRITE REJECTED ===")
+        parts.append("Reject this as User Memory because it is sensitive, critical, structured, or operator-defined.")
+        parts.append("Redirect the Admin to encrypted User Profile or Onboarding Question design.")
+        parts.append(f"Subject User ID: {sanitized_rejected_subject_user_id}")
+        parts.append(f"Rejected Content: {sanitized_rejected_content}")
 
     # Rules section
     rules = sections.get("prompt_rules", [])

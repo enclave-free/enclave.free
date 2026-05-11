@@ -6,7 +6,7 @@ This document describes the current tool behavior on the Sage hard-cut prototype
 
 | Route | Runtime mode | Tool behavior |
 | --- | --- | --- |
-| `/llm/chat` | stateful and memory-backed | optional server-side `web_search`; optional admin-only `db_query`; optional admin `tool_context` injection |
+| `/llm/chat` | stateful and memory-backed | optional server-side `web-search`; optional admin-only `db-query`; optional admin-only `admin-config`; optional admin `tool_context` injection |
 | `/query` | stateful and memory-backed | always retrieval-first; always has internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
 
 Current rule of thumb:
@@ -20,7 +20,7 @@ Current rule of thumb:
 | --- | --- | --- | --- |
 | `web-search` | `web_search` | all users | hits SearXNG for current/external information |
 | `db-query` | `db_query` | admins only | delegates to Python safe read-only admin DB query |
-| `admin-config` | none directly | admins only | frontend-side meta-tool that injects config snapshot into `tool_context` |
+| `admin-config` | `admin_config` | admins only | reads Scoped Config Context for Admin Conversations |
 
 `knowledge_search` is not a public frontend toggle. Sage registers it internally for `/query` so the agent can revisit Enclave document retrieval during the turn.
 
@@ -39,17 +39,18 @@ Current rule of thumb:
 Admins can send extra context in `tool_context` to help the model reason over client-side material such as:
 
 - decrypted DB rows
-- admin config snapshots
 - other trusted precomputed context
 
 When `tool_context` is present, clients should also send `client_executed_tools` so Sage does not re-run tools that have already been executed client-side.
 
-Current frontend pattern:
+Current frontend pattern for client-executed tools:
 
 1. optional client-side call to `POST /admin/tools/execute`
 2. decrypt or format the returned data in the browser
 3. send the formatted text in `tool_context`
 4. include `client_executed_tools`, usually `["db-query"]`
+
+`admin-config` is not client-executed. Admin clients send it as a normal tool ID, and Sage executes the admin-only runtime tool server-side.
 
 Non-admin use of `tool_context` is rejected with `403`.
 

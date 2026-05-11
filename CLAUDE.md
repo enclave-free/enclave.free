@@ -14,7 +14,7 @@ Use the default five-label triage vocabulary: `needs-triage`, `needs-info`, `rea
 
 ### Domain docs
 
-Use a multi-context layout rooted one level up at `/Users/plebdev/Desktop/code/enclave-free`, covering `enclave.free`, `sage`, and `enclave.free-prototype`. See `docs/agents/domain.md`.
+Use a multi-context layout rooted one level up from this repo, covering `enclave.free`, `sage`, and `enclave.free-prototype`. See `docs/agents/domain.md`.
 
 ## Project Overview
 

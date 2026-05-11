@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, KeyboardEvent, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Send } from 'lucide-react'
+import { IconButton } from '../ui'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -56,22 +58,22 @@ export function ChatInput({ onSend, disabled, placeholder, toolbar }: ChatInputP
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              aria-label={placeholder || defaultPlaceholder}
               placeholder={placeholder || defaultPlaceholder}
               disabled={disabled}
               rows={1}
               className="flex-1 bg-transparent text-text placeholder:text-text-muted resize-none outline-none focus-visible:outline-none border-none px-2 py-2 max-h-40 text-[15px] leading-relaxed"
             />
-            <button
+            <IconButton
+              label={t('chat.input.sendLabel')}
               onClick={handleSubmit}
               disabled={disabled || !input.trim()}
               title={t('chat.input.sendTitle')}
-              className="p-2.5 rounded-xl bg-accent text-accent-text hover:bg-accent-hover hover:-translate-y-0.5 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed disabled:translate-y-0 transition-all active:scale-95 shrink-0 shadow-sm hover:shadow-md hover:glow-accent disabled:shadow-none"
-              aria-label={t('chat.input.sendLabel')}
+              variant="primary"
+              className="rounded-xl shadow-sm hover:shadow-md hover:glow-accent disabled:shadow-none"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-              </svg>
-            </button>
+              <Send className="h-5 w-5" aria-hidden="true" />
+            </IconButton>
           </div>
         </div>
       </div>

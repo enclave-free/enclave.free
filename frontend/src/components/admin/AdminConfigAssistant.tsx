@@ -351,23 +351,19 @@ export function AdminConfigAssistant({
     setError(null)
 
     try {
-      const backendTools = selectedTools.filter((toolId) => toolId !== CONFIG_TOOL_ID)
-      let baseToolContext: string | undefined
-      if (hasConfigTool) {
-        const snapshot = await buildSnapshot()
-        setSnapshotInfo({ generatedAtIso: snapshot.generatedAtIso })
-        secretsForRedactionRef.current = snapshot.secretValues
-        deploymentSecretKeysRef.current = snapshot.deploymentSecretKeys
-        baseToolContext = snapshot.context
-      } else {
+      if (!hasConfigTool) {
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
+      } else {
+        const snap = await buildSnapshot()
+        setSnapshotInfo({ generatedAtIso: snap.generatedAtIso })
+        secretsForRedactionRef.current = snap.secretValues
+        deploymentSecretKeysRef.current = snap.deploymentSecretKeys
       }
 
       const res = await sendLlmChatWithUnifiedTools({
         content,
-        tools: backendTools,
-        baseToolContext,
+        tools: selectedTools,
         t,
         sessionId: conversationSessionId,
       })

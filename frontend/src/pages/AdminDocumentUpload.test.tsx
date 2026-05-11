@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -156,5 +156,121 @@ describe('AdminDocumentUpload', () => {
     expect(screen.getByText('Duplicate document name in this batch')).toBeInTheDocument()
     expect(screen.getByText('Invalid file type. Allowed: PDF, TXT, MD')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Upload Document' })).toBeEnabled()
+  })
+
+  it('confirms and deletes a completed Document Ingestion job', async () => {
+    const user = userEvent.setup()
+
+    mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(Response.json({
+          total: 1,
+          jobs: [
+            {
+              job_id: 'job-1',
+              filename: 'ops-guide.pdf',
+              status: 'completed',
+              total_chunks: 8,
+              created_at: '2026-05-05T10:00:00Z',
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/ingest/status/job-1') {
+        return Promise.resolve(Response.json({
+          job_id: 'job-1',
+          filename: 'ops-guide.pdf',
+          status: 'completed',
+          created_at: '2026-05-05T10:00:00Z',
+          updated_at: '2026-05-05T10:05:00Z',
+          total_chunks: 8,
+          processed_chunks: 8,
+        }))
+      }
+      if (endpoint === '/ingest/jobs/job-1' && options?.method === 'DELETE') {
+        return Promise.resolve(Response.json({ ok: true }))
+      }
+      return Promise.resolve(Response.json({}))
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('ops-guide.pdf')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete document' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Delete this document?' })
+    expect(dialog).toHaveTextContent('This will permanently remove the document and all its chunks from the knowledge base.')
+    expect(dialog).toHaveTextContent('ops-guide.pdf')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/ingest/jobs/job-1', expect.objectContaining({
+        method: 'DELETE',
+      }))
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Delete this document?' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows Document deletion failures as a named error note', async () => {
+    const user = userEvent.setup()
+
+    mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(Response.json({
+          total: 1,
+          jobs: [
+            {
+              job_id: 'job-1',
+              filename: 'ops-guide.pdf',
+              status: 'completed',
+              total_chunks: 8,
+              created_at: '2026-05-05T10:00:00Z',
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/ingest/status/job-1') {
+        return Promise.resolve(Response.json({
+          job_id: 'job-1',
+          filename: 'ops-guide.pdf',
+          status: 'completed',
+          created_at: '2026-05-05T10:00:00Z',
+          updated_at: '2026-05-05T10:05:00Z',
+          total_chunks: 8,
+          processed_chunks: 8,
+        }))
+      }
+      if (endpoint === '/ingest/jobs/job-1' && options?.method === 'DELETE') {
+        return Promise.resolve(Response.json({ detail: 'Delete failed' }, { status: 500 }))
+      }
+      return Promise.resolve(Response.json({}))
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('ops-guide.pdf')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete document' }))
+    const dialog = screen.getByRole('dialog', { name: 'Delete this document?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    const errorNote = await within(dialog).findByRole('note', { name: 'Document deletion error' })
+    expect(errorNote).toHaveTextContent('Delete failed')
   })
 })

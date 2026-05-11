@@ -1,8 +1,9 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Mail, ShieldCheck, Lock, Timer } from 'lucide-react'
+import { Loader2, Mail, ShieldCheck, Lock, Timer } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Button, Callout, TextField } from '../components/ui'
 import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
 import { useInstanceConfig } from '../context/InstanceConfigContext'
 import { fetchPublicConfig } from '../utils/publicConfig'
@@ -74,23 +75,15 @@ function InputField({
   error?: string
 }) {
   return (
-    <div>
-      <label className="text-sm font-medium text-text mb-1.5 block">
-        {label}
-        {required && <span className="text-error ml-1">*</span>}
-      </label>
-      <div className={`input-container px-4 py-3 ${error ? 'has-error' : ''}`}>
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="input-field text-sm"
-          required={required}
-        />
-      </div>
-      {error && <p className="text-xs text-error mt-1.5">{error}</p>}
-    </div>
+    <TextField
+      label={label}
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      required={required}
+      error={error}
+    />
   )
 }
 
@@ -154,6 +147,7 @@ export function UserAuth() {
   const [formState, setFormState] = useState<FormState>('idle')
   const [formData, setFormData] = useState<FormData>({ name: '', email: '' })
   const [errors, setErrors] = useState<Partial<FormData>>({})
+  const [formError, setFormError] = useState<string | null>(null)
   const [submittedEmail, setSubmittedEmail] = useState<string>('')
   const [simulateUserAuth, setSimulateUserAuth] = useState<boolean>(false)
 
@@ -171,6 +165,7 @@ export function UserAuth() {
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
     setErrors({})
+    setFormError(null)
     setFormState('idle')
   }
 
@@ -197,6 +192,7 @@ export function UserAuth() {
     if (!validate()) return
 
     setFormState('submitting')
+    setFormError(null)
 
     try {
       // Call the magic link API
@@ -239,6 +235,7 @@ export function UserAuth() {
       setFormState('success')
     } catch (error) {
       console.error('Magic link error:', error)
+      setFormError(error instanceof Error ? error.message : t('errors.failedToSendMagicLink'))
       setFormState('error')
     }
   }
@@ -282,6 +279,15 @@ export function UserAuth() {
           />
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {formState === 'error' && formError && (
+              <Callout
+                label={t('onboarding.auth.errorLabel', 'Magic link request error')}
+                tone="error"
+              >
+                {formError}
+              </Callout>
+            )}
+
             {activeTab === 'signup' && (
               <InputField
                 label={t('onboarding.auth.nameLabel')}
@@ -289,6 +295,8 @@ export function UserAuth() {
                 value={formData.name}
                 onChange={(name) => {
                   setFormData((prev) => ({ ...prev, name }))
+                  setFormError(null)
+                  setFormState('idle')
                   if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
                 }}
                 placeholder={t('onboarding.auth.namePlaceholder')}
@@ -303,6 +311,8 @@ export function UserAuth() {
               value={formData.email}
               onChange={(email) => {
                 setFormData((prev) => ({ ...prev, email }))
+                setFormError(null)
+                setFormState('idle')
                 if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }))
               }}
               placeholder={t('onboarding.auth.emailPlaceholder')}
@@ -310,23 +320,21 @@ export function UserAuth() {
               error={errors.email}
             />
 
-            <button
+            <Button
               type="submit"
               disabled={formState === 'submitting'}
-              className="btn btn-primary btn-lg w-full mt-6 flex items-center justify-center gap-2"
+              className="w-full mt-6"
+              size="lg"
+              leadingIcon={
+                formState === 'submitting'
+                  ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  : <Mail className="w-5 h-5" aria-hidden="true" />
+              }
             >
-              {formState === 'submitting' ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-accent-text/30 border-t-accent-text rounded-full animate-spin" />
-                  {t('onboarding.auth.sendingLink')}
-                </>
-              ) : (
-                <>
-                  <Mail className="w-5 h-5" />
-                  {t('onboarding.auth.continueWithEmail')}
-                </>
-              )}
-            </button>
+              {formState === 'submitting'
+                ? t('onboarding.auth.sendingLink')
+                : t('onboarding.auth.continueWithEmail')}
+            </Button>
 
             <p className="text-xs text-text-muted text-center mt-4">
               {t('onboarding.auth.magicLinkHelp')}

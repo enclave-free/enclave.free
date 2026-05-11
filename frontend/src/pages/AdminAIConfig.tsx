@@ -22,6 +22,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Callout, CodeBlockSurface } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useAIConfig, useDocumentDefaults } from '../hooks/useAdminConfig'
 import type { AIConfigItem, AIConfigWithInheritance, DocumentDefaultItem, DocumentDefaultWithInheritance, PromptSectionKey, ParameterKey, DefaultKey } from '../types/config'
@@ -542,29 +543,29 @@ export function AdminAIConfig() {
 
         {/* Error display */}
         {aiError && (
-          <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <Callout label={t('adminAI.loadErrorLabel', 'Agent Settings load error')} tone="error">
             <p className="text-sm text-error">{translateMaybeKey(aiError)}</p>
-          </div>
+          </Callout>
         )}
 
         {/* Preview error display */}
         {previewError && (
-          <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <Callout label={t('adminAI.previewErrorLabel', 'Agent Settings preview error')} tone="error">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-error" />
-              <p className="text-sm text-error">{previewError}</p>
+              <p className="text-sm text-error">{translateMaybeKey(previewError)}</p>
             </div>
-          </div>
+          </Callout>
         )}
 
         {/* Toggle error display */}
         {toggleError && (
-          <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <Callout label={t('adminAI.documentToggleErrorLabel', 'Agent Settings document toggle error')} tone="error">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-error" />
               <p className="text-sm text-error">{translateMaybeKey(toggleError)}</p>
             </div>
-          </div>
+          </Callout>
         )}
 
         {/* Prompt Template Section */}
@@ -804,9 +805,9 @@ export function AdminAIConfig() {
               </button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[60vh]">
-              <pre className="text-xs text-text whitespace-pre-wrap font-mono bg-surface-overlay rounded-lg p-4">
-                {previewContent}
-              </pre>
+              <CodeBlockSurface label={t('adminAI.assembledPromptOutput', 'Assembled prompt output')}>
+                <pre className="whitespace-pre-wrap">{previewContent}</pre>
+              </CodeBlockSurface>
             </div>
           </div>
         </div>

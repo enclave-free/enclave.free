@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ChatMessage, Message } from './ChatMessage'
 
@@ -20,7 +20,7 @@ function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string
 
   return (
     <div className="flex-1 flex items-center justify-center p-4">
-      <div className="text-center max-w-lg animate-fade-in">
+      <div className="text-center w-full max-w-lg min-w-0 animate-fade-in">
         {/* Icon */}
         <div className="relative mx-auto mb-8 w-20 h-20">
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 rotate-6 scale-95" />
@@ -30,8 +30,8 @@ function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string
         </div>
 
         {/* Text */}
-        <h2 className="heading-xl mb-2">{t('chat.emptyState.title')}</h2>
-        <p className="text-text-secondary text-sm mb-8">
+        <h2 className="heading-xl mb-2 text-balance">{t('chat.emptyState.title')}</h2>
+        <p className="text-text-secondary text-sm mb-8 mx-auto max-w-xs sm:max-w-prose text-pretty">
           {t('chat.emptyState.description')}
         </p>
 
@@ -65,9 +65,7 @@ function TypingIndicator() {
       <div className="flex gap-3">
         {/* Avatar */}
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent-hover flex items-center justify-center shrink-0 shadow-md ring-1 ring-white/10">
-          <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-          </svg>
+          <Sparkles className="w-4 h-4 text-white" aria-hidden="true" />
         </div>
 
         {/* Typing bubble */}
@@ -97,7 +95,7 @@ export function MessageList({ messages, isLoading, onSuggestedPrompt }: MessageL
 
   return (
     <div className="flex-1 overflow-y-auto px-3 py-6 sm:px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="w-full max-w-3xl mx-auto">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}

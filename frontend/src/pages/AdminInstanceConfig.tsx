@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Paintbrush, Loader2, ArrowLeft } from 'lucide-react'
@@ -6,9 +7,32 @@ import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { ColorPicker } from '../components/onboarding/ColorPicker'
 import { IconPicker } from '../components/onboarding/IconPicker'
 import { DynamicIcon } from '../components/shared/DynamicIcon'
+import { Button, Callout, Card, SectionHeader, TextField } from '../components/ui'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 import { useInstanceConfig } from '../context/InstanceConfigContext'
 import { AccentColor } from '../types/instance'
+
+function ConfigSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+}) {
+  return (
+    <Card padding="md" className="bg-surface-overlay">
+      <SectionHeader
+        title={title}
+        description={description}
+        icon={<Paintbrush className="h-4 w-4" aria-hidden="true" />}
+        className="mb-4"
+      />
+      {children}
+    </Card>
+  )
+}
 
 export function AdminInstanceConfig() {
   const { t } = useTranslation()
@@ -340,32 +364,17 @@ export function AdminInstanceConfig() {
     >
       <div className="space-y-6 stagger-children">
         {/* Instance Branding Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-4 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.setup.branding')}
-          </h3>
-
+        <ConfigSection title={t('admin.setup.branding')}>
           <div className="space-y-4">
             {/* Instance Name */}
-            <div>
-              <label htmlFor="instance-name" className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.setup.displayName')}
-              </label>
-              <div className="input-container px-4 py-3">
-                <input
-                  id="instance-name"
-                  type="text"
-                  value={instanceName}
-                  onChange={(e) => { setInstanceName(e.target.value); setIsDirty(true) }}
-                  placeholder={t('admin.setup.defaultName')}
-                  className="input-field text-sm"
-                />
-              </div>
-              <p className="text-xs text-text-muted mt-1.5">
-                {t('admin.setup.displayNameHint')}
-              </p>
-            </div>
+            <TextField
+              id="instance-name"
+              label={t('admin.setup.displayName')}
+              value={instanceName}
+              onChange={(e) => { setInstanceName(e.target.value); setIsDirty(true) }}
+              placeholder={t('admin.setup.defaultName')}
+              description={t('admin.setup.displayNameHint')}
+            />
 
             {/* Icon */}
             <div>
@@ -377,20 +386,15 @@ export function AdminInstanceConfig() {
 
             {/* Logo URL */}
             <div>
-              <label htmlFor="logo-url" className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.instanceConfig.logoUrlLabel', 'Logo URL')}
-              </label>
-              <input
+              <TextField
                 id="logo-url"
                 type="url"
+                label={t('admin.instanceConfig.logoUrlLabel', 'Logo URL')}
                 value={previewLogoUrl}
                 onChange={(e) => handleLogoUrlChange(e.target.value)}
                 placeholder={t('admin.instanceConfig.logoUrlPlaceholder', 'https://example.com/logo.png')}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                description={t('admin.instanceConfig.logoUrlHint', 'Square image recommended (128x128 or 256x256).')}
               />
-              <p className="text-xs text-text-muted mt-1.5">
-                {t('admin.instanceConfig.logoUrlHint', 'Square image recommended (128x128 or 256x256).')}
-              </p>
               <div className="mt-3 flex items-center gap-3">
                 <div className="w-12 h-12 rounded-lg border border-border bg-surface flex items-center justify-center overflow-hidden">
                   {previewLogoUrl.trim() && !logoPreviewError ? (
@@ -411,40 +415,26 @@ export function AdminInstanceConfig() {
             </div>
 
             {/* Favicon URL */}
-            <div>
-              <label htmlFor="favicon-url" className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.instanceConfig.faviconLabel', 'Favicon URL')}
-              </label>
-              <input
-                id="favicon-url"
-                type="url"
-                value={previewFaviconUrl}
-                onChange={(e) => handleFaviconUrlChange(e.target.value)}
-                placeholder={t('admin.instanceConfig.faviconPlaceholder', 'https://example.com/favicon.png')}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-              />
-              <p className="text-xs text-text-muted mt-1.5">
-                {t('admin.instanceConfig.faviconHint', 'Shown in the browser tab and bookmarks (recommended 32x32 or 64x64).')}
-              </p>
-            </div>
+            <TextField
+              id="favicon-url"
+              type="url"
+              label={t('admin.instanceConfig.faviconLabel', 'Favicon URL')}
+              value={previewFaviconUrl}
+              onChange={(e) => handleFaviconUrlChange(e.target.value)}
+              placeholder={t('admin.instanceConfig.faviconPlaceholder', 'https://example.com/favicon.png')}
+              description={t('admin.instanceConfig.faviconHint', 'Shown in the browser tab and bookmarks (recommended 32x32 or 64x64).')}
+            />
 
             {/* Apple Touch Icon URL */}
-            <div>
-              <label htmlFor="apple-touch-icon-url" className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.instanceConfig.appleTouchIconLabel', 'Apple touch icon URL')}
-              </label>
-              <input
-                id="apple-touch-icon-url"
-                type="url"
-                value={previewAppleTouchIconUrl}
-                onChange={(e) => handleAppleTouchIconUrlChange(e.target.value)}
-                placeholder={t('admin.instanceConfig.appleTouchIconPlaceholder', 'https://example.com/apple-touch-icon.png')}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-              />
-              <p className="text-xs text-text-muted mt-1.5">
-                {t('admin.instanceConfig.appleTouchIconHint', 'Used when adding to the iOS home screen (recommended 180x180).')}
-              </p>
-            </div>
+            <TextField
+              id="apple-touch-icon-url"
+              type="url"
+              label={t('admin.instanceConfig.appleTouchIconLabel', 'Apple touch icon URL')}
+              value={previewAppleTouchIconUrl}
+              onChange={(e) => handleAppleTouchIconUrlChange(e.target.value)}
+              placeholder={t('admin.instanceConfig.appleTouchIconPlaceholder', 'https://example.com/apple-touch-icon.png')}
+              description={t('admin.instanceConfig.appleTouchIconHint', 'Used when adding to the iOS home screen (recommended 180x180).')}
+            />
 
             {/* Accent Color */}
             <div>
@@ -454,18 +444,13 @@ export function AdminInstanceConfig() {
               <ColorPicker value={previewAccentColor} onChange={handleColorChange} aria-labelledby="accent-color-label" />
             </div>
           </div>
-        </div>
+        </ConfigSection>
 
         {/* Chat Icons Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.chatIconsTitle', 'Chat Icons')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.chatIconsDesc', 'Set the default icons used in chat messages.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.chatIconsTitle', 'Chat Icons')}
+          description={t('admin.instanceConfig.chatIconsDesc', 'Set the default icons used in chat messages.')}
+        >
           <div className="space-y-4">
             <div>
               <span id="assistant-icon-label" className="text-sm font-medium text-text mb-2 block">
@@ -481,18 +466,13 @@ export function AdminInstanceConfig() {
               <IconPicker value={previewUserIcon} onChange={handleUserIconChange} aria-labelledby="user-icon-label" />
             </div>
           </div>
-        </div>
+        </ConfigSection>
 
         {/* Header Branding Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.headerTitle', 'Header Branding')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.headerDesc', 'Control how your instance appears in the top header.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.headerTitle', 'Header Branding')}
+          description={t('admin.instanceConfig.headerDesc', 'Control how your instance appears in the top header.')}
+        >
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-text mb-2 block">
@@ -514,75 +494,45 @@ export function AdminInstanceConfig() {
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.instanceConfig.headerTaglineLabel', 'Tagline (optional)')}
-              </label>
-              <input
-                type="text"
-                value={previewHeaderTagline}
-                onChange={(e) => handleHeaderTaglineChange(e.target.value)}
-                placeholder={t('admin.instanceConfig.headerTaglinePlaceholder', 'Short descriptor shown under the name')}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-              />
-              <p className="text-xs text-text-muted mt-1.5">
-                {t('admin.instanceConfig.headerTaglineHint', 'Leave blank to hide the tagline.')}
-              </p>
-            </div>
+            <TextField
+              label={t('admin.instanceConfig.headerTaglineLabel', 'Tagline (optional)')}
+              value={previewHeaderTagline}
+              onChange={(e) => handleHeaderTaglineChange(e.target.value)}
+              placeholder={t('admin.instanceConfig.headerTaglinePlaceholder', 'Short descriptor shown under the name')}
+              description={t('admin.instanceConfig.headerTaglineHint', 'Leave blank to hide the tagline.')}
+            />
           </div>
-        </div>
+        </ConfigSection>
 
         {/* Chat Identity Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.chatIdentityTitle', 'Chat Identity')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.chatIdentityDesc', 'Set the labels shown above chat messages.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.chatIdentityTitle', 'Chat Identity')}
+          description={t('admin.instanceConfig.chatIdentityDesc', 'Set the labels shown above chat messages.')}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.instanceConfig.assistantNameLabel', 'Assistant display name')}
-              </label>
-              <input
-                type="text"
-                value={previewAssistantName}
-                onChange={(e) => handleAssistantNameChange(e.target.value)}
-                placeholder={t('admin.instanceConfig.assistantNamePlaceholder', 'e.g., Sanctum AI')}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-text mb-1.5 block">
-                {t('admin.instanceConfig.userLabelLabel', 'User label')}
-              </label>
-              <input
-                type="text"
-                value={previewUserLabel}
-                onChange={(e) => handleUserLabelChange(e.target.value)}
-                placeholder={t('admin.instanceConfig.userLabelPlaceholder', 'e.g., You')}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-              />
-            </div>
+            <TextField
+              label={t('admin.instanceConfig.assistantNameLabel', 'Assistant display name')}
+              value={previewAssistantName}
+              onChange={(e) => handleAssistantNameChange(e.target.value)}
+              placeholder={t('admin.instanceConfig.assistantNamePlaceholder', 'e.g., Sanctum AI')}
+            />
+            <TextField
+              label={t('admin.instanceConfig.userLabelLabel', 'User label')}
+              value={previewUserLabel}
+              onChange={(e) => handleUserLabelChange(e.target.value)}
+              placeholder={t('admin.instanceConfig.userLabelPlaceholder', 'e.g., You')}
+            />
           </div>
           <p className="text-xs text-text-muted mt-2">
             {t('admin.instanceConfig.chatIdentityHint', 'Leave a label empty to hide it.')}
           </p>
-        </div>
+        </ConfigSection>
 
         {/* Chat Bubble Style Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.bubbleStyleTitle', 'Chat Bubble Style')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.bubbleStyleDesc', 'Choose the shape and depth of chat bubbles.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.bubbleStyleTitle', 'Chat Bubble Style')}
+          description={t('admin.instanceConfig.bubbleStyleDesc', 'Choose the shape and depth of chat bubbles.')}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {bubbleStyleOptions.map((option) => (
               <button
@@ -607,18 +557,13 @@ export function AdminInstanceConfig() {
             />
             {t('admin.instanceConfig.bubbleShadowLabel', 'Add subtle bubble shadow')}
           </label>
-        </div>
+        </ConfigSection>
 
         {/* Surface Style Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.surfaceTitle', 'Background Style')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.surfaceDesc', 'Pick the background texture for your instance.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.surfaceTitle', 'Background Style')}
+          description={t('admin.instanceConfig.surfaceDesc', 'Pick the background texture for your instance.')}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {surfaceStyleOptions.map((option) => (
               <button
@@ -633,18 +578,13 @@ export function AdminInstanceConfig() {
               </button>
             ))}
           </div>
-        </div>
+        </ConfigSection>
 
         {/* Status Icons Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.statusIconsTitle', 'Status Icons')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.statusIconsDesc', 'Choose how status updates are displayed.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.statusIconsTitle', 'Status Icons')}
+          description={t('admin.instanceConfig.statusIconsDesc', 'Choose how status updates are displayed.')}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {statusIconOptions.map((option) => (
               <button
@@ -659,18 +599,13 @@ export function AdminInstanceConfig() {
               </button>
             ))}
           </div>
-        </div>
+        </ConfigSection>
 
         {/* Typography Section */}
-        <div className="card card-sm p-5! bg-surface-overlay!">
-          <h3 className="heading-sm mb-2 flex items-center gap-2">
-            <Paintbrush className="w-4 h-4 text-text-muted" />
-            {t('admin.instanceConfig.typographyTitle', 'Typography')}
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            {t('admin.instanceConfig.typographyDesc', 'Pick a font pairing for the entire interface.')}
-          </p>
-
+        <ConfigSection
+          title={t('admin.instanceConfig.typographyTitle', 'Typography')}
+          description={t('admin.instanceConfig.typographyDesc', 'Pick a font pairing for the entire interface.')}
+        >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {typographyOptions.map((option) => (
               <button
@@ -685,13 +620,13 @@ export function AdminInstanceConfig() {
               </button>
             ))}
           </div>
-        </div>
+        </ConfigSection>
 
         {/* Save Error display */}
         {saveError && (
-          <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <Callout label={t('common.error', 'Error')} tone="error">
             <p className="text-sm text-error">{saveError}</p>
-          </div>
+          </Callout>
         )}
 
         {/* Navigation */}
@@ -703,14 +638,14 @@ export function AdminInstanceConfig() {
             <ArrowLeft className="w-4 h-4" />
             {t('common.back', 'Back')}
           </Link>
-          <button
+          <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-1 btn btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 disabled:opacity-50"
+            leadingIcon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
           >
-            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? t('common.saving', 'Saving...') : t('admin.setup.save')}
-          </button>
+          </Button>
         </div>
       </div>
     </OnboardingCard>

@@ -9,6 +9,7 @@ import { authenticateWithNostr, hasNostrExtension, type AuthResult } from '../ut
 import { fetchPublicConfig } from '../utils/publicConfig'
 import { fetchInstanceStatus } from '../utils/instanceStatus'
 import { LANGUAGES } from '../utils/languages'
+import { Callout } from '../components/ui'
 
 type ConnectionState = 'idle' | 'connecting' | 'success' | 'no-extension' | 'error'
 
@@ -341,6 +342,23 @@ export function AdminOnboarding() {
                   )}
                 </p>
               </div>
+
+              <Callout tone="warning">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 shrink-0 text-warning" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-medium text-text">
+                      {t('instanceInitiation.keySafety.title', 'Use an Instance-specific Nostr key')}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-text-secondary">
+                      {t(
+                        'instanceInitiation.keySafety.body',
+                        'Do not use your personal Nostr key. Create or choose a dedicated admin key for this Instance to reduce surveillance risk and keep operational access separate.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </Callout>
 
               <div className="space-y-3">
                 <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-overlay/50 hover-lift">

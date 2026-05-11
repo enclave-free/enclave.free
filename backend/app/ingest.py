@@ -371,7 +371,7 @@ async def queue_document_ingestion(
     content_sha256 = hashlib.sha256(content).hexdigest()
     job_id = generate_job_id(canonical_name)
     file_path = UPLOADS_DIR / f"{job_id}_{safe_storage_filename(original_filename)}"
-    file_path.write_bytes(content)
+    await asyncio.to_thread(file_path.write_bytes, content)
 
     now = datetime.utcnow().isoformat()
     JOBS[job_id] = {
@@ -593,6 +593,25 @@ async def promote_replacement(job_id: str) -> None:
     if not old_job:
         return
 
+    try:
+        database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to transfer document access from {old_job_id}: {e}", exc_info=True)
+        now = datetime.utcnow().isoformat()
+        error_message = f"Failed to transfer document access: {e}"
+        if old_job_id in JOBS:
+            JOBS[old_job_id]["transfer_failed"] = True
+            JOBS[old_job_id]["error"] = error_message
+            JOBS[old_job_id]["updated_at"] = now
+        if job_id in JOBS:
+            JOBS[job_id]["transfer_failed"] = True
+            JOBS[job_id]["error"] = error_message
+            JOBS[job_id]["updated_at"] = now
+            _sync_job_to_db(job_id)
+        if old_job_id in JOBS:
+            _sync_job_to_db(old_job_id)
+        raise
+
     logger.info(f"[{job_id}] Promoting replacement for {old_job_id}")
     try:
         promoted = ingest_db.promote_replacement(job_id, old_job_id)
@@ -600,19 +619,28 @@ async def promote_replacement(job_id: str) -> None:
             raise RuntimeError("promote_replacement returned False")
     except Exception as e:
         logger.error(f"[{job_id}] Failed to promote replacement for {old_job_id}: {e}", exc_info=True)
-        raise
-
-    try:
-        database.transfer_document_access(old_job_id, job_id, changed_by="system:document-replacement")
-    except Exception as e:
-        logger.error(f"[{job_id}] Failed to transfer document access from {old_job_id}: {e}", exc_info=True)
         now = datetime.utcnow().isoformat()
-        if old_job_id in JOBS:
-            JOBS[old_job_id]["transfer_failed"] = True
-            JOBS[old_job_id]["updated_at"] = now
+        promotion_error = str(e)
+        rollback_message = promotion_error
+        try:
+            database.transfer_document_access(job_id, old_job_id, changed_by="system:rollback")
+        except Exception as rollback_error:
+            logger.error(
+                f"[{job_id}] Failed to roll back document access transfer to {old_job_id}: {rollback_error}",
+                exc_info=True,
+            )
+            rollback_message = str(rollback_error)
         if job_id in JOBS:
-            JOBS[job_id]["transfer_failed"] = True
+            JOBS[job_id]["promotion_error"] = promotion_error
+            JOBS[job_id]["error"] = rollback_message
             JOBS[job_id]["updated_at"] = now
+            _sync_job_to_db(job_id)
+        if old_job_id in JOBS:
+            JOBS[old_job_id]["promotion_error"] = promotion_error
+            JOBS[old_job_id]["error"] = rollback_message
+            JOBS[old_job_id]["updated_at"] = now
+            _sync_job_to_db(old_job_id)
+        raise
 
     try:
         await delete_document_chunks(old_job_id)
@@ -630,9 +658,11 @@ async def promote_replacement(job_id: str) -> None:
         JOBS[old_job_id]["is_current"] = False
         JOBS[old_job_id]["replaced_by_job_id"] = job_id
         JOBS[old_job_id]["updated_at"] = datetime.utcnow().isoformat()
+        _sync_job_to_db(old_job_id)
     if job_id in JOBS:
         JOBS[job_id]["is_current"] = True
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+        _sync_job_to_db(job_id)
 
 
 # PDF extraction mode: "fast" (PyMuPDF) or "quality" (Docling)

@@ -16,8 +16,31 @@ ALLOWED_TABLES = {
 }
 
 
+def _strip_leading_sql_comments(sql: str) -> str:
+    remaining = sql
+    while True:
+        stripped = remaining.lstrip()
+        if stripped.startswith("--"):
+            _, separator, tail = stripped.partition("\n")
+            remaining = tail if separator else ""
+            continue
+        if stripped.startswith("/*"):
+            end = stripped.find("*/")
+            if end == -1:
+                raise ValueError("Unterminated SQL block comment")
+            remaining = stripped[end + 2:]
+            continue
+        return stripped
+
+
 def referenced_sql_tables(sql: str) -> set[str]:
     """Extract simple FROM/JOIN table identifiers for allowlist checks."""
+    sql = _strip_leading_sql_comments(sql)
+    if re.match(r"^\s*WITH\b", sql, re.IGNORECASE):
+        raise ValueError("CTEs are not supported in read-only admin SQL")
+    if re.search(r"\b(?:FROM|JOIN)\s*\(", sql, re.IGNORECASE):
+        raise ValueError("Nested subqueries are not supported in read-only admin SQL")
+
     tables = set()
     source_pattern = r"\b(FROM|JOIN)\s+(.+?)(?=\b(?:JOIN|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|EXCEPT|INTERSECT|ON)\b|$)"
     for match in re.finditer(source_pattern, sql, re.IGNORECASE | re.DOTALL):
@@ -32,7 +55,12 @@ def referenced_sql_tables(sql: str) -> set[str]:
 def validate_sql_allowed_tables(sql: str) -> tuple[bool, str]:
     """Return whether SELECT SQL references only allowlisted tables."""
     allowed = {table.lower() for table in ALLOWED_TABLES}
-    disallowed = sorted(table for table in referenced_sql_tables(sql) if table not in allowed)
+    try:
+        referenced_tables = referenced_sql_tables(sql)
+    except ValueError as exc:
+        return False, str(exc)
+
+    disallowed = sorted(table for table in referenced_tables if table not in allowed)
     if disallowed:
         return False, f"Query references disallowed table(s): {', '.join(disallowed)}"
     return True, ""

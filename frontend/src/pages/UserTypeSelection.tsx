@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, Loader2 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { DynamicIcon } from '../components/shared/DynamicIcon'
+import { Button, Callout } from '../components/ui'
 import {
   UserType,
   STORAGE_KEYS,
@@ -127,14 +128,17 @@ export function UserTypeSelection() {
       <div className="min-h-screen bg-surface flex items-center justify-center p-4">
         <OnboardingCard
           title={t('common.error')}
-          subtitle={error}
         >
-          <button
+          <Callout className="mb-6" label={t('onboarding.userType.errorLabel', 'User type loading error')} tone="error">
+            {error}
+          </Callout>
+          <Button
             onClick={() => window.location.reload()}
-            className="btn btn-primary btn-lg w-full"
+            className="w-full"
+            size="lg"
           >
             {t('common.tryAgain')}
-          </button>
+          </Button>
         </OnboardingCard>
       </div>
     )
@@ -162,13 +166,14 @@ export function UserTypeSelection() {
           ))}
         </div>
 
-        <button
+        <Button
           onClick={handleContinue}
           disabled={selectedTypeId === null}
-          className="btn btn-primary btn-lg w-full"
+          className="w-full"
+          size="lg"
         >
           {t('common.continue')}
-        </button>
+        </Button>
       </OnboardingCard>
     </div>
   )

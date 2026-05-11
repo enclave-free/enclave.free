@@ -726,7 +726,9 @@
       "description": "Select sources to include in context",
       "noSources": "No sources available",
       "clearAll": "Clear all",
-      "docsLabel": "Docs"
+      "clearAllSelectedAria": "Clear all selected documents",
+      "docsLabel": "Docs",
+      "docsLabelWithCount": "Docs {{count}}"
     },
     "messages": {
       "searching": "Searching for \"{{term}}\"...",
@@ -851,6 +853,7 @@
     "activeByDefault": "Active by Default",
     "noDocuments": "No documents uploaded yet",
     "promptPreview": "Prompt Preview",
+    "assembledPromptOutput": "Assembled prompt output",
     "invalidJson": "Invalid JSON format",
     "chunks": "chunks",
     "configureFor": "Configure For",
@@ -1197,6 +1200,7 @@
     "deleting": "Deleting...",
     "deleteSuccess": "Document deleted successfully",
     "deleteFailed": "Failed to delete document",
+    "documentDeletionError": "Document deletion error",
     "pipelineHelp": {
       "ariaLabel": "Document upload pipeline help",
       "chunked": "Chunked",

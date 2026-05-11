@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronDown, FileText } from 'lucide-react'
+import { Badge, Button } from '../ui'
 
 export interface DocumentSource {
   id: string
@@ -76,6 +78,9 @@ export function DocumentScope({
   }, [isOpen])
 
   const selectedCount = selectedDocuments.length
+  const triggerLabel = selectedCount > 0
+    ? t('chat.documentScope.docsLabelWithCount', { count: selectedCount })
+    : t('chat.documentScope.docsLabel')
 
   const dropdownContent = isOpen ? (
     <div
@@ -106,6 +111,7 @@ export function DocumentScope({
                 <button
                   key={source.id}
                   onClick={() => onToggle(source.id)}
+                  aria-pressed={isSelected}
                   className={`w-full text-left p-2.5 rounded-lg mb-1 last:mb-0 transition-all ${
                     isSelected
                       ? 'bg-accent/10 border border-accent/30'
@@ -119,9 +125,7 @@ export function DocumentScope({
                       }`}
                     >
                       {isSelected && (
-                        <svg className="w-2.5 h-2.5 text-accent-text" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <Check className="h-2.5 w-2.5 text-accent-text" aria-hidden="true" strokeWidth={3} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -157,6 +161,7 @@ export function DocumentScope({
         <div className="px-3 py-2 border-t border-border shrink-0">
           <button
             onClick={() => selectedDocuments.forEach((id) => onToggle(id))}
+            aria-label={t('chat.documentScope.clearAllSelectedAria', 'Clear all selected documents')}
             className="text-[10px] text-text-muted hover:text-text transition-colors"
           >
             {t('chat.documentScope.clearAll')}
@@ -168,36 +173,30 @@ export function DocumentScope({
 
   return (
     <div className="relative">
-      <button
+      <Button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
-          selectedCount > 0
-            ? 'bg-accent text-accent-text shadow-md glow-accent'
-            : 'text-text-secondary hover:text-text hover:bg-surface-overlay border border-transparent hover:border-border'
-        }`}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        aria-label={triggerLabel}
+        variant={selectedCount > 0 ? 'primary' : 'ghost'}
+        size="sm"
+        leadingIcon={<FileText className="h-3.5 w-3.5" aria-hidden="true" />}
+        trailingIcon={
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        }
+        className={selectedCount > 0 ? 'text-xs shadow-md glow-accent' : 'text-xs'}
       >
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-        </svg>
         {compact ? null : t('chat.documentScope.docsLabel')}
         {selectedCount > 0 && (
-          <span className={`text-[10px] rounded px-1 min-w-[1rem] text-center ${
-            selectedCount > 0 ? 'bg-accent-text/20 text-accent-text' : ''
-          }`}>
+          <Badge tone="neutral" className="min-h-5 border-accent-text/20 bg-accent-text/20 px-1 text-[10px] text-accent-text">
             {selectedCount}
-          </span>
+          </Badge>
         )}
-        <svg
-          className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+      </Button>
 
       {typeof document !== 'undefined' && createPortal(dropdownContent, document.body)}
     </div>

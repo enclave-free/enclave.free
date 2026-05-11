@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { X } from 'lucide-react'
 import { API_BASE } from '../../types/onboarding'
+import { Button, Callout, IconButton, Textarea } from '../ui'
 
 export type ReachoutMode = 'feedback' | 'help' | 'support'
 
@@ -123,71 +125,74 @@ export function ReachoutModal({ open, mode, overrides, onClose }: ReachoutModalP
             <h3 id="reachout-modal-title" className="font-semibold text-text">{title}</h3>
             <p className="text-xs text-text-muted mt-1">{description}</p>
           </div>
-          <button
+          <IconButton
             onClick={onClose}
-            className="text-text-muted hover:text-text transition-colors text-sm"
-            aria-label={t('common.close', 'Close')}
+            label={t('common.close', 'Close')}
+            variant="ghost"
+            size="sm"
           >
-            {t('common.close', 'Close')}
-          </button>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </IconButton>
         </div>
 
         <div className="p-4">
           {success ? (
-            <div className="bg-surface-overlay border border-border rounded-xl p-4">
-              <p className="text-sm text-text">{successMessage}</p>
-            </div>
+            <Callout label={t('reachout.status.successLabel', 'Reachout success')} tone="success">
+              {successMessage}
+            </Callout>
           ) : (
             <>
-              <label htmlFor="reachout-message" className="text-sm font-medium text-text mb-1.5 block">
-                {t('reachout.form.messageLabel', 'Message')}
-              </label>
-              <textarea
+              <Textarea
                 id="reachout-message"
+                label={t('reachout.form.messageLabel', 'Message')}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t('reachout.form.placeholder', 'Write your message...')}
                 rows={6}
-                className="w-full border border-border rounded-lg px-3 py-2 bg-surface text-text placeholder:text-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 resize-y"
               />
               {error && (
-                <p className="text-xs text-error mt-2" role="alert">{error}</p>
+                <Callout
+                  label={t('reachout.errors.formErrorLabel', 'Reachout form error')}
+                  tone="error"
+                  className="mt-3"
+                >
+                  {error}
+                </Callout>
               )}
             </>
           )}
         </div>
 
         <div className="flex items-center justify-end gap-2 p-4 border-t border-border bg-surface-overlay">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-ghost px-3 py-2 rounded-lg transition-all"
-            disabled={submitting}
-          >
-            {t('common.cancel', 'Cancel')}
-          </button>
           {!success && (
-            <button
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="ghost"
+              disabled={submitting}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          )}
+          {!success && (
+            <Button
               type="button"
               onClick={handleSubmit}
-              className="btn btn-primary disabled:opacity-50"
               disabled={submitting}
             >
               {submitting ? t('common.sending', 'Sending...') : sendLabel}
-            </button>
+            </Button>
           )}
           {success && (
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="btn btn-primary"
             >
               {t('common.close', 'Close')}
-            </button>
+            </Button>
           )}
         </div>
       </div>
     </div>
   )
 }
-

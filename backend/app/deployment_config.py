@@ -7,7 +7,7 @@ import os
 import time
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Final, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -82,6 +82,11 @@ ENV_CONFIG_MAP = {
     "FRONTEND_URL": {"category": "security", "description": "Frontend application URL", "requires_restart": False, "default": "http://localhost:5173"},
     "SIMULATE_USER_AUTH": {"category": "security", "description": "Allow user verification without magic link token (testing only)", "requires_restart": False, "default": "false"},
     "SIMULATE_ADMIN_AUTH": {"category": "security", "description": "Show mock Nostr connection button for admin auth (testing only)", "requires_restart": False, "default": "false"},
+    "RATE_LIMIT_CHAT_PER_MINUTE": {"category": "security", "description": "Chat requests per minute", "requires_restart": True, "default": "120"},
+    "RATE_LIMIT_QUERY_PER_MINUTE": {"category": "security", "description": "Retrieval query requests per minute", "requires_restart": True, "default": "90"},
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {"category": "security", "description": "Document upload requests per minute", "requires_restart": True, "default": "20"},
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {"category": "security", "description": "Vector search requests per minute", "requires_restart": True, "default": "30"},
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {"category": "security", "description": "Deployment config exports per hour", "requires_restart": True, "default": "5"},
     # Retrieval compatibility settings. RAG_* names remain stable public config keys.
     "RAG_TOP_K": {"category": "llm", "description": "Default Retrieval count", "requires_restart": False, "default": "8"},
     "PDF_EXTRACT_MODE": {"category": "llm", "description": "PDF extraction mode (fast/quality)", "requires_restart": False, "default": "fast"},
@@ -112,6 +117,14 @@ FORBIDDEN_KEYS = {"SECRET_KEY", "DATABASE_URL", "ADMIN_PRIVATE_KEY"}
 
 # Allowed table names for audit log queries (prevents SQL injection)
 ALLOWED_AUDIT_TABLES = {"deployment_config", "ai_config", "document_defaults"}
+
+RATE_LIMIT_KEYS: Final[set[str]] = {
+    "RATE_LIMIT_CHAT_PER_MINUTE",
+    "RATE_LIMIT_QUERY_PER_MINUTE",
+    "RATE_LIMIT_UPLOAD_PER_MINUTE",
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE",
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR",
+}
 
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
@@ -438,6 +451,16 @@ async def update_deployment_config_value(
                 raise ValueError()
         except ValueError:
             raise HTTPException(status_code=400, detail="RAG_TOP_K must be between 1 and 100")
+
+    if key in RATE_LIMIT_KEYS:
+        if not value_to_save or value_to_save.strip() == "":
+            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer")
+        try:
+            rate_limit = int(value_to_save)
+            if rate_limit < 1:
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer") from None
 
     # URL validation for URL-type fields
     URL_KEYS = {"INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "CUSTOM_SEARXNG_URL",

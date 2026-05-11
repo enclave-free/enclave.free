@@ -5,9 +5,11 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, Copy } from 'lucide-react'
 import { useTheme } from '../../theme'
 import { useInstanceConfig } from '../../context/InstanceConfigContext'
 import { DynamicIcon } from '../shared/DynamicIcon'
+import { Button } from '../ui'
 
 export interface Message {
   id: string
@@ -62,30 +64,22 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
             {language || 'code'}
           </span>
         </div>
-        <button
+        <Button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md
-            text-text-muted hover:text-text-secondary hover:bg-surface-overlay
-            opacity-0 group-hover:opacity-100 transition-all duration-200
-            focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-accent/50"
+          variant="ghost"
+          size="sm"
+          leadingIcon={
+            copied ? (
+              <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            )
+          }
+          className="text-xs"
           aria-label={copied ? t('chat.code.copied') : t('chat.code.copyCode')}
         >
-          {copied ? (
-            <>
-              <svg className="w-3.5 h-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>{t('chat.code.copied')}</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span>{t('chat.code.copy')}</span>
-            </>
-          )}
-        </button>
+          {copied ? t('chat.code.copied') : t('chat.code.copy')}
+        </Button>
       </div>
       <SyntaxHighlighter
         style={codeStyle as { [key: string]: CSSProperties }}
@@ -132,8 +126,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   const bubbleRadius = bubbleStyles[config.chatBubbleStyle] || bubbleStyles.soft
   const bubbleShadow = config.chatBubbleShadow ? 'shadow-md' : ''
-  const userBubbleClass = `inline-block max-w-[85%] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
-  const assistantBubbleClass = `inline-block max-w-[85%] bg-surface-raised border border-border px-4 py-2.5 ${bubbleRadius.assistant} ${bubbleShadow}`
+  const userBubbleClass = `inline-block max-w-72 sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
+  const assistantBubbleClass = `inline-block max-w-72 sm:max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 ${bubbleRadius.assistant} ${bubbleShadow}`
 
   return (
     <div className="animate-fade-in-up mb-4 last:mb-0">
@@ -152,11 +146,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
           )}
           {isUser ? (
             <div className={userBubbleClass}>
-              <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{message.content}</p>
             </div>
           ) : (
             <div className={assistantBubbleClass}>
-              <div className="text-text [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
+              <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -200,17 +194,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     )
                   },
                   ul({ children }) {
-                    return <ul className="mb-3 last:mb-0 space-y-1.5 text-[15px]">{children}</ul>
+                    return <ul className="mb-3 last:mb-0 list-disc space-y-1.5 pl-5 text-[15px]">{children}</ul>
                   },
                   ol({ children }) {
-                    return <ol className="mb-3 last:mb-0 space-y-1.5 text-[15px] list-decimal list-inside">{children}</ol>
+                    return <ol className="mb-3 last:mb-0 list-decimal space-y-1.5 pl-5 text-[15px]">{children}</ol>
                   },
                   li({ children }) {
                     return (
-                      <li className="flex gap-2 leading-relaxed">
-                        <span className="text-accent mt-1.5 text-xs">•</span>
-                        <span className="flex-1">{children}</span>
-                      </li>
+                      <li className="pl-1 leading-relaxed marker:text-accent">{children}</li>
                     )
                   },
                   blockquote({ children }) {

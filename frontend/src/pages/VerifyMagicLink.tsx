@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Button } from '../components/ui'
 import { STORAGE_KEYS, API_BASE, saveSelectedUserTypeId } from '../types/onboarding'
 import { fetchPublicConfig } from '../utils/publicConfig'
 
@@ -277,12 +278,12 @@ export function VerifyMagicLink() {
           <p className="text-sm text-text-muted mb-6">
             {t('onboarding.verify.linkExpiredMessage')}
           </p>
-          <button
+          <Button
             onClick={() => navigate('/login')}
-            className="btn btn-primary btn-lg"
+            size="lg"
           >
             {t('onboarding.verify.requestNewLink')}
-          </button>
+          </Button>
         </div>
       )}
     </OnboardingCard>

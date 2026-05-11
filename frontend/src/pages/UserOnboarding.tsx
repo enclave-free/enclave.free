@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, Check, HelpCircle, ArrowRight } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { Button } from '../components/ui'
 import { LANGUAGES, Language, STORAGE_KEY_LANGUAGE } from '../utils/languages'
 
 function SearchInput({
@@ -168,16 +169,16 @@ export function UserOnboarding() {
         </div>
       )}
 
-      <button
-        type="button"
+      <Button
         onClick={handleContinue}
         disabled={!selectedLanguage}
         aria-disabled={!selectedLanguage}
-        className="btn btn-primary btn-lg w-full mt-6 flex items-center justify-center gap-2"
+        className="w-full mt-6"
+        size="lg"
+        trailingIcon={<ArrowRight className="w-5 h-5" aria-hidden="true" />}
       >
-        <span>{t('onboarding.language.continue')}</span>
-        <ArrowRight className="w-5 h-5" aria-hidden="true" />
-      </button>
+        {t('onboarding.language.continue')}
+      </Button>
 
       <p className="text-xs text-text-muted text-center mt-4">
         {t('onboarding.language.changeInSettings')}

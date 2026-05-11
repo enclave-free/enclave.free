@@ -25,10 +25,10 @@ export function OnboardingCard({ children, footer, title, subtitle, size, topRig
         </div>
       )}
 
-      <div className={`w-full ${maxWidthClass}`}>
+      <div className={`w-full min-w-0 ${maxWidthClass}`}>
         <InstanceLogo />
 
-        <div className="card card-lg animate-fade-in-up">
+        <div className="card rounded-3xl p-6 sm:p-10 min-w-0 overflow-hidden animate-fade-in-up">
           {(title || subtitle) && (
             <div className="text-center mb-8">
               {title && <h1 className="heading-xl">{title}</h1>}

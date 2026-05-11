@@ -1,9 +1,10 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Loader2 } from 'lucide-react'
+import { ArrowRight, Loader2 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { DynamicField } from '../components/onboarding/DynamicField'
+import { Button } from '../components/ui'
 import {
   CustomField,
   UserProfile as UserProfileType,
@@ -221,25 +222,16 @@ export function UserProfile() {
           />
         ))}
 
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="btn btn-primary btn-lg w-full flex items-center justify-center gap-2 mt-6"
+          className="w-full mt-6"
+          size="lg"
+          leadingIcon={isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : undefined}
+          trailingIcon={!isSubmitting ? <ArrowRight className="w-5 h-5" aria-hidden="true" /> : undefined}
         >
-          {isSubmitting ? (
-            <>
-              <div className="w-4 h-4 border-2 border-accent-text/30 border-t-accent-text rounded-full animate-spin" />
-              {t('onboarding.profile.saving')}
-            </>
-          ) : (
-            <>
-              {t('onboarding.profile.continue')}
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </>
-          )}
-        </button>
+          {isSubmitting ? t('onboarding.profile.saving') : t('onboarding.profile.continue')}
+        </Button>
       </form>
     </OnboardingCard>
   )
