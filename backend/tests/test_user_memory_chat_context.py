@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -27,7 +28,7 @@ class FakeProvider:
     def health_check(self) -> bool:
         return True
 
-    def complete(self, prompt: str, temperature: float = 0.1):
+    def complete(self, prompt: str, temperature: float = 0.1) -> Any:
         self.prompts.append(prompt)
         if "=== USER MEMORY EXTRACTION ===" in prompt:
             if self.fail_extractor:
@@ -150,7 +151,7 @@ class UserMemoryChatContextTest(unittest.TestCase):
                 subject_user_id=self.user_id,
                 kind="preference",
                 content=f"Memory {index}",
-                importance=index,
+                importance=min(index, 10),
                 source_kind="conversation",
                 author_actor="sage",
             )

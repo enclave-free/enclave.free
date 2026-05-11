@@ -88,29 +88,37 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
 
       case 'checkbox':
         return (
-          <label className="flex items-center gap-3 cursor-pointer py-2">
-            <div
-              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
-                value
-                  ? 'bg-accent border-accent'
-                  : 'border-border hover:border-accent/50'
-              }`}
-              onClick={() => onChange(!value)}
-            >
-              {value && (
-                <svg
-                  className="w-3 h-3 text-accent-text"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-            <span className="text-sm text-text">{field.placeholder || field.name}</span>
-          </label>
+          <div>
+            <label className="flex items-center gap-3 cursor-pointer py-2">
+              <div
+                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                  value
+                    ? 'bg-accent border-accent'
+                    : 'border-border hover:border-accent/50'
+                }`}
+                onClick={() => onChange(!value)}
+                aria-invalid={error ? true : undefined}
+              >
+                {value && (
+                  <svg
+                    className="w-3 h-3 text-accent-text"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-sm text-text">{field.placeholder || field.name}</span>
+            </label>
+            {error && (
+              <span className="text-xs text-error">
+                {error}
+              </span>
+            )}
+          </div>
         )
 
       default:

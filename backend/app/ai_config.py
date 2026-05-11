@@ -533,7 +533,8 @@ def get_llm_parameters(user_type_id: int | None = None) -> dict:
 
         if value_type == "number":
             try:
-                result[key] = float(value)
+                numeric_value = float(value)
+                result[key] = int(numeric_value) if numeric_value.is_integer() else numeric_value
             except (ValueError, TypeError):
                 logger.warning(f"Invalid numeric value for config key {key}: {value}")
                 # Provide safe defaults for critical parameters instead of omitting

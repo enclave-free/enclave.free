@@ -703,11 +703,6 @@ input:focus-visible {
   @apply rounded-xl p-5;
   box-shadow: var(--shadow-sm);
 }
-.card-lg {
-  @apply rounded-3xl p-10;
-  box-shadow: var(--shadow-lg);
-}
-
 /* =============================================================================
    TYPOGRAPHY SYSTEM
    ============================================================================= */

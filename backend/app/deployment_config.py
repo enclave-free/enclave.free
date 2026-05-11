@@ -7,7 +7,7 @@ import os
 import time
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Final, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -118,7 +118,7 @@ FORBIDDEN_KEYS = {"SECRET_KEY", "DATABASE_URL", "ADMIN_PRIVATE_KEY"}
 # Allowed table names for audit log queries (prevents SQL injection)
 ALLOWED_AUDIT_TABLES = {"deployment_config", "ai_config", "document_defaults"}
 
-RATE_LIMIT_KEYS = {
+RATE_LIMIT_KEYS: Final[set[str]] = {
     "RATE_LIMIT_CHAT_PER_MINUTE",
     "RATE_LIMIT_QUERY_PER_MINUTE",
     "RATE_LIMIT_UPLOAD_PER_MINUTE",

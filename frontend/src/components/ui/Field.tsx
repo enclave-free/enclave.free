@@ -78,7 +78,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   const describedBy = error ? errorId : description ? descriptionId : undefined
   const { 'aria-describedby': ariaDescribedBy, 'aria-invalid': ariaInvalid, ...inputProps } = props
   const finalAriaDescribedBy = [ariaDescribedBy, describedBy].filter(Boolean).join(' ')
-  const finalAriaInvalid = ariaInvalid ?? (error ? true : undefined)
+  const finalAriaInvalid = error ? true : (ariaInvalid ?? undefined)
 
   return (
     <div className={cx('flex flex-col gap-2', className)}>
@@ -126,7 +126,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   const describedBy = error ? errorId : description ? descriptionId : undefined
   const { 'aria-describedby': ariaDescribedBy, 'aria-invalid': ariaInvalid, ...textareaProps } = props
   const finalAriaDescribedBy = [ariaDescribedBy, describedBy].filter(Boolean).join(' ')
-  const finalAriaInvalid = ariaInvalid ?? (error ? true : undefined)
+  const finalAriaInvalid = error ? true : (ariaInvalid ?? undefined)
 
   return (
     <div className={cx('flex flex-col gap-2', className)}>
@@ -174,7 +174,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
   const describedBy = error ? errorId : description ? descriptionId : undefined
   const { 'aria-describedby': ariaDescribedBy, 'aria-invalid': ariaInvalid, ...selectProps } = props
   const finalAriaDescribedBy = [ariaDescribedBy, describedBy].filter(Boolean).join(' ')
-  const finalAriaInvalid = ariaInvalid ?? (error ? true : undefined)
+  const finalAriaInvalid = error ? true : (ariaInvalid ?? undefined)
 
   return (
     <div className={cx('flex flex-col gap-2', className)}>

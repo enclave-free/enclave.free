@@ -58,7 +58,7 @@ describe('AdminUserConfig', () => {
           },
         }))
       }
-      return Promise.resolve(Response.json({}))
+      throw new Error(`Unhandled adminFetch mock call: ${options?.method ?? 'GET'} ${endpoint}`)
     })
   })
 

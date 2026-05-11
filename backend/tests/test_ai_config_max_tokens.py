@@ -91,6 +91,17 @@ class AIConfigMaxTokensTest(unittest.TestCase):
                 max_tokens = next(item for item in parameters if item["key"] == "max_tokens")
                 self.assertEqual(max_tokens["value"], value)
 
+    def test_llm_parameters_preserve_whole_numbers_as_ints(self) -> None:
+        self.client.put(
+            "/admin/ai-config/max_tokens",
+            json={"value": "2048"},
+        )
+
+        params = self.ai_config.get_llm_parameters()
+
+        self.assertEqual(params["max_tokens"], 2048)
+        self.assertIsInstance(params["max_tokens"], int)
+
     def test_max_tokens_rejects_non_integer_values(self) -> None:
         response = self.client.put(
             "/admin/ai-config/max_tokens",

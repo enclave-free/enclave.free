@@ -61,7 +61,9 @@ describe('UserAuth', () => {
     const failure = await screen.findByRole('note', { name: 'Magic link request error' })
     expect(failure).toHaveTextContent('Email service unavailable')
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Continue with Email' })).toHaveClass('btn-primary')
+      const continueButton = screen.getByRole('button', { name: 'Continue with Email' })
+      expect(continueButton).toBeEnabled()
+      expect(continueButton).toHaveTextContent('Continue with Email')
     })
   })
 })

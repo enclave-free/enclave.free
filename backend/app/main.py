@@ -702,75 +702,81 @@ def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> di
 
 def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | None:
     state = admin_conversation_states.setdefault(session_id, {})
-    pending = state.pop("pending_user_memory_change", None)
+    pending = state.get("pending_user_memory_change")
     if not pending:
         return None
 
-    if pending.get("action") == "supersede":
-        memory_id = database.supersede_user_memory(
-            pending["memory_id"],
-            content=pending["content"],
-            importance=pending["importance"],
-            confidence=pending["confidence"],
-            source_kind="admin-confirmed",
-            source_conversation_id=session_id,
-            author_actor="admin",
-        )
-        database.log_config_audit_event(
-            table_name="user_memories",
-            config_key=str(pending["memory_id"]),
-            old_value=f"active memory_id={pending['memory_id']}",
-            new_value=(
-                f"supersede subject_user_id={pending['subject_user_id']}; "
-                f"memory_id={pending['memory_id']}; replacement_id={memory_id}; "
-                f"importance={pending['importance']}; "
-                f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
-            ),
-            changed_by=admin.get("pubkey", "unknown"),
-        )
-        return database.get_user_memory(memory_id)
+    try:
+        if pending.get("action") == "supersede":
+            memory_id = database.supersede_user_memory(
+                pending["memory_id"],
+                content=pending["content"],
+                importance=pending["importance"],
+                confidence=pending["confidence"],
+                source_kind="admin-confirmed",
+                source_conversation_id=session_id,
+                author_actor="admin",
+            )
+            database.log_config_audit_event(
+                table_name="user_memories",
+                config_key=str(pending["memory_id"]),
+                old_value=f"active memory_id={pending['memory_id']}",
+                new_value=(
+                    f"supersede subject_user_id={pending['subject_user_id']}; "
+                    f"memory_id={pending['memory_id']}; replacement_id={memory_id}; "
+                    f"importance={pending['importance']}; "
+                    f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
+                ),
+                changed_by=admin.get("pubkey", "unknown"),
+            )
+            result = database.get_user_memory(memory_id)
+        elif pending.get("action") == "delete":
+            database.soft_delete_user_memory(
+                pending["memory_id"],
+                deleted_by_actor="admin",
+                deletion_reason=pending["reason"],
+            )
+            database.log_config_audit_event(
+                table_name="user_memories",
+                config_key=str(pending["memory_id"]),
+                old_value=f"active memory_id={pending['memory_id']}",
+                new_value=(
+                    f"delete subject_user_id={pending['subject_user_id']}; "
+                    f"memory_id={pending['memory_id']}; "
+                    f"reason_sha256={hashlib.sha256(str(pending['reason']).encode('utf-8')).hexdigest()}"
+                ),
+                changed_by=admin.get("pubkey", "unknown"),
+            )
+            result = database.get_user_memory(pending["memory_id"])
+        else:
+            memory_id = database.create_user_memory(
+                subject_user_id=pending["subject_user_id"],
+                kind=pending["kind"],
+                content=pending["content"],
+                importance=pending["importance"],
+                confidence=pending["confidence"],
+                source_kind="admin-confirmed",
+                source_conversation_id=session_id,
+                author_actor="admin",
+            )
+            database.log_config_audit_event(
+                table_name="user_memories",
+                config_key=str(memory_id),
+                old_value=None,
+                new_value=(
+                    f"create subject_user_id={pending['subject_user_id']}; memory_id={memory_id}; "
+                    f"kind={pending['kind']}; importance={pending['importance']}; "
+                    f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
+                ),
+                changed_by=admin.get("pubkey", "unknown"),
+            )
+            result = database.get_user_memory(memory_id)
+    except Exception:
+        logger.error("Failed to confirm pending User Memory change", exc_info=True)
+        raise
 
-    if pending.get("action") == "delete":
-        database.soft_delete_user_memory(
-            pending["memory_id"],
-            deleted_by_actor="admin",
-            deletion_reason=pending["reason"],
-        )
-        database.log_config_audit_event(
-            table_name="user_memories",
-            config_key=str(pending["memory_id"]),
-            old_value=f"active memory_id={pending['memory_id']}",
-            new_value=(
-                f"delete subject_user_id={pending['subject_user_id']}; "
-                f"memory_id={pending['memory_id']}; "
-                f"reason_sha256={hashlib.sha256(str(pending['reason']).encode('utf-8')).hexdigest()}"
-            ),
-            changed_by=admin.get("pubkey", "unknown"),
-        )
-        return database.get_user_memory(pending["memory_id"])
-
-    memory_id = database.create_user_memory(
-        subject_user_id=pending["subject_user_id"],
-        kind=pending["kind"],
-        content=pending["content"],
-        importance=pending["importance"],
-        confidence=pending["confidence"],
-        source_kind="admin-confirmed",
-        source_conversation_id=session_id,
-        author_actor="admin",
-    )
-    database.log_config_audit_event(
-        table_name="user_memories",
-        config_key=str(memory_id),
-        old_value=None,
-        new_value=(
-            f"create subject_user_id={pending['subject_user_id']}; memory_id={memory_id}; "
-            f"kind={pending['kind']}; importance={pending['importance']}; "
-            f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
-        ),
-        changed_by=admin.get("pubkey", "unknown"),
-    )
-    return database.get_user_memory(memory_id)
+    state.pop("pending_user_memory_change", None)
+    return result
 
 
 def get_qdrant_client():

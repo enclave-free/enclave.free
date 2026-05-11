@@ -4,7 +4,7 @@ import { cx } from './utils'
 type CalloutTone = 'accent' | 'success' | 'warning' | 'error'
 
 export interface CalloutProps extends HTMLAttributes<HTMLDivElement> {
-  label: string
+  label?: string
   tone?: CalloutTone
   children: ReactNode
 }
@@ -26,7 +26,7 @@ export function Callout({
   return (
     <div
       role="note"
-      aria-label={label}
+      aria-label={label || undefined}
       className={cx(
         'rounded-r-lg border-l-4 bg-surface-overlay px-4 py-3 text-sm text-text-secondary',
         toneClasses[tone],

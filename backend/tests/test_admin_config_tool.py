@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -22,7 +23,7 @@ class FakeProvider:
     def health_check(self) -> bool:
         return True
 
-    def complete(self, prompt: str, temperature: float = 0.1):
+    def complete(self, prompt: str, temperature: float = 0.1) -> Any:
         self.prompts.append(prompt)
         return type(
             "LLMResult",

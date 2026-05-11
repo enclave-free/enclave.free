@@ -246,12 +246,28 @@ export function AdminUserConfig() {
 
     async function fetchReachoutSettings() {
       try {
-        const res = await adminFetch('/admin/settings')
+        let res: Response | null = null
+        let lastError: unknown
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            res = await adminFetch('/admin/settings')
+            if (res.ok) break
+            lastError = new Error(`HTTP ${res.status}`)
+          } catch (err) {
+            lastError = err
+          }
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)))
+          }
+        }
+        if (!res) throw lastError
         if (!res.ok) {
           if (!isCancelled) {
             const message = t('admin.errors.loadSettingsFailed', 'Failed to load settings')
             setUserApprovalSaveError(message)
             setReachoutSaveError(message)
+            setUserApprovalLoaded(true)
+            setReachoutLoaded(true)
           }
           return
         }
@@ -287,6 +303,8 @@ export function AdminUserConfig() {
             : t('admin.errors.loadSettingsFailed', 'Failed to load settings')
           setUserApprovalSaveError(message)
           setReachoutSaveError(message)
+          setUserApprovalLoaded(true)
+          setReachoutLoaded(true)
         }
       }
     }

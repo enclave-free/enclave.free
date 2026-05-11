@@ -157,6 +157,33 @@ class UserMemoryPersistenceTest(unittest.TestCase):
         self.assertEqual(new_memory["source_kind"], "admin-confirmed")
         self.assertEqual(new_memory["source_conversation_id"], "admin-conv-1")
 
+    def test_user_memory_rejects_out_of_range_scores(self) -> None:
+        with self.assertRaises(ValueError):
+            self.database.create_user_memory(
+                subject_user_id=self.user_id,
+                kind="preference",
+                content="Prefers invalid importance.",
+                importance=-1,
+                source_kind="conversation",
+                author_actor="sage",
+            )
+
+        memory_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Prefers validated replacement.",
+            source_kind="conversation",
+            author_actor="sage",
+        )
+        with self.assertRaises(ValueError):
+            self.database.supersede_user_memory(
+                memory_id,
+                content="Prefers invalid confidence.",
+                confidence=7,
+                source_kind="admin-confirmed",
+                author_actor="admin",
+            )
+
     def test_user_memory_can_be_purged_for_deleted_subject_user(self) -> None:
         other_user_id = self.database.create_user(pubkey="b" * 64)
         purged_memory_id = self.database.create_user_memory(
@@ -179,6 +206,20 @@ class UserMemoryPersistenceTest(unittest.TestCase):
         self.assertEqual(purged_count, 1)
         self.assertIsNone(self.database.get_user_memory(purged_memory_id))
         self.assertEqual(self.database.get_user_memory(retained_memory_id)["subject_user_id"], other_user_id)
+
+    def test_delete_user_explicitly_purges_user_memory(self) -> None:
+        memory_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Prefers deletion cleanup.",
+            source_kind="conversation",
+            author_actor="sage",
+        )
+
+        deleted = self.database.delete_user(self.user_id)
+
+        self.assertTrue(deleted)
+        self.assertIsNone(self.database.get_user_memory(memory_id))
 
 
 if __name__ == "__main__":

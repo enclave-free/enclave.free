@@ -403,7 +403,7 @@ def init_schema():
             deletion_reason TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (subject_user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (subject_user_id) REFERENCES users(id),
             FOREIGN KEY (supersedes_id) REFERENCES user_memories(id),
             FOREIGN KEY (superseded_by_id) REFERENCES user_memories(id)
         )
@@ -1624,6 +1624,22 @@ def _normalize_user_memory_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
+def _validate_user_memory_scores(importance: int, confidence: float) -> tuple[int, float]:
+    try:
+        normalized_importance = int(importance)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("User Memory importance must be an integer") from exc
+    try:
+        normalized_confidence = float(confidence)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("User Memory confidence must be a number") from exc
+    if not 0 <= normalized_importance <= 10:
+        raise ValueError("User Memory importance must be between 0 and 10")
+    if not 0.0 <= normalized_confidence <= 1.0:
+        raise ValueError("User Memory confidence must be between 0.0 and 1.0")
+    return normalized_importance, normalized_confidence
+
+
 def _user_memory_row_to_dict(row: sqlite3.Row) -> dict:
     memory = dict(row)
     memory["confidence"] = float(memory["confidence"])
@@ -1652,6 +1668,7 @@ def create_user_memory(
         raise ValueError("User Memory source_kind is required")
     if not author_actor.strip():
         raise ValueError("User Memory author_actor is required")
+    normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
 
     with get_cursor() as cursor:
         cursor.execute("""
@@ -1687,8 +1704,8 @@ def create_user_memory(
             content.strip(),
             normalized_kind,
             normalized_content,
-            int(importance),
-            float(confidence),
+            normalized_importance,
+            normalized_confidence,
             source_kind.strip(),
             source_conversation_id,
             author_actor.strip(),
@@ -1814,6 +1831,7 @@ def supersede_user_memory(
         raise ValueError("User Memory source_kind is required")
     if not author_actor.strip():
         raise ValueError("User Memory author_actor is required")
+    normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
 
     with get_cursor() as cursor:
         cursor.execute("""
@@ -1857,8 +1875,8 @@ def supersede_user_memory(
             content.strip(),
             old_memory["normalized_kind"],
             normalized_content,
-            int(importance),
-            float(confidence),
+            normalized_importance,
+            normalized_confidence,
             source_kind.strip(),
             source_conversation_id,
             author_actor.strip(),
@@ -1884,6 +1902,7 @@ def purge_user_memories_for_subject_user(subject_user_id: int) -> int:
 
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
+    purge_user_memories_for_subject_user(user_id)
     with get_cursor() as cursor:
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
         return cursor.rowcount > 0

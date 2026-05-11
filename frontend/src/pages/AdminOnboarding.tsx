@@ -343,10 +343,7 @@ export function AdminOnboarding() {
                 </p>
               </div>
 
-              <Callout
-                label={t('instanceInitiation.keySafety.title', 'Use an Instance-specific Nostr key')}
-                tone="warning"
-              >
+              <Callout tone="warning">
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="w-5 h-5 shrink-0 text-warning" aria-hidden="true" />
                   <div>

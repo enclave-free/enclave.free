@@ -27,7 +27,7 @@ def _strip_leading_sql_comments(sql: str) -> str:
         if stripped.startswith("/*"):
             end = stripped.find("*/")
             if end == -1:
-                return ""
+                raise ValueError("Unterminated SQL block comment")
             remaining = stripped[end + 2:]
             continue
         return stripped
