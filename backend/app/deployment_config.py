@@ -460,7 +460,7 @@ async def update_deployment_config_value(
             if rate_limit < 1:
                 raise ValueError()
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer")
+            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer") from None
 
     # URL validation for URL-type fields
     URL_KEYS = {"INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "CUSTOM_SEARXNG_URL",

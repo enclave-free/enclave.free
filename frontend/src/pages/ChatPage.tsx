@@ -28,7 +28,6 @@ type AdminApplyState =
   | { state: 'error'; message: string }
 
 const CONFIG_TOOL_ID = 'admin-config'
-const DEPLOYMENT_SECRET_KEYS = new Set(['LLM_API_KEY', 'SMTP_USER', 'SMTP_PASS', 'SSL_KEY_PATH'])
 export const SANCTUM_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL
 
 function slugify(value: string): string {
@@ -67,6 +66,7 @@ export function ChatPage() {
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false)
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([])
   const [adminApplyState, setAdminApplyState] = useState<AdminApplyState>({ state: 'idle' })
+  const [deploymentSecretKeys, setDeploymentSecretKeys] = useState<Set<string> | null>(null)
 
   const [reachoutOpen, setReachoutOpen] = useState(false)
   const [reachoutEnabled, setReachoutEnabled] = useState(false)
@@ -77,6 +77,35 @@ export function ChatPage() {
     buttonLabel?: string
     successMessage?: string
   }>({})
+
+  useEffect(() => {
+    if (!isAdmin) return
+
+    let cancelled = false
+    async function fetchDeploymentSecretKeys() {
+      try {
+        const res = await adminFetch('/admin/deployment/config')
+        if (!res.ok) return
+        const payload = await res.json()
+        const secretKeys = new Set<string>()
+        for (const value of Object.values(payload || {})) {
+          if (!Array.isArray(value)) continue
+          for (const item of value) {
+            const configItem = item as { is_secret?: boolean; key?: unknown }
+            if (configItem.is_secret && typeof configItem.key === 'string') secretKeys.add(configItem.key)
+          }
+        }
+        if (!cancelled) setDeploymentSecretKeys(secretKeys)
+      } catch {
+        // Safe fallback: leave values unmasked if metadata is unavailable.
+      }
+    }
+
+    fetchDeploymentSecretKeys()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
 
   // Build available tools list - db-query only visible to admins
   const availableTools = useMemo<Tool[]>(() => {
@@ -590,7 +619,7 @@ export function ChatPage() {
       let bodyDisplay: unknown = r.body
       if (r.method === 'PUT' && r.path.startsWith('/admin/deployment/config/')) {
         const key = r.path.split('/').pop() || ''
-        if (DEPLOYMENT_SECRET_KEYS.has(key) && r.body && typeof r.body === 'object') {
+        if (deploymentSecretKeys?.has(key) && r.body && typeof r.body === 'object') {
           const o = r.body as Record<string, unknown>
           if (typeof o.value === 'string' && o.value.length > 0) {
             bodyDisplay = { ...o, value: '[REDACTED]' }
@@ -609,7 +638,7 @@ export function ChatPage() {
       summary: changeSet.summary || '',
       requests: pretty,
     }
-  }, [adminApplyState])
+  }, [adminApplyState, deploymentSecretKeys])
   
   // Auto-search triggered by backend - injects results back into RAG session
   const triggerAutoSearch = async (searchTerm: string, sessionId?: string | null) => {

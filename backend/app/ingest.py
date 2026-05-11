@@ -655,9 +655,11 @@ async def promote_replacement(job_id: str) -> None:
         JOBS[old_job_id]["is_current"] = False
         JOBS[old_job_id]["replaced_by_job_id"] = job_id
         JOBS[old_job_id]["updated_at"] = datetime.utcnow().isoformat()
+        _sync_job_to_db(old_job_id)
     if job_id in JOBS:
         JOBS[job_id]["is_current"] = True
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+        _sync_job_to_db(job_id)
 
 
 # PDF extraction mode: "fast" (PyMuPDF) or "quality" (Docling)

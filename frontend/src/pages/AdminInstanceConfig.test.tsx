@@ -99,7 +99,7 @@ describe('AdminInstanceConfig', () => {
           assistant_name: 'Sage',
           user_label: 'Operator',
           header_layout: DEFAULT_INSTANCE_CONFIG.headerLayout,
-          header_tagline: '',
+          header_tagline: DEFAULT_INSTANCE_CONFIG.headerTagline,
           chat_bubble_style: DEFAULT_INSTANCE_CONFIG.chatBubbleStyle,
           chat_bubble_shadow: String(DEFAULT_INSTANCE_CONFIG.chatBubbleShadow),
           surface_style: DEFAULT_INSTANCE_CONFIG.surfaceStyle,

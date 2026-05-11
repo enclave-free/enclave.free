@@ -57,25 +57,28 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             os.environ[name] = value
 
     def test_rate_limit_config_rejects_non_positive_and_non_integer_values(self) -> None:
-        for value in ("", "   ", "0", "-1", "abc"):
-            with self.subTest(value=value):
-                response = self.client.put(
-                    "/admin/deployment/config/RATE_LIMIT_CHAT_PER_MINUTE",
-                    json={"value": value},
-                )
+        for key in self.deployment_config.RATE_LIMIT_KEYS:
+            for value in ("", "   ", "0", "-1", "abc"):
+                with self.subTest(key=key, value=value):
+                    response = self.client.put(
+                        f"/admin/deployment/config/{key}",
+                        json={"value": value},
+                    )
 
-                self.assertEqual(response.status_code, 400)
-                self.assertEqual(response.json()["detail"], "RATE_LIMIT_CHAT_PER_MINUTE must be a positive integer")
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.json()["detail"], f"{key} must be a positive integer")
 
     def test_rate_limit_config_persists_positive_integer_values(self) -> None:
-        response = self.client.put(
-            "/admin/deployment/config/RATE_LIMIT_CHAT_PER_MINUTE",
-            json={"value": "42"},
-        )
+        for key in self.deployment_config.RATE_LIMIT_KEYS:
+            with self.subTest(key=key):
+                response = self.client.put(
+                    f"/admin/deployment/config/{key}",
+                    json={"value": "42"},
+                )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["key"], "RATE_LIMIT_CHAT_PER_MINUTE")
-        self.assertEqual(response.json()["value"], "42")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["key"], key)
+                self.assertEqual(response.json()["value"], "42")
 
 
 if __name__ == "__main__":

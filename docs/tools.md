@@ -6,7 +6,7 @@ This document describes the current tool behavior on the Sage hard-cut prototype
 
 | Route | Runtime mode | Tool behavior |
 | --- | --- | --- |
-| `/llm/chat` | stateful and memory-backed | optional server-side `web_search`; optional admin-only `db_query`; optional admin-only `admin_config`; optional admin `tool_context` injection |
+| `/llm/chat` | stateful and memory-backed | optional server-side `web-search`; optional admin-only `db-query`; optional admin-only `admin-config`; optional admin `tool_context` injection |
 | `/query` | stateful and memory-backed | always retrieval-first; always has internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
 
 Current rule of thumb:

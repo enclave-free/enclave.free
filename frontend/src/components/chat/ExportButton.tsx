@@ -46,6 +46,10 @@ export function ExportButton({ messages, disabled, iconOnly = false }: ExportBut
   }
 
   const isDisabled = disabled || messages.length === 0
+  useEffect(() => {
+    if (isDisabled) setIsOpen(false)
+  }, [isDisabled])
+
   const buttonTitle = isDisabled ? t('chat.export.disabled') : t('chat.export.title')
   const exportIcon = <Download className="h-4 w-4" aria-hidden="true" />
 

@@ -1827,6 +1827,14 @@ def supersede_user_memory(
             raise ValueError("Active User Memory record not found")
 
         cursor.execute("""
+            UPDATE user_memories
+            SET status = 'superseded',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND status = 'active'
+        """, (memory_id,))
+
+        cursor.execute("""
             INSERT INTO user_memories (
                 subject_user_id,
                 kind,
@@ -1858,8 +1866,7 @@ def supersede_user_memory(
 
         cursor.execute("""
             UPDATE user_memories
-            SET status = 'superseded',
-                superseded_by_id = ?,
+            SET superseded_by_id = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (new_id, memory_id))

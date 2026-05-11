@@ -734,30 +734,35 @@ def build_chat_prompt(
     if pending_user_memory_change:
         parts.append("")
         action = pending_user_memory_change.get("action")
+        sanitized_subject_user_id = sanitize_profile_value(str(pending_user_memory_change.get("subject_user_id", "")))
+        sanitized_memory_id = sanitize_profile_value(str(pending_user_memory_change.get("memory_id", "")))
+        sanitized_kind = sanitize_profile_value(str(pending_user_memory_change.get("kind", "")))
         sanitized_content = sanitize_profile_value(str(pending_user_memory_change.get("content", "")))
         sanitized_reason = sanitize_profile_value(str(pending_user_memory_change.get("reason", "")))
+        sanitized_importance = sanitize_profile_value(str(pending_user_memory_change.get("importance", "")))
+        sanitized_confidence = sanitize_profile_value(str(pending_user_memory_change.get("confidence", "")))
         if action == "supersede":
             parts.append("=== PENDING USER MEMORY SUPERSEDE ===")
             parts.append("This User Memory supersede has not been written yet. Present it for Change Confirmation.")
-            parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
-            parts.append(f"Memory ID: {pending_user_memory_change.get('memory_id')}")
+            parts.append(f"Subject User ID: {sanitized_subject_user_id}")
+            parts.append(f"Memory ID: {sanitized_memory_id}")
             parts.append(f"Content: {sanitized_content}")
-            parts.append(f"Importance: {pending_user_memory_change.get('importance')}")
-            parts.append(f"Confidence: {pending_user_memory_change.get('confidence')}")
+            parts.append(f"Importance: {sanitized_importance}")
+            parts.append(f"Confidence: {sanitized_confidence}")
         elif action == "delete":
             parts.append("=== PENDING USER MEMORY DELETE ===")
             parts.append("This User Memory deletion has not been written yet. Present it for Change Confirmation.")
-            parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
-            parts.append(f"Memory ID: {pending_user_memory_change.get('memory_id')}")
+            parts.append(f"Subject User ID: {sanitized_subject_user_id}")
+            parts.append(f"Memory ID: {sanitized_memory_id}")
             parts.append(f"Reason: {sanitized_reason}")
         else:
             parts.append("=== PENDING USER MEMORY WRITE ===")
             parts.append("This User Memory change has not been written yet. Present it for Change Confirmation.")
-            parts.append(f"Subject User ID: {pending_user_memory_change.get('subject_user_id')}")
-            parts.append(f"Kind: {pending_user_memory_change.get('kind')}")
+            parts.append(f"Subject User ID: {sanitized_subject_user_id}")
+            parts.append(f"Kind: {sanitized_kind}")
             parts.append(f"Content: {sanitized_content}")
-            parts.append(f"Importance: {pending_user_memory_change.get('importance')}")
-            parts.append(f"Confidence: {pending_user_memory_change.get('confidence')}")
+            parts.append(f"Importance: {sanitized_importance}")
+            parts.append(f"Confidence: {sanitized_confidence}")
 
     if subject_user_required:
         parts.append("")
@@ -766,11 +771,12 @@ def build_chat_prompt(
 
     if rejected_user_memory_change:
         parts.append("")
+        sanitized_rejected_subject_user_id = sanitize_profile_value(str(rejected_user_memory_change.get("subject_user_id", "")))
         sanitized_rejected_content = sanitize_profile_value(str(rejected_user_memory_change.get("content", "")))
         parts.append("=== USER MEMORY WRITE REJECTED ===")
         parts.append("Reject this as User Memory because it is sensitive, critical, structured, or operator-defined.")
         parts.append("Redirect the Admin to encrypted User Profile or Onboarding Question design.")
-        parts.append(f"Subject User ID: {rejected_user_memory_change.get('subject_user_id')}")
+        parts.append(f"Subject User ID: {sanitized_rejected_subject_user_id}")
         parts.append(f"Rejected Content: {sanitized_rejected_content}")
 
     # Rules section

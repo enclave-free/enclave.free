@@ -16,12 +16,16 @@ vi.mock('../utils/encryption', () => ({
 }))
 
 const mockAdminFetch = vi.mocked(adminFetch)
+const jsonResponse = (payload: unknown) => new Response(JSON.stringify(payload), {
+  status: 200,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 describe('AdminDatabaseExplorer', () => {
   beforeEach(() => {
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/db/tables') {
-        return Promise.resolve(Response.json({
+        return Promise.resolve(jsonResponse({
           tables: [
             {
               name: 'users',
@@ -36,7 +40,7 @@ describe('AdminDatabaseExplorer', () => {
       }
 
       if (endpoint === '/admin/db/tables/users?page=1&page_size=10') {
-        return Promise.resolve(Response.json({
+        return Promise.resolve(jsonResponse({
           rows: [{ id: 1, role: 'admin' }],
           page: 1,
           totalPages: 1,
@@ -45,7 +49,7 @@ describe('AdminDatabaseExplorer', () => {
       }
 
       if (endpoint === '/admin/db/query' && options?.method === 'POST') {
-        return Promise.resolve(Response.json({
+        return Promise.resolve(jsonResponse({
           success: true,
           columns: ['id', 'role'],
           rows: [{ id: 1, role: 'admin' }],
@@ -53,7 +57,7 @@ describe('AdminDatabaseExplorer', () => {
         }))
       }
 
-      return Promise.resolve(Response.json({}))
+      return Promise.resolve(jsonResponse({}))
     })
   })
 

@@ -1,17 +1,21 @@
 """Admin configuration context tool."""
 
 import json
-from typing import Any
+import logging
+import re
+from typing import Any, ClassVar
 
 import database
 
 from .base import BaseTool, ToolDefinition, ToolResult
 
+logger = logging.getLogger("sanctum.tools.admin_config")
+
 
 class AdminConfigTool(BaseTool):
     """Read scoped admin configuration context for Admin Conversations."""
 
-    DEPLOYMENT_KEYWORDS = {
+    DEPLOYMENT_KEYWORDS: ClassVar[frozenset[str]] = frozenset({
         "deployment",
         "env",
         "environment",
@@ -24,14 +28,14 @@ class AdminConfigTool(BaseTool):
         "model",
         "searxng",
         "restart",
-    }
+    })
 
-    DEPLOYMENT_CATEGORY_KEYWORDS = {
-        "email": {"smtp", "email"},
-        "domains": {"domain", "dns", "cors", "url"},
-        "ssl": {"ssl", "https", "tls", "certificate", "cert"},
-        "llm": {"provider", "model", "llm", "rag", "pdf"},
-        "search": {"searxng", "search"},
+    DEPLOYMENT_CATEGORY_KEYWORDS: ClassVar[dict[str, frozenset[str]]] = {
+        "email": frozenset({"smtp", "email"}),
+        "domains": frozenset({"domain", "dns", "cors", "url"}),
+        "ssl": frozenset({"ssl", "https", "tls", "certificate", "cert"}),
+        "llm": frozenset({"provider", "model", "llm", "rag", "pdf"}),
+        "search": frozenset({"searxng", "search"}),
     }
 
     @property
@@ -70,18 +74,22 @@ class AdminConfigTool(BaseTool):
                 data=data,
             )
         except Exception as e:
+            logger.exception("Admin config tool execution failed")
             return ToolResult(success=False, data=None, error=str(e))
 
+    @staticmethod
+    def _contains_keyword(query: str, keywords: frozenset[str]) -> bool:
+        tokens = set(re.split(r"[^a-z0-9]+", query.lower()))
+        return bool(tokens.intersection(keywords))
+
     def _select_scope(self, query: str) -> str:
-        normalized = query.lower()
-        if any(keyword in normalized for keyword in self.DEPLOYMENT_KEYWORDS):
+        if self._contains_keyword(query, self.DEPLOYMENT_KEYWORDS):
             return "deployment-settings"
         return "overview"
 
     def _select_deployment_category(self, query: str) -> str | None:
-        normalized = query.lower()
         for category, keywords in self.DEPLOYMENT_CATEGORY_KEYWORDS.items():
-            if any(keyword in normalized for keyword in keywords):
+            if self._contains_keyword(query, keywords):
                 return category
         return None
 

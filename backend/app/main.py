@@ -5,6 +5,7 @@ Also provides user/admin management via SQLite.
 """
 
 import asyncio
+import hashlib
 import os
 import uuid
 import logging
@@ -694,7 +695,12 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
             table_name="user_memories",
             config_key=str(pending["memory_id"]),
             old_value=f"active memory_id={pending['memory_id']}",
-            new_value=f"supersede subject_user_id={pending['subject_user_id']}; replacement_id={memory_id}; content={pending['content']}; importance={pending['importance']}",
+            new_value=(
+                f"supersede subject_user_id={pending['subject_user_id']}; "
+                f"memory_id={pending['memory_id']}; replacement_id={memory_id}; "
+                f"importance={pending['importance']}; "
+                f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
+            ),
             changed_by=admin.get("pubkey", "unknown"),
         )
         return database.get_user_memory(memory_id)
@@ -709,7 +715,11 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
             table_name="user_memories",
             config_key=str(pending["memory_id"]),
             old_value=f"active memory_id={pending['memory_id']}",
-            new_value=f"delete subject_user_id={pending['subject_user_id']}; reason={pending['reason']}",
+            new_value=(
+                f"delete subject_user_id={pending['subject_user_id']}; "
+                f"memory_id={pending['memory_id']}; "
+                f"reason_sha256={hashlib.sha256(str(pending['reason']).encode('utf-8')).hexdigest()}"
+            ),
             changed_by=admin.get("pubkey", "unknown"),
         )
         return database.get_user_memory(pending["memory_id"])
@@ -728,7 +738,11 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
         table_name="user_memories",
         config_key=str(memory_id),
         old_value=None,
-        new_value=f"create subject_user_id={pending['subject_user_id']}; kind={pending['kind']}; content={pending['content']}; importance={pending['importance']}",
+        new_value=(
+            f"create subject_user_id={pending['subject_user_id']}; memory_id={memory_id}; "
+            f"kind={pending['kind']}; importance={pending['importance']}; "
+            f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
+        ),
         changed_by=admin.get("pubkey", "unknown"),
     )
     return database.get_user_memory(memory_id)
@@ -992,6 +1006,7 @@ async def chat(
         subject_user_context = None
         pending_user_memory_change = None
         subject_user_required = False
+        confirm_pending_user_memory_change = False
         rejected_user_memory_change = None
         user_id = user.get("id")
         if user_id and user_id != -1:  # Skip dev mode mock user (id=-1)
@@ -1010,8 +1025,7 @@ async def chat(
             subject_user_context = _admin_subject_user_context(active_session_id, request.message)
             state = admin_conversation_states.setdefault(active_session_id, {})
             if _message_confirms_user_memory_change(request.message):
-                _confirm_pending_user_memory_change(active_session_id, user)
-                subject_user_context = _admin_subject_user_context(active_session_id, "")
+                confirm_pending_user_memory_change = True
             else:
                 subject_user_id = (subject_user_context or {}).get("user", {}).get("id")
                 extracted_change = (
@@ -1079,6 +1093,9 @@ async def chat(
                     detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (connection error).",
                 )
             raise
+        if confirm_pending_user_memory_change:
+            _confirm_pending_user_memory_change(active_session_id, user)
+            subject_user_context = _admin_subject_user_context(active_session_id, "")
         response_payload = ChatResponse(
             message=result.content,
             session_id=active_session_id,

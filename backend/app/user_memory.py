@@ -110,7 +110,11 @@ ASSISTANT RESPONSE:
 
 
 def _parse_extractor_output(content: str) -> list[dict]:
-    parsed = json.loads(content)
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        logger.debug("Ambient User Memory extractor returned malformed JSON: %s", content)
+        return []
     memories = parsed.get("memories")
     if not isinstance(memories, list):
         return []

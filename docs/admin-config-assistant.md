@@ -117,6 +117,10 @@ The former full snapshot behavior is retained only as a manual/debug behavior.
 
 ### Scoped Read Resilience
 
+Status: planned. The frontend admin assistant currently builds and refreshes
+context in `frontend/src/components/admin/AdminConfigAssistant.tsx`; the Python
+runtime tool only returns a small scoped context and warning field today.
+
 Scoped config reads are best-effort. A slow or failing supporting endpoint should not block the admin assistant turn unless the failure means the admin is not authorized.
 
 Blocking failures:
@@ -149,6 +153,10 @@ Timeout budget:
 The chat request should proceed once the context budget is spent.
 
 ### Scoped Read Cache
+
+Status: planned. Cache invalidation and scoped-read budgets are design
+requirements for the frontend/backend config-context builder, not guarantees
+currently implemented by `backend/app/tools/admin_config.py`.
 
 The runtime tool may cache successful scoped reads briefly during an admin assistant conversation:
 
