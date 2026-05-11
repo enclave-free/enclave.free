@@ -90,14 +90,21 @@ export function DynamicField({ field, value, onChange, error }: DynamicFieldProp
         return (
           <div>
             <label className="flex items-center gap-3 cursor-pointer py-2">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={Boolean(value)}
+                onChange={(e) => onChange(e.target.checked)}
+                required={field.required}
+                aria-invalid={error ? true : undefined}
+              />
               <div
                 className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
                   value
                     ? 'bg-accent border-accent'
                     : 'border-border hover:border-accent/50'
                 }`}
-                onClick={() => onChange(!value)}
-                aria-invalid={error ? true : undefined}
+                aria-hidden="true"
               >
                 {value && (
                   <svg

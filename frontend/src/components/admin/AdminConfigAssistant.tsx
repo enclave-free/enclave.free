@@ -355,7 +355,10 @@ export function AdminConfigAssistant({
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
       } else {
-        setSnapshotInfo(null)
+        const snap = await buildSnapshot()
+        setSnapshotInfo({ generatedAtIso: snap.generatedAtIso })
+        secretsForRedactionRef.current = snap.secretValues
+        deploymentSecretKeysRef.current = snap.deploymentSecretKeys
       }
 
       const res = await sendLlmChatWithUnifiedTools({
@@ -401,7 +404,7 @@ export function AdminConfigAssistant({
     } finally {
       setIsLoading(false)
     }
-  }, [conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
+  }, [buildSnapshot, conversationSessionId, hasConfigTool, selectedTools, shareSecrets, t])
 
   const handleApply = useCallback(async (changeSet: AdminAssistantChangeSet) => {
     setApplyState({ state: 'applying', changeSet })

@@ -1893,17 +1893,21 @@ def supersede_user_memory(
         return new_id
 
 
+def _purge_user_memories_for_subject_user_tx(cursor: sqlite3.Cursor, subject_user_id: int) -> int:
+    cursor.execute("DELETE FROM user_memories WHERE subject_user_id = ?", (subject_user_id,))
+    return cursor.rowcount
+
+
 def purge_user_memories_for_subject_user(subject_user_id: int) -> int:
     """Permanently remove User Memory for a subject User after that User is deleted."""
     with get_cursor() as cursor:
-        cursor.execute("DELETE FROM user_memories WHERE subject_user_id = ?", (subject_user_id,))
-        return cursor.rowcount
+        return _purge_user_memories_for_subject_user_tx(cursor, subject_user_id)
 
 
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
-    purge_user_memories_for_subject_user(user_id)
     with get_cursor() as cursor:
+        _purge_user_memories_for_subject_user_tx(cursor, user_id)
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
         return cursor.rowcount > 0
 

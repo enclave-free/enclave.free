@@ -305,6 +305,26 @@ class UserMemoryChatContextTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.database.list_active_user_memories(user_id), [])
 
+    def test_ambient_capture_rejects_negative_importance(self) -> None:
+        user_id = self.database.create_user(pubkey="0" * 64)
+        self.provider.extractor_payload = (
+            '{"memories":[{"kind":"preference","content":"Prefers concise answers.",'
+            '"importance":-1,"confidence":0.9}]}'
+        )
+        self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "user",
+            "pubkey": "0" * 64,
+            "id": user_id,
+        }
+
+        response = self.client.post(
+            "/llm/chat",
+            json={"message": "Please remember that I prefer concise answers.", "tools": []},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.database.list_active_user_memories(user_id), [])
+
     def test_ambient_capture_skips_duplicate_memory(self) -> None:
         user_id = self.database.create_user(pubkey="1" * 64)
         existing_id = self.database.create_user_memory(

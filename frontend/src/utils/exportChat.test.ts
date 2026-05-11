@@ -2,6 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { generateExport } from './exportChat'
 import type { Message } from '../components/chat/ChatMessage'
 
+type TestMessage = Message & {
+  user_memory?: Array<{
+    kind: string
+    content: string
+    importance: number
+  }>
+  userMemory?: string
+}
+
 const translations = {
   defaultTitle: 'Conversation Export',
   roleUser: 'User',
@@ -19,7 +28,7 @@ describe('generateExport', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-10T12:00:00Z'))
 
-    const messages = [
+    const messages: TestMessage[] = [
       {
         id: 'm1',
         role: 'user',
@@ -38,7 +47,7 @@ describe('generateExport', () => {
         content: 'Yes. Let us make a short plan.',
         userMemory: 'Prefers high detail answers.',
       },
-    ] as unknown as Message[]
+    ]
 
     const exported = generateExport({
       messages,

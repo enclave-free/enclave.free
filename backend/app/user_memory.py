@@ -143,7 +143,7 @@ def _ambient_memory_allowed(memory: dict) -> bool:
         confidence = float(memory.get("confidence", 0.5))
     except (TypeError, ValueError):
         return False
-    if importance > MAX_AMBIENT_IMPORTANCE:
+    if importance < 0 or importance > MAX_AMBIENT_IMPORTANCE:
         return False
     if confidence < 0 or confidence > 1:
         return False
