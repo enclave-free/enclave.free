@@ -42,7 +42,7 @@ class AdminConfigTool(BaseTool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="admin-config",
-            description="Read scoped admin configuration context for Instance, Deployment, Agent, user type, document default, and health questions.",
+            description="Read scoped admin configuration context for Instance and Deployment settings.",
             parameters={
                 "type": "object",
                 "properties": {

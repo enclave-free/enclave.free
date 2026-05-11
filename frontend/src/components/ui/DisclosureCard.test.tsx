@@ -18,17 +18,21 @@ describe('DisclosureCard', () => {
     )
 
     const trigger = screen.getByRole('button', { name: /11.*Instance Settings.*Admin/ })
+    const content = screen.getByText('Fetch all settings').closest('[aria-hidden]') as HTMLElement
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('Fetch all settings')).not.toBeInTheDocument()
+    expect(content).toHaveAttribute('aria-hidden', 'true')
+    expect(content).toHaveClass('hidden')
 
     await user.click(trigger)
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('Fetch all settings')).toBeInTheDocument()
+    expect(content).toHaveAttribute('aria-hidden', 'false')
+    expect(content).not.toHaveClass('hidden')
 
     await user.click(trigger)
 
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('Fetch all settings')).not.toBeInTheDocument()
+    expect(content).toHaveAttribute('aria-hidden', 'true')
+    expect(content).toHaveClass('hidden')
   })
 })

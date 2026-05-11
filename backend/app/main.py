@@ -29,7 +29,7 @@ from sentence_transformers import SentenceTransformer
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
-from user_memory import SENSITIVE_TERMS
+from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
     AdminAuthRequest, AdminAuthResponse,
@@ -549,6 +549,7 @@ def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
     state = admin_conversation_states.setdefault(session_id, {})
     if _message_clears_subject_user(message):
         state.pop("subject_user_id", None)
+        state.pop("pending_user_memory_change", None)
         return None
 
     requested_user_id = _resolve_admin_subject_user_id(message)
@@ -590,7 +591,31 @@ def _admin_user_memory_rejection_reason(change: dict) -> str | None:
     content = str(change.get("content", "")).lower()
     if any(term in content for term in SENSITIVE_TERMS):
         return "sensitive"
+    if contains_direct_identifier(content):
+        return "sensitive"
     return None
+
+
+def _clamp_int(value: str | None, default: int, lower: int, upper: int) -> int:
+    try:
+        parsed = int(value) if value is not None else default
+    except (TypeError, ValueError):
+        parsed = default
+    return max(lower, min(parsed, upper))
+
+
+def _clamp_float(value: str | None, default: float, lower: float, upper: float) -> float:
+    try:
+        parsed = float(value) if value is not None else default
+    except (TypeError, ValueError):
+        parsed = default
+    return max(lower, min(parsed, upper))
+
+
+def _normalize_admin_memory_kind(kind: str | None) -> str:
+    allowed_kinds = {"preference", "communication_style", "interest", "fact", "task"}
+    normalized = (kind or "preference").strip().lower()
+    return normalized if normalized in allowed_kinds else "preference"
 
 
 def _memory_belongs_to_subject(memory_id: int, subject_user_id: int) -> bool:
@@ -631,14 +656,14 @@ def _extract_admin_memory_supersede(message: str, subject_user_id: int | None) -
     if content[-1] not in ".!?":
         content += "."
     importance_match = re.search(r"\bImportance:\s*(\d+)", message, flags=re.IGNORECASE)
-    confidence_match = re.search(r"\bConfidence:\s*(0(?:\.\d+)?|1(?:\.0+)?)", message, flags=re.IGNORECASE)
+    confidence_match = re.search(r"\bConfidence:\s*(-?\d+(?:\.\d+)?)", message, flags=re.IGNORECASE)
     return {
         "action": "supersede",
         "subject_user_id": subject_user_id,
         "memory_id": memory_id,
         "content": content,
-        "importance": int(importance_match.group(1)) if importance_match else 5,
-        "confidence": float(confidence_match.group(1)) if confidence_match else 1.0,
+        "importance": _clamp_int(importance_match.group(1) if importance_match else None, 5, 1, 10),
+        "confidence": _clamp_float(confidence_match.group(1) if confidence_match else None, 1.0, 0.0, 1.0),
     }
 
 
@@ -664,14 +689,14 @@ def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> di
 
     kind_match = re.search(r"\bKind:\s*([A-Za-z_-]+)", message, flags=re.IGNORECASE)
     importance_match = re.search(r"\bImportance:\s*(\d+)", message, flags=re.IGNORECASE)
-    confidence_match = re.search(r"\bConfidence:\s*(0(?:\.\d+)?|1(?:\.0+)?)", message, flags=re.IGNORECASE)
+    confidence_match = re.search(r"\bConfidence:\s*(-?\d+(?:\.\d+)?)", message, flags=re.IGNORECASE)
     return {
         "action": "create",
         "subject_user_id": subject_user_id,
-        "kind": (kind_match.group(1).strip().lower() if kind_match else "preference"),
+        "kind": _normalize_admin_memory_kind(kind_match.group(1) if kind_match else None),
         "content": content,
-        "importance": int(importance_match.group(1)) if importance_match else 5,
-        "confidence": float(confidence_match.group(1)) if confidence_match else 1.0,
+        "importance": _clamp_int(importance_match.group(1) if importance_match else None, 5, 1, 10),
+        "confidence": _clamp_float(confidence_match.group(1) if confidence_match else None, 1.0, 0.0, 1.0),
     }
 
 

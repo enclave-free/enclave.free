@@ -76,8 +76,9 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   const descriptionId = `${inputId}-description`
   const errorId = `${inputId}-error`
   const describedBy = error ? errorId : description ? descriptionId : undefined
-  const { 'aria-describedby': ariaDescribedBy, ...inputProps } = props
+  const { 'aria-describedby': ariaDescribedBy, 'aria-invalid': ariaInvalid, ...inputProps } = props
   const finalAriaDescribedBy = [ariaDescribedBy, describedBy].filter(Boolean).join(' ')
+  const finalAriaInvalid = ariaInvalid ?? (error ? true : undefined)
 
   return (
     <div className={cx('flex flex-col gap-2', className)}>
@@ -92,7 +93,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
           className="input-field text-sm"
           {...inputProps}
           aria-describedby={finalAriaDescribedBy || undefined}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={finalAriaInvalid}
         />
       </span>
       <FieldText
@@ -123,8 +124,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   const descriptionId = `${textareaId}-description`
   const errorId = `${textareaId}-error`
   const describedBy = error ? errorId : description ? descriptionId : undefined
-  const { 'aria-describedby': ariaDescribedBy, ...textareaProps } = props
+  const { 'aria-describedby': ariaDescribedBy, 'aria-invalid': ariaInvalid, ...textareaProps } = props
   const finalAriaDescribedBy = [ariaDescribedBy, describedBy].filter(Boolean).join(' ')
+  const finalAriaInvalid = ariaInvalid ?? (error ? true : undefined)
 
   return (
     <div className={cx('flex flex-col gap-2', className)}>
@@ -139,7 +141,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
           className="input-field min-h-24 resize-y text-sm"
           {...textareaProps}
           aria-describedby={finalAriaDescribedBy || undefined}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={finalAriaInvalid}
         />
       </span>
       <FieldText
@@ -170,8 +172,9 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
   const descriptionId = `${selectId}-description`
   const errorId = `${selectId}-error`
   const describedBy = error ? errorId : description ? descriptionId : undefined
-  const { 'aria-describedby': ariaDescribedBy, ...selectProps } = props
+  const { 'aria-describedby': ariaDescribedBy, 'aria-invalid': ariaInvalid, ...selectProps } = props
   const finalAriaDescribedBy = [ariaDescribedBy, describedBy].filter(Boolean).join(' ')
+  const finalAriaInvalid = ariaInvalid ?? (error ? true : undefined)
 
   return (
     <div className={cx('flex flex-col gap-2', className)}>
@@ -185,7 +188,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
           className="input-field text-sm"
           {...selectProps}
           aria-describedby={finalAriaDescribedBy || undefined}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={finalAriaInvalid}
         >
           {children}
         </select>

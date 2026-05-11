@@ -598,11 +598,14 @@ async def promote_replacement(job_id: str) -> None:
     except Exception as e:
         logger.error(f"[{job_id}] Failed to transfer document access from {old_job_id}: {e}", exc_info=True)
         now = datetime.utcnow().isoformat()
+        error_message = f"Failed to transfer document access: {e}"
         if old_job_id in JOBS:
             JOBS[old_job_id]["transfer_failed"] = True
+            JOBS[old_job_id]["error"] = error_message
             JOBS[old_job_id]["updated_at"] = now
         if job_id in JOBS:
             JOBS[job_id]["transfer_failed"] = True
+            JOBS[job_id]["error"] = error_message
             JOBS[job_id]["updated_at"] = now
             _sync_job_to_db(job_id)
         if old_job_id in JOBS:

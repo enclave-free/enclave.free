@@ -112,13 +112,23 @@ ASSISTANT RESPONSE:
 def _parse_extractor_output(content: str) -> list[dict]:
     try:
         parsed = json.loads(content)
-    except json.JSONDecodeError:
-        logger.debug("Ambient User Memory extractor returned malformed JSON: %s", content)
+    except json.JSONDecodeError as e:
+        logger.debug("Ambient User Memory extractor returned malformed JSON: %s", str(e))
         return []
     memories = parsed.get("memories")
     if not isinstance(memories, list):
         return []
     return [memory for memory in memories if isinstance(memory, dict)]
+
+
+def contains_direct_identifier(content: str) -> bool:
+    normalized_content = content.lower()
+    return any((
+        re.search(r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", normalized_content),
+        re.search(r"(?:\+?\d[\s().-]*){7,15}", normalized_content),
+        re.search(r"\b\d{3}-\d{2}-\d{4}\b", normalized_content),
+        re.search(r"\b\d+\s+[\w\s.-]+?\b(?:st|street|ave|avenue|road|rd|lane|ln|apt|suite)\b", normalized_content),
+    ))
 
 
 def _ambient_memory_allowed(memory: dict) -> bool:
@@ -141,12 +151,6 @@ def _ambient_memory_allowed(memory: dict) -> bool:
     normalized_content = content.lower()
     if any(term in normalized_content for term in SENSITIVE_TERMS):
         return False
-    if re.search(r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", normalized_content):
-        return False
-    if re.search(r"(?:\+?\d[\s().-]*){7,15}", normalized_content):
-        return False
-    if re.search(r"\b\d{3}-\d{2}-\d{4}\b", normalized_content):
-        return False
-    if re.search(r"\b\d+\s+[\w\s.-]+?\b(?:st|street|ave|avenue|road|rd|lane|ln|apt|suite)\b", normalized_content):
+    if contains_direct_identifier(content):
         return False
     return True

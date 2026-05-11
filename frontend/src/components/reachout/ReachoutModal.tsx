@@ -164,14 +164,16 @@ export function ReachoutModal({ open, mode, overrides, onClose }: ReachoutModalP
         </div>
 
         <div className="flex items-center justify-end gap-2 p-4 border-t border-border bg-surface-overlay">
-          <Button
-            type="button"
-            onClick={onClose}
-            variant="ghost"
-            disabled={submitting}
-          >
-            {t('common.cancel', 'Cancel')}
-          </Button>
+          {!success && (
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="ghost"
+              disabled={submitting}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          )}
           {!success && (
             <Button
               type="button"

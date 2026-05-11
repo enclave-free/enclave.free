@@ -356,6 +356,8 @@ export function AdminConfigAssistant({
       if (!hasConfigTool) {
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
+      } else if (backendTools.includes(CONFIG_TOOL_ID)) {
+        setSnapshotInfo(null)
       } else {
         const snap = await buildSnapshot()
         baseToolContext = snap.context

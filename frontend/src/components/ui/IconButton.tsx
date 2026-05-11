@@ -19,7 +19,7 @@ const variantClasses: Record<IconButtonVariant, string> = {
 }
 
 const sizeClasses: Record<IconButtonSize, string> = {
-  sm: 'h-10 w-10 p-2',
+  sm: 'h-8 w-8 p-1.5',
   md: 'h-10 w-10 p-2',
   lg: 'h-11 w-11 p-2.5',
 }

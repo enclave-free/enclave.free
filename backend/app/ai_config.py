@@ -358,6 +358,64 @@ async def delete_ai_config_override(
     return {"success": True, "message": f"Override for '{key}' reverted to global default"}
 
 
+def _assemble_prompt_preview(
+    sections: dict,
+    request: PromptPreviewRequest,
+    sections_used: list[str],
+) -> PromptPreviewResponse:
+    parts = []
+
+    if sections.get("prompt_system"):
+        parts.append("=== SYSTEM PROMPT ===")
+        parts.append(sections["prompt_system"])
+
+    if request.sample_facts:
+        if parts:
+            parts.append("")
+        facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
+        if facts_lines:
+            parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
+            parts.append("\n".join(facts_lines))
+        else:
+            parts.append("=== NO FACTS CONFIRMED YET ===")
+            parts.append("Ask about location and context early, but only once per conversation.")
+
+    if sections.get("prompt_tone"):
+        parts.append("")
+        parts.append("=== STYLE ===")
+        parts.append(sections["prompt_tone"])
+
+    rules = sections.get("prompt_rules", [])
+    if rules:
+        parts.append("")
+        parts.append("=== RULES ===")
+        for i, rule in enumerate(rules, 1):
+            parts.append(f"{i}. {rule}")
+
+    forbidden = sections.get("prompt_forbidden", [])
+    if forbidden:
+        parts.append("")
+        parts.append("=== FORBIDDEN TOPICS ===")
+        parts.append("If asked about these topics, politely decline:")
+        for topic in forbidden:
+            parts.append(f"- {topic}")
+
+    parts.append("")
+    parts.append("=== QUESTION ===")
+    if request.sample_question:
+        parts.append(request.sample_question)
+    else:
+        parts.append("(No sample question provided)")
+
+    parts.append("")
+    parts.append("=== RESPOND ===")
+
+    return PromptPreviewResponse(
+        assembled_prompt="\n".join(parts),
+        sections_used=sections_used,
+    )
+
+
 @router.post("/user-type/{user_type_id}/prompts/preview", response_model=PromptPreviewResponse)
 async def preview_prompt_for_user_type(
     user_type_id: int,
@@ -377,67 +435,7 @@ async def preview_prompt_for_user_type(
     # Get prompt sections with inheritance for this user type
     prompt_sections = get_prompt_sections(user_type_id=user_type_id)
 
-    # Build the assembled prompt (same logic as global preview)
-    parts = []
-    sections_used = list(prompt_sections.keys())
-
-    # System prompt section
-    if prompt_sections.get("prompt_system"):
-        parts.append("=== SYSTEM PROMPT ===")
-        parts.append(prompt_sections["prompt_system"])
-
-    # Known facts section
-    if request.sample_facts:
-        if parts:
-            parts.append("")
-        facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
-        if facts_lines:
-            parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
-            parts.append("\n".join(facts_lines))
-        else:
-            parts.append("=== NO FACTS CONFIRMED YET ===")
-            parts.append("Ask about location and context early, but only once per conversation.")
-
-    # Tone section
-    if prompt_sections.get("prompt_tone"):
-        parts.append("")
-        parts.append("=== STYLE ===")
-        parts.append(prompt_sections["prompt_tone"])
-
-    # Rules section
-    rules = prompt_sections.get("prompt_rules", [])
-    if rules:
-        parts.append("")
-        parts.append("=== RULES ===")
-        for i, rule in enumerate(rules, 1):
-            parts.append(f"{i}. {rule}")
-
-    # Forbidden topics
-    forbidden = prompt_sections.get("prompt_forbidden", [])
-    if forbidden:
-        parts.append("")
-        parts.append("=== FORBIDDEN TOPICS ===")
-        parts.append("If asked about these topics, politely decline:")
-        for topic in forbidden:
-            parts.append(f"- {topic}")
-
-    # Question
-    parts.append("")
-    parts.append("=== QUESTION ===")
-    if request.sample_question:
-        parts.append(request.sample_question)
-    else:
-        parts.append("(No sample question provided)")
-
-    parts.append("")
-    parts.append("=== RESPOND ===")
-
-    assembled = "\n".join(parts)
-
-    return PromptPreviewResponse(
-        assembled_prompt=assembled,
-        sections_used=sections_used
-    )
+    return _assemble_prompt_preview(prompt_sections, request, list(prompt_sections.keys()))
 
 
 @router.post("/prompts/preview", response_model=PromptPreviewResponse)
@@ -471,66 +469,7 @@ async def preview_prompt(
         sections[key] = value
         sections_used.append(key)
 
-    # Build the assembled prompt
-    parts = []
-
-    # System prompt section
-    if sections.get("prompt_system"):
-        parts.append("=== SYSTEM PROMPT ===")
-        parts.append(sections["prompt_system"])
-
-    # Known facts section
-    if request.sample_facts:
-        if parts:
-            parts.append("")
-        facts_lines = [f"  - {k}: {v}" for k, v in request.sample_facts.items() if v]
-        if facts_lines:
-            parts.append("=== CONFIRMED FACTS (do NOT re-ask these) ===")
-            parts.append("\n".join(facts_lines))
-        else:
-            parts.append("=== NO FACTS CONFIRMED YET ===")
-            parts.append("Ask about location and context early, but only once per conversation.")
-
-    # Tone section
-    if sections.get("prompt_tone"):
-        parts.append("")
-        parts.append("=== STYLE ===")
-        parts.append(sections["prompt_tone"])
-
-    # Rules section
-    rules = sections.get("prompt_rules", [])
-    if rules:
-        parts.append("")
-        parts.append("=== RULES ===")
-        for i, rule in enumerate(rules, 1):
-            parts.append(f"{i}. {rule}")
-
-    # Forbidden topics
-    forbidden = sections.get("prompt_forbidden", [])
-    if forbidden:
-        parts.append("")
-        parts.append("=== FORBIDDEN TOPICS ===")
-        parts.append("If asked about these topics, politely decline:")
-        for topic in forbidden:
-            parts.append(f"- {topic}")
-
-    # Question
-    parts.append("")
-    parts.append("=== QUESTION ===")
-    if request.sample_question:
-        parts.append(request.sample_question)
-    else:
-        parts.append("(No sample question provided)")
-
-    parts.append("")
-    parts.append("=== RESPOND ===")
-
-    assembled = "\n".join(parts)
-
-    return PromptPreviewResponse(
-        assembled_prompt=assembled,
-        sections_used=sections_used
-    )
+    return _assemble_prompt_preview(sections, request, sections_used)
 
 
 # Helper functions for use by other modules

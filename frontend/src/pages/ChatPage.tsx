@@ -67,6 +67,7 @@ export function ChatPage() {
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([])
   const [adminApplyState, setAdminApplyState] = useState<AdminApplyState>({ state: 'idle' })
   const [deploymentSecretKeys, setDeploymentSecretKeys] = useState<Set<string> | null>(null)
+  const [deploymentSecretKeysLoaded, setDeploymentSecretKeysLoaded] = useState(false)
 
   const [reachoutOpen, setReachoutOpen] = useState(false)
   const [reachoutEnabled, setReachoutEnabled] = useState(false)
@@ -83,6 +84,8 @@ export function ChatPage() {
 
     let cancelled = false
     async function fetchDeploymentSecretKeys() {
+      setDeploymentSecretKeys(new Set())
+      setDeploymentSecretKeysLoaded(false)
       try {
         const res = await adminFetch('/admin/deployment/config')
         if (!res.ok) return
@@ -95,9 +98,12 @@ export function ChatPage() {
             if (configItem.is_secret && typeof configItem.key === 'string') secretKeys.add(configItem.key)
           }
         }
-        if (!cancelled) setDeploymentSecretKeys(secretKeys)
+        if (!cancelled) {
+          setDeploymentSecretKeys(secretKeys)
+          setDeploymentSecretKeysLoaded(true)
+        }
       } catch {
-        // Safe fallback: leave values unmasked if metadata is unavailable.
+        // Keep pessimistic masking when metadata is unavailable.
       }
     }
 
@@ -619,7 +625,8 @@ export function ChatPage() {
       let bodyDisplay: unknown = r.body
       if (r.method === 'PUT' && r.path.startsWith('/admin/deployment/config/')) {
         const key = r.path.split('/').pop() || ''
-        if (deploymentSecretKeys?.has(key) && r.body && typeof r.body === 'object') {
+        const shouldRedact = deploymentSecretKeys && (!deploymentSecretKeysLoaded || deploymentSecretKeys.has(key))
+        if (shouldRedact && r.body && typeof r.body === 'object') {
           const o = r.body as Record<string, unknown>
           if (typeof o.value === 'string' && o.value.length > 0) {
             bodyDisplay = { ...o, value: '[REDACTED]' }
@@ -638,7 +645,7 @@ export function ChatPage() {
       summary: changeSet.summary || '',
       requests: pretty,
     }
-  }, [adminApplyState, deploymentSecretKeys])
+  }, [adminApplyState, deploymentSecretKeys, deploymentSecretKeysLoaded])
   
   // Auto-search triggered by backend - injects results back into RAG session
   const triggerAutoSearch = async (searchTerm: string, sessionId?: string | null) => {

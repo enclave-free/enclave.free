@@ -1833,6 +1833,8 @@ def supersede_user_memory(
             WHERE id = ?
               AND status = 'active'
         """, (memory_id,))
+        if cursor.rowcount == 0:
+            raise ValueError("Active User Memory record was already superseded")
 
         cursor.execute("""
             INSERT INTO user_memories (
