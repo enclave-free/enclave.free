@@ -8,6 +8,7 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from httpx import Response
 from fastapi.testclient import TestClient
 
 
@@ -104,7 +105,7 @@ class RetentionExecutionTest(unittest.TestCase):
         self.deleted_chunk_job_ids.append(job_id)
         return 2
 
-    def upload_text(self, filename: str, content: str = "operator knowledge"):
+    def upload_text(self, filename: str, content: str = "operator knowledge") -> Response:
         return self.client.post(
             "/ingest/upload",
             files={"file": (filename, content.encode("utf-8"), "text/plain")},

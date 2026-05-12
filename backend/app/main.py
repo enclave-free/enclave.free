@@ -596,7 +596,9 @@ def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
         if not subject_user:
             raise HTTPException(status_code=404, detail="Subject User not found")
         with _admin_conversation_states_lock:
-            admin_conversation_states.setdefault(session_id, {})["subject_user_id"] = requested_user_id
+            state = admin_conversation_states.setdefault(session_id, {})
+            state["subject_user_id"] = requested_user_id
+            state.pop("pending_user_memory_change", None)
         subject_user_id = requested_user_id
     else:
         with _admin_conversation_states_lock:
@@ -774,7 +776,7 @@ def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> di
 def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | None:
     with _admin_conversation_states_lock:
         state = admin_conversation_states.setdefault(session_id, {})
-        pending = state.get("pending_user_memory_change")
+        pending = state.pop("pending_user_memory_change", None)
     if not pending:
         return None
 
@@ -847,10 +849,6 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
         logger.error("Failed to confirm pending User Memory change", exc_info=True)
         raise
 
-    with _admin_conversation_states_lock:
-        state = admin_conversation_states.setdefault(session_id, {})
-        if state.get("pending_user_memory_change") == pending:
-            state.pop("pending_user_memory_change", None)
     return result
 
 
@@ -2976,6 +2974,18 @@ async def update_user(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Validate fields
+    if user.fields:
+        field_defs = database.get_field_definitions()
+        known_fields = {f["field_name"] for f in field_defs}
+        unknown = set(user.fields.keys()) - known_fields
+        if unknown:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown fields: {', '.join(unknown)}"
+            )
+        database.set_user_fields(user_id, user.fields)
+
     if user.approved is not None and bool(existing.get("approved", 1)) != user.approved:
         requester_is_admin = _is_admin_actor(requester)
         if not requester_is_admin:
@@ -2989,18 +2999,6 @@ async def update_user(
             changed_by=requester.get("pubkey", "unknown"),
         )
 
-    # Validate fields
-    if user.fields:
-        field_defs = database.get_field_definitions()
-        known_fields = {f["field_name"] for f in field_defs}
-        unknown = set(user.fields.keys()) - known_fields
-        if unknown:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown fields: {', '.join(unknown)}"
-            )
-        database.set_user_fields(user_id, user.fields)
-
     return UserResponse(**database.get_user(user_id))
 
 
@@ -3013,23 +3011,21 @@ async def delete_user(
     _require_self_or_admin(user_id, requester)
     existing_user = database.get_user(user_id)
     deleted_conversations = delete_sessions_for_owner("user", str(user_id))
-    admin_subject_sessions = 0
     with _admin_conversation_states_lock:
         for state in admin_conversation_states.values():
             if state.get("subject_user_id") == user_id:
                 state.pop("subject_user_id", None)
                 state.pop("pending_user_memory_change", None)
-                admin_subject_sessions += 1
 
     if not existing_user:
-        if deleted_conversations or admin_subject_sessions:
+        if deleted_conversations:
             conversation_result = deletion_target_succeeded(
                 target_kind="conversation",
                 target_id=str(user_id),
                 action="delete_conversations",
-                detail=f"Deleted or detached {deleted_conversations + admin_subject_sessions} active Conversation records for this User.",
+                detail=f"Deleted {deleted_conversations} active Conversation records for this User.",
             )
-            conversation_result["count"] = deleted_conversations + admin_subject_sessions
+            conversation_result["count"] = deleted_conversations
         else:
             conversation_result = deletion_target_skipped(
                 target_kind="conversation",
@@ -3073,7 +3069,7 @@ async def delete_user(
 
     lifecycle_delete = database.delete_user_lifecycle(user_id)
     memory_count = lifecycle_delete["user_memories_deleted"]
-    conversation_count = deleted_conversations + admin_subject_sessions
+    conversation_count = deleted_conversations
     if memory_count:
         user_memory_result = deletion_target_succeeded(
             target_kind="user_memory",
@@ -3095,7 +3091,7 @@ async def delete_user(
             target_kind="conversation",
             target_id=str(user_id),
             action="delete_conversations",
-            detail=f"Deleted or detached {conversation_count} active Conversation records for this User.",
+            detail=f"Deleted {conversation_count} active Conversation records for this User.",
         )
         conversation_result["count"] = conversation_count
     else:

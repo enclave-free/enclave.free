@@ -19,14 +19,12 @@ class DummySentenceTransformer:
         pass
 
 
-sys.modules.setdefault(
-    "sentence_transformers",
-    types.SimpleNamespace(SentenceTransformer=DummySentenceTransformer),
-)
-
-
 class UserAuditCoverageTest(unittest.TestCase):
     def setUp(self) -> None:
+        self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
+        sys.modules["sentence_transformers"] = types.SimpleNamespace(
+            SentenceTransformer=DummySentenceTransformer,
+        )
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.tmp.name) / "sanctum.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
@@ -72,6 +70,10 @@ class UserAuditCoverageTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        if self._orig_sentence_transformers is None:
+            sys.modules.pop("sentence_transformers", None)
+        else:
+            sys.modules["sentence_transformers"] = self._orig_sentence_transformers
         self.tmp.cleanup()
 
     @staticmethod
@@ -116,6 +118,18 @@ class UserAuditCoverageTest(unittest.TestCase):
         response = self.client.put(f"/users/{user_id}", json={"approved": False})
 
         self.assertEqual(response.status_code, 403)
+        self.assertTrue(self.database.get_user(user_id)["approved"])
+        self.assertEqual(self.audit_entries("user_approval"), [])
+
+    def test_invalid_field_update_does_not_commit_approval_change(self) -> None:
+        user_id = self.database.create_user(pubkey="d" * 64)
+
+        response = self.client.put(
+            f"/users/{user_id}",
+            json={"approved": False, "fields": {"unknown_field": "value"}},
+        )
+
+        self.assertEqual(response.status_code, 400)
         self.assertTrue(self.database.get_user(user_id)["approved"])
         self.assertEqual(self.audit_entries("user_approval"), [])
 

@@ -271,6 +271,76 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
 
+    def test_confirming_pending_memory_change_claims_it_once(self) -> None:
+        session_id = "admin-session-confirm-once"
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Set subject user to user {self.user_id}.",
+                "tools": [],
+            },
+        )
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": "Remember for the subject user: Prefers one-time writes. Kind: preference. Importance: 5.",
+                "tools": [],
+            },
+        )
+
+        first = self.main._confirm_pending_user_memory_change(session_id, {"pubkey": "admin-pubkey"})
+        second = self.main._confirm_pending_user_memory_change(session_id, {"pubkey": "admin-pubkey"})
+
+        memories = self.database.list_active_user_memories(self.user_id)
+        self.assertIsNotNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(
+            [memory["content"] for memory in memories].count("Prefers one-time writes."),
+            1,
+        )
+
+    def test_switching_subject_user_clears_stale_pending_memory_change(self) -> None:
+        other_user_id = self.database.create_user(pubkey="c" * 64)
+        session_id = "admin-session-switch-clears-pending"
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Set subject user to user {self.user_id}.",
+                "tools": [],
+            },
+        )
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": "Remember for the subject user: Prefers stale writes. Kind: preference. Importance: 5.",
+                "tools": [],
+            },
+        )
+
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Switch subject user to user {other_user_id}.",
+                "tools": [],
+            },
+        )
+        confirm_response = self.client.post(
+            "/llm/chat",
+            json={"session_id": session_id, "message": "Confirm this User Memory write.", "tools": []},
+        )
+
+        self.assertEqual(confirm_response.status_code, 200)
+        self.assertNotIn(
+            "Prefers stale writes.",
+            [memory["content"] for memory in self.database.list_active_user_memories(self.user_id)],
+        )
+        self.assertEqual(self.database.list_active_user_memories(other_user_id), [])
+
     def test_negated_admin_memory_confirmation_does_not_commit(self) -> None:
         session_id = "admin-session-negated-confirm"
         self.client.post(
