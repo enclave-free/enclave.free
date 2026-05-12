@@ -10,6 +10,7 @@ import logging
 import hashlib
 import hmac
 import re
+import contextvars
 from typing import Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
@@ -24,6 +25,10 @@ SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/sanctum.db")
 
 # Lazy-loaded connection
 _connection = None
+_dedicated_connection: contextvars.ContextVar[sqlite3.Connection | None] = contextvars.ContextVar(
+    "dedicated_connection",
+    default=None,
+)
 _deployment_secret_key = None
 _audit_hmac_key = None
 
@@ -35,6 +40,10 @@ DEPLOYMENT_SECRET_NONCE_BYTES = 12
 
 def get_connection():
     """Get or create SQLite connection"""
+    dedicated = _dedicated_connection.get()
+    if dedicated is not None:
+        return dedicated
+
     global _connection
     if _connection is None:
         # Ensure directory exists
@@ -42,13 +51,29 @@ def get_connection():
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
 
-        _connection = sqlite3.connect(SQLITE_PATH, check_same_thread=False)
-        _connection.row_factory = sqlite3.Row  # Enable dict-like access
-        _connection.execute("PRAGMA foreign_keys = ON")  # Enable FK constraints
-        _connection.execute("PRAGMA journal_mode = WAL")  # Improve read/write concurrency
-        _connection.execute("PRAGMA busy_timeout = 3000")  # Wait briefly if DB is locked
+        _connection = _configure_connection(sqlite3.connect(SQLITE_PATH, check_same_thread=False))
         logger.info(f"Connected to SQLite database: {SQLITE_PATH}")
     return _connection
+
+
+def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 3000")
+    return conn
+
+
+@contextmanager
+def dedicated_connection() -> Iterator[sqlite3.Connection]:
+    """Use a per-task SQLite connection for background work."""
+    conn = _configure_connection(sqlite3.connect(SQLITE_PATH, check_same_thread=False))
+    token = _dedicated_connection.set(conn)
+    try:
+        yield conn
+    finally:
+        _dedicated_connection.reset(token)
+        conn.close()
 
 
 @contextmanager
@@ -1674,12 +1699,10 @@ def create_user_memory(
     author_actor: str,
 ) -> int:
     """Create active Sage-owned User Memory, skipping obvious active duplicates."""
+    kind = _require_non_empty_user_memory_text(kind, "kind")
+    content = _require_non_empty_user_memory_text(content, "content")
     normalized_kind = _normalize_user_memory_text(kind)
     normalized_content = _normalize_user_memory_text(content)
-    if not normalized_kind:
-        raise ValueError("User Memory kind is required")
-    if not normalized_content:
-        raise ValueError("User Memory content is required")
     source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
     author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
@@ -1838,9 +1861,8 @@ def supersede_user_memory(
     author_actor: str,
 ) -> int:
     """Create a replacement User Memory and mark the original as superseded."""
+    content = _require_non_empty_user_memory_text(content, "content")
     normalized_content = _normalize_user_memory_text(content)
-    if not normalized_content:
-        raise ValueError("User Memory content is required")
     source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
     author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)

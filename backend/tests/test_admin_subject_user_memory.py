@@ -271,6 +271,34 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
 
+    def test_negated_admin_memory_confirmation_does_not_commit(self) -> None:
+        session_id = "admin-session-negated-confirm"
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Set subject user to user {self.user_id}.",
+                "tools": [],
+            },
+        )
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": "Remember for the subject user: Prefers short answers. Kind: preference. Importance: 4.",
+                "tools": [],
+            },
+        )
+
+        response = self.client.post(
+            "/llm/chat",
+            json={"session_id": session_id, "message": "Do not confirm this User Memory yet.", "tools": []},
+        )
+
+        memories = self.database.list_active_user_memories(self.user_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Prefers short answers.", [memory["content"] for memory in memories])
+
     def test_admin_memory_write_without_subject_user_requests_clarification(self) -> None:
         response = self.client.post(
             "/llm/chat",

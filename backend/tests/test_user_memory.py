@@ -71,6 +71,30 @@ class UserMemoryPersistenceTest(unittest.TestCase):
         self.assertIsNotNone(memories[0]["created_at"])
         self.assertIsNotNone(memories[0]["updated_at"])
 
+    def test_user_memory_rejects_non_string_kind_and_content(self) -> None:
+        with self.assertRaises(ValueError):
+            self.database.create_user_memory(
+                subject_user_id=self.user_id,
+                kind={"not": "text"},
+                content="Prefers concise answers.",
+                source_kind="conversation",
+                author_actor="sage",
+            )
+        memory_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Prefers concise answers.",
+            source_kind="conversation",
+            author_actor="sage",
+        )
+        with self.assertRaises(ValueError):
+            self.database.supersede_user_memory(
+                memory_id,
+                content={"not": "text"},
+                source_kind="admin-confirmed",
+                author_actor="admin",
+            )
+
     def test_active_user_memory_retrieval_is_bounded_ordered_and_deduplicated(self) -> None:
         low_id = self.database.create_user_memory(
             subject_user_id=self.user_id,

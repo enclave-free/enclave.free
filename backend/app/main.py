@@ -643,7 +643,9 @@ def _admin_set_pending_user_memory_change(
 
 
 def _message_confirms_user_memory_change(message: str) -> bool:
-    return bool(re.search(r"\bconfirm\b.*\buser memory\b|\bconfirm\b.*\bmemory\b", message, flags=re.IGNORECASE))
+    positive = re.search(r"\bconfirm\b.*\buser memory\b|\bconfirm\b.*\bmemory\b", message, flags=re.IGNORECASE)
+    negated = re.search(r"\b(?:do not|don't|dont|never|not|no)\b.{0,20}\bconfirm\b", message, flags=re.IGNORECASE)
+    return bool(positive and not negated)
 
 
 def _message_requests_user_memory_write(message: str) -> bool:
@@ -2955,6 +2957,13 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     if user.approved is not None and bool(existing.get("approved", 1)) != user.approved:
+        requester_is_admin = _is_admin_actor(requester)
+        requester_pubkey = requester.get("pubkey")
+        requester_is_target = requester.get("id") == user_id or (
+            requester_pubkey is not None and requester_pubkey == existing.get("pubkey")
+        )
+        if user.approved and requester_is_target and not requester_is_admin:
+            raise HTTPException(status_code=403, detail="Forbidden: users cannot approve themselves")
         database.update_user_approval(user_id, user.approved)
         database.log_config_audit_event(
             table_name="user_approval",
@@ -2997,6 +3006,21 @@ async def delete_user(
                 admin_subject_sessions += 1
 
     if not existing_user:
+        if deleted_conversations or admin_subject_sessions:
+            conversation_result = deletion_target_succeeded(
+                target_kind="conversation",
+                target_id=str(user_id),
+                action="delete_conversations",
+                detail=f"Deleted or detached {deleted_conversations + admin_subject_sessions} active Conversation records for this User.",
+            )
+            conversation_result["count"] = deleted_conversations + admin_subject_sessions
+        else:
+            conversation_result = deletion_target_skipped(
+                target_kind="conversation",
+                target_id=str(user_id),
+                action="delete_conversations",
+                detail="No active Conversations were found for the deleted User.",
+            )
         deletion = summarize_deletion_results([
             deletion_target_skipped(
                 target_kind="user_profile",
@@ -3016,12 +3040,7 @@ async def delete_user(
                 action="delete_user_memory",
                 detail="User Memory was already absent.",
             ),
-            deletion_target_skipped(
-                target_kind="conversation",
-                target_id=str(user_id),
-                action="delete_conversations",
-                detail="No active Conversations were found for the deleted User.",
-            ),
+            conversation_result,
         ])
         _audit_data_deletion_event(
             config_key=f"user:{user_id}:delete",

@@ -165,6 +165,24 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(idempotent_event["workflow"], "delete_user")
         self.assertEqual(idempotent_event["counts"]["skipped"], 4)
 
+    def test_repeat_deletion_reports_late_conversation_cleanup(self) -> None:
+        first = self.client.delete(f"/users/{self.user_id}")
+        self.assertEqual(first.status_code, 200)
+        self.query._sessions["late-session"] = {
+            "id": "late-session",
+            "owner_type": "user",
+            "owner_id": str(self.user_id),
+            "messages": [],
+        }
+
+        second = self.client.delete(f"/users/{self.user_id}")
+
+        self.assertEqual(second.status_code, 200)
+        actions = {result["action"]: result for result in second.json()["deletion"]["results"]}
+        self.assertEqual(actions["delete_conversations"]["status"], "succeeded")
+        self.assertEqual(actions["delete_conversations"]["count"], 1)
+        self.assertNotIn("late-session", self.query._sessions)
+
     def test_user_deletion_requires_authentication(self) -> None:
         self.main.app.dependency_overrides.clear()
 
