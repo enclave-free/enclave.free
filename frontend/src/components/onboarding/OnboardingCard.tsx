@@ -25,7 +25,7 @@ export function OnboardingCard({ children, footer, title, subtitle, size, topRig
         </div>
       )}
 
-      <div className={`w-full max-w-full min-w-0 ${maxWidthClass}`}>
+      <div className={`max-w-full min-w-0 ${maxWidthClass}`}>
         <InstanceLogo />
 
         <div className="card w-full max-w-full rounded-3xl p-6 sm:p-10 min-w-0 overflow-hidden animate-fade-in-up">

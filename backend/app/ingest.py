@@ -174,13 +174,22 @@ def _audit_document_action(
     old_value: dict | None = None,
     new_value: dict | None = None,
 ) -> None:
-    database.log_config_audit_event(
-        table_name="document_actions",
-        config_key=config_key,
-        old_value=json.dumps(old_value, sort_keys=True) if old_value is not None else None,
-        new_value=json.dumps({"action": action, **(new_value or {})}, sort_keys=True),
-        changed_by=changed_by,
-    )
+    try:
+        database.log_config_audit_event(
+            table_name="document_actions",
+            config_key=config_key,
+            old_value=json.dumps(old_value, sort_keys=True) if old_value is not None else None,
+            new_value=json.dumps({"action": action, **(new_value or {})}, sort_keys=True),
+            changed_by=changed_by,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to audit document action config_key=%s action=%s: %s",
+            config_key,
+            action,
+            exc,
+            exc_info=True,
+        )
 
 
 def _audit_data_deletion(
@@ -191,20 +200,30 @@ def _audit_data_deletion(
     workflow: str,
     target_id: str,
 ) -> None:
-    database.log_config_audit_event(
-        table_name="data_deletion",
-        config_key=config_key,
-        old_value=None,
-        new_value=json.dumps({
-            "workflow": workflow,
-            "target_id": target_id,
-            "status": deletion["status"],
-            "retryable": deletion["retryable"],
-            "counts": deletion["counts"],
-            "results": deletion["results"],
-        }, sort_keys=True),
-        changed_by=changed_by,
-    )
+    try:
+        database.log_config_audit_event(
+            table_name="data_deletion",
+            config_key=config_key,
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": workflow,
+                "target_id": target_id,
+                "status": deletion["status"],
+                "retryable": deletion["retryable"],
+                "counts": deletion["counts"],
+                "results": deletion["results"],
+            }, sort_keys=True),
+            changed_by=changed_by,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to audit data deletion config_key=%s workflow=%s target_id=%s: %s",
+            config_key,
+            workflow,
+            target_id,
+            exc,
+            exc_info=True,
+        )
 
 
 def _missing_document_deletion_response(job_id: str) -> dict:
@@ -266,16 +285,40 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
 
     file_path_value = job.get("file_path")
     file_path = Path(file_path_value) if file_path_value else None
-    if file_path and file_path.exists():
+    if file_path:
         try:
-            file_path.unlink()
-            results.append(deletion_target_succeeded(
-                target_kind="uploaded_document_artifact",
-                target_id=str(file_path),
-                action="delete_uploaded_document_artifact",
-                detail="Deleted uploaded document artifact.",
-            ))
-            logger.info(f"[{job_id}] Deleted file: {file_path}")
+            resolved_file_path = file_path.resolve()
+            uploads_root = UPLOADS_DIR.resolve()
+            if not resolved_file_path.is_relative_to(uploads_root):
+                logger.warning(
+                    "[%s] Refusing to delete uploaded artifact outside uploads root: %s",
+                    job_id,
+                    resolved_file_path,
+                )
+                results.append(deletion_target_failed(
+                    target_kind="uploaded_document_artifact",
+                    target_id=str(resolved_file_path),
+                    action="delete_uploaded_document_artifact",
+                    retryable=False,
+                    detail="Uploaded artifact path is outside the configured uploads directory.",
+                ))
+            elif resolved_file_path.exists():
+                resolved_file_path.unlink()
+                results.append(deletion_target_succeeded(
+                    target_kind="uploaded_document_artifact",
+                    target_id=str(resolved_file_path),
+                    action="delete_uploaded_document_artifact",
+                    detail="Deleted uploaded document artifact.",
+                ))
+                logger.info(f"[{job_id}] Deleted file: {resolved_file_path}")
+            else:
+                logger.debug(f"[{job_id}] File not found (already deleted?): {resolved_file_path}")
+                results.append(deletion_target_skipped(
+                    target_kind="uploaded_document_artifact",
+                    target_id=str(resolved_file_path),
+                    action="delete_uploaded_document_artifact",
+                    detail="Uploaded document artifact was already absent.",
+                ))
         except Exception as e:
             logger.error(f"[{job_id}] Failed to delete file {file_path}: {e}")
             results.append(deletion_target_failed(
@@ -286,31 +329,39 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
                 detail=f"Failed to delete uploaded document artifact: {e}",
             ))
     else:
-        logger.debug(f"[{job_id}] File not found (already deleted?): {file_path}")
         results.append(deletion_target_skipped(
             target_kind="uploaded_document_artifact",
-            target_id=str(file_path) if file_path else job_id,
+            target_id=job_id,
             action="delete_uploaded_document_artifact",
             detail="Uploaded document artifact was already absent.",
         ))
 
+    has_retryable_failures = any(result["status"] == "failed" and result["retryable"] for result in results)
     try:
-        db_deleted = ingest_db.delete_job(job_id)
-        if db_deleted:
-            results.append(deletion_target_succeeded(
-                target_kind="document_metadata",
-                target_id=job_id,
-                action="delete_document_metadata",
-                detail="Deleted document metadata and access defaults.",
-            ))
-        else:
+        if has_retryable_failures:
             results.append(deletion_target_skipped(
                 target_kind="document_metadata",
                 target_id=job_id,
                 action="delete_document_metadata",
-                detail="Document metadata was already absent.",
+                detail="Document metadata retained so retryable external cleanup can be attempted again.",
             ))
-        logger.info(f"[{job_id}] Deleted from SQLite: {db_deleted}")
+        else:
+            db_deleted = ingest_db.delete_job(job_id)
+            if db_deleted:
+                results.append(deletion_target_succeeded(
+                    target_kind="document_metadata",
+                    target_id=job_id,
+                    action="delete_document_metadata",
+                    detail="Deleted document metadata and access defaults.",
+                ))
+            else:
+                results.append(deletion_target_skipped(
+                    target_kind="document_metadata",
+                    target_id=job_id,
+                    action="delete_document_metadata",
+                    detail="Document metadata was already absent.",
+                ))
+            logger.info(f"[{job_id}] Deleted from SQLite: {db_deleted}")
     except Exception as e:
         logger.error(f"[{job_id}] Failed to delete from SQLite: {e}")
         results.append(deletion_target_failed(
@@ -321,25 +372,33 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
             detail=f"Failed to delete job from database: {e}",
         ))
 
-    runtime_job_deleted = JOBS.pop(job_id, None) is not None
-    chunks_to_delete = [cid for cid, c in CHUNKS.items() if c.get("job_id") == job_id]
-    for cid in chunks_to_delete:
-        CHUNKS.pop(cid, None)
-    logger.info(f"[{job_id}] Cleared {len(chunks_to_delete)} in-memory chunks")
-    if runtime_job_deleted or chunks_to_delete:
-        results.append(deletion_target_succeeded(
-            target_kind="runtime_document_state",
-            target_id=job_id,
-            action="delete_runtime_document_state",
-            detail=f"Cleared runtime job state and {len(chunks_to_delete)} in-memory chunks.",
-        ))
-    else:
+    if has_retryable_failures:
         results.append(deletion_target_skipped(
             target_kind="runtime_document_state",
             target_id=job_id,
             action="delete_runtime_document_state",
-            detail="Runtime document state was already absent.",
+            detail="Runtime document state retained so retryable external cleanup can be attempted again.",
         ))
+    else:
+        runtime_job_deleted = JOBS.pop(job_id, None) is not None
+        chunks_to_delete = [cid for cid, c in CHUNKS.items() if c.get("job_id") == job_id]
+        for cid in chunks_to_delete:
+            CHUNKS.pop(cid, None)
+        logger.info(f"[{job_id}] Cleared {len(chunks_to_delete)} in-memory chunks")
+        if runtime_job_deleted or chunks_to_delete:
+            results.append(deletion_target_succeeded(
+                target_kind="runtime_document_state",
+                target_id=job_id,
+                action="delete_runtime_document_state",
+                detail=f"Cleared runtime job state and {len(chunks_to_delete)} in-memory chunks.",
+            ))
+        else:
+            results.append(deletion_target_skipped(
+                target_kind="runtime_document_state",
+                target_id=job_id,
+                action="delete_runtime_document_state",
+                detail="Runtime document state was already absent.",
+            ))
 
     logger.info(f"[{job_id}] Document deletion complete")
     deletion = summarize_deletion_results(results)

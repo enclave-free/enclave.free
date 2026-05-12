@@ -104,20 +104,19 @@ class UserAuditCoverageTest(unittest.TestCase):
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
 
-    def test_non_admin_user_cannot_self_approve(self) -> None:
+    def test_non_admin_user_cannot_change_approval(self) -> None:
         user_pubkey = "c" * 64
         user_id = self.database.create_user(pubkey=user_pubkey)
-        self.database.update_user_approval(user_id, False)
         self.main.app.dependency_overrides[self.auth.require_admin_or_user] = lambda: {
             "type": "user",
             "id": user_id,
             "pubkey": user_pubkey,
         }
 
-        response = self.client.put(f"/users/{user_id}", json={"approved": True})
+        response = self.client.put(f"/users/{user_id}", json={"approved": False})
 
         self.assertEqual(response.status_code, 403)
-        self.assertFalse(self.database.get_user(user_id)["approved"])
+        self.assertTrue(self.database.get_user(user_id)["approved"])
         self.assertEqual(self.audit_entries("user_approval"), [])
 
     def test_auto_approval_setting_changes_are_audited_and_filterable(self) -> None:

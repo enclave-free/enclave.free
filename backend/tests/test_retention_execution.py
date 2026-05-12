@@ -217,6 +217,9 @@ class RetentionExecutionTest(unittest.TestCase):
         actions = {result["action"]: result for result in body["deletion"]["results"]}
         self.assertEqual(actions["delete_retrieval_index"]["status"], "failed")
         self.assertTrue(actions["delete_retrieval_index"]["retryable"])
+        self.assertEqual(actions["delete_document_metadata"]["status"], "skipped")
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
+        self.assertIn(job_id, self.ingest.JOBS)
 
     def test_retention_requires_admin(self) -> None:
         self.main.app.dependency_overrides.clear()

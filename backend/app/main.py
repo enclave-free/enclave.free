@@ -2756,7 +2756,27 @@ async def migrate_user_type_batch(
 
 def _is_admin_actor(actor: dict) -> bool:
     """Return True when auth context represents an admin."""
-    return actor.get("type") == "admin"
+    return actor.get("type") == "admin" or actor.get("is_admin") is True or actor.get("role") == "admin"
+
+
+def _audit_user_data_deletion(config_key: str, changed_by: str, workflow: str, target_id: str, deletion: dict) -> None:
+    try:
+        _audit_data_deletion_event(
+            config_key=config_key,
+            changed_by=changed_by,
+            workflow=workflow,
+            target_id=target_id,
+            deletion=deletion,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to audit data deletion config_key=%s workflow=%s target_id=%s: %s",
+            config_key,
+            workflow,
+            target_id,
+            exc,
+            exc_info=True,
+        )
 
 
 def _require_self_or_admin(target_user_id: int, actor: dict) -> None:
@@ -2958,12 +2978,8 @@ async def update_user(
 
     if user.approved is not None and bool(existing.get("approved", 1)) != user.approved:
         requester_is_admin = _is_admin_actor(requester)
-        requester_pubkey = requester.get("pubkey")
-        requester_is_target = requester.get("id") == user_id or (
-            requester_pubkey is not None and requester_pubkey == existing.get("pubkey")
-        )
-        if user.approved and requester_is_target and not requester_is_admin:
-            raise HTTPException(status_code=403, detail="Forbidden: users cannot approve themselves")
+        if not requester_is_admin:
+            raise HTTPException(status_code=403, detail="Forbidden: only admins can change user approval")
         database.update_user_approval(user_id, user.approved)
         database.log_config_audit_event(
             table_name="user_approval",
@@ -3042,7 +3058,7 @@ async def delete_user(
             ),
             conversation_result,
         ])
-        _audit_data_deletion_event(
+        _audit_user_data_deletion(
             config_key=f"user:{user_id}:delete",
             changed_by=requester.get("pubkey", "unknown"),
             workflow="delete_user",
@@ -3106,7 +3122,7 @@ async def delete_user(
         user_memory_result,
         conversation_result,
     ])
-    _audit_data_deletion_event(
+    _audit_user_data_deletion(
         config_key=f"user:{user_id}:delete",
         changed_by=requester.get("pubkey", "unknown"),
         workflow="delete_user",

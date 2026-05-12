@@ -21,6 +21,19 @@ class DeletionTargetResult(TypedDict):
     detail: str
 
 
+class DeletionCounts(TypedDict):
+    succeeded: int
+    skipped: int
+    failed: int
+
+
+class DeletionSummaryResult(TypedDict):
+    status: DeletionSummaryStatus
+    retryable: bool
+    counts: DeletionCounts
+    results: list[DeletionTargetResult]
+
+
 def deletion_target_succeeded(
     *,
     target_kind: str,
@@ -73,8 +86,8 @@ def deletion_target_failed(
     }
 
 
-def summarize_deletion_results(results: list[DeletionTargetResult]) -> dict:
-    counts = {
+def summarize_deletion_results(results: list[DeletionTargetResult]) -> DeletionSummaryResult:
+    counts: DeletionCounts = {
         "succeeded": 0,
         "skipped": 0,
         "failed": 0,

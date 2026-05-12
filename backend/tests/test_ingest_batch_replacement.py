@@ -285,6 +285,29 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(idempotent_event["status"], "succeeded")
         self.assertEqual(idempotent_event["counts"]["skipped"], 4)
 
+    def test_admin_delete_document_rejects_artifact_path_outside_uploads_root(self) -> None:
+        upload = self.upload_text("Handbook.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        self.complete_job(job_id)
+        outside_file = Path(self.tmp.name) / "outside.txt"
+        outside_file.write_text("do not delete")
+        self.ingest.JOBS[job_id]["file_path"] = str(outside_file)
+        with self.ingest_db.get_cursor() as cursor:
+            cursor.execute("UPDATE ingest_jobs SET file_path = ? WHERE job_id = ?", (str(outside_file), job_id))
+
+        response = self.client.delete(f"/ingest/jobs/{job_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(body["deletion"]["status"], "partial_failure")
+        self.assertFalse(body["deletion"]["retryable"])
+        self.assertEqual(actions["delete_uploaded_document_artifact"]["status"], "failed")
+        self.assertFalse(actions["delete_uploaded_document_artifact"]["retryable"])
+        self.assertTrue(outside_file.exists())
+        self.assertIsNone(self.ingest_db.get_job(job_id))
+
     def test_delete_document_requires_admin(self) -> None:
         app = FastAPI()
         app.include_router(self.ingest.router)
