@@ -22,6 +22,12 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Background
 from pydantic import BaseModel
 
 import auth
+from data_deletion import (
+    deletion_target_failed,
+    deletion_target_skipped,
+    deletion_target_succeeded,
+    summarize_deletion_results,
+)
 import database
 import ingest_db
 from rate_limit import RateLimiter
@@ -148,6 +154,201 @@ def _clear_job_chunks(job_id: str) -> None:
     to_delete = [cid for cid, c in CHUNKS.items() if c.get("job_id") == job_id]
     for cid in to_delete:
         CHUNKS.pop(cid, None)
+
+
+def _document_artifact_cleanup_reason(job: dict) -> str | None:
+    """Return why a job is eligible for lifecycle artifact cleanup."""
+    status = job.get("status")
+    if status == "failed":
+        return "failed_ingestion"
+    if job.get("replaced_by_job_id") and not bool(job.get("is_current", 1)):
+        return "superseded_document"
+    return None
+
+
+def _audit_document_action(
+    *,
+    config_key: str,
+    action: str,
+    changed_by: str,
+    old_value: dict | None = None,
+    new_value: dict | None = None,
+) -> None:
+    database.log_config_audit_event(
+        table_name="document_actions",
+        config_key=config_key,
+        old_value=json.dumps(old_value, sort_keys=True) if old_value is not None else None,
+        new_value=json.dumps({"action": action, **(new_value or {})}, sort_keys=True),
+        changed_by=changed_by,
+    )
+
+
+def _audit_data_deletion(
+    *,
+    config_key: str,
+    changed_by: str,
+    deletion: dict,
+    workflow: str,
+    target_id: str,
+) -> None:
+    database.log_config_audit_event(
+        table_name="data_deletion",
+        config_key=config_key,
+        old_value=None,
+        new_value=json.dumps({
+            "workflow": workflow,
+            "target_id": target_id,
+            "status": deletion["status"],
+            "retryable": deletion["retryable"],
+            "counts": deletion["counts"],
+            "results": deletion["results"],
+        }, sort_keys=True),
+        changed_by=changed_by,
+    )
+
+
+def _missing_document_deletion_response(job_id: str) -> dict:
+    return {
+        "status": "deleted",
+        "job_id": job_id,
+        "deletion": summarize_deletion_results([
+            deletion_target_skipped(
+                target_kind="document_metadata",
+                target_id=job_id,
+                action="delete_document_metadata",
+                detail="Document metadata was already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="uploaded_document_artifact",
+                target_id=job_id,
+                action="delete_uploaded_document_artifact",
+                detail="Uploaded artifact path is unavailable because the document is already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="retrieval_index",
+                target_id=job_id,
+                action="delete_retrieval_index",
+                detail="Retrieval entries were already absent or cannot be located for an absent document.",
+            ),
+            deletion_target_skipped(
+                target_kind="runtime_document_state",
+                target_id=job_id,
+                action="delete_runtime_document_state",
+                detail="Runtime document state was already absent.",
+            ),
+        ]),
+    }
+
+
+async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
+    """Delete all lifecycle-managed artifacts for one non-processing document job."""
+    logger.info(f"[{job_id}] Starting document deletion...")
+    results = []
+
+    try:
+        deleted_count = await delete_document_chunks(job_id)
+        results.append(deletion_target_succeeded(
+            target_kind="retrieval_index",
+            target_id=job_id,
+            action="delete_retrieval_index",
+            detail=f"Deleted {deleted_count} retrieval entries.",
+        ))
+        logger.info(f"[{job_id}] Deleted {deleted_count} chunks from Qdrant")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to delete from Qdrant: {e}")
+        results.append(deletion_target_failed(
+            target_kind="retrieval_index",
+            target_id=job_id,
+            action="delete_retrieval_index",
+            retryable=True,
+            detail=f"Failed to delete document chunks from vector database: {e}",
+        ))
+
+    file_path_value = job.get("file_path")
+    file_path = Path(file_path_value) if file_path_value else None
+    if file_path and file_path.exists():
+        try:
+            file_path.unlink()
+            results.append(deletion_target_succeeded(
+                target_kind="uploaded_document_artifact",
+                target_id=str(file_path),
+                action="delete_uploaded_document_artifact",
+                detail="Deleted uploaded document artifact.",
+            ))
+            logger.info(f"[{job_id}] Deleted file: {file_path}")
+        except Exception as e:
+            logger.error(f"[{job_id}] Failed to delete file {file_path}: {e}")
+            results.append(deletion_target_failed(
+                target_kind="uploaded_document_artifact",
+                target_id=str(file_path),
+                action="delete_uploaded_document_artifact",
+                retryable=True,
+                detail=f"Failed to delete uploaded document artifact: {e}",
+            ))
+    else:
+        logger.debug(f"[{job_id}] File not found (already deleted?): {file_path}")
+        results.append(deletion_target_skipped(
+            target_kind="uploaded_document_artifact",
+            target_id=str(file_path) if file_path else job_id,
+            action="delete_uploaded_document_artifact",
+            detail="Uploaded document artifact was already absent.",
+        ))
+
+    try:
+        db_deleted = ingest_db.delete_job(job_id)
+        if db_deleted:
+            results.append(deletion_target_succeeded(
+                target_kind="document_metadata",
+                target_id=job_id,
+                action="delete_document_metadata",
+                detail="Deleted document metadata and access defaults.",
+            ))
+        else:
+            results.append(deletion_target_skipped(
+                target_kind="document_metadata",
+                target_id=job_id,
+                action="delete_document_metadata",
+                detail="Document metadata was already absent.",
+            ))
+        logger.info(f"[{job_id}] Deleted from SQLite: {db_deleted}")
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to delete from SQLite: {e}")
+        results.append(deletion_target_failed(
+            target_kind="document_metadata",
+            target_id=job_id,
+            action="delete_document_metadata",
+            retryable=True,
+            detail=f"Failed to delete job from database: {e}",
+        ))
+
+    runtime_job_deleted = JOBS.pop(job_id, None) is not None
+    chunks_to_delete = [cid for cid, c in CHUNKS.items() if c.get("job_id") == job_id]
+    for cid in chunks_to_delete:
+        CHUNKS.pop(cid, None)
+    logger.info(f"[{job_id}] Cleared {len(chunks_to_delete)} in-memory chunks")
+    if runtime_job_deleted or chunks_to_delete:
+        results.append(deletion_target_succeeded(
+            target_kind="runtime_document_state",
+            target_id=job_id,
+            action="delete_runtime_document_state",
+            detail=f"Cleared runtime job state and {len(chunks_to_delete)} in-memory chunks.",
+        ))
+    else:
+        results.append(deletion_target_skipped(
+            target_kind="runtime_document_state",
+            target_id=job_id,
+            action="delete_runtime_document_state",
+            detail="Runtime document state was already absent.",
+        ))
+
+    logger.info(f"[{job_id}] Document deletion complete")
+    deletion = summarize_deletion_results(results)
+    return {
+        "status": "deleted" if deletion["status"] == "succeeded" else deletion["status"],
+        "job_id": job_id,
+        "filename": job.get("filename", "unknown"),
+        "deletion": deletion,
+    }
 
 
 def schedule_document_processing(job_id: str, file_path: Path, sample_percent: float) -> None:
@@ -358,6 +559,7 @@ async def queue_document_ingestion(
     content: bytes,
     ontology_id: str,
     sample_percent: float,
+    changed_by: str,
 ) -> UploadResponse:
     """Create a durable ingest job and start background processing."""
     current_job = ingest_db.get_current_job_by_canonical_name(canonical_name)
@@ -396,6 +598,23 @@ async def queue_document_ingestion(
     _sync_job_to_db(job_id)
 
     schedule_document_processing(job_id, file_path, sample_percent)
+    _audit_document_action(
+        config_key=f"document:{job_id}:queue",
+        action="replace_document" if replacement_for_job_id else "upload_document",
+        changed_by=changed_by,
+        old_value={
+            "job_id": replacement_for_job_id,
+            "filename": replacement_for_filename,
+        } if replacement_for_job_id else None,
+        new_value={
+            "job_id": job_id,
+            "filename": canonical_name,
+            "ontology_id": ontology_id,
+            "sample_percent": sample_percent,
+            "replacement_for_job_id": replacement_for_job_id,
+            "content_sha256": content_sha256,
+        },
+    )
 
     return UploadResponse(
         job_id=job_id,
@@ -663,6 +882,22 @@ async def promote_replacement(job_id: str) -> None:
         JOBS[job_id]["is_current"] = True
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
+    _audit_document_action(
+        config_key=f"document:{job_id}:promote_replacement",
+        action="promote_replacement",
+        changed_by="system:document-replacement",
+        old_value={
+            "job_id": old_job_id,
+            "filename": old_job.get("filename"),
+            "is_current": True,
+        },
+        new_value={
+            "job_id": job_id,
+            "filename": job.get("filename"),
+            "replacement_for_job_id": old_job_id,
+            "is_current": True,
+        },
+    )
 
 
 # PDF extraction mode: "fast" (PyMuPDF) or "quality" (Docling)
@@ -847,6 +1082,7 @@ async def upload_document(
             content=content,
             ontology_id=ontology_id,
             sample_percent=sample_percent,
+            changed_by=admin.get("pubkey", "unknown"),
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
@@ -933,6 +1169,7 @@ async def upload_document_batch(
                 content=content,
                 ontology_id=ontology_id,
                 sample_percent=sample_percent,
+                changed_by=admin.get("pubkey", "unknown"),
             ))
         except ValueError as e:
             rejected.append(BatchRejectedItem(filename=canonical_name, reason=str(e)))
@@ -1036,14 +1273,20 @@ async def delete_document(job_id: str, admin: dict = Depends(auth.require_admin)
 
     Cannot delete documents that are currently processing.
     """
-    from store import delete_chunks_from_qdrant
-
     # 1. Check if job exists
     job = ingest_db.get_job(job_id)
     if not job:
         # Also check in-memory (for jobs not yet synced)
         if job_id not in JOBS:
-            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+            response = _missing_document_deletion_response(job_id)
+            _audit_data_deletion(
+                config_key=f"document:{job_id}:delete",
+                changed_by=admin.get("pubkey", "unknown"),
+                deletion=response["deletion"],
+                workflow="delete_document",
+                target_id=job_id,
+            )
+            return response
         job = JOBS[job_id]
 
     # 2. Block deletion if job is currently processing
@@ -1054,80 +1297,70 @@ async def delete_document(job_id: str, admin: dict = Depends(auth.require_admin)
             detail=f"Cannot delete document while it is {status}. Wait for processing to complete."
         )
 
-    logger.info(f"[{job_id}] Starting document deletion...")
-    result = {
-        "job_id": job_id,
-        "filename": job.get("filename", "unknown"),
-        "qdrant_deleted": 0,
-        "file_deleted": False,
-        "db_deleted": False,
-    }
+    response = await _delete_document_job_artifacts(job_id, job)
+    _audit_document_action(
+        config_key=f"document:{job_id}:delete",
+        action="delete_document",
+        changed_by=admin.get("pubkey", "unknown"),
+        old_value={
+            "job_id": job_id,
+            "filename": job.get("filename"),
+            "status": status,
+        },
+        new_value={
+            "job_id": job_id,
+            "filename": job.get("filename"),
+            "deletion_status": response["deletion"]["status"],
+        },
+    )
+    _audit_data_deletion(
+        config_key=f"document:{job_id}:delete",
+        changed_by=admin.get("pubkey", "unknown"),
+        deletion=response["deletion"],
+        workflow="delete_document",
+        target_id=job_id,
+    )
+    return response
 
-    # 3. Delete chunks from Qdrant (fail-fast to avoid orphaned data)
-    try:
-        deleted_count = await delete_chunks_from_qdrant(job_id)
-        result["qdrant_deleted"] = deleted_count
-        logger.info(f"[{job_id}] Deleted {deleted_count} chunks from Qdrant")
-    except Exception as e:
-        logger.error(f"[{job_id}] Failed to delete from Qdrant: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete document chunks from vector database: {e}"
-        ) from e
 
-    # 4. Delete uploaded file from filesystem
-    file_path = Path(job.get("file_path", ""))
-    if file_path.exists():
-        try:
-            file_path.unlink()
-            result["file_deleted"] = True
-            logger.info(f"[{job_id}] Deleted file: {file_path}")
-        except Exception as e:
-            result["file_deleted"] = False
-            logger.error(f"[{job_id}] Failed to delete file {file_path}: {e}")
-    else:
-        logger.debug(f"[{job_id}] File not found (already deleted?): {file_path}")
-        result["file_deleted"] = True  # Consider it deleted if not present
+@router.post("/admin/documents/artifacts/cleanup")
+async def cleanup_document_artifacts(admin: dict = Depends(auth.require_admin)) -> dict:
+    """
+    Delete lifecycle-eligible failed and superseded Document ingestion artifacts.
 
-    # 5. Delete from SQLite (CASCADE handles document_defaults tables)
-    try:
-        db_deleted = ingest_db.delete_job(job_id)
-        result["db_deleted"] = db_deleted
-        logger.info(f"[{job_id}] Deleted from SQLite: {db_deleted}")
-    except Exception as e:
-        logger.error(f"[{job_id}] Failed to delete from SQLite: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete job from database: {e}"
-        ) from e
+    Current completed Documents and in-flight replacements are intentionally retained.
+    """
+    jobs = ingest_db.list_jobs(limit=1000)
+    eligible_jobs = []
+    results = []
 
-    # 6. Clear in-memory entries
-    JOBS.pop(job_id, None)
-    # Clear chunks for this job
-    chunks_to_delete = [cid for cid, c in CHUNKS.items() if c.get("job_id") == job_id]
-    for cid in chunks_to_delete:
-        CHUNKS.pop(cid, None)
-    logger.info(f"[{job_id}] Cleared {len(chunks_to_delete)} in-memory chunks")
+    for job in jobs:
+        reason = _document_artifact_cleanup_reason(job)
+        if not reason:
+            continue
+        job_id = job["job_id"]
+        deletion_response = await _delete_document_job_artifacts(job_id, job)
+        _audit_data_deletion(
+            config_key=f"document:{job_id}:cleanup",
+            changed_by=admin.get("pubkey", "unknown"),
+            deletion=deletion_response["deletion"],
+            workflow=f"cleanup_document_artifacts:{reason}",
+            target_id=job_id,
+        )
+        eligible_jobs.append({
+            "job_id": job_id,
+            "filename": job.get("filename", "unknown"),
+            "reason": reason,
+            "deletion": deletion_response["deletion"],
+        })
+        results.extend(deletion_response["deletion"]["results"])
 
-    logger.info(f"[{job_id}] Document deletion complete")
-    file_deleted = result.get("file_deleted", True)
-    db_deleted = result.get("db_deleted", False)
-    overall_success = file_deleted and db_deleted
-
-    # Build specific message based on what failed
-    if overall_success:
-        status_msg = "deleted successfully"
-    elif not file_deleted and db_deleted:
-        status_msg = "partially deleted (file deletion failed)"
-    elif file_deleted and not db_deleted:
-        status_msg = "partially deleted (database deletion failed)"
-    else:
-        status_msg = "deletion failed (both file and database deletion failed)"
-
+    summary = summarize_deletion_results(results)
     return {
-        "success": overall_success,
-        "message": f"Document '{result['filename']}' {status_msg}",
-        "details": result,
+        "status": summary["status"],
+        "cleaned_jobs": len(eligible_jobs),
+        "eligible_jobs": eligible_jobs,
+        "deletion": summary,
     }
 
 

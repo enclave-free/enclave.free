@@ -211,6 +211,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     """Request model for updating a user"""
     pubkey: Optional[str] = None
+    approved: Optional[bool] = None
     fields: dict = {}
 
 

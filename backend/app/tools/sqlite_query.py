@@ -166,6 +166,8 @@ class SQLiteQueryTool(BaseTool):
     def _normalize_query(self, query: str) -> str:
         """Accept direct SQL for admin flows and fall back to text-to-SQL otherwise."""
         stripped = query.strip()
+        if re.match(r"^(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|ATTACH|DETACH|PRAGMA)\b", stripped, re.IGNORECASE):
+            raise ValueError("Only SELECT queries are allowed")
         if stripped.upper().startswith("SELECT"):
             is_allowed, error = validate_sql_allowed_tables(stripped)
             if not is_allowed:

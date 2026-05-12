@@ -65,6 +65,8 @@ Use this checklist to:
   Evidence: `backend/app/main.py`
 - [x] Cookie-authenticated unsafe requests enforce CSRF origin + token checks.
   Evidence: `backend/app/main.py`, `frontend/src/utils/secureFetch.ts`
+- [x] Admin-visible lifecycle status identifies current Data Retention, Data Deletion, and Audit Log coverage by Instance data class.
+  Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`
 
 ### 1.2 Previously identified gaps (status)
 
@@ -84,6 +86,14 @@ Use this checklist to:
   Evidence: `backend/app/ingest.py`, `backend/app/store.py`
 - [x] Deployment secrets are now encrypted at rest in SQLite.
   Evidence: `backend/app/database.py` (Section 3.3, Section 5.2)
+- [x] User approval, auto-approval, User Type administration, and User Type migration actions are covered by the tamper-evident Audit Log.
+  Evidence: `backend/app/main.py`, `backend/app/deployment_config.py`, `backend/tests/test_user_audit_coverage.py`
+- [x] Document upload, replacement, access/default changes, deletion, cleanup, and user/document Data Deletion outcomes are covered by the tamper-evident Audit Log.
+  Evidence: `backend/app/ingest.py`, `backend/app/main.py`, `backend/tests/test_ingest_batch_replacement.py`, `backend/tests/test_user_deletion_lifecycle.py`
+- [x] Confirmed Admin Conversation User Memory writes are auditable, and direct database mutation paths are constrained to read-only inspection.
+  Evidence: `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`, `backend/tests/test_admin_subject_user_memory.py`
+- [x] Operators can invoke Data Retention execution for stale active Conversation state and failed/superseded Document artifacts with structured status and Audit Log coverage.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py`
 
 ---
 
@@ -137,6 +147,8 @@ Use this checklist to:
 - [x] Move admin token storage from `localStorage` to secure cookie/session mechanism.
 - [x] Add explicit admin session revocation/logout invalidation strategy.
   Evidence: `backend/app/database.py`, `backend/app/auth.py`, `backend/app/main.py`
+- [x] Add an admin-visible Data Lifecycle Status surface as the current source of truth for lifecycle coverage and known gaps.
+  Evidence: `GET /admin/lifecycle/status`, `frontend/src/pages/AdminDeploymentConfig.tsx`
 
 ### 3.2 Admin data access and key management
 
@@ -152,6 +164,12 @@ Use this checklist to:
 - [x] Encrypt secrets at rest in `deployment_config` (not just masked in API output).
 - [x] Restrict/monitor `.env` export usage and treat as high-risk operation.
 - [x] Add immutable audit controls for privileged config changes.
+- [x] Add immutable audit coverage for user approval and User Type governance changes.
+  Evidence: `backend/tests/test_user_audit_coverage.py`
+- [x] Add immutable audit coverage for Document governance and Data Deletion workflows.
+  Evidence: `backend/tests/test_ingest_batch_replacement.py`, `backend/tests/test_user_deletion_lifecycle.py`
+- [x] Define and enforce the Admin Conversation/direct database mutation audit posture.
+  Evidence: `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`, `backend/tests/test_admin_subject_user_memory.py`
 
 ---
 
@@ -212,8 +230,11 @@ Use this checklist to:
 
 ### 5.4 Retention and deletion
 
-- [x] Admin can delete ingest jobs and associated vectors.
-- [ ] Define retention schedule for uploads/chunks/sessions/logs.
+- [x] Admin can delete active Documents with structured per-target status for metadata, uploaded artifact, Retrieval entries, and runtime state.
+- [x] Admin can clean up failed and superseded Document ingestion artifacts without deleting current Documents or in-flight replacements.
+- [x] User deletion removes active User Profile/access state, purges Sage-owned User Memory, and clears active Conversation state with structured lifecycle status.
+- [x] Add operator-invoked retention execution for stale active Conversation state and failed/superseded Document artifacts.
+- [ ] Define scheduled retention policy for uploads/chunks/sessions/logs.
 - [ ] Add secure erase process where applicable.
 - [ ] Document full user-data deletion path (including vector and file artifacts).
 

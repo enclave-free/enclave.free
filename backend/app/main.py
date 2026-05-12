@@ -6,6 +6,7 @@ Also provides user/admin management via SQLite.
 
 import asyncio
 import hashlib
+import json
 import os
 import uuid
 import logging
@@ -29,6 +30,12 @@ from sentence_transformers import SentenceTransformer
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
+from data_deletion import (
+    deletion_target_skipped,
+    deletion_target_succeeded,
+    summarize_deletion_results,
+)
+from query import delete_sessions_for_owner
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -82,8 +89,33 @@ from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
+from lifecycle import router as lifecycle_router
 
 logger.info("Starting Sanctum API...")
+
+
+def _audit_data_deletion_event(
+    *,
+    config_key: str,
+    changed_by: str,
+    workflow: str,
+    target_id: str,
+    deletion: dict,
+) -> None:
+    database.log_config_audit_event(
+        table_name="data_deletion",
+        config_key=config_key,
+        old_value=None,
+        new_value=json.dumps({
+            "workflow": workflow,
+            "target_id": target_id,
+            "status": deletion["status"],
+            "retryable": deletion["retryable"],
+            "counts": deletion["counts"],
+            "results": deletion["results"],
+        }, sort_keys=True),
+        changed_by=changed_by,
+    )
 
 app = FastAPI(
     title="Sanctum API",
@@ -255,6 +287,7 @@ app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
+app.include_router(lifecycle_router)
 
 
 @app.on_event("startup")
@@ -2206,7 +2239,20 @@ async def get_settings(admin: dict = Depends(auth.require_admin)):
 async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth.require_admin)):
     """Update instance settings (requires admin auth)"""
     settings_dict = settings.model_dump(exclude_unset=True)
+    existing_settings = database.get_all_settings()
     database.update_settings(settings_dict)
+    if "auto_approve_users" in settings_dict:
+        updated_settings = database.get_all_settings()
+        old_value = str(existing_settings.get("auto_approve_users", "true")).lower()
+        new_value = str(updated_settings.get("auto_approve_users", settings_dict["auto_approve_users"])).lower()
+        if old_value != new_value:
+            database.log_config_audit_event(
+                table_name="instance_settings",
+                config_key="auto_approve_users",
+                old_value=old_value,
+                new_value=new_value,
+                changed_by=admin.get("pubkey", "unknown"),
+            )
     return InstanceSettingsResponse(settings=database.get_all_settings())
 
 
@@ -2253,6 +2299,18 @@ async def create_user_type(user_type: UserTypeCreate, admin: dict = Depends(auth
             display_order=user_type.display_order
         )
         created = database.get_user_type(type_id)
+        database.log_config_audit_event(
+            table_name="user_types",
+            config_key=f"user_type:{type_id}:create",
+            old_value=None,
+            new_value=str({
+                "name": created.get("name"),
+                "description": created.get("description"),
+                "icon": created.get("icon"),
+                "display_order": created.get("display_order"),
+            }),
+            changed_by=admin.get("pubkey", "unknown"),
+        )
         return UserTypeResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -2275,15 +2333,47 @@ async def update_user_type(type_id: int, user_type: UserTypeUpdate, admin: dict 
         display_order=user_type.display_order
     )
     updated = database.get_user_type(type_id)
+    database.log_config_audit_event(
+        table_name="user_types",
+        config_key=f"user_type:{type_id}:update",
+        old_value=str({
+            "name": existing.get("name"),
+            "description": existing.get("description"),
+            "icon": existing.get("icon"),
+            "display_order": existing.get("display_order"),
+        }),
+        new_value=str({
+            "name": updated.get("name"),
+            "description": updated.get("description"),
+            "icon": updated.get("icon"),
+            "display_order": updated.get("display_order"),
+        }),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
     return UserTypeResponse(**updated)
 
 
 @app.delete("/admin/user-types/{type_id}", response_model=SuccessResponse)
 async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admin)):
     """Delete a user type (requires admin auth, cascades to field definitions)"""
+    existing = database.get_user_type(type_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User type not found")
     if database.delete_user_type(type_id):
+        database.log_config_audit_event(
+            table_name="user_types",
+            config_key=f"user_type:{type_id}:delete",
+            old_value=str({
+                "name": existing.get("name"),
+                "description": existing.get("description"),
+                "icon": existing.get("icon"),
+                "display_order": existing.get("display_order"),
+            }),
+            new_value=None,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
         return SuccessResponse(success=True, message="User type deleted")
-    raise HTTPException(status_code=404, detail="User type not found")
+    raise HTTPException(status_code=500, detail="Failed to delete user type")
 
 
 # --- User Field Definitions ---
@@ -2489,6 +2579,21 @@ async def migrate_user_type(
         updated = database.update_user_type_id(user_id, migration.target_user_type_id)
         if not updated:
             raise HTTPException(status_code=500, detail="Failed to update user type")
+        database.log_config_audit_event(
+            table_name="user_types",
+            config_key=f"user:{user_id}:migrate_type",
+            old_value=str({
+                "user_id": user_id,
+                "user_type_id": previous_user_type_id,
+            }),
+            new_value=str({
+                "user_id": user_id,
+                "user_type_id": migration.target_user_type_id,
+                "user_type_name": target_type.get("name"),
+                "missing_required_count": len(missing_required_fields),
+            }),
+            changed_by=admin.get("pubkey", "unknown"),
+        )
 
     return UserTypeMigrationResponse(
         success=True,
@@ -2558,6 +2663,22 @@ async def migrate_user_type_batch(
                 updated = database.update_user_type_id(user_id, migration.target_user_type_id)
                 if not updated:
                     raise ValueError("Failed to update user type")
+                database.log_config_audit_event(
+                    table_name="user_types",
+                    config_key=f"user:{user_id}:migrate_type",
+                    old_value=str({
+                        "user_id": user_id,
+                        "user_type_id": previous_user_type_id,
+                    }),
+                    new_value=str({
+                        "user_id": user_id,
+                        "user_type_id": migration.target_user_type_id,
+                        "user_type_name": target_type.get("name"),
+                        "missing_required_count": len(missing_required_fields),
+                        "batch": True,
+                    }),
+                    changed_by=admin.get("pubkey", "unknown"),
+                )
             migrated += 1
             results.append(UserTypeMigrationBatchResult(
                 user_id=user_id,
@@ -2789,6 +2910,16 @@ async def update_user(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if user.approved is not None and bool(existing.get("approved", 1)) != user.approved:
+        database.update_user_approval(user_id, user.approved)
+        database.log_config_audit_event(
+            table_name="user_approval",
+            config_key=f"user:{user_id}:approved",
+            old_value="true" if bool(existing.get("approved", 1)) else "false",
+            new_value="true" if user.approved else "false",
+            changed_by=requester.get("pubkey", "unknown"),
+        )
+
     # Validate fields
     if user.fields:
         field_defs = database.get_field_definitions()
@@ -2804,16 +2935,125 @@ async def update_user(
     return UserResponse(**database.get_user(user_id))
 
 
-@app.delete("/users/{user_id}", response_model=SuccessResponse)
+@app.delete("/users/{user_id}", response_model=dict)
 async def delete_user(
     user_id: int,
     requester: dict = Depends(auth.require_admin_or_user)
 ):
     """Delete a user (self or admin)."""
     _require_self_or_admin(user_id, requester)
-    if database.delete_user(user_id):
-        return SuccessResponse(success=True, message="User deleted")
-    raise HTTPException(status_code=404, detail="User not found")
+    existing_user = database.get_user(user_id)
+    deleted_conversations = delete_sessions_for_owner("user", str(user_id))
+    admin_subject_sessions = 0
+    for state in admin_conversation_states.values():
+        if state.get("subject_user_id") == user_id:
+            state.pop("subject_user_id", None)
+            state.pop("pending_user_memory_change", None)
+            admin_subject_sessions += 1
+
+    if not existing_user:
+        deletion = summarize_deletion_results([
+            deletion_target_skipped(
+                target_kind="user_profile",
+                target_id=str(user_id),
+                action="delete_user_profile",
+                detail="User Profile was already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="user_approval",
+                target_id=str(user_id),
+                action="delete_user_approval",
+                detail="User approval/access state was already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="user_memory",
+                target_id=str(user_id),
+                action="delete_user_memory",
+                detail="User Memory was already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="conversation",
+                target_id=str(user_id),
+                action="delete_conversations",
+                detail="No active Conversations were found for the deleted User.",
+            ),
+        ])
+        _audit_data_deletion_event(
+            config_key=f"user:{user_id}:delete",
+            changed_by=requester.get("pubkey", "unknown"),
+            workflow="delete_user",
+            target_id=str(user_id),
+            deletion=deletion,
+        )
+        return {
+            "success": True,
+            "message": "User already deleted",
+            "deletion": deletion,
+        }
+
+    lifecycle_delete = database.delete_user_lifecycle(user_id)
+    memory_count = lifecycle_delete["user_memories_deleted"]
+    conversation_count = deleted_conversations + admin_subject_sessions
+    if memory_count:
+        user_memory_result = deletion_target_succeeded(
+            target_kind="user_memory",
+            target_id=str(user_id),
+            action="delete_user_memory",
+            detail=f"Deleted {memory_count} Sage-owned User Memory records.",
+        )
+        user_memory_result["count"] = memory_count
+    else:
+        user_memory_result = deletion_target_skipped(
+            target_kind="user_memory",
+            target_id=str(user_id),
+            action="delete_user_memory",
+            detail="No Sage-owned User Memory records were found for this User.",
+        )
+
+    if conversation_count:
+        conversation_result = deletion_target_succeeded(
+            target_kind="conversation",
+            target_id=str(user_id),
+            action="delete_conversations",
+            detail=f"Deleted or detached {conversation_count} active Conversation records for this User.",
+        )
+        conversation_result["count"] = conversation_count
+    else:
+        conversation_result = deletion_target_skipped(
+            target_kind="conversation",
+            target_id=str(user_id),
+            action="delete_conversations",
+            detail="No active Conversations were found for this User.",
+        )
+
+    deletion = summarize_deletion_results([
+        deletion_target_succeeded(
+            target_kind="user_profile",
+            target_id=str(user_id),
+            action="delete_user_profile",
+            detail="Deleted User Profile and profile field values.",
+        ),
+        deletion_target_succeeded(
+            target_kind="user_approval",
+            target_id=str(user_id),
+            action="delete_user_approval",
+            detail="Deleted User approval/access state with the User Profile.",
+        ),
+        user_memory_result,
+        conversation_result,
+    ])
+    _audit_data_deletion_event(
+        config_key=f"user:{user_id}:delete",
+        changed_by=requester.get("pubkey", "unknown"),
+        workflow="delete_user",
+        target_id=str(user_id),
+        deletion=deletion,
+    )
+    return {
+        "success": bool(lifecycle_delete["user_deleted"]),
+        "message": "User deleted",
+        "deletion": deletion,
+    }
 
 
 # =============================================================================

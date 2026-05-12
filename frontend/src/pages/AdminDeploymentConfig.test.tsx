@@ -63,6 +63,31 @@ describe('AdminDeploymentConfig', () => {
       if (endpoint.startsWith('/admin/deployment/audit-log')) {
         return Promise.resolve(Response.json({ entries: [] }))
       }
+      if (endpoint === '/admin/lifecycle/status') {
+        return Promise.resolve(Response.json({
+          data_classes: [
+            {
+              key: 'sage_session_memory',
+              label: 'Sage Session Memory',
+              owner: 'Sage',
+              storage_targets: ['Postgres'],
+              deletion: {
+                status: 'partial',
+                summary: 'Deleting a public query-session record does not yet guarantee full Session Memory Deletion.',
+              },
+              retention: {
+                status: 'not_started',
+                summary: 'No operator-controlled Data Retention rule is currently enforced.',
+              },
+              audit: {
+                status: 'not_started',
+                summary: 'Session Memory lifecycle actions are not yet represented in the Audit Log.',
+              },
+              notes: ['Session Memory belongs to the Agent Runtime.'],
+            },
+          ],
+        }))
+      }
       if (endpoint === '/admin/key-migration/prepare') {
         return Promise.resolve(Response.json({
           admin_pubkey: 'a'.repeat(64),
@@ -96,6 +121,25 @@ describe('AdminDeploymentConfig', () => {
 
     const securitySettings = screen.getByRole('group', { name: 'Security & URLs Settings' })
     expect(within(securitySettings).getByText('Chat Rate Limit')).toBeInTheDocument()
+  })
+
+  it('shows operator-controlled privacy lifecycle status', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByRole('group', { name: 'Data Lifecycle Status' })).toBeInTheDocument()
+    expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
+    expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
+    expect(screen.getByText('Deletion: Partial')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')
+    })
   })
 
   it('keeps admin key migration behind a named destructive confirmation', async () => {

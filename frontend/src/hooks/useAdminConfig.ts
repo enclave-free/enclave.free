@@ -19,6 +19,7 @@ import type {
   DeploymentConfigItem,
   ServiceHealthResponse,
   DeploymentValidationResponse,
+  LifecycleStatusResponse,
   ConfigAuditLogResponse,
   MigrationPrepareResponse,
   MigrationExecuteResponse,
@@ -437,6 +438,42 @@ export function useDeploymentConfig() {
     exportEnv,
     validate,
     revealSecret,
+  }
+}
+
+// --- Data Lifecycle Hook ---
+
+export function useLifecycleStatus() {
+  const [status, setStatus] = useState<LifecycleStatusResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await adminFetch('/admin/lifecycle/status')
+      if (!response.ok) {
+        throw new Error('errors.failedToFetchLifecycleStatus')
+      }
+      const data = await response.json()
+      setStatus(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'errors.failedToFetchLifecycleStatus')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchStatus()
+  }, [fetchStatus])
+
+  return {
+    status,
+    loading,
+    error,
+    refresh: fetchStatus,
   }
 }
 

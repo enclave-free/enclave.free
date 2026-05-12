@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,17 @@ from fastapi.testclient import TestClient
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
+
+
+class DummySentenceTransformer:
+    def __init__(self, *_args, **_kwargs) -> None:
+        pass
+
+
+sys.modules.setdefault(
+    "sentence_transformers",
+    types.SimpleNamespace(SentenceTransformer=DummySentenceTransformer),
+)
 
 
 class FakeProvider:
@@ -49,10 +61,12 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
 
         import database
         import auth
+        import deployment_config
         import main
 
         self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
+        self.deployment_config = importlib.reload(deployment_config)
         self.main = importlib.reload(main)
         self.database.init_schema()
 
@@ -70,6 +84,14 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.provider = FakeProvider()
         self.main.get_sage_provider = lambda: self.provider
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.deployment_config.auth.require_admin] = lambda: {
             "type": "admin",
             "pubkey": "admin-pubkey",
         }
@@ -91,6 +113,11 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
             os.environ.pop(name, None)
         else:
             os.environ[name] = value
+
+    def audit_entries(self, table_name: str) -> list[dict]:
+        response = self.client.get(f"/admin/deployment/audit-log?table_name={table_name}")
+        self.assertEqual(response.status_code, 200)
+        return response.json()["entries"]
 
     def test_admin_conversation_sets_subject_user_and_loads_only_that_users_memory(self) -> None:
         other_user_id = self.database.create_user(pubkey="c" * 64)
@@ -238,6 +265,11 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertEqual(confirmed_memories[0]["importance"], 8)
         self.assertEqual(confirmed_memories[0]["source_kind"], "admin-confirmed")
         self.assertTrue(any(entry["config_key"] == str(confirmed_memories[0]["id"]) for entry in audit_entries))
+        filter_entries = self.audit_entries("user_memories")
+        self.assertTrue(any(entry["config_key"] == str(confirmed_memories[0]["id"]) for entry in filter_entries))
+        verify = self.client.get("/admin/deployment/audit-log/verify?table_name=user_memories")
+        self.assertEqual(verify.status_code, 200)
+        self.assertTrue(verify.json()["valid"])
 
     def test_admin_memory_write_without_subject_user_requests_clarification(self) -> None:
         response = self.client.post(
@@ -367,6 +399,21 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertEqual(active_memories, [])
         self.assertTrue(any(entry["config_key"] == str(existing_memory_id) and "supersede" in entry["new_value"] for entry in audit_entries))
         self.assertTrue(any(entry["config_key"] == str(replacement["id"]) and "delete" in entry["new_value"] for entry in audit_entries))
+
+    def test_admin_direct_database_mutation_tool_is_constrained_to_read_only_queries(self) -> None:
+        response = self.client.post(
+            "/admin/tools/execute",
+            json={
+                "tool_id": "db-query",
+                "query": f"UPDATE users SET approved = 0 WHERE id = {self.user_id}",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["success"])
+        self.assertIn("Only SELECT queries are allowed", body["error"])
+        self.assertTrue(self.database.get_user(self.user_id)["approved"])
 
 
 if __name__ == "__main__":

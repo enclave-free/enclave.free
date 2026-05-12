@@ -1399,6 +1399,16 @@ def update_user_type_id(user_id: int, user_type_id: int | None) -> bool:
         return cursor.rowcount > 0
 
 
+def update_user_approval(user_id: int, approved: bool) -> bool:
+    """Update a user's approval/access state. Returns True if updated."""
+    with get_cursor() as cursor:
+        cursor.execute(
+            "UPDATE users SET approved = ? WHERE id = ?",
+            (1 if approved else 0, user_id)
+        )
+        return cursor.rowcount > 0
+
+
 def get_user(user_id: int) -> dict | None:
     """Get user by id with all field values.
 
@@ -1904,12 +1914,21 @@ def purge_user_memories_for_subject_user(subject_user_id: int) -> int:
         return _purge_user_memories_for_subject_user_tx(cursor, subject_user_id)
 
 
+def delete_user_lifecycle(user_id: int) -> dict:
+    """Delete a User Profile and associated User Memory with lifecycle counts."""
+    with get_cursor() as cursor:
+        purged_memories = _purge_user_memories_for_subject_user_tx(cursor, user_id)
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        user_deleted = cursor.rowcount > 0
+        return {
+            "user_deleted": user_deleted,
+            "user_memories_deleted": purged_memories,
+        }
+
+
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
-    with get_cursor() as cursor:
-        _purge_user_memories_for_subject_user_tx(cursor, user_id)
-        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        return cursor.rowcount > 0
+    return bool(delete_user_lifecycle(user_id)["user_deleted"])
 
 
 # --- Migration: Encrypt Existing Plaintext Data ---

@@ -20,11 +20,11 @@ What it does today:
 - Updates `users.user_type_id` to the target type.
 - Computes which **required** onboarding fields would be missing after the change and returns them in the response.
 - Optionally blocks the migration if required fields would be missing (`allow_incomplete=false`).
+- Writes a tamper-evident Audit Log entry for successful user type migrations.
 
 What it does not do today:
 - It does not "convert" or copy field values between fields that have different `field_name`s.
 - It does not delete existing `user_field_values`. Values remain stored and can become "inactive" simply because their field definition is no longer effective for the user's new type.
-- It does not write an audit log entry (planned).
 - The request `reason` field is accepted in the plan doc, but the current backend endpoint ignores it.
 
 ## How Onboarding Enforcement Works After Migration

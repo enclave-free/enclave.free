@@ -116,7 +116,18 @@ ENV_CONFIG_MAP = {
 FORBIDDEN_KEYS = {"SECRET_KEY", "DATABASE_URL", "ADMIN_PRIVATE_KEY"}
 
 # Allowed table names for audit log queries (prevents SQL injection)
-ALLOWED_AUDIT_TABLES = {"deployment_config", "ai_config", "document_defaults"}
+ALLOWED_AUDIT_TABLES = {
+    "deployment_config",
+    "ai_config",
+    "document_defaults",
+    "document_defaults_user_type_overrides",
+    "document_actions",
+    "data_deletion",
+    "instance_settings",
+    "user_approval",
+    "user_memories",
+    "user_types",
+}
 
 RATE_LIMIT_KEYS: Final[set[str]] = {
     "RATE_LIMIT_CHAT_PER_MINUTE",
