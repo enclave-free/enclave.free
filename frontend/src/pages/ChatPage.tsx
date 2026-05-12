@@ -66,7 +66,7 @@ export function ChatPage() {
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false)
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([])
   const [adminApplyState, setAdminApplyState] = useState<AdminApplyState>({ state: 'idle' })
-  const [deploymentSecretKeys, setDeploymentSecretKeys] = useState<Set<string> | null>(null)
+  const [deploymentSecretKeys, setDeploymentSecretKeys] = useState<Set<string>>(new Set())
   const [deploymentSecretKeysLoaded, setDeploymentSecretKeysLoaded] = useState(false)
 
   const [reachoutOpen, setReachoutOpen] = useState(false)
@@ -625,7 +625,7 @@ export function ChatPage() {
       let bodyDisplay: unknown = r.body
       if (r.method === 'PUT' && r.path.startsWith('/admin/deployment/config/')) {
         const key = r.path.split('/').pop() || ''
-        const shouldRedact = deploymentSecretKeys && (!deploymentSecretKeysLoaded || deploymentSecretKeys.has(key))
+        const shouldRedact = !deploymentSecretKeysLoaded || deploymentSecretKeys.has(key)
         if (shouldRedact && r.body && typeof r.body === 'object') {
           const o = r.body as Record<string, unknown>
           if (typeof o.value === 'string' && o.value.length > 0) {

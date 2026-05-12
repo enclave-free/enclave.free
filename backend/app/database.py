@@ -1650,6 +1650,12 @@ def _validate_user_memory_scores(importance: int, confidence: float) -> tuple[in
     return normalized_importance, normalized_confidence
 
 
+def _require_non_empty_user_memory_text(value: str, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"User Memory {field_name} is required")
+    return value.strip()
+
+
 def _user_memory_row_to_dict(row: sqlite3.Row) -> dict:
     memory = dict(row)
     memory["confidence"] = float(memory["confidence"])
@@ -1674,10 +1680,8 @@ def create_user_memory(
         raise ValueError("User Memory kind is required")
     if not normalized_content:
         raise ValueError("User Memory content is required")
-    if not source_kind.strip():
-        raise ValueError("User Memory source_kind is required")
-    if not author_actor.strip():
-        raise ValueError("User Memory author_actor is required")
+    source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
+    author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
 
     with get_cursor() as cursor:
@@ -1716,9 +1720,9 @@ def create_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
-            source_kind.strip(),
+            source_kind,
             source_conversation_id,
-            author_actor.strip(),
+            author_actor,
         ))
         if cursor.rowcount == 1:
             return int(cursor.lastrowid)
@@ -1837,10 +1841,8 @@ def supersede_user_memory(
     normalized_content = _normalize_user_memory_text(content)
     if not normalized_content:
         raise ValueError("User Memory content is required")
-    if not source_kind.strip():
-        raise ValueError("User Memory source_kind is required")
-    if not author_actor.strip():
-        raise ValueError("User Memory author_actor is required")
+    source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
+    author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
 
     with get_cursor() as cursor:
@@ -1887,9 +1889,9 @@ def supersede_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
-            source_kind.strip(),
+            source_kind,
             source_conversation_id,
-            author_actor.strip(),
+            author_actor,
             memory_id,
         ))
         new_id = int(cursor.lastrowid)

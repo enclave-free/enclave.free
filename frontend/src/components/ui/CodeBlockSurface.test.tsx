@@ -9,7 +9,7 @@ describe('CodeBlockSurface', () => {
 
   it('exposes labelled technical output as a named region', () => {
     render(
-      <CodeBlockSurface label="Health response output">
+      <CodeBlockSurface label='Health response output'>
         <pre>{JSON.stringify({ neo4j: 'ok' }, null, 2)}</pre>
       </CodeBlockSurface>
     )

@@ -18,6 +18,7 @@ import sqlite3
 import secrets
 import html
 import ipaddress
+import threading
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, Query, Depends, Request, BackgroundTasks, Response, Header, Cookie
 from fastapi.responses import FileResponse, JSONResponse
@@ -81,6 +82,7 @@ logging.basicConfig(
 logger = logging.getLogger("sanctum.main")
 
 admin_conversation_states: dict[str, dict] = {}
+_admin_conversation_states_lock = threading.Lock()
 
 # Import routers
 from ingest import router as ingest_router
@@ -579,31 +581,65 @@ def _message_clears_subject_user(message: str) -> bool:
 
 
 def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
-    state = admin_conversation_states.setdefault(session_id, {})
+    requested_user_id = _resolve_admin_subject_user_id(message)
+
     if _message_clears_subject_user(message):
-        state.pop("subject_user_id", None)
-        state.pop("pending_user_memory_change", None)
+        with _admin_conversation_states_lock:
+            state = admin_conversation_states.setdefault(session_id, {})
+            state.pop("subject_user_id", None)
+            state.pop("pending_user_memory_change", None)
         return None
 
-    requested_user_id = _resolve_admin_subject_user_id(message)
+    subject_user = None
     if requested_user_id is not None:
-        if not database.get_user(requested_user_id):
+        subject_user = database.get_user(requested_user_id)
+        if not subject_user:
             raise HTTPException(status_code=404, detail="Subject User not found")
-        state["subject_user_id"] = requested_user_id
+        with _admin_conversation_states_lock:
+            admin_conversation_states.setdefault(session_id, {})["subject_user_id"] = requested_user_id
+        subject_user_id = requested_user_id
+    else:
+        with _admin_conversation_states_lock:
+            subject_user_id = admin_conversation_states.setdefault(session_id, {}).get("subject_user_id")
 
-    subject_user_id = state.get("subject_user_id")
     if not subject_user_id:
         return None
 
-    subject_user = database.get_user(subject_user_id)
+    if subject_user is None:
+        subject_user = database.get_user(subject_user_id)
     if not subject_user:
-        state.pop("subject_user_id", None)
+        with _admin_conversation_states_lock:
+            state = admin_conversation_states.setdefault(session_id, {})
+            if state.get("subject_user_id") == subject_user_id:
+                state.pop("subject_user_id", None)
         return None
 
     return {
         "user": subject_user,
         "memories": database.list_active_user_memories(subject_user_id, limit=20),
     }
+
+
+def _admin_set_pending_user_memory_change(
+    session_id: str,
+    extracted_change: dict | None,
+    rejection_reason: str | None,
+    subject_user_id: int | None,
+    message: str,
+) -> tuple[dict | None, bool, dict | None]:
+    subject_user_required = False
+    rejected_user_memory_change = None
+    with _admin_conversation_states_lock:
+        state = admin_conversation_states.setdefault(session_id, {})
+        if extracted_change:
+            if rejection_reason:
+                state.pop("pending_user_memory_change", None)
+                rejected_user_memory_change = {**extracted_change, "reason": rejection_reason}
+            else:
+                state["pending_user_memory_change"] = extracted_change
+        elif subject_user_id is None and _message_requests_user_memory_write(message):
+            subject_user_required = True
+        return state.get("pending_user_memory_change"), subject_user_required, rejected_user_memory_change
 
 
 def _message_confirms_user_memory_change(message: str) -> bool:
@@ -734,8 +770,9 @@ def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> di
 
 
 def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | None:
-    state = admin_conversation_states.setdefault(session_id, {})
-    pending = state.get("pending_user_memory_change")
+    with _admin_conversation_states_lock:
+        state = admin_conversation_states.setdefault(session_id, {})
+        pending = state.get("pending_user_memory_change")
     if not pending:
         return None
 
@@ -808,7 +845,10 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
         logger.error("Failed to confirm pending User Memory change", exc_info=True)
         raise
 
-    state.pop("pending_user_memory_change", None)
+    with _admin_conversation_states_lock:
+        state = admin_conversation_states.setdefault(session_id, {})
+        if state.get("pending_user_memory_change") == pending:
+            state.pop("pending_user_memory_change", None)
     return result
 
 
@@ -1087,7 +1127,6 @@ async def chat(
                     user_memory_context = None
         if user.get("type") == "admin":
             subject_user_context = _admin_subject_user_context(active_session_id, request.message)
-            state = admin_conversation_states.setdefault(active_session_id, {})
             if _message_confirms_user_memory_change(request.message):
                 confirm_pending_user_memory_change = True
             else:
@@ -1099,14 +1138,19 @@ async def chat(
                 )
                 if extracted_change:
                     rejection_reason = _admin_user_memory_rejection_reason(extracted_change)
-                    if rejection_reason:
-                        state.pop("pending_user_memory_change", None)
-                        rejected_user_memory_change = {**extracted_change, "reason": rejection_reason}
-                    else:
-                        state["pending_user_memory_change"] = extracted_change
-                elif subject_user_id is None and _message_requests_user_memory_write(request.message):
-                    subject_user_required = True
-            pending_user_memory_change = state.get("pending_user_memory_change")
+                else:
+                    rejection_reason = None
+                (
+                    pending_user_memory_change,
+                    subject_user_required,
+                    rejected_user_memory_change,
+                ) = _admin_set_pending_user_memory_change(
+                    active_session_id,
+                    extracted_change,
+                    rejection_reason,
+                    subject_user_id,
+                    request.message,
+                )
 
         # Build prompt using Agent Settings (with user-type overrides if applicable)
         combined_context = "\n\n".join(tool_context_parts) if tool_context_parts else ""
@@ -2945,11 +2989,12 @@ async def delete_user(
     existing_user = database.get_user(user_id)
     deleted_conversations = delete_sessions_for_owner("user", str(user_id))
     admin_subject_sessions = 0
-    for state in admin_conversation_states.values():
-        if state.get("subject_user_id") == user_id:
-            state.pop("subject_user_id", None)
-            state.pop("pending_user_memory_change", None)
-            admin_subject_sessions += 1
+    with _admin_conversation_states_lock:
+        for state in admin_conversation_states.values():
+            if state.get("subject_user_id") == user_id:
+                state.pop("subject_user_id", None)
+                state.pop("pending_user_memory_change", None)
+                admin_subject_sessions += 1
 
     if not existing_user:
         deletion = summarize_deletion_results([
