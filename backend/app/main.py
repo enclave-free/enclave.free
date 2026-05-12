@@ -3368,35 +3368,10 @@ async def insert_db_row(table_name: str, request: RowMutationRequest, admin: dic
     if table_name not in ALLOWED_TABLES:
         raise HTTPException(status_code=403, detail=f"Access to table '{table_name}' is not allowed")
 
-    if not request.data:
-        return RowMutationResponse(success=False, error="No data provided")
-
-    try:
-        data = _encrypt_row_for_write(table_name, request.data)
-        if not data:
-            return RowMutationResponse(success=False, error="No data provided")
-
-        columns = list(data.keys())
-        placeholders = ", ".join(["?" for _ in columns])
-        col_names = ", ".join(columns)
-        values = list(data.values())
-
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders})",
-            values
-        )
-        conn.commit()
-
-        row_id = cursor.lastrowid
-        cursor.close()
-
-        return RowMutationResponse(success=True, id=row_id)
-    except ValueError as e:
-        return RowMutationResponse(success=False, error=str(e))
-    except Exception as e:
-        return RowMutationResponse(success=False, error=str(e))
+    return RowMutationResponse(
+        success=False,
+        error="Direct database mutations are not supported. Use audited admin product flows instead.",
+    )
 
 
 @app.put("/admin/db/tables/{table_name}/rows/{row_id}", response_model=RowMutationResponse)
@@ -3405,35 +3380,10 @@ async def update_db_row(table_name: str, row_id: int, request: RowMutationReques
     if table_name not in ALLOWED_TABLES:
         raise HTTPException(status_code=403, detail=f"Access to table '{table_name}' is not allowed")
 
-    if not request.data:
-        return RowMutationResponse(success=False, error="No data provided")
-
-    try:
-        data = _encrypt_row_for_write(table_name, request.data)
-        if not data:
-            return RowMutationResponse(success=False, error="No data provided")
-
-        set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
-        values = list(data.values()) + [row_id]
-
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            f"UPDATE {table_name} SET {set_clause} WHERE id = ?",
-            values
-        )
-        conn.commit()
-
-        if cursor.rowcount == 0:
-            cursor.close()
-            return RowMutationResponse(success=False, error="Row not found")
-
-        cursor.close()
-        return RowMutationResponse(success=True, id=row_id)
-    except ValueError as e:
-        return RowMutationResponse(success=False, error=str(e))
-    except Exception as e:
-        return RowMutationResponse(success=False, error=str(e))
+    return RowMutationResponse(
+        success=False,
+        error="Direct database mutations are not supported. Use audited admin product flows instead.",
+    )
 
 
 @app.delete("/admin/db/tables/{table_name}/rows/{row_id}", response_model=RowMutationResponse)
@@ -3442,20 +3392,10 @@ async def delete_db_row(table_name: str, row_id: int, admin: dict = Depends(auth
     if table_name not in ALLOWED_TABLES:
         raise HTTPException(status_code=403, detail=f"Access to table '{table_name}' is not allowed")
 
-    try:
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table_name} WHERE id = ?", (row_id,))
-        conn.commit()
-
-        if cursor.rowcount == 0:
-            cursor.close()
-            return RowMutationResponse(success=False, error="Row not found")
-
-        cursor.close()
-        return RowMutationResponse(success=True, id=row_id)
-    except Exception as e:
-        return RowMutationResponse(success=False, error=str(e))
+    return RowMutationResponse(
+        success=False,
+        error="Direct database mutations are not supported. Use audited admin product flows instead.",
+    )
 
 
 @app.get("/admin/database/export")

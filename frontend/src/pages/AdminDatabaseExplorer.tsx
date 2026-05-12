@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, SquareTerminal, RefreshCw, Loader2, Play, Database, Key, X, Pencil, Trash2, ChevronLeft, ChevronRight, HelpCircle, Download, Lock, Unlock } from 'lucide-react'
+import { ArrowLeft, SquareTerminal, RefreshCw, Loader2, Play, Database, Key, X, ChevronLeft, ChevronRight, HelpCircle, Download, Lock, Unlock } from 'lucide-react'
 import {
   ColumnInfo,
   TableInfo,
@@ -41,12 +41,6 @@ export function AdminDatabaseExplorer() {
   const [queryResult, setQueryResult] = useState<QueryResponse | null>(null)
   const [isRunningQuery, setIsRunningQuery] = useState(false)
   const isRunningQueryRef = useRef(false)
-
-  // Record editor state
-  const [editingRecord, setEditingRecord] = useState<Record<string, unknown> | null>(null)
-  const [isCreatingRecord, setIsCreatingRecord] = useState(false)
-  const [recordFormData, setRecordFormData] = useState<Record<string, string>>({})
-  const [isSavingRecord, setIsSavingRecord] = useState(false)
 
   // Cell detail view
   const [expandedCell, setExpandedCell] = useState<{ row: number; col: string } | null>(null)
@@ -438,108 +432,6 @@ export function AdminDatabaseExplorer() {
       isRunningQueryRef.current = false
       setIsRunningQuery(false)
     }
-  }
-
-  // Handle record creation
-  const handleCreateRecord = () => {
-    const table = tables.find((t) => t.name === selectedTable)
-    if (!table) return
-
-    // Initialize form with empty values (skip auto-increment primary key)
-    const initialData: Record<string, string> = {}
-    table.columns.forEach((col) => {
-      if (!col.primaryKey) {
-        initialData[col.name] = col.defaultValue || ''
-      }
-    })
-
-    setRecordFormData(initialData)
-    setIsCreatingRecord(true)
-    setEditingRecord(null)
-  }
-
-  // Handle record edit
-  const handleEditRecord = (record: Record<string, unknown>) => {
-    const formData: Record<string, string> = {}
-    Object.entries(record).forEach(([key, value]) => {
-      formData[key] = value === null ? '' : String(value)
-    })
-
-    setRecordFormData(formData)
-    setEditingRecord(record)
-    setIsCreatingRecord(false)
-  }
-
-  // Handle record save
-  const handleSaveRecord = async () => {
-    if (!selectedTable) return
-    setIsSavingRecord(true)
-
-    try {
-      if (isCreatingRecord) {
-        const response = await adminFetch(`/admin/db/tables/${selectedTable}/rows`, {
-          method: 'POST',
-          body: JSON.stringify({ data: recordFormData }),
-        })
-        const result = await response.json()
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to create record')
-        }
-      } else if (editingRecord) {
-        const recordId = editingRecord.id
-        const response = await adminFetch(`/admin/db/tables/${selectedTable}/rows/${recordId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ data: recordFormData }),
-        })
-        const result = await response.json()
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to update record')
-        }
-      }
-
-      // Reset form and refresh data
-      setIsCreatingRecord(false)
-      setEditingRecord(null)
-      setRecordFormData({})
-
-      // Refresh table data after save (preserve current page)
-      fetchTableData(selectedTable, currentPage)
-    } catch (error) {
-      console.error('Error saving record:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save record')
-    } finally {
-      setIsSavingRecord(false)
-    }
-  }
-
-  // Handle record delete
-  const handleDeleteRecord = async (record: Record<string, unknown>) => {
-    if (!selectedTable) return
-    if (!confirm(t('admin.confirmDelete'))) return
-
-    try {
-      const recordId = record.id
-      const response = await adminFetch(`/admin/db/tables/${selectedTable}/rows/${recordId}`, {
-        method: 'DELETE',
-      })
-      const result = await response.json()
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to delete record')
-      }
-
-      // Refresh table data after delete (preserve current page)
-      fetchTableData(selectedTable, currentPage)
-    } catch (error) {
-      console.error('Error deleting record:', error)
-      alert(error instanceof Error ? error.message : 'Failed to delete record')
-    }
-  }
-
-  // Cancel editing
-  const handleCancelEdit = () => {
-    setIsCreatingRecord(false)
-    setEditingRecord(null)
-    setRecordFormData({})
   }
 
   const handleUnlockDecryption = async () => {
@@ -1053,82 +945,11 @@ export function AdminDatabaseExplorer() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Add Record Button */}
-                  <button
-                    onClick={handleCreateRecord}
-                    className="btn btn-primary btn-sm inline-flex items-center gap-1.5"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    {t('admin.database.addRow')}
-                  </button>
+                  <span className="badge badge-neutral">
+                    {t('admin.database.readOnly', 'Read-only')}
+                  </span>
                 </div>
               </div>
-
-              {/* Record Editor Form */}
-              {(isCreatingRecord || editingRecord) && currentTableInfo && (
-                <div className="px-4 py-4 border-b border-border bg-surface-raised animate-fade-in">
-                  <div className="card card-sm !p-4 !bg-surface">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="heading-sm">
-                        {isCreatingRecord ? t('admin.database.newRecord') : t('admin.database.editRecord')}
-                      </h3>
-                      <button
-                        onClick={handleCancelEdit}
-                        className="btn-ghost p-1.5 rounded-lg transition-all"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {currentTableInfo.columns
-                        .filter((col) => !col.primaryKey || !isCreatingRecord)
-                        .map((col) => (
-                          <div key={col.name}>
-                            <label className="text-xs font-medium text-text mb-1.5 block">
-                              {renderColumnName(col)}
-                              {!col.nullable && <span className="text-error ml-0.5">*</span>}
-                              <span className="text-text-muted ml-1 font-normal">({col.type})</span>
-                            </label>
-                            <div className="input-container px-3 py-2">
-                              <input
-                                type={col.type === 'INTEGER' || col.type === 'REAL' ? 'number' : 'text'}
-                                value={recordFormData[col.name] || ''}
-                                onChange={(e) =>
-                                  setRecordFormData((prev) => ({
-                                    ...prev,
-                                    [col.name]: e.target.value,
-                                  }))
-                                }
-                                disabled={col.primaryKey}
-                                placeholder={col.nullable ? t('common.nullPlaceholder') : ''}
-                                className="input-field text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-
-                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
-                      <button
-                        onClick={handleSaveRecord}
-                        disabled={isSavingRecord}
-                        className="btn btn-primary btn-sm"
-                      >
-                        {isSavingRecord ? t('common.saving') : t('common.save')}
-                      </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        className="btn btn-ghost btn-sm"
-                      >
-                        {t('common.cancel')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Table Data */}
               <div className="flex-1 overflow-auto">
@@ -1159,12 +980,9 @@ export function AdminDatabaseExplorer() {
                   <div className="flex flex-col items-center justify-center h-full text-text-muted">
                     <Database className="w-12 h-12 mb-3" strokeWidth={1} />
                     <p className="text-sm">{t('admin.database.noData')}</p>
-                    <button
-                      onClick={handleCreateRecord}
-                      className="mt-3 text-sm text-accent hover:text-accent-hover transition-colors"
-                    >
-                      {t('admin.database.addFirstRecord')}
-                    </button>
+                    <p className="mt-2 text-xs">
+                      {t('admin.database.readOnlyHint', 'Direct database edits are disabled; use audited admin flows to make changes.')}
+                    </p>
                   </div>
                 ) : (
                   <table className="w-full text-sm">
@@ -1252,23 +1070,8 @@ export function AdminDatabaseExplorer() {
                               </td>
                             )
                           })}
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleEditRecord(row)}
-                                className="p-1 text-text-muted hover:text-accent transition-colors"
-                                title={t('common.edit')}
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRecord(row)}
-                                className="p-1 text-text-muted hover:text-error transition-colors"
-                                title={t('common.delete')}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                          <td className="px-3 py-2 text-xs text-text-muted">
+                            {t('admin.database.readOnly', 'Read-only')}
                           </td>
                         </tr>
                       )})}

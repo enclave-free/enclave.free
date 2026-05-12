@@ -415,6 +415,26 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertIn("Only SELECT queries are allowed", body["error"])
         self.assertTrue(self.database.get_user(self.user_id)["approved"])
 
+    def test_admin_database_explorer_mutation_endpoints_are_constrained(self) -> None:
+        insert_response = self.client.post(
+            "/admin/db/tables/user_types/rows",
+            json={"data": {"name": "Escalation", "description": "Direct insert"}},
+        )
+        update_response = self.client.put(
+            f"/admin/db/tables/users/rows/{self.user_id}",
+            json={"data": {"approved": 0}},
+        )
+        delete_response = self.client.delete(f"/admin/db/tables/users/rows/{self.user_id}")
+
+        for response in (insert_response, update_response, delete_response):
+            self.assertEqual(response.status_code, 200)
+            body = response.json()
+            self.assertFalse(body["success"])
+            self.assertIn("Direct database mutations are not supported", body["error"])
+
+        self.assertTrue(self.database.get_user(self.user_id)["approved"])
+        self.assertEqual(self.database.list_user_types(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
