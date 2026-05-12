@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,16 @@ from fastapi.testclient import TestClient
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
+
+if "sentence_transformers" not in sys.modules:
+    sentence_transformers_stub = types.ModuleType("sentence_transformers")
+
+    class _SentenceTransformerStub:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+    sentence_transformers_stub.SentenceTransformer = _SentenceTransformerStub
+    sys.modules["sentence_transformers"] = sentence_transformers_stub
 
 
 class FakeProvider:

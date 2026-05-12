@@ -72,12 +72,12 @@ describe('AdminDeploymentConfig', () => {
               owner: 'Sage',
               storage_targets: ['Postgres'],
               deletion: {
-                status: 'partial',
-                summary: 'Deleting a public query-session record does not yet guarantee full Session Memory Deletion.',
+                status: 'complete',
+                summary: 'Conversation deletion removes the public session record and associated Sage Session Memory.',
               },
               retention: {
-                status: 'not_started',
-                summary: 'No operator-controlled Data Retention rule is currently enforced.',
+                status: 'partial',
+                summary: 'Operators can invoke retention execution for stale active Conversation state; persistent Sage Session Memory retention is not implemented.',
               },
               audit: {
                 status: 'not_started',
@@ -135,7 +135,7 @@ describe('AdminDeploymentConfig', () => {
     expect(await screen.findByRole('group', { name: 'Data Lifecycle Status' })).toBeInTheDocument()
     expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
     expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
-    expect(screen.getByText('Deletion: Partial')).toBeInTheDocument()
+    expect(screen.getByText('Deletion: Complete')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')

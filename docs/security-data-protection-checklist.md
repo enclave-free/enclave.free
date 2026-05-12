@@ -234,9 +234,10 @@ Use this checklist to:
 - [x] Admin can clean up failed and superseded Document ingestion artifacts without deleting current Documents or in-flight replacements.
 - [x] User deletion removes active User Profile/access state, purges Sage-owned User Memory, and clears active Conversation state with structured lifecycle status.
 - [x] Add operator-invoked retention execution for stale active Conversation state and failed/superseded Document artifacts.
+- [x] Document implemented lifecycle guarantees and remaining limitations across security docs, session docs, ADR-0006, and ADR-0007.
 - [ ] Define scheduled retention policy for uploads/chunks/sessions/logs.
 - [ ] Add secure erase process where applicable.
-- [ ] Document full user-data deletion path (including vector and file artifacts).
+- [ ] Define complete historical log/session retention and deletion policy.
 
 ---
 

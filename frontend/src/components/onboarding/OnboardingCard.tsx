@@ -18,21 +18,21 @@ export function OnboardingCard({ children, footer, title, subtitle, size, topRig
   }[size ?? 'md']
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center justify-center p-4">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center justify-center p-4">
       {topRight && (
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 inset-x-4 flex min-w-0 justify-end">
           {topRight}
         </div>
       )}
 
-      <div className={`w-full min-w-0 ${maxWidthClass}`}>
+      <div className={`w-full max-w-full min-w-0 ${maxWidthClass}`}>
         <InstanceLogo />
 
-        <div className="card rounded-3xl p-6 sm:p-10 min-w-0 overflow-hidden animate-fade-in-up">
+        <div className="card w-full max-w-full rounded-3xl p-6 sm:p-10 min-w-0 overflow-hidden animate-fade-in-up">
           {(title || subtitle) && (
-            <div className="text-center mb-8">
-              {title && <h1 className="heading-xl">{title}</h1>}
-              {subtitle && <p className="text-sm text-text-muted mt-2 max-w-md mx-auto">{subtitle}</p>}
+            <div className="text-center mb-8 min-w-0">
+              {title && <h1 className="heading-xl text-balance break-words">{title}</h1>}
+              {subtitle && <p className="text-sm text-text-muted mt-2 max-w-md mx-auto text-balance break-words">{subtitle}</p>}
             </div>
           )}
           {children}

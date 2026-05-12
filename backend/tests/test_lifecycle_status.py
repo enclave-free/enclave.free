@@ -1,5 +1,7 @@
 import importlib
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,6 +16,10 @@ if str(APP_DIR) not in sys.path:
 
 class LifecycleStatusTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.previous_uploads_dir = os.environ.get("UPLOADS_DIR")
+        os.environ["UPLOADS_DIR"] = str(Path(self.temp_dir.name) / "uploads")
+
         import auth
         import lifecycle
 
@@ -27,6 +33,13 @@ class LifecycleStatusTest(unittest.TestCase):
             "pubkey": "admin-pubkey",
         }
         self.client = TestClient(app)
+
+    def tearDown(self) -> None:
+        if self.previous_uploads_dir is None:
+            os.environ.pop("UPLOADS_DIR", None)
+        else:
+            os.environ["UPLOADS_DIR"] = self.previous_uploads_dir
+        self.temp_dir.cleanup()
 
     def test_admin_can_inspect_instance_data_lifecycle_status(self) -> None:
         response = self.client.get("/admin/lifecycle/status")

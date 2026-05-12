@@ -364,7 +364,7 @@ _Avoid_: full snapshot, config dump
 > **Domain expert:** "That is **Data Retention**. The **Operator** should control those rules for the **Instance**, even where the current prototype only implements part of the deletion path."
 
 > **Dev:** "If we delete a conversation, is all Sage memory gone?"
-> **Domain expert:** "Not yet. **Data Deletion** for a **Conversation** must eventually include the related **Session Memory**, but the current prototype does not guarantee full Sage memory purge."
+> **Domain expert:** "For supported active **Conversation** deletion paths, yes: **Session Memory Deletion** removes the related Sage-owned **Session Memory** together with the public conversation record. Broader scheduled retention for every historical/log surface is still future work."
 
 > **Dev:** "Can the operator see who changed configuration?"
 > **Domain expert:** "For some configuration paths, yes. The **Audit Log** concept is broader, but current coverage is still partial."
@@ -469,7 +469,7 @@ _Avoid_: full snapshot, config dump
 > **Domain expert:** "No. The answers are the **User Profile**. **Sage** may use that profile as context, but **Session Memory** is conversation-specific agent state."
 
 > **Dev:** "Does deleting a query session delete Sage memory?"
-> **Domain expert:** "Not necessarily in the current prototype. That requires **Session Memory Deletion**, which is the deletion path for Sage-owned memory associated with a **Conversation**."
+> **Domain expert:** "Yes for the supported active **Conversation** deletion path. Product language should call that **Session Memory Deletion**, because deleting only a query-session record would be too narrow."
 
 > **Dev:** "Should we call this a query session?"
 > **Domain expert:** "Use **Conversation** in product language. Query session is implementation/API language for a Sage-backed conversation session."
@@ -502,9 +502,9 @@ _Avoid_: full snapshot, config dump
 
 - "prototype" can imply a disposable demo; resolved: **Enclave Free Prototype** means the candidate next version of **Enclave Free**.
 - "private" does not mean local-only or offline-only; resolved: use **Operator-Controlled Privacy** for the product principle.
-- **Data Retention** is a policy concept even where implementation is incomplete; current gaps include full user-data deletion and full Sage Session Memory purge.
-- **Data Deletion** is distinct from hiding or archiving data; current deletion gaps should be treated as product work, not glossary ambiguity.
-- **Audit Log** should not be confused with debug or server logs; current audit coverage is strongest for configuration changes and is not complete for every state-changing action.
+- **Data Retention** is a policy concept even where implementation is incomplete; current gaps include scheduled retention policy, secure erase semantics, log retention, and complete historical session retention.
+- **Data Deletion** is distinct from hiding or archiving data; supported Document, User, Conversation, and User Memory deletion paths now return structured lifecycle status, while remaining gaps should be treated as product work rather than glossary ambiguity.
+- **Audit Log** should not be confused with debug or server logs; current audit coverage includes configuration, user governance, document governance, User Memory, and Data Deletion workflows but is not complete for every state-changing action.
 - External services used by a deployment should be named as **External Integrations**, not treated as hidden platform-owned dependencies.
 - "instance" can mean a running server process; resolved: **Instance** means the operator-controlled product space and data boundary, while **Deployment** means the technical environment.
 - "gateway" can imply an API policy layer; resolved: **Gateway** is routing infrastructure and should not own product correctness.
