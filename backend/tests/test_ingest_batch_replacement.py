@@ -306,7 +306,8 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(actions["delete_uploaded_document_artifact"]["status"], "failed")
         self.assertFalse(actions["delete_uploaded_document_artifact"]["retryable"])
         self.assertTrue(outside_file.exists())
-        self.assertIsNone(self.ingest_db.get_job(job_id))
+        self.assertIsNotNone(self.ingest_db.get_job(job_id))
+        self.assertEqual(actions["delete_document_metadata"]["status"], "skipped")
 
     def test_delete_document_requires_admin(self) -> None:
         app = FastAPI()

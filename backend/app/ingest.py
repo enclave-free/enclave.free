@@ -336,14 +336,14 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
             detail="Uploaded document artifact was already absent.",
         ))
 
-    has_retryable_failures = any(result["status"] == "failed" and result["retryable"] for result in results)
+    has_failures = any(result["status"] == "failed" for result in results)
     try:
-        if has_retryable_failures:
+        if has_failures:
             results.append(deletion_target_skipped(
                 target_kind="document_metadata",
                 target_id=job_id,
                 action="delete_document_metadata",
-                detail="Document metadata retained so retryable external cleanup can be attempted again.",
+                detail="Document metadata retained because at least one deletion target failed.",
             ))
         else:
             db_deleted = ingest_db.delete_job(job_id)
@@ -372,12 +372,12 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
             detail=f"Failed to delete job from database: {e}",
         ))
 
-    if has_retryable_failures:
+    if has_failures:
         results.append(deletion_target_skipped(
             target_kind="runtime_document_state",
             target_id=job_id,
             action="delete_runtime_document_state",
-            detail="Runtime document state retained so retryable external cleanup can be attempted again.",
+            detail="Runtime document state retained because at least one deletion target failed.",
         ))
     else:
         runtime_job_deleted = JOBS.pop(job_id, None) is not None
@@ -1391,6 +1391,7 @@ async def cleanup_document_artifacts(admin: dict = Depends(auth.require_admin)) 
     """
     page_size = 1000
     offset = 0
+    jobs_to_check = []
     eligible_jobs = []
     results = []
 
@@ -1398,29 +1399,31 @@ async def cleanup_document_artifacts(admin: dict = Depends(auth.require_admin)) 
         jobs = ingest_db.list_jobs(limit=page_size, offset=offset)
         if not jobs:
             break
-        for job in jobs:
-            reason = _document_artifact_cleanup_reason(job)
-            if not reason:
-                continue
-            job_id = job["job_id"]
-            deletion_response = await _delete_document_job_artifacts(job_id, job)
-            _audit_data_deletion(
-                config_key=f"document:{job_id}:cleanup",
-                changed_by=admin.get("pubkey", "unknown"),
-                deletion=deletion_response["deletion"],
-                workflow=f"cleanup_document_artifacts:{reason}",
-                target_id=job_id,
-            )
-            eligible_jobs.append({
-                "job_id": job_id,
-                "filename": job.get("filename", "unknown"),
-                "reason": reason,
-                "deletion": deletion_response["deletion"],
-            })
-            results.extend(deletion_response["deletion"]["results"])
+        jobs_to_check.extend(jobs)
         if len(jobs) < page_size:
             break
         offset += page_size
+
+    for job in jobs_to_check:
+        reason = _document_artifact_cleanup_reason(job)
+        if not reason:
+            continue
+        job_id = job["job_id"]
+        deletion_response = await _delete_document_job_artifacts(job_id, job)
+        _audit_data_deletion(
+            config_key=f"document:{job_id}:cleanup",
+            changed_by=admin.get("pubkey", "unknown"),
+            deletion=deletion_response["deletion"],
+            workflow=f"cleanup_document_artifacts:{reason}",
+            target_id=job_id,
+        )
+        eligible_jobs.append({
+            "job_id": job_id,
+            "filename": job.get("filename", "unknown"),
+            "reason": reason,
+            "deletion": deletion_response["deletion"],
+        })
+        results.extend(deletion_response["deletion"]["results"])
 
     summary = summarize_deletion_results(results)
     return {

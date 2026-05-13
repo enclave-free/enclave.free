@@ -1,6 +1,6 @@
 # Security and Data Protection Checklist
 
-Last updated: 2026-02-08
+Last updated: 2026-05-13
 Scope: Sanctum current repository state (code/config review)
 
 ## Purpose

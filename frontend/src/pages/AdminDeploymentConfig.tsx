@@ -1336,7 +1336,7 @@ export function AdminDeploymentConfig() {
             {t('adminDeployment.lifecycle.description', 'Current Operator-Controlled Privacy coverage across Instance data.')}
           </p>
 
-          {lifecycleStatus?.data_classes.length ? (
+          {Array.isArray(lifecycleStatus?.data_classes) && lifecycleStatus.data_classes.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
               {lifecycleStatus.data_classes.map((dataClass) => (
                 <div key={dataClass.key} className="bg-surface border border-border rounded-lg p-3">

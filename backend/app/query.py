@@ -230,6 +230,7 @@ async def query(
         context = _build_context(chunk_texts, sources)
         with session_lock:
             session["_last_sources"] = sources  # For dynamic citation
+            llm_session = _session_public_snapshot(session)
 
         # Get user profile context for chat personalization (unencrypted fields only)
         # Skip for dev mode (id=-1) and admin accounts (no user profile in users table)
@@ -249,12 +250,13 @@ async def query(
                 user_memory_context = None
 
         answer, clarifying_questions, full_prompt, search_term = _call_llm_contextual(
-            question, context, session, tools=request.tools, user_type_id=user_type_id,
+            question, context, llm_session, tools=request.tools, user_type_id=user_type_id,
             user_profile_context=user_profile_context,
             user_memory_context=user_memory_context,
         )
         
         with session_lock:
+            session["facts_gathered"].update(llm_session.get("facts_gathered", {}))
             # Add assistant response to history
             session["messages"].append({
                 "role": "assistant",

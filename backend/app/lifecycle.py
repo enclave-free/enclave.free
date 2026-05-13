@@ -30,6 +30,20 @@ router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
 logger = logging.getLogger("sanctum.lifecycle")
 
 
+def _session_last_activity(session: dict) -> datetime | None:
+    messages = session.get("messages") or []
+    last_activity = None
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        message_time = _parse_timestamp(message.get("timestamp"))
+        if message_time and (last_activity is None or message_time > last_activity):
+            last_activity = message_time
+    if last_activity:
+        return last_activity
+    return _parse_timestamp(session.get("created_at"))
+
+
 DATA_CLASSES = [
     {
         "key": "user_profiles",
@@ -244,8 +258,9 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
     with query._sessions_lock:
         stale_session_ids = []
         for session_id, session in list(query._sessions.items()):
-            created_at = _parse_timestamp(session.get("created_at"))
-            if created_at and created_at <= conversation_cutoff:
+            with query._session_lock(session):
+                last_activity = _session_last_activity(session)
+            if last_activity and last_activity <= conversation_cutoff:
                 stale_session_ids.append(session_id)
 
         for session_id in stale_session_ids:
@@ -274,8 +289,14 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
         reason = ingest._document_artifact_cleanup_reason(job)
         if not reason:
             continue
-        updated_at = _parse_timestamp(job.get("updated_at") or job.get("created_at"))
-        if updated_at and updated_at > document_cutoff:
+        updated_at = _parse_timestamp(job.get("updated_at"))
+        if updated_at is None:
+            logger.warning(
+                "Skipping retention cleanup for document job with missing or invalid updated_at",
+                extra={"job_id": job.get("job_id"), "updated_at": job.get("updated_at")},
+            )
+            continue
+        if updated_at > document_cutoff:
             continue
 
         job_id = job["job_id"]

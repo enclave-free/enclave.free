@@ -2988,6 +2988,10 @@ async def update_user(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
+    approval_changed = user.approved is not None and bool(existing.get("approved", 1)) != user.approved
+    if approval_changed and not _is_admin_actor(requester):
+        raise HTTPException(status_code=403, detail="Forbidden: only admins can change user approval")
+
     # Validate fields
     if user.fields:
         field_defs = database.get_field_definitions()
@@ -3000,10 +3004,7 @@ async def update_user(
             )
         database.set_user_fields(user_id, user.fields)
 
-    if user.approved is not None and bool(existing.get("approved", 1)) != user.approved:
-        requester_is_admin = _is_admin_actor(requester)
-        if not requester_is_admin:
-            raise HTTPException(status_code=403, detail="Forbidden: only admins can change user approval")
+    if approval_changed:
         database.update_user_approval(user_id, user.approved)
         _best_effort_config_audit_event(
             table_name="user_approval",

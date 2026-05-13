@@ -119,6 +119,7 @@ FORBIDDEN_KEYS = {"SECRET_KEY", "DATABASE_URL", "ADMIN_PRIVATE_KEY"}
 ALLOWED_AUDIT_TABLES = {
     "deployment_config",
     "ai_config",
+    "ai_config_user_type_overrides",
     "document_defaults",
     "document_defaults_user_type_overrides",
     "document_actions",
