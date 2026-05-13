@@ -15,6 +15,7 @@ import re
 import logging
 import threading
 import uuid
+from copy import deepcopy
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -374,7 +375,7 @@ def _session_lock(session: dict) -> threading.RLock:
 
 
 def _session_public_snapshot(session: dict) -> dict:
-    return {key: value for key, value in session.items() if key != "_lock"}
+    return {key: deepcopy(value) for key, value in session.items() if key != "_lock"}
 
 
 def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:

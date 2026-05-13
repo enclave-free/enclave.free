@@ -104,7 +104,7 @@ def _audit_data_deletion_event(
     target_id: str,
     deletion: dict,
 ) -> None:
-    database.log_config_audit_event(
+    _best_effort_config_audit_event(
         table_name="data_deletion",
         config_key=config_key,
         old_value=None,
@@ -118,6 +118,20 @@ def _audit_data_deletion_event(
         }, sort_keys=True),
         changed_by=changed_by,
     )
+
+
+def _best_effort_config_audit_event(**kwargs) -> None:
+    try:
+        database.log_config_audit_event(**kwargs)
+    except Exception as exc:
+        logger.error(
+            "Failed to write config audit event table=%s config_key=%s: %s",
+            kwargs.get("table_name"),
+            kwargs.get("config_key"),
+            exc,
+            exc_info=True,
+        )
+
 
 app = FastAPI(
     title="Sanctum API",
@@ -791,7 +805,7 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
                 source_conversation_id=session_id,
                 author_actor="admin",
             )
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="user_memories",
                 config_key=str(pending["memory_id"]),
                 old_value=f"active memory_id={pending['memory_id']}",
@@ -810,7 +824,7 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
                 deleted_by_actor="admin",
                 deletion_reason=pending["reason"],
             )
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="user_memories",
                 config_key=str(pending["memory_id"]),
                 old_value=f"active memory_id={pending['memory_id']}",
@@ -833,7 +847,7 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
                 source_conversation_id=session_id,
                 author_actor="admin",
             )
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="user_memories",
                 config_key=str(memory_id),
                 old_value=None,
@@ -2290,7 +2304,7 @@ async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth
         old_value = str(existing_settings.get("auto_approve_users", "true")).lower()
         new_value = str(updated_settings.get("auto_approve_users", settings_dict["auto_approve_users"])).lower()
         if old_value != new_value:
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="instance_settings",
                 config_key="auto_approve_users",
                 old_value=old_value,
@@ -2343,7 +2357,7 @@ async def create_user_type(user_type: UserTypeCreate, admin: dict = Depends(auth
             display_order=user_type.display_order
         )
         created = database.get_user_type(type_id)
-        database.log_config_audit_event(
+        _best_effort_config_audit_event(
             table_name="user_types",
             config_key=f"user_type:{type_id}:create",
             old_value=None,
@@ -2377,7 +2391,7 @@ async def update_user_type(type_id: int, user_type: UserTypeUpdate, admin: dict 
         display_order=user_type.display_order
     )
     updated = database.get_user_type(type_id)
-    database.log_config_audit_event(
+    _best_effort_config_audit_event(
         table_name="user_types",
         config_key=f"user_type:{type_id}:update",
         old_value=str({
@@ -2404,7 +2418,7 @@ async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admi
     if not existing:
         raise HTTPException(status_code=404, detail="User type not found")
     if database.delete_user_type(type_id):
-        database.log_config_audit_event(
+        _best_effort_config_audit_event(
             table_name="user_types",
             config_key=f"user_type:{type_id}:delete",
             old_value=str({
@@ -2623,7 +2637,7 @@ async def migrate_user_type(
         updated = database.update_user_type_id(user_id, migration.target_user_type_id)
         if not updated:
             raise HTTPException(status_code=500, detail="Failed to update user type")
-        database.log_config_audit_event(
+        _best_effort_config_audit_event(
             table_name="user_types",
             config_key=f"user:{user_id}:migrate_type",
             old_value=str({
@@ -2707,7 +2721,7 @@ async def migrate_user_type_batch(
                 updated = database.update_user_type_id(user_id, migration.target_user_type_id)
                 if not updated:
                     raise ValueError("Failed to update user type")
-                database.log_config_audit_event(
+                _best_effort_config_audit_event(
                     table_name="user_types",
                     config_key=f"user:{user_id}:migrate_type",
                     old_value=str({
@@ -2991,7 +3005,7 @@ async def update_user(
         if not requester_is_admin:
             raise HTTPException(status_code=403, detail="Forbidden: only admins can change user approval")
         database.update_user_approval(user_id, user.approved)
-        database.log_config_audit_event(
+        _best_effort_config_audit_event(
             table_name="user_approval",
             config_key=f"user:{user_id}:approved",
             old_value="true" if bool(existing.get("approved", 1)) else "false",

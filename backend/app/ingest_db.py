@@ -219,6 +219,8 @@ def list_jobs(status: Optional[str] = None, limit: int = 100, offset: int = 0) -
     Returns:
         List of job dicts
     """
+    limit = max(0, min(int(limit), 1000))
+    offset = max(0, int(offset))
     conn = get_connection()
     cursor = conn.cursor()
     

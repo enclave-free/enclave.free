@@ -20,12 +20,6 @@ class DummySentenceTransformer:
         pass
 
 
-sys.modules.setdefault(
-    "sentence_transformers",
-    types.SimpleNamespace(SentenceTransformer=DummySentenceTransformer),
-)
-
-
 class FakeProvider:
     name = "fake-provider"
 
@@ -50,6 +44,10 @@ class FakeProvider:
 
 class AdminSubjectUserMemoryTest(unittest.TestCase):
     def setUp(self) -> None:
+        self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
+        sys.modules["sentence_transformers"] = types.SimpleNamespace(
+            SentenceTransformer=DummySentenceTransformer,
+        )
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.tmp.name) / "sanctum.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
@@ -105,6 +103,10 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        if self._orig_sentence_transformers is None:
+            sys.modules.pop("sentence_transformers", None)
+        else:
+            sys.modules["sentence_transformers"] = self._orig_sentence_transformers
         self.tmp.cleanup()
 
     @staticmethod

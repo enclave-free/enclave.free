@@ -9,6 +9,7 @@ coverage, including gaps, instead of implying complete guarantees.
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import json
+import logging
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -26,6 +27,7 @@ import query
 
 
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
+logger = logging.getLogger("sanctum.lifecycle")
 
 
 DATA_CLASSES = [
@@ -205,19 +207,28 @@ def _parse_timestamp(value: object) -> datetime | None:
 
 
 def _audit_retention_run(*, changed_by: str, deletion: dict) -> None:
-    database.log_config_audit_event(
-        table_name="data_deletion",
-        config_key=f"retention:{datetime.utcnow().isoformat()}",
-        old_value=None,
-        new_value=json.dumps({
-            "workflow": "run_retention",
-            "status": deletion["status"],
-            "retryable": deletion["retryable"],
-            "counts": deletion["counts"],
-            "results": deletion["results"],
-        }, sort_keys=True),
-        changed_by=changed_by,
-    )
+    try:
+        database.log_config_audit_event(
+            table_name="data_deletion",
+            config_key=f"retention:{datetime.utcnow().isoformat()}",
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": "run_retention",
+                "status": deletion["status"],
+                "retryable": deletion["retryable"],
+                "counts": deletion["counts"],
+                "results": deletion["results"],
+            }, sort_keys=True),
+            changed_by=changed_by,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to audit retention run changed_by=%s deletion_status=%s: %s",
+            changed_by,
+            deletion.get("status"),
+            exc,
+            exc_info=True,
+        )
 
 
 async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:

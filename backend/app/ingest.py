@@ -1389,30 +1389,38 @@ async def cleanup_document_artifacts(admin: dict = Depends(auth.require_admin)) 
 
     Current completed Documents and in-flight replacements are intentionally retained.
     """
-    jobs = ingest_db.list_jobs(limit=1000)
+    page_size = 1000
+    offset = 0
     eligible_jobs = []
     results = []
 
-    for job in jobs:
-        reason = _document_artifact_cleanup_reason(job)
-        if not reason:
-            continue
-        job_id = job["job_id"]
-        deletion_response = await _delete_document_job_artifacts(job_id, job)
-        _audit_data_deletion(
-            config_key=f"document:{job_id}:cleanup",
-            changed_by=admin.get("pubkey", "unknown"),
-            deletion=deletion_response["deletion"],
-            workflow=f"cleanup_document_artifacts:{reason}",
-            target_id=job_id,
-        )
-        eligible_jobs.append({
-            "job_id": job_id,
-            "filename": job.get("filename", "unknown"),
-            "reason": reason,
-            "deletion": deletion_response["deletion"],
-        })
-        results.extend(deletion_response["deletion"]["results"])
+    while True:
+        jobs = ingest_db.list_jobs(limit=page_size, offset=offset)
+        if not jobs:
+            break
+        for job in jobs:
+            reason = _document_artifact_cleanup_reason(job)
+            if not reason:
+                continue
+            job_id = job["job_id"]
+            deletion_response = await _delete_document_job_artifacts(job_id, job)
+            _audit_data_deletion(
+                config_key=f"document:{job_id}:cleanup",
+                changed_by=admin.get("pubkey", "unknown"),
+                deletion=deletion_response["deletion"],
+                workflow=f"cleanup_document_artifacts:{reason}",
+                target_id=job_id,
+            )
+            eligible_jobs.append({
+                "job_id": job_id,
+                "filename": job.get("filename", "unknown"),
+                "reason": reason,
+                "deletion": deletion_response["deletion"],
+            })
+            results.extend(deletion_response["deletion"]["results"])
+        if len(jobs) < page_size:
+            break
+        offset += page_size
 
     summary = summarize_deletion_results(results)
     return {

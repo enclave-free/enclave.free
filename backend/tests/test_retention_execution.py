@@ -22,14 +22,12 @@ class DummySentenceTransformer:
         pass
 
 
-sys.modules.setdefault(
-    "sentence_transformers",
-    types.SimpleNamespace(SentenceTransformer=DummySentenceTransformer),
-)
-
-
 class RetentionExecutionTest(unittest.TestCase):
     def setUp(self) -> None:
+        self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
+        sys.modules["sentence_transformers"] = types.SimpleNamespace(
+            SentenceTransformer=DummySentenceTransformer,
+        )
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.tmp.name) / "sanctum.db"
         self.uploads_dir = Path(self.tmp.name) / "uploads"
@@ -92,6 +90,10 @@ class RetentionExecutionTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
+        if self._orig_sentence_transformers is None:
+            sys.modules.pop("sentence_transformers", None)
+        else:
+            sys.modules["sentence_transformers"] = self._orig_sentence_transformers
         self.tmp.cleanup()
 
     @staticmethod
