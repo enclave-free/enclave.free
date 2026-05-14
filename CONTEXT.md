@@ -12,13 +12,41 @@ _Avoid_: original app, legacy app
 The product principle that an **Operator** controls the **Instance** data boundary, configuration, document library, and approved external integrations.
 _Avoid_: local-only, offline-only
 
+**Operator-Controlled Data Lifecycle**:
+The product boundary where the **Operator** can understand, configure or invoke, and review lifecycle handling for each operator-visible class of **Instance** data.
+_Avoid_: cleanup, full compliance, guaranteed erasure
+
+**Lifecycle Data Class**:
+An operator-visible category of **Instance** data whose retention, deletion, and audit posture can be described independently.
+_Avoid_: table, storage backend, log surface
+
+**Storage Target**:
+A technical place where some or all of a **Lifecycle Data Class** is stored.
+_Avoid_: lifecycle data class, product category
+
+**Lifecycle Support Status**:
+The stated level of retention, deletion, or audit support for a **Lifecycle Data Class** within supported **Storage Targets**.
+_Avoid_: compliance status, deployment guarantee
+
+**Deployment Surface**:
+A technical runtime or infrastructure surface in a **Deployment** that may contain traces of **Instance** activity but is not currently controlled as a **Lifecycle Data Class**.
+_Avoid_: lifecycle data class, product record
+
 **Data Retention**:
 The **Operator** controlled rules for how long **Instance** data is kept before deletion or review.
 _Avoid_: cleanup, storage duration
 
+**Retention Execution**:
+The act of applying **Data Retention** rules to eligible **Instance** data.
+_Avoid_: data retention, cleanup job
+
 **Data Deletion**:
 The **Operator** controlled action or workflow that removes **Instance** data from active storage according to **Data Retention** rules or a specific deletion request.
 _Avoid_: cleanup, hide, archive
+
+**Secure Erase**:
+A stronger deletion guarantee that reduces recoverability from underlying storage, logs, backups, or snapshots.
+_Avoid_: data deletion, logical deletion
 
 **Audit Log**:
 An operator-visible record of security-relevant or state-changing actions within an **Instance**.
@@ -188,6 +216,22 @@ _Avoid_: user profile, chat history
 **Data Deletion** for **Sage** owned **Session Memory** associated with a **Conversation**.
 _Avoid_: delete query session
 
+**Lifecycle Deletion Result**:
+The per-target outcome of a **Data Deletion** or **Retention Execution** workflow for a **Lifecycle Data Class**.
+_Avoid_: success flag, transaction result
+
+**Lifecycle Error Category**:
+A sanitized classification of a lifecycle target failure suitable for **Deletion Tombstones** and **Audit Log** events.
+_Avoid_: raw stack trace, provider error dump
+
+**Deletion Tombstone**:
+A retained product record that marks a requested deletion and preserves enough lifecycle status to audit or retry incomplete deletion targets.
+_Avoid_: deleted record, archive, hidden conversation
+
+**Former Subject Reference**:
+A minimal non-profile reference used in lifecycle evidence after a **User** has been deleted.
+_Avoid_: deleted user profile, email, name
+
 **Conversation**:
 An ongoing interaction between a **User** or **Admin** and **Sage**.
 _Avoid_: query session, chat session
@@ -233,8 +277,23 @@ _Avoid_: full snapshot, config dump
 - **Enclave Free Prototype** succeeds the first version of **Enclave Free** if the prototype direction is validated
 - **Enclave Free** is guided by **Operator-Controlled Privacy**
 - **Operator-Controlled Privacy** allows **External Integrations** when they are visible and configurable by the **Operator**
+- **Operator-Controlled Data Lifecycle** is part of **Operator-Controlled Privacy**
+- **Operator-Controlled Data Lifecycle** is described through **Lifecycle Data Classes**
+- A **Lifecycle Data Class** is grouped by product meaning, not by **Storage Target**
+- A **Lifecycle Data Class** may span one or more **Storage Targets**
+- A **Lifecycle Data Class** has its own lifecycle support status
+- **Lifecycle Support Status** is scoped to the stated **Lifecycle Data Class** and supported **Storage Targets**
+- A **Deployment Surface** may contain traces of **Instance** activity without being a supported **Lifecycle Data Class**
 - **Data Retention** is part of **Operator-Controlled Privacy**
+- **Retention Execution** applies **Data Retention** rules
+- **Retention Execution** may be operator-invoked before it is scheduled automatically
+- **Retention Execution** reports results per **Lifecycle Data Class**
+- Destructive **Retention Execution** requires explicit **Admin** confirmation and should make eligibility or result counts visible
+- A dry-run or preview for broad **Retention Execution** is desired but not required for the first slice
+- Operator-invoked **Retention Execution** should create an **Audit Log** event even when no data changes
 - **Data Deletion** executes **Data Retention** decisions or specific deletion requests
+- **Data Deletion** removes data from active product storage unless a specific **Secure Erase** guarantee is stated
+- Product copy should avoid "permanent deletion" or "delete forever" unless a **Secure Erase** or backup-retention guarantee exists
 - An **Audit Log** supports **Operator-Controlled Privacy** by making important **Instance** changes visible after the fact
 - **Enclave Free Prototype** integrates **Sage** directly into the product runtime
 - A **Deployment** usually runs one **Instance** in the prototype
@@ -339,11 +398,39 @@ _Avoid_: full snapshot, config dump
 - Ambient **User Memory** capture should be controlled by a simple **Instance Setting**
 - **Session Memory** belongs to the **Agent Runtime**
 - **Session Memory Deletion** must remove the **Session Memory** associated with a **Conversation**
+- **Session Memory Deletion** is logical active-storage deletion in the first version, not **Secure Erase**
+- **Session Memory** is the first priority **Lifecycle Data Class** for completing **Operator-Controlled Data Lifecycle** across the **Enclave Control Plane** and **Agent Runtime** boundary
+- The primary lifecycle unit for **Session Memory** is a **Conversation**
+- **Data Retention** eligibility for **Conversations** should be based on last **Conversation** activity rather than creation time
+- **Conversation** activity for **Data Retention** means human and Sage assistant turns, not lifecycle retries, audit writes, retention scans, or tombstone updates
+- **Retention Execution** should re-check **Conversation** eligibility before deletion and skip candidates that became active
+- **User** deletion may remove active **User Profile** and access state while leaving retryable **Deletion Tombstones** for incomplete **Session Memory Deletion** targets
+- **Session Memory Deletion** is a coordinated workflow with explicit **Lifecycle Deletion Results**, not a distributed transaction
+- **Lifecycle Deletion Results** should use **Lifecycle Error Categories** rather than raw backend error details
+- Incomplete **Session Memory Deletion** should leave a retryable **Deletion Tombstone** visible to the **Operator**
+- A **Deletion Tombstone** should keep lifecycle metadata and retry evidence without retaining **Conversation Content**
+- **Deletion Tombstone** surfaces should not expose **Conversation Content** even when a failed target may still physically contain it
+- A **Deletion Tombstone** for a deleted **User** should use a **Former Subject Reference** rather than retaining deleted **User Profile** data
+- Successful **Session Memory Deletion** should leave lifecycle and audit metadata only, not **Conversation Content**
+- **Deletion Tombstones** are lifecycle evidence and should remain until deletion targets complete and an evidence-retention policy allows purging them
+- **Deletion Tombstones** are owned by the **Enclave Control Plane** as operator-visible lifecycle evidence
+- **Deletion Tombstones** are visible to the **Admin** as the **Operator's** control identity, not to ordinary **Users** in the first version
+- Deleted or tombstoned **Conversations** should disappear from ordinary **User** conversation surfaces while remaining visible in **Admin** lifecycle surfaces when evidence or retry is needed
+- Tombstoned **Conversations** should be handled as retryable lifecycle records, not as active **Data Retention** candidates
+- **Deletion Tombstone** retry should be manual and **Admin** invoked in the first version
+- Each manual **Deletion Tombstone** retry should create a new **Audit Log** event linked to the original lifecycle workflow
+- **Sage** owns the **Session Memory** deletion target and reports target results back to the **Enclave Control Plane**
+- **Session Memory Deletion** should use a formal internal lifecycle contract between the **Enclave Control Plane** and **Sage**, not overload public query-session deletion semantics
+- The first **Session Memory** lifecycle implementation should update security posture, session behavior, and internal contract docs alongside code
+- User-initiated, **Admin**-initiated, and **Retention Execution** paths should share the same underlying **Session Memory Deletion** workflow with role-specific visibility
+- User-initiated **Session Memory Deletion** should create a privacy-preserving lifecycle **Audit Log** event without **Conversation Content**
+- Operator-invoked **Session Memory Deletion** should create an **Audit Log** event even when it fails or deletes nothing
 - A **Conversation** may have **Session Memory**
 - A **Conversation** may include **Retrieval**, **Required Context**, and **User Profile** context
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
 - **Sage** may invoke **Tools** during a **Conversation**
 - **User Conversations** and **Admin Conversations** are both **Conversations**
+- **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
 - An **Admin Conversation** may have a **Subject User**
 - An **Admin Conversation** may directly perform **Enclave Control Plane** actions after **Change Confirmation**
 - Every admin-conversation write that changes **Instance** or **Agent Runtime** state requires **Change Confirmation**
@@ -356,19 +443,34 @@ _Avoid_: full snapshot, config dump
 
 > **Dev:** "Is this prototype separate from Enclave Free?"
 > **Domain expert:** "No. The **Enclave Free Prototype** is the candidate next version of **Enclave Free**, and its defining change is that **Sage** is integrated directly as the agent runtime."
-
+>
 > **Dev:** "Does private mean the product never calls external services?"
 > **Domain expert:** "No. **Operator-Controlled Privacy** means the **Operator** controls the **Instance** data boundary, configuration, document library, and approved external integrations."
-
+>
 > **Dev:** "Who decides how long uploaded documents or conversation records are kept?"
 > **Domain expert:** "That is **Data Retention**. The **Operator** should control those rules for the **Instance**, even where the current prototype only implements part of the deletion path."
-
+>
+> **Dev:** "If an Operator has a 30-day retention rule, has old data been deleted automatically?"
+> **Domain expert:** "Not necessarily. **Data Retention** is the rule; **Retention Execution** is the action that applies it, and it may be operator-invoked before scheduling exists."
+>
+> **Dev:** "If retention succeeds for uploaded artifacts but fails for Sage memory, did retention succeed?"
+> **Domain expert:** "**Retention Execution** should report results per **Lifecycle Data Class**. One class can succeed while another fails or remains unsupported."
+>
+> **Dev:** "If Document deletion is marked complete, does that mean every backup and log trace is gone?"
+> **Domain expert:** "No. A complete **Lifecycle Support Status** is scoped to the stated **Lifecycle Data Class** and supported **Storage Targets**, not every **Deployment Surface**."
+>
+> **Dev:** "Does lifecycle governance mean every trace is securely erased immediately?"
+> **Domain expert:** "No. **Operator-Controlled Data Lifecycle** first means the **Operator** can see each operator-visible data class, configure or invoke supported lifecycle actions, and review truthful status for unsupported surfaces."
+>
+> **Dev:** "If I delete a User, does that delete Docker logs, gateway logs, backups, and every provider trace?"
+> **Domain expert:** "No. Those are **Deployment Surfaces** unless and until the product promotes them into supported **Lifecycle Data Classes** with explicit lifecycle controls."
+>
 > **Dev:** "If we delete a conversation, is all Sage memory gone?"
 > **Domain expert:** "For supported active **Conversation** deletion paths, yes: **Session Memory Deletion** removes the related Sage-owned **Session Memory** together with the public conversation record. Broader scheduled retention for every historical/log surface is still future work."
-
+>
 > **Dev:** "Can the operator see who changed configuration?"
 > **Domain expert:** "For some configuration paths, yes. The **Audit Log** concept is broader, but current coverage is still partial."
-
+>
 > **Dev:** "Can a private instance use SMTP or Tinfoil?"
 > **Domain expert:** "Yes, if those **External Integrations** are visible and configurable parts of the **Operator's** deployment choices."
 
@@ -502,6 +604,9 @@ _Avoid_: full snapshot, config dump
 
 - "prototype" can imply a disposable demo; resolved: **Enclave Free Prototype** means the candidate next version of **Enclave Free**.
 - "private" does not mean local-only or offline-only; resolved: use **Operator-Controlled Privacy** for the product principle.
+- "data lifecycle governance" can imply full compliance-grade records management; resolved: **Operator-Controlled Data Lifecycle** means inventory, supported policy/action, evidence, and honest unsupported status before it means complete secure erasure across every technical surface.
+- "logs" and "backups" can be mistaken for supported product records; resolved: treat them as **Deployment Surfaces** until a specific one is promoted into a **Lifecycle Data Class**.
+- "retention is implemented" can confuse a configured rule with data-changing enforcement; resolved: **Data Retention** is policy and **Retention Execution** is the act of applying it.
 - **Data Retention** is a policy concept even where implementation is incomplete; current gaps include scheduled retention policy, secure erase semantics, log retention, and complete historical session retention.
 - **Data Deletion** is distinct from hiding or archiving data; supported Document, User, Conversation, and User Memory deletion paths now return structured lifecycle status, while remaining gaps should be treated as product work rather than glossary ambiguity.
 - **Audit Log** should not be confused with debug or server logs; current audit coverage includes configuration, user governance, document governance, User Memory, and Data Deletion workflows but is not complete for every state-changing action.

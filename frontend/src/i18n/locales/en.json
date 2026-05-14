@@ -1196,7 +1196,7 @@
     "chunks": "{{processed}}/{{total}} chunks",
     "deleteDocument": "Delete document",
     "confirmDelete": "Delete this document?",
-    "confirmDeleteDesc": "This will permanently remove the document and all its chunks from the knowledge base. This action cannot be undone.",
+    "confirmDeleteDesc": "This removes the document and its chunks from active knowledge base storage. Backup, log, and snapshot retention follow the instance lifecycle policy.",
     "deleting": "Deleting...",
     "deleteSuccess": "Document deleted successfully",
     "deleteFailed": "Failed to delete document",

@@ -28,13 +28,14 @@ import {
   Key,
   Globe,
   Lock,
+  RotateCcw,
 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { Button, Callout, Card, TextField } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
-import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus } from '../hooks/useAdminConfig'
+import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus, useDeletionTombstones } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
+import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse, DeletionTombstoneStatusFilter } from '../types/config'
 import { DEFAULT_TINFOIL_MODEL, TINFOIL_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
@@ -75,6 +76,13 @@ export function AdminDeploymentConfig() {
     status: lifecycleStatus,
     loading: lifecycleLoading,
   } = useLifecycleStatus()
+  const [tombstoneStatusFilter, setTombstoneStatusFilter] = useState<DeletionTombstoneStatusFilter>('all')
+  const {
+    tombstones,
+    loading: tombstonesLoading,
+    error: tombstonesError,
+    retryTombstone,
+  } = useDeletionTombstones(tombstoneStatusFilter)
 
   const {
     log: auditLog,
@@ -97,6 +105,8 @@ export function AdminDeploymentConfig() {
   const [showAuditLog, setShowAuditLog] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [retryingTombstoneId, setRetryingTombstoneId] = useState<number | null>(null)
+  const [tombstoneRetryError, setTombstoneRetryError] = useState<string | null>(null)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -218,6 +228,36 @@ export function AdminDeploymentConfig() {
   const formatLifecycleStatus = (status: string) => {
     if (status === 'not_started') return t('adminDeployment.lifecycle.notStarted', 'Not Started')
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+  }
+
+  const tombstoneStatusFilters: Array<{ value: DeletionTombstoneStatusFilter; label: string; ariaLabel: string }> = [
+    {
+      value: 'all',
+      label: t('adminDeployment.lifecycle.allTombstones', 'All'),
+      ariaLabel: t('adminDeployment.lifecycle.allTombstonesLabel', 'All tombstones'),
+    },
+    {
+      value: 'incomplete',
+      label: t('adminDeployment.lifecycle.incompleteTombstonesFilter', 'Incomplete'),
+      ariaLabel: t('adminDeployment.lifecycle.incompleteTombstonesLabel', 'Incomplete tombstones'),
+    },
+    {
+      value: 'completed',
+      label: t('adminDeployment.lifecycle.completedTombstonesFilter', 'Completed'),
+      ariaLabel: t('adminDeployment.lifecycle.completedTombstonesLabel', 'Completed tombstones'),
+    },
+  ]
+
+  const handleRetryTombstone = async (id: number) => {
+    try {
+      setRetryingTombstoneId(id)
+      setTombstoneRetryError(null)
+      await retryTombstone(id)
+    } catch (err) {
+      setTombstoneRetryError(err instanceof Error ? err.message : 'errors.failedToRetryDeletionTombstone')
+    } finally {
+      setRetryingTombstoneId(null)
+    }
   }
 
   // Handle editing a config value
@@ -1355,6 +1395,12 @@ export function AdminDeploymentConfig() {
                     <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
+                    {lifecycleStatus.deletion_tombstones?.by_class?.[dataClass.key] && (
+                      <div className="pt-2 mt-1 border-t border-border/60 grid gap-1">
+                        <p>{t('adminDeployment.lifecycle.incompleteTombstones', 'Incomplete tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].incomplete })}</p>
+                        <p>{t('adminDeployment.lifecycle.completedTombstones', 'Completed tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].completed })}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1362,6 +1408,101 @@ export function AdminDeploymentConfig() {
           ) : (
             <p className="text-xs text-text-muted">
               {t('adminDeployment.lifecycle.empty', 'Lifecycle status is not available.')}
+            </p>
+          )}
+        </Card>
+
+        <Card role="group" aria-label={t('adminDeployment.lifecycle.tombstonesTitle', 'Deletion Tombstones')}>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="heading-sm flex items-center gap-2">
+              <History className="w-4 h-4 text-text-muted" />
+              {t('adminDeployment.lifecycle.tombstonesTitle', 'Deletion Tombstones')}
+            </h3>
+            {tombstonesLoading && <Loader2 className="w-4 h-4 animate-spin text-text-muted" />}
+          </div>
+          <p className="text-sm text-text-secondary mb-4">
+            {t('adminDeployment.lifecycle.tombstonesDescription', 'Retry incomplete lifecycle deletions without exposing deleted content.')}
+          </p>
+          <div className="mb-4 inline-flex rounded-lg border border-border bg-surface p-1" role="group" aria-label={t('adminDeployment.lifecycle.tombstoneStatusFilter', 'Tombstone status filter')}>
+            {tombstoneStatusFilters.map((filter) => {
+              const selected = tombstoneStatusFilter === filter.value
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  aria-label={filter.ariaLabel}
+                  aria-pressed={selected}
+                  onClick={() => setTombstoneStatusFilter(filter.value)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    selected
+                      ? 'bg-surface-raised text-text shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-surface-overlay'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              )
+            })}
+          </div>
+          {tombstoneRetryError && (
+            <p className="text-xs text-danger mb-3">
+              {t('adminDeployment.lifecycle.tombstoneRetryFailed', 'Retry failed.')}
+            </p>
+          )}
+          {tombstonesError && !tombstonesLoading ? (
+            <p className="text-xs text-danger">
+              {t('adminDeployment.lifecycle.tombstonesFetchFailed', 'Unable to load deletion tombstones.')}
+            </p>
+          ) : tombstones.length > 0 ? (
+            <div className="space-y-3">
+              {tombstones.map((tombstone) => {
+                const detail = tombstone.deletion?.results?.[0]?.detail
+                const canRetry = tombstone.status !== 'completed' && tombstone.deletion?.retryable !== false
+                const updatedAt = tombstone.updated_at ?? tombstone.last_retry_at ?? tombstone.created_at
+                return (
+                  <div key={tombstone.id} className="bg-surface border border-border rounded-lg p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium text-text break-all">{tombstone.conversation_id}</span>
+                          <span className="text-[10px] uppercase tracking-wide bg-surface-overlay text-text-secondary px-2 py-1 rounded">
+                            {formatLifecycleStatus(tombstone.status)}
+                          </span>
+                        </div>
+                        <div className="mt-2 grid gap-1 text-xs text-text-secondary">
+                          <p>{t('adminDeployment.lifecycle.tombstoneClass', 'Class: {{className}}', { className: tombstone.lifecycle_data_class })}</p>
+                          <p>{t('adminDeployment.lifecycle.tombstoneSource', 'Source: {{source}}', { source: tombstone.source })}</p>
+                          <p>{t('adminDeployment.lifecycle.tombstoneRetries', 'Retries: {{count}}', { count: tombstone.retry_count ?? 0 })}</p>
+                          {updatedAt && (
+                            <p>{t('adminDeployment.lifecycle.tombstoneUpdated', 'Updated: {{updated}}', { updated: formatTimestamp(updatedAt) })}</p>
+                          )}
+                          {detail && <p>{detail}</p>}
+                        </div>
+                      </div>
+                      {canRetry && (
+                        <button
+                          type="button"
+                          onClick={() => handleRetryTombstone(tombstone.id)}
+                          disabled={retryingTombstoneId === tombstone.id}
+                          aria-label={t('adminDeployment.lifecycle.retryTombstoneLabel', 'Retry deletion tombstone {{id}}', { id: tombstone.id })}
+                          className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {retryingTombstoneId === tombstone.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          )}
+                          {t('adminDeployment.lifecycle.retry', 'Retry')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">
+              {t('adminDeployment.lifecycle.tombstonesEmpty', 'No deletion tombstones are waiting for retry.')}
             </p>
           )}
         </Card>

@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import sys
 import tempfile
@@ -21,10 +22,17 @@ class LifecycleStatusTest(unittest.TestCase):
         os.environ["UPLOADS_DIR"] = str(Path(self.temp_dir.name) / "uploads")
 
         import auth
+        import database
         import lifecycle
 
+        self.previous_sqlite_path = os.environ.get("SQLITE_PATH")
+        self.db_path = Path(self.temp_dir.name) / "sanctum.db"
+        os.environ["SQLITE_PATH"] = str(self.db_path)
+
+        self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
         self.lifecycle = importlib.reload(lifecycle)
+        self.database.init_schema()
 
         app = FastAPI()
         app.include_router(self.lifecycle.router)
@@ -35,6 +43,13 @@ class LifecycleStatusTest(unittest.TestCase):
         self.client = TestClient(app)
 
     def tearDown(self) -> None:
+        if self.database._connection is not None:
+            self.database._connection.close()
+            self.database._connection = None
+        if self.previous_sqlite_path is None:
+            os.environ.pop("SQLITE_PATH", None)
+        else:
+            os.environ["SQLITE_PATH"] = self.previous_sqlite_path
         if self.previous_uploads_dir is None:
             os.environ.pop("UPLOADS_DIR", None)
         else:
@@ -70,6 +85,86 @@ class LifecycleStatusTest(unittest.TestCase):
             "stale active Conversation",
             session_memory["retention"]["summary"],
         )
+
+    def test_lifecycle_status_summarizes_deletion_tombstones(self) -> None:
+        self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="conversation-1",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+        self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="conversation-2",
+            former_subject_ref="deleted_user:43",
+            status="completed",
+            source="retry",
+            workflow="retry_deletion_tombstone",
+            deletion={
+                "status": "succeeded",
+                "retryable": False,
+                "counts": {"succeeded": 1, "skipped": 0, "failed": 0},
+                "results": [],
+            },
+        )
+
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["deletion_tombstones"]["total"], 2)
+        self.assertEqual(body["deletion_tombstones"]["incomplete"], 1)
+        self.assertEqual(body["deletion_tombstones"]["completed"], 1)
+        self.assertEqual(
+            body["deletion_tombstones"]["by_class"]["sage_session_memory"]["incomplete"],
+            1,
+        )
+        serialized = json.dumps(body["deletion_tombstones"])
+        self.assertNotIn("deleted_user", serialized)
+        self.assertNotIn("conversation-", serialized)
+
+    def test_incomplete_deletion_tombstones_are_idempotent_per_conversation(self) -> None:
+        first_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="conversation-1",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+        second_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="conversation-1",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+
+        tombstones = self.database.list_deletion_tombstones()
+
+        self.assertEqual(first_id, second_id)
+        self.assertEqual(len(tombstones), 1)
 
     def test_lifecycle_status_requires_admin_authentication(self) -> None:
         app = FastAPI()

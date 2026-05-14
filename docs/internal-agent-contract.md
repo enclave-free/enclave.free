@@ -1,7 +1,8 @@
 # Internal Agent Contract v0
 
-This document is the source of truth for the private `/internal/agent/*`
-contract between Sage and the Python control plane on the current prototype.
+This document is the source of truth for the private `/internal/agent/*` and
+`/internal/lifecycle/*` contracts between Sage and the Python control plane on
+the current prototype.
 
 These routes are not part of the public product API. Sage is the intended
 caller, Python is the owner, and both sides must evolve request and response
@@ -69,6 +70,66 @@ Response:
   "status": "healthy"
 }
 ```
+
+## Lifecycle Contract
+
+Session Memory Deletion is now modeled as an operator-visible lifecycle
+workflow under `/internal/lifecycle/*` rather than a bare public query-session
+delete. The Enclave Control Plane owns deletion tombstones and Audit Log
+evidence; Sage owns the Session Memory deletion target and must report
+sanitized per-target lifecycle results.
+
+### `POST /internal/lifecycle/session-memory/delete`
+
+Deletes Sage-owned Session Memory for one Conversation. This endpoint is
+internal-only and requires `X-Internal-Agent-Token`.
+
+Request:
+
+```json
+{
+  "conversation_id": "uuid"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "deleted",
+  "deletion": {
+    "status": "succeeded",
+    "retryable": false,
+    "counts": {
+      "succeeded": 1,
+      "skipped": 0,
+      "failed": 0
+    },
+    "results": []
+  }
+}
+```
+
+Field contract:
+
+- `status`: outer endpoint outcome; currently `deleted` when Sage accepted the lifecycle delete request. Transport or auth failures use HTTP error status codes rather than this field.
+- `deletion.status`: aggregate lifecycle result. Allowed values are `succeeded`, `partial_failure`, and `failed`.
+- `deletion.retryable`: `true` when at least one failed target can be retried by the control plane; `false` when the result is complete or only contains non-retryable skips.
+- `deletion.counts.succeeded`: number of lifecycle targets successfully deleted.
+- `deletion.counts.skipped`: number of targets intentionally skipped, such as already-absent Session Memory or non-applicable targets.
+- `deletion.counts.failed`: number of lifecycle targets that failed.
+- `deletion.results`: per-target lifecycle evidence. It may be empty when Sage has no target-level detail to report. When populated, each result object includes `target_kind`, `target_id`, `action`, `status`, `retryable`, and `detail`. Failure details must use sanitized lifecycle error categories rather than raw backend errors or secrets.
+
+The control plane sanitizes failed lifecycle details into stable categories
+such as `target_unavailable`, `not_found`, `already_deleted`,
+`unauthorized_internal_contract`, or `target_error` before storing tombstones or
+Audit Log evidence. Tombstones must remain metadata-only: they may include a
+Conversation id, Former Subject Reference, lifecycle class, source workflow,
+retry count, status, and sanitized deletion result, but no Conversation Content
+or deleted User PII.
+
+Until secure erase and complete historical log/session retention are defined,
+docs and UI must not imply secure erase or complete historical deletion.
 
 ### `GET /internal/agent/users/{user_id}`
 

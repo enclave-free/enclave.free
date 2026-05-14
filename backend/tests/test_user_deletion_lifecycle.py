@@ -39,12 +39,14 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         import database
         import auth
         import deployment_config
+        import lifecycle
         import query
         import main
 
         self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
         self.deployment_config = importlib.reload(deployment_config)
+        self.lifecycle = importlib.reload(lifecycle)
         self.query = importlib.reload(query)
         self.main = importlib.reload(main)
         self.database.init_schema()
@@ -81,6 +83,11 @@ class UserDeletionLifecycleTest(unittest.TestCase):
             "pubkey": "admin-pubkey",
         }
         self.main.app.dependency_overrides[self.deployment_config.auth.require_admin] = lambda: {
+            "type": "admin",
+            "id": 1,
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.lifecycle.auth.require_admin] = lambda: {
             "type": "admin",
             "id": 1,
             "pubkey": "admin-pubkey",
@@ -144,7 +151,7 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
         self.assertEqual(event["workflow"], "delete_user")
         self.assertEqual(event["status"], "succeeded")
-        self.assertEqual(event["counts"]["succeeded"], 4)
+        self.assertEqual(event["counts"]["succeeded"], 5)
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
@@ -188,6 +195,55 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(actions["delete_conversations"]["status"], "succeeded")
         self.assertEqual(actions["delete_conversations"]["count"], 1)
         self.assertNotIn("late-session", self.query._sessions)
+
+    def test_user_deletion_creates_metadata_only_tombstone_when_session_memory_deletion_fails(self) -> None:
+        self.query._sessions["query-session-1"]["agent_runtime"] = "sage"
+        self.query._sessions["query-session-1"]["messages"] = [
+            {
+                "role": "user",
+                "content": "Deleted user conversation content must not survive in lifecycle evidence.",
+            }
+        ]
+
+        async def fail_sage_session_memory_delete(_payload: dict) -> dict:
+            return {
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": "query-session-1",
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "postgres://sage:secret@postgres:5432/sage connection refused",
+                    }
+                ],
+            }
+
+        self.lifecycle.post_sage_session_memory_delete = fail_sage_session_memory_delete
+
+        response = self.client.delete(f"/users/{self.user_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["deletion"]["status"], "partial_failure")
+        self.assertIsNone(self.database.get_user(self.user_id))
+        self.assertNotIn("query-session-1", self.query._sessions)
+
+        tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
+        self.assertEqual(tombstones.status_code, 200)
+        tombstone = tombstones.json()["tombstones"][0]
+        self.assertEqual(tombstone["conversation_id"], "query-session-1")
+        self.assertEqual(tombstone["source"], "user_deletion")
+        self.assertEqual(tombstone["former_subject_ref"], f"deleted_user:{self.user_id}")
+        serialized = json.dumps(tombstone)
+        self.assertIn("target_unavailable", serialized)
+        self.assertNotIn("postgres://", serialized)
+        self.assertNotIn("secret", serialized)
+        self.assertNotIn("Deleted user conversation content", serialized)
 
     def test_admin_subject_binding_cleanup_is_not_reported_as_conversation_deletion(self) -> None:
         self.query._sessions.clear()

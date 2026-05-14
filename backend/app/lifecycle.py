@@ -10,13 +10,17 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import json
 import logging
+import os
 
 from fastapi import APIRouter, Depends
+from fastapi import HTTPException
+import httpx
 from pydantic import BaseModel, Field
 
 import auth
 import database
 from data_deletion import (
+    deletion_target_failed,
     deletion_target_skipped,
     deletion_target_succeeded,
     summarize_deletion_results,
@@ -28,6 +32,23 @@ import query
 
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
 logger = logging.getLogger("sanctum.lifecycle")
+_warned_missing_internal_agent_token = False
+_sage_client: httpx.AsyncClient | None = None
+_sage_client_timeout = httpx.Timeout(10.0, connect=5.0, read=10.0, write=10.0, pool=5.0)
+
+
+def _get_sage_client() -> httpx.AsyncClient:
+    global _sage_client
+    if _sage_client is None or _sage_client.is_closed:
+        _sage_client = httpx.AsyncClient(timeout=_sage_client_timeout)
+    return _sage_client
+
+
+async def close_sage_client() -> None:
+    global _sage_client
+    if _sage_client is not None:
+        await _sage_client.aclose()
+        _sage_client = None
 
 
 def _session_last_activity(session: dict) -> datetime | None:
@@ -165,8 +186,8 @@ DATA_CLASSES = [
             "summary": "Operators can invoke retention execution for stale active Conversation state; persistent Sage Session Memory retention is not implemented.",
         },
         "audit": {
-            "status": "not_started",
-            "summary": "Session Memory lifecycle actions are not yet represented in the Audit Log.",
+            "status": "partial",
+            "summary": "Retention, User deletion, public Conversation deletion, and tombstone retry record privacy-preserving Session Memory lifecycle evidence.",
         },
         "notes": [
             "Session Memory belongs to the Agent Runtime.",
@@ -204,7 +225,135 @@ class RetentionRunRequest(BaseModel):
 
 def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
-    return {"data_classes": deepcopy(DATA_CLASSES)}
+    return {
+        "data_classes": deepcopy(DATA_CLASSES),
+        "deletion_tombstones": database.summarize_deletion_tombstones(),
+    }
+
+
+def _lifecycle_error_category(detail: object) -> str:
+    if isinstance(detail, (httpx.TimeoutException, httpx.ConnectError)):
+        return "target_unavailable"
+    if isinstance(detail, httpx.HTTPStatusError):
+        status_code = detail.response.status_code
+        if status_code in (401, 403):
+            return "unauthorized_internal_contract"
+        if status_code == 404:
+            return "not_found"
+        if status_code in (409, 410):
+            return "already_deleted"
+        if 500 <= status_code:
+            return "target_unavailable"
+    text = str(detail or "").lower()
+    if "unavailable" in text or "connection refused" in text or "timed out" in text:
+        return "target_unavailable"
+    if "not found" in text or "404" in text:
+        return "not_found"
+    if "already" in text and "deleted" in text:
+        return "already_deleted"
+    if "unauthorized" in text or "forbidden" in text or "401" in text or "403" in text:
+        return "unauthorized_internal_contract"
+    return "target_error"
+
+
+def categorize_error(detail: object) -> str:
+    return _lifecycle_error_category(detail)
+
+
+def _sanitize_lifecycle_deletion(deletion: dict) -> dict:
+    sanitized = deepcopy(deletion)
+    sanitized["results"] = []
+    for result in deletion.get("results", []):
+        sanitized_result = dict(result)
+        if sanitized_result.get("status") == "failed":
+            sanitized_result["detail"] = _lifecycle_error_category(sanitized_result.get("detail"))
+        sanitized["results"].append(sanitized_result)
+    return sanitized
+
+
+async def post_sage_session_memory_delete(payload: dict) -> dict:
+    global _warned_missing_internal_agent_token
+    sage_url = os.getenv("SAGE_WEB_URL", "http://sage:3000").rstrip("/")
+    token = os.getenv("INTERNAL_AGENT_TOKEN", "")
+    if not token and not _warned_missing_internal_agent_token:
+        logger.warning(
+            "INTERNAL_AGENT_TOKEN is unset; Sage lifecycle requests will be sent without X-Internal-Agent-Token."
+        )
+        _warned_missing_internal_agent_token = True
+    headers = {"X-Internal-Agent-Token": token} if token else {}
+    response = await _get_sage_client().post(
+        f"{sage_url}/internal/lifecycle/session-memory/delete",
+        json=payload,
+        headers=headers,
+    )
+    response.raise_for_status()
+    body = response.json()
+    if "deletion" not in body:
+        raise ValueError(
+            f"Sage session-memory delete response missing deletion key: "
+            f"status={response.status_code} body={body}"
+        )
+    return body["deletion"]
+
+
+async def delete_session_memory_for_conversation(session: dict) -> dict:
+    """Delete Sage Session Memory for a Conversation.
+
+    The Python fallback only knows about legacy in-memory Conversation state.
+    Sage-backed deletion will replace this boundary through the internal
+    lifecycle contract.
+    """
+    session_id = str(session.get("id", "unknown"))
+    if session.get("agent_runtime") == "sage":
+        try:
+            deletion = await post_sage_session_memory_delete({"conversation_id": session_id})
+            return _sanitize_lifecycle_deletion(deletion)
+        except Exception as exc:
+            return summarize_deletion_results([
+                deletion_target_failed(
+                    target_kind="session_memory",
+                    target_id=session_id,
+                    action="delete_session_memory",
+                    detail=categorize_error(exc),
+                    retryable=True,
+                )
+            ])
+    return summarize_deletion_results([
+        deletion_target_succeeded(
+            target_kind="session_memory",
+            target_id=session_id,
+            action="delete_session_memory",
+            detail="No separate Sage Session Memory target exists for this legacy Conversation.",
+        )
+    ])
+
+
+def _former_subject_ref(session: dict) -> str | None:
+    owner_type = session.get("owner_type")
+    owner_id = session.get("owner_id")
+    if owner_type == "user" and owner_id:
+        return f"deleted_user:{owner_id}"
+    if owner_type == "admin" and owner_id:
+        return f"admin:{owner_id}"
+    return None
+
+
+def create_session_memory_tombstone(
+    *,
+    session: dict,
+    source: str,
+    workflow: str,
+    deletion: dict,
+) -> None:
+    database.create_deletion_tombstone(
+        lifecycle_data_class="sage_session_memory",
+        conversation_id=str(session.get("id", "unknown")),
+        former_subject_ref=_former_subject_ref(session),
+        status="incomplete",
+        source=source,
+        workflow=workflow,
+        deletion=deletion,
+    )
 
 
 def _parse_timestamp(value: object) -> datetime | None:
@@ -245,6 +394,68 @@ def _audit_retention_run(*, changed_by: str, deletion: dict) -> None:
         )
 
 
+def _audit_deletion_tombstone_retry(*, changed_by: str, tombstone: dict, deletion: dict) -> None:
+    try:
+        database.log_config_audit_event(
+            table_name="data_deletion",
+            config_key=f"deletion_tombstone:{tombstone['id']}:retry:{datetime.utcnow().isoformat()}",
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": "retry_deletion_tombstone",
+                "status": deletion["status"],
+                "retryable": deletion["retryable"],
+                "tombstone_id": tombstone["id"],
+                "conversation_id": tombstone["conversation_id"],
+                "lifecycle_data_class": tombstone["lifecycle_data_class"],
+                "counts": deletion["counts"],
+                "results": deletion["results"],
+            }, sort_keys=True),
+            changed_by=changed_by,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to audit deletion tombstone retry tombstone_id=%s status=%s: %s",
+            tombstone.get("id"),
+            deletion.get("status"),
+            exc,
+            exc_info=True,
+        )
+
+
+def audit_lifecycle_deletion(
+    *,
+    config_key: str,
+    changed_by: str,
+    workflow: str,
+    target_id: str,
+    deletion: dict,
+) -> None:
+    try:
+        database.log_config_audit_event(
+            table_name="data_deletion",
+            config_key=config_key,
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": workflow,
+                "target_id": target_id,
+                "status": deletion["status"],
+                "retryable": deletion["retryable"],
+                "counts": deletion["counts"],
+                "results": deletion["results"],
+            }, sort_keys=True),
+            changed_by=changed_by,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to audit lifecycle deletion config_key=%s workflow=%s target_id=%s: %s",
+            config_key,
+            workflow,
+            target_id,
+            exc,
+            exc_info=True,
+        )
+
+
 async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
     now = datetime.utcnow()
     conversation_cutoff = now - timedelta(days=request.stale_conversation_days)
@@ -252,9 +463,11 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
     results = []
     retained = {
         "stale_conversations": [],
+        "skipped_conversations": [],
         "document_artifacts": [],
     }
 
+    stale_sessions = []
     with query._sessions_lock:
         stale_session_ids = []
         for session_id, session in list(query._sessions.items()):
@@ -264,14 +477,51 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
                 stale_session_ids.append(session_id)
 
         for session_id in stale_session_ids:
-            query._sessions.pop(session_id, None)
-            retained["stale_conversations"].append(session_id)
-            results.append(deletion_target_succeeded(
+            if database.has_incomplete_deletion_tombstone_for_conversation(session_id):
+                retained["skipped_conversations"].append(session_id)
+                results.append(deletion_target_skipped(
+                    target_kind="conversation",
+                    target_id=session_id,
+                    action="retention_skip_tombstoned_conversation",
+                    detail="Skipped Conversation because an incomplete Deletion Tombstone already tracks its lifecycle deletion.",
+                ))
+                continue
+            session = query._sessions.pop(session_id, None)
+            if session is not None:
+                stale_sessions.append((session_id, session))
+
+    for session_id, session in stale_sessions:
+        with query._session_lock(session):
+            last_activity = _session_last_activity(session)
+            became_active = bool(last_activity and last_activity > conversation_cutoff)
+        if became_active:
+            with query._sessions_lock:
+                query._sessions[session_id] = session
+            retained["skipped_conversations"].append(session_id)
+            results.append(deletion_target_skipped(
                 target_kind="conversation",
                 target_id=session_id,
-                action="retention_delete_stale_conversation",
-                detail="Deleted stale active Conversation state.",
+                action="retention_skip_active_conversation",
+                detail="Skipped Conversation because it became active before retention deletion.",
             ))
+            continue
+
+        retained["stale_conversations"].append(session_id)
+        session_memory_deletion = await delete_session_memory_for_conversation(session)
+        if session_memory_deletion["status"] != "succeeded":
+            create_session_memory_tombstone(
+                session=session,
+                source="retention_execution",
+                workflow="run_retention",
+                deletion=session_memory_deletion,
+            )
+        results.extend(session_memory_deletion["results"])
+        results.append(deletion_target_succeeded(
+            target_kind="conversation",
+            target_id=session_id,
+            action="retention_delete_stale_conversation",
+            detail="Deleted stale active Conversation state.",
+        ))
 
     job_limit = 1000
     job_offset = 0
@@ -332,6 +582,61 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
 @router.get("/status", response_model=dict)
 async def get_admin_lifecycle_status(_admin: dict = Depends(auth.require_admin)):
     return get_lifecycle_status()
+
+
+@router.get("/deletion-tombstones", response_model=dict)
+async def list_admin_deletion_tombstones(
+    status: str | None = None,
+    _admin: dict = Depends(auth.require_admin),
+):
+    if status is not None and status not in {"incomplete", "completed"}:
+        raise HTTPException(status_code=400, detail="Unsupported deletion tombstone status")
+    return {"tombstones": database.list_deletion_tombstones(status=status)}
+
+
+@router.post("/deletion-tombstones/{tombstone_id}/retry", response_model=dict)
+async def retry_admin_deletion_tombstone(
+    tombstone_id: int,
+    admin: dict = Depends(auth.require_admin),
+):
+    tombstone = database.get_deletion_tombstone(tombstone_id)
+    if not tombstone:
+        raise HTTPException(status_code=404, detail="Deletion tombstone not found")
+    if tombstone["lifecycle_data_class"] != "sage_session_memory":
+        raise HTTPException(status_code=400, detail="Unsupported deletion tombstone class")
+    if tombstone["status"] == "completed":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Deletion tombstone is already completed",
+                "tombstone": tombstone,
+            },
+        )
+    deletion = await delete_session_memory_for_conversation({
+        "id": tombstone["conversation_id"],
+        "agent_runtime": "sage",
+        "owner_type": "tombstone",
+        "owner_id": tombstone.get("former_subject_ref"),
+    })
+    new_status = "completed" if deletion["status"] == "succeeded" else "incomplete"
+    updated = database.update_deletion_tombstone_after_retry(
+        tombstone_id,
+        status=new_status,
+        deletion=deletion,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Deletion tombstone not found")
+    _audit_deletion_tombstone_retry(
+        changed_by=admin.get("pubkey", "unknown"),
+        tombstone=updated,
+        deletion=deletion,
+    )
+    return {
+        "status": deletion["status"],
+        "retryable": deletion["retryable"],
+        "tombstone": updated,
+        "deletion": deletion,
+    }
 
 
 @router.post("/retention/run", response_model=dict)

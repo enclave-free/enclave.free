@@ -89,6 +89,10 @@ Sage verifies the session token itself, hydrates the user/admin record from Pyth
 Current nuance:
 
 - active Conversation deletion removes the public `web_sessions` row and associated Sage Session Memory for that Conversation
+- public Conversation deletion, User deletion, and operator-invoked retention share Session Memory lifecycle handling
+- incomplete Sage Session Memory deletion creates an admin-visible metadata-only deletion tombstone for manual retry
+- deletion tombstones and lifecycle Audit Log events preserve sanitized lifecycle status and retry evidence, not Conversation Content
+- retention re-checks Conversation activity immediately before deletion and skips candidates that became active
 - scheduled retention for every historical Session Memory or log surface is still not implemented
 
 ## Debugging

@@ -14,7 +14,7 @@ import contextvars
 from typing import Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
-from datetime import datetime
+from datetime import datetime, timezone
 from Crypto.Cipher import AES
 
 # Configure logging
@@ -22,6 +22,17 @@ logger = logging.getLogger("sanctum.database")
 
 # Configuration
 SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/sanctum.db")
+
+
+def _json_dumps_for_lifecycle(value: object) -> str:
+    try:
+        return json.dumps(value, sort_keys=True)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Lifecycle JSON contained non-standard values; serializing with string fallbacks",
+            exc_info=True,
+        )
+        return json.dumps(value, sort_keys=True, default=str)
 
 # Lazy-loaded connection
 _connection = None
@@ -372,6 +383,42 @@ def init_schema():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS deletion_tombstones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lifecycle_data_class TEXT NOT NULL,
+            conversation_id TEXT NOT NULL,
+            former_subject_ref TEXT,
+            status TEXT NOT NULL CHECK(status IN ('incomplete', 'completed')),
+            source TEXT NOT NULL,
+            workflow TEXT NOT NULL,
+            deletion JSON NOT NULL,
+            retry_count INTEGER DEFAULT 0,
+            last_retry_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
+        ON deletion_tombstones(status, updated_at DESC)
+    """)
+    cursor.execute("""
+        DELETE FROM deletion_tombstones
+        WHERE status = 'incomplete'
+          AND id NOT IN (
+              SELECT MAX(id)
+              FROM deletion_tombstones
+              WHERE status = 'incomplete'
+              GROUP BY conversation_id
+          )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_deletion_tombstones_incomplete_conversation
+        ON deletion_tombstones(conversation_id)
+        WHERE status = 'incomplete'
+    """)
+
     # Agent Settings user-type overrides - keeps the compatibility table name.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config_user_type_overrides (
@@ -456,6 +503,7 @@ def init_schema():
     _migrate_encrypt_deployment_config_secrets()  # Encrypt plaintext deployment secrets at rest
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
+    _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -636,6 +684,112 @@ def _migrate_add_admin_session_nonce_column() -> None:
     cursor.close()
 
 
+def _migrate_deletion_tombstones_status_check() -> None:
+    """Rebuild deletion_tombstones if it lacks the status CHECK constraint."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'deletion_tombstones'"
+    )
+    row = cursor.fetchone()
+    table_sql = row[0] if row else ""
+    if "CHECK(status IN ('incomplete', 'completed'))" in table_sql:
+        cursor.execute("""
+            DELETE FROM deletion_tombstones
+            WHERE status = 'incomplete'
+              AND id NOT IN (
+                  SELECT MAX(id)
+                  FROM deletion_tombstones
+                  WHERE status = 'incomplete'
+                  GROUP BY conversation_id
+              )
+        """)
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_deletion_tombstones_incomplete_conversation
+            ON deletion_tombstones(conversation_id)
+            WHERE status = 'incomplete'
+        """)
+        conn.commit()
+        cursor.close()
+        return
+
+    cursor.execute("SELECT COUNT(*) FROM deletion_tombstones")
+    count = cursor.fetchone()[0]
+    cursor.execute("ALTER TABLE deletion_tombstones RENAME TO deletion_tombstones_old")
+    cursor.execute("""
+        CREATE TABLE deletion_tombstones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lifecycle_data_class TEXT NOT NULL,
+            conversation_id TEXT NOT NULL,
+            former_subject_ref TEXT,
+            status TEXT NOT NULL CHECK(status IN ('incomplete', 'completed')),
+            source TEXT NOT NULL,
+            workflow TEXT NOT NULL,
+            deletion JSON NOT NULL,
+            retry_count INTEGER DEFAULT 0,
+            last_retry_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO deletion_tombstones (
+            id,
+            lifecycle_data_class,
+            conversation_id,
+            former_subject_ref,
+            status,
+            source,
+            workflow,
+            deletion,
+            retry_count,
+            last_retry_at,
+            created_at,
+            updated_at
+        )
+        SELECT
+            id,
+            lifecycle_data_class,
+            conversation_id,
+            former_subject_ref,
+            CASE WHEN status IN ('incomplete', 'completed') THEN status ELSE 'incomplete' END,
+            source,
+            workflow,
+            deletion,
+            retry_count,
+            last_retry_at,
+            created_at,
+            updated_at
+        FROM deletion_tombstones_old
+    """)
+    cursor.execute("DROP TABLE deletion_tombstones_old")
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
+        ON deletion_tombstones(status, updated_at DESC)
+    """)
+    cursor.execute("""
+        DELETE FROM deletion_tombstones
+        WHERE status = 'incomplete'
+          AND id NOT IN (
+              SELECT MAX(id)
+              FROM deletion_tombstones
+              WHERE status = 'incomplete'
+              GROUP BY conversation_id
+          )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_deletion_tombstones_incomplete_conversation
+        ON deletion_tombstones(conversation_id)
+        WHERE status = 'incomplete'
+    """)
+    conn.commit()
+    logger.info(
+        "Migration: Rebuilt deletion_tombstones with status CHECK constraint (%s rows)",
+        count,
+    )
+    cursor.close()
+
+
 def _migrate_encrypt_deployment_config_secrets() -> None:
     """Encrypt existing plaintext deployment_config secrets in place."""
     conn = get_connection()
@@ -767,6 +921,175 @@ def log_config_audit_event(
     """
     with get_write_cursor() as cursor:
         _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+
+
+def create_deletion_tombstone(
+    *,
+    lifecycle_data_class: str,
+    conversation_id: str,
+    former_subject_ref: str | None,
+    status: str,
+    source: str,
+    workflow: str,
+    deletion: dict,
+) -> int:
+    now = datetime.now(timezone.utc).isoformat()
+    serialized_deletion = _json_dumps_for_lifecycle(deletion)
+    with get_write_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO deletion_tombstones (
+                lifecycle_data_class,
+                conversation_id,
+                former_subject_ref,
+                status,
+                source,
+                workflow,
+                deletion,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                lifecycle_data_class,
+                conversation_id,
+                former_subject_ref,
+                status,
+                source,
+                workflow,
+                serialized_deletion,
+                now,
+                now,
+            ),
+        )
+        if cursor.rowcount:
+            return int(cursor.lastrowid)
+        cursor.execute(
+            """
+            SELECT id FROM deletion_tombstones
+            WHERE conversation_id = ? AND status = 'incomplete'
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (conversation_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            raise RuntimeError("Failed to create or find deletion tombstone")
+        return int(row["id"])
+
+
+def list_deletion_tombstones(*, status: str | None = None, limit: int = 100) -> list[dict]:
+    with get_cursor() as cursor:
+        if status:
+            cursor.execute(
+                """
+                SELECT * FROM deletion_tombstones
+                WHERE status = ?
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ?
+                """,
+                (status, limit),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT * FROM deletion_tombstones
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+        rows = cursor.fetchall()
+    tombstones = []
+    for row in rows:
+        item = dict(row)
+        item["deletion"] = json.loads(item["deletion"])
+        tombstones.append(item)
+    return tombstones
+
+
+def has_incomplete_deletion_tombstone_for_conversation(conversation_id: str) -> bool:
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 1 FROM deletion_tombstones
+            WHERE conversation_id = ? AND status = 'incomplete'
+            LIMIT 1
+            """,
+            (conversation_id,),
+        )
+        return cursor.fetchone() is not None
+
+
+def summarize_deletion_tombstones() -> dict:
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT lifecycle_data_class, status, COUNT(*) AS count
+            FROM deletion_tombstones
+            GROUP BY lifecycle_data_class, status
+            """
+        )
+        rows = cursor.fetchall()
+
+    summary = {
+        "total": 0,
+        "incomplete": 0,
+        "completed": 0,
+        "by_class": {},
+    }
+    for row in rows:
+        lifecycle_data_class = row["lifecycle_data_class"]
+        status = row["status"]
+        count = int(row["count"])
+        summary["total"] += count
+        if status in ("incomplete", "completed"):
+            summary[status] += count
+        class_counts = summary["by_class"].setdefault(
+            lifecycle_data_class,
+            {"total": 0, "incomplete": 0, "completed": 0},
+        )
+        class_counts["total"] += count
+        if status in ("incomplete", "completed"):
+            class_counts[status] += count
+    return summary
+
+
+def get_deletion_tombstone(tombstone_id: int) -> dict | None:
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM deletion_tombstones WHERE id = ?", (tombstone_id,))
+        row = cursor.fetchone()
+    if not row:
+        return None
+    item = dict(row)
+    item["deletion"] = json.loads(item["deletion"])
+    return item
+
+
+def update_deletion_tombstone_after_retry(
+    tombstone_id: int,
+    *,
+    status: str,
+    deletion: dict,
+) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    serialized_deletion = _json_dumps_for_lifecycle(deletion)
+    with get_write_cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE deletion_tombstones
+            SET status = ?,
+                deletion = ?,
+                retry_count = retry_count + 1,
+                last_retry_at = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (status, serialized_deletion, now, now, tombstone_id),
+        )
+    return get_deletion_tombstone(tombstone_id)
 
 
 def _migrate_add_config_audit_hash_columns() -> None:

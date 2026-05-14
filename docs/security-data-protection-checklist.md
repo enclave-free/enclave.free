@@ -1,6 +1,6 @@
 # Security and Data Protection Checklist
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 Scope: Sanctum current repository state (code/config review)
 
 ## Purpose
@@ -234,6 +234,20 @@ Use this checklist to:
 - [x] Admin can clean up failed and superseded Document ingestion artifacts without deleting current Documents or in-flight replacements.
 - [x] User deletion removes active User Profile/access state, purges Sage-owned User Memory, and clears active Conversation state with structured lifecycle status.
 - [x] Add operator-invoked retention execution for stale active Conversation state and failed/superseded Document artifacts.
+- [x] Add admin-visible metadata-only deletion tombstones for incomplete Session Memory deletion during operator-invoked retention.
+  Evidence: `backend/app/database.py`, `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py::test_retention_creates_metadata_only_tombstone_when_session_memory_deletion_fails`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+- [x] Add admin manual retry for incomplete Session Memory deletion tombstones.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py::test_admin_can_retry_incomplete_session_memory_tombstone`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+- [x] Define the first Sage Session Memory lifecycle deletion contract.
+  Evidence: `runtime/sage/crates/sage-core/src/web_runtime.rs`, `backend/app/lifecycle.py::post_sage_session_memory_delete`, `backend/tests/test_retention_execution.py::test_retention_uses_sage_lifecycle_contract_and_sanitizes_failures`, `docs/internal-agent-contract.md`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+- [x] Route public Conversation deletion through shared Session Memory lifecycle handling.
+  Evidence: `backend/app/query.py`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+- [x] Route User deletion through shared Session Memory lifecycle handling and create metadata-only tombstones for incomplete targets.
+  Evidence: `backend/app/main.py`, `backend/app/query.py`, `backend/tests/test_user_deletion_lifecycle.py::test_user_deletion_creates_metadata_only_tombstone_when_session_memory_deletion_fails`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+- [x] Emit privacy-preserving lifecycle Audit Log evidence for Conversation deletion and tombstone retry workflows.
+  Evidence: `backend/app/lifecycle.py::audit_lifecycle_deletion`, `backend/app/query.py`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `backend/tests/test_retention_execution.py::test_admin_can_retry_incomplete_session_memory_tombstone`, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`
+- [x] Re-check Conversation retention eligibility immediately before deletion and report skipped active candidates.
+  Evidence: `backend/app/lifecycle.py::run_retention`, `backend/tests/test_retention_execution.py::test_retention_rechecks_conversation_activity_before_deleting_candidate`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
 - [x] Document implemented lifecycle guarantees and remaining limitations across security docs, session docs, ADR-0006, and ADR-0007.
 - [ ] Define scheduled retention policy for uploads/chunks/sessions/logs.
 - [ ] Add secure erase process where applicable.
@@ -341,7 +355,7 @@ Use these guardrails while security fixes are in progress:
 
 ---
 
-## 11. Verification Evidence (2026-02-08)
+## 11. Verification Evidence (2026-02-08 — 2026-05-14)
 
 - Automated regression suite:
   - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3c_auth_hardening_regression.py --api-base http://localhost:8000`
@@ -360,3 +374,8 @@ Use these guardrails while security fixes are in progress:
   - S4-6 (query-param token removal): Inspected `Network` tab during auth flows — no tokens appear as URL query parameters. Magic-link verification submits the token in the request body, not the URL.
 - Frontend availability smoke:
   - `GET http://localhost:5173/` -> `200`
+- Session Memory lifecycle verification (2026-05-14):
+  - `python3 -m unittest backend.tests.test_retention_execution backend.tests.test_user_deletion_lifecycle backend.tests.test_data_deletion_results backend.tests.test_lifecycle_status` (activate the repository virtualenv first, if used)
+    - Result: `Ran 23 tests ... OK`
+  - Audit evidence location: `GET /admin/deployment/audit-log?table_name=data_deletion`; tamper verification: `GET /admin/deployment/audit-log/verify?table_name=data_deletion`.
+  - Sage contract verification: `cargo check -p sage-core` from `runtime/sage` returned `Finished dev profile`.

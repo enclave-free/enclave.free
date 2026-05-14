@@ -16,6 +16,7 @@ import logging
 import threading
 import uuid
 from copy import deepcopy
+from types import MappingProxyType
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -24,6 +25,12 @@ from pydantic import BaseModel
 import httpx
 
 import auth
+from data_deletion import (
+    deletion_target_failed,
+    deletion_target_skipped,
+    deletion_target_succeeded,
+    summarize_deletion_results,
+)
 from store import (
     embed_texts,
     COLLECTION_NAME,
@@ -381,16 +388,55 @@ def _session_public_snapshot(session: dict) -> dict:
 
 
 def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:
-    """Delete in-memory Retrieval sessions owned by a profile or admin actor."""
+    """Return the count of in-memory Retrieval sessions removed for an owner.
+
+    This convenience wrapper calls pop_sessions_for_owner and discards the
+    popped session dicts. Callers that need Sage/Session Memory cleanup must use
+    pop_sessions_for_owner(owner_type, owner_id) directly and handle each
+    returned session.
+    """
+    return len(pop_sessions_for_owner(owner_type, owner_id))
+
+
+def pop_sessions_for_owner(owner_type: str, owner_id: str) -> list[dict]:
+    """Remove and return in-memory Retrieval sessions owned by a profile or admin actor."""
     with _sessions_lock:
-        session_ids = [
-            session_id
-            for session_id, session in _sessions.items()
-            if session.get("owner_type") == owner_type and session.get("owner_id") == owner_id
-        ]
+        session_ids = _session_ids_for_owner(owner_type, owner_id)
+        sessions = []
         for session_id in session_ids:
-            _sessions.pop(session_id, None)
-    return len(session_ids)
+            original = _sessions.get(session_id)
+            if original is not None:
+                _sessions[session_id] = _freeze_session_snapshot(original)
+            session = _sessions.pop(session_id, None)
+            if session is not None:
+                sessions.append(session)
+    return sessions
+
+
+def sessions_for_owner(owner_type: str, owner_id: str) -> list[dict]:
+    """Return frozen snapshots for in-memory Retrieval sessions owned by an actor."""
+    with _sessions_lock:
+        return [
+            _freeze_session_snapshot(_sessions[session_id])
+            for session_id in _session_ids_for_owner(owner_type, owner_id)
+        ]
+
+
+def _session_ids_for_owner(owner_type: str, owner_id: str) -> list[str]:
+    return [
+        session_id
+        for session_id, session in _sessions.items()
+        if session.get("owner_type") == owner_type and session.get("owner_id") == owner_id
+    ]
+
+
+def _freeze_session_snapshot(session: dict) -> MappingProxyType:
+    snapshot = {
+        key: deepcopy(value)
+        for key, value in session.items()
+        if key != "_lock"
+    }
+    return MappingProxyType(snapshot)
 
 
 def _extract_facts_from_conversation(session: dict) -> dict:
@@ -726,10 +772,98 @@ async def get_session(session_id: str, user: dict = Depends(auth.require_admin_o
 @router.delete("/session/{session_id}")
 async def delete_session(session_id: str, user: dict = Depends(auth.require_admin_or_approved_user)):
     """Delete a session. Requires auth."""
+    deleted_session = None
     with _sessions_lock:
         if session_id in _sessions:
             session = _sessions[session_id]
             if not _can_access_session(user, session):
                 raise HTTPException(status_code=403, detail="Session access denied")
-            del _sessions[session_id]
-    return {"status": "deleted"}
+            _sessions[session_id] = _freeze_session_snapshot(session)
+            deleted_session = _sessions.pop(session_id)
+    if deleted_session is None:
+        deletion = summarize_deletion_results([
+            deletion_target_skipped(
+                target_kind="conversation",
+                target_id=session_id,
+                action="delete_session_record",
+                detail="Conversation record was already absent.",
+            )
+        ])
+        import lifecycle
+        lifecycle.audit_lifecycle_deletion(
+            config_key=f"conversation:{session_id}:delete",
+            changed_by=user.get("pubkey", str(user.get("id", "unknown"))),
+            workflow="delete_conversation",
+            target_id=session_id,
+            deletion=deletion,
+        )
+        return {"status": "deleted", "deletion": deletion}
+
+    import lifecycle
+
+    try:
+        session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(deleted_session)
+    except Exception as exc:
+        logger.warning(
+            "Failed to delete Session Memory for Conversation session_id=%s: %s",
+            session_id,
+            exc,
+            exc_info=True,
+        )
+        session_memory_deletion = summarize_deletion_results([
+            deletion_target_failed(
+                target_kind="session_memory",
+                target_id=session_id,
+                action="delete_session_memory",
+                detail=lifecycle.categorize_error(exc),
+                retryable=True,
+            )
+        ])
+    if session_memory_deletion["status"] != "succeeded":
+        try:
+            lifecycle.create_session_memory_tombstone(
+                session=deleted_session,
+                source="user_conversation_delete" if user.get("type") != "admin" else "admin_conversation_delete",
+                workflow="delete_conversation",
+                deletion=session_memory_deletion,
+            )
+        except Exception as exc:
+            logger.exception(
+                "Failed to create Session Memory deletion tombstone for session_id=%s",
+                session_id,
+            )
+            with _sessions_lock:
+                if session_id not in _sessions:
+                    restored_session = deepcopy(dict(deleted_session))
+                    restored_session["_lock"] = threading.RLock()
+                    _sessions[session_id] = restored_session
+            session_memory_deletion = summarize_deletion_results([
+                *session_memory_deletion.get("results", []),
+                deletion_target_failed(
+                    target_kind="deletion_tombstone",
+                    target_id=session_id,
+                    action="create_session_memory_tombstone",
+                    detail=lifecycle.categorize_error(exc),
+                    retryable=True,
+                ),
+            ])
+    session_memory_results = session_memory_deletion.get("results", [])
+    if not isinstance(session_memory_results, list):
+        session_memory_results = []
+    deletion = summarize_deletion_results([
+        deletion_target_succeeded(
+            target_kind="conversation",
+            target_id=session_id,
+            action="delete_session_record",
+            detail="Deleted active Conversation record.",
+        ),
+        *session_memory_results,
+    ])
+    lifecycle.audit_lifecycle_deletion(
+        config_key=f"conversation:{session_id}:delete",
+        changed_by=user.get("pubkey", str(user.get("id", "unknown"))),
+        workflow="delete_conversation",
+        target_id=session_id,
+        deletion=deletion,
+    )
+    return {"status": "deleted", "deletion": deletion}
