@@ -189,16 +189,7 @@ export interface DeploymentValidationResponse {
 
 // --- Data Lifecycle Types ---
 
-export type LifecycleStatusValue = 'complete' | 'partial' | 'not_started' | 'unsupported'
-
-export interface LifecycleRetentionPolicy {
-  lifecycle_data_class: string
-  enabled: boolean
-  retention_days: number
-  schedule_enabled: boolean
-  updated_by?: string | null
-  updated_at?: string | null
-}
+export type LifecycleStatusValue = 'complete' | 'partial' | 'not_started'
 
 export interface LifecyclePosture {
   status: LifecycleStatusValue
@@ -214,78 +205,11 @@ export interface LifecycleDataClass {
   retention: LifecyclePosture
   audit: LifecyclePosture
   notes: string[]
-  retention_policy?: LifecycleRetentionPolicy
-}
-
-export interface LifecycleDeploymentSurface {
-  key: string
-  label: string
-  owner: string
-  status: LifecycleStatusValue
-  summary: string
-  acknowledged: boolean
-  acknowledgement?: {
-    surface_key: string
-    acknowledged_by: string
-    acknowledged_at: string
-  } | null
 }
 
 export interface LifecycleStatusResponse {
   data_classes: LifecycleDataClass[]
-  deployment_surfaces?: LifecycleDeploymentSurface[]
-  deletion_tombstones?: {
-    total: number
-    incomplete: number
-    completed: number
-    by_class: Record<string, {
-      total: number
-      incomplete: number
-      completed: number
-    }>
-  }
 }
-
-export interface LifecycleDeletionResult {
-  target_kind: string
-  target_id: string
-  action: string
-  status: string
-  retryable: boolean
-  detail: string
-}
-
-export interface LifecycleDeletionSummary {
-  status: string
-  retryable: boolean
-  counts: {
-    succeeded: number
-    skipped: number
-    failed: number
-  }
-  results: LifecycleDeletionResult[]
-}
-
-export interface DeletionTombstone {
-  id: number
-  lifecycle_data_class: string
-  conversation_id: string
-  former_subject_ref?: string | null
-  status: string
-  source: string
-  workflow: string
-  deletion: LifecycleDeletionSummary
-  retry_count: number
-  last_retry_at?: string | null
-  created_at?: string | null
-  updated_at?: string | null
-}
-
-export interface DeletionTombstonesResponse {
-  tombstones: DeletionTombstone[]
-}
-
-export type DeletionTombstoneStatusFilter = 'all' | 'incomplete' | 'completed'
 
 // --- Config Audit Log Types ---
 

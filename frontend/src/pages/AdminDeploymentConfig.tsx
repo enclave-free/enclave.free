@@ -28,14 +28,13 @@ import {
   Key,
   Globe,
   Lock,
-  RotateCcw,
 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { Button, Callout, Card, TextField } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
-import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus, useDeletionTombstones } from '../hooks/useAdminConfig'
+import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse, DeletionTombstoneStatusFilter } from '../types/config'
+import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
 import { DEFAULT_TINFOIL_MODEL, TINFOIL_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
@@ -75,16 +74,7 @@ export function AdminDeploymentConfig() {
   const {
     status: lifecycleStatus,
     loading: lifecycleLoading,
-    refresh: refreshLifecycleStatus,
-    acknowledgeDeploymentSurface,
   } = useLifecycleStatus()
-  const [tombstoneStatusFilter, setTombstoneStatusFilter] = useState<DeletionTombstoneStatusFilter>('all')
-  const {
-    tombstones,
-    loading: tombstonesLoading,
-    error: tombstonesError,
-    retryTombstone,
-  } = useDeletionTombstones(tombstoneStatusFilter)
 
   const {
     log: auditLog,
@@ -107,15 +97,6 @@ export function AdminDeploymentConfig() {
   const [showAuditLog, setShowAuditLog] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
-  const [retryingTombstoneId, setRetryingTombstoneId] = useState<number | null>(null)
-  const [tombstoneRetryError, setTombstoneRetryError] = useState<string | null>(null)
-  const [acknowledgingSurfaceKey, setAcknowledgingSurfaceKey] = useState<string | null>(null)
-  const [surfaceAckError, setSurfaceAckError] = useState<string | null>(null)
-  const [updatingRetentionClass, setUpdatingRetentionClass] = useState<string | null>(null)
-  const [retentionActionLoading, setRetentionActionLoading] = useState<'preview' | 'run' | null>(null)
-  const [retentionActionError, setRetentionActionError] = useState<string | null>(null)
-  const [retentionPreview, setRetentionPreview] = useState<Record<string, { count: number }> | null>(null)
-  const [retentionRunStatus, setRetentionRunStatus] = useState<string | null>(null)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -237,105 +218,6 @@ export function AdminDeploymentConfig() {
   const formatLifecycleStatus = (status: string) => {
     if (status === 'not_started') return t('adminDeployment.lifecycle.notStarted', 'Not Started')
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
-  }
-
-  const tombstoneStatusFilters: Array<{ value: DeletionTombstoneStatusFilter; label: string; ariaLabel: string }> = [
-    {
-      value: 'all',
-      label: t('adminDeployment.lifecycle.allTombstones', 'All'),
-      ariaLabel: t('adminDeployment.lifecycle.allTombstonesLabel', 'All tombstones'),
-    },
-    {
-      value: 'incomplete',
-      label: t('adminDeployment.lifecycle.incompleteTombstonesFilter', 'Incomplete'),
-      ariaLabel: t('adminDeployment.lifecycle.incompleteTombstonesLabel', 'Incomplete tombstones'),
-    },
-    {
-      value: 'completed',
-      label: t('adminDeployment.lifecycle.completedTombstonesFilter', 'Completed'),
-      ariaLabel: t('adminDeployment.lifecycle.completedTombstonesLabel', 'Completed tombstones'),
-    },
-  ]
-
-  const handleRetryTombstone = async (id: number) => {
-    try {
-      setRetryingTombstoneId(id)
-      setTombstoneRetryError(null)
-      await retryTombstone(id)
-    } catch (err) {
-      setTombstoneRetryError(err instanceof Error ? err.message : 'errors.failedToRetryDeletionTombstone')
-    } finally {
-      setRetryingTombstoneId(null)
-    }
-  }
-
-  const handleAcknowledgeDeploymentSurface = async (surfaceKey: string) => {
-    try {
-      setAcknowledgingSurfaceKey(surfaceKey)
-      setSurfaceAckError(null)
-      await acknowledgeDeploymentSurface(surfaceKey)
-    } catch (err) {
-      setSurfaceAckError(err instanceof Error ? err.message : 'errors.failedToAcknowledgeDeploymentSurface')
-    } finally {
-      setAcknowledgingSurfaceKey(null)
-    }
-  }
-
-  const handleEnableRetentionPolicy = async (dataClass: { key: string; retention_policy?: { retention_days: number; schedule_enabled: boolean } }) => {
-    try {
-      setUpdatingRetentionClass(dataClass.key)
-      setRetentionActionError(null)
-      await adminFetch(`/admin/lifecycle/retention-policy/${dataClass.key}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          enabled: true,
-          retention_days: dataClass.retention_policy?.retention_days ?? 30,
-          schedule_enabled: dataClass.retention_policy?.schedule_enabled ?? false,
-        }),
-      })
-      await refreshLifecycleStatus()
-    } catch (err) {
-      setRetentionActionError(err instanceof Error ? err.message : 'errors.failedToUpdateRetentionPolicy')
-    } finally {
-      setUpdatingRetentionClass(null)
-    }
-  }
-
-  const handleRetentionPreview = async () => {
-    try {
-      setRetentionActionLoading('preview')
-      setRetentionActionError(null)
-      const response = await adminFetch('/admin/lifecycle/retention/preview', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      })
-      if (!response.ok) throw new Error('errors.failedToPreviewRetention')
-      const data = await response.json()
-      setRetentionPreview(data.eligible ?? {})
-    } catch (err) {
-      setRetentionActionError(err instanceof Error ? err.message : 'errors.failedToPreviewRetention')
-    } finally {
-      setRetentionActionLoading(null)
-    }
-  }
-
-  const handleRetentionRun = async () => {
-    try {
-      setRetentionActionLoading('run')
-      setRetentionActionError(null)
-      const response = await adminFetch('/admin/lifecycle/retention/run', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      })
-      if (!response.ok) throw new Error('errors.failedToRunRetention')
-      const data = await response.json()
-      setRetentionRunStatus(data.status ?? data.deletion?.status ?? 'unknown')
-      await refreshLifecycleStatus()
-    } catch (err) {
-      setRetentionActionError(err instanceof Error ? err.message : 'errors.failedToRunRetention')
-    } finally {
-      setRetentionActionLoading(null)
-    }
   }
 
   // Handle editing a config value
@@ -1469,233 +1351,17 @@ export function AdminDeploymentConfig() {
                       {dataClass.storage_targets.join(', ')}
                     </span>
                   </div>
-	                  <div className="mt-3 grid gap-1 text-xs text-text-secondary">
-	                    <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
-	                    <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
-	                    <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
-	                    {dataClass.retention_policy && (
-	                      <div className="pt-2 mt-1 border-t border-border/60 grid gap-2">
-	                        <p>
-	                          {t('adminDeployment.lifecycle.policySummary', 'Policy: {{enabled}}, {{days}} days, schedule {{schedule}}', {
-	                            enabled: dataClass.retention_policy.enabled ? 'Enabled' : 'Disabled',
-	                            days: dataClass.retention_policy.retention_days,
-	                            schedule: dataClass.retention_policy.schedule_enabled ? 'on' : 'off',
-	                          })}
-	                        </p>
-	                        {!dataClass.retention_policy.enabled && (
-	                          <button
-	                            type="button"
-	                            onClick={() => handleEnableRetentionPolicy(dataClass)}
-	                            disabled={updatingRetentionClass === dataClass.key}
-	                            aria-label={t('adminDeployment.lifecycle.enableRetentionLabel', 'Enable {{className}} retention', { className: dataClass.label })}
-	                            className="inline-flex w-fit items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
-	                          >
-	                            {updatingRetentionClass === dataClass.key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-	                            {t('adminDeployment.lifecycle.enableRetention', 'Enable retention')}
-	                          </button>
-	                        )}
-	                      </div>
-	                    )}
-	                    {lifecycleStatus.deletion_tombstones?.by_class?.[dataClass.key] && (
-                      <div className="pt-2 mt-1 border-t border-border/60 grid gap-1">
-                        <p>{t('adminDeployment.lifecycle.incompleteTombstones', 'Incomplete tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].incomplete })}</p>
-                        <p>{t('adminDeployment.lifecycle.completedTombstones', 'Completed tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].completed })}</p>
-                      </div>
-                    )}
+                  <div className="mt-3 grid gap-1 text-xs text-text-secondary">
+                    <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
+                    <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
+                    <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
                   </div>
                 </div>
               ))}
-	            </div>
-	          ) : (
-            <p className="text-xs text-text-muted">
-              {t('adminDeployment.lifecycle.empty', 'Lifecycle status is not available.')}
-            </p>
-	          )}
-          <div className="mt-5 border-t border-border pt-4">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleRetentionPreview}
-                disabled={retentionActionLoading !== null}
-                aria-label={t('adminDeployment.lifecycle.previewRetentionLabel', 'Preview retention')}
-                className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {retentionActionLoading === 'preview' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                {t('adminDeployment.lifecycle.previewRetention', 'Preview retention')}
-              </button>
-              <button
-                type="button"
-                onClick={handleRetentionRun}
-                disabled={retentionActionLoading !== null}
-                aria-label={t('adminDeployment.lifecycle.runRetentionLabel', 'Run retention')}
-                className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {retentionActionLoading === 'run' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                {t('adminDeployment.lifecycle.runRetention', 'Run retention')}
-              </button>
-            </div>
-            {retentionActionError && (
-              <p className="text-xs text-danger mt-2">{t('adminDeployment.lifecycle.retentionActionFailed', 'Retention action failed.')}</p>
-            )}
-            {retentionPreview && (
-              <div className="mt-3 grid gap-1 text-xs text-text-secondary">
-                {Object.entries(retentionPreview).map(([key, value]) => (
-                  <p key={key}>{key.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')}: {value.count} eligible</p>
-                ))}
-              </div>
-            )}
-            {retentionRunStatus && (
-              <p className="mt-3 text-xs text-text-secondary">
-                {t('adminDeployment.lifecycle.retentionRunStatus', 'Retention run: {{status}}', { status: retentionRunStatus })}
-              </p>
-            )}
-          </div>
-          {Array.isArray(lifecycleStatus?.deployment_surfaces) && lifecycleStatus.deployment_surfaces.length > 0 && (
-            <div className="mt-5 border-t border-border pt-4">
-              <h4 className="text-sm font-medium text-text mb-3">
-                {t('adminDeployment.lifecycle.deploymentSurfaces', 'Unsupported Deployment Surfaces')}
-              </h4>
-              {surfaceAckError && (
-                <p className="text-xs text-danger mb-3">
-                  {t('adminDeployment.lifecycle.surfaceAckFailed', 'Unable to acknowledge Deployment Surface.')}
-                </p>
-              )}
-              <div className="grid gap-3 md:grid-cols-2">
-                {lifecycleStatus.deployment_surfaces.map((surface) => (
-                  <div key={surface.key} className="bg-surface border border-border rounded-lg p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h5 className="text-sm font-medium text-text">{surface.label}</h5>
-                        <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.lifecycle.owner', 'Owner: {{owner}}', { owner: surface.owner })}
-                        </p>
-                      </div>
-                      <span className="text-[10px] uppercase tracking-wide bg-surface-overlay text-text-secondary px-2 py-1 rounded">
-                        {formatLifecycleStatus(surface.status)}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-text-secondary">{surface.summary}</p>
-                    <div className="mt-3">
-                      {surface.acknowledged ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-success">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          {t('adminDeployment.lifecycle.acknowledged', 'Acknowledged')}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleAcknowledgeDeploymentSurface(surface.key)}
-                          disabled={acknowledgingSurfaceKey === surface.key}
-                          aria-label={t('adminDeployment.lifecycle.acknowledgeSurfaceLabel', 'Acknowledge {{surface}}', { surface: surface.label })}
-                          className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {acknowledgingSurfaceKey === surface.key ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          )}
-                          {t('adminDeployment.lifecycle.acknowledge', 'Acknowledge')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <Card role="group" aria-label={t('adminDeployment.lifecycle.tombstonesTitle', 'Deletion Tombstones')}>
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="heading-sm flex items-center gap-2">
-              <History className="w-4 h-4 text-text-muted" />
-              {t('adminDeployment.lifecycle.tombstonesTitle', 'Deletion Tombstones')}
-            </h3>
-            {tombstonesLoading && <Loader2 className="w-4 h-4 animate-spin text-text-muted" />}
-          </div>
-          <p className="text-sm text-text-secondary mb-4">
-            {t('adminDeployment.lifecycle.tombstonesDescription', 'Retry incomplete lifecycle deletions without exposing deleted content.')}
-          </p>
-          <div className="mb-4 inline-flex rounded-lg border border-border bg-surface p-1" role="group" aria-label={t('adminDeployment.lifecycle.tombstoneStatusFilter', 'Tombstone status filter')}>
-            {tombstoneStatusFilters.map((filter) => {
-              const selected = tombstoneStatusFilter === filter.value
-              return (
-                <button
-                  key={filter.value}
-                  type="button"
-                  aria-label={filter.ariaLabel}
-                  aria-pressed={selected}
-                  onClick={() => setTombstoneStatusFilter(filter.value)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    selected
-                      ? 'bg-surface-raised text-text shadow-sm'
-                      : 'text-text-secondary hover:text-text hover:bg-surface-overlay'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              )
-            })}
-          </div>
-          {tombstoneRetryError && (
-            <p className="text-xs text-danger mb-3">
-              {t('adminDeployment.lifecycle.tombstoneRetryFailed', 'Retry failed.')}
-            </p>
-          )}
-          {tombstonesError && !tombstonesLoading ? (
-            <p className="text-xs text-danger">
-              {t('adminDeployment.lifecycle.tombstonesFetchFailed', 'Unable to load deletion tombstones.')}
-            </p>
-          ) : tombstones.length > 0 ? (
-            <div className="space-y-3">
-              {tombstones.map((tombstone) => {
-                const detail = tombstone.deletion?.results?.[0]?.detail
-                const canRetry = tombstone.status !== 'completed' && tombstone.deletion?.retryable !== false
-                const updatedAt = tombstone.updated_at ?? tombstone.last_retry_at ?? tombstone.created_at
-                return (
-                  <div key={tombstone.id} className="bg-surface border border-border rounded-lg p-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium text-text break-all">{tombstone.conversation_id}</span>
-                          <span className="text-[10px] uppercase tracking-wide bg-surface-overlay text-text-secondary px-2 py-1 rounded">
-                            {formatLifecycleStatus(tombstone.status)}
-                          </span>
-                        </div>
-                        <div className="mt-2 grid gap-1 text-xs text-text-secondary">
-                          <p>{t('adminDeployment.lifecycle.tombstoneClass', 'Class: {{className}}', { className: tombstone.lifecycle_data_class })}</p>
-                          <p>{t('adminDeployment.lifecycle.tombstoneSource', 'Source: {{source}}', { source: tombstone.source })}</p>
-                          <p>{t('adminDeployment.lifecycle.tombstoneRetries', 'Retries: {{count}}', { count: tombstone.retry_count ?? 0 })}</p>
-                          {updatedAt && (
-                            <p>{t('adminDeployment.lifecycle.tombstoneUpdated', 'Updated: {{updated}}', { updated: formatTimestamp(updatedAt) })}</p>
-                          )}
-                          {detail && <p>{detail}</p>}
-                        </div>
-                      </div>
-                      {canRetry && (
-                        <button
-                          type="button"
-                          onClick={() => handleRetryTombstone(tombstone.id)}
-                          disabled={retryingTombstoneId === tombstone.id}
-                          aria-label={t('adminDeployment.lifecycle.retryTombstoneLabel', 'Retry deletion tombstone {{id}}', { id: tombstone.id })}
-                          className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {retryingTombstoneId === tombstone.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <RotateCcw className="w-3.5 h-3.5" />
-                          )}
-                          {t('adminDeployment.lifecycle.retry', 'Retry')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           ) : (
             <p className="text-xs text-text-muted">
-              {t('adminDeployment.lifecycle.tombstonesEmpty', 'No deletion tombstones are waiting for retry.')}
+              {t('adminDeployment.lifecycle.empty', 'Lifecycle status is not available.')}
             </p>
           )}
         </Card>

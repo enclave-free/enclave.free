@@ -1,3 +1,0 @@
-# Audit Log Retention Preserves Lifecycle Evidence
-
-Enclave Free treats the Audit Log as both a Lifecycle Data Class and the evidence mechanism for other Operator-Controlled Data Lifecycle workflows. The first complete lifecycle version should support evidence-preserving Audit Log Retention, such as compaction or redaction of sensitive event detail after a retention window, rather than ordinary full Audit Log deletion. This keeps deletion and retention outcomes reviewable by the Operator while avoiding a false promise that lifecycle evidence can be erased like ordinary content without weakening accountability.

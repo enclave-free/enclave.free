@@ -20,8 +20,6 @@ import type {
   ServiceHealthResponse,
   DeploymentValidationResponse,
   LifecycleStatusResponse,
-  DeletionTombstonesResponse,
-  DeletionTombstoneStatusFilter,
   ConfigAuditLogResponse,
   MigrationPrepareResponse,
   MigrationExecuteResponse,
@@ -467,18 +465,6 @@ export function useLifecycleStatus() {
     }
   }, [])
 
-  const acknowledgeDeploymentSurface = useCallback(async (surfaceKey: string) => {
-    const response = await adminFetch(`/admin/lifecycle/deployment-surfaces/${surfaceKey}/acknowledgement`, {
-      method: 'PUT',
-    })
-    if (!response.ok) {
-      throw new Error('errors.failedToAcknowledgeDeploymentSurface')
-    }
-    const data = await response.json()
-    await fetchStatus()
-    return data
-  }, [fetchStatus])
-
   useEffect(() => {
     fetchStatus()
   }, [fetchStatus])
@@ -488,56 +474,6 @@ export function useLifecycleStatus() {
     loading,
     error,
     refresh: fetchStatus,
-    acknowledgeDeploymentSurface,
-  }
-}
-
-export function useDeletionTombstones(statusFilter: DeletionTombstoneStatusFilter = 'all') {
-  const [tombstones, setTombstones] = useState<DeletionTombstonesResponse['tombstones']>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchTombstones = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const query = statusFilter === 'all' ? '' : `?status=${statusFilter}`
-      const response = await adminFetch(`/admin/lifecycle/deletion-tombstones${query}`)
-      if (!response.ok) {
-        throw new Error('errors.failedToFetchDeletionTombstones')
-      }
-      const data: DeletionTombstonesResponse = await response.json()
-      setTombstones(data.tombstones)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchDeletionTombstones')
-    } finally {
-      setLoading(false)
-    }
-  }, [statusFilter])
-
-  const retryTombstone = useCallback(async (id: number) => {
-    const response = await adminFetch(`/admin/lifecycle/deletion-tombstones/${id}/retry`, {
-      method: 'POST',
-    })
-    if (!response.ok) {
-      await fetchTombstones()
-      throw new Error('errors.failedToRetryDeletionTombstone')
-    }
-    const data = await response.json()
-    await fetchTombstones()
-    return data
-  }, [fetchTombstones])
-
-  useEffect(() => {
-    fetchTombstones()
-  }, [fetchTombstones])
-
-  return {
-    tombstones,
-    loading,
-    error,
-    refresh: fetchTombstones,
-    retryTombstone,
   }
 }
 

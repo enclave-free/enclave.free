@@ -128,7 +128,6 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(actions["delete_user_memory"]["status"], "succeeded")
         self.assertEqual(actions["delete_user_memory"]["count"], 1)
         self.assertEqual(actions["delete_conversations"]["status"], "succeeded")
-        self.assertEqual(actions["delete_session_memory"]["status"], "succeeded")
         self.assertEqual(actions["delete_user_profile"]["status"], "succeeded")
         self.assertEqual(actions["delete_user_approval"]["status"], "succeeded")
 
@@ -145,7 +144,7 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
         self.assertEqual(event["workflow"], "delete_user")
         self.assertEqual(event["status"], "succeeded")
-        self.assertEqual(event["counts"]["succeeded"], 5)
+        self.assertEqual(event["counts"]["succeeded"], 4)
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
