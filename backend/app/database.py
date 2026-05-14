@@ -950,6 +950,53 @@ def list_deletion_tombstones(*, status: str | None = None, limit: int = 100) -> 
     return tombstones
 
 
+def has_incomplete_deletion_tombstone_for_conversation(conversation_id: str) -> bool:
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 1 FROM deletion_tombstones
+            WHERE conversation_id = ? AND status = 'incomplete'
+            LIMIT 1
+            """,
+            (conversation_id,),
+        )
+        return cursor.fetchone() is not None
+
+
+def summarize_deletion_tombstones() -> dict:
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT lifecycle_data_class, status, COUNT(*) AS count
+            FROM deletion_tombstones
+            GROUP BY lifecycle_data_class, status
+            """
+        )
+        rows = cursor.fetchall()
+
+    summary = {
+        "total": 0,
+        "incomplete": 0,
+        "completed": 0,
+        "by_class": {},
+    }
+    for row in rows:
+        lifecycle_data_class = row["lifecycle_data_class"]
+        status = row["status"]
+        count = int(row["count"])
+        summary["total"] += count
+        if status in ("incomplete", "completed"):
+            summary[status] += count
+        class_counts = summary["by_class"].setdefault(
+            lifecycle_data_class,
+            {"total": 0, "incomplete": 0, "completed": 0},
+        )
+        class_counts["total"] += count
+        if status in ("incomplete", "completed"):
+            class_counts[status] += count
+    return summary
+
+
 def get_deletion_tombstone(tombstone_id: int) -> dict | None:
     with get_cursor() as cursor:
         cursor.execute("SELECT * FROM deletion_tombstones WHERE id = ?", (tombstone_id,))

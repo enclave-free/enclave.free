@@ -1375,6 +1375,12 @@ export function AdminDeploymentConfig() {
                     <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
+                    {lifecycleStatus.deletion_tombstones?.by_class?.[dataClass.key] && (
+                      <div className="pt-2 mt-1 border-t border-border/60 grid gap-1">
+                        <p>{t('adminDeployment.lifecycle.incompleteTombstones', 'Incomplete tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].incomplete })}</p>
+                        <p>{t('adminDeployment.lifecycle.completedTombstones', 'Completed tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].completed })}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

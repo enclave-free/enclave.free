@@ -209,7 +209,10 @@ class RetentionRunRequest(BaseModel):
 
 def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
-    return {"data_classes": deepcopy(DATA_CLASSES)}
+    return {
+        "data_classes": deepcopy(DATA_CLASSES),
+        "deletion_tombstones": database.summarize_deletion_tombstones(),
+    }
 
 
 def _lifecycle_error_category(detail: object) -> str:
@@ -475,6 +478,15 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
                 stale_session_ids.append(session_id)
 
         for session_id in stale_session_ids:
+            if database.has_incomplete_deletion_tombstone_for_conversation(session_id):
+                retained["skipped_conversations"].append(session_id)
+                results.append(deletion_target_skipped(
+                    target_kind="conversation",
+                    target_id=session_id,
+                    action="retention_skip_tombstoned_conversation",
+                    detail="Skipped Conversation because an incomplete Deletion Tombstone already tracks its lifecycle deletion.",
+                ))
+                continue
             session = query._sessions.pop(session_id, None)
             if session is not None:
                 stale_sessions.append((session_id, session))

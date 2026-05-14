@@ -89,6 +89,18 @@ describe('AdminDeploymentConfig', () => {
               notes: ['Session Memory belongs to the Agent Runtime.'],
             },
           ],
+          deletion_tombstones: {
+            total: 2,
+            incomplete: 1,
+            completed: 1,
+            by_class: {
+              sage_session_memory: {
+                total: 2,
+                incomplete: 1,
+                completed: 1,
+              },
+            },
+          },
         }))
       }
       if (endpoint === '/admin/lifecycle/deletion-tombstones') {
@@ -203,6 +215,8 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
     expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
     expect(screen.getByText('Deletion: Complete')).toBeInTheDocument()
+    expect(screen.getByText('Incomplete tombstones: 1')).toBeInTheDocument()
+    expect(screen.getByText('Completed tombstones: 1')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')

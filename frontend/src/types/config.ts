@@ -209,6 +209,16 @@ export interface LifecycleDataClass {
 
 export interface LifecycleStatusResponse {
   data_classes: LifecycleDataClass[]
+  deletion_tombstones?: {
+    total: number
+    incomplete: number
+    completed: number
+    by_class: Record<string, {
+      total: number
+      incomplete: number
+      completed: number
+    }>
+  }
 }
 
 export interface LifecycleDeletionResult {

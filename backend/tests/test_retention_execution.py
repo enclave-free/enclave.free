@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from httpx import Response
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 
@@ -440,6 +441,18 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertNotIn(session_id, self.query._sessions)
         get_deleted = self.client.get(f"/query/session/{session_id}")
         self.assertEqual(get_deleted.status_code, 404)
+        self.main.app.dependency_overrides[self.lifecycle.auth.require_admin] = lambda: (_ for _ in ()).throw(
+            HTTPException(status_code=403, detail="Admin access required")
+        )
+        hidden_tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
+        self.assertEqual(hidden_tombstones.status_code, 403)
+        hidden_retry = self.client.post("/admin/lifecycle/deletion-tombstones/1/retry")
+        self.assertEqual(hidden_retry.status_code, 403)
+        self.main.app.dependency_overrides[self.lifecycle.auth.require_admin] = lambda: {
+            "type": "admin",
+            "id": 1,
+            "pubkey": "admin-pubkey",
+        }
         tombstone = self.client.get("/admin/lifecycle/deletion-tombstones").json()["tombstones"][0]
         self.assertEqual(tombstone["conversation_id"], session_id)
         self.assertEqual(tombstone["source"], "user_conversation_delete")
@@ -459,6 +472,72 @@ class RetentionExecutionTest(unittest.TestCase):
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
+
+    def test_admin_conversation_delete_uses_shared_session_memory_lifecycle(self) -> None:
+        session_id = "admin-delete-session"
+        self.query._sessions[session_id] = {
+            "id": session_id,
+            "agent_runtime": "sage",
+            "owner_type": "admin",
+            "owner_id": "1",
+            "created_at": datetime.utcnow().isoformat(),
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Admin-deleted content must not appear in lifecycle evidence.",
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            ],
+        }
+        self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "admin",
+            "id": 1,
+            "pubkey": "admin-pubkey",
+        }
+
+        async def fail_sage_delete(payload: dict) -> dict:
+            self.assertEqual(payload, {"conversation_id": session_id})
+            return {
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": session_id,
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "Sage unavailable",
+                    }
+                ],
+            }
+
+        self.lifecycle.post_sage_session_memory_delete = fail_sage_delete
+
+        response = self.client.delete(f"/query/session/{session_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "deleted")
+        self.assertEqual(body["deletion"]["status"], "partial_failure")
+        self.assertNotIn(session_id, self.query._sessions)
+        tombstone = self.client.get("/admin/lifecycle/deletion-tombstones").json()["tombstones"][0]
+        self.assertEqual(tombstone["conversation_id"], session_id)
+        self.assertEqual(tombstone["source"], "admin_conversation_delete")
+        self.assertEqual(tombstone["former_subject_ref"], "admin:1")
+        serialized = json.dumps(tombstone)
+        self.assertIn("target_unavailable", serialized)
+        self.assertNotIn("Admin-deleted content", serialized)
+        entries = self.audit_entries("data_deletion")
+        event = next(
+            json.loads(entry["new_value"])
+            for entry in entries
+            if json.loads(entry["new_value"])["workflow"] == "delete_conversation"
+        )
+        self.assertEqual(event["status"], "partial_failure")
+        self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
+        self.assertNotIn("Admin-deleted content", json.dumps(event))
 
     def test_repeat_conversation_delete_returns_deletion_summary_and_audit(self) -> None:
         session_id = "already-deleted-session"
@@ -556,6 +635,59 @@ class RetentionExecutionTest(unittest.TestCase):
         actions = {result["target_id"]: result for result in body["deletion"]["results"]}
         self.assertEqual(actions[revived_session_id]["status"], "skipped")
         self.assertEqual(actions[revived_session_id]["action"], "retention_skip_active_conversation")
+
+    def test_retention_skips_conversations_with_incomplete_deletion_tombstones(self) -> None:
+        tombstoned_session_id = "tombstoned-stale-session"
+        self.query._sessions[tombstoned_session_id] = {
+            "id": tombstoned_session_id,
+            "owner_type": "user",
+            "owner_id": "42",
+            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "This tombstoned Conversation must not be deleted again.",
+                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+                }
+            ],
+        }
+        self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id=tombstoned_session_id,
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="user_conversation_delete",
+            workflow="delete_conversation",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": tombstoned_session_id,
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "target_unavailable",
+                    }
+                ],
+            },
+        )
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(tombstoned_session_id, self.query._sessions)
+        self.assertNotIn(tombstoned_session_id, body["retained"]["stale_conversations"])
+        self.assertIn(tombstoned_session_id, body["retained"]["skipped_conversations"])
+        actions = {result["target_id"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions[tombstoned_session_id]["status"], "skipped")
+        self.assertEqual(actions[tombstoned_session_id]["action"], "retention_skip_tombstoned_conversation")
 
     def test_retention_reports_partial_failure_for_retryable_document_cleanup(self) -> None:
         upload = self.upload_text("Broken.md")
