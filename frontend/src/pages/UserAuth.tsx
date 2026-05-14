@@ -32,10 +32,10 @@ function TabSwitcher({
   logInLabel: string
 }) {
   return (
-    <div className="flex bg-surface-overlay rounded-xl p-1.5 mb-6">
+    <div className="flex min-w-0 bg-surface-overlay rounded-xl p-1.5 mb-6">
       <button
         onClick={() => onTabChange('signup')}
-        className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+        className={`min-w-0 flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
           activeTab === 'signup'
             ? 'bg-surface text-text shadow-md'
             : 'text-text-muted hover:text-text'
@@ -45,7 +45,7 @@ function TabSwitcher({
       </button>
       <button
         onClick={() => onTabChange('login')}
-        className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+        className={`min-w-0 flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
           activeTab === 'login'
             ? 'bg-surface text-text shadow-md'
             : 'text-text-muted hover:text-text'

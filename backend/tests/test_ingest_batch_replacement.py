@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import json
 import os
 import sys
 import tempfile
@@ -29,11 +30,13 @@ class IngestBatchReplacementTest(unittest.TestCase):
 
         import database
         import auth
+        import deployment_config
         import ingest_db
         import ingest
 
         self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
+        self.deployment_config = importlib.reload(deployment_config)
         self.ingest_db = importlib.reload(ingest_db)
         self.ingest = importlib.reload(ingest)
         self.database.init_schema()
@@ -42,11 +45,17 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.original_scheduler = self.ingest.schedule_document_processing
         self.ingest.schedule_document_processing = lambda *_args, **_kwargs: None
         self.original_chunk_deleter = self.ingest.delete_document_chunks
-        self.ingest.delete_document_chunks = self.noop_chunk_delete
+        self.deleted_chunk_job_ids = []
+        self.ingest.delete_document_chunks = self.record_chunk_delete
 
         app = FastAPI()
         app.include_router(self.ingest.router)
+        app.include_router(self.deployment_config.router)
         app.dependency_overrides[self.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        app.dependency_overrides[self.deployment_config.auth.require_admin] = lambda: {
             "type": "admin",
             "pubkey": "admin-pubkey",
         }
@@ -75,8 +84,9 @@ class IngestBatchReplacementTest(unittest.TestCase):
         else:
             os.environ[name] = value
 
-    async def noop_chunk_delete(self, _job_id: str) -> int:
-        return 0
+    async def record_chunk_delete(self, job_id: str) -> int:
+        self.deleted_chunk_job_ids.append(job_id)
+        return 3
 
     def upload_text(self, filename: str, content: str = "operator knowledge"):
         return self.client.post(
@@ -91,6 +101,11 @@ class IngestBatchReplacementTest(unittest.TestCase):
         job["total_chunks"] = 1
         job["processed_chunks"] = 1
         self.ingest._sync_job_to_db(job_id)
+
+    def audit_entries(self, table_name: str) -> list[dict]:
+        response = self.client.get(f"/admin/deployment/audit-log?table_name={table_name}")
+        self.assertEqual(response.status_code, 200)
+        return response.json()["entries"]
 
     def test_single_upload_replacement_keeps_old_document_current_while_pending(self):
         first = self.upload_text("Handbook.md")
@@ -111,6 +126,14 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertTrue(old_job["is_current"])
         self.assertFalse(new_job["is_current"])
         self.assertEqual(new_job["replacement_for_job_id"], old_job_id)
+
+        entries = self.audit_entries("document_actions")
+        actions = {entry["config_key"]: json.loads(entry["new_value"]) for entry in entries}
+        self.assertEqual(actions[f"document:{old_job_id}:queue"]["action"], "upload_document")
+        self.assertEqual(actions[f"document:{replacement['job_id']}:queue"]["action"], "replace_document")
+        verify = self.client.get("/admin/deployment/audit-log/verify?table_name=document_actions")
+        self.assertEqual(verify.status_code, 200)
+        self.assertTrue(verify.json()["valid"])
 
     def test_successful_replacement_transfers_access_and_retires_old_document(self):
         first = self.upload_text("Handbook.md")
@@ -142,6 +165,9 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertFalse(new_defaults["is_default_active"])
         self.assertEqual(new_defaults["display_order"], 7)
 
+        actions = {entry["config_key"]: json.loads(entry["new_value"]) for entry in self.audit_entries("document_actions")}
+        self.assertEqual(actions[f"document:{new_job_id}:promote_replacement"]["action"], "promote_replacement")
+
     def test_batch_upload_partial_success_and_same_batch_duplicate_rejection(self):
         response = self.client.post(
             "/ingest/upload/batch",
@@ -161,7 +187,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertIn("Duplicate document name in this batch", reasons)
         self.assertTrue(any("Unsupported file type" in reason for reason in reasons))
 
-    def test_batch_upload_preserves_safe_relative_paths_and_rejects_traversal(self):
+    def test_batch_upload_preserves_safe_relative_paths_and_rejects_traversal(self) -> None:
         response = self.client.post(
             "/ingest/upload/batch",
             data={"relative_paths": ["Policies/HR/Handbook.md", "../secrets.md"]},
@@ -176,6 +202,197 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(body["accepted"][0]["filename"], "Policies/HR/Handbook.md")
         self.assertEqual(body["rejected"][0]["filename"], "secrets.md")
         self.assertIn("cannot contain '..'", body["rejected"][0]["reason"])
+
+    def test_admin_delete_document_removes_access_artifact_and_retrieval_entries(self) -> None:
+        upload = self.upload_text("Handbook.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        self.complete_job(job_id)
+
+        defaults_response = self.client.put(
+            f"/ingest/admin/documents/{job_id}/defaults",
+            json={"is_available": True, "is_default_active": True, "display_order": 4},
+        )
+        self.assertEqual(defaults_response.status_code, 200)
+        defaults_entries = self.audit_entries("document_defaults")
+        self.assertEqual(defaults_entries[0]["config_key"], job_id)
+        self.assertEqual(defaults_entries[0]["changed_by"], "admin-pubkey")
+        file_path = Path(self.ingest.JOBS[job_id]["file_path"])
+        self.assertTrue(file_path.exists())
+
+        response = self.client.delete(f"/ingest/jobs/{job_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "deleted")
+        self.assertEqual(body["deletion"]["status"], "succeeded")
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["delete_retrieval_index"]["status"], "succeeded")
+        self.assertEqual(actions["delete_uploaded_document_artifact"]["status"], "succeeded")
+        self.assertEqual(actions["delete_document_metadata"]["status"], "succeeded")
+        self.assertEqual(actions["delete_runtime_document_state"]["status"], "succeeded")
+
+        self.assertEqual(self.deleted_chunk_job_ids, [job_id])
+        self.assertFalse(file_path.exists())
+        self.assertNotIn(job_id, self.ingest.JOBS)
+        self.assertNotIn(
+            job_id,
+            {doc["job_id"] for doc in self.client.get("/ingest/admin/documents/defaults").json()["documents"]},
+        )
+
+        deletion_entries = self.audit_entries("data_deletion")
+        self.assertEqual(len(deletion_entries), 1)
+        deletion_event = json.loads(deletion_entries[0]["new_value"])
+        self.assertEqual(deletion_entries[0]["config_key"], f"document:{job_id}:delete")
+        self.assertEqual(deletion_event["workflow"], "delete_document")
+        self.assertEqual(deletion_event["status"], "succeeded")
+        self.assertEqual(deletion_event["counts"]["succeeded"], 4)
+        self.assertIn(
+            f"document:{job_id}:delete",
+            {entry["config_key"] for entry in self.audit_entries("document_actions")},
+        )
+        verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
+        self.assertEqual(verify.status_code, 200)
+        self.assertTrue(verify.json()["valid"])
+
+    def test_admin_delete_document_is_safe_to_repeat(self) -> None:
+        upload = self.upload_text("Handbook.md")
+        job_id = upload.json()["job_id"]
+        self.complete_job(job_id)
+
+        first = self.client.delete(f"/ingest/jobs/{job_id}")
+        self.assertEqual(first.status_code, 200)
+
+        second = self.client.delete(f"/ingest/jobs/{job_id}")
+
+        self.assertEqual(second.status_code, 200)
+        body = second.json()
+        self.assertEqual(body["status"], "deleted")
+        self.assertEqual(body["deletion"]["status"], "succeeded")
+        self.assertEqual(body["deletion"]["counts"]["skipped"], 4)
+        self.assertEqual(
+            {result["status"] for result in body["deletion"]["results"]},
+            {"skipped"},
+        )
+
+        entries = self.audit_entries("data_deletion")
+        idempotent_entry = next(
+            entry for entry in entries
+            if json.loads(entry["new_value"])["counts"]["skipped"] == 4
+        )
+        idempotent_event = json.loads(idempotent_entry["new_value"])
+        self.assertEqual(idempotent_entry["config_key"], f"document:{job_id}:delete")
+        self.assertEqual(idempotent_event["status"], "succeeded")
+        self.assertEqual(idempotent_event["counts"]["skipped"], 4)
+
+    def test_admin_delete_document_rejects_artifact_path_outside_uploads_root(self) -> None:
+        upload = self.upload_text("Handbook.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        self.complete_job(job_id)
+        outside_file = Path(self.tmp.name) / "outside.txt"
+        outside_file.write_text("do not delete")
+        self.ingest.JOBS[job_id]["file_path"] = str(outside_file)
+        with self.ingest_db.get_cursor() as cursor:
+            cursor.execute("UPDATE ingest_jobs SET file_path = ? WHERE job_id = ?", (str(outside_file), job_id))
+
+        response = self.client.delete(f"/ingest/jobs/{job_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(body["deletion"]["status"], "partial_failure")
+        self.assertFalse(body["deletion"]["retryable"])
+        self.assertEqual(actions["delete_uploaded_document_artifact"]["status"], "failed")
+        self.assertFalse(actions["delete_uploaded_document_artifact"]["retryable"])
+        self.assertTrue(outside_file.exists())
+        self.assertIsNotNone(self.ingest_db.get_job(job_id))
+        self.assertEqual(actions["delete_document_metadata"]["status"], "skipped")
+
+    def test_delete_document_requires_admin(self) -> None:
+        app = FastAPI()
+        app.include_router(self.ingest.router)
+        client = TestClient(app)
+
+        response = client.delete("/ingest/jobs/not-a-real-job")
+
+        self.assertIn(response.status_code, (401, 403))
+
+    def test_admin_cleanup_removes_failed_ingestion_artifacts(self) -> None:
+        upload = self.upload_text("Broken.md")
+        job_id = upload.json()["job_id"]
+        job = self.ingest.JOBS[job_id]
+        job["status"] = "failed"
+        job["error"] = "Extraction failed"
+        self.ingest._sync_job_to_db(job_id)
+        file_path = Path(job["file_path"])
+        self.assertTrue(file_path.exists())
+
+        response = self.client.post("/ingest/admin/documents/artifacts/cleanup")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "succeeded")
+        self.assertEqual(body["cleaned_jobs"], 1)
+        self.assertEqual(body["eligible_jobs"][0]["reason"], "failed_ingestion")
+        self.assertFalse(file_path.exists())
+        self.assertNotIn(job_id, self.ingest.JOBS)
+
+        entries = self.audit_entries("data_deletion")
+        self.assertEqual(entries[0]["config_key"], f"document:{job_id}:cleanup")
+        cleanup_event = json.loads(entries[0]["new_value"])
+        self.assertEqual(cleanup_event["workflow"], "cleanup_document_artifacts:failed_ingestion")
+        self.assertEqual(cleanup_event["status"], "succeeded")
+
+    def test_admin_cleanup_removes_superseded_replacement_artifacts_without_current_document(self) -> None:
+        first = self.upload_text("Handbook.md")
+        old_job_id = first.json()["job_id"]
+        self.complete_job(old_job_id)
+        old_file_path = Path(self.ingest.JOBS[old_job_id]["file_path"])
+
+        second = self.upload_text("Handbook.md", "updated knowledge")
+        new_job_id = second.json()["job_id"]
+        self.complete_job(new_job_id)
+        asyncio.run(self.ingest.promote_replacement(new_job_id))
+
+        response = self.client.post("/ingest/admin/documents/artifacts/cleanup")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "succeeded")
+        self.assertEqual(body["cleaned_jobs"], 1)
+        self.assertEqual(body["eligible_jobs"][0]["job_id"], old_job_id)
+        self.assertEqual(body["eligible_jobs"][0]["reason"], "superseded_document")
+        self.assertNotIn(old_job_id, self.ingest.JOBS)
+        self.assertFalse(old_file_path.exists())
+        jobs_by_id = {
+            job["job_id"]: job
+            for job in self.client.get("/ingest/jobs").json()["jobs"]
+        }
+        self.assertIn(new_job_id, jobs_by_id)
+        self.assertTrue(jobs_by_id[new_job_id]["is_current"])
+
+    def test_admin_cleanup_preserves_current_document_during_pending_replacement(self) -> None:
+        first = self.upload_text("Handbook.md")
+        old_job_id = first.json()["job_id"]
+        self.complete_job(old_job_id)
+
+        second = self.upload_text("Handbook.md", "updated knowledge")
+        new_job_id = second.json()["job_id"]
+
+        response = self.client.post("/ingest/admin/documents/artifacts/cleanup")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["cleaned_jobs"], 0)
+        jobs_by_id = {
+            job["job_id"]: job
+            for job in self.client.get("/ingest/jobs").json()["jobs"]
+        }
+        self.assertIn(old_job_id, jobs_by_id)
+        self.assertIn(new_job_id, jobs_by_id)
+        self.assertTrue(jobs_by_id[old_job_id]["is_current"])
+        self.assertFalse(jobs_by_id[new_job_id]["is_current"])
 
 
 if __name__ == "__main__":

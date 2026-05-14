@@ -207,29 +207,32 @@ def get_job(job_id: str) -> Optional[dict]:
     return None
 
 
-def list_jobs(status: Optional[str] = None, limit: int = 100) -> list[dict]:
+def list_jobs(status: Optional[str] = None, limit: int = 100, offset: int = 0) -> list[dict]:
     """
     List all ingest jobs, optionally filtered by status.
     
     Args:
         status: Filter by status (e.g., 'completed', 'pending')
         limit: Max number of jobs to return
+        offset: Number of sorted jobs to skip
     
     Returns:
         List of job dicts
     """
+    limit = max(0, min(int(limit), 1000))
+    offset = max(0, int(offset))
     conn = get_connection()
     cursor = conn.cursor()
     
     if status:
         cursor.execute(
-            "SELECT * FROM ingest_jobs WHERE status = ? ORDER BY created_at DESC LIMIT ?",
-            (status, limit)
+            "SELECT * FROM ingest_jobs WHERE status = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+            (status, limit, offset)
         )
     else:
         cursor.execute(
-            "SELECT * FROM ingest_jobs ORDER BY created_at DESC LIMIT ?",
-            (limit,)
+            "SELECT * FROM ingest_jobs ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+            (limit, offset)
         )
     
     rows = cursor.fetchall()

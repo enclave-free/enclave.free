@@ -187,6 +187,30 @@ export interface DeploymentValidationResponse {
   warnings: string[]
 }
 
+// --- Data Lifecycle Types ---
+
+export type LifecycleStatusValue = 'complete' | 'partial' | 'not_started'
+
+export interface LifecyclePosture {
+  status: LifecycleStatusValue
+  summary: string
+}
+
+export interface LifecycleDataClass {
+  key: string
+  label: string
+  owner: string
+  storage_targets: string[]
+  deletion: LifecyclePosture
+  retention: LifecyclePosture
+  audit: LifecyclePosture
+  notes: string[]
+}
+
+export interface LifecycleStatusResponse {
+  data_classes: LifecycleDataClass[]
+}
+
 // --- Config Audit Log Types ---
 
 export interface ConfigAuditLogEntry {

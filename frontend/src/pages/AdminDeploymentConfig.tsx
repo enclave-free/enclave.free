@@ -8,6 +8,7 @@ import {
   Database,
   Mail,
   Shield,
+  ShieldCheck,
   Search,
   Download,
   RefreshCw,
@@ -31,7 +32,7 @@ import {
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { Button, Callout, Card, TextField } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
-import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration } from '../hooks/useAdminConfig'
+import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
 import { DEFAULT_TINFOIL_MODEL, TINFOIL_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
@@ -69,6 +70,11 @@ export function AdminDeploymentConfig() {
     loading: healthLoading,
     refresh: refreshHealth,
   } = useServiceHealth()
+
+  const {
+    status: lifecycleStatus,
+    loading: lifecycleLoading,
+  } = useLifecycleStatus()
 
   const {
     log: auditLog,
@@ -207,6 +213,11 @@ export function AdminDeploymentConfig() {
     if (!value) return t('common.unknown', 'Unknown')
     const date = new Date(value)
     return isNaN(date.getTime()) ? value : date.toLocaleString()
+  }
+
+  const formatLifecycleStatus = (status: string) => {
+    if (status === 'not_started') return t('adminDeployment.lifecycle.notStarted', 'Not Started')
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
   }
 
   // Handle editing a config value
@@ -1310,6 +1321,49 @@ export function AdminDeploymentConfig() {
               </div>
             ))}
           </div>
+        </Card>
+
+        {/* Data Lifecycle Status Section */}
+        <Card role="group" aria-label={t('adminDeployment.lifecycle.title', 'Data Lifecycle Status')}>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="heading-sm flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-text-muted" />
+              {t('adminDeployment.lifecycle.title', 'Data Lifecycle Status')}
+            </h3>
+            {lifecycleLoading && <Loader2 className="w-4 h-4 animate-spin text-text-muted" />}
+          </div>
+          <p className="text-sm text-text-secondary mb-4">
+            {t('adminDeployment.lifecycle.description', 'Current Operator-Controlled Privacy coverage across Instance data.')}
+          </p>
+
+          {Array.isArray(lifecycleStatus?.data_classes) && lifecycleStatus.data_classes.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {lifecycleStatus.data_classes.map((dataClass) => (
+                <div key={dataClass.key} className="bg-surface border border-border rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-medium text-text">{dataClass.label}</h4>
+                      <p className="text-xs text-text-muted mt-1">
+                        {t('adminDeployment.lifecycle.owner', 'Owner: {{owner}}', { owner: dataClass.owner })}
+                      </p>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wide bg-surface-overlay text-text-secondary px-2 py-1 rounded">
+                      {dataClass.storage_targets.join(', ')}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-1 text-xs text-text-secondary">
+                    <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
+                    <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
+                    <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">
+              {t('adminDeployment.lifecycle.empty', 'Lifecycle status is not available.')}
+            </p>
+          )}
         </Card>
 
         {/* Actions Section */}

@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,11 @@ from fastapi.testclient import TestClient
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
+
+
+class DummySentenceTransformer:
+    def __init__(self, *_args, **_kwargs) -> None:
+        pass
 
 
 class FakeProvider:
@@ -38,6 +44,10 @@ class FakeProvider:
 
 class AdminSubjectUserMemoryTest(unittest.TestCase):
     def setUp(self) -> None:
+        self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
+        sys.modules["sentence_transformers"] = types.SimpleNamespace(
+            SentenceTransformer=DummySentenceTransformer,
+        )
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.tmp.name) / "sanctum.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
@@ -49,10 +59,12 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
 
         import database
         import auth
+        import deployment_config
         import main
 
         self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
+        self.deployment_config = importlib.reload(deployment_config)
         self.main = importlib.reload(main)
         self.database.init_schema()
 
@@ -73,6 +85,14 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
             "type": "admin",
             "pubkey": "admin-pubkey",
         }
+        self.main.app.dependency_overrides[self.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.deployment_config.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
         self.client = TestClient(self.main.app)
 
     def tearDown(self) -> None:
@@ -83,6 +103,10 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        if self._orig_sentence_transformers is None:
+            sys.modules.pop("sentence_transformers", None)
+        else:
+            sys.modules["sentence_transformers"] = self._orig_sentence_transformers
         self.tmp.cleanup()
 
     @staticmethod
@@ -91,6 +115,11 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
             os.environ.pop(name, None)
         else:
             os.environ[name] = value
+
+    def audit_entries(self, table_name: str) -> list[dict]:
+        response = self.client.get(f"/admin/deployment/audit-log?table_name={table_name}")
+        self.assertEqual(response.status_code, 200)
+        return response.json()["entries"]
 
     def test_admin_conversation_sets_subject_user_and_loads_only_that_users_memory(self) -> None:
         other_user_id = self.database.create_user(pubkey="c" * 64)
@@ -238,6 +267,109 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertEqual(confirmed_memories[0]["importance"], 8)
         self.assertEqual(confirmed_memories[0]["source_kind"], "admin-confirmed")
         self.assertTrue(any(entry["config_key"] == str(confirmed_memories[0]["id"]) for entry in audit_entries))
+        filter_entries = self.audit_entries("user_memories")
+        self.assertTrue(any(entry["config_key"] == str(confirmed_memories[0]["id"]) for entry in filter_entries))
+        verify = self.client.get("/admin/deployment/audit-log/verify?table_name=user_memories")
+        self.assertEqual(verify.status_code, 200)
+        self.assertTrue(verify.json()["valid"])
+
+    def test_confirming_pending_memory_change_claims_it_once(self) -> None:
+        session_id = "admin-session-confirm-once"
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Set subject user to user {self.user_id}.",
+                "tools": [],
+            },
+        )
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": "Remember for the subject user: Prefers one-time writes. Kind: preference. Importance: 5.",
+                "tools": [],
+            },
+        )
+
+        first = self.main._confirm_pending_user_memory_change(session_id, {"pubkey": "admin-pubkey"})
+        second = self.main._confirm_pending_user_memory_change(session_id, {"pubkey": "admin-pubkey"})
+
+        memories = self.database.list_active_user_memories(self.user_id)
+        self.assertIsNotNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(
+            [memory["content"] for memory in memories].count("Prefers one-time writes."),
+            1,
+        )
+
+    def test_switching_subject_user_clears_stale_pending_memory_change(self) -> None:
+        other_user_id = self.database.create_user(pubkey="c" * 64)
+        session_id = "admin-session-switch-clears-pending"
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Set subject user to user {self.user_id}.",
+                "tools": [],
+            },
+        )
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": "Remember for the subject user: Prefers stale writes. Kind: preference. Importance: 5.",
+                "tools": [],
+            },
+        )
+
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Switch subject user to user {other_user_id}.",
+                "tools": [],
+            },
+        )
+        confirm_response = self.client.post(
+            "/llm/chat",
+            json={"session_id": session_id, "message": "Confirm this User Memory write.", "tools": []},
+        )
+
+        self.assertEqual(confirm_response.status_code, 200)
+        self.assertNotIn(
+            "Prefers stale writes.",
+            [memory["content"] for memory in self.database.list_active_user_memories(self.user_id)],
+        )
+        self.assertEqual(self.database.list_active_user_memories(other_user_id), [])
+
+    def test_negated_admin_memory_confirmation_does_not_commit(self) -> None:
+        session_id = "admin-session-negated-confirm"
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": f"Set subject user to user {self.user_id}.",
+                "tools": [],
+            },
+        )
+        self.client.post(
+            "/llm/chat",
+            json={
+                "session_id": session_id,
+                "message": "Remember for the subject user: Prefers short answers. Kind: preference. Importance: 4.",
+                "tools": [],
+            },
+        )
+
+        response = self.client.post(
+            "/llm/chat",
+            json={"session_id": session_id, "message": "Do not confirm this User Memory yet.", "tools": []},
+        )
+
+        memories = self.database.list_active_user_memories(self.user_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Prefers short answers.", [memory["content"] for memory in memories])
 
     def test_admin_memory_write_without_subject_user_requests_clarification(self) -> None:
         response = self.client.post(
@@ -367,6 +499,41 @@ class AdminSubjectUserMemoryTest(unittest.TestCase):
         self.assertEqual(active_memories, [])
         self.assertTrue(any(entry["config_key"] == str(existing_memory_id) and "supersede" in entry["new_value"] for entry in audit_entries))
         self.assertTrue(any(entry["config_key"] == str(replacement["id"]) and "delete" in entry["new_value"] for entry in audit_entries))
+
+    def test_admin_direct_database_mutation_tool_is_constrained_to_read_only_queries(self) -> None:
+        response = self.client.post(
+            "/admin/tools/execute",
+            json={
+                "tool_id": "db-query",
+                "query": f"UPDATE users SET approved = 0 WHERE id = {self.user_id}",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["success"])
+        self.assertIn("Only SELECT queries are allowed", body["error"])
+        self.assertTrue(self.database.get_user(self.user_id)["approved"])
+
+    def test_admin_database_explorer_mutation_endpoints_are_constrained(self) -> None:
+        insert_response = self.client.post(
+            "/admin/db/tables/user_types/rows",
+            json={"data": {"name": "Escalation", "description": "Direct insert"}},
+        )
+        update_response = self.client.put(
+            f"/admin/db/tables/users/rows/{self.user_id}",
+            json={"data": {"approved": 0}},
+        )
+        delete_response = self.client.delete(f"/admin/db/tables/users/rows/{self.user_id}")
+
+        for response in (insert_response, update_response, delete_response):
+            self.assertEqual(response.status_code, 200)
+            body = response.json()
+            self.assertFalse(body["success"])
+            self.assertIn("Direct database mutations are not supported", body["error"])
+
+        self.assertTrue(self.database.get_user(self.user_id)["approved"])
+        self.assertEqual(self.database.list_user_types(), [])
 
 
 if __name__ == "__main__":

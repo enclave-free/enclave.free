@@ -80,7 +80,7 @@ If this prototype gets productized, the biggest architecture decision is no long
 
 - deployment/runtime config is still split across Python Deployment Settings, Sage env, and Gateway config
 - legacy Python `/llm/chat` and `/query` code still exists in-repo even though the gateway bypasses it
-- deleting a public `/query` session record does not delete the full underlying Sage Session Memory
+- supported active Conversation deletion now removes the public `/query` session record and associated Sage Session Memory, but scheduled retention for all historical Session Memory/log surfaces is still future work
 - compatibility internal endpoints such as `/internal/agent/auth-context` and `/internal/agent/ai-config/effective` still exist in Python even though Sage no longer needs them on this branch
 
 ## Branch Note

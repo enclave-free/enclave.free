@@ -13,7 +13,9 @@ Key principles:
 import os
 import re
 import logging
+import threading
 import uuid
+from copy import deepcopy
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -45,6 +47,7 @@ QUERY_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_QUERY_PER_MINUTE", "90")
 
 # Simple in-memory session store (replace with Redis/DB for production)
 _sessions: dict[str, dict] = {}
+_sessions_lock = threading.RLock()
 
 
 def _rate_limit_key(request: Request) -> str:
@@ -127,19 +130,21 @@ async def query(
     # Session management
     session_id = request.session_id or str(uuid.uuid4())
     session = _get_or_create_session(session_id, user)
+    session_lock = _session_lock(session)
     
-    # Add user context if provided
-    if request.jurisdiction and not session.get("jurisdiction"):
-        session["jurisdiction"] = request.jurisdiction
-    if request.situation_details:
-        session["situation_details"] = session.get("situation_details", "") + "\n" + request.situation_details
-    
-    # Add user message to history
-    session["messages"].append({
-        "role": "user",
-        "content": question,
-        "timestamp": datetime.utcnow().isoformat()
-    })
+    with session_lock:
+        # Add user context if provided
+        if request.jurisdiction and not session.get("jurisdiction"):
+            session["jurisdiction"] = request.jurisdiction
+        if request.situation_details:
+            session["situation_details"] = session.get("situation_details", "") + "\n" + request.situation_details
+
+        # Add user message to history
+        session["messages"].append({
+            "role": "user",
+            "content": question,
+            "timestamp": datetime.utcnow().isoformat()
+        })
     
     logger.info(f"RAG query (session={session_id[:8]}): '{question[:50]}...'")
     
@@ -148,7 +153,8 @@ async def query(
         import database
 
         # 1. Embed the query (include conversation context for better retrieval)
-        search_query = _build_search_query(question, session)
+        with session_lock:
+            search_query = _build_search_query(question, session)
         query_embedding = embed_texts([f"query: {search_query}"])[0]
 
         # 2. Build filter for document access control
@@ -222,7 +228,9 @@ async def query(
 
         # 4. Build context and call LLM with context-aware prompt
         context = _build_context(chunk_texts, sources)
-        session["_last_sources"] = sources  # For dynamic citation
+        with session_lock:
+            session["_last_sources"] = sources  # For dynamic citation
+            llm_session = _session_public_snapshot(session)
 
         # Get user profile context for chat personalization (unencrypted fields only)
         # Skip for dev mode (id=-1) and admin accounts (no user profile in users table)
@@ -242,30 +250,32 @@ async def query(
                 user_memory_context = None
 
         answer, clarifying_questions, full_prompt, search_term = _call_llm_contextual(
-            question, context, session, tools=request.tools, user_type_id=user_type_id,
+            question, context, llm_session, tools=request.tools, user_type_id=user_type_id,
             user_profile_context=user_profile_context,
             user_memory_context=user_memory_context,
         )
         
-        # Add assistant response to history
-        session["messages"].append({
-            "role": "assistant", 
-            "content": answer,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        
-        # Run dedicated fact extraction after response (more reliable than in-response tags)
-        session["facts_gathered"] = _extract_facts_from_conversation(session)
-        
-        # Update jurisdiction from extracted facts if we got location/country
-        if not session.get("jurisdiction"):
-            facts = session.get("facts_gathered", {})
-            if facts.get("location"):
-                session["jurisdiction"] = facts["location"]
-        
-        # Track what we still need to know
-        if clarifying_questions:
-            session["pending_questions"] = clarifying_questions
+        with session_lock:
+            session["facts_gathered"].update(llm_session.get("facts_gathered", {}))
+            # Add assistant response to history
+            session["messages"].append({
+                "role": "assistant",
+                "content": answer,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+            # Run dedicated fact extraction after response (more reliable than in-response tags)
+            session["facts_gathered"] = _extract_facts_from_conversation(session)
+
+            # Update jurisdiction from extracted facts if we got location/country
+            if not session.get("jurisdiction"):
+                facts = session.get("facts_gathered", {})
+                if facts.get("location"):
+                    session["jurisdiction"] = facts["location"]
+
+            # Track what we still need to know
+            if clarifying_questions:
+                session["pending_questions"] = clarifying_questions
         
         # Get actual temperature for response (same logic as _call_llm_contextual)
         try:
@@ -335,16 +345,17 @@ def _get_or_create_session(session_id: str, user: dict) -> dict:
     """Get existing authorized session or create a new owner-scoped session."""
     owner_type, owner_id = _session_owner_for_user(user)
 
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        if not _can_access_session(user, session):
-            raise HTTPException(status_code=403, detail="Session access denied")
-        return session
+    with _sessions_lock:
+        if session_id in _sessions:
+            session = _sessions[session_id]
+            if not _can_access_session(user, session):
+                raise HTTPException(status_code=403, detail="Session access denied")
+            return session
 
-    # New sessions are always owned by the caller creating them.
-    if session_id not in _sessions:
+        # New sessions are always owned by the caller creating them.
         _sessions[session_id] = {
             "id": session_id,
+            "_lock": threading.RLock(),
             "owner_type": owner_type,
             "owner_id": owner_id,
             "created_at": datetime.utcnow().isoformat(),
@@ -354,7 +365,32 @@ def _get_or_create_session(session_id: str, user: dict) -> dict:
             "facts_gathered": {},
             "pending_questions": [],
         }
-    return _sessions[session_id]
+        return _sessions[session_id]
+
+
+def _session_lock(session: dict) -> threading.RLock:
+    lock = session.get("_lock")
+    if lock is None:
+        lock = threading.RLock()
+        session["_lock"] = lock
+    return lock
+
+
+def _session_public_snapshot(session: dict) -> dict:
+    return {key: deepcopy(value) for key, value in session.items() if key != "_lock"}
+
+
+def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:
+    """Delete in-memory Retrieval sessions owned by a profile or admin actor."""
+    with _sessions_lock:
+        session_ids = [
+            session_id
+            for session_id, session in _sessions.items()
+            if session.get("owner_type") == owner_type and session.get("owner_id") == owner_id
+        ]
+        for session_id in session_ids:
+            _sessions.pop(session_id, None)
+    return len(session_ids)
 
 
 def _extract_facts_from_conversation(session: dict) -> dict:
@@ -650,14 +686,15 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
     if facts_match:
         facts_str = facts_match.group(1).strip()
         if facts_str:
-            for pair in facts_str.split(','):
-                if '=' in pair:
-                    key, value = pair.split('=', 1)
-                    key, value = key.strip(), value.strip()
-                    if key and value:
-                        if "facts_gathered" not in session:
-                            session["facts_gathered"] = {}
-                        session["facts_gathered"][key] = value
+            with _session_lock(session):
+                for pair in facts_str.split(','):
+                    if '=' in pair:
+                        key, value = pair.split('=', 1)
+                        key, value = key.strip(), value.strip()
+                        if key and value:
+                            if "facts_gathered" not in session:
+                                session["facts_gathered"] = {}
+                            session["facts_gathered"][key] = value
             logger.info(f"Session facts updated: {session.get('facts_gathered', {})}")
     
     # Extract clarifying questions (lines starting with ?)
@@ -676,20 +713,23 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 @router.get("/session/{session_id}")
 async def get_session(session_id: str, user: dict = Depends(auth.require_admin_or_approved_user)):
     """Get session history and state. Requires auth."""
-    if session_id not in _sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    session = _sessions[session_id]
-    if not _can_access_session(user, session):
-        raise HTTPException(status_code=403, detail="Session access denied")
-    return session
+    with _sessions_lock:
+        if session_id not in _sessions:
+            raise HTTPException(status_code=404, detail="Session not found")
+        session = _sessions[session_id]
+        if not _can_access_session(user, session):
+            raise HTTPException(status_code=403, detail="Session access denied")
+        with _session_lock(session):
+            return _session_public_snapshot(session)
 
 
 @router.delete("/session/{session_id}")
 async def delete_session(session_id: str, user: dict = Depends(auth.require_admin_or_approved_user)):
     """Delete a session. Requires auth."""
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        if not _can_access_session(user, session):
-            raise HTTPException(status_code=403, detail="Session access denied")
-        del _sessions[session_id]
+    with _sessions_lock:
+        if session_id in _sessions:
+            session = _sessions[session_id]
+            if not _can_access_session(user, session):
+                raise HTTPException(status_code=403, detail="Session access denied")
+            del _sessions[session_id]
     return {"status": "deleted"}

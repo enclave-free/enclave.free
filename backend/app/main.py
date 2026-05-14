@@ -6,6 +6,7 @@ Also provides user/admin management via SQLite.
 
 import asyncio
 import hashlib
+import json
 import os
 import uuid
 import logging
@@ -17,6 +18,7 @@ import sqlite3
 import secrets
 import html
 import ipaddress
+import threading
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, Query, Depends, Request, BackgroundTasks, Response, Header, Cookie
 from fastapi.responses import FileResponse, JSONResponse
@@ -29,6 +31,12 @@ from sentence_transformers import SentenceTransformer
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
+from data_deletion import (
+    deletion_target_skipped,
+    deletion_target_succeeded,
+    summarize_deletion_results,
+)
+from query import delete_sessions_for_owner
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -74,6 +82,7 @@ logging.basicConfig(
 logger = logging.getLogger("sanctum.main")
 
 admin_conversation_states: dict[str, dict] = {}
+_admin_conversation_states_lock = threading.Lock()
 
 # Import routers
 from ingest import router as ingest_router
@@ -82,8 +91,47 @@ from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
+from lifecycle import router as lifecycle_router
 
 logger.info("Starting Sanctum API...")
+
+
+def _audit_data_deletion_event(
+    *,
+    config_key: str,
+    changed_by: str,
+    workflow: str,
+    target_id: str,
+    deletion: dict,
+) -> None:
+    _best_effort_config_audit_event(
+        table_name="data_deletion",
+        config_key=config_key,
+        old_value=None,
+        new_value=json.dumps({
+            "workflow": workflow,
+            "target_id": target_id,
+            "status": deletion["status"],
+            "retryable": deletion["retryable"],
+            "counts": deletion["counts"],
+            "results": deletion["results"],
+        }, sort_keys=True),
+        changed_by=changed_by,
+    )
+
+
+def _best_effort_config_audit_event(**kwargs) -> None:
+    try:
+        database.log_config_audit_event(**kwargs)
+    except Exception as exc:
+        logger.error(
+            "Failed to write config audit event table=%s config_key=%s: %s",
+            kwargs.get("table_name"),
+            kwargs.get("config_key"),
+            exc,
+            exc_info=True,
+        )
+
 
 app = FastAPI(
     title="Sanctum API",
@@ -255,6 +303,7 @@ app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
+app.include_router(lifecycle_router)
 
 
 @app.on_event("startup")
@@ -546,25 +595,41 @@ def _message_clears_subject_user(message: str) -> bool:
 
 
 def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
-    state = admin_conversation_states.setdefault(session_id, {})
+    requested_user_id = _resolve_admin_subject_user_id(message)
+
     if _message_clears_subject_user(message):
-        state.pop("subject_user_id", None)
-        state.pop("pending_user_memory_change", None)
+        with _admin_conversation_states_lock:
+            state = admin_conversation_states.setdefault(session_id, {})
+            state.pop("subject_user_id", None)
+            state.pop("pending_user_memory_change", None)
         return None
 
-    requested_user_id = _resolve_admin_subject_user_id(message)
+    subject_user = None
     if requested_user_id is not None:
-        if not database.get_user(requested_user_id):
+        subject_user = database.get_user(requested_user_id)
+        if not subject_user:
             raise HTTPException(status_code=404, detail="Subject User not found")
-        state["subject_user_id"] = requested_user_id
+        with _admin_conversation_states_lock:
+            state = admin_conversation_states.setdefault(session_id, {})
+            prev_subject_user_id = state.get("subject_user_id")
+            state["subject_user_id"] = requested_user_id
+            if prev_subject_user_id is not None and prev_subject_user_id != requested_user_id:
+                state.pop("pending_user_memory_change", None)
+        subject_user_id = requested_user_id
+    else:
+        with _admin_conversation_states_lock:
+            subject_user_id = admin_conversation_states.setdefault(session_id, {}).get("subject_user_id")
 
-    subject_user_id = state.get("subject_user_id")
     if not subject_user_id:
         return None
 
-    subject_user = database.get_user(subject_user_id)
+    if subject_user is None:
+        subject_user = database.get_user(subject_user_id)
     if not subject_user:
-        state.pop("subject_user_id", None)
+        with _admin_conversation_states_lock:
+            state = admin_conversation_states.setdefault(session_id, {})
+            if state.get("subject_user_id") == subject_user_id:
+                state.pop("subject_user_id", None)
         return None
 
     return {
@@ -573,8 +638,32 @@ def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
     }
 
 
+def _admin_set_pending_user_memory_change(
+    session_id: str,
+    extracted_change: dict | None,
+    rejection_reason: str | None,
+    subject_user_id: int | None,
+    message: str,
+) -> tuple[dict | None, bool, dict | None]:
+    subject_user_required = False
+    rejected_user_memory_change = None
+    with _admin_conversation_states_lock:
+        state = admin_conversation_states.setdefault(session_id, {})
+        if extracted_change:
+            if rejection_reason:
+                state.pop("pending_user_memory_change", None)
+                rejected_user_memory_change = {**extracted_change, "reason": rejection_reason}
+            else:
+                state["pending_user_memory_change"] = extracted_change
+        elif subject_user_id is None and _message_requests_user_memory_write(message):
+            subject_user_required = True
+        return state.get("pending_user_memory_change"), subject_user_required, rejected_user_memory_change
+
+
 def _message_confirms_user_memory_change(message: str) -> bool:
-    return bool(re.search(r"\bconfirm\b.*\buser memory\b|\bconfirm\b.*\bmemory\b", message, flags=re.IGNORECASE))
+    positive = re.search(r"\bconfirm\b.*\buser memory\b|\bconfirm\b.*\bmemory\b", message, flags=re.IGNORECASE)
+    negated = re.search(r"\b(?:do not|don't|dont|never|not|no)\b.{0,20}\bconfirm\b", message, flags=re.IGNORECASE)
+    return bool(positive and not negated)
 
 
 def _message_requests_user_memory_write(message: str) -> bool:
@@ -701,8 +790,9 @@ def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> di
 
 
 def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | None:
-    state = admin_conversation_states.setdefault(session_id, {})
-    pending = state.get("pending_user_memory_change")
+    with _admin_conversation_states_lock:
+        state = admin_conversation_states.setdefault(session_id, {})
+        pending = state.pop("pending_user_memory_change", None)
     if not pending:
         return None
 
@@ -717,7 +807,7 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
                 source_conversation_id=session_id,
                 author_actor="admin",
             )
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="user_memories",
                 config_key=str(pending["memory_id"]),
                 old_value=f"active memory_id={pending['memory_id']}",
@@ -736,7 +826,7 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
                 deleted_by_actor="admin",
                 deletion_reason=pending["reason"],
             )
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="user_memories",
                 config_key=str(pending["memory_id"]),
                 old_value=f"active memory_id={pending['memory_id']}",
@@ -759,7 +849,7 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
                 source_conversation_id=session_id,
                 author_actor="admin",
             )
-            database.log_config_audit_event(
+            _best_effort_config_audit_event(
                 table_name="user_memories",
                 config_key=str(memory_id),
                 old_value=None,
@@ -775,7 +865,6 @@ def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | 
         logger.error("Failed to confirm pending User Memory change", exc_info=True)
         raise
 
-    state.pop("pending_user_memory_change", None)
     return result
 
 
@@ -1054,7 +1143,6 @@ async def chat(
                     user_memory_context = None
         if user.get("type") == "admin":
             subject_user_context = _admin_subject_user_context(active_session_id, request.message)
-            state = admin_conversation_states.setdefault(active_session_id, {})
             if _message_confirms_user_memory_change(request.message):
                 confirm_pending_user_memory_change = True
             else:
@@ -1066,14 +1154,19 @@ async def chat(
                 )
                 if extracted_change:
                     rejection_reason = _admin_user_memory_rejection_reason(extracted_change)
-                    if rejection_reason:
-                        state.pop("pending_user_memory_change", None)
-                        rejected_user_memory_change = {**extracted_change, "reason": rejection_reason}
-                    else:
-                        state["pending_user_memory_change"] = extracted_change
-                elif subject_user_id is None and _message_requests_user_memory_write(request.message):
-                    subject_user_required = True
-            pending_user_memory_change = state.get("pending_user_memory_change")
+                else:
+                    rejection_reason = None
+                (
+                    pending_user_memory_change,
+                    subject_user_required,
+                    rejected_user_memory_change,
+                ) = _admin_set_pending_user_memory_change(
+                    active_session_id,
+                    extracted_change,
+                    rejection_reason,
+                    subject_user_id,
+                    request.message,
+                )
 
         # Build prompt using Agent Settings (with user-type overrides if applicable)
         combined_context = "\n\n".join(tool_context_parts) if tool_context_parts else ""
@@ -2206,7 +2299,20 @@ async def get_settings(admin: dict = Depends(auth.require_admin)):
 async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth.require_admin)):
     """Update instance settings (requires admin auth)"""
     settings_dict = settings.model_dump(exclude_unset=True)
+    existing_settings = database.get_all_settings()
     database.update_settings(settings_dict)
+    if "auto_approve_users" in settings_dict:
+        updated_settings = database.get_all_settings()
+        old_value = str(existing_settings.get("auto_approve_users", "true")).lower()
+        new_value = str(updated_settings.get("auto_approve_users", settings_dict["auto_approve_users"])).lower()
+        if old_value != new_value:
+            _best_effort_config_audit_event(
+                table_name="instance_settings",
+                config_key="auto_approve_users",
+                old_value=old_value,
+                new_value=new_value,
+                changed_by=admin.get("pubkey", "unknown"),
+            )
     return InstanceSettingsResponse(settings=database.get_all_settings())
 
 
@@ -2253,6 +2359,18 @@ async def create_user_type(user_type: UserTypeCreate, admin: dict = Depends(auth
             display_order=user_type.display_order
         )
         created = database.get_user_type(type_id)
+        _best_effort_config_audit_event(
+            table_name="user_types",
+            config_key=f"user_type:{type_id}:create",
+            old_value=None,
+            new_value=str({
+                "name": created.get("name"),
+                "description": created.get("description"),
+                "icon": created.get("icon"),
+                "display_order": created.get("display_order"),
+            }),
+            changed_by=admin.get("pubkey", "unknown"),
+        )
         return UserTypeResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -2275,15 +2393,47 @@ async def update_user_type(type_id: int, user_type: UserTypeUpdate, admin: dict 
         display_order=user_type.display_order
     )
     updated = database.get_user_type(type_id)
+    _best_effort_config_audit_event(
+        table_name="user_types",
+        config_key=f"user_type:{type_id}:update",
+        old_value=str({
+            "name": existing.get("name"),
+            "description": existing.get("description"),
+            "icon": existing.get("icon"),
+            "display_order": existing.get("display_order"),
+        }),
+        new_value=str({
+            "name": updated.get("name"),
+            "description": updated.get("description"),
+            "icon": updated.get("icon"),
+            "display_order": updated.get("display_order"),
+        }),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
     return UserTypeResponse(**updated)
 
 
 @app.delete("/admin/user-types/{type_id}", response_model=SuccessResponse)
 async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admin)):
     """Delete a user type (requires admin auth, cascades to field definitions)"""
+    existing = database.get_user_type(type_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User type not found")
     if database.delete_user_type(type_id):
+        _best_effort_config_audit_event(
+            table_name="user_types",
+            config_key=f"user_type:{type_id}:delete",
+            old_value=str({
+                "name": existing.get("name"),
+                "description": existing.get("description"),
+                "icon": existing.get("icon"),
+                "display_order": existing.get("display_order"),
+            }),
+            new_value=None,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
         return SuccessResponse(success=True, message="User type deleted")
-    raise HTTPException(status_code=404, detail="User type not found")
+    raise HTTPException(status_code=500, detail="Failed to delete user type")
 
 
 # --- User Field Definitions ---
@@ -2489,6 +2639,21 @@ async def migrate_user_type(
         updated = database.update_user_type_id(user_id, migration.target_user_type_id)
         if not updated:
             raise HTTPException(status_code=500, detail="Failed to update user type")
+        _best_effort_config_audit_event(
+            table_name="user_types",
+            config_key=f"user:{user_id}:migrate_type",
+            old_value=str({
+                "user_id": user_id,
+                "user_type_id": previous_user_type_id,
+            }),
+            new_value=str({
+                "user_id": user_id,
+                "user_type_id": migration.target_user_type_id,
+                "user_type_name": target_type.get("name"),
+                "missing_required_count": len(missing_required_fields),
+            }),
+            changed_by=admin.get("pubkey", "unknown"),
+        )
 
     return UserTypeMigrationResponse(
         success=True,
@@ -2558,6 +2723,22 @@ async def migrate_user_type_batch(
                 updated = database.update_user_type_id(user_id, migration.target_user_type_id)
                 if not updated:
                     raise ValueError("Failed to update user type")
+                _best_effort_config_audit_event(
+                    table_name="user_types",
+                    config_key=f"user:{user_id}:migrate_type",
+                    old_value=str({
+                        "user_id": user_id,
+                        "user_type_id": previous_user_type_id,
+                    }),
+                    new_value=str({
+                        "user_id": user_id,
+                        "user_type_id": migration.target_user_type_id,
+                        "user_type_name": target_type.get("name"),
+                        "missing_required_count": len(missing_required_fields),
+                        "batch": True,
+                    }),
+                    changed_by=admin.get("pubkey", "unknown"),
+                )
             migrated += 1
             results.append(UserTypeMigrationBatchResult(
                 user_id=user_id,
@@ -2589,7 +2770,27 @@ async def migrate_user_type_batch(
 
 def _is_admin_actor(actor: dict) -> bool:
     """Return True when auth context represents an admin."""
-    return actor.get("type") == "admin"
+    return actor.get("type") == "admin" or actor.get("is_admin") is True or actor.get("role") == "admin"
+
+
+def _audit_user_data_deletion(config_key: str, changed_by: str, workflow: str, target_id: str, deletion: dict) -> None:
+    try:
+        _audit_data_deletion_event(
+            config_key=config_key,
+            changed_by=changed_by,
+            workflow=workflow,
+            target_id=target_id,
+            deletion=deletion,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to audit data deletion config_key=%s workflow=%s target_id=%s: %s",
+            config_key,
+            workflow,
+            target_id,
+            exc,
+            exc_info=True,
+        )
 
 
 def _require_self_or_admin(target_user_id: int, actor: dict) -> None:
@@ -2789,6 +2990,10 @@ async def update_user(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
+    approval_changed = user.approved is not None and bool(existing.get("approved", 1)) != user.approved
+    if approval_changed and not _is_admin_actor(requester):
+        raise HTTPException(status_code=403, detail="Forbidden: only admins can change user approval")
+
     # Validate fields
     if user.fields:
         field_defs = database.get_field_definitions()
@@ -2801,19 +3006,147 @@ async def update_user(
             )
         database.set_user_fields(user_id, user.fields)
 
+    if approval_changed:
+        database.update_user_approval(user_id, user.approved)
+        _best_effort_config_audit_event(
+            table_name="user_approval",
+            config_key=f"user:{user_id}:approved",
+            old_value="true" if bool(existing.get("approved", 1)) else "false",
+            new_value="true" if user.approved else "false",
+            changed_by=requester.get("pubkey", "unknown"),
+        )
+
     return UserResponse(**database.get_user(user_id))
 
 
-@app.delete("/users/{user_id}", response_model=SuccessResponse)
+@app.delete("/users/{user_id}", response_model=dict)
 async def delete_user(
     user_id: int,
     requester: dict = Depends(auth.require_admin_or_user)
 ):
     """Delete a user (self or admin)."""
     _require_self_or_admin(user_id, requester)
-    if database.delete_user(user_id):
-        return SuccessResponse(success=True, message="User deleted")
-    raise HTTPException(status_code=404, detail="User not found")
+    existing_user = database.get_user(user_id)
+    deleted_conversations = delete_sessions_for_owner("user", str(user_id))
+    with _admin_conversation_states_lock:
+        for state in admin_conversation_states.values():
+            if state.get("subject_user_id") == user_id:
+                state.pop("subject_user_id", None)
+                state.pop("pending_user_memory_change", None)
+
+    if not existing_user:
+        if deleted_conversations:
+            conversation_result = deletion_target_succeeded(
+                target_kind="conversation",
+                target_id=str(user_id),
+                action="delete_conversations",
+                detail=f"Deleted {deleted_conversations} active Conversation records for this User.",
+            )
+            conversation_result["count"] = deleted_conversations
+        else:
+            conversation_result = deletion_target_skipped(
+                target_kind="conversation",
+                target_id=str(user_id),
+                action="delete_conversations",
+                detail="No active Conversations were found for the deleted User.",
+            )
+        deletion = summarize_deletion_results([
+            deletion_target_skipped(
+                target_kind="user_profile",
+                target_id=str(user_id),
+                action="delete_user_profile",
+                detail="User Profile was already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="user_approval",
+                target_id=str(user_id),
+                action="delete_user_approval",
+                detail="User approval/access state was already absent.",
+            ),
+            deletion_target_skipped(
+                target_kind="user_memory",
+                target_id=str(user_id),
+                action="delete_user_memory",
+                detail="User Memory was already absent.",
+            ),
+            conversation_result,
+        ])
+        _audit_user_data_deletion(
+            config_key=f"user:{user_id}:delete",
+            changed_by=requester.get("pubkey", "unknown"),
+            workflow="delete_user",
+            target_id=str(user_id),
+            deletion=deletion,
+        )
+        return {
+            "success": True,
+            "message": "User already deleted",
+            "deletion": deletion,
+        }
+
+    lifecycle_delete = database.delete_user_lifecycle(user_id)
+    memory_count = lifecycle_delete["user_memories_deleted"]
+    conversation_count = deleted_conversations
+    if memory_count:
+        user_memory_result = deletion_target_succeeded(
+            target_kind="user_memory",
+            target_id=str(user_id),
+            action="delete_user_memory",
+            detail=f"Deleted {memory_count} Sage-owned User Memory records.",
+        )
+        user_memory_result["count"] = memory_count
+    else:
+        user_memory_result = deletion_target_skipped(
+            target_kind="user_memory",
+            target_id=str(user_id),
+            action="delete_user_memory",
+            detail="No Sage-owned User Memory records were found for this User.",
+        )
+
+    if conversation_count:
+        conversation_result = deletion_target_succeeded(
+            target_kind="conversation",
+            target_id=str(user_id),
+            action="delete_conversations",
+            detail=f"Deleted {conversation_count} active Conversation records for this User.",
+        )
+        conversation_result["count"] = conversation_count
+    else:
+        conversation_result = deletion_target_skipped(
+            target_kind="conversation",
+            target_id=str(user_id),
+            action="delete_conversations",
+            detail="No active Conversations were found for this User.",
+        )
+
+    deletion = summarize_deletion_results([
+        deletion_target_succeeded(
+            target_kind="user_profile",
+            target_id=str(user_id),
+            action="delete_user_profile",
+            detail="Deleted User Profile and profile field values.",
+        ),
+        deletion_target_succeeded(
+            target_kind="user_approval",
+            target_id=str(user_id),
+            action="delete_user_approval",
+            detail="Deleted User approval/access state with the User Profile.",
+        ),
+        user_memory_result,
+        conversation_result,
+    ])
+    _audit_user_data_deletion(
+        config_key=f"user:{user_id}:delete",
+        changed_by=requester.get("pubkey", "unknown"),
+        workflow="delete_user",
+        target_id=str(user_id),
+        deletion=deletion,
+    )
+    return {
+        "success": bool(lifecycle_delete["user_deleted"]),
+        "message": "User deleted",
+        "deletion": deletion,
+    }
 
 
 # =============================================================================
@@ -3083,35 +3416,10 @@ async def insert_db_row(table_name: str, request: RowMutationRequest, admin: dic
     if table_name not in ALLOWED_TABLES:
         raise HTTPException(status_code=403, detail=f"Access to table '{table_name}' is not allowed")
 
-    if not request.data:
-        return RowMutationResponse(success=False, error="No data provided")
-
-    try:
-        data = _encrypt_row_for_write(table_name, request.data)
-        if not data:
-            return RowMutationResponse(success=False, error="No data provided")
-
-        columns = list(data.keys())
-        placeholders = ", ".join(["?" for _ in columns])
-        col_names = ", ".join(columns)
-        values = list(data.values())
-
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders})",
-            values
-        )
-        conn.commit()
-
-        row_id = cursor.lastrowid
-        cursor.close()
-
-        return RowMutationResponse(success=True, id=row_id)
-    except ValueError as e:
-        return RowMutationResponse(success=False, error=str(e))
-    except Exception as e:
-        return RowMutationResponse(success=False, error=str(e))
+    return RowMutationResponse(
+        success=False,
+        error="Direct database mutations are not supported. Use audited admin product flows instead.",
+    )
 
 
 @app.put("/admin/db/tables/{table_name}/rows/{row_id}", response_model=RowMutationResponse)
@@ -3120,35 +3428,10 @@ async def update_db_row(table_name: str, row_id: int, request: RowMutationReques
     if table_name not in ALLOWED_TABLES:
         raise HTTPException(status_code=403, detail=f"Access to table '{table_name}' is not allowed")
 
-    if not request.data:
-        return RowMutationResponse(success=False, error="No data provided")
-
-    try:
-        data = _encrypt_row_for_write(table_name, request.data)
-        if not data:
-            return RowMutationResponse(success=False, error="No data provided")
-
-        set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
-        values = list(data.values()) + [row_id]
-
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            f"UPDATE {table_name} SET {set_clause} WHERE id = ?",
-            values
-        )
-        conn.commit()
-
-        if cursor.rowcount == 0:
-            cursor.close()
-            return RowMutationResponse(success=False, error="Row not found")
-
-        cursor.close()
-        return RowMutationResponse(success=True, id=row_id)
-    except ValueError as e:
-        return RowMutationResponse(success=False, error=str(e))
-    except Exception as e:
-        return RowMutationResponse(success=False, error=str(e))
+    return RowMutationResponse(
+        success=False,
+        error="Direct database mutations are not supported. Use audited admin product flows instead.",
+    )
 
 
 @app.delete("/admin/db/tables/{table_name}/rows/{row_id}", response_model=RowMutationResponse)
@@ -3157,20 +3440,10 @@ async def delete_db_row(table_name: str, row_id: int, admin: dict = Depends(auth
     if table_name not in ALLOWED_TABLES:
         raise HTTPException(status_code=403, detail=f"Access to table '{table_name}' is not allowed")
 
-    try:
-        conn = database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table_name} WHERE id = ?", (row_id,))
-        conn.commit()
-
-        if cursor.rowcount == 0:
-            cursor.close()
-            return RowMutationResponse(success=False, error="Row not found")
-
-        cursor.close()
-        return RowMutationResponse(success=True, id=row_id)
-    except Exception as e:
-        return RowMutationResponse(success=False, error=str(e))
+    return RowMutationResponse(
+        success=False,
+        error="Direct database mutations are not supported. Use audited admin product flows instead.",
+    )
 
 
 @app.get("/admin/database/export")

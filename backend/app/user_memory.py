@@ -63,8 +63,9 @@ def capture_ambient_user_memory(
 ) -> None:
     """Best-effort post-response ambient capture. Logs failures without surfacing them."""
     try:
-        if not ambient_capture_enabled():
-            return
+        with database.dedicated_connection():
+            if not ambient_capture_enabled():
+                return
         if not likely_contains_personalization(user_message):
             return
 
@@ -77,16 +78,17 @@ def capture_ambient_user_memory(
         for memory in memories:
             if not _ambient_memory_allowed(memory):
                 continue
-            database.create_user_memory(
-                subject_user_id=subject_user_id,
-                kind=memory["kind"],
-                content=memory["content"],
-                importance=int(memory.get("importance", 1)),
-                confidence=float(memory.get("confidence", 0.5)),
-                source_kind="ambient",
-                source_conversation_id=None,
-                author_actor="sage",
-            )
+            with database.dedicated_connection():
+                database.create_user_memory(
+                    subject_user_id=subject_user_id,
+                    kind=memory["kind"],
+                    content=memory["content"],
+                    importance=int(memory.get("importance", 1)),
+                    confidence=float(memory.get("confidence", 0.5)),
+                    source_kind="ambient",
+                    source_conversation_id=None,
+                    author_actor="sage",
+                )
     except Exception:
         logger.exception("Ambient User Memory capture failed")
 
@@ -143,7 +145,7 @@ def _ambient_memory_allowed(memory: dict) -> bool:
         confidence = float(memory.get("confidence", 0.5))
     except (TypeError, ValueError):
         return False
-    if importance < 0 or importance > MAX_AMBIENT_IMPORTANCE:
+    if importance < 1 or importance > MAX_AMBIENT_IMPORTANCE:
         return False
     if confidence < 0 or confidence > 1:
         return False

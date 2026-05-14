@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,10 @@ from fastapi.testclient import TestClient
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
+
+class _SentenceTransformerStub:
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        pass
 
 
 class FakeProvider:
@@ -43,6 +48,11 @@ class AdminConfigToolChatTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
+        sentence_transformers_stub = types.ModuleType("sentence_transformers")
+        sentence_transformers_stub.SentenceTransformer = _SentenceTransformerStub
+        sys.modules["sentence_transformers"] = sentence_transformers_stub
+        self.addCleanup(self._restore_sentence_transformers)
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
@@ -86,7 +96,14 @@ class AdminConfigToolChatTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        self._restore_sentence_transformers()
         self.tmp.cleanup()
+
+    def _restore_sentence_transformers(self) -> None:
+        if self._orig_sentence_transformers is None:
+            sys.modules.pop("sentence_transformers", None)
+        else:
+            sys.modules["sentence_transformers"] = self._orig_sentence_transformers
 
     @staticmethod
     def _restore_env(name: str, value: str | None) -> None:

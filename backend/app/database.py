@@ -10,6 +10,7 @@ import logging
 import hashlib
 import hmac
 import re
+import contextvars
 from typing import Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
@@ -24,6 +25,10 @@ SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/sanctum.db")
 
 # Lazy-loaded connection
 _connection = None
+_dedicated_connection: contextvars.ContextVar[sqlite3.Connection | None] = contextvars.ContextVar(
+    "dedicated_connection",
+    default=None,
+)
 _deployment_secret_key = None
 _audit_hmac_key = None
 
@@ -35,6 +40,10 @@ DEPLOYMENT_SECRET_NONCE_BYTES = 12
 
 def get_connection():
     """Get or create SQLite connection"""
+    dedicated = _dedicated_connection.get()
+    if dedicated is not None:
+        return dedicated
+
     global _connection
     if _connection is None:
         # Ensure directory exists
@@ -42,13 +51,29 @@ def get_connection():
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
 
-        _connection = sqlite3.connect(SQLITE_PATH, check_same_thread=False)
-        _connection.row_factory = sqlite3.Row  # Enable dict-like access
-        _connection.execute("PRAGMA foreign_keys = ON")  # Enable FK constraints
-        _connection.execute("PRAGMA journal_mode = WAL")  # Improve read/write concurrency
-        _connection.execute("PRAGMA busy_timeout = 3000")  # Wait briefly if DB is locked
+        _connection = _configure_connection(sqlite3.connect(SQLITE_PATH, check_same_thread=False))
         logger.info(f"Connected to SQLite database: {SQLITE_PATH}")
     return _connection
+
+
+def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 3000")
+    return conn
+
+
+@contextmanager
+def dedicated_connection() -> Iterator[sqlite3.Connection]:
+    """Use a per-task SQLite connection for background work."""
+    conn = _configure_connection(sqlite3.connect(SQLITE_PATH, check_same_thread=False))
+    token = _dedicated_connection.set(conn)
+    try:
+        yield conn
+    finally:
+        _dedicated_connection.reset(token)
+        conn.close()
 
 
 @contextmanager
@@ -1399,6 +1424,16 @@ def update_user_type_id(user_id: int, user_type_id: int | None) -> bool:
         return cursor.rowcount > 0
 
 
+def update_user_approval(user_id: int, approved: bool) -> bool:
+    """Update a user's approval/access state. Returns True if updated."""
+    with get_cursor() as cursor:
+        cursor.execute(
+            "UPDATE users SET approved = ? WHERE id = ?",
+            (1 if approved else 0, user_id)
+        )
+        return cursor.rowcount > 0
+
+
 def get_user(user_id: int) -> dict | None:
     """Get user by id with all field values.
 
@@ -1640,6 +1675,12 @@ def _validate_user_memory_scores(importance: int, confidence: float) -> tuple[in
     return normalized_importance, normalized_confidence
 
 
+def _require_non_empty_user_memory_text(value: str, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"User Memory {field_name} is required")
+    return value.strip()
+
+
 def _user_memory_row_to_dict(row: sqlite3.Row) -> dict:
     memory = dict(row)
     memory["confidence"] = float(memory["confidence"])
@@ -1658,16 +1699,12 @@ def create_user_memory(
     author_actor: str,
 ) -> int:
     """Create active Sage-owned User Memory, skipping obvious active duplicates."""
+    kind = _require_non_empty_user_memory_text(kind, "kind")
+    content = _require_non_empty_user_memory_text(content, "content")
     normalized_kind = _normalize_user_memory_text(kind)
     normalized_content = _normalize_user_memory_text(content)
-    if not normalized_kind:
-        raise ValueError("User Memory kind is required")
-    if not normalized_content:
-        raise ValueError("User Memory content is required")
-    if not source_kind.strip():
-        raise ValueError("User Memory source_kind is required")
-    if not author_actor.strip():
-        raise ValueError("User Memory author_actor is required")
+    source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
+    author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
 
     with get_cursor() as cursor:
@@ -1706,9 +1743,9 @@ def create_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
-            source_kind.strip(),
+            source_kind,
             source_conversation_id,
-            author_actor.strip(),
+            author_actor,
         ))
         if cursor.rowcount == 1:
             return int(cursor.lastrowid)
@@ -1824,13 +1861,10 @@ def supersede_user_memory(
     author_actor: str,
 ) -> int:
     """Create a replacement User Memory and mark the original as superseded."""
+    content = _require_non_empty_user_memory_text(content, "content")
     normalized_content = _normalize_user_memory_text(content)
-    if not normalized_content:
-        raise ValueError("User Memory content is required")
-    if not source_kind.strip():
-        raise ValueError("User Memory source_kind is required")
-    if not author_actor.strip():
-        raise ValueError("User Memory author_actor is required")
+    source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
+    author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
 
     with get_cursor() as cursor:
@@ -1877,9 +1911,9 @@ def supersede_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
-            source_kind.strip(),
+            source_kind,
             source_conversation_id,
-            author_actor.strip(),
+            author_actor,
             memory_id,
         ))
         new_id = int(cursor.lastrowid)
@@ -1904,12 +1938,21 @@ def purge_user_memories_for_subject_user(subject_user_id: int) -> int:
         return _purge_user_memories_for_subject_user_tx(cursor, subject_user_id)
 
 
+def delete_user_lifecycle(user_id: int) -> dict:
+    """Delete a User Profile and associated User Memory with lifecycle counts."""
+    with get_cursor() as cursor:
+        purged_memories = _purge_user_memories_for_subject_user_tx(cursor, user_id)
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        user_deleted = cursor.rowcount > 0
+        return {
+            "user_deleted": user_deleted,
+            "user_memories_deleted": purged_memories,
+        }
+
+
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
-    with get_cursor() as cursor:
-        _purge_user_memories_for_subject_user_tx(cursor, user_id)
-        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        return cursor.rowcount > 0
+    return bool(delete_user_lifecycle(user_id)["user_deleted"])
 
 
 # --- Migration: Encrypt Existing Plaintext Data ---

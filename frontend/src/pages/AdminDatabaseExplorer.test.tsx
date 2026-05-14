@@ -101,4 +101,21 @@ describe('AdminDatabaseExplorer', () => {
     expect(within(results).getByText('admin')).toBeInTheDocument()
     expect(results).toHaveClass('overflow-hidden')
   })
+
+  it('presents table browsing as read-only', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/database']}>
+        <Routes>
+          <Route path="/admin/database" element={<AdminDatabaseExplorer />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByText('users').length).toBeGreaterThan(0)
+    })
+
+    expect(screen.getAllByText('Read-only').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: /add row/i })).not.toBeInTheDocument()
+  })
 })

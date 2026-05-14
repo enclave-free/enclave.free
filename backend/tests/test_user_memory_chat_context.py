@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,17 @@ from fastapi.testclient import TestClient
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
+
+
+class DummySentenceTransformer:
+    def __init__(self, *_args, **_kwargs) -> None:
+        pass
+
+
+sys.modules.setdefault(
+    "sentence_transformers",
+    types.SimpleNamespace(SentenceTransformer=DummySentenceTransformer),
+)
 
 
 class FakeProvider:
@@ -144,6 +156,35 @@ class UserMemoryChatContextTest(unittest.TestCase):
         prompt = self.provider.prompts[-1]
         self.assertNotIn("=== USER MEMORY ===", prompt)
         self.assertIn("=== QUESTION ===", prompt)
+
+    def test_deleted_user_data_does_not_enter_conversation_context(self) -> None:
+        self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.auth.require_admin_or_user] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        delete_response = self.client.delete(f"/users/{self.user_id}")
+        self.assertEqual(delete_response.status_code, 200)
+
+        self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "user",
+            "pubkey": "a" * 64,
+            "id": self.user_id,
+        }
+        response = self.client.post(
+            "/llm/chat",
+            json={"message": "How should we proceed?", "tools": []},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        prompt = self.provider.prompts[-1]
+        self.assertNotIn("=== USER PROFILE ===", prompt)
+        self.assertNotIn("preferred_language", prompt)
+        self.assertNotIn("=== USER MEMORY ===", prompt)
+        self.assertNotIn("Prefers concise answers.", prompt)
 
     def test_user_conversation_uses_bounded_user_memory_retrieval(self) -> None:
         for index in range(25):

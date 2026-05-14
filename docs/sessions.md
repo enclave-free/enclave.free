@@ -84,12 +84,12 @@ Sage verifies the session token itself, hydrates the user/admin record from Pyth
 
 - `POST /query` creates or resumes a session and returns `session_id`
 - `GET /query/session/{session_id}` returns the stored conversation view for that session
-- `DELETE /query/session/{session_id}` deletes the public query-session record
+- `DELETE /query/session/{session_id}` deletes the public query-session record and coordinates Session Memory Deletion for the associated Sage-owned Conversation memory
 
 Current nuance:
 
-- deleting a session removes the `web_sessions` row
-- it does not currently serve as full Session Memory Deletion for all underlying Session Memory rows tied to that session's agent
+- active Conversation deletion removes the public `web_sessions` row and associated Sage Session Memory for that Conversation
+- scheduled retention for every historical Session Memory or log surface is still not implemented
 
 ## Debugging
 
