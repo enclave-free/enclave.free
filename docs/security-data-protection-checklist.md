@@ -355,7 +355,7 @@ Use these guardrails while security fixes are in progress:
 
 ---
 
-## 11. Verification Evidence (2026-02-08)
+## 11. Verification Evidence (2026-02-08 — 2026-05-14)
 
 - Automated regression suite:
   - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3c_auth_hardening_regression.py --api-base http://localhost:8000`

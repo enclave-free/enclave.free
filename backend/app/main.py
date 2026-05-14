@@ -37,7 +37,7 @@ from data_deletion import (
     deletion_target_succeeded,
     summarize_deletion_results,
 )
-from query import delete_sessions_for_owner, pop_sessions_for_owner
+from query import delete_sessions_for_owner, pop_sessions_for_owner, sessions_for_owner
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -314,6 +314,12 @@ async def startup_event():
     smtp_status = auth.verify_smtp_config()
     if smtp_status["configured"] and not smtp_status["mock_mode"] and not smtp_status["connection_ok"]:
         logger.warning("SMTP is configured but connection test failed - email sending may not work")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close shared outbound clients."""
+    await lifecycle.close_sage_client()
 
 # Rate limiters for auth endpoints
 magic_link_limiter = RateLimiter(limit=5, window_seconds=60)   # 5 per minute
@@ -3028,7 +3034,7 @@ async def delete_user(
     """Delete a user (self or admin)."""
     _require_self_or_admin(user_id, requester)
     existing_user = database.get_user(user_id)
-    deleted_conversation_sessions = pop_sessions_for_owner("user", str(user_id))
+    deleted_conversation_sessions = sessions_for_owner("user", str(user_id))
     deleted_conversations = len(deleted_conversation_sessions)
     session_memory_results = []
     for session in deleted_conversation_sessions:
@@ -3062,6 +3068,7 @@ async def delete_user(
         results = session_memory_deletion.get("results", [])
         if isinstance(results, list):
             session_memory_results.extend(results)
+    pop_sessions_for_owner("user", str(user_id))
     with _admin_conversation_states_lock:
         for state in admin_conversation_states.values():
             if state.get("subject_user_id") == user_id:

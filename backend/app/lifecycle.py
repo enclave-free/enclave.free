@@ -33,6 +33,22 @@ import query
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
 logger = logging.getLogger("sanctum.lifecycle")
 _warned_missing_internal_agent_token = False
+_sage_client: httpx.AsyncClient | None = None
+_sage_client_timeout = httpx.Timeout(10.0, connect=5.0, read=10.0, write=10.0, pool=5.0)
+
+
+def _get_sage_client() -> httpx.AsyncClient:
+    global _sage_client
+    if _sage_client is None or _sage_client.is_closed:
+        _sage_client = httpx.AsyncClient(timeout=_sage_client_timeout)
+    return _sage_client
+
+
+async def close_sage_client() -> None:
+    global _sage_client
+    if _sage_client is not None:
+        await _sage_client.aclose()
+        _sage_client = None
 
 
 def _session_last_activity(session: dict) -> datetime | None:
@@ -265,21 +281,19 @@ async def post_sage_session_memory_delete(payload: dict) -> dict:
         )
         _warned_missing_internal_agent_token = True
     headers = {"X-Internal-Agent-Token": token} if token else {}
-    timeout = httpx.Timeout(10.0, connect=5.0, read=10.0, write=10.0, pool=5.0)
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(
-            f"{sage_url}/internal/lifecycle/session-memory/delete",
-            json=payload,
-            headers=headers,
+    response = await _get_sage_client().post(
+        f"{sage_url}/internal/lifecycle/session-memory/delete",
+        json=payload,
+        headers=headers,
+    )
+    response.raise_for_status()
+    body = response.json()
+    if "deletion" not in body:
+        raise ValueError(
+            f"Sage session-memory delete response missing deletion key: "
+            f"status={response.status_code} body={body}"
         )
-        response.raise_for_status()
-        body = response.json()
-        if "deletion" not in body:
-            raise ValueError(
-                f"Sage session-memory delete response missing deletion key: "
-                f"status={response.status_code} body={body}"
-            )
-        return body["deletion"]
+    return body["deletion"]
 
 
 async def delete_session_memory_for_conversation(session: dict) -> dict:
@@ -324,7 +338,7 @@ def _former_subject_ref(session: dict) -> str | None:
     return None
 
 
-def _create_session_memory_tombstone(
+def create_session_memory_tombstone(
     *,
     session: dict,
     source: str,
@@ -336,21 +350,6 @@ def _create_session_memory_tombstone(
         conversation_id=str(session.get("id", "unknown")),
         former_subject_ref=_former_subject_ref(session),
         status="incomplete",
-        source=source,
-        workflow=workflow,
-        deletion=deletion,
-    )
-
-
-def create_session_memory_tombstone(
-    *,
-    session: dict,
-    source: str,
-    workflow: str,
-    deletion: dict,
-) -> None:
-    _create_session_memory_tombstone(
-        session=session,
         source=source,
         workflow=workflow,
         deletion=deletion,

@@ -403,6 +403,21 @@ def init_schema():
         CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
         ON deletion_tombstones(status, updated_at DESC)
     """)
+    cursor.execute("""
+        DELETE FROM deletion_tombstones
+        WHERE status = 'incomplete'
+          AND id NOT IN (
+              SELECT MAX(id)
+              FROM deletion_tombstones
+              WHERE status = 'incomplete'
+              GROUP BY conversation_id
+          )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_deletion_tombstones_incomplete_conversation
+        ON deletion_tombstones(conversation_id)
+        WHERE status = 'incomplete'
+    """)
 
     # Agent Settings user-type overrides - keeps the compatibility table name.
     cursor.execute("""
@@ -679,6 +694,22 @@ def _migrate_deletion_tombstones_status_check() -> None:
     row = cursor.fetchone()
     table_sql = row[0] if row else ""
     if "CHECK(status IN ('incomplete', 'completed'))" in table_sql:
+        cursor.execute("""
+            DELETE FROM deletion_tombstones
+            WHERE status = 'incomplete'
+              AND id NOT IN (
+                  SELECT MAX(id)
+                  FROM deletion_tombstones
+                  WHERE status = 'incomplete'
+                  GROUP BY conversation_id
+              )
+        """)
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_deletion_tombstones_incomplete_conversation
+            ON deletion_tombstones(conversation_id)
+            WHERE status = 'incomplete'
+        """)
+        conn.commit()
         cursor.close()
         return
 
@@ -735,6 +766,21 @@ def _migrate_deletion_tombstones_status_check() -> None:
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
         ON deletion_tombstones(status, updated_at DESC)
+    """)
+    cursor.execute("""
+        DELETE FROM deletion_tombstones
+        WHERE status = 'incomplete'
+          AND id NOT IN (
+              SELECT MAX(id)
+              FROM deletion_tombstones
+              WHERE status = 'incomplete'
+              GROUP BY conversation_id
+          )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_deletion_tombstones_incomplete_conversation
+        ON deletion_tombstones(conversation_id)
+        WHERE status = 'incomplete'
     """)
     conn.commit()
     logger.info(
@@ -892,7 +938,7 @@ def create_deletion_tombstone(
     with get_write_cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO deletion_tombstones (
+            INSERT OR IGNORE INTO deletion_tombstones (
                 lifecycle_data_class,
                 conversation_id,
                 former_subject_ref,
@@ -917,7 +963,21 @@ def create_deletion_tombstone(
                 now,
             ),
         )
-        return int(cursor.lastrowid)
+        if cursor.rowcount:
+            return int(cursor.lastrowid)
+        cursor.execute(
+            """
+            SELECT id FROM deletion_tombstones
+            WHERE conversation_id = ? AND status = 'incomplete'
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (conversation_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            raise RuntimeError("Failed to create or find deletion tombstone")
+        return int(row["id"])
 
 
 def list_deletion_tombstones(*, status: str | None = None, limit: int = 100) -> list[dict]:

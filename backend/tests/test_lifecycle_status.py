@@ -131,6 +131,41 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertNotIn("deleted_user", serialized)
         self.assertNotIn("conversation-", serialized)
 
+    def test_incomplete_deletion_tombstones_are_idempotent_per_conversation(self) -> None:
+        first_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="conversation-1",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+        second_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="conversation-1",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+
+        tombstones = self.database.list_deletion_tombstones()
+
+        self.assertEqual(first_id, second_id)
+        self.assertEqual(len(tombstones), 1)
+
     def test_lifecycle_status_requires_admin_authentication(self) -> None:
         app = FastAPI()
         app.include_router(self.lifecycle.router)

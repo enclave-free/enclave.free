@@ -509,11 +509,14 @@ export function useDeletionTombstones(status: DeletionTombstoneStatusFilter = 'a
     const response = await adminFetch(`/admin/lifecycle/deletion-tombstones/${id}/retry`, {
       method: 'POST',
     })
-    if (!response.ok) {
-      throw new Error('errors.failedToRetryDeletionTombstone')
+    try {
+      if (!response.ok) {
+        throw new Error('errors.failedToRetryDeletionTombstone')
+      }
+      return await response.json()
+    } finally {
+      await fetchTombstones()
     }
-    await fetchTombstones()
-    return response.json()
   }, [fetchTombstones])
 
   useEffect(() => {

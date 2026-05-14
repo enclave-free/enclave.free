@@ -441,9 +441,10 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertNotIn(session_id, self.query._sessions)
         get_deleted = self.client.get(f"/query/session/{session_id}")
         self.assertEqual(get_deleted.status_code, 404)
-        self.main.app.dependency_overrides[self.lifecycle.auth.require_admin] = lambda: (_ for _ in ()).throw(
-            HTTPException(status_code=403, detail="Admin access required")
-        )
+        def _require_admin_override():
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        self.main.app.dependency_overrides[self.lifecycle.auth.require_admin] = _require_admin_override
         hidden_tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
         self.assertEqual(hidden_tombstones.status_code, 403)
         hidden_retry = self.client.post("/admin/lifecycle/deletion-tombstones/1/retry")

@@ -54,10 +54,14 @@ const makeTombstoneFixture = (completed = false, overrides: Record<string, unkno
 
 describe('AdminDeploymentConfig', () => {
   let tombstoneRetryCompleted = false
+  let tombstoneRetryShouldFail = false
+  let tombstoneFetchShouldFail = false
   let tombstonesFixture: unknown[] | null
 
   beforeEach(() => {
     tombstoneRetryCompleted = false
+    tombstoneRetryShouldFail = false
+    tombstoneFetchShouldFail = false
     tombstonesFixture = null
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
@@ -136,6 +140,9 @@ describe('AdminDeploymentConfig', () => {
         }))
       }
       if (endpoint === '/admin/lifecycle/deletion-tombstones/7/retry') {
+        if (tombstoneRetryShouldFail) {
+          return Promise.resolve(Response.json({ detail: 'completed' }, { status: 409 }))
+        }
         tombstoneRetryCompleted = true
         return Promise.resolve(Response.json({
           status: 'succeeded',
@@ -166,6 +173,9 @@ describe('AdminDeploymentConfig', () => {
         }))
       }
       if (endpoint.startsWith('/admin/lifecycle/deletion-tombstones')) {
+        if (tombstoneFetchShouldFail) {
+          return Promise.resolve(Response.json({ detail: 'unavailable' }, { status: 500 }))
+        }
         const status = endpoint.includes('?status=completed')
           ? 'completed'
           : endpoint.includes('?status=incomplete')
@@ -286,6 +296,47 @@ describe('AdminDeploymentConfig', () => {
     const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
     expect(within(tombstones).getByText('No deletion tombstones are waiting for retry.')).toBeInTheDocument()
     expect(within(tombstones).queryByRole('button', { name: /Retry deletion tombstone/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a tombstone fetch error instead of an empty state', async () => {
+    tombstoneFetchShouldFail = true
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
+    expect(await within(tombstones).findByText('Unable to load deletion tombstones.')).toBeInTheDocument()
+    expect(within(tombstones).queryByText('No deletion tombstones are waiting for retry.')).not.toBeInTheDocument()
+  })
+
+  it('refreshes deletion tombstones after a retry conflict', async () => {
+    const user = userEvent.setup()
+    tombstoneRetryShouldFail = true
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
+    await user.click(within(tombstones).getByRole('button', { name: 'Retry deletion tombstone 7' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/deletion-tombstones/7/retry', { method: 'POST' })
+    })
+    await waitFor(() => {
+      const listCalls = mockAdminFetch.mock.calls.filter(([endpoint]) => endpoint === '/admin/lifecycle/deletion-tombstones')
+      expect(listCalls.length).toBeGreaterThanOrEqual(2)
+    })
+    expect(within(tombstones).getByText('Retry failed.')).toBeInTheDocument()
   })
 
   it('filters deletion tombstones by lifecycle status', async () => {

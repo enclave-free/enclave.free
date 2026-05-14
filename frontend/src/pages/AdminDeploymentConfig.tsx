@@ -80,6 +80,7 @@ export function AdminDeploymentConfig() {
   const {
     tombstones,
     loading: tombstonesLoading,
+    error: tombstonesError,
     retryTombstone,
   } = useDeletionTombstones(tombstoneStatusFilter)
 
@@ -1448,7 +1449,11 @@ export function AdminDeploymentConfig() {
               {t('adminDeployment.lifecycle.tombstoneRetryFailed', 'Retry failed.')}
             </p>
           )}
-          {tombstones.length > 0 ? (
+          {tombstonesError && !tombstonesLoading ? (
+            <p className="text-xs text-danger">
+              {t('adminDeployment.lifecycle.tombstonesFetchFailed', 'Unable to load deletion tombstones.')}
+            </p>
+          ) : tombstones.length > 0 ? (
             <div className="space-y-3">
               {tombstones.map((tombstone) => {
                 const detail = tombstone.deletion?.results?.[0]?.detail
