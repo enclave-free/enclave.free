@@ -1,7 +1,8 @@
 # Internal Agent Contract v0
 
-This document is the source of truth for the private `/internal/agent/*`
-contract between Sage and the Python control plane on the current prototype.
+This document is the source of truth for the private `/internal/agent/*` and
+`/internal/lifecycle/*` contracts between Sage and the Python control plane on
+the current prototype.
 
 These routes are not part of the public product API. Sage is the intended
 caller, Python is the owner, and both sides must evolve request and response
@@ -73,9 +74,10 @@ Response:
 ## Lifecycle Contract
 
 Session Memory Deletion is now modeled as an operator-visible lifecycle
-workflow rather than a bare public query-session delete. The Enclave Control
-Plane owns deletion tombstones and Audit Log evidence; Sage owns the Session
-Memory deletion target and must report sanitized per-target lifecycle results.
+workflow under `/internal/lifecycle/*` rather than a bare public query-session
+delete. The Enclave Control Plane owns deletion tombstones and Audit Log
+evidence; Sage owns the Session Memory deletion target and must report
+sanitized per-target lifecycle results.
 
 ### `POST /internal/lifecycle/session-memory/delete`
 

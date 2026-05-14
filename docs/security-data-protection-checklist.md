@@ -1,6 +1,6 @@
 # Security and Data Protection Checklist
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 Scope: Sanctum current repository state (code/config review)
 
 ## Purpose
@@ -375,7 +375,7 @@ Use these guardrails while security fixes are in progress:
 - Frontend availability smoke:
   - `GET http://localhost:5173/` -> `200`
 - Session Memory lifecycle verification (2026-05-14):
-  - `/Users/plebdev/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m unittest backend.tests.test_retention_execution backend.tests.test_user_deletion_lifecycle backend.tests.test_data_deletion_results backend.tests.test_lifecycle_status`
+  - `python3 -m unittest backend.tests.test_retention_execution backend.tests.test_user_deletion_lifecycle backend.tests.test_data_deletion_results backend.tests.test_lifecycle_status` (activate the repository virtualenv first, if used)
     - Result: `Ran 23 tests ... OK`
   - Audit evidence location: `GET /admin/deployment/audit-log?table_name=data_deletion`; tamper verification: `GET /admin/deployment/audit-log/verify?table_name=data_deletion`.
   - Sage contract verification: `cargo check -p sage-core` from `runtime/sage` returned `Finished dev profile`.

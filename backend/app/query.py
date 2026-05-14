@@ -26,6 +26,7 @@ import httpx
 import auth
 from data_deletion import (
     deletion_target_failed,
+    deletion_target_skipped,
     deletion_target_succeeded,
     summarize_deletion_results,
 )
@@ -386,7 +387,13 @@ def _session_public_snapshot(session: dict) -> dict:
 
 
 def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:
-    """Delete in-memory Retrieval sessions owned by a profile or admin actor."""
+    """Return the count of in-memory Retrieval sessions removed for an owner.
+
+    This convenience wrapper calls pop_sessions_for_owner and discards the
+    popped session dicts. Callers that need Sage/Session Memory cleanup must use
+    pop_sessions_for_owner(owner_type, owner_id) directly and handle each
+    returned session.
+    """
     return len(pop_sessions_for_owner(owner_type, owner_id))
 
 
@@ -747,7 +754,23 @@ async def delete_session(session_id: str, user: dict = Depends(auth.require_admi
                 raise HTTPException(status_code=403, detail="Session access denied")
             deleted_session = _sessions.pop(session_id)
     if deleted_session is None:
-        return {"status": "deleted"}
+        deletion = summarize_deletion_results([
+            deletion_target_skipped(
+                target_kind="conversation",
+                target_id=session_id,
+                action="delete_session_record",
+                detail="Conversation record was already absent.",
+            )
+        ])
+        import lifecycle
+        lifecycle.audit_lifecycle_deletion(
+            config_key=f"conversation:{session_id}:delete",
+            changed_by=user.get("pubkey", str(user.get("id", "unknown"))),
+            workflow="delete_conversation",
+            target_id=session_id,
+            deletion=deletion,
+        )
+        return {"status": "deleted", "deletion": deletion}
 
     import lifecycle
 
@@ -765,12 +788,12 @@ async def delete_session(session_id: str, user: dict = Depends(auth.require_admi
                 target_kind="session_memory",
                 target_id=session_id,
                 action="delete_session_memory",
-                detail=lifecycle._lifecycle_error_category(str(exc)),
+                detail=lifecycle.categorize_error(exc),
                 retryable=True,
             )
         ])
     if session_memory_deletion["status"] != "succeeded":
-        lifecycle._create_session_memory_tombstone(
+        lifecycle.create_session_memory_tombstone(
             session=deleted_session,
             source="user_conversation_delete" if user.get("type") != "admin" else "admin_conversation_delete",
             workflow="delete_conversation",

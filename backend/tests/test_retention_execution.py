@@ -318,6 +318,24 @@ class RetentionExecutionTest(unittest.TestCase):
         )
         self.assertEqual(retry_event["status"], "succeeded")
 
+        repeat_retry = self.client.post(f"/admin/lifecycle/deletion-tombstones/{tombstone['id']}/retry")
+
+        self.assertEqual(repeat_retry.status_code, 409)
+        repeat_body = repeat_retry.json()["detail"]
+        self.assertEqual(repeat_body["tombstone"]["status"], "completed")
+        self.assertEqual(repeat_body["tombstone"]["retry_count"], 1)
+        retry_events = [
+            json.loads(entry["new_value"])
+            for entry in self.audit_entries("data_deletion")
+            if json.loads(entry["new_value"])["workflow"] == "retry_deletion_tombstone"
+        ]
+        self.assertEqual(len(retry_events), 1)
+
+    def test_deletion_tombstone_status_filter_rejects_unknown_values(self) -> None:
+        response = self.client.get("/admin/lifecycle/deletion-tombstones?status=done")
+
+        self.assertEqual(response.status_code, 400)
+
     def test_retention_uses_sage_lifecycle_contract_and_sanitizes_failures(self) -> None:
         stale_session_id = "sage-backed-session"
         self.query._sessions[stale_session_id] = {
@@ -442,6 +460,30 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
 
+    def test_repeat_conversation_delete_returns_deletion_summary_and_audit(self) -> None:
+        session_id = "already-deleted-session"
+        self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "user",
+            "id": 42,
+            "approved": True,
+        }
+
+        response = self.client.delete(f"/query/session/{session_id}")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "deleted")
+        self.assertEqual(body["deletion"]["status"], "succeeded")
+        self.assertEqual(body["deletion"]["results"][0]["status"], "skipped")
+        entries = self.audit_entries("data_deletion")
+        event = next(
+            json.loads(entry["new_value"])
+            for entry in entries
+            if json.loads(entry["new_value"])["workflow"] == "delete_conversation"
+        )
+        self.assertEqual(event["status"], "succeeded")
+        self.assertEqual(event["results"][0]["action"], "delete_session_record")
+
     def test_retention_is_safe_to_repeat_when_nothing_is_eligible(self) -> None:
         first = self.client.post(
             "/admin/lifecycle/retention/run",
@@ -463,22 +505,25 @@ class RetentionExecutionTest(unittest.TestCase):
         first_session_id = "first-stale-session"
         revived_session_id = "revived-stale-session"
         stale_created = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        revived_session = None
         for session_id in (first_session_id, revived_session_id):
-            self.query._sessions[session_id] = {
+            session = {
                 "id": session_id,
                 "owner_type": "user",
                 "owner_id": "42",
                 "created_at": stale_created,
                 "messages": [],
             }
+            self.query._sessions[session_id] = session
+            if session_id == revived_session_id:
+                revived_session = session
 
         async def revive_second_session(_session: dict) -> dict:
-            if revived_session_id in self.query._sessions:
-                self.query._sessions[revived_session_id]["messages"].append({
-                    "role": "assistant",
-                    "content": "This activity should keep the Conversation active.",
-                    "timestamp": datetime.utcnow().isoformat(),
-                })
+            revived_session["messages"].append({
+                "role": "assistant",
+                "content": "This activity should keep the Conversation active.",
+                "timestamp": datetime.utcnow().isoformat(),
+            })
             return {
                 "status": "succeeded",
                 "retryable": False,

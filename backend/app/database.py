@@ -389,7 +389,7 @@ def init_schema():
             lifecycle_data_class TEXT NOT NULL,
             conversation_id TEXT NOT NULL,
             former_subject_ref TEXT,
-            status TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('incomplete', 'completed')),
             source TEXT NOT NULL,
             workflow TEXT NOT NULL,
             deletion JSON NOT NULL,
@@ -488,6 +488,7 @@ def init_schema():
     _migrate_encrypt_deployment_config_secrets()  # Encrypt plaintext deployment secrets at rest
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
+    _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -665,6 +666,81 @@ def _migrate_add_admin_session_nonce_column() -> None:
         cursor.execute("UPDATE admins SET session_nonce = 0 WHERE session_nonce IS NULL")
 
     conn.commit()
+    cursor.close()
+
+
+def _migrate_deletion_tombstones_status_check() -> None:
+    """Rebuild deletion_tombstones if it lacks the status CHECK constraint."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'deletion_tombstones'"
+    )
+    row = cursor.fetchone()
+    table_sql = row[0] if row else ""
+    if "CHECK(status IN ('incomplete', 'completed'))" in table_sql:
+        cursor.close()
+        return
+
+    cursor.execute("SELECT COUNT(*) FROM deletion_tombstones")
+    count = cursor.fetchone()[0]
+    cursor.execute("ALTER TABLE deletion_tombstones RENAME TO deletion_tombstones_old")
+    cursor.execute("""
+        CREATE TABLE deletion_tombstones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lifecycle_data_class TEXT NOT NULL,
+            conversation_id TEXT NOT NULL,
+            former_subject_ref TEXT,
+            status TEXT NOT NULL CHECK(status IN ('incomplete', 'completed')),
+            source TEXT NOT NULL,
+            workflow TEXT NOT NULL,
+            deletion JSON NOT NULL,
+            retry_count INTEGER DEFAULT 0,
+            last_retry_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO deletion_tombstones (
+            id,
+            lifecycle_data_class,
+            conversation_id,
+            former_subject_ref,
+            status,
+            source,
+            workflow,
+            deletion,
+            retry_count,
+            last_retry_at,
+            created_at,
+            updated_at
+        )
+        SELECT
+            id,
+            lifecycle_data_class,
+            conversation_id,
+            former_subject_ref,
+            CASE WHEN status IN ('incomplete', 'completed') THEN status ELSE 'incomplete' END,
+            source,
+            workflow,
+            deletion,
+            retry_count,
+            last_retry_at,
+            created_at,
+            updated_at
+        FROM deletion_tombstones_old
+    """)
+    cursor.execute("DROP TABLE deletion_tombstones_old")
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
+        ON deletion_tombstones(status, updated_at DESC)
+    """)
+    conn.commit()
+    logger.info(
+        "Migration: Rebuilt deletion_tombstones with status CHECK constraint (%s rows)",
+        count,
+    )
     cursor.close()
 
 

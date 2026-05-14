@@ -211,6 +211,45 @@ export interface LifecycleStatusResponse {
   data_classes: LifecycleDataClass[]
 }
 
+export interface LifecycleDeletionResult {
+  target_kind: string
+  target_id: string
+  action: string
+  status: string
+  retryable: boolean
+  detail: string
+}
+
+export interface LifecycleDeletionSummary {
+  status: string
+  retryable: boolean
+  counts: {
+    succeeded: number
+    skipped: number
+    failed: number
+  }
+  results: LifecycleDeletionResult[]
+}
+
+export interface DeletionTombstone {
+  id: number
+  lifecycle_data_class: string
+  conversation_id: string
+  former_subject_ref?: string | null
+  status: string
+  source: string
+  workflow: string
+  deletion: LifecycleDeletionSummary
+  retry_count: number
+  last_retry_at?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface DeletionTombstonesResponse {
+  tombstones: DeletionTombstone[]
+}
+
 // --- Config Audit Log Types ---
 
 export interface ConfigAuditLogEntry {

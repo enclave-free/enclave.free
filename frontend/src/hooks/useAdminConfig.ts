@@ -20,6 +20,8 @@ import type {
   ServiceHealthResponse,
   DeploymentValidationResponse,
   LifecycleStatusResponse,
+  DeletionTombstone,
+  DeletionTombstonesResponse,
   ConfigAuditLogResponse,
   MigrationPrepareResponse,
   MigrationExecuteResponse,
@@ -474,6 +476,52 @@ export function useLifecycleStatus() {
     loading,
     error,
     refresh: fetchStatus,
+  }
+}
+
+export function useDeletionTombstones() {
+  const [tombstones, setTombstones] = useState<DeletionTombstone[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchTombstones = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await adminFetch('/admin/lifecycle/deletion-tombstones')
+      if (!response.ok) {
+        throw new Error('errors.failedToFetchDeletionTombstones')
+      }
+      const data: DeletionTombstonesResponse = await response.json()
+      setTombstones(Array.isArray(data.tombstones) ? data.tombstones : [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'errors.failedToFetchDeletionTombstones')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const retryTombstone = useCallback(async (id: number) => {
+    const response = await adminFetch(`/admin/lifecycle/deletion-tombstones/${id}/retry`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToRetryDeletionTombstone')
+    }
+    await fetchTombstones()
+    return response.json()
+  }, [fetchTombstones])
+
+  useEffect(() => {
+    fetchTombstones()
+  }, [fetchTombstones])
+
+  return {
+    tombstones,
+    loading,
+    error,
+    refresh: fetchTombstones,
+    retryTombstone,
   }
 }
 

@@ -206,7 +206,7 @@ describe('AdminDocumentUpload', () => {
     await user.click(screen.getByRole('button', { name: 'Delete document' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Delete this document?' })
-    expect(dialog).toHaveTextContent('This will permanently remove the document and all its chunks from the knowledge base.')
+    expect(dialog).toHaveTextContent('This removes the document and its chunks from active knowledge base storage.')
     expect(dialog).toHaveTextContent('ops-guide.pdf')
 
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }))

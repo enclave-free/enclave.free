@@ -23,7 +23,10 @@ vi.mock('../utils/encryption', () => ({
 const mockAdminFetch = vi.mocked(adminFetch)
 
 describe('AdminDeploymentConfig', () => {
+  let tombstoneRetryCompleted = false
+
   beforeEach(() => {
+    tombstoneRetryCompleted = false
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
       removeItem: vi.fn(),
@@ -88,6 +91,70 @@ describe('AdminDeploymentConfig', () => {
           ],
         }))
       }
+      if (endpoint === '/admin/lifecycle/deletion-tombstones') {
+        return Promise.resolve(Response.json({
+          tombstones: [
+            {
+              id: 7,
+              lifecycle_data_class: 'sage_session_memory',
+              conversation_id: 'conversation-123',
+              former_subject_ref: 'deleted_user:42',
+              status: tombstoneRetryCompleted ? 'completed' : 'incomplete',
+              source: 'retention_execution',
+              workflow: 'run_retention',
+              retry_count: tombstoneRetryCompleted ? 1 : 0,
+              updated_at: tombstoneRetryCompleted ? '2026-05-14T13:05:00Z' : '2026-05-14T13:00:00Z',
+              deletion: {
+                status: tombstoneRetryCompleted ? 'succeeded' : 'failed',
+                retryable: !tombstoneRetryCompleted,
+                counts: tombstoneRetryCompleted
+                  ? { succeeded: 1, skipped: 0, failed: 0 }
+                  : { succeeded: 0, skipped: 0, failed: 1 },
+                results: tombstoneRetryCompleted ? [] : [
+                  {
+                    target_kind: 'session_memory',
+                    target_id: 'conversation-123',
+                    action: 'delete_session_memory',
+                    status: 'failed',
+                    retryable: true,
+                    detail: 'target_unavailable',
+                  },
+                ],
+              },
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/deletion-tombstones/7/retry') {
+        tombstoneRetryCompleted = true
+        return Promise.resolve(Response.json({
+          status: 'succeeded',
+          retryable: false,
+          tombstone: {
+            id: 7,
+            lifecycle_data_class: 'sage_session_memory',
+            conversation_id: 'conversation-123',
+            former_subject_ref: 'deleted_user:42',
+            status: 'completed',
+            source: 'retention_execution',
+            workflow: 'run_retention',
+            retry_count: 1,
+            updated_at: '2026-05-14T13:05:00Z',
+            deletion: {
+              status: 'succeeded',
+              retryable: false,
+              counts: { succeeded: 1, skipped: 0, failed: 0 },
+              results: [],
+            },
+          },
+          deletion: {
+            status: 'succeeded',
+            retryable: false,
+            counts: { succeeded: 1, skipped: 0, failed: 0 },
+            results: [],
+          },
+        }))
+      }
       if (endpoint === '/admin/key-migration/prepare') {
         return Promise.resolve(Response.json({
           admin_pubkey: 'a'.repeat(64),
@@ -140,6 +207,36 @@ describe('AdminDeploymentConfig', () => {
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')
     })
+  })
+
+  it('shows deletion tombstones and lets admins retry incomplete Session Memory deletion', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
+    expect(within(tombstones).getByText('conversation-123')).toBeInTheDocument()
+    expect(within(tombstones).getByText('Incomplete')).toBeInTheDocument()
+    expect(within(tombstones).getByText('target_unavailable')).toBeInTheDocument()
+    expect(within(tombstones).getByText(/Updated:/)).toBeInTheDocument()
+    expect(within(tombstones).queryByText(/Deleted user conversation content/i)).not.toBeInTheDocument()
+
+    await user.click(within(tombstones).getByRole('button', { name: 'Retry deletion tombstone 7' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/deletion-tombstones/7/retry', { method: 'POST' })
+    })
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/deletion-tombstones')
+    })
+    expect(await within(tombstones).findByText('Completed')).toBeInTheDocument()
+    expect(within(tombstones).queryByRole('button', { name: 'Retry deletion tombstone 7' })).not.toBeInTheDocument()
   })
 
   it('keeps admin key migration behind a named destructive confirmation', async () => {

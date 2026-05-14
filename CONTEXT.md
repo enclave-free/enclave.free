@@ -443,34 +443,34 @@ _Avoid_: full snapshot, config dump
 
 > **Dev:** "Is this prototype separate from Enclave Free?"
 > **Domain expert:** "No. The **Enclave Free Prototype** is the candidate next version of **Enclave Free**, and its defining change is that **Sage** is integrated directly as the agent runtime."
-
+>
 > **Dev:** "Does private mean the product never calls external services?"
 > **Domain expert:** "No. **Operator-Controlled Privacy** means the **Operator** controls the **Instance** data boundary, configuration, document library, and approved external integrations."
-
+>
 > **Dev:** "Who decides how long uploaded documents or conversation records are kept?"
 > **Domain expert:** "That is **Data Retention**. The **Operator** should control those rules for the **Instance**, even where the current prototype only implements part of the deletion path."
-
+>
 > **Dev:** "If an Operator has a 30-day retention rule, has old data been deleted automatically?"
 > **Domain expert:** "Not necessarily. **Data Retention** is the rule; **Retention Execution** is the action that applies it, and it may be operator-invoked before scheduling exists."
-
+>
 > **Dev:** "If retention succeeds for uploaded artifacts but fails for Sage memory, did retention succeed?"
 > **Domain expert:** "**Retention Execution** should report results per **Lifecycle Data Class**. One class can succeed while another fails or remains unsupported."
-
+>
 > **Dev:** "If Document deletion is marked complete, does that mean every backup and log trace is gone?"
 > **Domain expert:** "No. A complete **Lifecycle Support Status** is scoped to the stated **Lifecycle Data Class** and supported **Storage Targets**, not every **Deployment Surface**."
-
+>
 > **Dev:** "Does lifecycle governance mean every trace is securely erased immediately?"
 > **Domain expert:** "No. **Operator-Controlled Data Lifecycle** first means the **Operator** can see each operator-visible data class, configure or invoke supported lifecycle actions, and review truthful status for unsupported surfaces."
-
+>
 > **Dev:** "If I delete a User, does that delete Docker logs, gateway logs, backups, and every provider trace?"
 > **Domain expert:** "No. Those are **Deployment Surfaces** unless and until the product promotes them into supported **Lifecycle Data Classes** with explicit lifecycle controls."
-
+>
 > **Dev:** "If we delete a conversation, is all Sage memory gone?"
 > **Domain expert:** "For supported active **Conversation** deletion paths, yes: **Session Memory Deletion** removes the related Sage-owned **Session Memory** together with the public conversation record. Broader scheduled retention for every historical/log surface is still future work."
-
+>
 > **Dev:** "Can the operator see who changed configuration?"
 > **Domain expert:** "For some configuration paths, yes. The **Audit Log** concept is broader, but current coverage is still partial."
-
+>
 > **Dev:** "Can a private instance use SMTP or Tinfoil?"
 > **Domain expert:** "Yes, if those **External Integrations** are visible and configurable parts of the **Operator's** deployment choices."
 

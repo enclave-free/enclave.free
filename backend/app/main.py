@@ -69,6 +69,7 @@ from models import (
 )
 from nostr import verify_auth_event, get_pubkey_from_event
 import auth
+import lifecycle
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
@@ -92,7 +93,6 @@ from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
-from lifecycle import router as lifecycle_router
 
 logger.info("Starting Sanctum API...")
 
@@ -304,7 +304,7 @@ app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
-app.include_router(lifecycle_router)
+app.include_router(lifecycle.router)
 
 
 @app.on_event("startup")
@@ -3030,6 +3030,38 @@ async def delete_user(
     existing_user = database.get_user(user_id)
     deleted_conversation_sessions = pop_sessions_for_owner("user", str(user_id))
     deleted_conversations = len(deleted_conversation_sessions)
+    session_memory_results = []
+    for session in deleted_conversation_sessions:
+        session_id = str(session.get("id", "unknown"))
+        try:
+            session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(session)
+        except Exception as exc:
+            logger.warning(
+                "Failed to delete Session Memory during User deletion user_id=%s session_id=%s: %s",
+                user_id,
+                session_id,
+                exc,
+                exc_info=True,
+            )
+            session_memory_deletion = summarize_deletion_results([
+                deletion_target_failed(
+                    target_kind="session_memory",
+                    target_id=session_id,
+                    action="delete_session_memory",
+                    detail=lifecycle.categorize_error(exc),
+                    retryable=True,
+                )
+            ])
+        if session_memory_deletion["status"] != "succeeded":
+            lifecycle.create_session_memory_tombstone(
+                session=session,
+                source="user_deletion",
+                workflow="delete_user",
+                deletion=session_memory_deletion,
+            )
+        results = session_memory_deletion.get("results", [])
+        if isinstance(results, list):
+            session_memory_results.extend(results)
     with _admin_conversation_states_lock:
         for state in admin_conversation_states.values():
             if state.get("subject_user_id") == user_id:
@@ -3072,6 +3104,7 @@ async def delete_user(
                 detail="User Memory was already absent.",
             ),
             conversation_result,
+            *session_memory_results,
         ])
         _audit_user_data_deletion(
             config_key=f"user:{user_id}:delete",
@@ -3089,39 +3122,6 @@ async def delete_user(
     lifecycle_delete = database.delete_user_lifecycle(user_id)
     memory_count = lifecycle_delete["user_memories_deleted"]
     conversation_count = deleted_conversations
-    session_memory_results = []
-    import lifecycle
-    for session in deleted_conversation_sessions:
-        session_id = str(session.get("id", "unknown"))
-        try:
-            session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(session)
-        except Exception as exc:
-            logger.warning(
-                "Failed to delete Session Memory during User deletion user_id=%s session_id=%s: %s",
-                user_id,
-                session_id,
-                exc,
-                exc_info=True,
-            )
-            session_memory_deletion = summarize_deletion_results([
-                deletion_target_failed(
-                    target_kind="session_memory",
-                    target_id=session_id,
-                    action="delete_session_memory",
-                    detail=lifecycle._lifecycle_error_category(str(exc)),
-                    retryable=True,
-                )
-            ])
-        if session_memory_deletion["status"] != "succeeded":
-            lifecycle._create_session_memory_tombstone(
-                session=session,
-                source="user_deletion",
-                workflow="delete_user",
-                deletion=session_memory_deletion,
-            )
-        results = session_memory_deletion.get("results", [])
-        if isinstance(results, list):
-            session_memory_results.extend(results)
     if memory_count:
         user_memory_result = deletion_target_succeeded(
             target_kind="user_memory",
