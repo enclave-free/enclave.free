@@ -32,11 +32,12 @@ from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
 from data_deletion import (
+    deletion_target_failed,
     deletion_target_skipped,
     deletion_target_succeeded,
     summarize_deletion_results,
 )
-from query import delete_sessions_for_owner
+from query import delete_sessions_for_owner, pop_sessions_for_owner, sessions_for_owner
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -68,6 +69,7 @@ from models import (
 )
 from nostr import verify_auth_event, get_pubkey_from_event
 import auth
+import lifecycle
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
@@ -91,7 +93,6 @@ from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
-from lifecycle import router as lifecycle_router
 
 logger.info("Starting Sanctum API...")
 
@@ -303,7 +304,7 @@ app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
-app.include_router(lifecycle_router)
+app.include_router(lifecycle.router)
 
 
 @app.on_event("startup")
@@ -313,6 +314,12 @@ async def startup_event():
     smtp_status = auth.verify_smtp_config()
     if smtp_status["configured"] and not smtp_status["mock_mode"] and not smtp_status["connection_ok"]:
         logger.warning("SMTP is configured but connection test failed - email sending may not work")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close shared outbound clients."""
+    await lifecycle.close_sage_client()
 
 # Rate limiters for auth endpoints
 magic_link_limiter = RateLimiter(limit=5, window_seconds=60)   # 5 per minute
@@ -3027,7 +3034,19 @@ async def delete_user(
     """Delete a user (self or admin)."""
     _require_self_or_admin(user_id, requester)
     existing_user = database.get_user(user_id)
-    deleted_conversations = delete_sessions_for_owner("user", str(user_id))
+    deleted_conversation_sessions = sessions_for_owner("user", str(user_id))
+    deleted_conversations = len(deleted_conversation_sessions)
+    session_memory_results = []
+    for session in deleted_conversation_sessions:
+        session_memory_deletion = await lifecycle.delete_session_memory_for_lifecycle(
+            session=session,
+            source="user_deletion",
+            workflow="delete_user",
+        )
+        results = session_memory_deletion.get("results", [])
+        if isinstance(results, list):
+            session_memory_results.extend(results)
+    pop_sessions_for_owner("user", str(user_id))
     with _admin_conversation_states_lock:
         for state in admin_conversation_states.values():
             if state.get("subject_user_id") == user_id:
@@ -3070,6 +3089,7 @@ async def delete_user(
                 detail="User Memory was already absent.",
             ),
             conversation_result,
+            *session_memory_results,
         ])
         _audit_user_data_deletion(
             config_key=f"user:{user_id}:delete",
@@ -3134,6 +3154,7 @@ async def delete_user(
         ),
         user_memory_result,
         conversation_result,
+        *session_memory_results,
     ])
     _audit_user_data_deletion(
         config_key=f"user:{user_id}:delete",
