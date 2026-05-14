@@ -79,6 +79,13 @@ CHUNKS: dict = {}  # In-memory only (not persisted for now)
 TASKS: dict[str, asyncio.Task] = {}
 
 
+def require_admin_pubkey(admin: dict) -> str:
+    pubkey = admin.get("pubkey")
+    if not pubkey:
+        raise HTTPException(status_code=500, detail="Authenticated admin pubkey is missing")
+    return str(pubkey)
+
+
 def _rate_limit_key(request: Request) -> str:
     """Prefer auth identity for rate limiting; fallback to client IP."""
     return _stable_rate_limit_key(request)
@@ -372,6 +379,7 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
             detail=f"Failed to delete job from database: {e}",
         ))
 
+    has_failures = any(result["status"] == "failed" for result in results)
     if has_failures:
         results.append(deletion_target_skipped(
             target_kind="runtime_document_state",
@@ -1134,6 +1142,7 @@ async def upload_document(
 
     validate_ingest_options(ontology_id, sample_percent)
     content = await file.read()
+    changed_by = require_admin_pubkey(admin)
     try:
         return await queue_document_ingestion(
             original_filename=original_filename,
@@ -1141,7 +1150,7 @@ async def upload_document(
             content=content,
             ontology_id=ontology_id,
             sample_percent=sample_percent,
-            changed_by=admin.get("pubkey", "unknown"),
+            changed_by=changed_by,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
@@ -1218,6 +1227,7 @@ async def upload_document_batch(
             )
         staged.append((upload, original_filename, canonical_name))
 
+    changed_by = require_admin_pubkey(admin)
     for upload, original_filename, canonical_name in staged:
         try:
             await upload.seek(0)
@@ -1228,7 +1238,7 @@ async def upload_document_batch(
                 content=content,
                 ontology_id=ontology_id,
                 sample_percent=sample_percent,
-                changed_by=admin.get("pubkey", "unknown"),
+                changed_by=changed_by,
             ))
         except ValueError as e:
             rejected.append(BatchRejectedItem(filename=canonical_name, reason=str(e)))
@@ -1332,6 +1342,7 @@ async def delete_document(job_id: str, admin: dict = Depends(auth.require_admin)
 
     Cannot delete documents that are currently processing.
     """
+    changed_by = require_admin_pubkey(admin)
     # 1. Check if job exists
     job = ingest_db.get_job(job_id)
     if not job:
@@ -1340,7 +1351,7 @@ async def delete_document(job_id: str, admin: dict = Depends(auth.require_admin)
             response = _missing_document_deletion_response(job_id)
             _audit_data_deletion(
                 config_key=f"document:{job_id}:delete",
-                changed_by=admin.get("pubkey", "unknown"),
+                changed_by=changed_by,
                 deletion=response["deletion"],
                 workflow="delete_document",
                 target_id=job_id,
@@ -1360,7 +1371,7 @@ async def delete_document(job_id: str, admin: dict = Depends(auth.require_admin)
     _audit_document_action(
         config_key=f"document:{job_id}:delete",
         action="delete_document",
-        changed_by=admin.get("pubkey", "unknown"),
+        changed_by=changed_by,
         old_value={
             "job_id": job_id,
             "filename": job.get("filename"),
@@ -1374,7 +1385,7 @@ async def delete_document(job_id: str, admin: dict = Depends(auth.require_admin)
     )
     _audit_data_deletion(
         config_key=f"document:{job_id}:delete",
-        changed_by=admin.get("pubkey", "unknown"),
+        changed_by=changed_by,
         deletion=response["deletion"],
         workflow="delete_document",
         target_id=job_id,
@@ -1389,6 +1400,7 @@ async def cleanup_document_artifacts(admin: dict = Depends(auth.require_admin)) 
 
     Current completed Documents and in-flight replacements are intentionally retained.
     """
+    changed_by = require_admin_pubkey(admin)
     page_size = 1000
     offset = 0
     jobs_to_check = []
@@ -1412,7 +1424,7 @@ async def cleanup_document_artifacts(admin: dict = Depends(auth.require_admin)) 
         deletion_response = await _delete_document_job_artifacts(job_id, job)
         _audit_data_deletion(
             config_key=f"document:{job_id}:cleanup",
-            changed_by=admin.get("pubkey", "unknown"),
+            changed_by=changed_by,
             deletion=deletion_response["deletion"],
             workflow=f"cleanup_document_artifacts:{reason}",
             target_id=job_id,

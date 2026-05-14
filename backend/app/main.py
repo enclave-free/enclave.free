@@ -611,8 +611,10 @@ def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
             raise HTTPException(status_code=404, detail="Subject User not found")
         with _admin_conversation_states_lock:
             state = admin_conversation_states.setdefault(session_id, {})
+            prev_subject_user_id = state.get("subject_user_id")
             state["subject_user_id"] = requested_user_id
-            state.pop("pending_user_memory_change", None)
+            if prev_subject_user_id is not None and prev_subject_user_id != requested_user_id:
+                state.pop("pending_user_memory_change", None)
         subject_user_id = requested_user_id
     else:
         with _admin_conversation_states_lock:

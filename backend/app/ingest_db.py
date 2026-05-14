@@ -226,12 +226,12 @@ def list_jobs(status: Optional[str] = None, limit: int = 100, offset: int = 0) -
     
     if status:
         cursor.execute(
-            "SELECT * FROM ingest_jobs WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM ingest_jobs WHERE status = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
             (status, limit, offset)
         )
     else:
         cursor.execute(
-            "SELECT * FROM ingest_jobs ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM ingest_jobs ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
             (limit, offset)
         )
     
