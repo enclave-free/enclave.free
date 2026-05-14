@@ -24,6 +24,11 @@ from pydantic import BaseModel
 import httpx
 
 import auth
+from data_deletion import (
+    deletion_target_failed,
+    deletion_target_succeeded,
+    summarize_deletion_results,
+)
 from store import (
     embed_texts,
     COLLECTION_NAME,
@@ -382,15 +387,23 @@ def _session_public_snapshot(session: dict) -> dict:
 
 def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:
     """Delete in-memory Retrieval sessions owned by a profile or admin actor."""
+    return len(pop_sessions_for_owner(owner_type, owner_id))
+
+
+def pop_sessions_for_owner(owner_type: str, owner_id: str) -> list[dict]:
+    """Remove and return in-memory Retrieval sessions owned by a profile or admin actor."""
     with _sessions_lock:
         session_ids = [
             session_id
             for session_id, session in _sessions.items()
             if session.get("owner_type") == owner_type and session.get("owner_id") == owner_id
         ]
+        sessions = []
         for session_id in session_ids:
-            _sessions.pop(session_id, None)
-    return len(session_ids)
+            session = _sessions.pop(session_id, None)
+            if session is not None:
+                sessions.append(session)
+    return sessions
 
 
 def _extract_facts_from_conversation(session: dict) -> dict:
@@ -726,10 +739,60 @@ async def get_session(session_id: str, user: dict = Depends(auth.require_admin_o
 @router.delete("/session/{session_id}")
 async def delete_session(session_id: str, user: dict = Depends(auth.require_admin_or_approved_user)):
     """Delete a session. Requires auth."""
+    deleted_session = None
     with _sessions_lock:
         if session_id in _sessions:
             session = _sessions[session_id]
             if not _can_access_session(user, session):
                 raise HTTPException(status_code=403, detail="Session access denied")
-            del _sessions[session_id]
-    return {"status": "deleted"}
+            deleted_session = _sessions.pop(session_id)
+    if deleted_session is None:
+        return {"status": "deleted"}
+
+    import lifecycle
+
+    try:
+        session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(deleted_session)
+    except Exception as exc:
+        logger.warning(
+            "Failed to delete Session Memory for Conversation session_id=%s: %s",
+            session_id,
+            exc,
+            exc_info=True,
+        )
+        session_memory_deletion = summarize_deletion_results([
+            deletion_target_failed(
+                target_kind="session_memory",
+                target_id=session_id,
+                action="delete_session_memory",
+                detail=lifecycle._lifecycle_error_category(str(exc)),
+                retryable=True,
+            )
+        ])
+    if session_memory_deletion["status"] != "succeeded":
+        lifecycle._create_session_memory_tombstone(
+            session=deleted_session,
+            source="user_conversation_delete" if user.get("type") != "admin" else "admin_conversation_delete",
+            workflow="delete_conversation",
+            deletion=session_memory_deletion,
+        )
+    session_memory_results = session_memory_deletion.get("results", [])
+    if not isinstance(session_memory_results, list):
+        session_memory_results = []
+    deletion = summarize_deletion_results([
+        deletion_target_succeeded(
+            target_kind="conversation",
+            target_id=session_id,
+            action="delete_session_record",
+            detail="Deleted active Conversation record.",
+        ),
+        *session_memory_results,
+    ])
+    lifecycle.audit_lifecycle_deletion(
+        config_key=f"conversation:{session_id}:delete",
+        changed_by=user.get("pubkey", str(user.get("id", "unknown"))),
+        workflow="delete_conversation",
+        target_id=session_id,
+        deletion=deletion,
+    )
+    return {"status": "deleted", "deletion": deletion}

@@ -32,11 +32,12 @@ from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 import database
 from data_deletion import (
+    deletion_target_failed,
     deletion_target_skipped,
     deletion_target_succeeded,
     summarize_deletion_results,
 )
-from query import delete_sessions_for_owner
+from query import delete_sessions_for_owner, pop_sessions_for_owner
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -3027,7 +3028,8 @@ async def delete_user(
     """Delete a user (self or admin)."""
     _require_self_or_admin(user_id, requester)
     existing_user = database.get_user(user_id)
-    deleted_conversations = delete_sessions_for_owner("user", str(user_id))
+    deleted_conversation_sessions = pop_sessions_for_owner("user", str(user_id))
+    deleted_conversations = len(deleted_conversation_sessions)
     with _admin_conversation_states_lock:
         for state in admin_conversation_states.values():
             if state.get("subject_user_id") == user_id:
@@ -3087,6 +3089,39 @@ async def delete_user(
     lifecycle_delete = database.delete_user_lifecycle(user_id)
     memory_count = lifecycle_delete["user_memories_deleted"]
     conversation_count = deleted_conversations
+    session_memory_results = []
+    import lifecycle
+    for session in deleted_conversation_sessions:
+        session_id = str(session.get("id", "unknown"))
+        try:
+            session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(session)
+        except Exception as exc:
+            logger.warning(
+                "Failed to delete Session Memory during User deletion user_id=%s session_id=%s: %s",
+                user_id,
+                session_id,
+                exc,
+                exc_info=True,
+            )
+            session_memory_deletion = summarize_deletion_results([
+                deletion_target_failed(
+                    target_kind="session_memory",
+                    target_id=session_id,
+                    action="delete_session_memory",
+                    detail=lifecycle._lifecycle_error_category(str(exc)),
+                    retryable=True,
+                )
+            ])
+        if session_memory_deletion["status"] != "succeeded":
+            lifecycle._create_session_memory_tombstone(
+                session=session,
+                source="user_deletion",
+                workflow="delete_user",
+                deletion=session_memory_deletion,
+            )
+        results = session_memory_deletion.get("results", [])
+        if isinstance(results, list):
+            session_memory_results.extend(results)
     if memory_count:
         user_memory_result = deletion_target_succeeded(
             target_kind="user_memory",
@@ -3134,6 +3169,7 @@ async def delete_user(
         ),
         user_memory_result,
         conversation_result,
+        *session_memory_results,
     ])
     _audit_user_data_deletion(
         config_key=f"user:{user_id}:delete",

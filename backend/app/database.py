@@ -14,7 +14,7 @@ import contextvars
 from typing import Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
-from datetime import datetime
+from datetime import datetime, timezone
 from Crypto.Cipher import AES
 
 # Configure logging
@@ -22,6 +22,17 @@ logger = logging.getLogger("sanctum.database")
 
 # Configuration
 SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/sanctum.db")
+
+
+def _json_dumps_for_lifecycle(value: object) -> str:
+    try:
+        return json.dumps(value, sort_keys=True)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Lifecycle JSON contained non-standard values; serializing with string fallbacks",
+            exc_info=True,
+        )
+        return json.dumps(value, sort_keys=True, default=str)
 
 # Lazy-loaded connection
 _connection = None
@@ -370,6 +381,27 @@ def init_schema():
             prev_hash TEXT,
             entry_hash TEXT
         )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS deletion_tombstones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lifecycle_data_class TEXT NOT NULL,
+            conversation_id TEXT NOT NULL,
+            former_subject_ref TEXT,
+            status TEXT NOT NULL,
+            source TEXT NOT NULL,
+            workflow TEXT NOT NULL,
+            deletion JSON NOT NULL,
+            retry_count INTEGER DEFAULT 0,
+            last_retry_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
+        ON deletion_tombstones(status, updated_at DESC)
     """)
 
     # Agent Settings user-type overrides - keeps the compatibility table name.
@@ -767,6 +799,114 @@ def log_config_audit_event(
     """
     with get_write_cursor() as cursor:
         _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+
+
+def create_deletion_tombstone(
+    *,
+    lifecycle_data_class: str,
+    conversation_id: str,
+    former_subject_ref: str | None,
+    status: str,
+    source: str,
+    workflow: str,
+    deletion: dict,
+) -> int:
+    now = datetime.now(timezone.utc).isoformat()
+    serialized_deletion = _json_dumps_for_lifecycle(deletion)
+    with get_write_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO deletion_tombstones (
+                lifecycle_data_class,
+                conversation_id,
+                former_subject_ref,
+                status,
+                source,
+                workflow,
+                deletion,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                lifecycle_data_class,
+                conversation_id,
+                former_subject_ref,
+                status,
+                source,
+                workflow,
+                serialized_deletion,
+                now,
+                now,
+            ),
+        )
+        return int(cursor.lastrowid)
+
+
+def list_deletion_tombstones(*, status: str | None = None, limit: int = 100) -> list[dict]:
+    with get_cursor() as cursor:
+        if status:
+            cursor.execute(
+                """
+                SELECT * FROM deletion_tombstones
+                WHERE status = ?
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ?
+                """,
+                (status, limit),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT * FROM deletion_tombstones
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+        rows = cursor.fetchall()
+    tombstones = []
+    for row in rows:
+        item = dict(row)
+        item["deletion"] = json.loads(item["deletion"])
+        tombstones.append(item)
+    return tombstones
+
+
+def get_deletion_tombstone(tombstone_id: int) -> dict | None:
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM deletion_tombstones WHERE id = ?", (tombstone_id,))
+        row = cursor.fetchone()
+    if not row:
+        return None
+    item = dict(row)
+    item["deletion"] = json.loads(item["deletion"])
+    return item
+
+
+def update_deletion_tombstone_after_retry(
+    tombstone_id: int,
+    *,
+    status: str,
+    deletion: dict,
+) -> dict | None:
+    now = datetime.now(timezone.utc).isoformat()
+    serialized_deletion = _json_dumps_for_lifecycle(deletion)
+    with get_write_cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE deletion_tombstones
+            SET status = ?,
+                deletion = ?,
+                retry_count = retry_count + 1,
+                last_retry_at = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (status, serialized_deletion, now, now, tombstone_id),
+        )
+    return get_deletion_tombstone(tombstone_id)
 
 
 def _migrate_add_config_audit_hash_columns() -> None:
