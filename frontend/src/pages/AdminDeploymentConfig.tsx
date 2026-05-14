@@ -35,7 +35,7 @@ import { Button, Callout, Card, TextField } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
 import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus, useDeletionTombstones } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse } from '../types/config'
+import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse, DeletionTombstoneStatusFilter } from '../types/config'
 import { DEFAULT_TINFOIL_MODEL, TINFOIL_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
@@ -76,11 +76,12 @@ export function AdminDeploymentConfig() {
     status: lifecycleStatus,
     loading: lifecycleLoading,
   } = useLifecycleStatus()
+  const [tombstoneStatusFilter, setTombstoneStatusFilter] = useState<DeletionTombstoneStatusFilter>('all')
   const {
     tombstones,
     loading: tombstonesLoading,
     retryTombstone,
-  } = useDeletionTombstones()
+  } = useDeletionTombstones(tombstoneStatusFilter)
 
   const {
     log: auditLog,
@@ -227,6 +228,24 @@ export function AdminDeploymentConfig() {
     if (status === 'not_started') return t('adminDeployment.lifecycle.notStarted', 'Not Started')
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
   }
+
+  const tombstoneStatusFilters: Array<{ value: DeletionTombstoneStatusFilter; label: string; ariaLabel: string }> = [
+    {
+      value: 'all',
+      label: t('adminDeployment.lifecycle.allTombstones', 'All'),
+      ariaLabel: t('adminDeployment.lifecycle.allTombstonesLabel', 'All tombstones'),
+    },
+    {
+      value: 'incomplete',
+      label: t('adminDeployment.lifecycle.incompleteTombstonesFilter', 'Incomplete'),
+      ariaLabel: t('adminDeployment.lifecycle.incompleteTombstonesLabel', 'Incomplete tombstones'),
+    },
+    {
+      value: 'completed',
+      label: t('adminDeployment.lifecycle.completedTombstonesFilter', 'Completed'),
+      ariaLabel: t('adminDeployment.lifecycle.completedTombstonesLabel', 'Completed tombstones'),
+    },
+  ]
 
   const handleRetryTombstone = async (id: number) => {
     try {
@@ -1403,6 +1422,27 @@ export function AdminDeploymentConfig() {
           <p className="text-sm text-text-secondary mb-4">
             {t('adminDeployment.lifecycle.tombstonesDescription', 'Retry incomplete lifecycle deletions without exposing deleted content.')}
           </p>
+          <div className="mb-4 inline-flex rounded-lg border border-border bg-surface p-1" role="group" aria-label={t('adminDeployment.lifecycle.tombstoneStatusFilter', 'Tombstone status filter')}>
+            {tombstoneStatusFilters.map((filter) => {
+              const selected = tombstoneStatusFilter === filter.value
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  aria-label={filter.ariaLabel}
+                  aria-pressed={selected}
+                  onClick={() => setTombstoneStatusFilter(filter.value)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    selected
+                      ? 'bg-surface-raised text-text shadow-sm'
+                      : 'text-text-secondary hover:text-text hover:bg-surface-overlay'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              )
+            })}
+          </div>
           {tombstoneRetryError && (
             <p className="text-xs text-danger mb-3">
               {t('adminDeployment.lifecycle.tombstoneRetryFailed', 'Retry failed.')}

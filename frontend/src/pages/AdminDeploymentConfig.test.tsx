@@ -22,11 +22,43 @@ vi.mock('../utils/encryption', () => ({
 
 const mockAdminFetch = vi.mocked(adminFetch)
 
+const makeTombstoneFixture = (completed = false, overrides: Record<string, unknown> = {}) => ({
+  id: completed ? 8 : 7,
+  lifecycle_data_class: 'sage_session_memory',
+  conversation_id: completed ? 'conversation-456' : 'conversation-123',
+  former_subject_ref: 'deleted_user:42',
+  status: completed ? 'completed' : 'incomplete',
+  source: 'retention_execution',
+  workflow: 'run_retention',
+  retry_count: completed ? 1 : 0,
+  updated_at: completed ? '2026-05-14T13:05:00Z' : '2026-05-14T13:00:00Z',
+  deletion: {
+    status: completed ? 'succeeded' : 'failed',
+    retryable: !completed,
+    counts: completed
+      ? { succeeded: 1, skipped: 0, failed: 0 }
+      : { succeeded: 0, skipped: 0, failed: 1 },
+    results: completed ? [] : [
+      {
+        target_kind: 'session_memory',
+        target_id: 'conversation-123',
+        action: 'delete_session_memory',
+        status: 'failed',
+        retryable: true,
+        detail: 'target_unavailable',
+      },
+    ],
+  },
+  ...overrides,
+})
+
 describe('AdminDeploymentConfig', () => {
   let tombstoneRetryCompleted = false
+  let tombstonesFixture: unknown[] | null
 
   beforeEach(() => {
     tombstoneRetryCompleted = false
+    tombstonesFixture = null
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
       removeItem: vi.fn(),
@@ -103,40 +135,6 @@ describe('AdminDeploymentConfig', () => {
           },
         }))
       }
-      if (endpoint === '/admin/lifecycle/deletion-tombstones') {
-        return Promise.resolve(Response.json({
-          tombstones: [
-            {
-              id: 7,
-              lifecycle_data_class: 'sage_session_memory',
-              conversation_id: 'conversation-123',
-              former_subject_ref: 'deleted_user:42',
-              status: tombstoneRetryCompleted ? 'completed' : 'incomplete',
-              source: 'retention_execution',
-              workflow: 'run_retention',
-              retry_count: tombstoneRetryCompleted ? 1 : 0,
-              updated_at: tombstoneRetryCompleted ? '2026-05-14T13:05:00Z' : '2026-05-14T13:00:00Z',
-              deletion: {
-                status: tombstoneRetryCompleted ? 'succeeded' : 'failed',
-                retryable: !tombstoneRetryCompleted,
-                counts: tombstoneRetryCompleted
-                  ? { succeeded: 1, skipped: 0, failed: 0 }
-                  : { succeeded: 0, skipped: 0, failed: 1 },
-                results: tombstoneRetryCompleted ? [] : [
-                  {
-                    target_kind: 'session_memory',
-                    target_id: 'conversation-123',
-                    action: 'delete_session_memory',
-                    status: 'failed',
-                    retryable: true,
-                    detail: 'target_unavailable',
-                  },
-                ],
-              },
-            },
-          ],
-        }))
-      }
       if (endpoint === '/admin/lifecycle/deletion-tombstones/7/retry') {
         tombstoneRetryCompleted = true
         return Promise.resolve(Response.json({
@@ -165,6 +163,25 @@ describe('AdminDeploymentConfig', () => {
             counts: { succeeded: 1, skipped: 0, failed: 0 },
             results: [],
           },
+        }))
+      }
+      if (endpoint.startsWith('/admin/lifecycle/deletion-tombstones')) {
+        const status = endpoint.includes('?status=completed')
+          ? 'completed'
+          : endpoint.includes('?status=incomplete')
+            ? 'incomplete'
+            : null
+        const tombstones = tombstonesFixture ?? [makeTombstoneFixture(tombstoneRetryCompleted)]
+        const filteredTombstones = status
+          ? tombstones.filter((tombstone) => {
+            return typeof tombstone === 'object'
+              && tombstone !== null
+              && 'status' in tombstone
+              && tombstone.status === status
+          })
+          : tombstones
+        return Promise.resolve(Response.json({
+          tombstones: filteredTombstones,
         }))
       }
       if (endpoint === '/admin/key-migration/prepare') {
@@ -236,7 +253,7 @@ describe('AdminDeploymentConfig', () => {
 
     const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
     expect(within(tombstones).getByText('conversation-123')).toBeInTheDocument()
-    expect(within(tombstones).getByText('Incomplete')).toBeInTheDocument()
+    expect(within(tombstones).getAllByText('Incomplete').length).toBeGreaterThan(0)
     expect(within(tombstones).getByText('target_unavailable')).toBeInTheDocument()
     expect(within(tombstones).getByText(/Updated:/)).toBeInTheDocument()
     expect(within(tombstones).queryByText(/Deleted user conversation content/i)).not.toBeInTheDocument()
@@ -249,8 +266,54 @@ describe('AdminDeploymentConfig', () => {
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/deletion-tombstones')
     })
-    expect(await within(tombstones).findByText('Completed')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(within(tombstones).getAllByText('Completed').length).toBeGreaterThan(0)
+    })
     expect(within(tombstones).queryByRole('button', { name: 'Retry deletion tombstone 7' })).not.toBeInTheDocument()
+  })
+
+  it('shows an empty tombstone state when no lifecycle deletion needs retry', async () => {
+    tombstonesFixture = []
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
+    expect(within(tombstones).getByText('No deletion tombstones are waiting for retry.')).toBeInTheDocument()
+    expect(within(tombstones).queryByRole('button', { name: /Retry deletion tombstone/i })).not.toBeInTheDocument()
+  })
+
+  it('filters deletion tombstones by lifecycle status', async () => {
+    const user = userEvent.setup()
+    tombstonesFixture = [
+      makeTombstoneFixture(false),
+      makeTombstoneFixture(true),
+    ]
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const tombstones = await screen.findByRole('group', { name: 'Deletion Tombstones' })
+    expect(within(tombstones).getByText('conversation-123')).toBeInTheDocument()
+    expect(within(tombstones).getByText('conversation-456')).toBeInTheDocument()
+
+    await user.click(within(tombstones).getByRole('button', { name: 'Completed tombstones' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/deletion-tombstones?status=completed')
+    })
+    expect(within(tombstones).queryByText('conversation-123')).not.toBeInTheDocument()
+    expect(await within(tombstones).findByText('conversation-456')).toBeInTheDocument()
   })
 
   it('keeps admin key migration behind a named destructive confirmation', async () => {

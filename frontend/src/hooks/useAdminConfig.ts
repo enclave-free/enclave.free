@@ -22,6 +22,7 @@ import type {
   LifecycleStatusResponse,
   DeletionTombstone,
   DeletionTombstonesResponse,
+  DeletionTombstoneStatusFilter,
   ConfigAuditLogResponse,
   MigrationPrepareResponse,
   MigrationExecuteResponse,
@@ -479,7 +480,7 @@ export function useLifecycleStatus() {
   }
 }
 
-export function useDeletionTombstones() {
+export function useDeletionTombstones(status: DeletionTombstoneStatusFilter = 'all') {
   const [tombstones, setTombstones] = useState<DeletionTombstone[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -488,7 +489,10 @@ export function useDeletionTombstones() {
     try {
       setLoading(true)
       setError(null)
-      const response = await adminFetch('/admin/lifecycle/deletion-tombstones')
+      const path = status === 'all'
+        ? '/admin/lifecycle/deletion-tombstones'
+        : `/admin/lifecycle/deletion-tombstones?status=${status}`
+      const response = await adminFetch(path)
       if (!response.ok) {
         throw new Error('errors.failedToFetchDeletionTombstones')
       }
@@ -499,7 +503,7 @@ export function useDeletionTombstones() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [status])
 
   const retryTombstone = useCallback(async (id: number) => {
     const response = await adminFetch(`/admin/lifecycle/deletion-tombstones/${id}/retry`, {

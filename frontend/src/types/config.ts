@@ -260,6 +260,8 @@ export interface DeletionTombstonesResponse {
   tombstones: DeletionTombstone[]
 }
 
+export type DeletionTombstoneStatusFilter = 'all' | 'incomplete' | 'completed'
+
 // --- Config Audit Log Types ---
 
 export interface ConfigAuditLogEntry {
