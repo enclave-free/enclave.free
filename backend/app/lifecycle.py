@@ -221,6 +221,28 @@ DATA_CLASSES = [
         ],
     },
     {
+        "key": "inference_verification_records",
+        "label": "Inference Verification Records",
+        "owner": "Enclave Control Plane",
+        "storage_targets": ["SQLite"],
+        "deletion": {
+            "status": "not_started",
+            "summary": "Deletion controls for Inference Verification Records are not implemented yet.",
+        },
+        "retention": {
+            "status": "indefinite",
+            "summary": "Inference Verification Records are retained indefinitely by default until configurable retention and deletion controls are implemented.",
+        },
+        "audit": {
+            "status": "partial",
+            "summary": "Manual verification and blocked protected inference create concise Audit Log events without storing full attestation material in the Audit Log.",
+        },
+        "notes": [
+            "Full provider attestation material remains in the Inference Verification Record, not in the Audit Log.",
+            "These records support operator repair and historical evidence for protected Model Provider calls.",
+        ],
+    },
+    {
         "key": "audit_log",
         "label": "Audit Log",
         "owner": "Enclave Control Plane",
@@ -453,6 +475,11 @@ def _confidentiality_posture_for_data_class(data_class_key: str) -> dict:
         return {
             "status": "partial",
             "summary": "Sage Session Memory uses active-storage lifecycle controls; Secure Erase and full historical/log retention remain unsupported.",
+        }
+    if data_class_key == "inference_verification_records":
+        return {
+            "status": "partial",
+            "summary": "Attestation material is encrypted at rest when the deployment secret is configured; Audit Log references intentionally omit full attestation material.",
         }
     if data_class_key == "audit_log":
         return {
@@ -870,6 +897,13 @@ AUDIT_COVERAGE_INVENTORY = [
         "status": "audited",
         "event_family": "user_memories",
         "surface": "ordinary_admin",
+    },
+    {
+        "key": "inference_verification_events",
+        "label": "Inference Verification events",
+        "status": "audited",
+        "event_family": "inference_verification",
+        "surface": "operator_security",
     },
     {
         "key": "retrieval_index_internal_writes",

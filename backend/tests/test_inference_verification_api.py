@@ -21,8 +21,10 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.db_path = Path(self.tmp.name) / "enclave.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
+        self._orig_llm_api_key = os.environ.get("LLM_API_KEY")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
+        os.environ["LLM_API_KEY"] = "test-key"
 
         import auth
         import database
@@ -52,6 +54,7 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.database._deployment_secret_key = None
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
+        self._restore_env("LLM_API_KEY", self._orig_llm_api_key)
         self.tmp.cleanup()
 
     @staticmethod
@@ -139,6 +142,14 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.assertEqual(body["attestation_material"], {"quote": "manual"})
         self.assertEqual(len(self.database.list_inference_verification_records()), 1)
 
+        audit_response = self.client.get("/admin/deployment/audit-log?table_name=inference_verification")
+        self.assertEqual(audit_response.status_code, 200)
+        audit_entries = audit_response.json()["entries"]
+        self.assertEqual(audit_entries[0]["config_key"], "manual_verification")
+        self.assertEqual(audit_entries[0]["changed_by"], "admin-pubkey")
+        self.assertIn('"status":"success"', audit_entries[0]["new_value"])
+        self.assertNotIn("manual-attestation-material", audit_entries[0]["new_value"])
+
     def test_manual_verification_requires_configured_model_provider_api_key(self) -> None:
         self.database.update_deployment_config("LLM_API_KEY", "", changed_by="admin-pubkey")
         self._restore_env("LLM_API_KEY", None)
@@ -157,3 +168,19 @@ class InferenceVerificationApiTest(unittest.TestCase):
         response = client.get("/admin/deployment/inference-verification/records/1")
 
         self.assertEqual(response.status_code, 403)
+
+    def test_blocked_protected_inference_audit_is_visible_without_content(self) -> None:
+        from protected_inference import audit_blocked_protected_inference
+
+        audit_blocked_protected_inference(context="conversation", status="missing")
+
+        response = self.client.get("/admin/deployment/audit-log?table_name=inference_verification")
+
+        self.assertEqual(response.status_code, 200)
+        entries = response.json()["entries"]
+        self.assertEqual(entries[0]["config_key"], "protected_inference_blocked")
+        self.assertEqual(entries[0]["changed_by"], "system:protected-inference-gate")
+        self.assertIn('"context":"conversation"', entries[0]["new_value"])
+        self.assertIn('"status":"missing"', entries[0]["new_value"])
+        self.assertNotIn("message", entries[0]["new_value"])
+        self.assertNotIn("content", entries[0]["new_value"])

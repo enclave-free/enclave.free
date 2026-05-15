@@ -83,6 +83,7 @@ class LifecycleStatusTest(unittest.TestCase):
             "retrieval_index",
             "uploaded_document_artifacts",
             "sage_session_memory",
+            "inference_verification_records",
             "audit_log",
         ):
             self.assertIn(key, classes_by_key)
@@ -96,6 +97,14 @@ class LifecycleStatusTest(unittest.TestCase):
             "stale active Conversation",
             session_memory["retention"]["summary"],
         )
+
+        inference_records = classes_by_key["inference_verification_records"]
+        self.assertEqual(inference_records["owner"], "Enclave Control Plane")
+        self.assertIn("SQLite", inference_records["storage_targets"])
+        self.assertEqual(inference_records["deletion"]["status"], "not_started")
+        self.assertEqual(inference_records["retention"]["status"], "indefinite")
+        self.assertIn("indefinitely", inference_records["retention"]["summary"])
+        self.assertEqual(inference_records["audit"]["status"], "partial")
 
     def test_lifecycle_status_reports_active_storage_scope_and_confidentiality_posture(self) -> None:
         response = self.client.get("/admin/lifecycle/status")

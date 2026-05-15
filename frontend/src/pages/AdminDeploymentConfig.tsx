@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -47,6 +47,34 @@ type ValidationState = {
   result: DeploymentValidationResponse
   validatedAt: string
   configFingerprint: string
+}
+
+type InferenceVerificationRecord = {
+  id: number
+  status?: string
+  trigger?: string
+  provider_identity?: string | null
+  provider_endpoint?: string | null
+  model_identifier?: string | null
+  checked_at?: string | null
+  expires_at?: string | null
+  verifier_version?: string | null
+  claims_fingerprint?: string | null
+  attestation_material?: unknown
+  error?: string | null
+}
+
+type InferenceVerificationStatus = {
+  status: string
+  checked_at?: string | null
+  expires_at?: string | null
+  expected_claims_fingerprint?: string | null
+  configured_provider?: {
+    provider_identity?: string | null
+    provider_endpoint?: string | null
+    model_identifier?: string | null
+  } | null
+  record?: InferenceVerificationRecord | null
 }
 
 export function AdminDeploymentConfig() {
@@ -135,6 +163,17 @@ export function AdminDeploymentConfig() {
   const [scheduledRetentionError, setScheduledRetentionError] = useState<string | null>(null)
   const [artifactPostureUpdating, setArtifactPostureUpdating] = useState(false)
   const [artifactPostureError, setArtifactPostureError] = useState<string | null>(null)
+  const [inferenceVerificationStatus, setInferenceVerificationStatus] = useState<InferenceVerificationStatus | null>(null)
+  const [inferenceVerificationRecords, setInferenceVerificationRecords] = useState<InferenceVerificationRecord[]>([])
+  const [inferenceVerificationLoading, setInferenceVerificationLoading] = useState(false)
+  const [inferenceVerificationError, setInferenceVerificationError] = useState<string | null>(null)
+  const [manualVerificationLoading, setManualVerificationLoading] = useState(false)
+  const [manualVerificationMessage, setManualVerificationMessage] = useState<string | null>(null)
+  const [manualVerificationError, setManualVerificationError] = useState<string | null>(null)
+  const [selectedVerificationRecordId, setSelectedVerificationRecordId] = useState<number | null>(null)
+  const [selectedVerificationRecord, setSelectedVerificationRecord] = useState<InferenceVerificationRecord | null>(null)
+  const [selectedVerificationLoading, setSelectedVerificationLoading] = useState(false)
+  const [selectedVerificationError, setSelectedVerificationError] = useState<string | null>(null)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -251,6 +290,95 @@ export function AdminDeploymentConfig() {
     if (!value) return t('common.unknown', 'Unknown')
     const date = new Date(value)
     return isNaN(date.getTime()) ? value : date.toLocaleString()
+  }
+
+  const parseAdminResponseError = async (response: Response, fallback: string) => {
+    try {
+      const body = await response.json()
+      return typeof body?.detail === 'string' ? body.detail : fallback
+    } catch {
+      return fallback
+    }
+  }
+
+  const formatVerificationStatus = (status?: string | null) => {
+    if (!status) return t('common.unknown', 'Unknown')
+    if (status === 'current') return t('adminDeployment.inferenceVerification.current', 'Current')
+    if (status === 'missing') return t('adminDeployment.inferenceVerification.missing', 'Missing')
+    if (status === 'expired') return t('adminDeployment.inferenceVerification.expired', 'Expired')
+    if (status === 'failed') return t('adminDeployment.inferenceVerification.failed', 'Failed')
+    if (status === 'success') return t('adminDeployment.inferenceVerification.success', 'Success')
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+  }
+
+  const loadInferenceVerification = useCallback(async () => {
+    setInferenceVerificationLoading(true)
+    setInferenceVerificationError(null)
+    try {
+      const [statusResponse, recordsResponse] = await Promise.all([
+        adminFetch('/admin/deployment/inference-verification/status'),
+        adminFetch('/admin/deployment/inference-verification/records'),
+      ])
+
+      if (!statusResponse.ok) {
+        throw new Error(await parseAdminResponseError(statusResponse, t('adminDeployment.inferenceVerification.statusLoadFailed', 'Failed to load inference verification status')))
+      }
+      if (!recordsResponse.ok) {
+        throw new Error(await parseAdminResponseError(recordsResponse, t('adminDeployment.inferenceVerification.historyLoadFailed', 'Failed to load inference verification history')))
+      }
+
+      const statusBody = await statusResponse.json()
+      const recordsBody = await recordsResponse.json()
+      setInferenceVerificationStatus(statusBody)
+      setInferenceVerificationRecords(Array.isArray(recordsBody?.records) ? recordsBody.records : [])
+    } catch (err) {
+      setInferenceVerificationError(err instanceof Error ? err.message : t('adminDeployment.inferenceVerification.loadFailed', 'Failed to load inference verification'))
+    } finally {
+      setInferenceVerificationLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (authChecked) {
+      void loadInferenceVerification()
+    }
+  }, [authChecked, loadInferenceVerification])
+
+  const handleManualInferenceVerification = async () => {
+    setManualVerificationLoading(true)
+    setManualVerificationMessage(null)
+    setManualVerificationError(null)
+    try {
+      const response = await adminFetch('/admin/deployment/inference-verification/verify', { method: 'POST' })
+      if (!response.ok) {
+        throw new Error(await parseAdminResponseError(response, t('adminDeployment.inferenceVerification.manualFailed', 'Manual verification failed')))
+      }
+      await response.json()
+      setManualVerificationMessage(t('adminDeployment.inferenceVerification.manualSucceeded', 'Manual verification succeeded'))
+      await loadInferenceVerification()
+    } catch (err) {
+      setManualVerificationError(err instanceof Error ? err.message : t('adminDeployment.inferenceVerification.manualFailed', 'Manual verification failed'))
+    } finally {
+      setManualVerificationLoading(false)
+    }
+  }
+
+  const handleInspectInferenceVerificationRecord = async (recordId: number) => {
+    setSelectedVerificationRecordId(recordId)
+    setSelectedVerificationRecord(null)
+    setSelectedVerificationError(null)
+    setSelectedVerificationLoading(true)
+    try {
+      const response = await adminFetch(`/admin/deployment/inference-verification/records/${recordId}`)
+      if (!response.ok) {
+        throw new Error(await parseAdminResponseError(response, t('adminDeployment.inferenceVerification.detailLoadFailed', 'Failed to load attestation detail')))
+      }
+      setSelectedVerificationRecord(await response.json())
+    } catch (err) {
+      setSelectedVerificationError(err instanceof Error ? err.message : t('adminDeployment.inferenceVerification.detailLoadFailed', 'Failed to load attestation detail'))
+    } finally {
+      setSelectedVerificationLoading(false)
+    }
   }
 
   const formatLifecycleStatus = (status: string) => {
@@ -1275,6 +1403,169 @@ export function AdminDeploymentConfig() {
   // Get translated config categories
   const configCategories = getConfigCategories(t)
 
+  const renderInferenceVerificationPanel = () => {
+    const provider = inferenceVerificationStatus?.configured_provider
+    const statusLabel = formatVerificationStatus(inferenceVerificationStatus?.status)
+    const statusTone = inferenceVerificationStatus?.status === 'current'
+      ? 'text-success bg-success/10 border-success/20'
+      : 'text-warning bg-warning/10 border-warning/20'
+
+    return (
+      <div
+        role="group"
+        aria-label={t('adminDeployment.inferenceVerification.ariaLabel', 'Inference Verification')}
+        className="mb-4 rounded-lg border border-border bg-surface p-4"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-text flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-accent" />
+              {t('adminDeployment.inferenceVerification.title', 'Inference Verification')}
+            </h4>
+            <p className="mt-1 text-xs text-text-muted">
+              {t('adminDeployment.inferenceVerification.summary', 'Admin-only evidence that protected inference is running on the expected Model Provider.')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => void loadInferenceVerification()}
+              disabled={inferenceVerificationLoading || manualVerificationLoading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${inferenceVerificationLoading ? 'animate-spin' : ''}`} />
+              {t('adminDeployment.refresh', 'Refresh')}
+            </button>
+            <button
+              onClick={() => void handleManualInferenceVerification()}
+              disabled={manualVerificationLoading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-text hover:bg-accent-hover disabled:opacity-50"
+            >
+              {manualVerificationLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              {t('adminDeployment.inferenceVerification.verifyNow', 'Verify Now')}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-border bg-surface-overlay p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs uppercase tracking-wide text-text-muted">
+                {t('adminDeployment.inferenceVerification.status', 'Status')}
+              </span>
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusTone}`}>
+                {statusLabel}
+              </span>
+            </div>
+            <dl className="mt-3 space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.checkedAt', 'Checked')}</dt>
+                <dd className="text-right text-text">{formatTimestamp(inferenceVerificationStatus?.checked_at ?? inferenceVerificationStatus?.record?.checked_at)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.expiresAt', 'Expires')}</dt>
+                <dd className="text-right text-text">{formatTimestamp(inferenceVerificationStatus?.expires_at ?? inferenceVerificationStatus?.record?.expires_at)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="sr-only">{t('adminDeployment.inferenceVerification.expectedClaims', 'Expected claims')}</dt>
+                <dd className="max-w-full truncate text-right font-mono text-text">
+                  {t('adminDeployment.inferenceVerification.expectedClaimsValue', 'Expected claims: {{fingerprint}}', {
+                    fingerprint: inferenceVerificationStatus?.expected_claims_fingerprint ?? t('common.unknown', 'Unknown'),
+                  })}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-lg border border-border bg-surface-overlay p-3">
+            <span className="text-xs uppercase tracking-wide text-text-muted">
+              {t('adminDeployment.inferenceVerification.providerClaims', 'Provider Claims')}
+            </span>
+            <dl className="mt-3 space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.provider', 'Provider')}</dt>
+                <dd className="text-right text-text">{provider?.provider_identity ?? t('common.unknown', 'Unknown')}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.model', 'Model')}</dt>
+                <dd className="text-right text-text">{provider?.model_identifier ?? t('common.unknown', 'Unknown')}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.endpoint', 'Endpoint')}</dt>
+                <dd className="max-w-[12rem] truncate text-right text-text">{provider?.provider_endpoint ?? t('common.unknown', 'Unknown')}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        {inferenceVerificationError && (
+          <p className="mt-3 text-xs text-error">{inferenceVerificationError}</p>
+        )}
+        {manualVerificationMessage && (
+          <p className="mt-3 text-xs font-medium text-success">{manualVerificationMessage}</p>
+        )}
+        {manualVerificationError && (
+          <p className="mt-3 text-xs font-medium text-error">{manualVerificationError}</p>
+        )}
+
+        <div className="mt-4 border-t border-border pt-4">
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-text-muted flex items-center gap-2">
+            <History className="w-3.5 h-3.5" />
+            {t('adminDeployment.inferenceVerification.history', 'Verification History')}
+          </h5>
+          <div className="mt-2 space-y-2">
+            {inferenceVerificationRecords.length === 0 ? (
+              <p className="text-xs text-text-muted">
+                {t('adminDeployment.inferenceVerification.emptyHistory', 'No verification records yet.')}
+              </p>
+            ) : inferenceVerificationRecords.map((record) => (
+              <div key={record.id} className="rounded-lg border border-border bg-surface-overlay p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-text">
+                      {t('adminDeployment.inferenceVerification.recordTitle', 'Record #{{id}}', { id: record.id })}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {formatVerificationStatus(record.status)} · {record.trigger ?? t('common.unknown', 'Unknown')} · {formatTimestamp(record.checked_at)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void handleInspectInferenceVerificationRecord(record.id)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    {t('adminDeployment.inferenceVerification.inspectAttestation', 'Inspect Attestation')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedVerificationRecordId && (
+            <div className="mt-3 rounded-lg border border-border bg-surface-overlay p-3">
+              <h6 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                {t('adminDeployment.inferenceVerification.fullAttestation', 'Full Attestation Material')}
+              </h6>
+              {selectedVerificationLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {t('common.loading', 'Loading')}
+                </div>
+              )}
+              {selectedVerificationError && (
+                <p className="mt-2 text-xs text-error">{selectedVerificationError}</p>
+              )}
+              {selectedVerificationRecord && (
+                <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-surface px-3 py-2 text-xs text-text font-mono whitespace-pre-wrap">
+                  {JSON.stringify(selectedVerificationRecord.attestation_material ?? selectedVerificationRecord, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // Render a config category section
   const renderCategory = (category: ConfigCategory, items: DeploymentConfigItem[]) => {
     if (items.length === 0) return null
@@ -1385,6 +1676,8 @@ export function AdminDeploymentConfig() {
         {'hint' in meta && meta.hint && (
           <p className="text-xs text-text-muted mb-4">{meta.hint}</p>
         )}
+
+        {category === 'llm' && renderInferenceVerificationPanel()}
 
         <div className="space-y-2">
           {items.map(renderConfigItem)}

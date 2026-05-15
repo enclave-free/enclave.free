@@ -5,6 +5,7 @@ Handles environment settings, service health checks, and .env management.
 
 import os
 import time
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Final, Mapping, Optional
@@ -148,6 +149,7 @@ ALLOWED_AUDIT_TABLES = {
     "document_defaults_user_type_overrides",
     "document_actions",
     "data_deletion",
+    "inference_verification",
     "instance_settings",
     "user_approval",
     "user_memories",
@@ -380,7 +382,7 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
     api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
     if not api_key:
         raise HTTPException(status_code=400, detail="LLM_API_KEY not configured")
-    return verify_and_store(
+    record = verify_and_store(
         verifier=TinfoilVerifier(),
         storage=database,
         expected_claims=current_expected_claims(),
@@ -388,6 +390,23 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
         api_key=api_key,
         **configured,
     )
+    database.log_config_audit_event(
+        table_name="inference_verification",
+        config_key="manual_verification",
+        old_value=None,
+        new_value=json.dumps({
+            "record_id": record.get("id"),
+            "status": record.get("status"),
+            "provider_identity": record.get("provider_identity"),
+            "provider_endpoint": record.get("provider_endpoint"),
+            "model_identifier": record.get("model_identifier"),
+            "checked_at": record.get("checked_at"),
+            "expires_at": record.get("expires_at"),
+            "failure_category": record.get("failure_category"),
+        }, separators=(",", ":")),
+        changed_by=admin.get("pubkey", "admin"),
+    )
+    return record
 
 
 @router.get("/config/export", response_class=PlainTextResponse)

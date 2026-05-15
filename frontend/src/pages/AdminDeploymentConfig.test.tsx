@@ -59,6 +59,8 @@ describe('AdminDeploymentConfig', () => {
   let tombstonesFixture: unknown[] | null
   let acknowledgedSurfaceKeys: string[]
   let artifactEncryptionPosture: 'required' | 'disabled'
+  let verificationStatus = 'current'
+  let verificationRecordDetailRequested = false
   let sessionMemoryRetentionPolicy = {
     enabled: false,
     retention_window_days: 30,
@@ -72,6 +74,8 @@ describe('AdminDeploymentConfig', () => {
     tombstonesFixture = null
     acknowledgedSurfaceKeys = []
     artifactEncryptionPosture = 'required'
+    verificationStatus = 'current'
+    verificationRecordDetailRequested = false
     sessionMemoryRetentionPolicy = {
       enabled: false,
       retention_window_days: 30,
@@ -86,7 +90,16 @@ describe('AdminDeploymentConfig', () => {
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/deployment/config') {
         return Promise.resolve(Response.json({
-          llm: [],
+          llm: [
+            {
+              key: 'LLM_PROVIDER',
+              value: 'sage',
+              is_secret: false,
+              requires_restart: true,
+              category: 'llm',
+              description: 'Model Provider',
+            },
+          ],
           embedding: [],
           email: [],
           storage: [],
@@ -111,6 +124,74 @@ describe('AdminDeploymentConfig', () => {
           services: [],
           restart_required: false,
           changed_keys_requiring_restart: [],
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/status') {
+        return Promise.resolve(Response.json({
+          status: verificationStatus,
+          checked_at: '2026-05-15T12:00:00Z',
+          expires_at: '2026-05-16T12:00:00Z',
+          expected_claims_fingerprint: 'expected-fingerprint',
+          configured_provider: {
+            provider_identity: 'sage',
+            provider_endpoint: 'https://inference.tinfoil.sh/v1',
+            model_identifier: 'kimi-k2-6',
+          },
+          record: verificationStatus === 'current'
+            ? {
+              id: 42,
+              provider_identity: 'sage',
+              provider_endpoint: 'https://inference.tinfoil.sh/v1',
+              model_identifier: 'kimi-k2-6',
+              checked_at: '2026-05-15T12:00:00Z',
+              expires_at: '2026-05-16T12:00:00Z',
+              verifier_version: 'test-verifier/1',
+            }
+            : null,
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/records') {
+        return Promise.resolve(Response.json({
+          records: [
+            {
+              id: 42,
+              status: 'success',
+              trigger: 'manual',
+              provider_identity: 'sage',
+              provider_endpoint: 'https://inference.tinfoil.sh/v1',
+              model_identifier: 'kimi-k2-6',
+              checked_at: '2026-05-15T12:00:00Z',
+              expires_at: '2026-05-16T12:00:00Z',
+              verifier_version: 'test-verifier/1',
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/records/42') {
+        verificationRecordDetailRequested = true
+        return Promise.resolve(Response.json({
+          id: 42,
+          status: 'success',
+          trigger: 'manual',
+          attestation_material: {
+            quote: 'full-attestation-material',
+          },
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/verify') {
+        verificationStatus = 'current'
+        return Promise.resolve(Response.json({
+          id: 43,
+          status: 'success',
+          trigger: 'manual',
+          provider_identity: 'sage',
+          provider_endpoint: 'https://inference.tinfoil.sh/v1',
+          model_identifier: 'kimi-k2-6',
+          checked_at: '2026-05-15T12:05:00Z',
+          expires_at: '2026-05-16T12:05:00Z',
+          attestation_material: {
+            quote: 'manual-attestation-material',
+          },
         }))
       }
       if (endpoint.startsWith('/admin/deployment/audit-log')) {
@@ -358,6 +439,70 @@ describe('AdminDeploymentConfig', () => {
 
     const securitySettings = screen.getByRole('group', { name: 'Security & URLs Settings' })
     expect(within(securitySettings).getByText('Chat Rate Limit')).toBeInTheDocument()
+  })
+
+  it('shows current Model Provider verification status', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const verification = await screen.findByRole('group', { name: 'Inference Verification' })
+    expect(within(verification).getByText('Current')).toBeInTheDocument()
+    expect(within(verification).getByText('sage')).toBeInTheDocument()
+    expect(within(verification).getByText('kimi-k2-6')).toBeInTheDocument()
+    expect(within(verification).getByText('https://inference.tinfoil.sh/v1')).toBeInTheDocument()
+    expect(within(verification).getByText(/Expected claims: expected-fingerprint/)).toBeInTheDocument()
+  })
+
+  it('lets admins trigger manual inference verification', async () => {
+    const user = userEvent.setup()
+    verificationStatus = 'missing'
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const verification = await screen.findByRole('group', { name: 'Inference Verification' })
+    expect(within(verification).getByText('Missing')).toBeInTheDocument()
+
+    await user.click(within(verification).getByRole('button', { name: 'Verify Now' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/deployment/inference-verification/verify',
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+    expect(await within(verification).findByText('Manual verification succeeded')).toBeInTheDocument()
+  })
+
+  it('shows verification history and full attestation detail on demand', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const verification = await screen.findByRole('group', { name: 'Inference Verification' })
+    expect(within(verification).getByText('Record #42')).toBeInTheDocument()
+    expect(within(verification).queryByText('full-attestation-material')).not.toBeInTheDocument()
+
+    await user.click(within(verification).getByRole('button', { name: 'Inspect Attestation' }))
+
+    expect(await within(verification).findByText(/full-attestation-material/)).toBeInTheDocument()
+    expect(verificationRecordDetailRequested).toBe(true)
   })
 
   it('shows operator-controlled privacy lifecycle status', async () => {
