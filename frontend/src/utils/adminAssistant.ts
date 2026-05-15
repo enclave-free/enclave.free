@@ -66,6 +66,12 @@ function _readUserTypeId(value: unknown): number | string | undefined {
   return undefined
 }
 
+function _readTraceVisibility(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase()
+  return ['off', 'minimal', 'summary', 'detailed'].includes(normalized) ? normalized : undefined
+}
+
 /**
  * Normalize common-but-unsupported request shapes into supported ones.
  *
@@ -348,6 +354,13 @@ export function validateAdminAssistantChangeSet(
 
     const allowed = allowedPathByMethod[req.method].some((re) => re.test(req.path))
     if (!allowed) return { ok: false, error: `Disallowed request: ${req.method} ${req.path}` }
+
+    if (req.method === 'PUT' && pathLower === '/admin/ai-config/user_trace_visibility') {
+      const value = _isPlainObject(req.body) ? _readTraceVisibility(req.body.value) : undefined
+      if (value === 'detailed') {
+        return { ok: false, error: 'User Conversation trace visibility cannot be detailed' }
+      }
+    }
   }
 
   return { ok: true }

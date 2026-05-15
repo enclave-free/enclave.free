@@ -103,6 +103,9 @@ def summarize_tool_call(info: ToolCallInfo, *, execution: TraceExecution = "serv
         warnings.append("raw_results_redacted")
         output_summary = "Database results were redacted from the trace."
         metadata["redacted"] = True
+        metadata.update(_summarize_sql_metadata(info.query))
+        if metadata.get("read_only") is False:
+            warnings.append("non_read_only_sql")
 
     return ToolTrace(
         id=info.tool_id,
@@ -211,6 +214,54 @@ def _redact_sql_literals(sql: str) -> str:
     redacted = re.sub(r"'[^']*'", "'[redacted]'", sql)
     redacted = re.sub(r'"[^"]*"', '"[redacted]"', redacted)
     return redacted
+
+
+def _summarize_sql_metadata(query: str | None) -> dict:
+    if not query:
+        return {}
+
+    compact = " ".join(str(query).strip().split())
+    if not compact:
+        return {}
+
+    statement_match = re.match(r"^([A-Za-z]+)\b", compact)
+    statement_type = statement_match.group(1).lower() if statement_match else "unknown"
+    metadata = {
+        "statement_type": statement_type,
+        "read_only": statement_type in {"select", "with", "pragma", "explain"},
+    }
+
+    if statement_type == "select":
+        columns = _extract_select_columns(compact)
+        if columns:
+            metadata["selected_columns"] = columns
+
+    limit_match = re.search(r"\blimit\s+(\d+)\b", compact, flags=re.IGNORECASE)
+    if limit_match:
+        metadata["limit"] = int(limit_match.group(1))
+
+    return metadata
+
+
+def _extract_select_columns(sql: str) -> list[str]:
+    match = re.match(r"^select\s+(.*?)\s+from\s+", sql, flags=re.IGNORECASE)
+    if not match:
+        return []
+    raw_columns = match.group(1).strip()
+    if raw_columns == "*":
+        return ["*"]
+
+    columns: list[str] = []
+    for part in raw_columns.split(","):
+        cleaned = part.strip()
+        if not cleaned:
+            continue
+        cleaned = re.sub(r"\s+as\s+.*$", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = cleaned.split()[-1]
+        cleaned = cleaned.split(".")[-1]
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*|\*", cleaned):
+            columns.append(cleaned)
+    return columns[:20]
 
 
 def _ensure_trace_text_is_safe(value: str) -> None:

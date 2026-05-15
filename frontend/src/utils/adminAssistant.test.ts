@@ -78,4 +78,25 @@ describe('extractAdminAssistantChangeSetStrict', () => {
 
     expect(extracted.ok).toBe(true)
   })
+
+  it('rejects detailed Trace Visibility Policy for User Conversations', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      summary: 'Show detailed traces to users',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/user_trace_visibility',
+          body: { value: 'detailed' },
+        },
+      ],
+    })
+
+    const extracted = extractAdminAssistantChangeSetStrict(raw)
+
+    expect(extracted.ok).toBe(false)
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('User Conversation')
+    }
+  })
 })

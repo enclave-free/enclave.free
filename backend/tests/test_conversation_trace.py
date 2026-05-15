@@ -242,6 +242,55 @@ class ConversationTraceTest(unittest.TestCase):
         serialized = str(body)
         self.assertNotIn("alice@example.com", serialized)
 
+    def test_db_query_trace_includes_safe_read_only_metadata(self) -> None:
+        from conversation_trace import build_conversation_trace
+        from tools import ToolCallInfo
+
+        trace = build_conversation_trace(
+            actor_type="admin",
+            tools_used=[
+                ToolCallInfo(
+                    tool_id="db-query",
+                    tool_name="Database",
+                    query="SELECT id, email FROM users WHERE email = 'alice@example.com' LIMIT 5",
+                )
+            ],
+        )
+
+        self.assertIsNotNone(trace)
+        tool = trace.model_dump()["tools"][0]
+        self.assertEqual(tool["status"], "success")
+        self.assertEqual(tool["execution"], "server")
+        self.assertEqual(tool["metadata"]["statement_type"], "select")
+        self.assertTrue(tool["metadata"]["read_only"])
+        self.assertEqual(tool["metadata"]["selected_columns"], ["id", "email"])
+        self.assertEqual(tool["metadata"]["limit"], 5)
+        serialized = str(tool)
+        self.assertNotIn("alice@example.com", serialized)
+
+    def test_db_query_trace_marks_non_read_only_sql_without_results(self) -> None:
+        from conversation_trace import build_conversation_trace
+        from tools import ToolCallInfo
+
+        trace = build_conversation_trace(
+            actor_type="admin",
+            tools_used=[
+                ToolCallInfo(
+                    tool_id="db-query",
+                    tool_name="Database",
+                    query="DELETE FROM users WHERE email = 'alice@example.com'",
+                )
+            ],
+        )
+
+        self.assertIsNotNone(trace)
+        tool = trace.model_dump()["tools"][0]
+        self.assertEqual(tool["metadata"]["statement_type"], "delete")
+        self.assertFalse(tool["metadata"]["read_only"])
+        self.assertIn("non_read_only_sql", tool["warnings"])
+        self.assertEqual(tool["output_summary"], "Database results were redacted from the trace.")
+        self.assertNotIn("alice@example.com", str(tool))
+
     def test_trace_redaction_failure_suppresses_trace_and_audits_without_secret(self) -> None:
         from conversation_trace import build_conversation_trace
         from tools import ToolCallInfo
