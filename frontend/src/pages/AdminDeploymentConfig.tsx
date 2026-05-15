@@ -1492,6 +1492,18 @@ export function AdminDeploymentConfig() {
           <p className="text-sm text-text-secondary mb-4">
             {t('adminDeployment.lifecycle.description', 'Current Operator-Controlled Privacy coverage across Instance data.')}
           </p>
+          {lifecycleStatus?.secure_erase && (
+            <div className="mb-4 rounded-lg border border-border bg-surface p-3">
+              <p className="text-xs font-medium text-text">
+                {t('adminDeployment.lifecycle.secureEraseStatus', 'Secure Erase: {{status}}', {
+                  status: formatLifecycleStatus(lifecycleStatus.secure_erase.status),
+                })}
+              </p>
+              <p className="mt-1 text-xs text-text-secondary">
+                {lifecycleStatus.secure_erase.summary}
+              </p>
+            </div>
+          )}
           <div className="mb-4 flex flex-wrap gap-2">
             <button
               type="button"

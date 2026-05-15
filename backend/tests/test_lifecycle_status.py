@@ -183,6 +183,19 @@ class LifecycleStatusTest(unittest.TestCase):
             self.assertEqual(surfaces[key]["status"], "unsupported")
             self.assertFalse(surfaces[key]["acknowledged"])
 
+    def test_lifecycle_status_copy_avoids_secure_erase_overclaims(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        serialized = json.dumps(body).lower()
+        self.assertNotIn("permanent deletion", serialized)
+        self.assertNotIn("delete forever", serialized)
+        self.assertIn("secure erase", serialized)
+        self.assertEqual(body["secure_erase"]["status"], "unsupported")
+        self.assertIn("active-storage", body["secure_erase"]["summary"])
+        self.assertIn("unsupported", body["secure_erase"]["summary"])
+
     def test_admin_can_acknowledge_unsupported_deployment_surface(self) -> None:
         acknowledgement = self.client.post(
             "/admin/lifecycle/unsupported-deployment-surfaces/docker_logs/acknowledgement",

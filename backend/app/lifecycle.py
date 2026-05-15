@@ -98,8 +98,8 @@ DATA_CLASSES = [
             "summary": "Deleting a User purges Sage-owned User Memory for that subject User before the profile leaves active product surfaces.",
         },
         "retention": {
-            "status": "not_started",
-            "summary": "No operator-controlled Data Retention rule is currently enforced for User Memory.",
+            "status": "partial",
+            "summary": "Operators can invoke age-based Data Retention for stale active User Memory without exposing raw memory content in lifecycle evidence.",
         },
         "audit": {
             "status": "partial",
@@ -204,8 +204,8 @@ DATA_CLASSES = [
             "summary": "Audit Log deletion is not implemented as a product workflow.",
         },
         "retention": {
-            "status": "not_started",
-            "summary": "Audit Log retention policy is not currently configurable.",
+            "status": "partial",
+            "summary": "Audit Log retention can compact sensitive detail while preserving lifecycle evidence; ordinary full Audit Log deletion is not exposed.",
         },
         "audit": {
             "status": "partial",
@@ -262,6 +262,16 @@ UNSUPPORTED_DEPLOYMENT_SURFACES = [
         "summary": "LLM, email, search, or infrastructure provider traces are governed by those providers and deployment contracts.",
     },
 ]
+
+
+SECURE_ERASE_SCOPE = {
+    "status": "unsupported",
+    "summary": (
+        "Secure Erase is out of scope for v1; lifecycle controls apply to stated "
+        "active-storage targets and exclude unsupported Deployment Surfaces such as logs, "
+        "WAL, backups, snapshots, and provider traces."
+    ),
+}
 
 
 class RetentionRunRequest(BaseModel):
@@ -410,6 +420,7 @@ def get_lifecycle_status() -> dict:
     policies = _stored_retention_policies()
     return {
         "data_classes": _data_classes_with_retention_policies(),
+        "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "scheduled_retention": {
             "enabled_classes": sorted([
@@ -734,14 +745,35 @@ def _retention_policy_days(data_class_key: str, fallback_days: int) -> int:
     return fallback_days
 
 
+def _stale_user_memory_ids(cutoff: datetime) -> list[int]:
+    with database.get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id
+            FROM user_memories
+            WHERE status = 'active'
+              AND datetime(updated_at) <= datetime(?)
+            ORDER BY updated_at ASC, id ASC
+            LIMIT 1000
+            """,
+            (cutoff.isoformat(),),
+        )
+        return [int(row["id"]) for row in cursor.fetchall()]
+
+
 def preview_retention(request: RetentionRunRequest) -> dict:
     now = datetime.utcnow()
+    stored_policies = _stored_retention_policies()
     session_memory_policy = _retention_policy_for("sage_session_memory")
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
+    user_memory_policy = _retention_policy_for("user_memory")
+    audit_log_policy = _retention_policy_for("audit_log")
     conversation_days = _retention_policy_days("sage_session_memory", request.stale_conversation_days)
     document_days = _retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
+    user_memory_days = _retention_policy_days("user_memory", 30)
     conversation_cutoff = now - timedelta(days=conversation_days)
     document_cutoff = now - timedelta(days=document_days)
+    user_memory_cutoff = now - timedelta(days=user_memory_days)
 
     stale_conversations = []
     skipped_conversations = []
@@ -779,11 +811,19 @@ def preview_retention(request: RetentionRunRequest) -> dict:
                 break
             job_offset += job_limit
 
+    user_memories = []
+    if user_memory_policy["enabled"]:
+        user_memories = _stale_user_memory_ids(user_memory_cutoff)
+
     skipped_classes = []
-    if not session_memory_policy["enabled"]:
+    if "sage_session_memory" in stored_policies and not session_memory_policy["enabled"]:
         skipped_classes.append("sage_session_memory")
-    if not document_artifact_policy["enabled"]:
+    if "uploaded_document_artifacts" in stored_policies and not document_artifact_policy["enabled"]:
         skipped_classes.append("uploaded_document_artifacts")
+    if "user_memory" in stored_policies and not user_memory_policy["enabled"]:
+        skipped_classes.append("user_memory")
+    if "audit_log" in stored_policies and not audit_log_policy["enabled"]:
+        skipped_classes.append("audit_log")
 
     return {
         "status": "preview",
@@ -791,10 +831,14 @@ def preview_retention(request: RetentionRunRequest) -> dict:
         "eligible": {
             "stale_conversations": stale_conversations,
             "document_artifacts": document_artifacts,
+            "user_memories": user_memories,
+            "audit_log_entries": [],
         },
         "counts": {
             "stale_conversations": len(stale_conversations),
             "document_artifacts": len(document_artifacts),
+            "user_memories": len(user_memories),
+            "audit_log_entries": 0,
             "skipped_classes": len(skipped_classes),
         },
         "skipped_conversations": skipped_conversations,
@@ -804,19 +848,26 @@ def preview_retention(request: RetentionRunRequest) -> dict:
 
 async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
     now = datetime.utcnow()
+    stored_policies = _stored_retention_policies()
     session_memory_policy = _retention_policy_for("sage_session_memory")
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
+    user_memory_policy = _retention_policy_for("user_memory")
+    audit_log_policy = _retention_policy_for("audit_log")
     conversation_cutoff = now - timedelta(
         days=_retention_policy_days("sage_session_memory", request.stale_conversation_days)
     )
     document_cutoff = now - timedelta(
         days=_retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
     )
+    user_memory_cutoff = now - timedelta(days=_retention_policy_days("user_memory", 30))
+    audit_log_cutoff = now - timedelta(days=_retention_policy_days("audit_log", 30))
     results = []
     retained = {
         "stale_conversations": [],
         "skipped_conversations": [],
         "document_artifacts": [],
+        "user_memories": [],
+        "audit_log_entries": 0,
     }
 
     stale_sessions = []
@@ -842,7 +893,7 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
                 session = query._sessions.pop(session_id, None)
                 if session is not None:
                     stale_sessions.append((session_id, session))
-    else:
+    elif "sage_session_memory" in stored_policies:
         results.append(deletion_target_skipped(
             target_kind="lifecycle_data_class",
             target_id="sage_session_memory",
@@ -919,12 +970,62 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
                 "deletion": deletion_response["deletion"],
             })
             results.extend(deletion_response["deletion"]["results"])
-    else:
+    elif "uploaded_document_artifacts" in stored_policies:
         results.append(deletion_target_skipped(
             target_kind="lifecycle_data_class",
             target_id="uploaded_document_artifacts",
             action="retention_skip_disabled_policy",
             detail="Skipped Uploaded Document Artifacts retention because its Data Retention policy is disabled.",
+        ))
+
+    if user_memory_policy["enabled"]:
+        for memory_id in _stale_user_memory_ids(user_memory_cutoff):
+            deleted = database.soft_delete_user_memory(
+                memory_id,
+                deleted_by_actor=f"retention:{admin.get('pubkey', 'unknown')}",
+                deletion_reason="Data Retention policy removed stale User Memory.",
+            )
+            if deleted:
+                retained["user_memories"].append(memory_id)
+                results.append(deletion_target_succeeded(
+                    target_kind="user_memory",
+                    target_id=str(memory_id),
+                    action="retention_delete_user_memory",
+                    detail="Deleted stale User Memory by Data Retention policy.",
+                ))
+            else:
+                results.append(deletion_target_skipped(
+                    target_kind="user_memory",
+                    target_id=str(memory_id),
+                    action="retention_skip_user_memory",
+                    detail="Skipped User Memory because it was no longer active.",
+                ))
+    elif "user_memory" in stored_policies:
+        results.append(deletion_target_skipped(
+            target_kind="lifecycle_data_class",
+            target_id="user_memory",
+            action="retention_skip_disabled_policy",
+            detail="Skipped User Memory retention because its Data Retention policy is disabled.",
+        ))
+
+    if audit_log_policy["enabled"]:
+        compaction = database.compact_config_audit_log_before(
+            audit_log_cutoff.isoformat(),
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        retained["audit_log_entries"] = compaction["compacted_entries"]
+        results.append(deletion_target_succeeded(
+            target_kind="audit_log",
+            target_id=str(compaction["compacted_entries"]),
+            action="retention_compact_audit_log",
+            detail="Compacted old non-lifecycle Audit Log detail while preserving lifecycle evidence.",
+        ))
+    elif "audit_log" in stored_policies:
+        results.append(deletion_target_skipped(
+            target_kind="lifecycle_data_class",
+            target_id="audit_log",
+            action="retention_skip_disabled_policy",
+            detail="Skipped Audit Log retention because its Data Retention policy is disabled.",
         ))
 
     if not results:

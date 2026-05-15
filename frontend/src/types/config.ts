@@ -226,6 +226,7 @@ export interface UnsupportedDeploymentSurface {
 
 export interface LifecycleStatusResponse {
   data_classes: LifecycleDataClass[]
+  secure_erase?: LifecyclePosture
   unsupported_deployment_surfaces?: UnsupportedDeploymentSurface[]
   scheduled_retention?: {
     enabled_classes: string[]

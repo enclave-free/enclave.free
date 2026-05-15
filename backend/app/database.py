@@ -3169,6 +3169,84 @@ def get_config_audit_log(limit: int = 100, table_name: str | None = None) -> lis
         return [dict(row) for row in cursor.fetchall()]
 
 
+def compact_config_audit_log_before(cutoff_iso: str, *, changed_by: str) -> dict:
+    """Redact old non-lifecycle audit detail while preserving the hash chain."""
+    redacted_value = json.dumps({
+        "redacted_by_audit_log_retention": True,
+        "detail": "Original audit value compacted by evidence-preserving Audit Log Retention.",
+    }, sort_keys=True)
+    compacted_ids: list[int] = []
+    with get_write_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id
+            FROM config_audit_log
+            WHERE datetime(changed_at) <= datetime(?)
+              AND table_name != 'data_deletion'
+              AND (
+                old_value IS NOT NULL
+                OR new_value IS NOT NULL
+              )
+              AND COALESCE(old_value, '') NOT LIKE '%redacted_by_audit_log_retention%'
+              AND COALESCE(new_value, '') NOT LIKE '%redacted_by_audit_log_retention%'
+            ORDER BY id
+            """,
+            (cutoff_iso,),
+        )
+        compacted_ids = [int(row["id"]) for row in cursor.fetchall()]
+        if compacted_ids:
+            placeholders = ",".join("?" for _ in compacted_ids)
+            cursor.execute(
+                f"""
+                UPDATE config_audit_log
+                SET old_value = CASE WHEN old_value IS NULL THEN NULL ELSE ? END,
+                    new_value = CASE WHEN new_value IS NULL THEN NULL ELSE ? END
+                WHERE id IN ({placeholders})
+                """,
+                (redacted_value, redacted_value, *compacted_ids),
+            )
+
+        cursor.execute(
+            """
+            SELECT id, table_name, config_key, old_value, new_value, changed_by, changed_at
+            FROM config_audit_log
+            ORDER BY id
+            """
+        )
+        rows = cursor.fetchall()
+        prev_hash = ""
+        for row in rows:
+            payload = _audit_hash_payload(
+                prev_hash=prev_hash,
+                table_name=row["table_name"],
+                config_key=row["config_key"],
+                old_value=row["old_value"],
+                new_value=row["new_value"],
+                changed_by=row["changed_by"],
+                changed_at=row["changed_at"] or "",
+            )
+            entry_hash = _compute_audit_entry_hash(payload)
+            cursor.execute(
+                "UPDATE config_audit_log SET prev_hash = ?, entry_hash = ? WHERE id = ?",
+                (prev_hash, entry_hash, row["id"]),
+            )
+            prev_hash = entry_hash
+
+        _insert_config_audit_log(
+            cursor,
+            table_name="data_deletion",
+            config_key=f"audit_log_retention:{datetime.utcnow().isoformat()}",
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": "audit_log_retention",
+                "status": "succeeded",
+                "compacted_entries": len(compacted_ids),
+            }, sort_keys=True),
+            changed_by=changed_by,
+        )
+    return {"compacted_entries": len(compacted_ids), "compacted_ids": compacted_ids}
+
+
 def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
     """
     Verify tamper-evident hash chain for config audit log.

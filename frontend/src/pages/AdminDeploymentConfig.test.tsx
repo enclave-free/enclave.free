@@ -141,6 +141,10 @@ describe('AdminDeploymentConfig', () => {
               notes: ['Session Memory belongs to the Agent Runtime.'],
             },
           ],
+          secure_erase: {
+            status: 'unsupported',
+            summary: 'Secure Erase is out of scope for v1; lifecycle controls apply to stated active-storage targets and exclude unsupported Deployment Surfaces.',
+          },
           unsupported_deployment_surfaces: [
             {
               key: 'docker_logs',
@@ -321,6 +325,8 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
     expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
     expect(screen.getByText('Deletion: Complete')).toBeInTheDocument()
+    expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
+    expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
     expect(screen.getByText('Incomplete tombstones: 1')).toBeInTheDocument()
     expect(screen.getByText('Completed tombstones: 1')).toBeInTheDocument()
 
