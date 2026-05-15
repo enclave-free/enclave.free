@@ -202,6 +202,7 @@ ALLOWED_AUDIT_TABLES = {
     "data_deletion",
     "inference_verification",
     "instance_settings",
+    "conversation_trace",
     "user_approval",
     "user_memories",
     "user_types",

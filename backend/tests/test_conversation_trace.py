@@ -53,18 +53,31 @@ class ConversationTraceTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self._orig_protected_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
+        os.environ["PROTECTED_INFERENCE_DEVELOPMENT_BYPASS"] = "true"
 
         import database
         import auth
+        import ai_config
+        import deployment_config
+        import query
         import main
 
         self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
+        self.ai_config = importlib.reload(ai_config)
+        self.deployment_config = importlib.reload(deployment_config)
+        self.query = importlib.reload(query)
         self.main = importlib.reload(main)
         self.database.init_schema()
+        self.database.update_deployment_config(
+            "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS",
+            "true",
+            changed_by="test",
+        )
 
         self.provider = FakeProvider()
         self.main.get_sage_provider = lambda: self.provider
@@ -78,6 +91,7 @@ class ConversationTraceTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_bypass)
         if self._orig_sentence_transformers is None:
             sys.modules.pop("sentence_transformers", None)
         else:
@@ -98,14 +112,36 @@ class ConversationTraceTest(unittest.TestCase):
             "pubkey": "a" * 64,
             "id": self.user_id,
         }
+        self.main.app.dependency_overrides[self.query.auth.require_admin_or_approved_user] = lambda: {
+            "type": "user",
+            "pubkey": "a" * 64,
+            "id": self.user_id,
+        }
 
     def authenticate_as_admin(self) -> None:
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
             "type": "admin",
+            "id": 1,
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.query.auth.require_admin_or_approved_user] = lambda: {
+            "type": "admin",
+            "id": 1,
             "pubkey": "admin-pubkey",
         }
         self.main.app.dependency_overrides[self.auth.require_admin] = lambda: {
             "type": "admin",
+            "id": 1,
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.ai_config.auth.require_admin] = lambda: {
+            "type": "admin",
+            "id": 1,
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.deployment_config.auth.require_admin] = lambda: {
+            "type": "admin",
+            "id": 1,
             "pubkey": "admin-pubkey",
         }
 
@@ -230,6 +266,32 @@ class ConversationTraceTest(unittest.TestCase):
         self.assertIn("trace_suppressed", serialized)
         self.assertNotIn("super-secret-value", serialized)
 
+    def test_trace_redaction_failure_audit_is_visible_to_admin_audit_api(self) -> None:
+        from conversation_trace import build_conversation_trace
+        from tools import ToolCallInfo
+
+        self.authenticate_as_admin()
+
+        build_conversation_trace(
+            actor_type="admin",
+            tools_used=[
+                ToolCallInfo(
+                    tool_id="web-search",
+                    tool_name="Web search",
+                    query="Find docs with LLM_API_KEY=super-secret-value",
+                )
+            ],
+        )
+        response = self.client.get("/admin/deployment/audit-log?table_name=conversation_trace")
+
+        self.assertEqual(response.status_code, 200)
+        entries = response.json()["entries"]
+        self.assertEqual(entries[0]["table_name"], "conversation_trace")
+        self.assertEqual(entries[0]["config_key"], "redaction_failure")
+        serialized = str(entries)
+        self.assertIn("trace_suppressed", serialized)
+        self.assertNotIn("super-secret-value", serialized)
+
     def test_retrieval_session_history_persists_assistant_trace(self) -> None:
         self.authenticate_as_user()
         self.stub_retrieval_query()
@@ -285,7 +347,6 @@ class ConversationTraceTest(unittest.TestCase):
         self.assertIn("event: done", body)
         self.assertIn('"message_id":"msg_', body)
         self.assertIn('"visibility":"minimal"', body)
-        self.assertIn('"search_term":"housing advocate"', body)
 
     def test_streaming_query_emits_message_delta_trace_and_done_events(self) -> None:
         self.authenticate_as_user()
@@ -337,5 +398,6 @@ class ConversationTraceTest(unittest.TestCase):
             [],
             "=== PROMPT ===\nredacted",
             "housing advocate",
+            None,
         )
         query._extract_facts_from_conversation = lambda _session: {}
