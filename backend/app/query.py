@@ -15,11 +15,13 @@ import re
 import logging
 import threading
 import uuid
+import json
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import httpx
@@ -69,6 +71,10 @@ query_limiter = RateLimiter(
     window_seconds=60,
     key_func=_rate_limit_key,
 )
+
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
 
 
 class Message(BaseModel):
@@ -342,6 +348,69 @@ async def query(
     except Exception as e:
         logger.error(f"RAG query failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def query_stream(
+    request: QueryRequest,
+    user: dict = Depends(auth.require_admin_or_approved_user),
+    _: None = Depends(query_limiter),
+):
+    """Streaming Retrieval Conversation endpoint with final trace events."""
+
+    async def event_stream():
+        try:
+            response_payload = await query(request=request, user=user, _=None)
+            yield _sse_event(
+                "assistant_message_started",
+                {
+                    "message_id": response_payload.message_id,
+                    "session_id": response_payload.session_id,
+                },
+            )
+            if response_payload.answer:
+                yield _sse_event(
+                    "answer_delta",
+                    {
+                        "message_id": response_payload.message_id,
+                        "delta": response_payload.answer,
+                    },
+                )
+            if response_payload.trace is not None:
+                yield _sse_event(
+                    "trace_final",
+                    {
+                        "message_id": response_payload.message_id,
+                        "trace": response_payload.trace.model_dump(),
+                    },
+                )
+            yield _sse_event(
+                "done",
+                {
+                    "message_id": response_payload.message_id,
+                    "session_id": response_payload.session_id,
+                    "search_term": response_payload.search_term,
+                },
+            )
+        except HTTPException as exc:
+            yield _sse_event(
+                "error",
+                {
+                    "status_code": exc.status_code,
+                    "detail": exc.detail,
+                },
+            )
+        except Exception as exc:
+            logger.exception("Streaming Retrieval query failed")
+            yield _sse_event(
+                "error",
+                {
+                    "status_code": 500,
+                    "detail": str(exc),
+                },
+            )
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 def _session_owner_for_user(user: dict) -> tuple[str, str]:

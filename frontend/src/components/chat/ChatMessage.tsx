@@ -41,6 +41,7 @@ export interface Message {
   content: string
   timestamp?: Date
   trace?: ConversationTrace | null
+  traceStatus?: string | null
 }
 
 interface ChatMessageProps {
@@ -131,9 +132,28 @@ function ConversationTracePanel({ trace }: { trace: ConversationTrace }) {
 
   if (trace.visibility === 'off') return null
 
+  if (trace.visibility === 'minimal') {
+    if (tools.length === 0 && retrieval.length === 0) return null
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-border/70 pt-3 text-xs text-text-muted">
+        {tools.map((tool) => (
+          <div key={tool.id} className="rounded-md border border-border bg-surface px-2 py-1">
+            <span className="font-medium text-text">{tool.name}</span>
+          </div>
+        ))}
+        {retrieval.map((item, index) => (
+          <div key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`} className="rounded-md border border-border bg-surface px-2 py-1">
+            <span className="font-medium text-text">{item.title || item.source_type || 'Retrieved source'}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
-      <div className="mb-2 font-medium text-text">Conversation Trace</div>
+    <details className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
+      <summary className="mb-2 cursor-pointer select-none font-medium text-text">Conversation Trace</summary>
       {summary && <p className="mb-2 leading-relaxed">{summary}</p>}
       {tools.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -155,7 +175,7 @@ function ConversationTracePanel({ trace }: { trace: ConversationTrace }) {
           ))}
         </div>
       )}
-    </div>
+    </details>
   )
 }
 
@@ -366,6 +386,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 >
                   {message.content}
                 </ReactMarkdown>
+                {message.traceStatus && (
+                  <div className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
+                    {message.traceStatus}
+                  </div>
+                )}
                 {message.trace && <ConversationTracePanel trace={message.trace} />}
               </div>
             </div>

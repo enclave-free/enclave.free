@@ -60,4 +60,22 @@ describe('extractAdminAssistantChangeSetStrict', () => {
       expect(extracted.error).toContain('Disallowed')
     }
   })
+
+  it('allows confirmed Trace Visibility Policy changes through Agent Settings', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      summary: 'Show summary traces to users',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/user_trace_visibility',
+          body: { value: 'summary' },
+        },
+      ],
+    })
+
+    const extracted = extractAdminAssistantChangeSetStrict(raw)
+
+    expect(extracted.ok).toBe(true)
+  })
 })

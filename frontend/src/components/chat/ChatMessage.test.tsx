@@ -184,4 +184,55 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Web search')).toBeInTheDocument()
     expect(screen.getByText('Found 3 relevant results.')).toBeInTheDocument()
   })
+
+  it('renders minimal assistant trace as compact usage badges', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'minimal',
+      reasoning: {
+        summary: 'Sage used internal context before answering.',
+      },
+      tools: [
+        {
+          id: 'web-search',
+          name: 'Web search',
+          status: 'success',
+          execution: 'server',
+          output_summary: 'Found 3 relevant results.',
+        },
+      ],
+      retrieval: [
+        {
+          source_type: 'document',
+          title: 'Tenant Rights Guide',
+          summary: 'Matched eviction timeline section.',
+        },
+      ],
+      suppressed: false,
+    })
+
+    expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sage used internal context before answering.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Found 3 relevant results.')).not.toBeInTheDocument()
+    expect(screen.getByText('Web search')).toBeInTheDocument()
+    expect(screen.getByText('Tenant Rights Guide')).toBeInTheDocument()
+  })
+
+  it('renders compact live trace status while a streamed assistant turn is in progress', () => {
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-1',
+              role: 'assistant',
+              content: 'Partial answer',
+              traceStatus: 'Writing answer...',
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    )
+
+    expect(screen.getByText('Writing answer...')).toBeInTheDocument()
+  })
 })

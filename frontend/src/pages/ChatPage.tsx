@@ -13,7 +13,7 @@ import { Message } from '../components/chat/ChatMessage'
 import { ReachoutModal, type ReachoutMode } from '../components/reachout/ReachoutModal'
 import { API_BASE, STORAGE_KEYS, getSelectedUserTypeId, saveSelectedUserTypeId } from '../types/onboarding'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
-import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
+import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools, sendQueryStream } from '../utils/llmChat'
 import { Button, Callout, IconButton } from '../components/ui'
 import {
   extractAdminAssistantChangeSetStrict,
@@ -354,6 +354,12 @@ export function ChatPage() {
 
   const generateMessageId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
+  const updateAssistantMessage = (id: string, patch: Partial<Message>) => {
+    setMessages((prev) => prev.map((message) => (
+      message.id === id ? { ...message, ...patch } : message
+    )))
+  }
+
   const handleSend = async (content: string) => {
     const userMessage: Message = {
       id: generateMessageId(),
@@ -385,6 +391,67 @@ export function ChatPage() {
           ...(conversationSessionId && { session_id: conversationSessionId }),
         }
 
+        let streamed = false
+        let streamMessageId: string | null = null
+        let streamContent = ''
+        let streamSessionId: string | null = null
+        let streamSearchTerm: string | null = null
+        try {
+          await sendQueryStream({
+            question: content,
+            tools: backendTools,
+            jobIds: selectedDocuments,
+            sessionId: conversationSessionId,
+            onEvent: (event, payload) => {
+              const data = payload as Record<string, unknown>
+              if (event === 'assistant_message_started') {
+                const id = typeof data.message_id === 'string' ? data.message_id : generateMessageId()
+                streamMessageId = id
+                if (typeof data.session_id === 'string') streamSessionId = data.session_id
+                setMessages((prev) => [...prev, {
+                  id,
+                  role: 'assistant',
+                  content: '',
+                  timestamp: new Date(),
+                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                }])
+              } else if (event === 'answer_delta' && streamMessageId) {
+                const delta = typeof data.delta === 'string' ? data.delta : ''
+                streamContent += delta
+                updateAssistantMessage(streamMessageId, {
+                  content: streamContent,
+                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                })
+              } else if (event === 'trace_final' && streamMessageId) {
+                updateAssistantMessage(streamMessageId, {
+                  trace: data.trace as Message['trace'],
+                  traceStatus: null,
+                })
+              } else if (event === 'done') {
+                if (typeof data.session_id === 'string') streamSessionId = data.session_id
+                if (typeof data.search_term === 'string') streamSearchTerm = data.search_term
+              } else if (event === 'error') {
+                throw new Error(typeof data.detail === 'string' ? data.detail : t('errors.failedToSendMessage'))
+              }
+            },
+          })
+          if (streamSessionId) setConversationSessionId(streamSessionId)
+          if (streamMessageId) {
+            updateAssistantMessage(streamMessageId, { traceStatus: null })
+          }
+          setAdminApplyState({ state: 'idle' })
+          if (streamSearchTerm) {
+            await triggerAutoSearch(streamSearchTerm, streamSessionId ?? conversationSessionId)
+          }
+          streamed = true
+        } catch (streamError) {
+          if (streamMessageId) {
+            setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
+          }
+          console.warn('Streaming query failed; falling back to non-streaming query:', streamError)
+        }
+        if (streamed) return
+
         response = await fetch(`${API_BASE}/query`, {
           method: 'POST',
           headers: {
@@ -394,6 +461,68 @@ export function ChatPage() {
           body: JSON.stringify(body),
         })
       } else {
+        let streamed = false
+        let streamMessageId: string | null = null
+        let streamContent = ''
+        let streamSessionId: string | null = null
+        try {
+          await sendLlmChatStreamWithUnifiedTools({
+            content,
+            tools: backendTools,
+            t,
+            sessionId: conversationSessionId,
+            onEvent: (event, payload) => {
+              const data = payload as Record<string, unknown>
+              if (event === 'assistant_message_started') {
+                const id = typeof data.message_id === 'string' ? data.message_id : generateMessageId()
+                streamMessageId = id
+                if (typeof data.session_id === 'string') streamSessionId = data.session_id
+                setMessages((prev) => [...prev, {
+                  id,
+                  role: 'assistant',
+                  content: '',
+                  timestamp: new Date(),
+                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                }])
+              } else if (event === 'answer_delta' && streamMessageId) {
+                const delta = typeof data.delta === 'string' ? data.delta : ''
+                streamContent += delta
+                updateAssistantMessage(streamMessageId, {
+                  content: streamContent,
+                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                })
+              } else if (event === 'trace_final' && streamMessageId) {
+                updateAssistantMessage(streamMessageId, {
+                  trace: data.trace as Message['trace'],
+                  traceStatus: null,
+                })
+              } else if (event === 'done') {
+                if (typeof data.session_id === 'string') streamSessionId = data.session_id
+              } else if (event === 'error') {
+                throw new Error(typeof data.detail === 'string' ? data.detail : t('errors.failedToSendMessage'))
+              }
+            },
+          })
+          if (streamSessionId) setConversationSessionId(streamSessionId)
+          if (hasConfigTool) {
+            const extracted = extractAdminAssistantChangeSetStrict(streamContent)
+            if (extracted.ok) {
+              setAdminApplyState({ state: 'review', changeSet: extracted.changeSet })
+            } else if (streamContent.includes('```json') && streamContent.includes('"requests"')) {
+              setAdminApplyState({ state: 'error', message: extracted.error })
+            }
+          } else {
+            setAdminApplyState({ state: 'idle' })
+          }
+          streamed = true
+        } catch (streamError) {
+          if (streamMessageId) {
+            setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
+          }
+          console.warn('Streaming chat failed; falling back to non-streaming chat:', streamError)
+        }
+        if (streamed) return
+
         response = await sendLlmChatWithUnifiedTools({
           content,
           tools: backendTools,

@@ -243,6 +243,26 @@ class ConversationTraceTest(unittest.TestCase):
         self.assertIn("event: done", body)
         self.assertIn('"message_id":"msg_', body)
         self.assertIn('"visibility":"minimal"', body)
+        self.assertIn('"search_term":"housing advocate"', body)
+
+    def test_streaming_query_emits_message_delta_trace_and_done_events(self) -> None:
+        self.authenticate_as_user()
+        self.stub_retrieval_query()
+
+        with self.client.stream(
+            "POST",
+            "/query/stream",
+            json={"question": "What does the policy say?", "session_id": "query-stream-session"},
+        ) as response:
+            self.assertEqual(response.status_code, 200)
+            body = "".join(response.iter_text())
+
+        self.assertIn("event: assistant_message_started", body)
+        self.assertIn("event: answer_delta", body)
+        self.assertIn("event: trace_final", body)
+        self.assertIn("event: done", body)
+        self.assertIn('"message_id":"msg_', body)
+        self.assertIn('"visibility":"minimal"', body)
 
     def stub_retrieval_query(self) -> None:
         import query
@@ -273,6 +293,6 @@ class ConversationTraceTest(unittest.TestCase):
             "The policy says yes.",
             [],
             "=== PROMPT ===\nredacted",
-            None,
+            "housing advocate",
         )
         query._extract_facts_from_conversation = lambda _session: {}
