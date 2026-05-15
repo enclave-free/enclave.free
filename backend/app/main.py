@@ -30,6 +30,7 @@ from typing import Optional, List, Dict
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 from conversation_trace import ConversationTrace, build_conversation_trace, build_live_trace_status
+from protected_inference import ProtectedInferenceBlocked, require_current_inference_verification
 from store import embed_texts
 import database
 from data_deletion import (
@@ -81,6 +82,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("enclave.main")
+
+
+def _require_protected_inference_or_503(context: str) -> dict:
+    try:
+        return require_current_inference_verification(context=context)
+    except ProtectedInferenceBlocked as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 admin_conversation_states: dict[str, dict] = {}
 _admin_conversation_states_lock = threading.Lock()
@@ -1200,11 +1208,13 @@ async def chat(
                     status_code=503,
                     detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (health check failed).",
                 )
+            _require_protected_inference_or_503("conversation")
             result = provider.complete(prompt, temperature=temperature)
             if _is_retryable_llm_content(result.content):
                 logger.warning(
                     "Sage/Tinfoil returned retryable empty/generic chat content; retrying once"
                 )
+                _require_protected_inference_or_503("conversation")
                 result = provider.complete(prompt, temperature=temperature)
         except HTTPException:
             raise

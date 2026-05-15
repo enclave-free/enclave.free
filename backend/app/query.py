@@ -29,6 +29,7 @@ import httpx
 import auth
 import ingest_db
 from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace, build_live_trace_status
+from protected_inference import ProtectedInferenceBlocked, require_current_inference_verification
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -49,6 +50,13 @@ from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 logger = logging.getLogger("enclave.query")
 
 router = APIRouter(prefix="/query", tags=["query"])
+
+
+def _require_protected_inference_or_503(context: str) -> dict:
+    try:
+        return require_current_inference_verification(context=context)
+    except ProtectedInferenceBlocked as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # Configuration
@@ -889,6 +897,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 
 === RESPOND ==="""
 
+    _require_protected_inference_or_503("rag_query")
     response = llm.complete(prompt, temperature=temperature)
     answer = response.content
     

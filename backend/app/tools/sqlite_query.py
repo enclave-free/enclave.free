@@ -144,10 +144,12 @@ class SQLiteQueryTool(BaseTool):
     def _generate_sql(self, natural_query: str) -> str:
         """Use LLM to convert natural language to SQL."""
         from llm import get_sage_provider
+        from protected_inference import require_current_inference_verification
 
         provider = get_sage_provider()
         extra_context = self._build_extra_context(natural_query)
         prompt = TEXT_TO_SQL_PROMPT.format(question=natural_query, extra_context=extra_context)
+        require_current_inference_verification(context="admin_db_query")
         response = provider.complete(prompt)
 
         # Extract SQL from response (strip whitespace and any markdown)
