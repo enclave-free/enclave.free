@@ -70,3 +70,32 @@ class ProtectedInferenceGateTest(unittest.TestCase):
         from protected_inference import DEFAULT_EXPECTED_CLAIMS_FINGERPRINT
 
         self.assertEqual(DEFAULT_EXPECTED_CLAIMS_FINGERPRINT, fingerprint_claims({}))
+
+    def test_response_reference_contains_only_safe_record_metadata(self) -> None:
+        from protected_inference import inference_verification_reference
+
+        reference = inference_verification_reference({
+            "id": 42,
+            "provider_identity": "sage",
+            "provider_endpoint": "https://inference.tinfoil.sh/v1",
+            "model_identifier": "kimi-k2-6",
+            "checked_at": "2026-05-15T12:00:00+00:00",
+            "expires_at": "2026-05-16T12:00:00+00:00",
+            "attestation_material": {"quote": "full"},
+        })
+
+        self.assertEqual(reference["record_id"], 42)
+        self.assertEqual(reference["provider_identity"], "sage")
+        self.assertEqual(reference["model_identifier"], "kimi-k2-6")
+        self.assertNotIn("attestation_material", reference)
+
+    def test_blocked_inference_has_no_response_reference(self) -> None:
+        from protected_inference import ProtectedInferenceBlocked, ProtectedInferenceGate
+
+        gate = ProtectedInferenceGate(
+            current_status=lambda: {"status": "missing", "record": None},
+            audit_block=lambda **_kwargs: None,
+        )
+
+        with self.assertRaises(ProtectedInferenceBlocked):
+            gate.require_current(context="conversation")

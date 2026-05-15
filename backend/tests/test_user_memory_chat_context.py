@@ -226,7 +226,7 @@ class UserMemoryChatContextTest(unittest.TestCase):
         )
         query.get_sage_provider = lambda: self.provider
 
-        _answer, _questions, prompt, _search_term = query._call_llm_contextual(
+        _answer, _questions, prompt, _search_term, _inference_record = query._call_llm_contextual(
             question="What next?",
             context="Retrieved passage.",
             session={

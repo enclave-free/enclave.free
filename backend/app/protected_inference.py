@@ -60,6 +60,19 @@ def inference_requires_verification(context: str) -> bool:
     return context in PROTECTED_INFERENCE_CONTEXTS
 
 
+def inference_verification_reference(record: dict | None) -> dict | None:
+    if not record:
+        return None
+    return {
+        "record_id": record.get("id"),
+        "provider_identity": record.get("provider_identity"),
+        "provider_endpoint": record.get("provider_endpoint"),
+        "model_identifier": record.get("model_identifier"),
+        "checked_at": record.get("checked_at"),
+        "expires_at": record.get("expires_at"),
+    }
+
+
 def development_bypass_enabled() -> bool:
     import database
 

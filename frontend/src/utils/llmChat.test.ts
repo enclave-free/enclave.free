@@ -76,7 +76,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
           controller.enqueue(encoder.encode('event: trace_status\ndata: {"message_id":"msg_1","status":"Using Web search"}\n\n'))
           controller.enqueue(encoder.encode('event: answer_delta\ndata: {"message_id":"msg_1","delta":"Hello"}\n\n'))
           controller.enqueue(encoder.encode('event: trace_final\ndata: {"message_id":"msg_1","trace":{"visibility":"minimal","reasoning":{"summary":"Sage answered."},"tools":[],"retrieval":[]}}\n\n'))
-          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"msg_1","session_id":"s1"}\n\n'))
+          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"msg_1","session_id":"s1","inference_verification":{"record_id":42}}\n\n'))
           controller.close()
         },
       }),
@@ -142,7 +142,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
           controller.enqueue(encoder.encode('event: assistant_message_started\ndata: {"message_id":"rag_1","session_id":"s1"}\n\n'))
           controller.enqueue(encoder.encode('event: trace_status\ndata: {"message_id":"rag_1","status":"Searching documents"}\n\n'))
           controller.enqueue(encoder.encode('event: answer_delta\ndata: {"message_id":"rag_1","delta":"Document answer"}\n\n'))
-          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"rag_1","session_id":"s1","search_term":"housing advocate"}\n\n'))
+          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"rag_1","session_id":"s1","search_term":"housing advocate","inference_verification":{"record_id":42}}\n\n'))
           controller.close()
         },
       }),
@@ -175,7 +175,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
       { event: 'assistant_message_started', data: { message_id: 'rag_1', session_id: 's1' } },
       { event: 'trace_status', data: { message_id: 'rag_1', status: 'Searching documents' } },
       { event: 'answer_delta', data: { message_id: 'rag_1', delta: 'Document answer' } },
-      { event: 'done', data: { message_id: 'rag_1', session_id: 's1', search_term: 'housing advocate' } },
+      { event: 'done', data: { message_id: 'rag_1', session_id: 's1', search_term: 'housing advocate', inference_verification: { record_id: 42 } } },
     ])
   })
 })

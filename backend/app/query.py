@@ -29,7 +29,7 @@ import httpx
 import auth
 import ingest_db
 from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace, build_live_trace_status
-from protected_inference import ProtectedInferenceBlocked, require_current_inference_verification
+from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -115,6 +115,7 @@ class QueryResponse(BaseModel):
     context_used: str  # The actual context passed to LLM (for debugging)
     temperature: float  # Temperature used
     trace: Optional[ConversationTrace] = None
+    inference_verification: Optional[dict] = None
 
 
 @router.post("", response_model=QueryResponse)
@@ -274,7 +275,7 @@ async def query(
             if not user_memory_context:
                 user_memory_context = None
 
-        answer, clarifying_questions, full_prompt, search_term = _call_llm_contextual(
+        answer, clarifying_questions, full_prompt, search_term, inference_record = _call_llm_contextual(
             question, context, llm_session, tools=request.tools, user_type_id=user_type_id,
             user_profile_context=user_profile_context,
             user_memory_context=user_memory_context,
@@ -351,6 +352,7 @@ async def query(
             context_used=debug_prompt,  # For debugging - redacted to protect user data
             temperature=actual_temperature,
             trace=trace,
+            inference_verification=inference_verification_reference(inference_record),
         )
         
     except Exception as e:
@@ -407,6 +409,7 @@ async def query_stream(
                     "message_id": response_payload.message_id,
                     "session_id": response_payload.session_id,
                     "search_term": response_payload.search_term,
+                    "inference_verification": response_payload.inference_verification,
                 },
             )
         except HTTPException as exc:
@@ -753,7 +756,7 @@ def _call_llm_contextual(
     user_type_id: int | None = None,
     user_profile_context: dict[str, str] | None = None,
     user_memory_context: list[dict] | None = None,
-) -> tuple[str, list[str], str, Optional[str]]:
+) -> tuple[str, list[str], str, Optional[str], dict | None]:
     """
     Call LLM with context-aware prompt.
     Returns (answer, list of clarifying questions, full_prompt for debugging, search_term or None).
@@ -897,7 +900,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 
 === RESPOND ==="""
 
-    _require_protected_inference_or_503("rag_query")
+    inference_record = _require_protected_inference_or_503("rag_query")
     response = llm.complete(prompt, temperature=temperature)
     answer = response.content
     
@@ -936,7 +939,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
             clarifying_questions.append(stripped[1:].strip())
     
     # Return answer, questions, full prompt for debugging, and search term
-    return answer, clarifying_questions, prompt, search_term
+    return answer, clarifying_questions, prompt, search_term, inference_record
 
 
 @router.get("/session/{session_id}")

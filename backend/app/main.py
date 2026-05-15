@@ -30,7 +30,7 @@ from typing import Optional, List, Dict
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 from conversation_trace import ConversationTrace, build_conversation_trace, build_live_trace_status
-from protected_inference import ProtectedInferenceBlocked, require_current_inference_verification
+from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
 from store import embed_texts
 import database
 from data_deletion import (
@@ -494,6 +494,7 @@ class ChatResponse(BaseModel):
     provider: str
     tools_used: List[ToolCallInfoResponse] = []
     trace: Optional[ConversationTrace] = None
+    inference_verification: Optional[dict] = None
 
 
 def _sse_event(event: str, data: dict) -> str:
@@ -1208,13 +1209,13 @@ async def chat(
                     status_code=503,
                     detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (health check failed).",
                 )
-            _require_protected_inference_or_503("conversation")
+            inference_record = _require_protected_inference_or_503("conversation")
             result = provider.complete(prompt, temperature=temperature)
             if _is_retryable_llm_content(result.content):
                 logger.warning(
                     "Sage/Tinfoil returned retryable empty/generic chat content; retrying once"
                 )
-                _require_protected_inference_or_503("conversation")
+                inference_record = _require_protected_inference_or_503("conversation")
                 result = provider.complete(prompt, temperature=temperature)
         except HTTPException:
             raise
@@ -1264,6 +1265,7 @@ async def chat(
             provider=result.provider,
             tools_used=tools_used,
             trace=trace,
+            inference_verification=inference_verification_reference(inference_record),
         )
         if user.get("type") == "user" and user_id and user_id != -1 and not tools_used and not tool_context_parts:
             from user_memory import capture_ambient_user_memory
@@ -1341,6 +1343,7 @@ async def chat_stream(
                 {
                     "message_id": response_payload.message_id,
                     "session_id": response_payload.session_id,
+                    "inference_verification": response_payload.inference_verification,
                 },
             )
         except HTTPException as exc:
