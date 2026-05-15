@@ -20,18 +20,54 @@ class InstanceStatusTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self._orig_llm_api_key = os.environ.get("LLM_API_KEY")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
+        os.environ["LLM_API_KEY"] = "test-key"
 
         import database
         import inference_repair
         import main
+        import auth
 
         self.database = importlib.reload(database)
         self.inference_repair = importlib.reload(inference_repair)
+        self.auth = importlib.reload(auth)
         self.main = importlib.reload(main)
         self.database.init_schema()
+        self.database.upsert_deployment_config("LLM_PROVIDER", "sage", category="llm")
+        self.database.upsert_deployment_config("LLM_API_URL", "https://inference.tinfoil.sh/v1", category="llm")
+        self.database.upsert_deployment_config("LLM_MODEL", "kimi-k2-6", category="llm")
+        self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
+            "type": "user",
+            "id": 1,
+            "email": "user@example.test",
+            "user_type_id": None,
+        }
+        self.main.app.dependency_overrides[self.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.main.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        self.main.app.dependency_overrides[self.main.deployment_config.auth.require_admin] = lambda: {
+            "type": "admin",
+            "pubkey": "admin-pubkey",
+        }
+        for route in self.main.app.routes:
+            dependant = getattr(route, "dependant", None)
+            if dependant is None:
+                continue
+            for dependency in dependant.dependencies:
+                call = getattr(dependency, "call", None)
+                if getattr(call, "__name__", None) == "require_admin":
+                    self.main.app.dependency_overrides[call] = lambda: {
+                        "type": "admin",
+                        "pubkey": "admin-pubkey",
+                    }
         self.client = TestClient(self.main.app)
 
     def tearDown(self) -> None:
@@ -42,6 +78,7 @@ class InstanceStatusTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        self._restore_env("LLM_API_KEY", self._orig_llm_api_key)
         self.tmp.cleanup()
 
     @staticmethod
@@ -64,6 +101,83 @@ class InstanceStatusTest(unittest.TestCase):
         self.assertEqual(protected["mode"], "degraded_admin_repair")
         self.assertFalse(protected["protected_inference_available"])
         self.assertEqual(protected["reason"], "LLM_API_KEY not configured")
+
+    def test_degraded_admin_repair_blocks_normal_chat_before_generation(self) -> None:
+        class FakeProvider:
+            name = "sage"
+
+            def health_check(self) -> bool:
+                return True
+
+            def complete(self, *_args, **_kwargs):
+                raise AssertionError("chat generation should not run in degraded admin-repair mode")
+
+        self.inference_repair.mark_startup_verification_unavailable(
+            status="missing",
+            reason="LLM_API_KEY not configured",
+        )
+        self.main.get_sage_provider = lambda: FakeProvider()
+
+        response = self.client.post("/llm/chat", json={"message": "hello"})
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("Protected inference is unavailable", response.json()["detail"])
+
+    def test_degraded_admin_repair_keeps_diagnostics_available(self) -> None:
+        class FakeProvider:
+            name = "sage"
+
+            def health_check(self) -> bool:
+                return False
+
+            def complete(self, *_args, **_kwargs):
+                raise AssertionError("diagnostic health failure should not generate text")
+
+        self.inference_repair.mark_startup_verification_unavailable(
+            status="missing",
+            reason="LLM_API_KEY not configured",
+        )
+        self.main.get_sage_provider = lambda: FakeProvider()
+
+        response = self.client.get("/llm/test")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["success"])
+        self.assertEqual(response.json()["provider"], "sage")
+
+    def test_manual_verification_recovery_updates_public_product_status(self) -> None:
+        from inference_verification import InferenceVerificationResult
+
+        expected_fingerprint = self.main.deployment_config.current_expected_claims_fingerprint()
+
+        class FakeVerifier:
+            def verify(self, **kwargs):
+                return InferenceVerificationResult(
+                    provider_identity=kwargs["provider_identity"],
+                    provider_endpoint=kwargs["provider_endpoint"],
+                    model_identifier=kwargs["model_identifier"],
+                    status="success",
+                    trigger=kwargs["trigger"],
+                    expected_claims_fingerprint=expected_fingerprint,
+                    actual_claims_fingerprint="actual",
+                    verifier_version="fake-verifier/1",
+                    attestation_material={"quote": "manual-repair"},
+                )
+
+        self.inference_repair.mark_startup_verification_unavailable(
+            status="missing",
+            reason="LLM_API_KEY not configured",
+        )
+        self.main.deployment_config.TinfoilVerifier = lambda: FakeVerifier()
+
+        verify_response = self.client.post("/admin/deployment/inference-verification/verify")
+        status_response = self.client.get("/instance/status")
+
+        self.assertEqual(verify_response.status_code, 200)
+        protected = status_response.json()["protected_inference"]
+        self.assertEqual(protected["mode"], "normal")
+        self.assertTrue(protected["protected_inference_available"])
+        self.assertEqual(protected["reason"], "manual_verification_current")
 
 
 if __name__ == "__main__":
