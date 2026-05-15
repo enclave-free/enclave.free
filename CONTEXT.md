@@ -280,6 +280,10 @@ _Avoid_: user message, prompt text
 Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and safe reasoning summaries when available.
 _Avoid_: chain of thought, debug log, audit log, provider trace
 
+**Conversation Streaming Transport**:
+A conversation response path that sends assistant turn, live trace status, answer deltas, and completion events to the client as they become available.
+_Avoid_: streaming-shaped response, fake streaming, delayed batch response
+
 **Trace Visibility Policy**:
 The **Operator** configured **Instance Setting** or **Agent Setting** that determines which **Conversation Trace** details are visible for **Admin Conversations** and **User Conversations**.
 _Avoid_: debug mode, logging level, provider trace setting
@@ -542,7 +546,8 @@ _Avoid_: full snapshot, config dump
 - Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
 - **Conversation Trace** should be exposed through a structured `trace` response object on both assistant-style and retrieval-first conversation routes
 - **Conversation Traces** should render inline with the assistant turn they describe, with minimal traces as compact badges and richer traces inside a collapsed per-message disclosure
-- The chat UI should prefer streaming **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
+- The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
+- **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
 - During streaming turns, the chat UI should show compact live status derived from **Conversation Trace** events and then collapse the final sanitized trace into the assistant turn's per-message trace panel
 - During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status to that turn, and attach the final sanitized **Conversation Trace** when it arrives
 - Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
