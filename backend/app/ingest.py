@@ -22,6 +22,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Background
 from pydantic import BaseModel
 
 import auth
+import content_artifacts
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -257,6 +258,12 @@ def _missing_document_deletion_response(job_id: str) -> dict:
                 detail="Retrieval entries were already absent or cannot be located for an absent document.",
             ),
             deletion_target_skipped(
+                target_kind="retrieval_chunk_text",
+                target_id=job_id,
+                action="delete_retrieval_chunk_text",
+                detail="Encrypted retrieval chunk text was already absent.",
+            ),
+            deletion_target_skipped(
                 target_kind="runtime_document_state",
                 target_id=job_id,
                 action="delete_runtime_document_state",
@@ -288,6 +295,24 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
             action="delete_retrieval_index",
             retryable=True,
             detail=f"Failed to delete document chunks from vector database: {e}",
+        ))
+
+    try:
+        deleted_text_rows = ingest_db.delete_retrieval_chunks_for_job(job_id)
+        results.append(deletion_target_succeeded(
+            target_kind="retrieval_chunk_text",
+            target_id=job_id,
+            action="delete_retrieval_chunk_text",
+            detail=f"Deleted {deleted_text_rows} encrypted retrieval chunk rows.",
+        ))
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to delete encrypted retrieval chunk text: {e}")
+        results.append(deletion_target_failed(
+            target_kind="retrieval_chunk_text",
+            target_id=job_id,
+            action="delete_retrieval_chunk_text",
+            retryable=True,
+            detail=f"Failed to delete encrypted retrieval chunk text: {e}",
         ))
 
     file_path_value = job.get("file_path")
@@ -640,7 +665,11 @@ async def queue_document_ingestion(
     content_sha256 = hashlib.sha256(content).hexdigest()
     job_id = generate_job_id(canonical_name)
     file_path = UPLOADS_DIR / f"{job_id}_{safe_storage_filename(original_filename)}"
-    await asyncio.to_thread(file_path.write_bytes, content)
+    try:
+        storage_content = content_artifacts.encode_for_storage(content)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await asyncio.to_thread(file_path.write_bytes, storage_content)
 
     now = datetime.utcnow().isoformat()
     JOBS[job_id] = {
@@ -762,22 +791,23 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
 
-        # Get file extension
-        suffix = file_path.suffix.lower()
-        logger.debug(f"[{job_id}] File type: {suffix}")
+        with content_artifacts.processing_path(file_path) as processing_file_path:
+            # Get file extension
+            suffix = processing_file_path.suffix.lower()
+            logger.debug(f"[{job_id}] File type: {suffix}")
 
-        # Extract text based on file type
-        if suffix == ".pdf":
-            logger.info(f"[{job_id}] Extracting text from PDF...")
-            text = await asyncio.to_thread(extract_pdf_text, file_path)
-        elif suffix == ".txt":
-            logger.info(f"[{job_id}] Reading text file...")
-            text = file_path.read_text(encoding="utf-8")
-        elif suffix == ".md":
-            logger.info(f"[{job_id}] Reading markdown file...")
-            text = file_path.read_text(encoding="utf-8")
-        else:
-            raise ValueError(f"Unsupported file type: {suffix}")
+            # Extract text based on file type
+            if suffix == ".pdf":
+                logger.info(f"[{job_id}] Extracting text from PDF...")
+                text = await asyncio.to_thread(extract_pdf_text, processing_file_path)
+            elif suffix == ".txt":
+                logger.info(f"[{job_id}] Reading text file...")
+                text = processing_file_path.read_text(encoding="utf-8")
+            elif suffix == ".md":
+                logger.info(f"[{job_id}] Reading markdown file...")
+                text = processing_file_path.read_text(encoding="utf-8")
+            else:
+                raise ValueError(f"Unsupported file type: {suffix}")
 
         logger.info(f"[{job_id}] Extracted {len(text)} characters")
 
@@ -825,6 +855,13 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
             async with semaphore:
                 chunk = CHUNKS[chunk_id]
                 try:
+                    ingest_db.upsert_retrieval_chunk(
+                        chunk_id=chunk_id,
+                        job_id=chunk["job_id"],
+                        chunk_index=chunk["index"],
+                        source_file=chunk["source_file"],
+                        text=chunk["text"],
+                    )
                     result = await store_chunk(
                         chunk_id=chunk_id,
                         chunk_text_content=chunk["text"],
@@ -1486,7 +1523,18 @@ async def get_chunk(chunk_id: str, admin: dict = Depends(auth.require_admin)):
     Get a specific chunk details.
     """
     if chunk_id not in CHUNKS:
-        raise HTTPException(status_code=404, detail=f"Chunk not found: {chunk_id}")
+        persisted_chunk = ingest_db.get_retrieval_chunk(chunk_id)
+        if not persisted_chunk:
+            raise HTTPException(status_code=404, detail=f"Chunk not found: {chunk_id}")
+        return {
+            "chunk_id": persisted_chunk["chunk_id"],
+            "job_id": persisted_chunk["job_id"],
+            "index": persisted_chunk["chunk_index"],
+            "source_file": persisted_chunk["source_file"],
+            "status": "stored",
+            "text": persisted_chunk["text"],
+            "char_count": persisted_chunk["char_count"],
+        }
 
     chunk = CHUNKS[chunk_id]
 

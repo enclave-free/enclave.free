@@ -15,6 +15,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+import content_artifacts
 from database import get_connection, get_cursor
 
 logger = logging.getLogger("sanctum.ingest_db")
@@ -90,6 +91,24 @@ def init_ingest_schema():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ingest_jobs_canonical_current
         ON ingest_jobs(canonical_name, is_current)
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS retrieval_chunks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chunk_id TEXT UNIQUE NOT NULL,
+            job_id TEXT NOT NULL,
+            chunk_index INTEGER NOT NULL,
+            source_file TEXT NOT NULL,
+            char_count INTEGER DEFAULT 0,
+            encrypted_text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (job_id) REFERENCES ingest_jobs(job_id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_retrieval_chunks_job_id
+        ON retrieval_chunks(job_id)
     """)
 
     conn.commit()
@@ -185,6 +204,42 @@ def create_job(
         return cursor.lastrowid
 
 
+def upsert_retrieval_chunk(
+    *,
+    chunk_id: str,
+    job_id: str,
+    chunk_index: int,
+    source_file: str,
+    text: str,
+) -> None:
+    """Persist retrieval chunk text encrypted for backend hydration."""
+    encrypted_text = content_artifacts.encrypt_bytes(text.encode("utf-8")).decode("ascii")
+    now = datetime.utcnow().isoformat()
+    with get_cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO retrieval_chunks (
+                chunk_id, job_id, chunk_index, source_file, char_count, encrypted_text, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(chunk_id) DO UPDATE SET
+                job_id = excluded.job_id,
+                chunk_index = excluded.chunk_index,
+                source_file = excluded.source_file,
+                char_count = excluded.char_count,
+                encrypted_text = excluded.encrypted_text,
+                updated_at = excluded.updated_at
+        """, (
+            chunk_id,
+            job_id,
+            chunk_index,
+            source_file,
+            len(text),
+            encrypted_text,
+            now,
+            now,
+        ))
+
+
 # =============================================================================
 # READ OPERATIONS
 # =============================================================================
@@ -205,6 +260,33 @@ def get_job(job_id: str) -> Optional[dict]:
     if row:
         return dict(row)
     return None
+
+
+def get_retrieval_chunk(chunk_id: str) -> Optional[dict]:
+    """Return one retrieval chunk with decrypted text."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM retrieval_chunks WHERE chunk_id = ?", (chunk_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    if not row:
+        return None
+    chunk = dict(row)
+    chunk["text"] = content_artifacts.decrypt_bytes(chunk["encrypted_text"].encode("ascii")).decode("utf-8")
+    return chunk
+
+
+def list_retrieval_chunks(job_id: str) -> list[dict]:
+    """List raw encrypted retrieval chunk rows for one document job."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM retrieval_chunks WHERE job_id = ? ORDER BY chunk_index ASC",
+        (job_id,),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+    return [dict(row) for row in rows]
 
 
 def list_jobs(status: Optional[str] = None, limit: int = 100, offset: int = 0) -> list[dict]:
@@ -430,6 +512,13 @@ def delete_job(job_id: str) -> bool:
         if deleted:
             logger.info(f"Deleted ingest job: {job_id}")
         return deleted
+
+
+def delete_retrieval_chunks_for_job(job_id: str) -> int:
+    """Delete encrypted retrieval chunk text rows for one document job."""
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM retrieval_chunks WHERE job_id = ?", (job_id,))
+        return cursor.rowcount
 
 
 # def purge_old_jobs(days: int = 30) -> int:

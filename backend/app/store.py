@@ -42,6 +42,89 @@ def get_qdrant_client():
     return _qdrant_client
 
 
+def detect_legacy_plaintext_payloads(limit: int = 500) -> dict[str, Any]:
+    """Best-effort scan for legacy Qdrant payloads that still contain raw text."""
+    try:
+        client = get_qdrant_client()
+        points, _next_page = client.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+    except Exception as exc:
+        logger.warning("Could not inspect Qdrant payload confidentiality: %s", exc)
+        return {
+            "checked": False,
+            "legacy_plaintext_payloads": None,
+            "summary": "Qdrant payload confidentiality could not be inspected from this process.",
+        }
+
+    legacy_count = 0
+    affected = []
+    for point in points:
+        payload = getattr(point, "payload", None) or {}
+        if payload.get("text") or payload.get("fact_text"):
+            legacy_count += 1
+            affected.append({
+                "point_id": str(getattr(point, "id", "")),
+                "chunk_id": payload.get("chunk_id"),
+                "job_id": payload.get("job_id"),
+                "source_file": payload.get("source_file"),
+            })
+
+    return {
+        "checked": True,
+        "legacy_plaintext_payloads": legacy_count,
+        "affected": affected,
+        "summary": (
+            f"Found {legacy_count} Qdrant points with legacy plaintext payload text."
+            if legacy_count
+            else "No legacy plaintext Qdrant payload text was detected in the inspected active index."
+        ),
+    }
+
+
+def list_legacy_plaintext_payloads(limit: int = 500) -> list[dict[str, Any]]:
+    """Return legacy Qdrant payloads with recoverable text for confidentiality migration."""
+    client = get_qdrant_client()
+    points, _next_page = client.scroll(
+        collection_name=COLLECTION_NAME,
+        limit=limit,
+        with_payload=True,
+        with_vectors=False,
+    )
+    legacy_points = []
+    for point in points:
+        payload = getattr(point, "payload", None) or {}
+        text = payload.get("text") or payload.get("fact_text")
+        if not text:
+            continue
+        legacy_points.append({
+            "point_id": getattr(point, "id", None),
+            "chunk_id": payload.get("chunk_id"),
+            "job_id": payload.get("job_id"),
+            "source_file": payload.get("source_file"),
+            "text": text,
+            "payload": payload,
+        })
+    return legacy_points
+
+
+def rewrite_payload_without_plaintext(point_id: Any, payload: dict[str, Any]) -> None:
+    """Overwrite a Qdrant payload while preserving retrieval metadata and removing raw text."""
+    minimized_payload = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"text", "fact_text"}
+    }
+    get_qdrant_client().overwrite_payload(
+        collection_name=COLLECTION_NAME,
+        points=[point_id],
+        payload=minimized_payload,
+    )
+
+
 def get_embedding_model():
     """Get or create local embedding model (sentence-transformers)"""
     global _embedding_model
@@ -115,8 +198,9 @@ def _store_chunk_sync(
             "type": "chunk",
             "chunk_id": chunk_id,
             "job_id": job_id,  # Separate field for filtering by document
-            "text": source_text[:2000],  # Store more text for context
             "source_file": source_file,
+            "source_label": source_file,
+            "content_ref": f"retrieval_chunk:{chunk_id}",
         }
     )
 

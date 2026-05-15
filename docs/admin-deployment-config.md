@@ -104,8 +104,25 @@ Python deployment config still owns:
 - `QDRANT_HOST`
 - `QDRANT_PORT`
 - `SEARXNG_URL`
+- `CONTENT_ENCRYPTION_KEY`
+- `DOCUMENT_ARTIFACT_ENCRYPTION`
 
 Sage depends on Enclave Python for document retrieval, so mismatches here can break `/query` even when Sage itself is healthy.
+
+`CONTENT_ENCRYPTION_KEY` enables backend-readable encryption for new Uploaded Document artifacts and Retrieval chunk text in active storage. `DOCUMENT_ARTIFACT_ENCRYPTION` defaults to `required`; set it to `disabled` only when the operator explicitly chooses plaintext Uploaded Document artifact storage. Retrieval chunk text still requires the Content Encryption Key even when uploaded artifacts are plaintext by operator choice.
+
+New Retrieval Index writes store vectors and minimal metadata in Qdrant, while encrypted chunk text lives in SQLite. This is active storage confidentiality for product-owned artifacts and retrieval content, not Secure Erase. Legacy Retrieval Index payloads may still contain plaintext until the Confidentiality Migration runs.
+
+## Data Lifecycle Status
+
+The Data Lifecycle Status panel is the current operator-visible inventory for the Active Storage Lifecycle. It deliberately separates:
+
+- Active Storage Lifecycle coverage for supported product data classes
+- unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, and provider traces
+- Scheduled Retention Policy settings from Retention Scheduler execution
+- Content Encryption Key status from Artifact Encryption Posture
+
+This split is important because a class can have deletion, retention, audit, and confidentiality states that move independently.
 
 ## Common Operator Workflow
 

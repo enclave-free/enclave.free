@@ -11,13 +11,16 @@ from datetime import datetime, timedelta, timezone
 import json
 import logging
 import os
+from pathlib import Path
+import secrets
 
 from fastapi import APIRouter, Depends
-from fastapi import HTTPException
+from fastapi import Header, HTTPException
 import httpx
 from pydantic import BaseModel, Field
 
 import auth
+import content_artifacts
 import database
 from data_deletion import (
     deletion_target_failed,
@@ -28,6 +31,7 @@ from data_deletion import (
 import ingest
 import ingest_db
 import query
+import store
 
 
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
@@ -35,6 +39,7 @@ logger = logging.getLogger("sanctum.lifecycle")
 _warned_missing_internal_agent_token = False
 _sage_client: httpx.AsyncClient | None = None
 _sage_client_timeout = httpx.Timeout(10.0, connect=5.0, read=10.0, write=10.0, pool=5.0)
+RETENTION_AUTOMATION_ACTOR = "machine:scheduled-retention"
 
 
 def _get_sage_client() -> httpx.AsyncClient:
@@ -42,6 +47,24 @@ def _get_sage_client() -> httpx.AsyncClient:
     if _sage_client is None or _sage_client.is_closed:
         _sage_client = httpx.AsyncClient(timeout=_sage_client_timeout)
     return _sage_client
+
+
+def _require_retention_automation_actor(
+    x_retention_automation_token: str | None = Header(default=None),
+) -> dict:
+    configured_token = os.getenv("RETENTION_AUTOMATION_TOKEN", "").strip()
+    if not configured_token:
+        raise HTTPException(status_code=503, detail="Retention Automation Token is not configured")
+    if not x_retention_automation_token or not secrets.compare_digest(
+        x_retention_automation_token,
+        configured_token,
+    ):
+        raise HTTPException(status_code=401, detail="Invalid Retention Automation Token")
+    return {
+        "type": "machine",
+        "pubkey": RETENTION_AUTOMATION_ACTOR,
+        "actor": RETENTION_AUTOMATION_ACTOR,
+    }
 
 
 async def close_sage_client() -> None:
@@ -149,6 +172,7 @@ DATA_CLASSES = [
         },
         "notes": [
             "Retrieval selects knowledge from the Document Library for Sage Conversations.",
+            "New Retrieval Index points store vectors and minimal metadata; encrypted chunk text lives in SQLite.",
         ],
     },
     {
@@ -169,7 +193,8 @@ DATA_CLASSES = [
             "summary": "Lifecycle cleanup and Document deletion audit uploaded artifact outcomes; raw upload artifact writes are represented by Document upload events.",
         },
         "notes": [
-            "Uploaded files and chunk payload text are currently plaintext at rest.",
+            "New uploaded artifacts are encrypted by default when a Content Encryption Key is configured.",
+            "Retrieval chunk text is stored separately from uploaded artifacts.",
         ],
     },
     {
@@ -301,6 +326,30 @@ class UnsupportedSurfaceAcknowledgementRequest(BaseModel):
     acknowledged: bool = True
 
 
+class ArtifactEncryptionPostureUpdateRequest(BaseModel):
+    posture: str
+
+
+LIFECYCLE_SCOPE = {
+    "key": "active_storage_lifecycle",
+    "label": "Active Storage Lifecycle",
+    "summary": (
+        "Lifecycle controls apply to supported Lifecycle Data Classes in active product storage. "
+        "Unsupported Deployment Surfaces remain disclosed separately."
+    ),
+    "excludes": "Deployment Surfaces such as runtime logs, WAL, backups, snapshots, and provider traces.",
+}
+
+
+RETENTION_SCHEDULER_SCOPE = {
+    "status": "external_or_manual",
+    "summary": (
+        "Scheduled Retention Policy can mark Lifecycle Data Classes for scheduled Retention Execution; "
+        "the product does not yet include its own Retention Scheduler, so execution is manual or externally invoked."
+    ),
+}
+
+
 def _data_class_keys() -> set[str]:
     return {
         data_class["key"]
@@ -359,6 +408,7 @@ def _data_classes_with_retention_policies() -> list[dict]:
     classes = []
     for data_class in DATA_CLASSES:
         class_copy = deepcopy(data_class)
+        class_copy["confidentiality"] = _confidentiality_posture_for_data_class(data_class["key"])
         if data_class["key"] in _data_class_keys():
             class_copy["retention_policy"] = {
                 **_default_retention_policy(data_class["key"]),
@@ -366,6 +416,290 @@ def _data_classes_with_retention_policies() -> list[dict]:
             }
         classes.append(class_copy)
     return classes
+
+
+def _confidentiality_posture_for_data_class(data_class_key: str) -> dict:
+    artifact_status = _artifact_encryption_status()
+    if data_class_key == "uploaded_document_artifacts":
+        return {
+            "status": artifact_status["status"],
+            "summary": artifact_status["summary"],
+        }
+    if data_class_key == "document_library":
+        return {
+            "status": "partial" if artifact_status["status"] != "encrypted" else "encrypted",
+            "summary": "Document metadata is stored separately from uploaded artifact content; artifact content posture is reported under Uploaded Document Artifacts.",
+        }
+    if data_class_key == "retrieval_index":
+        retrieval_status = _retrieval_index_confidentiality_status()
+        if retrieval_status["status"] != "partial":
+            return retrieval_status
+        return {
+            "status": "partial",
+            "summary": "New Qdrant Retrieval Index entries store vector data and minimal metadata; legacy plaintext payloads may remain until confidentiality migration lands.",
+        }
+    if data_class_key == "user_profiles":
+        return {
+            "status": "encrypted",
+            "summary": "User PII fields are encrypted at rest in SQLite.",
+        }
+    if data_class_key == "user_memory":
+        return {
+            "status": "partial",
+            "summary": "Initial User Memory is low-sensitivity Sage context and may be stored without content encryption.",
+        }
+    if data_class_key == "sage_session_memory":
+        return {
+            "status": "partial",
+            "summary": "Sage Session Memory uses active-storage lifecycle controls; Secure Erase and full historical/log retention remain unsupported.",
+        }
+    if data_class_key == "audit_log":
+        return {
+            "status": "partial",
+            "summary": "Audit Log detail can be compacted by retention while lifecycle evidence is preserved.",
+        }
+    return {
+        "status": "unsupported",
+        "summary": "No confidentiality posture is defined for this Lifecycle Data Class.",
+    }
+
+
+def _artifact_encryption_status() -> dict:
+    status = content_artifacts.artifact_encryption_status()
+    if status["status"] != "encrypted":
+        return status
+
+    inventory = _active_artifact_confidentiality_inventory()
+    if inventory["plaintext_artifacts"]:
+        return {
+            "posture": "required",
+            "status": "mixed",
+            "summary": (
+                f"Artifact encryption is required, but {len(inventory['plaintext_artifacts'])} active uploaded "
+                "artifact(s) still appear to be legacy plaintext."
+            ),
+            "legacy_plaintext_artifacts": inventory["plaintext_artifacts"],
+        }
+    if inventory["missing_artifacts"]:
+        return {
+            "posture": "required",
+            "status": "mixed",
+            "summary": (
+                f"Artifact encryption is required, but {len(inventory['missing_artifacts'])} active uploaded "
+                "artifact path(s) could not be verified."
+            ),
+            "missing_artifacts": inventory["missing_artifacts"],
+        }
+    return {
+        **status,
+        "summary": "Uploaded Document artifacts are encrypted in active storage for new writes and verified active artifacts.",
+    }
+
+
+def _active_artifact_confidentiality_inventory() -> dict:
+    plaintext_artifacts = []
+    encrypted_artifacts = []
+    missing_artifacts = []
+    for job in ingest_db.list_jobs(limit=1000):
+        file_path = job.get("file_path")
+        if not file_path:
+            continue
+        try:
+            with open(file_path, "rb") as artifact:
+                content = artifact.read(64)
+        except FileNotFoundError:
+            missing_artifacts.append(_document_artifact_result(job, "missing"))
+            continue
+        except OSError as exc:
+            missing_artifacts.append({**_document_artifact_result(job, "unreadable"), "error": str(exc)})
+            continue
+        if content_artifacts.is_encrypted_artifact(content):
+            encrypted_artifacts.append(_document_artifact_result(job, "encrypted"))
+        else:
+            plaintext_artifacts.append(_document_artifact_result(job, "legacy_plaintext"))
+    return {
+        "plaintext_artifacts": plaintext_artifacts,
+        "encrypted_artifacts": encrypted_artifacts,
+        "missing_artifacts": missing_artifacts,
+    }
+
+
+def _document_artifact_result(job: dict, status: str) -> dict:
+    return {
+        "job_id": job.get("job_id"),
+        "filename": job.get("filename"),
+        "file_path": job.get("file_path"),
+        "status": status,
+    }
+
+
+def _retrieval_index_confidentiality_status() -> dict:
+    detection = store.detect_legacy_plaintext_payloads()
+    if detection.get("legacy_plaintext_payloads"):
+        return {
+            "status": "mixed",
+            "summary": (
+                "Retrieval Index has minimized encrypted chunk storage for new writes, but legacy plaintext "
+                f"Qdrant payload text remains in {detection['legacy_plaintext_payloads']} inspected point(s)."
+            ),
+            "legacy_plaintext_payloads": detection["legacy_plaintext_payloads"],
+        }
+    if detection.get("checked"):
+        return {
+            "status": "encrypted",
+            "summary": "Qdrant Retrieval Index payloads are minimized; encrypted chunk text is hydrated from product-owned storage.",
+        }
+    return {
+        "status": "partial",
+        "summary": detection.get(
+            "summary",
+            "Qdrant Retrieval Index payload confidentiality could not be verified from this process.",
+        ),
+    }
+
+
+def preview_confidentiality_migration() -> dict:
+    artifact_status = _artifact_encryption_status()
+    artifact_inventory = _active_artifact_confidentiality_inventory()
+    try:
+        legacy_payloads = store.list_legacy_plaintext_payloads()
+        qdrant_available = True
+        qdrant_error = None
+    except Exception as exc:
+        legacy_payloads = []
+        qdrant_available = False
+        qdrant_error = str(exc)
+
+    artifact_actions = []
+    for artifact in artifact_inventory["plaintext_artifacts"]:
+        artifact_actions.append({
+            **artifact,
+            "target": "uploaded_document_artifact",
+            "action": "encrypt_artifact",
+            "eligible": artifact_status["status"] != "not_configured",
+            "skip_reason": None if artifact_status["status"] != "not_configured" else "content_encryption_key_not_configured",
+        })
+
+    retrieval_actions = []
+    for payload in legacy_payloads:
+        retrieval_actions.append({
+            "target": "retrieval_payload",
+            "action": "backfill_chunk_and_minimize_qdrant_payload",
+            "point_id": str(payload.get("point_id")),
+            "chunk_id": payload.get("chunk_id"),
+            "job_id": payload.get("job_id"),
+            "source_file": payload.get("source_file"),
+            "eligible": bool(payload.get("chunk_id") and payload.get("job_id") and payload.get("text")),
+            "skip_reason": None if payload.get("chunk_id") and payload.get("job_id") and payload.get("text") else "missing_recoverable_chunk_metadata",
+        })
+
+    skipped = []
+    if not qdrant_available:
+        skipped.append({
+            "target": "retrieval_payload",
+            "action": "inspect_qdrant_payloads",
+            "status": "skipped",
+            "reason": qdrant_error,
+        })
+
+    documents: dict[str, dict] = {}
+    for action in artifact_actions + retrieval_actions:
+        job_id = action.get("job_id")
+        if not job_id:
+            continue
+        documents.setdefault(job_id, {
+            "job_id": job_id,
+            "filename": action.get("filename") or action.get("source_file"),
+            "actions": [],
+        })["actions"].append(action)
+
+    return {
+        "status": "ready" if artifact_actions or retrieval_actions else "nothing_to_migrate",
+        "artifact_encryption": artifact_status,
+        "affected_documents": list(documents.values()),
+        "artifacts": artifact_actions,
+        "retrieval_payloads": retrieval_actions,
+        "skipped": skipped,
+        "expected_actions": artifact_actions + retrieval_actions,
+        "secure_erase_claimed": False,
+        "summary": (
+            f"Preview found {len(artifact_actions)} plaintext artifact(s) and "
+            f"{len(retrieval_actions)} legacy Retrieval payload(s). No Secure Erase claim is made."
+        ),
+    }
+
+
+def execute_confidentiality_migration(*, actor: str) -> dict:
+    preview = preview_confidentiality_migration()
+    results = []
+
+    for artifact in preview["artifacts"]:
+        if not artifact["eligible"]:
+            results.append({**artifact, "status": "skipped", "reason": artifact["skip_reason"]})
+            continue
+        try:
+            path = Path(artifact["file_path"])
+            content = path.read_bytes()
+            if content_artifacts.is_encrypted_artifact(content):
+                status = "skipped"
+                reason = "already_encrypted"
+            else:
+                path.write_bytes(content_artifacts.encrypt_bytes(content))
+                status = "succeeded"
+                reason = None
+            results.append({**artifact, "status": status, "reason": reason})
+        except Exception as exc:
+            results.append({**artifact, "status": "failed", "reason": str(exc)})
+
+    try:
+        legacy_payloads = store.list_legacy_plaintext_payloads()
+    except Exception as exc:
+        legacy_payloads = []
+        results.append({
+            "target": "retrieval_payload",
+            "action": "inspect_qdrant_payloads",
+            "status": "failed",
+            "reason": str(exc),
+        })
+
+    for payload in legacy_payloads:
+        action = {
+            "target": "retrieval_payload",
+            "action": "backfill_chunk_and_minimize_qdrant_payload",
+            "point_id": str(payload.get("point_id")),
+            "chunk_id": payload.get("chunk_id"),
+            "job_id": payload.get("job_id"),
+            "source_file": payload.get("source_file"),
+        }
+        if not (payload.get("chunk_id") and payload.get("job_id") and payload.get("text")):
+            results.append({**action, "status": "skipped", "reason": "missing_recoverable_chunk_metadata"})
+            continue
+        try:
+            ingest_db.upsert_retrieval_chunk(
+                chunk_id=payload["chunk_id"],
+                job_id=payload["job_id"],
+                chunk_index=int(payload.get("payload", {}).get("chunk_index") or 0),
+                source_file=payload.get("source_file") or "",
+                text=payload["text"],
+            )
+            store.rewrite_payload_without_plaintext(payload["point_id"], payload.get("payload") or {})
+            results.append({**action, "status": "succeeded", "reason": None})
+        except Exception as exc:
+            results.append({**action, "status": "failed", "reason": str(exc)})
+
+    database.update_setting_with_audit(
+        "confidentiality_migration_last_run",
+        json.dumps({"actor": actor, "result_count": len(results), "secure_erase_claimed": False}),
+        changed_by=actor,
+    )
+
+    return {
+        "status": "completed_with_errors" if any(result["status"] == "failed" for result in results) else "completed",
+        "results": results,
+        "summary": "Confidentiality migration completed without making any Secure Erase claim.",
+        "secure_erase_claimed": False,
+        "post_migration_status": get_lifecycle_status(),
+    }
 
 
 def _update_retention_policy(data_class_key: str, request: RetentionPolicyUpdateRequest, *, changed_by: str) -> dict:
@@ -437,7 +771,10 @@ def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
     policies = _stored_retention_policies()
     return {
+        "lifecycle_scope": deepcopy(LIFECYCLE_SCOPE),
         "data_classes": _data_classes_with_retention_policies(),
+        "content_encryption": content_artifacts.content_encryption_status(),
+        "artifact_encryption": _artifact_encryption_status(),
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "scheduled_retention": {
@@ -447,6 +784,7 @@ def get_lifecycle_status() -> dict:
                 if policy.get("enabled") and policy.get("scheduled_enforcement_enabled")
             ]),
         },
+        "retention_scheduler": deepcopy(RETENTION_SCHEDULER_SCOPE),
         "audit_coverage": get_audit_coverage_inventory(),
         "deletion_tombstones": database.summarize_deletion_tombstones(),
     }
@@ -1194,6 +1532,36 @@ async def update_admin_retention_policy(
     }
 
 
+@router.put("/artifact-encryption-posture", response_model=dict)
+async def update_admin_artifact_encryption_posture(
+    request: ArtifactEncryptionPostureUpdateRequest,
+    admin: dict = Depends(auth.require_admin),
+):
+    posture = request.posture.strip().lower()
+    if posture not in {"required", "disabled"}:
+        raise HTTPException(status_code=400, detail="Unsupported Artifact Encryption Posture")
+    database.upsert_deployment_config(
+        content_artifacts.ARTIFACT_ENCRYPTION_KEY,
+        posture,
+        is_secret=False,
+        requires_restart=False,
+        category="storage",
+        description="Artifact Encryption Posture (required or disabled)",
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return {"artifact_encryption": _artifact_encryption_status()}
+
+
+@router.get("/confidentiality-migration/preview", response_model=dict)
+async def preview_admin_confidentiality_migration(_admin: dict = Depends(auth.require_admin)):
+    return preview_confidentiality_migration()
+
+
+@router.post("/confidentiality-migration/execute", response_model=dict)
+async def execute_admin_confidentiality_migration(admin: dict = Depends(auth.require_admin)):
+    return execute_confidentiality_migration(actor=admin.get("pubkey", "unknown"))
+
+
 @router.post("/retention/preview", response_model=dict)
 async def preview_admin_retention(
     request: RetentionRunRequest,
@@ -1271,3 +1639,11 @@ async def run_admin_scheduled_retention(
     admin: dict = Depends(auth.require_admin),
 ):
     return await run_scheduled_retention(request, admin)
+
+
+@router.post("/retention/scheduled/automation/run", response_model=dict)
+async def run_automation_scheduled_retention(
+    request: ScheduledRetentionRunRequest,
+    machine_actor: dict = Depends(_require_retention_automation_actor),
+):
+    return await run_scheduled_retention(request, machine_actor)

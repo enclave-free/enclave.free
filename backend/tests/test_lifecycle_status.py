@@ -19,6 +19,7 @@ class LifecycleStatusTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.previous_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self.previous_content_encryption_key = os.environ.get("CONTENT_ENCRYPTION_KEY")
         os.environ["UPLOADS_DIR"] = str(Path(self.temp_dir.name) / "uploads")
 
         import auth
@@ -54,6 +55,10 @@ class LifecycleStatusTest(unittest.TestCase):
             os.environ.pop("UPLOADS_DIR", None)
         else:
             os.environ["UPLOADS_DIR"] = self.previous_uploads_dir
+        if self.previous_content_encryption_key is None:
+            os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+        else:
+            os.environ["CONTENT_ENCRYPTION_KEY"] = self.previous_content_encryption_key
         self.temp_dir.cleanup()
 
     def test_admin_can_inspect_instance_data_lifecycle_status(self) -> None:
@@ -86,6 +91,235 @@ class LifecycleStatusTest(unittest.TestCase):
             "stale active Conversation",
             session_memory["retention"]["summary"],
         )
+
+    def test_lifecycle_status_reports_active_storage_scope_and_confidentiality_posture(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+
+        self.assertEqual(body["lifecycle_scope"]["key"], "active_storage_lifecycle")
+        self.assertIn("active product storage", body["lifecycle_scope"]["summary"])
+        self.assertIn("Deployment Surfaces", body["lifecycle_scope"]["excludes"])
+
+        scheduler = body["retention_scheduler"]
+        self.assertEqual(scheduler["status"], "external_or_manual")
+        self.assertIn("Scheduled Retention Policy", scheduler["summary"])
+        self.assertIn("Retention Scheduler", scheduler["summary"])
+
+        classes_by_key = {
+            data_class["key"]: data_class
+            for data_class in body["data_classes"]
+        }
+        for data_class in classes_by_key.values():
+            self.assertIn("confidentiality", data_class)
+            self.assertIn(data_class["confidentiality"]["status"], {
+                "encrypted",
+                "mixed",
+                "partial",
+                "plaintext_by_operator_choice",
+                "not_configured",
+                "unsupported",
+            })
+
+        artifacts = classes_by_key["uploaded_document_artifacts"]["confidentiality"]
+        self.assertEqual(artifacts["status"], "not_configured")
+        self.assertIn("Content Encryption Key", artifacts["summary"])
+        retrieval = classes_by_key["retrieval_index"]["confidentiality"]
+        self.assertEqual(retrieval["status"], "partial")
+        self.assertIn("Qdrant", retrieval["summary"])
+
+    def test_lifecycle_status_reports_mixed_when_required_artifacts_include_legacy_plaintext(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text("legacy plaintext artifact", encoding="utf-8")
+
+        import ingest_db
+
+        ingest_db.create_job(
+            job_id="legacy-job",
+            filename="Legacy.md",
+            file_path=str(artifact_path),
+            ontology_id="default",
+        )
+        ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
+
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["artifact_encryption"]["status"], "mixed")
+        self.assertIn("legacy plaintext", body["artifact_encryption"]["summary"])
+        classes_by_key = {
+            data_class["key"]: data_class
+            for data_class in body["data_classes"]
+        }
+        artifacts = classes_by_key["uploaded_document_artifacts"]["confidentiality"]
+        self.assertEqual(artifacts["status"], "mixed")
+        self.assertNotIn("Secure Erase", artifacts["summary"])
+
+    def test_lifecycle_status_reports_mixed_when_qdrant_payload_text_remains(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        original_detector = self.lifecycle.store.detect_legacy_plaintext_payloads
+        self.lifecycle.store.detect_legacy_plaintext_payloads = lambda: {
+            "checked": True,
+            "legacy_plaintext_payloads": 2,
+            "summary": "Found 2 Qdrant points with legacy plaintext payload text.",
+        }
+        try:
+            response = self.client.get("/admin/lifecycle/status")
+        finally:
+            self.lifecycle.store.detect_legacy_plaintext_payloads = original_detector
+
+        self.assertEqual(response.status_code, 200)
+        classes_by_key = {
+            data_class["key"]: data_class
+            for data_class in response.json()["data_classes"]
+        }
+        retrieval = classes_by_key["retrieval_index"]["confidentiality"]
+        self.assertEqual(retrieval["status"], "mixed")
+        self.assertIn("legacy plaintext", retrieval["summary"])
+        self.assertNotIn("Secure Erase", retrieval["summary"])
+
+    def test_confidentiality_migration_previews_plaintext_artifacts_and_legacy_payloads(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text("legacy plaintext artifact", encoding="utf-8")
+
+        import ingest_db
+
+        ingest_db.create_job("legacy-job", "Legacy.md", str(artifact_path), "default")
+        ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
+        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
+        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: [{
+            "point_id": "point-1",
+            "chunk_id": "chunk-1",
+            "job_id": "legacy-job",
+            "source_file": "Legacy.md",
+            "text": "legacy retrieval text",
+            "payload": {"type": "chunk", "chunk_id": "chunk-1", "job_id": "legacy-job", "text": "legacy retrieval text"},
+        }]
+        try:
+            response = self.client.get("/admin/lifecycle/confidentiality-migration/preview")
+        finally:
+            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "ready")
+        self.assertEqual(len(body["artifacts"]), 1)
+        self.assertEqual(len(body["retrieval_payloads"]), 1)
+        self.assertFalse(body["secure_erase_claimed"])
+        self.assertNotIn("Secure Erase", body["summary"].replace("No Secure Erase claim is made.", ""))
+
+    def test_confidentiality_migration_executes_artifact_and_retrieval_repairs(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text("legacy plaintext artifact", encoding="utf-8")
+
+        import content_artifacts
+        import ingest_db
+
+        ingest_db.create_job("legacy-job", "Legacy.md", str(artifact_path), "default")
+        ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
+        legacy_payloads = [{
+            "point_id": "point-1",
+            "chunk_id": "chunk-1",
+            "job_id": "legacy-job",
+            "source_file": "Legacy.md",
+            "text": "legacy retrieval text",
+            "payload": {"type": "chunk", "chunk_id": "chunk-1", "job_id": "legacy-job", "text": "legacy retrieval text"},
+        }]
+        rewritten = []
+        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
+        original_rewriter = self.lifecycle.store.rewrite_payload_without_plaintext
+        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: legacy_payloads
+        self.lifecycle.store.rewrite_payload_without_plaintext = lambda point_id, payload: rewritten.append((point_id, payload))
+        try:
+            response = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
+        finally:
+            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+            self.lifecycle.store.rewrite_payload_without_plaintext = original_rewriter
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "completed")
+        self.assertTrue(content_artifacts.is_encrypted_artifact(artifact_path.read_bytes()))
+        self.assertEqual(ingest_db.get_retrieval_chunk("chunk-1")["text"], "legacy retrieval text")
+        self.assertEqual(rewritten[0][0], "point-1")
+        self.assertFalse(body["secure_erase_claimed"])
+
+    def test_confidentiality_migration_reports_partial_failure_without_secure_erase_claim(self) -> None:
+        os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+        artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text("legacy plaintext artifact", encoding="utf-8")
+
+        import ingest_db
+
+        ingest_db.create_job("legacy-job", "Legacy.md", str(artifact_path), "default")
+        ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
+        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
+        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: []
+        try:
+            response = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
+        finally:
+            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        skipped = [result for result in body["results"] if result["status"] == "skipped"]
+        self.assertEqual(skipped[0]["reason"], "content_encryption_key_not_configured")
+        self.assertFalse(body["secure_erase_claimed"])
+        self.assertEqual(artifact_path.read_text(encoding="utf-8"), "legacy plaintext artifact")
+
+    def test_confidentiality_migration_is_idempotent_when_no_legacy_storage_remains(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
+        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: []
+        try:
+            first = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
+            second = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
+        finally:
+            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.json()["results"], [])
+        self.assertEqual(second.json()["results"], [])
+
+    def test_deployment_automation_can_run_scheduled_retention_without_admin_session(self) -> None:
+        os.environ["RETENTION_AUTOMATION_TOKEN"] = "automation-secret"
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/scheduled/automation/run",
+            headers={"X-Retention-Automation-Token": "automation-secret"},
+            json={"retry_limit": 0},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "skipped")
+        audit_entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
+        self.assertEqual(audit_entries[0]["changed_by"], "machine:scheduled-retention")
+
+    def test_deployment_automation_rejects_missing_or_wrong_token(self) -> None:
+        os.environ["RETENTION_AUTOMATION_TOKEN"] = "automation-secret"
+
+        missing = self.client.post(
+            "/admin/lifecycle/retention/scheduled/automation/run",
+            json={"retry_limit": 0},
+        )
+        wrong = self.client.post(
+            "/admin/lifecycle/retention/scheduled/automation/run",
+            headers={"X-Retention-Automation-Token": "wrong"},
+            json={"retry_limit": 0},
+        )
+
+        self.assertEqual(missing.status_code, 401)
+        self.assertEqual(wrong.status_code, 401)
 
     def test_lifecycle_status_includes_disabled_default_retention_policy_for_enforced_classes(self) -> None:
         response = self.client.get("/admin/lifecycle/status")
@@ -218,6 +452,36 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(body["secure_erase"]["status"], "unsupported")
         self.assertIn("active-storage", body["secure_erase"]["summary"])
         self.assertIn("unsupported", body["secure_erase"]["summary"])
+
+    def test_lifecycle_status_reports_artifact_encryption_posture_from_deployment_settings(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        try:
+            response = self.client.get("/admin/lifecycle/status")
+            self.assertEqual(response.status_code, 200)
+            body = response.json()
+            self.assertEqual(body["content_encryption"]["status"], "configured")
+            self.assertEqual(body["artifact_encryption"]["posture"], "required")
+
+            update = self.client.put(
+                "/admin/lifecycle/artifact-encryption-posture",
+                json={"posture": "disabled"},
+            )
+            self.assertEqual(update.status_code, 200)
+            self.assertEqual(update.json()["artifact_encryption"]["posture"], "disabled")
+
+            body = self.client.get("/admin/lifecycle/status").json()
+            self.assertEqual(body["artifact_encryption"]["posture"], "disabled")
+            artifacts = {
+                data_class["key"]: data_class
+                for data_class in body["data_classes"]
+            }["uploaded_document_artifacts"]["confidentiality"]
+            self.assertEqual(artifacts["status"], "plaintext_by_operator_choice")
+
+            audit_entries = self.database.get_config_audit_log(limit=10, table_name="deployment_config")
+            self.assertEqual(audit_entries[0]["config_key"], "DOCUMENT_ARTIFACT_ENCRYPTION")
+            self.assertEqual(audit_entries[0]["changed_by"], "admin-pubkey")
+        finally:
+            os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
 
     def test_admin_can_acknowledge_unsupported_deployment_surface(self) -> None:
         acknowledgement = self.client.post(

@@ -58,6 +58,7 @@ describe('AdminDeploymentConfig', () => {
   let tombstoneFetchShouldFail = false
   let tombstonesFixture: unknown[] | null
   let acknowledgedSurfaceKeys: string[]
+  let artifactEncryptionPosture: 'required' | 'disabled'
   let sessionMemoryRetentionPolicy = {
     enabled: false,
     retention_window_days: 30,
@@ -70,6 +71,7 @@ describe('AdminDeploymentConfig', () => {
     tombstoneFetchShouldFail = false
     tombstonesFixture = null
     acknowledgedSurfaceKeys = []
+    artifactEncryptionPosture = 'required'
     sessionMemoryRetentionPolicy = {
       enabled: false,
       retention_window_days: 30,
@@ -116,6 +118,27 @@ describe('AdminDeploymentConfig', () => {
       }
       if (endpoint === '/admin/lifecycle/status') {
         return Promise.resolve(Response.json({
+          lifecycle_scope: {
+            key: 'active_storage_lifecycle',
+            label: 'Active Storage Lifecycle',
+            summary: 'Lifecycle controls apply to supported Lifecycle Data Classes in active product storage.',
+            excludes: 'Deployment Surfaces such as logs and backups.',
+          },
+          content_encryption: {
+            status: 'configured',
+            summary: 'Content Encryption Key is configured for backend-readable active content storage.',
+          },
+          artifact_encryption: {
+            posture: artifactEncryptionPosture,
+            status: artifactEncryptionPosture === 'required' ? 'encrypted' : 'plaintext_by_operator_choice',
+            summary: artifactEncryptionPosture === 'required'
+              ? 'Uploaded Document artifacts are encrypted in active storage for new writes.'
+              : 'Uploaded Document artifacts are stored as plaintext by explicit Operator choice.',
+          },
+          retention_scheduler: {
+            status: 'external_or_manual',
+            summary: 'Scheduled Retention Policy marks classes for retention; this prototype does not include its own Retention Scheduler.',
+          },
           data_classes: [
             {
               key: 'sage_session_memory',
@@ -133,6 +156,10 @@ describe('AdminDeploymentConfig', () => {
               audit: {
                 status: 'not_started',
                 summary: 'Session Memory lifecycle actions are not yet represented in the Audit Log.',
+              },
+              confidentiality: {
+                status: 'partial',
+                summary: 'Persistent Session Memory confidentiality is owned by Sage.',
               },
               retention_policy: {
                 lifecycle_data_class: 'sage_session_memory',
@@ -186,6 +213,17 @@ describe('AdminDeploymentConfig', () => {
                 completed: 1,
               },
             },
+          },
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/artifact-encryption-posture') {
+        const body = JSON.parse(String(options?.body ?? '{}'))
+        artifactEncryptionPosture = body.posture === 'disabled' ? 'disabled' : 'required'
+        return Promise.resolve(Response.json({
+          artifact_encryption: {
+            posture: artifactEncryptionPosture,
+            status: artifactEncryptionPosture === 'required' ? 'encrypted' : 'plaintext_by_operator_choice',
+            summary: 'Artifact Encryption Posture updated.',
           },
         }))
       }
@@ -335,6 +373,11 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
     expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
     expect(screen.getByText('Deletion: Complete')).toBeInTheDocument()
+    expect(screen.getByText('Active Storage Lifecycle')).toBeInTheDocument()
+    expect(screen.getByText('Content Encryption Key: Configured')).toBeInTheDocument()
+    expect(screen.getByText('Artifact Encryption Posture: Encrypted')).toBeInTheDocument()
+    expect(screen.getByText('Retention Scheduler: External or manual')).toBeInTheDocument()
+    expect(screen.getByText('Confidentiality: Partial')).toBeInTheDocument()
     expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
     expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
     expect(screen.getByText('Incomplete tombstones: 1')).toBeInTheDocument()
@@ -343,6 +386,32 @@ describe('AdminDeploymentConfig', () => {
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')
     })
+  })
+
+  it('lets admins mark uploaded artifacts as plaintext by operator choice', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    await user.click(within(lifecycleStatus).getByRole('button', { name: 'Disabled' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/lifecycle/artifact-encryption-posture',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ posture: 'disabled' }),
+        }),
+      )
+    })
+    expect(await within(lifecycleStatus).findByText('Artifact Encryption Posture: Plaintext by Operator Choice')).toBeInTheDocument()
   })
 
   it('shows unsupported deployment surfaces and lets admins acknowledge one', async () => {

@@ -73,6 +73,8 @@ ENV_CONFIG_MAP = {
     # Storage Settings
     "SQLITE_PATH": {"category": "storage", "description": "SQLite database path", "requires_restart": True, "default": "/data/sanctum.db"},
     "UPLOADS_DIR": {"category": "storage", "description": "Uploads directory path", "requires_restart": True, "default": "/uploads"},
+    "CONTENT_ENCRYPTION_KEY": {"category": "storage", "description": "Deployment-held key for backend-readable active content encryption", "requires_restart": False, "is_secret": True},
+    "DOCUMENT_ARTIFACT_ENCRYPTION": {"category": "storage", "description": "Artifact Encryption Posture (required or disabled)", "requires_restart": False, "default": "required"},
     # Qdrant Settings
     "QDRANT_HOST": {"category": "storage", "description": "Qdrant server hostname", "requires_restart": True, "default": "qdrant"},
     "QDRANT_PORT": {"category": "storage", "description": "Qdrant server port", "requires_restart": True, "default": "6333"},

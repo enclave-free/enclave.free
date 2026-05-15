@@ -16,6 +16,10 @@ _Avoid_: local-only, offline-only
 The product boundary where the **Operator** can understand, configure or invoke, and review lifecycle handling for each operator-visible class of **Instance** data.
 _Avoid_: cleanup, full compliance, guaranteed erasure
 
+**Active Storage Lifecycle**:
+The portion of **Operator-Controlled Data Lifecycle** that covers supported **Lifecycle Data Classes** in product-owned active **Storage Targets**.
+_Avoid_: secure erase, deployment lifecycle, host compliance
+
 **Lifecycle Data Class**:
 An operator-visible category of **Instance** data whose retention, deletion, and audit posture can be described independently.
 _Avoid_: table, storage backend, log surface
@@ -40,6 +44,14 @@ _Avoid_: cleanup, storage duration
 The act of applying **Data Retention** rules to eligible **Instance** data.
 _Avoid_: data retention, cleanup job
 
+**Scheduled Retention Policy**:
+An **Operator** configured **Data Retention** rule that marks a **Lifecycle Data Class** for scheduled **Retention Execution**.
+_Avoid_: retention scheduler, cron job
+
+**Retention Scheduler**:
+The technical automation that invokes scheduled **Retention Execution** without a human pressing a product control.
+_Avoid_: scheduled retention policy, retention setting
+
 **Data Deletion**:
 The **Operator** controlled action or workflow that removes **Instance** data from active storage according to **Data Retention** rules or a specific deletion request.
 _Avoid_: cleanup, hide, archive
@@ -47,6 +59,22 @@ _Avoid_: cleanup, hide, archive
 **Secure Erase**:
 A stronger deletion guarantee that reduces recoverability from underlying storage, logs, backups, or snapshots.
 _Avoid_: data deletion, logical deletion
+
+**Content Encryption Key**:
+A deployment-held key used to encrypt product-owned active content storage that backend workflows must still read.
+_Avoid_: admin key, user key, secure erase
+
+**Artifact Encryption Posture**:
+The **Deployment** choice that determines whether uploaded **Document** artifacts are encrypted in active storage or explicitly stored as plaintext.
+_Avoid_: secure erase, document access, end-to-end encryption
+
+**Retrieval Content Posture**:
+The confidentiality posture for chunk text used to hydrate **Retrieval** context after vector search.
+_Avoid_: retrieval index posture, artifact encryption posture
+
+**Confidentiality Migration**:
+A repair workflow that brings existing active content storage into the current confidentiality posture.
+_Avoid_: retention execution, secure erase, cleanup
 
 **Audit Log**:
 An operator-visible record of security-relevant or state-changing actions within an **Instance**.
@@ -67,6 +95,10 @@ _Avoid_: tenant, workspace, deployment
 **Deployment**:
 The technical environment that runs an **Instance**.
 _Avoid_: instance, tenant
+
+**Deployment Automation**:
+A deployment-owned machine actor that invokes approved operational workflows for an **Instance**.
+_Avoid_: admin user, service account, bot admin
 
 **Instance Initiation**:
 The first-time setup act where the first **Admin** authenticates and makes an **Instance** ready for configuration and user onboarding.
@@ -279,6 +311,8 @@ _Avoid_: full snapshot, config dump
 - **Operator-Controlled Privacy** allows **External Integrations** when they are visible and configurable by the **Operator**
 - **Operator-Controlled Data Lifecycle** is part of **Operator-Controlled Privacy**
 - **Operator-Controlled Data Lifecycle** is described through **Lifecycle Data Classes**
+- **Active Storage Lifecycle** is the first production-readiness target for **Operator-Controlled Data Lifecycle**
+- **Active Storage Lifecycle** excludes **Deployment Surfaces** unless a future decision promotes a surface into a supported **Lifecycle Data Class**
 - A **Lifecycle Data Class** is grouped by product meaning, not by **Storage Target**
 - A **Lifecycle Data Class** may span one or more **Storage Targets**
 - A **Lifecycle Data Class** has its own lifecycle support status
@@ -287,6 +321,9 @@ _Avoid_: full snapshot, config dump
 - **Data Retention** is part of **Operator-Controlled Privacy**
 - **Retention Execution** applies **Data Retention** rules
 - **Retention Execution** may be operator-invoked before it is scheduled automatically
+- A **Scheduled Retention Policy** identifies which **Lifecycle Data Classes** scheduled **Retention Execution** should include
+- A **Retention Scheduler** triggers scheduled **Retention Execution** automatically
+- The first **Scheduled Retention Policy** support may exist before the product includes its own **Retention Scheduler**
 - **Retention Execution** reports results per **Lifecycle Data Class**
 - Destructive **Retention Execution** requires explicit **Admin** confirmation and should make eligibility or result counts visible
 - A dry-run or preview for broad **Retention Execution** is desired but not required for the first slice
@@ -294,9 +331,22 @@ _Avoid_: full snapshot, config dump
 - **Data Deletion** executes **Data Retention** decisions or specific deletion requests
 - **Data Deletion** removes data from active product storage unless a specific **Secure Erase** guarantee is stated
 - Product copy should avoid "permanent deletion" or "delete forever" unless a **Secure Erase** or backup-retention guarantee exists
+- A **Content Encryption Key** protects active content storage at rest without making it end-to-end encrypted from backend workflows
+- A **Content Encryption Key** belongs to the **Deployment** rather than the **Admin**
+- **Artifact Encryption Posture** is a **Deployment Setting**, not an **Instance Setting**
+- **Artifact Encryption Posture** should default to encrypted active storage when a **Content Encryption Key** is configured
+- Plaintext uploaded artifacts are an explicit **Operator** choice reported in lifecycle status, not the default privacy posture
+- Changes to **Artifact Encryption Posture** should create **Audit Log** evidence
+- Changing **Artifact Encryption Posture** affects future uploaded **Documents** unless a separate migration workflow rewrites existing artifacts
+- **Retrieval Content Posture** should require encrypted chunk text in active product storage
+- **Retrieval Content Posture** is separate from **Artifact Encryption Posture** because derived chunk text is a distinct active content surface
+- **Confidentiality Migration** is required before legacy plaintext active content storage can be reported as fully matching an encrypted posture
+- **Confidentiality Migration** should report per-document results and avoid claiming **Secure Erase**
 - An **Audit Log** supports **Operator-Controlled Privacy** by making important **Instance** changes visible after the fact
 - **Enclave Free Prototype** integrates **Sage** directly into the product runtime
 - A **Deployment** usually runs one **Instance** in the prototype
+- **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
+- **Deployment Automation** may invoke scheduled operational workflows without representing a human **Admin** action
 - A **Deployment** includes a **Gateway**
 - The **Gateway** routes requests to **Sage** or the **Enclave Control Plane**
 - The **Gateway** does not own product correctness
@@ -453,14 +503,35 @@ _Avoid_: full snapshot, config dump
 > **Dev:** "If an Operator has a 30-day retention rule, has old data been deleted automatically?"
 > **Domain expert:** "Not necessarily. **Data Retention** is the rule; **Retention Execution** is the action that applies it, and it may be operator-invoked before scheduling exists."
 >
+> **Dev:** "If the admin marks a lifecycle class as scheduled, does the app now run cleanup by itself?"
+> **Domain expert:** "No. That is a **Scheduled Retention Policy**. A **Retention Scheduler** is the separate automation that invokes scheduled **Retention Execution**."
+>
 > **Dev:** "If retention succeeds for uploaded artifacts but fails for Sage memory, did retention succeed?"
 > **Domain expert:** "**Retention Execution** should report results per **Lifecycle Data Class**. One class can succeed while another fails or remains unsupported."
 >
 > **Dev:** "If Document deletion is marked complete, does that mean every backup and log trace is gone?"
 > **Domain expert:** "No. A complete **Lifecycle Support Status** is scoped to the stated **Lifecycle Data Class** and supported **Storage Targets**, not every **Deployment Surface**."
 >
+> **Dev:** "Should uploaded Documents be encrypted to the Admin's Nostr key?"
+> **Domain expert:** "No. The backend still needs to read Documents for ingestion and **Retrieval**, so active content storage should use a **Content Encryption Key** rather than the **Admin** key."
+>
+> **Dev:** "Can an Operator choose plaintext uploaded artifacts?"
+> **Domain expert:** "Yes, but that is an explicit **Artifact Encryption Posture** choice for the **Deployment** and should be visible in lifecycle status."
+>
+> **Dev:** "If the Operator turns artifact encryption on, are old uploaded files automatically encrypted?"
+> **Domain expert:** "No. **Artifact Encryption Posture** governs future writes unless a separate migration workflow rewrites existing artifacts, and the **Audit Log** should record the posture change."
+>
+> **Dev:** "If uploaded artifacts are plaintext by choice, can Retrieval chunks also be plaintext?"
+> **Domain expert:** "No. **Retrieval Content Posture** is stricter: chunk text should be encrypted in active product storage and Qdrant should stay minimized."
+>
+> **Dev:** "If we add encryption today, can old plaintext content be marked protected?"
+> **Domain expert:** "Not until **Confidentiality Migration** rewrites or verifies existing active content storage. Until then, lifecycle status should report a mixed posture."
+>
 > **Dev:** "Does lifecycle governance mean every trace is securely erased immediately?"
 > **Domain expert:** "No. **Operator-Controlled Data Lifecycle** first means the **Operator** can see each operator-visible data class, configure or invoke supported lifecycle actions, and review truthful status for unsupported surfaces."
+>
+> **Dev:** "What should we make production-ready first?"
+> **Domain expert:** "Start with **Active Storage Lifecycle**: make the product-owned active storage targets truthful, configurable where supported, auditable, and repairable before claiming control over deployment logs, backups, snapshots, or provider traces."
 >
 > **Dev:** "If I delete a User, does that delete Docker logs, gateway logs, backups, and every provider trace?"
 > **Domain expert:** "No. Those are **Deployment Surfaces** unless and until the product promotes them into supported **Lifecycle Data Classes** with explicit lifecycle controls."
@@ -476,6 +547,9 @@ _Avoid_: full snapshot, config dump
 
 > **Dev:** "Is the instance the Docker stack?"
 > **Domain expert:** "No. The **Instance** is the operator-controlled product space and data boundary; the **Deployment** is the technical environment running it."
+
+> **Dev:** "Should a cron job use the Admin's browser session to run retention?"
+> **Domain expert:** "No. That would confuse a human **Admin** action with **Deployment Automation**. A deployment-owned machine actor should invoke scheduled workflows when the product supports that path."
 
 > **Dev:** "Should the gateway decide how AI routes work?"
 > **Domain expert:** "No. The **Gateway** routes requests; **Sage** and the **Enclave Control Plane** own behavior and correctness."
@@ -607,11 +681,15 @@ _Avoid_: full snapshot, config dump
 - "data lifecycle governance" can imply full compliance-grade records management; resolved: **Operator-Controlled Data Lifecycle** means inventory, supported policy/action, evidence, and honest unsupported status before it means complete secure erasure across every technical surface.
 - "logs" and "backups" can be mistaken for supported product records; resolved: treat them as **Deployment Surfaces** until a specific one is promoted into a **Lifecycle Data Class**.
 - "retention is implemented" can confuse a configured rule with data-changing enforcement; resolved: **Data Retention** is policy and **Retention Execution** is the act of applying it.
-- **Data Retention** is a policy concept even where implementation is incomplete; current gaps include scheduled retention policy, secure erase semantics, log retention, and complete historical session retention.
+- "scheduled retention" can confuse policy with automation; resolved: **Scheduled Retention Policy** is the configuration, while **Retention Scheduler** is the automated trigger.
+- **Data Retention** is a policy concept even where implementation is incomplete; current gaps include product-owned **Retention Scheduler**, secure erase semantics, log retention, and complete historical session retention.
 - **Data Deletion** is distinct from hiding or archiving data; supported Document, User, Conversation, and User Memory deletion paths now return structured lifecycle status, while remaining gaps should be treated as product work rather than glossary ambiguity.
 - **Audit Log** should not be confused with debug or server logs; current audit coverage includes configuration, user governance, document governance, User Memory, and Data Deletion workflows but is not complete for every state-changing action.
+- "production-ready lifecycle" can accidentally include host backups, runtime logs, snapshots, and provider traces; resolved: the first plan targets **Active Storage Lifecycle**, while those remain **Deployment Surfaces** disclosed to the **Operator**.
+- "encrypted documents" can imply Admin-key or user-key encryption; resolved: backend-readable document and retrieval storage should use a **Content Encryption Key** unless a future end-to-end workflow is explicitly designed.
 - External services used by a deployment should be named as **External Integrations**, not treated as hidden platform-owned dependencies.
 - "instance" can mean a running server process; resolved: **Instance** means the operator-controlled product space and data boundary, while **Deployment** means the technical environment.
+- "cron" or "scheduler" can be mistaken for a human admin action; resolved: scheduled machine-triggered workflows should be attributed to **Deployment Automation**.
 - "gateway" can imply an API policy layer; resolved: **Gateway** is routing infrastructure and should not own product correctness.
 - "operator" and "admin" are distinct: **Operator** is the responsible person or organization, while **Admin** is the authenticated control identity.
 - "admin" can imply a general staff role; resolved: **Admin** is currently the single operator identity for an **Instance**.

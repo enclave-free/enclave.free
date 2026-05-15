@@ -24,9 +24,11 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
+        self._orig_content_encryption_key = os.environ.get("CONTENT_ENCRYPTION_KEY")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["UPLOADS_DIR"] = str(self.uploads_dir)
         os.environ["SECRET_KEY"] = "test-secret"
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
 
         import database
         import auth
@@ -75,6 +77,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
+        self._restore_env("CONTENT_ENCRYPTION_KEY", self._orig_content_encryption_key)
         self.tmp.cleanup()
 
     @staticmethod
@@ -93,6 +96,93 @@ class IngestBatchReplacementTest(unittest.TestCase):
             "/ingest/upload",
             files={"file": (filename, content.encode("utf-8"), "text/plain")},
         )
+
+    def test_upload_requires_content_encryption_key_by_default(self) -> None:
+        os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+
+        upload = self.upload_text("Handbook.md")
+
+        self.assertEqual(upload.status_code, 503)
+        self.assertIn("Content Encryption Key", upload.json()["detail"])
+
+    def test_upload_stores_encrypted_artifact_when_content_key_configured(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+
+        upload = self.upload_text("Handbook.md", "operator knowledge")
+
+        self.assertEqual(upload.status_code, 200)
+        job = self.ingest.JOBS[upload.json()["job_id"]]
+        artifact_path = Path(job["file_path"])
+        self.assertTrue(artifact_path.exists())
+        self.assertNotEqual(artifact_path.read_bytes(), b"operator knowledge")
+        self.assertTrue(artifact_path.read_bytes().startswith(b"sanctum-artifact::v1::"))
+
+    def test_upload_allows_plaintext_artifact_when_operator_disables_encryption(self) -> None:
+        self.database.update_setting_with_audit(
+            "DOCUMENT_ARTIFACT_ENCRYPTION",
+            "disabled",
+            changed_by="admin-pubkey",
+        )
+
+        upload = self.upload_text("Handbook.md", "operator knowledge")
+
+        self.assertEqual(upload.status_code, 200)
+        job = self.ingest.JOBS[upload.json()["job_id"]]
+        artifact_path = Path(job["file_path"])
+        self.assertEqual(artifact_path.read_bytes(), b"operator knowledge")
+
+    def test_processing_persists_retrieval_chunk_text_encrypted_and_delete_removes_it(self) -> None:
+        async def fake_store_chunk(*_args, **_kwargs):
+            return {"qdrant": {"points_inserted": 1}}
+
+        original_store_chunk = self.ingest.store_chunk
+        self.ingest.store_chunk = fake_store_chunk
+        try:
+            upload = self.upload_text("Handbook.md", "operator knowledge for retrieval")
+            self.assertEqual(upload.status_code, 200)
+            job_id = upload.json()["job_id"]
+            artifact_path = Path(self.ingest.JOBS[job_id]["file_path"])
+
+            asyncio.run(self.ingest.process_document(job_id, artifact_path, sample_percent=100.0))
+
+            chunk_id = self.ingest.generate_chunk_id(job_id, 0)
+            chunk = self.client.get(f"/ingest/chunk/{chunk_id}")
+            self.assertEqual(chunk.status_code, 200)
+            self.assertEqual(chunk.json()["text"], "operator knowledge for retrieval")
+
+            raw_rows = self.ingest_db.list_retrieval_chunks(job_id)
+            self.assertEqual(len(raw_rows), 1)
+            self.assertNotIn("operator knowledge", raw_rows[0]["encrypted_text"])
+
+            response = self.client.delete(f"/ingest/jobs/{job_id}")
+            self.assertEqual(response.status_code, 200)
+            actions = {result["action"]: result for result in response.json()["deletion"]["results"]}
+            self.assertEqual(actions["delete_retrieval_chunk_text"]["status"], "succeeded")
+            self.assertEqual(self.ingest_db.list_retrieval_chunks(job_id), [])
+        finally:
+            self.ingest.store_chunk = original_store_chunk
+
+    def test_retrieval_chunk_text_requires_content_key_even_when_artifacts_are_plaintext(self) -> None:
+        self.database.update_setting_with_audit(
+            "DOCUMENT_ARTIFACT_ENCRYPTION",
+            "disabled",
+            changed_by="admin-pubkey",
+        )
+        os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+
+        upload = self.upload_text("Handbook.md", "plaintext artifact but protected retrieval")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        artifact_path = Path(self.ingest.JOBS[job_id]["file_path"])
+        self.assertEqual(artifact_path.read_text(encoding="utf-8"), "plaintext artifact but protected retrieval")
+
+        asyncio.run(self.ingest.process_document(job_id, artifact_path, sample_percent=100.0))
+
+        job = self.ingest.JOBS[job_id]
+        self.assertEqual(job["status"], "completed_with_errors")
+        self.assertEqual(job["failed_chunks"], 1)
+        self.assertIn("Content Encryption Key", self.ingest.CHUNKS[self.ingest.generate_chunk_id(job_id, 0)]["error"])
+        self.assertEqual(self.ingest_db.list_retrieval_chunks(job_id), [])
 
     def complete_job(self, job_id: str) -> None:
         """Mark a job completed for state-machine tests; does not exercise process_document."""
@@ -228,6 +318,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(body["deletion"]["status"], "succeeded")
         actions = {result["action"]: result for result in body["deletion"]["results"]}
         self.assertEqual(actions["delete_retrieval_index"]["status"], "succeeded")
+        self.assertEqual(actions["delete_retrieval_chunk_text"]["status"], "succeeded")
         self.assertEqual(actions["delete_uploaded_document_artifact"]["status"], "succeeded")
         self.assertEqual(actions["delete_document_metadata"]["status"], "succeeded")
         self.assertEqual(actions["delete_runtime_document_state"]["status"], "succeeded")
@@ -246,7 +337,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(deletion_entries[0]["config_key"], f"document:{job_id}:delete")
         self.assertEqual(deletion_event["workflow"], "delete_document")
         self.assertEqual(deletion_event["status"], "succeeded")
-        self.assertEqual(deletion_event["counts"]["succeeded"], 4)
+        self.assertEqual(deletion_event["counts"]["succeeded"], 5)
         self.assertIn(
             f"document:{job_id}:delete",
             {entry["config_key"] for entry in self.audit_entries("document_actions")},
@@ -269,7 +360,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         body = second.json()
         self.assertEqual(body["status"], "deleted")
         self.assertEqual(body["deletion"]["status"], "succeeded")
-        self.assertEqual(body["deletion"]["counts"]["skipped"], 4)
+        self.assertEqual(body["deletion"]["counts"]["skipped"], 5)
         self.assertEqual(
             {result["status"] for result in body["deletion"]["results"]},
             {"skipped"},
@@ -278,12 +369,12 @@ class IngestBatchReplacementTest(unittest.TestCase):
         entries = self.audit_entries("data_deletion")
         idempotent_entry = next(
             entry for entry in entries
-            if json.loads(entry["new_value"])["counts"]["skipped"] == 4
+            if json.loads(entry["new_value"])["counts"]["skipped"] == 5
         )
         idempotent_event = json.loads(idempotent_entry["new_value"])
         self.assertEqual(idempotent_entry["config_key"], f"document:{job_id}:delete")
         self.assertEqual(idempotent_event["status"], "succeeded")
-        self.assertEqual(idempotent_event["counts"]["skipped"], 4)
+        self.assertEqual(idempotent_event["counts"]["skipped"], 5)
 
     def test_admin_delete_document_rejects_artifact_path_outside_uploads_root(self) -> None:
         upload = self.upload_text("Handbook.md")
@@ -325,6 +416,13 @@ class IngestBatchReplacementTest(unittest.TestCase):
         job["status"] = "failed"
         job["error"] = "Extraction failed"
         self.ingest._sync_job_to_db(job_id)
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id=f"{job_id}_chunk_0000",
+            job_id=job_id,
+            chunk_index=0,
+            source_file="Broken.md",
+            text="failed job retrieval text",
+        )
         file_path = Path(job["file_path"])
         self.assertTrue(file_path.exists())
 
@@ -337,6 +435,9 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(body["eligible_jobs"][0]["reason"], "failed_ingestion")
         self.assertFalse(file_path.exists())
         self.assertNotIn(job_id, self.ingest.JOBS)
+        actions = {result["action"]: result for result in body["eligible_jobs"][0]["deletion"]["results"]}
+        self.assertEqual(actions["delete_retrieval_chunk_text"]["status"], "succeeded")
+        self.assertEqual(self.ingest_db.list_retrieval_chunks(job_id), [])
 
         entries = self.audit_entries("data_deletion")
         self.assertEqual(entries[0]["config_key"], f"document:{job_id}:cleanup")

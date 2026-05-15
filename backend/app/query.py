@@ -25,6 +25,7 @@ from pydantic import BaseModel
 import httpx
 
 import auth
+import ingest_db
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -527,26 +528,69 @@ def _process_search_results(search_results: list) -> tuple[list, set, list]:
         payload = result.get("payload", {})
         score = result.get("score", 0)
         
-        sources.append({
+        source = {
             "score": score,
             "type": payload.get("type", "unknown"),
-            "text": payload.get("text") or payload.get("fact_text", ""),
+            "text": "",
             "chunk_id": payload.get("chunk_id", ""),
             "source_file": payload.get("source_file", ""),
-        })
+            "hydrated": False,
+            "hydration_status": "not_applicable",
+        }
+
+        payload_text = payload.get("text") or payload.get("fact_text", "")
+        if payload.get("type") == "chunk":
+            hydrated_text, hydration_status = _hydrate_chunk_text(payload)
+            source["hydrated"] = hydrated_text is not None
+            source["hydration_status"] = hydration_status
+            if hydrated_text is not None:
+                chunk_texts.append(hydrated_text)
+            elif payload.get("text"):
+                source["hydration_status"] = "legacy_payload"
+                chunk_texts.append(payload["text"])
+        elif payload_text:
+            source["text"] = payload_text
+            chunk_texts.append(payload_text)
+
+        sources.append(source)
         
         if payload.get("type") == "fact":
             entity_names.add(payload.get("from_entity", ""))
             entity_names.add(payload.get("to_entity", ""))
-        
-        if payload.get("text"):
-            chunk_texts.append(payload.get("text"))
         
         for name in payload.get("entity_names", []):
             entity_names.add(name)
     
     entity_names.discard("")
     return sources, entity_names, chunk_texts
+
+
+def _hydrate_chunk_text(payload: dict) -> tuple[str | None, str]:
+    """Hydrate minimized Qdrant chunk hits from encrypted product-owned storage."""
+    chunk_id = payload.get("chunk_id")
+    if not chunk_id:
+        return None, "missing_chunk_id"
+
+    try:
+        chunk = ingest_db.get_retrieval_chunk(chunk_id)
+    except Exception as exc:
+        logger.warning("Retrieval chunk hydration failed for %s: %s", chunk_id, exc)
+        return None, "error"
+
+    if chunk is None:
+        return None, "missing"
+
+    payload_job_id = payload.get("job_id")
+    if payload_job_id and chunk.get("job_id") != payload_job_id:
+        logger.warning(
+            "Retrieval chunk hydration skipped for %s: payload job_id %s does not match stored job_id %s",
+            chunk_id,
+            payload_job_id,
+            chunk.get("job_id"),
+        )
+        return None, "job_mismatch"
+
+    return chunk["text"], "hydrated"
 
 
 def _build_context(chunk_texts: list[str], sources: list[dict]) -> str:

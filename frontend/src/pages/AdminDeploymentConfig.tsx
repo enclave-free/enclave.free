@@ -77,6 +77,7 @@ export function AdminDeploymentConfig() {
     loading: lifecycleLoading,
     acknowledgeUnsupportedSurface,
     updateRetentionPolicy,
+    updateArtifactEncryptionPosture,
     previewRetention,
     runScheduledRetention,
   } = useLifecycleStatus()
@@ -132,6 +133,8 @@ export function AdminDeploymentConfig() {
   const [scheduledRetentionResult, setScheduledRetentionResult] = useState<{ status?: string; retry_results?: unknown[] } | null>(null)
   const [scheduledRetentionLoading, setScheduledRetentionLoading] = useState(false)
   const [scheduledRetentionError, setScheduledRetentionError] = useState<string | null>(null)
+  const [artifactPostureUpdating, setArtifactPostureUpdating] = useState(false)
+  const [artifactPostureError, setArtifactPostureError] = useState<string | null>(null)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -252,6 +255,8 @@ export function AdminDeploymentConfig() {
 
   const formatLifecycleStatus = (status: string) => {
     if (status === 'not_started') return t('adminDeployment.lifecycle.notStarted', 'Not Started')
+    if (status === 'not_configured') return t('adminDeployment.lifecycle.notConfigured', 'Not Configured')
+    if (status === 'plaintext_by_operator_choice') return t('adminDeployment.lifecycle.plaintextByOperatorChoice', 'Plaintext by Operator Choice')
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
   }
 
@@ -377,6 +382,18 @@ export function AdminDeploymentConfig() {
       setScheduledRetentionError(err instanceof Error ? err.message : 'errors.failedToRunScheduledRetention')
     } finally {
       setScheduledRetentionLoading(false)
+    }
+  }
+
+  const handleArtifactPostureChange = async (posture: 'required' | 'disabled') => {
+    try {
+      setArtifactPostureUpdating(true)
+      setArtifactPostureError(null)
+      await updateArtifactEncryptionPosture(posture)
+    } catch (err) {
+      setArtifactPostureError(err instanceof Error ? err.message : 'errors.failedToUpdateArtifactEncryptionPosture')
+    } finally {
+      setArtifactPostureUpdating(false)
     }
   }
 
@@ -1495,6 +1512,15 @@ export function AdminDeploymentConfig() {
           <p className="text-sm text-text-secondary mb-4">
             {t('adminDeployment.lifecycle.description', 'Current Operator-Controlled Privacy coverage across Instance data.')}
           </p>
+          {lifecycleStatus?.lifecycle_scope && (
+            <div className="mb-4 rounded-lg border border-border bg-surface p-3">
+              <p className="text-xs font-medium text-text">{lifecycleStatus.lifecycle_scope.label}</p>
+              <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.lifecycle_scope.summary}</p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t('adminDeployment.lifecycle.scopeExcludes', 'Excludes: {{excludes}}', { excludes: lifecycleStatus.lifecycle_scope.excludes })}
+              </p>
+            </div>
+          )}
           {lifecycleStatus?.secure_erase && (
             <div className="mb-4 rounded-lg border border-border bg-surface p-3">
               <p className="text-xs font-medium text-text">
@@ -1505,6 +1531,59 @@ export function AdminDeploymentConfig() {
               <p className="mt-1 text-xs text-text-secondary">
                 {lifecycleStatus.secure_erase.summary}
               </p>
+            </div>
+          )}
+          {(lifecycleStatus?.content_encryption || lifecycleStatus?.artifact_encryption || lifecycleStatus?.retention_scheduler) && (
+            <div className="mb-4 grid gap-3 md:grid-cols-3">
+              {lifecycleStatus?.content_encryption && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-text">
+                    {t('adminDeployment.lifecycle.contentEncryptionKey', 'Content Encryption Key: {{status}}', {
+                      status: formatLifecycleStatus(lifecycleStatus.content_encryption.status),
+                    })}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.content_encryption.summary}</p>
+                </div>
+              )}
+              {lifecycleStatus?.artifact_encryption && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-text">
+                    {t('adminDeployment.lifecycle.artifactEncryptionPosture', 'Artifact Encryption Posture: {{status}}', {
+                      status: formatLifecycleStatus(lifecycleStatus.artifact_encryption.status),
+                    })}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.artifact_encryption.summary}</p>
+                  <div className="mt-3 inline-flex rounded-lg border border-border bg-background p-1" role="group" aria-label={t('adminDeployment.lifecycle.artifactPostureLabel', 'Artifact encryption posture')}>
+                    {(['required', 'disabled'] as const).map((posture) => (
+                      <button
+                        key={posture}
+                        type="button"
+                        onClick={() => handleArtifactPostureChange(posture)}
+                        disabled={artifactPostureUpdating || lifecycleStatus.artifact_encryption?.posture === posture}
+                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                          lifecycleStatus.artifact_encryption?.posture === posture
+                            ? 'bg-accent text-white'
+                            : 'text-text-secondary hover:bg-surface-overlay'
+                        } disabled:cursor-not-allowed disabled:opacity-70`}
+                      >
+                        {posture === 'required'
+                          ? t('adminDeployment.lifecycle.artifactPostureRequired', 'Required')
+                          : t('adminDeployment.lifecycle.artifactPostureDisabled', 'Disabled')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {lifecycleStatus?.retention_scheduler && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-text">
+                    {t('adminDeployment.lifecycle.retentionSchedulerStatus', 'Retention Scheduler: {{status}}', {
+                      status: formatLifecycleStatus(lifecycleStatus.retention_scheduler.status),
+                    })}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.retention_scheduler.summary}</p>
+                </div>
+              )}
             </div>
           )}
           <div className="mb-4 flex flex-wrap gap-2">
@@ -1582,6 +1661,9 @@ export function AdminDeploymentConfig() {
                     <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
+                    {dataClass.confidentiality && (
+                      <p>{t('adminDeployment.lifecycle.confidentiality', 'Confidentiality: {{status}}', { status: formatLifecycleStatus(dataClass.confidentiality.status) })}</p>
+                    )}
                     {lifecycleStatus.deletion_tombstones?.by_class?.[dataClass.key] && (
                       <div className="pt-2 mt-1 border-t border-border/60 grid gap-1">
                         <p>{t('adminDeployment.lifecycle.incompleteTombstones', 'Incomplete tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].incomplete })}</p>
@@ -1659,6 +1741,11 @@ export function AdminDeploymentConfig() {
           {scheduledRetentionError && (
             <p className="mt-3 text-xs text-danger">
               {t('adminDeployment.lifecycle.scheduledRetentionFailed', 'Unable to run scheduled retention.')}
+            </p>
+          )}
+          {artifactPostureError && (
+            <p className="mt-3 text-xs text-danger">
+              {t('adminDeployment.lifecycle.artifactPostureFailed', 'Unable to update artifact encryption posture.')}
             </p>
           )}
 
