@@ -14,7 +14,7 @@ import contextvars
 from typing import Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from Crypto.Cipher import AES
 
 # Configure logging
@@ -377,6 +377,37 @@ def init_schema():
             category TEXT NOT NULL,
             description TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS inference_verification_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_identity TEXT NOT NULL,
+            provider_endpoint TEXT NOT NULL,
+            model_identifier TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('success', 'failed')),
+            trigger TEXT NOT NULL,
+            expected_claims_fingerprint TEXT NOT NULL,
+            actual_claims_fingerprint TEXT,
+            verifier_version TEXT NOT NULL,
+            failure_category TEXT,
+            failure_message TEXT,
+            encrypted_attestation_material TEXT,
+            checked_at TIMESTAMP NOT NULL,
+            expires_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_inference_verification_current
+        ON inference_verification_records (
+            provider_identity,
+            provider_endpoint,
+            model_identifier,
+            expected_claims_fingerprint,
+            status,
+            checked_at DESC
         )
     """)
 
@@ -3186,6 +3217,219 @@ def get_deployment_config_value(key: str) -> str | None:
                 return None
 
         return value
+
+
+# --- Inference Verification Record Operations ---
+
+INFERENCE_VERIFICATION_FRESHNESS_HOURS = 24
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _format_inference_time(value: datetime | str | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat()
+
+
+def _parse_inference_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.replace("Z", "+00:00")
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _serialize_attestation_material(attestation_material: object | None) -> str | None:
+    if attestation_material is None:
+        return None
+    if isinstance(attestation_material, str):
+        raw = attestation_material
+    else:
+        raw = json.dumps(attestation_material, sort_keys=True, separators=(",", ":"), default=str)
+    return _encrypt_deployment_secret_value(raw)
+
+
+def _deserialize_attestation_material(encrypted: str | None) -> object | None:
+    if not encrypted:
+        return None
+    raw = _decrypt_deployment_secret_value(encrypted)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+
+
+def _inference_record_from_row(row: sqlite3.Row, *, include_attestation: bool = False) -> dict:
+    record = dict(row)
+    encrypted = record.pop("encrypted_attestation_material", None)
+    if include_attestation:
+        record["attestation_material"] = _deserialize_attestation_material(encrypted)
+    return record
+
+
+def create_inference_verification_record(
+    *,
+    provider_identity: str,
+    provider_endpoint: str,
+    model_identifier: str,
+    status: str,
+    trigger: str,
+    expected_claims_fingerprint: str,
+    actual_claims_fingerprint: str | None,
+    verifier_version: str,
+    attestation_material: object | None = None,
+    failure_category: str | None = None,
+    failure_message: str | None = None,
+    checked_at: datetime | str | None = None,
+    expires_at: datetime | str | None = None,
+) -> dict:
+    """Create a historical Inference Verification Record."""
+    normalized_status = status.strip().lower()
+    if normalized_status not in {"success", "failed"}:
+        raise ValueError("Inference Verification Record status must be success or failed")
+
+    checked = checked_at if checked_at is not None else _utc_now()
+    if expires_at is None and normalized_status == "success":
+        checked_dt = _parse_inference_time(_format_inference_time(checked))
+        expires_at = checked_dt + timedelta(hours=INFERENCE_VERIFICATION_FRESHNESS_HOURS)
+
+    encrypted_attestation = _serialize_attestation_material(attestation_material)
+
+    with get_cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO inference_verification_records (
+                provider_identity,
+                provider_endpoint,
+                model_identifier,
+                status,
+                trigger,
+                expected_claims_fingerprint,
+                actual_claims_fingerprint,
+                verifier_version,
+                failure_category,
+                failure_message,
+                encrypted_attestation_material,
+                checked_at,
+                expires_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            provider_identity,
+            provider_endpoint,
+            model_identifier,
+            normalized_status,
+            trigger,
+            expected_claims_fingerprint,
+            actual_claims_fingerprint,
+            verifier_version,
+            failure_category,
+            failure_message,
+            encrypted_attestation,
+            _format_inference_time(checked),
+            _format_inference_time(expires_at),
+        ))
+        record_id = cursor.lastrowid
+
+    record = get_inference_verification_record(record_id)
+    if record is None:
+        raise RuntimeError("Created Inference Verification Record could not be loaded")
+    return record
+
+
+def get_inference_verification_record(record_id: int) -> dict | None:
+    """Fetch one Inference Verification Record with decrypted full attestation material."""
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM inference_verification_records WHERE id = ?", (record_id,))
+        row = cursor.fetchone()
+        return _inference_record_from_row(row, include_attestation=True) if row else None
+
+
+def list_inference_verification_records(limit: int = 100) -> list[dict]:
+    """List normalized Inference Verification Record metadata without full attestation material."""
+    bounded_limit = max(1, min(int(limit), 500))
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT * FROM inference_verification_records ORDER BY checked_at DESC, id DESC LIMIT ?",
+            (bounded_limit,),
+        )
+        return [_inference_record_from_row(row, include_attestation=False) for row in cursor.fetchall()]
+
+
+def get_current_inference_verification_status(
+    *,
+    provider_identity: str,
+    provider_endpoint: str,
+    model_identifier: str,
+    expected_claims_fingerprint: str,
+    now: datetime | str | None = None,
+) -> dict:
+    """Return the latest fresh successful matching verification record, if any."""
+    now_dt = _parse_inference_time(_format_inference_time(now if now is not None else _utc_now()))
+    now_iso = _format_inference_time(now_dt)
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT *
+            FROM inference_verification_records
+            WHERE provider_identity = ?
+              AND provider_endpoint = ?
+              AND model_identifier = ?
+              AND expected_claims_fingerprint = ?
+              AND status = 'success'
+              AND checked_at <= ?
+              AND (expires_at IS NULL OR expires_at > ?)
+            ORDER BY checked_at DESC, id DESC
+            LIMIT 1
+        """, (
+            provider_identity,
+            provider_endpoint,
+            model_identifier,
+            expected_claims_fingerprint,
+            now_iso,
+            now_iso,
+        ))
+        row = cursor.fetchone()
+
+    if row:
+        return {
+            "status": "current",
+            "checked_at": row["checked_at"],
+            "expires_at": row["expires_at"],
+            "record": _inference_record_from_row(row, include_attestation=False),
+        }
+
+    return {
+        "status": "missing",
+        "checked_at": None,
+        "expires_at": None,
+        "record": None,
+    }
+
+
+def get_current_inference_verification_status_for_config(
+    *,
+    expected_claims_fingerprint: str,
+    now: datetime | str | None = None,
+) -> dict:
+    """Resolve current status for the configured Model Provider identity, endpoint, and model."""
+    provider_identity = get_deployment_config_value("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage")
+    provider_endpoint = get_deployment_config_value("LLM_API_URL") or os.getenv("LLM_API_URL", "")
+    model_identifier = get_deployment_config_value("LLM_MODEL") or os.getenv("LLM_MODEL", "")
+    return get_current_inference_verification_status(
+        provider_identity=provider_identity,
+        provider_endpoint=provider_endpoint,
+        model_identifier=model_identifier,
+        expected_claims_fingerprint=expected_claims_fingerprint,
+        now=now,
+    )
 
 
 # --- Audit Log Operations ---
