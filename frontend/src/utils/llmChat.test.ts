@@ -73,6 +73,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
       new ReadableStream({
         start(controller) {
           controller.enqueue(encoder.encode('event: assistant_message_started\ndata: {"message_id":"msg_1","session_id":"s1"}\n\n'))
+          controller.enqueue(encoder.encode('event: trace_status\ndata: {"message_id":"msg_1","status":"Using Web search"}\n\n'))
           controller.enqueue(encoder.encode('event: answer_delta\ndata: {"message_id":"msg_1","delta":"Hello"}\n\n'))
           controller.enqueue(encoder.encode('event: trace_final\ndata: {"message_id":"msg_1","trace":{"visibility":"minimal","reasoning":{"summary":"Sage answered."},"tools":[],"retrieval":[]}}\n\n'))
           controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"msg_1","session_id":"s1"}\n\n'))
@@ -97,11 +98,13 @@ describe('sendLlmChatWithUnifiedTools', () => {
     }))
     expect(events.map((event) => event.event)).toEqual([
       'assistant_message_started',
+      'trace_status',
       'answer_delta',
       'trace_final',
       'done',
     ])
-    expect(events[1].data).toEqual({ message_id: 'msg_1', delta: 'Hello' })
+    expect(events[1].data).toEqual({ message_id: 'msg_1', status: 'Using Web search' })
+    expect(events[2].data).toEqual({ message_id: 'msg_1', delta: 'Hello' })
   })
 
   it('parses stream events split across chunks with CRLF boundaries', async () => {
@@ -137,6 +140,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
       new ReadableStream({
         start(controller) {
           controller.enqueue(encoder.encode('event: assistant_message_started\ndata: {"message_id":"rag_1","session_id":"s1"}\n\n'))
+          controller.enqueue(encoder.encode('event: trace_status\ndata: {"message_id":"rag_1","status":"Searching documents"}\n\n'))
           controller.enqueue(encoder.encode('event: answer_delta\ndata: {"message_id":"rag_1","delta":"Document answer"}\n\n'))
           controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"rag_1","session_id":"s1","search_term":"housing advocate"}\n\n'))
           controller.close()
@@ -169,6 +173,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
     })
     expect(events).toEqual([
       { event: 'assistant_message_started', data: { message_id: 'rag_1', session_id: 's1' } },
+      { event: 'trace_status', data: { message_id: 'rag_1', status: 'Searching documents' } },
       { event: 'answer_delta', data: { message_id: 'rag_1', delta: 'Document answer' } },
       { event: 'done', data: { message_id: 'rag_1', session_id: 's1', search_term: 'housing advocate' } },
     ])

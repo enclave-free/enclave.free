@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 from typing import Literal, Optional
 
@@ -10,6 +12,8 @@ from pydantic import BaseModel, Field
 import database
 from tools import ToolCallInfo
 
+logger = logging.getLogger("enclave.conversation_trace")
+
 
 TraceVisibility = Literal["off", "minimal", "summary", "detailed"]
 TraceExecution = Literal["client", "server"]
@@ -17,6 +21,16 @@ TraceStatus = Literal["success", "error", "skipped"]
 
 TRACE_VISIBILITIES = {"off", "minimal", "summary", "detailed"}
 USER_TRACE_VISIBILITIES = {"off", "minimal", "summary"}
+FORBIDDEN_TRACE_PATTERNS = (
+    re.compile(r"\bSECRET_KEY\s*=", re.IGNORECASE),
+    re.compile(r"\bLLM_API_KEY\s*=", re.IGNORECASE),
+    re.compile(r"\bTINFOIL_API_KEY\s*=", re.IGNORECASE),
+    re.compile(r"\bapi[_-]?key\s*=", re.IGNORECASE),
+)
+
+
+class TraceRedactionFailure(Exception):
+    """Raised when trace metadata contains content that cannot be safely summarized."""
 
 
 class ReasoningTrace(BaseModel):
@@ -111,15 +125,36 @@ def build_conversation_trace(
     if visibility == "off":
         return None
 
-    tool_traces = [summarize_tool_call(info) for info in tools_used]
-    retrieval_traces = retrieval or []
-    trace = ConversationTrace(
-        visibility=visibility,
-        reasoning=ReasoningTrace(summary=build_reasoning_summary(tools=tool_traces, retrieval=retrieval_traces)),
-        tools=tool_traces,
-        retrieval=retrieval_traces,
-    )
-    return filter_trace_for_visibility(trace, actor_type=actor_type)
+    try:
+        tool_traces = [summarize_tool_call(info) for info in tools_used]
+        retrieval_traces = retrieval or []
+        trace = ConversationTrace(
+            visibility=visibility,
+            reasoning=ReasoningTrace(summary=build_reasoning_summary(tools=tool_traces, retrieval=retrieval_traces)),
+            tools=tool_traces,
+            retrieval=retrieval_traces,
+        )
+        return filter_trace_for_visibility(trace, actor_type=actor_type)
+    except TraceRedactionFailure:
+        _audit_trace_redaction_failure(actor_type=actor_type)
+        return ConversationTrace(
+            visibility=visibility,
+            reasoning=ReasoningTrace(summary="Conversation Trace was suppressed because safe redaction could not be verified."),
+            tools=[],
+            retrieval=[],
+            suppressed=True,
+        )
+
+
+def build_live_trace_status(trace: ConversationTrace | None) -> str | None:
+    if trace is None or trace.visibility == "off" or trace.suppressed:
+        return None
+    if trace.retrieval:
+        return "Searching documents"
+    if trace.tools:
+        names = ", ".join(tool.name for tool in trace.tools)
+        return f"Using {names}"
+    return "Writing answer"
 
 
 def filter_trace_for_visibility(trace: ConversationTrace, *, actor_type: str) -> ConversationTrace:
@@ -164,6 +199,7 @@ def _summarize_query(tool_id: str, query: str | None) -> str | None:
     if not query:
         return None
     compact = " ".join(str(query).split())
+    _ensure_trace_text_is_safe(compact)
     if tool_id == "db-query":
         compact = _redact_sql_literals(compact)
     if len(compact) > 160:
@@ -175,3 +211,26 @@ def _redact_sql_literals(sql: str) -> str:
     redacted = re.sub(r"'[^']*'", "'[redacted]'", sql)
     redacted = re.sub(r'"[^"]*"', '"[redacted]"', redacted)
     return redacted
+
+
+def _ensure_trace_text_is_safe(value: str) -> None:
+    for pattern in FORBIDDEN_TRACE_PATTERNS:
+        if pattern.search(value):
+            raise TraceRedactionFailure("unsafe trace content")
+
+
+def _audit_trace_redaction_failure(*, actor_type: str) -> None:
+    try:
+        database.log_config_audit_event(
+            table_name="conversation_trace",
+            config_key="redaction_failure",
+            old_value=None,
+            new_value=json.dumps({
+                "event": "trace_suppressed",
+                "actor_type": actor_type,
+                "reason": "redaction_failure",
+            }, separators=(",", ":")),
+            changed_by=f"system:conversation-trace:{actor_type}",
+        )
+    except Exception as exc:
+        logger.warning("Failed to audit Conversation Trace redaction failure: %s", exc)

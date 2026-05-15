@@ -146,6 +146,23 @@ class ConversationTraceTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("User Conversation trace visibility", response.json()["detail"])
 
+    def test_trace_visibility_policy_changes_are_audited(self) -> None:
+        self.authenticate_as_admin()
+
+        response = self.client.put(
+            "/admin/ai-config/user_trace_visibility",
+            json={"value": "summary"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        entries = self.database.get_config_audit_log(limit=10, table_name="ai_config")
+        self.assertTrue(any(
+            entry["config_key"] == "user_trace_visibility"
+            and entry["old_value"] == "minimal"
+            and entry["new_value"] == "summary"
+            for entry in entries
+        ))
+
     def test_trace_policy_off_omits_trace_from_future_chat_turns(self) -> None:
         self.authenticate_as_user()
         self.assertTrue(
@@ -188,6 +205,30 @@ class ConversationTraceTest(unittest.TestCase):
         self.assertIn("raw_results_redacted", body["tools"][0]["warnings"])
         serialized = str(body)
         self.assertNotIn("alice@example.com", serialized)
+
+    def test_trace_redaction_failure_suppresses_trace_and_audits_without_secret(self) -> None:
+        from conversation_trace import build_conversation_trace
+        from tools import ToolCallInfo
+
+        trace = build_conversation_trace(
+            actor_type="admin",
+            tools_used=[
+                ToolCallInfo(
+                    tool_id="web-search",
+                    tool_name="Web search",
+                    query="Find docs with SECRET_KEY=super-secret-value",
+                )
+            ],
+        )
+
+        self.assertIsNotNone(trace)
+        self.assertTrue(trace.suppressed)
+        self.assertEqual(trace.tools, [])
+        entries = self.database.get_config_audit_log(limit=10, table_name="conversation_trace")
+        self.assertEqual(entries[0]["config_key"], "redaction_failure")
+        serialized = str(entries)
+        self.assertIn("trace_suppressed", serialized)
+        self.assertNotIn("super-secret-value", serialized)
 
     def test_retrieval_session_history_persists_assistant_trace(self) -> None:
         self.authenticate_as_user()
@@ -238,6 +279,7 @@ class ConversationTraceTest(unittest.TestCase):
             body = "".join(response.iter_text())
 
         self.assertIn("event: assistant_message_started", body)
+        self.assertIn("event: trace_status", body)
         self.assertIn("event: answer_delta", body)
         self.assertIn("event: trace_final", body)
         self.assertIn("event: done", body)
@@ -258,6 +300,7 @@ class ConversationTraceTest(unittest.TestCase):
             body = "".join(response.iter_text())
 
         self.assertIn("event: assistant_message_started", body)
+        self.assertIn("event: trace_status", body)
         self.assertIn("event: answer_delta", body)
         self.assertIn("event: trace_final", body)
         self.assertIn("event: done", body)

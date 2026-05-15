@@ -29,7 +29,7 @@ from typing import Optional, List, Dict
 
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
-from conversation_trace import ConversationTrace, build_conversation_trace
+from conversation_trace import ConversationTrace, build_conversation_trace, build_live_trace_status
 from store import embed_texts
 import database
 from data_deletion import (
@@ -1302,6 +1302,15 @@ async def chat_stream(
                 },
             )
             if response_payload.message:
+                trace_status = build_live_trace_status(response_payload.trace)
+                if trace_status:
+                    yield _sse_event(
+                        "trace_status",
+                        {
+                            "message_id": response_payload.message_id,
+                            "status": trace_status,
+                        },
+                    )
                 yield _sse_event(
                     "answer_delta",
                     {

@@ -415,12 +415,14 @@ export function ChatPage() {
                   timestamp: new Date(),
                   traceStatus: t('chat.trace.writing', 'Writing answer...'),
                 }])
+              } else if (event === 'trace_status' && streamMessageId) {
+                const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
+                updateAssistantMessage(streamMessageId, { traceStatus: status })
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
                 updateAssistantMessage(streamMessageId, {
                   content: streamContent,
-                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
                 })
               } else if (event === 'trace_final' && streamMessageId) {
                 updateAssistantMessage(streamMessageId, {
@@ -484,12 +486,14 @@ export function ChatPage() {
                   timestamp: new Date(),
                   traceStatus: t('chat.trace.writing', 'Writing answer...'),
                 }])
+              } else if (event === 'trace_status' && streamMessageId) {
+                const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
+                updateAssistantMessage(streamMessageId, { traceStatus: status })
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
                 updateAssistantMessage(streamMessageId, {
                   content: streamContent,
-                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
                 })
               } else if (event === 'trace_final' && streamMessageId) {
                 updateAssistantMessage(streamMessageId, {

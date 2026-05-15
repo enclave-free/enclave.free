@@ -28,7 +28,7 @@ import httpx
 
 import auth
 import ingest_db
-from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace
+from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace, build_live_trace_status
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -369,6 +369,15 @@ async def query_stream(
                 },
             )
             if response_payload.answer:
+                trace_status = build_live_trace_status(response_payload.trace)
+                if trace_status:
+                    yield _sse_event(
+                        "trace_status",
+                        {
+                            "message_id": response_payload.message_id,
+                            "status": trace_status,
+                        },
+                    )
                 yield _sse_event(
                     "answer_delta",
                     {

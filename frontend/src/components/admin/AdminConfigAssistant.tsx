@@ -400,6 +400,9 @@ export function AdminConfigAssistant({
                 timestamp: new Date(),
                 traceStatus: t('chat.trace.writing', 'Writing answer...'),
               }])
+            } else if (event === 'trace_status' && streamMessageId) {
+              const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
+              setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, { traceStatus: status }))
             } else if (event === 'answer_delta' && streamMessageId) {
               const delta = typeof data.delta === 'string' ? data.delta : ''
               raw += delta
@@ -408,7 +411,6 @@ export function AdminConfigAssistant({
                 : raw
               setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, {
                 content: display,
-                traceStatus: t('chat.trace.writing', 'Writing answer...'),
               }))
             } else if (event === 'trace_final' && streamMessageId) {
               setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, {
