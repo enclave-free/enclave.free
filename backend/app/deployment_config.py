@@ -15,6 +15,7 @@ import httpx
 
 import auth
 import database
+from inference_verification import TinfoilVerifier, fingerprint_claims, verify_and_store
 from rate_limit import RateLimiter
 from models import (
     DeploymentConfigItem,
@@ -47,6 +48,23 @@ config_export_limiter = RateLimiter(
     limit=_parse_rate_limit(),
     window_seconds=60 * 60,
 )
+
+
+def current_expected_claims() -> dict:
+    """Return the configured expected Verifiable Inference claims for v1."""
+    return {}
+
+
+def current_expected_claims_fingerprint() -> str:
+    return fingerprint_claims(current_expected_claims())
+
+
+def _configured_model_provider() -> dict:
+    return {
+        "provider_identity": database.get_deployment_config_value("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage"),
+        "provider_endpoint": database.get_deployment_config_value("LLM_API_URL") or os.getenv("LLM_API_URL", ""),
+        "model_identifier": database.get_deployment_config_value("LLM_MODEL") or os.getenv("LLM_MODEL", ""),
+    }
 
 
 # Environment variable to config key mapping
@@ -307,6 +325,68 @@ async def get_deployment_config(admin: dict = Depends(auth.require_admin)):
             response.general.append(item)
 
     return response
+
+
+@router.get("/inference-verification/status", response_model=dict)
+async def get_inference_verification_status(admin: dict = Depends(auth.require_admin)):
+    """
+    Get current Verifiable Inference status for the configured Model Provider.
+    Requires admin authentication.
+    """
+    configured = _configured_model_provider()
+    status = database.get_current_inference_verification_status(
+        **configured,
+        expected_claims_fingerprint=current_expected_claims_fingerprint(),
+    )
+    return {
+        **status,
+        "configured_provider": configured,
+        "expected_claims_fingerprint": current_expected_claims_fingerprint(),
+    }
+
+
+@router.get("/inference-verification/records", response_model=dict)
+async def list_inference_verification_records(
+    limit: int = Query(default=100, ge=1, le=500),
+    admin: dict = Depends(auth.require_admin),
+):
+    """
+    List Inference Verification Record metadata without full attestation material.
+    Requires admin authentication.
+    """
+    return {"records": database.list_inference_verification_records(limit=limit)}
+
+
+@router.get("/inference-verification/records/{record_id}", response_model=dict)
+async def get_inference_verification_record(record_id: int, admin: dict = Depends(auth.require_admin)):
+    """
+    Fetch a single Inference Verification Record including full attestation material.
+    Requires admin authentication.
+    """
+    record = database.get_inference_verification_record(record_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Inference Verification Record not found")
+    return record
+
+
+@router.post("/inference-verification/verify", response_model=dict)
+async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
+    """
+    Run manual Verifiable Inference for the configured Model Provider.
+    Requires admin authentication.
+    """
+    configured = _configured_model_provider()
+    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="LLM_API_KEY not configured")
+    return verify_and_store(
+        verifier=TinfoilVerifier(),
+        storage=database,
+        expected_claims=current_expected_claims(),
+        trigger="manual",
+        api_key=api_key,
+        **configured,
+    )
 
 
 @router.get("/config/export", response_class=PlainTextResponse)
