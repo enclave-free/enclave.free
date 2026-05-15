@@ -62,6 +62,7 @@ class InferenceVerificationStorage(Protocol):
 
 
 Fetcher = Callable[[str, dict[str, str], float], tuple[int, object]]
+StatusChangeAuditor = Callable[[dict[str, Any]], None]
 
 
 def fingerprint_claims(claims: object) -> str:
@@ -177,6 +178,7 @@ def verify_and_store(
     expected_claims: dict[str, Any],
     trigger: str = "manual",
     api_key: str | None = None,
+    audit_status_change: StatusChangeAuditor | None = None,
 ) -> dict:
     result = verifier.verify(
         provider_identity=provider_identity,
@@ -186,7 +188,7 @@ def verify_and_store(
         trigger=trigger,
         api_key=api_key,
     )
-    return storage.create_inference_verification_record(
+    record = storage.create_inference_verification_record(
         provider_identity=result.provider_identity,
         provider_endpoint=result.provider_endpoint,
         model_identifier=result.model_identifier,
@@ -201,6 +203,24 @@ def verify_and_store(
         checked_at=result.checked_at,
         expires_at=result.expires_at,
     )
+    if audit_status_change is not None:
+        audit_status_change(inference_verification_status_change_event(record))
+    return record
+
+
+def inference_verification_status_change_event(record: dict[str, Any]) -> dict[str, Any]:
+    """Return audit-safe status-change metadata without full attestation material."""
+    return {
+        "record_id": record.get("id"),
+        "status": record.get("status"),
+        "trigger": record.get("trigger"),
+        "provider_identity": record.get("provider_identity"),
+        "provider_endpoint": record.get("provider_endpoint"),
+        "model_identifier": record.get("model_identifier"),
+        "checked_at": record.get("checked_at"),
+        "expires_at": record.get("expires_at"),
+        "failure_category": record.get("failure_category"),
+    }
 
 
 def _failed_result(

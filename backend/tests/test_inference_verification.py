@@ -144,3 +144,46 @@ class InferenceVerificationTest(unittest.TestCase):
         self.assertEqual(record["id"], 1)
         self.assertEqual(writes[0]["status"], "success")
         self.assertEqual(writes[0]["attestation_material"], {"quote": "full"})
+
+    def test_verify_and_store_can_audit_status_change_without_attestation_material(self) -> None:
+        from inference_verification import InferenceVerificationResult, verify_and_store
+
+        class FakeVerifier:
+            def verify(self, **_kwargs):
+                return InferenceVerificationResult(
+                    provider_identity="sage",
+                    provider_endpoint="https://inference.tinfoil.sh/v1",
+                    model_identifier="kimi-k2-6",
+                    status="failed",
+                    trigger="startup",
+                    expected_claims_fingerprint="expected",
+                    actual_claims_fingerprint="actual",
+                    verifier_version="fake/1",
+                    failure_category="claim_mismatch",
+                    failure_message="PCR mismatch",
+                    attestation_material={"quote": "full-attestation-material"},
+                )
+
+        class FakeStorage:
+            def create_inference_verification_record(self, **kwargs):
+                return {"id": 7, **kwargs}
+
+        audit_events: list[dict] = []
+
+        verify_and_store(
+            verifier=FakeVerifier(),
+            storage=FakeStorage(),
+            provider_identity="sage",
+            provider_endpoint="https://inference.tinfoil.sh/v1",
+            model_identifier="kimi-k2-6",
+            expected_claims={"tee": "tdx"},
+            trigger="startup",
+            audit_status_change=lambda event: audit_events.append(event),
+        )
+
+        self.assertEqual(audit_events[0]["record_id"], 7)
+        self.assertEqual(audit_events[0]["status"], "failed")
+        self.assertEqual(audit_events[0]["trigger"], "startup")
+        self.assertEqual(audit_events[0]["failure_category"], "claim_mismatch")
+        self.assertNotIn("attestation_material", audit_events[0])
+        self.assertNotIn("full-attestation-material", str(audit_events[0]))

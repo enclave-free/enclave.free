@@ -145,10 +145,15 @@ class InferenceVerificationApiTest(unittest.TestCase):
         audit_response = self.client.get("/admin/deployment/audit-log?table_name=inference_verification")
         self.assertEqual(audit_response.status_code, 200)
         audit_entries = audit_response.json()["entries"]
-        self.assertEqual(audit_entries[0]["config_key"], "manual_verification")
-        self.assertEqual(audit_entries[0]["changed_by"], "admin-pubkey")
-        self.assertIn('"status":"success"', audit_entries[0]["new_value"])
-        self.assertNotIn("manual-attestation-material", audit_entries[0]["new_value"])
+        entries_by_key = {entry["config_key"]: entry for entry in audit_entries}
+        self.assertIn("verification_status_changed", entries_by_key)
+        self.assertIn("manual_verification", entries_by_key)
+        self.assertEqual(entries_by_key["manual_verification"]["changed_by"], "admin-pubkey")
+        self.assertEqual(entries_by_key["verification_status_changed"]["changed_by"], "admin-pubkey")
+        self.assertIn('"status":"success"', entries_by_key["verification_status_changed"]["new_value"])
+        self.assertIn('"trigger":"manual"', entries_by_key["verification_status_changed"]["new_value"])
+        self.assertNotIn("manual-attestation-material", entries_by_key["manual_verification"]["new_value"])
+        self.assertNotIn("manual-attestation-material", entries_by_key["verification_status_changed"]["new_value"])
 
     def test_manual_verification_requires_configured_model_provider_api_key(self) -> None:
         self.database.update_deployment_config("LLM_API_KEY", "", changed_by="admin-pubkey")
