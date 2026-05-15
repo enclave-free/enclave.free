@@ -57,19 +57,31 @@ describe('AdminDeploymentConfig', () => {
   let tombstoneRetryShouldFail = false
   let tombstoneFetchShouldFail = false
   let tombstonesFixture: unknown[] | null
+  let acknowledgedSurfaceKeys: string[]
+  let sessionMemoryRetentionPolicy = {
+    enabled: false,
+    retention_window_days: 30,
+    scheduled_enforcement_enabled: false,
+  }
 
   beforeEach(() => {
     tombstoneRetryCompleted = false
     tombstoneRetryShouldFail = false
     tombstoneFetchShouldFail = false
     tombstonesFixture = null
+    acknowledgedSurfaceKeys = []
+    sessionMemoryRetentionPolicy = {
+      enabled: false,
+      retention_window_days: 30,
+      scheduled_enforcement_enabled: false,
+    }
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
       removeItem: vi.fn(),
       setItem: vi.fn(),
     })
 
-    mockAdminFetch.mockImplementation((endpoint: string) => {
+    mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/deployment/config') {
         return Promise.resolve(Response.json({
           llm: [],
@@ -122,9 +134,47 @@ describe('AdminDeploymentConfig', () => {
                 status: 'not_started',
                 summary: 'Session Memory lifecycle actions are not yet represented in the Audit Log.',
               },
+              retention_policy: {
+                lifecycle_data_class: 'sage_session_memory',
+                ...sessionMemoryRetentionPolicy,
+              },
               notes: ['Session Memory belongs to the Agent Runtime.'],
             },
           ],
+          secure_erase: {
+            status: 'unsupported',
+            summary: 'Secure Erase is out of scope for v1; lifecycle controls apply to stated active-storage targets and exclude unsupported Deployment Surfaces.',
+          },
+          unsupported_deployment_surfaces: [
+            {
+              key: 'docker_logs',
+              label: 'Docker Logs',
+              category: 'runtime_logs',
+              summary: 'Container stdout/stderr logs are managed by the deployment runtime, not product lifecycle controls.',
+              status: 'unsupported',
+              acknowledged: acknowledgedSurfaceKeys.includes('docker_logs'),
+            },
+            {
+              key: 'sqlite_wal',
+              label: 'SQLite WAL',
+              category: 'database_wal',
+              summary: 'SQLite write-ahead-log files are database runtime artifacts.',
+              status: 'unsupported',
+              acknowledged: false,
+            },
+          ],
+          scheduled_retention: {
+            enabled_classes: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled ? ['sage_session_memory'] : [],
+          },
+          audit_coverage: {
+            summary: {
+              total: 8,
+              audited: 6,
+              documented_exceptions: 2,
+              missing: 0,
+              guardrail_passed: true,
+            },
+          },
           deletion_tombstones: {
             total: 2,
             incomplete: 1,
@@ -137,6 +187,49 @@ describe('AdminDeploymentConfig', () => {
               },
             },
           },
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/unsupported-deployment-surfaces/docker_logs/acknowledgement') {
+        const body = JSON.parse(String(options?.body ?? '{}'))
+        acknowledgedSurfaceKeys = body.acknowledged === true ? ['docker_logs'] : []
+        return Promise.resolve(Response.json({
+          unsupported_deployment_surfaces: [
+            {
+              key: 'docker_logs',
+              label: 'Docker Logs',
+              category: 'runtime_logs',
+              summary: 'Container stdout/stderr logs are managed by the deployment runtime, not product lifecycle controls.',
+              status: 'unsupported',
+              acknowledged: acknowledgedSurfaceKeys.includes('docker_logs'),
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/retention-policies/sage_session_memory') {
+        sessionMemoryRetentionPolicy = JSON.parse(String(options?.body))
+        return Promise.resolve(Response.json({
+          policy: {
+            lifecycle_data_class: 'sage_session_memory',
+            ...sessionMemoryRetentionPolicy,
+          },
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/retention/preview') {
+        return Promise.resolve(Response.json({
+          status: 'preview',
+          destructive: false,
+          counts: {
+            stale_conversations: 1,
+            document_artifacts: 2,
+            skipped_classes: 0,
+          },
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/retention/scheduled/run') {
+        return Promise.resolve(Response.json({
+          status: 'succeeded',
+          enabled_classes: ['sage_session_memory'],
+          retry_results: [{ tombstone_id: 7, status: 'completed' }],
         }))
       }
       if (endpoint === '/admin/lifecycle/deletion-tombstones/7/retry') {
@@ -242,11 +335,113 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
     expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
     expect(screen.getByText('Deletion: Complete')).toBeInTheDocument()
+    expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
+    expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
     expect(screen.getByText('Incomplete tombstones: 1')).toBeInTheDocument()
     expect(screen.getByText('Completed tombstones: 1')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')
+    })
+  })
+
+  it('shows unsupported deployment surfaces and lets admins acknowledge one', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    expect(within(lifecycleStatus).getByText('Unsupported Deployment Surfaces')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Docker Logs')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('SQLite WAL')).toBeInTheDocument()
+
+    await user.click(within(lifecycleStatus).getAllByRole('button', { name: 'Acknowledge' })[0])
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/lifecycle/unsupported-deployment-surfaces/docker_logs/acknowledgement',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ acknowledged: true }),
+        }),
+      )
+    })
+    expect(await within(lifecycleStatus).findByRole('button', { name: 'Acknowledged' })).toBeInTheDocument()
+  })
+
+  it('lets admins edit retention policy for a lifecycle data class', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    const sessionMemoryCard = within(lifecycleStatus).getByText('Sage Session Memory').closest('.bg-surface')
+    expect(sessionMemoryCard).not.toBeNull()
+    const card = within(sessionMemoryCard as HTMLElement)
+
+    await user.click(card.getByLabelText('Enabled'))
+    await user.clear(card.getByRole('spinbutton', { name: /Window/i }))
+    await user.type(card.getByRole('spinbutton', { name: /Window/i }), '45')
+    await user.click(card.getByLabelText('Scheduled'))
+    await user.click(card.getByRole('button', { name: 'Save Policy' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/lifecycle/retention-policies/sage_session_memory',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            enabled: true,
+            retention_window_days: 45,
+            scheduled_enforcement_enabled: true,
+          }),
+        }),
+      )
+    })
+  })
+
+  it('lets admins preview retention, run scheduled retention, and see audit coverage', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    expect(within(lifecycleStatus).getByText('Audit coverage: 6 audited, 2 exceptions, 0 missing.')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Scheduled classes: none')).toBeInTheDocument()
+
+    await user.click(within(lifecycleStatus).getByRole('button', { name: 'Preview Retention' }))
+    expect(await within(lifecycleStatus).findByText('Preview: 1 conversations, 2 document artifacts, 0 skipped classes.')).toBeInTheDocument()
+
+    await user.click(within(lifecycleStatus).getByRole('button', { name: 'Run Scheduled' }))
+    expect(await within(lifecycleStatus).findByText('Scheduled run: succeeded with 1 tombstone retries.')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/lifecycle/retention/preview',
+        expect.objectContaining({ method: 'POST' }),
+      )
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/lifecycle/retention/scheduled/run',
+        expect.objectContaining({ method: 'POST' }),
+      )
     })
   })
 

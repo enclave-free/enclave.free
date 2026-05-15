@@ -56,6 +56,29 @@ class RetentionExecutionTest(unittest.TestCase):
         self.main = importlib.reload(main)
         self.database.init_schema()
         self.ingest.JOBS = self.ingest._load_jobs_from_db()
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "user_memory": {
+                    "lifecycle_data_class": "user_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+            }, sort_keys=True),
+        )
 
         self.original_scheduler = self.ingest.schedule_document_processing
         self.ingest.schedule_document_processing = lambda *_args, **_kwargs: None
@@ -133,6 +156,29 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         return response.json()["entries"]
 
+    def create_stale_user_memory(self, *, content: str = "Prefers private retention cleanup.") -> int:
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (pubkey, approved) VALUES (?, ?)",
+                ("c" * 64, 1),
+            )
+            user_id = int(cursor.lastrowid)
+        memory_id = self.database.create_user_memory(
+            subject_user_id=user_id,
+            kind="preference",
+            content=content,
+            source_kind="conversation",
+            source_conversation_id="memory-source-conversation",
+            author_actor="sage",
+        )
+        stale = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE user_memories SET created_at = ?, updated_at = ? WHERE id = ?",
+                (stale, stale, memory_id),
+            )
+        return memory_id
+
     def test_retention_deletes_stale_conversations_and_failed_document_artifacts(self) -> None:
         stale_session_id = "stale-session"
         recent_session_id = "recent-session"
@@ -181,6 +227,317 @@ class RetentionExecutionTest(unittest.TestCase):
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
+
+    def test_retention_preview_reports_eligible_counts_without_deleting(self) -> None:
+        stale_session_id = "preview-stale-session"
+        self.query._sessions[stale_session_id] = {
+            "id": stale_session_id,
+            "owner_type": "user",
+            "owner_id": "1",
+            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+            "messages": [],
+        }
+        upload = self.upload_text("Preview.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        artifact_path = self.mark_failed_job_stale(job_id)
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "preview")
+        self.assertFalse(body["destructive"])
+        self.assertEqual(body["counts"]["stale_conversations"], 1)
+        self.assertEqual(body["counts"]["document_artifacts"], 1)
+        self.assertIn(stale_session_id, self.query._sessions)
+        self.assertTrue(artifact_path.exists())
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
+
+    def test_retention_preview_reports_stale_user_memory_without_exposing_content(self) -> None:
+        memory_id = self.create_stale_user_memory(content="Raw memory content must not appear in preview.")
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "preview")
+        self.assertEqual(body["counts"]["user_memories"], 1)
+        self.assertEqual(body["eligible"]["user_memories"], [memory_id])
+        self.assertEqual(self.database.get_user_memory(memory_id)["status"], "active")
+        self.assertNotIn("Raw memory content", json.dumps(body))
+
+    def test_retention_run_soft_deletes_stale_user_memory_with_sanitized_audit(self) -> None:
+        memory_id = self.create_stale_user_memory(content="Raw memory content must not appear in audit.")
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(memory_id, body["retained"]["user_memories"])
+        memory = self.database.get_user_memory(memory_id)
+        self.assertEqual(memory["status"], "deleted")
+        self.assertEqual(memory["deleted_by_actor"], "retention:admin-pubkey")
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["retention_delete_user_memory"]["status"], "succeeded")
+        self.assertNotIn("Raw memory content", json.dumps(body))
+
+        entries = self.audit_entries("data_deletion")
+        retention_event = json.loads(entries[0]["new_value"])
+        self.assertEqual(retention_event["workflow"], "run_retention")
+        self.assertNotIn("Raw memory content", json.dumps(retention_event))
+
+    def test_audit_log_retention_compacts_sensitive_detail_without_full_deletion(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "audit_log": {
+                    "lifecycle_data_class": "audit_log",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+            }, sort_keys=True),
+        )
+        self.database.log_config_audit_event(
+            table_name="deployment_config",
+            config_key="LLM_API_KEY",
+            old_value="old-secret-value",
+            new_value='{"value": "new-secret-value"}',
+            changed_by="admin-pubkey",
+        )
+        self.database.log_config_audit_event(
+            table_name="data_deletion",
+            config_key="retention:evidence",
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": "run_retention",
+                "status": "succeeded",
+                "results": [{"action": "retention_delete_user_memory", "target_id": "12"}],
+            }),
+            changed_by="admin-pubkey",
+        )
+        stale = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE config_audit_log SET changed_at = ? WHERE table_name IN (?, ?)",
+                (stale, "deployment_config", "data_deletion"),
+            )
+
+        preview = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.json()["counts"]["audit_log_entries"], 1)
+        self.assertEqual(len(preview.json()["eligible"]["audit_log_entries"]), 1)
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["retention_compact_audit_log"]["status"], "succeeded")
+        self.assertEqual(actions["retention_compact_audit_log"]["target_id"], "1")
+
+        deployment_entries = self.audit_entries("deployment_config")
+        compacted = deployment_entries[0]
+        self.assertIn("redacted_by_audit_log_retention", compacted["old_value"])
+        self.assertIn("redacted_by_audit_log_retention", compacted["new_value"])
+        self.assertNotIn("old-secret-value", json.dumps(deployment_entries))
+        self.assertNotIn("new-secret-value", json.dumps(deployment_entries))
+
+        lifecycle_entries = self.audit_entries("data_deletion")
+        self.assertIn("retention_delete_user_memory", json.dumps(lifecycle_entries))
+        verify = self.client.get("/admin/deployment/audit-log/verify")
+        self.assertEqual(verify.status_code, 200)
+        self.assertTrue(verify.json()["valid"])
+
+        full_delete = self.client.delete("/admin/deployment/audit-log")
+        self.assertEqual(full_delete.status_code, 405)
+
+    def test_scheduled_retention_reports_incomplete_when_retry_remains_incomplete(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="still-incomplete-session",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+
+        async def fail_session_memory_delete(_session: dict) -> dict:
+            return {
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": "still-incomplete-session",
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "target_unavailable",
+                    }
+                ],
+            }
+
+        self.lifecycle.delete_session_memory_for_conversation = fail_session_memory_delete
+
+        response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "incomplete")
+        self.assertEqual(body["retry_results"][0]["status"], "incomplete")
+
+    def test_disabled_retention_policy_skips_execution_without_deleting_candidates(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "user_memory": {
+                    "lifecycle_data_class": "user_memory",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+            }, sort_keys=True),
+        )
+        stale_session_id = "disabled-policy-stale-session"
+        self.query._sessions[stale_session_id] = {
+            "id": stale_session_id,
+            "owner_type": "user",
+            "owner_id": "1",
+            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+            "messages": [],
+        }
+        upload = self.upload_text("DisabledPolicy.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        artifact_path = self.mark_failed_job_stale(job_id)
+        memory_id = self.create_stale_user_memory()
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(stale_session_id, self.query._sessions)
+        self.assertTrue(artifact_path.exists())
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
+        actions = {result["target_id"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["sage_session_memory"]["action"], "retention_skip_disabled_policy")
+        self.assertEqual(actions["uploaded_document_artifacts"]["action"], "retention_skip_disabled_policy")
+        self.assertEqual(actions["user_memory"]["action"], "retention_skip_disabled_policy")
+        self.assertEqual(self.database.get_user_memory(memory_id)["status"], "active")
+
+    def test_scheduled_retention_requires_opt_in_and_retries_incomplete_tombstones(self) -> None:
+        skipped = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+        self.assertEqual(skipped.status_code, 200)
+        self.assertEqual(skipped.json()["status"], "skipped")
+        self.assertEqual(skipped.json()["enabled_classes"], [])
+
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        tombstone_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="scheduled-retry-session",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+        self.lifecycle.delete_session_memory_for_conversation = lambda _session: self._successful_session_memory_delete()
+
+        response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("sage_session_memory", body["enabled_classes"])
+        self.assertEqual(body["retry_results"][0]["tombstone_id"], tombstone_id)
+        self.assertEqual(body["retry_results"][0]["status"], "completed")
+
+    async def _successful_session_memory_delete(self) -> dict:
+        return {
+            "status": "succeeded",
+            "retryable": False,
+            "counts": {"succeeded": 1, "skipped": 0, "failed": 0},
+            "results": [
+                {
+                    "target_kind": "session_memory",
+                    "target_id": "scheduled-retry-session",
+                    "action": "delete_session_memory",
+                    "status": "succeeded",
+                    "retryable": False,
+                    "detail": "Deleted Session Memory.",
+                }
+            ],
+        }
 
     def test_retention_creates_metadata_only_tombstone_when_session_memory_deletion_fails(self) -> None:
         stale_session_id = "stale-session"
@@ -725,6 +1082,101 @@ class RetentionExecutionTest(unittest.TestCase):
         )
 
         self.assertIn(response.status_code, (401, 403))
+
+    def test_end_to_end_lifecycle_completion_smoke(self) -> None:
+        registry = self.client.get("/admin/lifecycle/status")
+        self.assertEqual(registry.status_code, 200)
+        registry_body = registry.json()
+        self.assertEqual(registry_body["secure_erase"]["status"], "unsupported")
+        self.assertTrue(registry_body["unsupported_deployment_surfaces"])
+        self.assertIn(
+            "user_memory",
+            {data_class["key"] for data_class in registry_body["data_classes"]},
+        )
+
+        for data_class_key in ("user_memory", "audit_log", "sage_session_memory"):
+            policy = self.client.put(
+                f"/admin/lifecycle/retention-policies/{data_class_key}",
+                json={
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": data_class_key == "sage_session_memory",
+                },
+            )
+            self.assertEqual(policy.status_code, 200)
+            self.assertTrue(policy.json()["policy"]["enabled"])
+
+        memory_id = self.create_stale_user_memory(content="Smoke memory content must stay private.")
+        preview = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.json()["counts"]["user_memories"], 1)
+        self.assertNotIn("Smoke memory content", json.dumps(preview.json()))
+
+        run = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+        self.assertEqual(run.status_code, 200)
+        self.assertIn(memory_id, run.json()["retained"]["user_memories"])
+        self.assertEqual(self.database.get_user_memory(memory_id)["status"], "deleted")
+
+        tombstone_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="smoke-retry-session",
+            former_subject_ref="deleted_user:99",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": "smoke-retry-session",
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "target_unavailable",
+                    }
+                ],
+            },
+        )
+        self.lifecycle.delete_session_memory_for_conversation = lambda _session: self._successful_session_memory_delete()
+        scheduled = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+        self.assertEqual(scheduled.status_code, 200)
+        scheduled_body = scheduled.json()
+        self.assertIn("sage_session_memory", scheduled_body["enabled_classes"])
+        self.assertEqual(scheduled_body["retry_results"][0]["tombstone_id"], tombstone_id)
+        self.assertEqual(scheduled_body["retry_results"][0]["status"], "completed")
+
+        tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
+        self.assertEqual(tombstones.status_code, 200)
+        serialized_tombstones = json.dumps(tombstones.json())
+        self.assertIn("smoke-retry-session", serialized_tombstones)
+        self.assertNotIn("Smoke memory content", serialized_tombstones)
+
+        audit_entries = self.audit_entries("data_deletion")
+        audit_payload = json.dumps(audit_entries)
+        self.assertIn("run_retention", audit_payload)
+        self.assertIn("retry_deletion_tombstone", audit_payload)
+        self.assertNotIn("Smoke memory content", audit_payload)
+        verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
+        self.assertEqual(verify.status_code, 200)
+        self.assertTrue(verify.json()["valid"])
+
+        def deny_admin():
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        self.main.app.dependency_overrides[self.lifecycle.auth.require_admin] = deny_admin
+        self.main.app.dependency_overrides[self.deployment_config.auth.require_admin] = deny_admin
+        self.assertEqual(self.client.get("/admin/lifecycle/status").status_code, 403)
+        self.assertEqual(self.client.get("/admin/lifecycle/deletion-tombstones").status_code, 403)
+        self.assertEqual(self.client.get("/admin/deployment/audit-log?table_name=data_deletion").status_code, 403)
 
 
 if __name__ == "__main__":

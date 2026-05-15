@@ -23,6 +23,7 @@ import type {
   DeletionTombstone,
   DeletionTombstonesResponse,
   DeletionTombstoneStatusFilter,
+  RetentionPolicy,
   ConfigAuditLogResponse,
   MigrationPrepareResponse,
   MigrationExecuteResponse,
@@ -472,11 +473,77 @@ export function useLifecycleStatus() {
     fetchStatus()
   }, [fetchStatus])
 
+  const acknowledgeUnsupportedSurface = useCallback(async (key: string, acknowledged: boolean) => {
+    const response = await adminFetch(`/admin/lifecycle/unsupported-deployment-surfaces/${key}/acknowledgement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acknowledged }),
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToAcknowledgeUnsupportedSurface')
+    }
+    await fetchStatus()
+  }, [fetchStatus])
+
+  const updateRetentionPolicy = useCallback(async (
+    key: string,
+    policy: Pick<RetentionPolicy, 'enabled' | 'retention_window_days' | 'scheduled_enforcement_enabled'>,
+  ) => {
+    const response = await adminFetch(`/admin/lifecycle/retention-policies/${key}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(policy),
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToUpdateRetentionPolicy')
+    }
+    await fetchStatus()
+  }, [fetchStatus])
+
+  const previewRetention = useCallback(async () => {
+    const policyByClass = (status?.data_classes ?? []).reduce<Record<string, RetentionPolicy>>((policies, dataClass) => {
+      if (dataClass.retention_policy) {
+        policies[dataClass.key] = dataClass.retention_policy
+      }
+      return policies
+    }, {})
+    const response = await adminFetch('/admin/lifecycle/retention/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stale_conversation_days: policyByClass.sage_session_memory?.retention_window_days ?? 30,
+        document_artifact_days: policyByClass.uploaded_document_artifacts?.retention_window_days ?? 0,
+      }),
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToPreviewRetention')
+    }
+    return response.json()
+  }, [status])
+
+  const runScheduledRetention = useCallback(async () => {
+    const response = await adminFetch('/admin/lifecycle/retention/scheduled/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retry_limit: 3 }),
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToRunScheduledRetention')
+    }
+    const body = await response.json()
+    await fetchStatus()
+    return body
+  }, [fetchStatus])
+
   return {
     status,
     loading,
     error,
     refresh: fetchStatus,
+    acknowledgeUnsupportedSurface,
+    updateRetentionPolicy,
+    previewRetention,
+    runScheduledRetention,
   }
 }
 

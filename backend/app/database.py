@@ -1318,6 +1318,30 @@ def update_setting(key: str, value: str):
         """, (key, value))
 
 
+def update_setting_with_audit(key: str, value: str, *, changed_by: str) -> None:
+    """Update an Instance setting and append a tamper-evident audit entry."""
+    with get_write_cursor() as cursor:
+        cursor.execute("SELECT value FROM instance_settings WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        old_value = row["value"] if row else None
+        cursor.execute("""
+            INSERT INTO instance_settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+        """, (key, value))
+        if old_value != value:
+            _insert_config_audit_log(
+                cursor,
+                table_name="instance_settings",
+                config_key=key,
+                old_value=old_value,
+                new_value=value,
+                changed_by=changed_by,
+            )
+
+
 def update_settings(settings: dict[str, object]) -> None:
     """Update multiple settings at once"""
     def _coerce_setting_value(value: object) -> str:
@@ -3167,6 +3191,108 @@ def get_config_audit_log(limit: int = 100, table_name: str | None = None) -> lis
                 ORDER BY changed_at DESC LIMIT ?
             """, (limit,))
         return [dict(row) for row in cursor.fetchall()]
+
+
+def list_config_audit_log_compaction_candidates(cutoff_iso: str, limit: int = 1000) -> list[int]:
+    """Return old non-lifecycle audit entries whose detail can be compacted."""
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id
+            FROM config_audit_log
+            WHERE datetime(changed_at) <= datetime(?)
+              AND table_name != 'data_deletion'
+              AND (
+                old_value IS NOT NULL
+                OR new_value IS NOT NULL
+              )
+              AND COALESCE(old_value, '') NOT LIKE '%redacted_by_audit_log_retention%'
+              AND COALESCE(new_value, '') NOT LIKE '%redacted_by_audit_log_retention%'
+            ORDER BY id
+            LIMIT ?
+            """,
+            (cutoff_iso, limit),
+        )
+        return [int(row["id"]) for row in cursor.fetchall()]
+
+
+def compact_config_audit_log_before(cutoff_iso: str, *, changed_by: str) -> dict:
+    """Redact old non-lifecycle audit detail while preserving the hash chain."""
+    redacted_value = json.dumps({
+        "redacted_by_audit_log_retention": True,
+        "detail": "Original audit value compacted by evidence-preserving Audit Log Retention.",
+    }, sort_keys=True)
+    compacted_ids: list[int] = []
+    with get_write_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id
+            FROM config_audit_log
+            WHERE datetime(changed_at) <= datetime(?)
+              AND table_name != 'data_deletion'
+              AND (
+                old_value IS NOT NULL
+                OR new_value IS NOT NULL
+              )
+              AND COALESCE(old_value, '') NOT LIKE '%redacted_by_audit_log_retention%'
+              AND COALESCE(new_value, '') NOT LIKE '%redacted_by_audit_log_retention%'
+            ORDER BY id
+            LIMIT 1000
+            """,
+            (cutoff_iso,),
+        )
+        compacted_ids = [int(row["id"]) for row in cursor.fetchall()]
+        if compacted_ids:
+            placeholders = ",".join("?" for _ in compacted_ids)
+            cursor.execute(
+                f"""
+                UPDATE config_audit_log
+                SET old_value = CASE WHEN old_value IS NULL THEN NULL ELSE ? END,
+                    new_value = CASE WHEN new_value IS NULL THEN NULL ELSE ? END
+                WHERE id IN ({placeholders})
+                """,
+                (redacted_value, redacted_value, *compacted_ids),
+            )
+
+        cursor.execute(
+            """
+            SELECT id, table_name, config_key, old_value, new_value, changed_by, changed_at
+            FROM config_audit_log
+            ORDER BY id
+            """
+        )
+        rows = cursor.fetchall()
+        prev_hash = ""
+        for row in rows:
+            payload = _audit_hash_payload(
+                prev_hash=prev_hash,
+                table_name=row["table_name"],
+                config_key=row["config_key"],
+                old_value=row["old_value"],
+                new_value=row["new_value"],
+                changed_by=row["changed_by"],
+                changed_at=row["changed_at"] or "",
+            )
+            entry_hash = _compute_audit_entry_hash(payload)
+            cursor.execute(
+                "UPDATE config_audit_log SET prev_hash = ?, entry_hash = ? WHERE id = ?",
+                (prev_hash, entry_hash, row["id"]),
+            )
+            prev_hash = entry_hash
+
+        _insert_config_audit_log(
+            cursor,
+            table_name="data_deletion",
+            config_key=f"audit_log_retention:{datetime.utcnow().isoformat()}",
+            old_value=None,
+            new_value=json.dumps({
+                "workflow": "audit_log_retention",
+                "status": "succeeded",
+                "compacted_entries": len(compacted_ids),
+            }, sort_keys=True),
+            changed_by=changed_by,
+        )
+    return {"compacted_entries": len(compacted_ids), "compacted_ids": compacted_ids}
 
 
 def verify_config_audit_log_chain(table_name: str | None = None) -> dict:

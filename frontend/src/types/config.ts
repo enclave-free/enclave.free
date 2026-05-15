@@ -189,7 +189,7 @@ export interface DeploymentValidationResponse {
 
 // --- Data Lifecycle Types ---
 
-export type LifecycleStatusValue = 'complete' | 'partial' | 'not_started'
+export type LifecycleStatusValue = 'complete' | 'partial' | 'not_started' | 'unsupported'
 
 export interface LifecyclePosture {
   status: LifecycleStatusValue
@@ -204,11 +204,42 @@ export interface LifecycleDataClass {
   deletion: LifecyclePosture
   retention: LifecyclePosture
   audit: LifecyclePosture
+  retention_policy?: RetentionPolicy
   notes: string[]
+}
+
+export interface RetentionPolicy {
+  lifecycle_data_class: string
+  enabled: boolean
+  retention_window_days: number
+  scheduled_enforcement_enabled: boolean
+}
+
+export interface UnsupportedDeploymentSurface {
+  key: string
+  label: string
+  category: string
+  summary: string
+  status: 'unsupported'
+  acknowledged: boolean
 }
 
 export interface LifecycleStatusResponse {
   data_classes: LifecycleDataClass[]
+  secure_erase?: LifecyclePosture
+  unsupported_deployment_surfaces?: UnsupportedDeploymentSurface[]
+  scheduled_retention?: {
+    enabled_classes: string[]
+  }
+  audit_coverage?: {
+    summary: {
+      total: number
+      audited: number
+      documented_exceptions: number
+      missing: number
+      guardrail_passed: boolean
+    }
+  }
   deletion_tombstones?: {
     total: number
     incomplete: number
