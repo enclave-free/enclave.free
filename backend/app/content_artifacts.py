@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import hmac
 import os
 from pathlib import Path
 import tempfile
@@ -19,7 +20,7 @@ CONTENT_ENCRYPTION_KEY = "CONTENT_ENCRYPTION_KEY"
 
 
 def artifact_encryption_posture() -> str:
-    value = (
+    value = str(
         database.get_deployment_config_value(ARTIFACT_ENCRYPTION_KEY)
         or database.get_setting(ARTIFACT_ENCRYPTION_KEY)
         or os.getenv(ARTIFACT_ENCRYPTION_KEY, "required")
@@ -77,6 +78,26 @@ def _key_bytes() -> bytes:
     key = _content_encryption_key_value()
     if not key:
         raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
+    return _derive_artifact_key(key)
+
+
+def _derive_artifact_key(key: str) -> bytes:
+    pseudo_random_key = hmac.new(
+        b"sanctum/artifact/v1",
+        key.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    return hmac.new(
+        pseudo_random_key,
+        b"sanctum/artifact/v1" + b"\x01",
+        hashlib.sha256,
+    ).digest()
+
+
+def _legacy_key_bytes() -> bytes:
+    key = _content_encryption_key_value()
+    if not key:
+        raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
     return hashlib.sha256(key.encode("utf-8")).digest()
 
 
@@ -93,14 +114,24 @@ def is_encrypted_artifact(content: bytes) -> bool:
 
 
 def decrypt_bytes(content: bytes) -> bytes:
+    """Decrypt ARTIFACT_PREFIX-prefixed content, returning unprefixed input unchanged.
+
+    decrypt_bytes only verifies AES-GCM integrity when ARTIFACT_PREFIX is present.
+    Callers that need to know whether plaintext was verified should check
+    is_encrypted_artifact before treating the output as authenticated plaintext.
+    """
     if not is_encrypted_artifact(content):
         return content
     raw = base64.b64decode(content[len(ARTIFACT_PREFIX):])
     nonce = raw[:12]
     tag = raw[12:28]
     ciphertext = raw[28:]
-    cipher = AES.new(_key_bytes(), AES.MODE_GCM, nonce=nonce)
-    return cipher.decrypt_and_verify(ciphertext, tag)
+    try:
+        cipher = AES.new(_key_bytes(), AES.MODE_GCM, nonce=nonce)
+        return cipher.decrypt_and_verify(ciphertext, tag)
+    except ValueError:
+        cipher = AES.new(_legacy_key_bytes(), AES.MODE_GCM, nonce=nonce)
+        return cipher.decrypt_and_verify(ciphertext, tag)
 
 
 def encode_for_storage(content: bytes) -> bytes:
@@ -114,7 +145,7 @@ def read_artifact_bytes(path: Path) -> bytes:
 
 
 @contextmanager
-def processing_path(path: Path) -> Iterator[Path]:
+def processing_path(path: Path, temp_dir: Path | str | None = None) -> Iterator[Path]:
     content = path.read_bytes()
     if not is_encrypted_artifact(content):
         yield path
@@ -123,7 +154,7 @@ def processing_path(path: Path) -> Iterator[Path]:
     suffix = path.suffix
     temp_path: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=temp_dir) as temp:
             temp.write(decrypt_bytes(content))
             temp_path = Path(temp.name)
         yield temp_path

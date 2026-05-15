@@ -400,6 +400,7 @@ describe('AdminDeploymentConfig', () => {
     )
 
     const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    const lifecycleStatusCallsBeforeToggle = mockAdminFetch.mock.calls.filter(([endpoint]) => endpoint === '/admin/lifecycle/status').length
     await user.click(within(lifecycleStatus).getByRole('button', { name: 'Disabled' }))
 
     await waitFor(() => {
@@ -410,6 +411,10 @@ describe('AdminDeploymentConfig', () => {
           body: JSON.stringify({ posture: 'disabled' }),
         }),
       )
+    })
+    await waitFor(() => {
+      const lifecycleStatusCalls = mockAdminFetch.mock.calls.filter(([endpoint]) => endpoint === '/admin/lifecycle/status')
+      expect(lifecycleStatusCalls.length).toBeGreaterThan(lifecycleStatusCallsBeforeToggle)
     })
     expect(await within(lifecycleStatus).findByText('Artifact Encryption Posture: Plaintext by Operator Choice')).toBeInTheDocument()
   })

@@ -544,8 +544,10 @@ def _process_search_results(search_results: list) -> tuple[list, set, list]:
             source["hydrated"] = hydrated_text is not None
             source["hydration_status"] = hydration_status
             if hydrated_text is not None:
+                source["text"] = hydrated_text
                 chunk_texts.append(hydrated_text)
-            elif payload.get("text"):
+            elif payload.get("text") and hydration_status != "missing_payload_job_id":
+                source["text"] = payload["text"]
                 source["hydration_status"] = "legacy_payload"
                 chunk_texts.append(payload["text"])
         elif payload_text:
@@ -571,6 +573,11 @@ def _hydrate_chunk_text(payload: dict) -> tuple[str | None, str]:
     if not chunk_id:
         return None, "missing_chunk_id"
 
+    payload_job_id = payload.get("job_id")
+    if not payload_job_id:
+        logger.warning("Retrieval chunk hydration skipped for %s: missing payload job_id", chunk_id)
+        return None, "missing_payload_job_id"
+
     try:
         chunk = ingest_db.get_retrieval_chunk(chunk_id)
     except Exception as exc:
@@ -579,9 +586,15 @@ def _hydrate_chunk_text(payload: dict) -> tuple[str | None, str]:
 
     if chunk is None:
         return None, "missing"
+    if chunk.get("text") is None and chunk.get("decryption_error"):
+        logger.warning(
+            "Retrieval chunk hydration failed for %s: %s",
+            chunk_id,
+            chunk.get("decryption_error"),
+        )
+        return None, "decryption_error"
 
-    payload_job_id = payload.get("job_id")
-    if payload_job_id and chunk.get("job_id") != payload_job_id:
+    if chunk.get("job_id") != payload_job_id:
         logger.warning(
             "Retrieval chunk hydration skipped for %s: payload job_id %s does not match stored job_id %s",
             chunk_id,

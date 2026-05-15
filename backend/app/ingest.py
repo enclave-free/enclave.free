@@ -669,7 +669,18 @@ async def queue_document_ingestion(
         storage_content = content_artifacts.encode_for_storage(content)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    await asyncio.to_thread(file_path.write_bytes, storage_content)
+    try:
+        await asyncio.to_thread(file_path.write_bytes, storage_content)
+    except OSError as exc:
+        logger.exception("Failed to write uploaded artifact for %s to %s", job_id, file_path)
+        _audit_document_action(
+            config_key=f"document:{job_id}:write_artifact",
+            action="write_artifact_failed",
+            changed_by=changed_by,
+            old_value=None,
+            new_value={"filename": canonical_name, "error": str(exc)},
+        )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     now = datetime.utcnow().isoformat()
     JOBS[job_id] = {
@@ -791,12 +802,14 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
 
-        with content_artifacts.processing_path(file_path) as processing_file_path:
+        with content_artifacts.processing_path(file_path, temp_dir=UPLOADS_DIR) as processing_file_path:
             # Get file extension
             suffix = processing_file_path.suffix.lower()
             logger.debug(f"[{job_id}] File type: {suffix}")
 
             # Extract text based on file type
+            # read_text/extract_pdf_text return a self-contained str; chunking happens after
+            # content_artifacts.processing_path removes any temporary decrypted file.
             if suffix == ".pdf":
                 logger.info(f"[{job_id}] Extracting text from PDF...")
                 text = await asyncio.to_thread(extract_pdf_text, processing_file_path)
@@ -855,17 +868,18 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
             async with semaphore:
                 chunk = CHUNKS[chunk_id]
                 try:
+                    result = await store_chunk(
+                        chunk_id=chunk_id,
+                        chunk_text_content=chunk["text"],
+                        source_file=chunk["source_file"],
+                    )
+                    # Store encrypted chunk text only after Qdrant accepts the point to avoid orphan rows.
                     ingest_db.upsert_retrieval_chunk(
                         chunk_id=chunk_id,
                         job_id=chunk["job_id"],
                         chunk_index=chunk["index"],
                         source_file=chunk["source_file"],
                         text=chunk["text"],
-                    )
-                    result = await store_chunk(
-                        chunk_id=chunk_id,
-                        chunk_text_content=chunk["text"],
-                        source_file=chunk["source_file"],
                     )
                     chunk["status"] = "stored"
                     chunk["store_result"] = result

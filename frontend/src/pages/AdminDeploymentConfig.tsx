@@ -1559,7 +1559,8 @@ export function AdminDeploymentConfig() {
                         key={posture}
                         type="button"
                         onClick={() => handleArtifactPostureChange(posture)}
-                        disabled={artifactPostureUpdating || lifecycleStatus.artifact_encryption?.posture === posture}
+                        disabled={artifactPostureUpdating}
+                        aria-pressed={lifecycleStatus.artifact_encryption?.posture === posture}
                         className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                           lifecycleStatus.artifact_encryption?.posture === posture
                             ? 'bg-accent text-white'

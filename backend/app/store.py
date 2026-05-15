@@ -28,6 +28,7 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
 # Collection name for knowledge base
 COLLECTION_NAME = "sanctum_knowledge"
+_LEGACY_PLAINTEXT_KEYS = {"text", "fact_text"}
 
 # Lazy-loaded resources
 _qdrant_client = None
@@ -44,14 +45,31 @@ def get_qdrant_client():
 
 def detect_legacy_plaintext_payloads(limit: int = 500) -> dict[str, Any]:
     """Best-effort scan for legacy Qdrant payloads that still contain raw text."""
+    legacy_count = 0
+    affected = []
     try:
         client = get_qdrant_client()
-        points, _next_page = client.scroll(
-            collection_name=COLLECTION_NAME,
-            limit=limit,
-            with_payload=True,
-            with_vectors=False,
-        )
+        next_offset = None
+        while True:
+            points, next_offset = client.scroll(
+                collection_name=COLLECTION_NAME,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False,
+                offset=next_offset,
+            )
+            for point in points:
+                payload = getattr(point, "payload", None) or {}
+                if any(payload.get(key) for key in _LEGACY_PLAINTEXT_KEYS):
+                    legacy_count += 1
+                    affected.append({
+                        "point_id": str(getattr(point, "id", "")),
+                        "chunk_id": payload.get("chunk_id"),
+                        "job_id": payload.get("job_id"),
+                        "source_file": payload.get("source_file"),
+                    })
+            if next_offset is None:
+                break
     except Exception as exc:
         logger.warning("Could not inspect Qdrant payload confidentiality: %s", exc)
         return {
@@ -59,19 +77,6 @@ def detect_legacy_plaintext_payloads(limit: int = 500) -> dict[str, Any]:
             "legacy_plaintext_payloads": None,
             "summary": "Qdrant payload confidentiality could not be inspected from this process.",
         }
-
-    legacy_count = 0
-    affected = []
-    for point in points:
-        payload = getattr(point, "payload", None) or {}
-        if payload.get("text") or payload.get("fact_text"):
-            legacy_count += 1
-            affected.append({
-                "point_id": str(getattr(point, "id", "")),
-                "chunk_id": payload.get("chunk_id"),
-                "job_id": payload.get("job_id"),
-                "source_file": payload.get("source_file"),
-            })
 
     return {
         "checked": True,
@@ -88,26 +93,31 @@ def detect_legacy_plaintext_payloads(limit: int = 500) -> dict[str, Any]:
 def list_legacy_plaintext_payloads(limit: int = 500) -> list[dict[str, Any]]:
     """Return legacy Qdrant payloads with recoverable text for confidentiality migration."""
     client = get_qdrant_client()
-    points, _next_page = client.scroll(
-        collection_name=COLLECTION_NAME,
-        limit=limit,
-        with_payload=True,
-        with_vectors=False,
-    )
     legacy_points = []
-    for point in points:
-        payload = getattr(point, "payload", None) or {}
-        text = payload.get("text") or payload.get("fact_text")
-        if not text:
-            continue
-        legacy_points.append({
-            "point_id": getattr(point, "id", None),
-            "chunk_id": payload.get("chunk_id"),
-            "job_id": payload.get("job_id"),
-            "source_file": payload.get("source_file"),
-            "text": text,
-            "payload": payload,
-        })
+    next_offset = None
+    while True:
+        points, next_offset = client.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+            offset=next_offset,
+        )
+        for point in points:
+            payload = getattr(point, "payload", None) or {}
+            text = payload.get("text") or payload.get("fact_text")
+            if not text:
+                continue
+            legacy_points.append({
+                "point_id": getattr(point, "id", None),
+                "chunk_id": payload.get("chunk_id"),
+                "job_id": payload.get("job_id"),
+                "source_file": payload.get("source_file"),
+                "text": text,
+                "payload": payload,
+            })
+        if next_offset is None:
+            break
     return legacy_points
 
 
@@ -116,7 +126,7 @@ def rewrite_payload_without_plaintext(point_id: Any, payload: dict[str, Any]) ->
     minimized_payload = {
         key: value
         for key, value in payload.items()
-        if key not in {"text", "fact_text"}
+        if key not in _LEGACY_PLAINTEXT_KEYS
     }
     get_qdrant_client().overwrite_payload(
         collection_name=COLLECTION_NAME,
@@ -173,6 +183,7 @@ def _store_chunk_sync(
     chunk_id: str,
     source_text: str,
     source_file: str,
+    source_label: str | None = None,
 ) -> dict[str, Any]:
     logger.info(f"[{chunk_id}] Storing chunk to Qdrant...")
     qdrant_result = {"points_inserted": 0}
@@ -191,17 +202,20 @@ def _store_chunk_sync(
     chunk_point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"chunk:{chunk_id}"))
     # Extract job_id from chunk_id (format: {job_id}_chunk_XXXX)
     job_id = chunk_id.split('_chunk_')[0] if '_chunk_' in chunk_id else chunk_id
+    payload = {
+        "type": "chunk",
+        "chunk_id": chunk_id,
+        "job_id": job_id,  # Separate field for filtering by document
+        "source_file": source_file,
+        "content_ref": f"retrieval_chunk:{chunk_id}",
+    }
+    if source_label:
+        payload["source_label"] = source_label
+
     point = PointStruct(
         id=chunk_point_id,
         vector=embedding,
-        payload={
-            "type": "chunk",
-            "chunk_id": chunk_id,
-            "job_id": job_id,  # Separate field for filtering by document
-            "source_file": source_file,
-            "source_label": source_file,
-            "content_ref": f"retrieval_chunk:{chunk_id}",
-        }
+        payload=payload,
     )
 
     # Insert to Qdrant
@@ -221,6 +235,7 @@ async def store_chunks_to_qdrant(
     chunk_id: str,
     source_text: str,
     source_file: str,
+    source_label: str | None = None,
 ) -> dict[str, Any]:
     """
     Store a text chunk and its embedding to Qdrant.
@@ -234,6 +249,7 @@ async def store_chunks_to_qdrant(
         chunk_id,
         source_text,
         source_file,
+        source_label,
     )
 
 

@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -61,7 +62,6 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.client = TestClient(app)
 
         self.original_embed_texts = self.query.embed_texts
-        self.original_httpx_post = self.query.httpx.post
         self.original_call_llm = self.query._call_llm_contextual
         self.original_extract_facts = self.query._extract_facts_from_conversation
 
@@ -70,7 +70,6 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.query.embed_texts = self.original_embed_texts
-        self.query.httpx.post = self.original_httpx_post
         self.query._call_llm_contextual = self.original_call_llm
         self.query._extract_facts_from_conversation = self.original_extract_facts
         self.query._sessions.clear()
@@ -112,7 +111,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Handbook.md",
             text="Encrypted retrieval context reaches the model.",
         )
-        self.query.httpx.post = lambda *_args, **_kwargs: FakeQdrantResponse([
+        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
             {
                 "score": 0.93,
                 "payload": {
@@ -133,7 +132,8 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
 
         self.query._call_llm_contextual = fake_llm
 
-        response = self.client.post("/query", json={"question": "What does the handbook say?"})
+        with patch.object(self.query.httpx, "post", side_effect=fake_post):
+            response = self.client.post("/query", json={"question": "What does the handbook say?"})
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -142,7 +142,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.assertEqual(body["sources"][0]["chunk_id"], "chunk-1")
         self.assertEqual(body["sources"][0]["source_file"], "Handbook.md")
         self.assertTrue(body["sources"][0]["hydrated"])
-        self.assertEqual(body["sources"][0]["text"], "")
+        self.assertEqual(body["sources"][0]["text"], "Encrypted retrieval context reaches the model.")
 
     def test_query_skips_hydration_when_chunk_row_belongs_to_different_document(self) -> None:
         self.create_completed_document("allowed-job")
@@ -154,7 +154,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Blocked.md",
             text="This unauthorized passage must not enter context.",
         )
-        self.query.httpx.post = lambda *_args, **_kwargs: FakeQdrantResponse([
+        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
             {
                 "score": 0.71,
                 "payload": {
@@ -167,11 +167,15 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         ])
 
         captured_contexts = []
-        self.query._call_llm_contextual = lambda question, context, session, **_kwargs: (
-            captured_contexts.append(context) or ("No context.", [], f"=== CONTEXT ===\n{context}", None)
-        )
 
-        response = self.client.post("/query", json={"question": "What is available?"})
+        def _capture_and_respond(question, context, session, **_kwargs):
+            captured_contexts.append(context)
+            return "No context.", [], f"=== CONTEXT ===\n{context}", None
+
+        self.query._call_llm_contextual = _capture_and_respond
+
+        with patch.object(self.query.httpx, "post", side_effect=fake_post):
+            response = self.client.post("/query", json={"question": "What is available?"})
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("unauthorized passage", captured_contexts[0])
@@ -180,7 +184,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
 
     def test_query_handles_missing_deleted_retrieval_chunk_without_payload_text(self) -> None:
         self.create_completed_document("job-1")
-        self.query.httpx.post = lambda *_args, **_kwargs: FakeQdrantResponse([
+        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
             {
                 "score": 0.5,
                 "payload": {
@@ -195,7 +199,8 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             "Missing chunk handled.", [], f"=== CONTEXT ===\n{context}", None
         )
 
-        response = self.client.post("/query", json={"question": "What remains?"})
+        with patch.object(self.query.httpx, "post", side_effect=fake_post):
+            response = self.client.post("/query", json={"question": "What remains?"})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["answer"], "Missing chunk handled.")

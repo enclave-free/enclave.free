@@ -7,7 +7,7 @@ import os
 import time
 import logging
 from datetime import datetime, timezone
-from typing import Final, Optional
+from typing import Final, Mapping, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -161,11 +161,11 @@ def _config_to_item(config: dict) -> DeploymentConfigItem:
     )
 
 
-def _truthy_config_value(value: str | None) -> bool:
+def _truthy_config_value(value: Optional[str]) -> bool:
     return str(value or "").strip().lower() in {"true", "1", "yes", "on"}
 
 
-def _deployment_config_value(config_dict: dict[str, str], key: str) -> str | None:
+def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Optional[str]:
     value = config_dict.get(key)
     if value not in (None, ""):
         return value

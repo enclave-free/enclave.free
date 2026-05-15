@@ -12,6 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import tempfile
 import secrets
 
 from fastapi import APIRouter, Depends
@@ -500,23 +501,39 @@ def _active_artifact_confidentiality_inventory() -> dict:
     plaintext_artifacts = []
     encrypted_artifacts = []
     missing_artifacts = []
-    for job in ingest_db.list_jobs(limit=1000):
-        file_path = job.get("file_path")
-        if not file_path:
-            continue
-        try:
-            with open(file_path, "rb") as artifact:
-                content = artifact.read(64)
-        except FileNotFoundError:
-            missing_artifacts.append(_document_artifact_result(job, "missing"))
-            continue
-        except OSError as exc:
-            missing_artifacts.append({**_document_artifact_result(job, "unreadable"), "error": str(exc)})
-            continue
-        if content_artifacts.is_encrypted_artifact(content):
-            encrypted_artifacts.append(_document_artifact_result(job, "encrypted"))
-        else:
-            plaintext_artifacts.append(_document_artifact_result(job, "legacy_plaintext"))
+    offset = 0
+    limit = 1000
+    active_statuses = {"completed", "completed_with_errors", "processing", "pending"}
+    while True:
+        jobs = ingest_db.list_jobs(limit=limit, offset=offset)
+        if not jobs:
+            break
+        for job in jobs:
+            if job.get("status") not in active_statuses:
+                continue
+            if job.get("is_current") in (0, False):
+                continue
+            if job.get("replaced_by_job_id"):
+                continue
+            file_path = job.get("file_path")
+            if not file_path:
+                continue
+            try:
+                with open(file_path, "rb") as artifact:
+                    content = artifact.read(64)
+            except FileNotFoundError:
+                missing_artifacts.append(_document_artifact_result(job, "missing"))
+                continue
+            except OSError as exc:
+                missing_artifacts.append({**_document_artifact_result(job, "unreadable"), "error": str(exc)})
+                continue
+            if content_artifacts.is_encrypted_artifact(content):
+                encrypted_artifacts.append(_document_artifact_result(job, "encrypted"))
+            else:
+                plaintext_artifacts.append(_document_artifact_result(job, "legacy_plaintext"))
+        if len(jobs) < limit:
+            break
+        offset += limit
     return {
         "plaintext_artifacts": plaintext_artifacts,
         "encrypted_artifacts": encrypted_artifacts,
@@ -531,6 +548,26 @@ def _document_artifact_result(job: dict, status: str) -> dict:
         "file_path": job.get("file_path"),
         "status": status,
     }
+
+
+def _atomic_replace_bytes(path: Path, content: bytes) -> None:
+    temp_path: Path | None = None
+    with tempfile.NamedTemporaryFile(delete=False, dir=path.parent, prefix=f".{path.name}.", suffix=".tmp") as temp:
+        temp.write(content)
+        temp.flush()
+        os.fsync(temp.fileno())
+        temp_path = Path(temp.name)
+    try:
+        temp_path.replace(path)
+        directory_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except Exception:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise
 
 
 def _retrieval_index_confidentiality_status() -> dict:
@@ -644,7 +681,8 @@ def execute_confidentiality_migration(*, actor: str) -> dict:
                 status = "skipped"
                 reason = "already_encrypted"
             else:
-                path.write_bytes(content_artifacts.encrypt_bytes(content))
+                encrypted_content = content_artifacts.encrypt_bytes(content)
+                _atomic_replace_bytes(path, encrypted_content)
                 status = "succeeded"
                 reason = None
             results.append({**artifact, "status": status, "reason": reason})

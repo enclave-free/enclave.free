@@ -20,6 +20,7 @@ class LifecycleStatusTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.previous_uploads_dir = os.environ.get("UPLOADS_DIR")
         self.previous_content_encryption_key = os.environ.get("CONTENT_ENCRYPTION_KEY")
+        self.previous_retention_automation_token = os.environ.get("RETENTION_AUTOMATION_TOKEN")
         os.environ["UPLOADS_DIR"] = str(Path(self.temp_dir.name) / "uploads")
 
         import auth
@@ -59,6 +60,10 @@ class LifecycleStatusTest(unittest.TestCase):
             os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
         else:
             os.environ["CONTENT_ENCRYPTION_KEY"] = self.previous_content_encryption_key
+        if self.previous_retention_automation_token is None:
+            os.environ.pop("RETENTION_AUTOMATION_TOKEN", None)
+        else:
+            os.environ["RETENTION_AUTOMATION_TOKEN"] = self.previous_retention_automation_token
         self.temp_dir.cleanup()
 
     def test_admin_can_inspect_instance_data_lifecycle_status(self) -> None:

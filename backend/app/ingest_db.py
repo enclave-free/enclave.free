@@ -272,7 +272,14 @@ def get_retrieval_chunk(chunk_id: str) -> Optional[dict]:
     if not row:
         return None
     chunk = dict(row)
-    chunk["text"] = content_artifacts.decrypt_bytes(chunk["encrypted_text"].encode("ascii")).decode("utf-8")
+    try:
+        chunk["text"] = content_artifacts.decrypt_bytes(chunk["encrypted_text"].encode("ascii")).decode("utf-8")
+    except Exception as exc:
+        chunk["text"] = None
+        chunk["decryption_error"] = {
+            "type": type(exc).__name__,
+            "msg": str(exc),
+        }
     return chunk
 
 

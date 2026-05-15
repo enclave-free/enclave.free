@@ -94,7 +94,7 @@ Current nuance:
 - deletion tombstones and lifecycle Audit Log events preserve sanitized lifecycle status and retry evidence, not Conversation Content
 - retention re-checks Conversation activity immediately before deletion and skips candidates that became active
 - scheduled retention for every historical Session Memory or log surface is still not implemented
-- Data Lifecycle Status names this as a Scheduled Retention Policy; this prototype still relies on manual or external Retention Scheduler execution
+- Although shown as Scheduled Retention Policy in Data Lifecycle Status, this prototype still relies on manual or external Retention Scheduler execution
 
 ## Debugging
 
