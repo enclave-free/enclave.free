@@ -17,6 +17,7 @@ import httpx
 import auth
 import database
 from inference_verification import TinfoilVerifier, fingerprint_claims, verify_and_store
+from inference_repair import current_inference_repair_status, mark_startup_verification_unavailable, mark_verification_record
 from rate_limit import RateLimiter
 from models import (
     DeploymentConfigItem,
@@ -58,6 +59,56 @@ def current_expected_claims() -> dict:
 
 def current_expected_claims_fingerprint() -> str:
     return fingerprint_claims(current_expected_claims())
+
+
+def _audit_inference_verification_status_change(event: dict, *, changed_by: str) -> None:
+    database.log_config_audit_event(
+        table_name="inference_verification",
+        config_key="verification_status_changed",
+        old_value=None,
+        new_value=json.dumps(event, separators=(",", ":")),
+        changed_by=changed_by,
+    )
+
+
+def run_startup_inference_verification() -> dict:
+    """
+    Attempt Verifiable Inference during startup without crash-looping the app.
+    Admin repair surfaces remain available if startup verification cannot pass.
+    """
+    configured = _configured_model_provider()
+    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    if not api_key:
+        logger.warning("Startup Verifiable Inference skipped: LLM_API_KEY not configured")
+        return mark_startup_verification_unavailable(
+            status="missing",
+            reason="LLM_API_KEY not configured",
+        )
+
+    try:
+        record = verify_and_store(
+            verifier=TinfoilVerifier(),
+            storage=database,
+            expected_claims=current_expected_claims(),
+            trigger="startup",
+            api_key=api_key,
+            audit_status_change=lambda event: _audit_inference_verification_status_change(
+                event,
+                changed_by="system:startup",
+            ),
+            **configured,
+        )
+    except Exception as exc:
+        logger.exception("Startup Verifiable Inference failed without a stored record")
+        return mark_startup_verification_unavailable(
+            status="failed",
+            reason=str(exc),
+        )
+
+    return mark_verification_record(
+        record,
+        reason="startup_verification_current" if record.get("status") == "success" else "startup_verification_failed",
+    )
 
 
 def _configured_model_provider() -> dict:
@@ -345,6 +396,7 @@ async def get_inference_verification_status(admin: dict = Depends(auth.require_a
         **status,
         "configured_provider": configured,
         "expected_claims_fingerprint": current_expected_claims_fingerprint(),
+        "repair": current_inference_repair_status(),
     }
 
 
@@ -389,14 +441,12 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
         expected_claims=current_expected_claims(),
         trigger="manual",
         api_key=api_key,
-        audit_status_change=lambda event: database.log_config_audit_event(
-            table_name="inference_verification",
-            config_key="verification_status_changed",
-            old_value=None,
-            new_value=json.dumps(event, separators=(",", ":")),
-            changed_by=changed_by,
-        ),
+        audit_status_change=lambda event: _audit_inference_verification_status_change(event, changed_by=changed_by),
         **configured,
+    )
+    mark_verification_record(
+        record,
+        reason="manual_verification_current" if record.get("status") == "success" else "manual_verification_failed",
     )
     database.log_config_audit_event(
         table_name="inference_verification",

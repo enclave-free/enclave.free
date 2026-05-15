@@ -31,6 +31,7 @@ from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
 from conversation_trace import ConversationTrace, build_conversation_trace, build_live_trace_status
 from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
+from inference_repair import current_inference_repair_status
 from store import embed_texts
 import database
 from data_deletion import (
@@ -98,6 +99,7 @@ from ingest import router as ingest_router
 from query import router as query_router
 from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
+import deployment_config
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
 
@@ -321,6 +323,7 @@ async def startup_event():
     smtp_status = auth.verify_smtp_config()
     if smtp_status["configured"] and not smtp_status["mock_mode"] and not smtp_status["connection_ok"]:
         logger.warning("SMTP is configured but connection test failed - email sending may not work")
+    deployment_config.run_startup_inference_verification()
 
 
 @app.on_event("shutdown")
@@ -2315,7 +2318,8 @@ async def get_instance_status():
         initialized=database.has_admin(),
         setup_complete=database.is_instance_setup_complete(),
         ready_for_users=database.is_instance_setup_complete(),
-        settings=settings
+        settings=settings,
+        protected_inference=current_inference_repair_status(),
     )
 
 

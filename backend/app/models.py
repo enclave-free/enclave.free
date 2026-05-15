@@ -92,6 +92,7 @@ class InstanceStatusResponse(BaseModel):
     setup_complete: bool = False  # Whether admin has completed setup/auth
     ready_for_users: bool = False  # Whether users can register/login
     settings: dict = Field(default_factory=dict)  # Public instance settings
+    protected_inference: dict = Field(default_factory=dict)
 
 
 # --- User Type Models ---

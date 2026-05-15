@@ -29,15 +29,18 @@ class InferenceVerificationApiTest(unittest.TestCase):
         import auth
         import database
         import deployment_config
+        import inference_repair
 
         self.auth = importlib.reload(auth)
         self.database = importlib.reload(database)
+        self.inference_repair = importlib.reload(inference_repair)
         self.deployment_config = importlib.reload(deployment_config)
         self.database.init_schema()
         self.deployment_config._sync_env_to_db()
         self.database.upsert_deployment_config("LLM_PROVIDER", "sage", category="llm")
         self.database.upsert_deployment_config("LLM_API_URL", "https://inference.tinfoil.sh/v1", category="llm")
         self.database.upsert_deployment_config("LLM_MODEL", "kimi-k2-6", category="llm")
+        self.inference_repair.reset_inference_repair_status()
 
         app = FastAPI()
         app.include_router(self.deployment_config.router)
@@ -88,7 +91,51 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.assertEqual(body["configured_provider"]["provider_identity"], "sage")
         self.assertEqual(body["configured_provider"]["provider_endpoint"], "https://inference.tinfoil.sh/v1")
         self.assertEqual(body["configured_provider"]["model_identifier"], "kimi-k2-6")
+        self.assertIn("repair", body)
         self.assertNotIn("attestation_material", body["record"])
+
+    def test_startup_verification_success_permits_protected_inference(self) -> None:
+        from inference_verification import InferenceVerificationResult
+
+        expected_fingerprint = self.deployment_config.current_expected_claims_fingerprint()
+
+        class FakeVerifier:
+            def verify(self, **kwargs):
+                return InferenceVerificationResult(
+                    provider_identity=kwargs["provider_identity"],
+                    provider_endpoint=kwargs["provider_endpoint"],
+                    model_identifier=kwargs["model_identifier"],
+                    status="success",
+                    trigger=kwargs["trigger"],
+                    expected_claims_fingerprint=expected_fingerprint,
+                    actual_claims_fingerprint="actual",
+                    verifier_version="fake-verifier/1",
+                    attestation_material={"quote": "startup"},
+                )
+
+        self.deployment_config.TinfoilVerifier = lambda: FakeVerifier()
+
+        repair = self.deployment_config.run_startup_inference_verification()
+        status = self.client.get("/admin/deployment/inference-verification/status").json()
+
+        self.assertEqual(repair["mode"], "normal")
+        self.assertTrue(repair["protected_inference_available"])
+        self.assertEqual(status["status"], "current")
+        self.assertEqual(status["record"]["trigger"], "startup")
+
+    def test_startup_verification_failure_enters_degraded_admin_repair_mode(self) -> None:
+        self.database.update_deployment_config("LLM_API_KEY", "", changed_by="admin-pubkey")
+        self._restore_env("LLM_API_KEY", None)
+
+        repair = self.deployment_config.run_startup_inference_verification()
+
+        self.assertEqual(repair["mode"], "degraded_admin_repair")
+        self.assertFalse(repair["protected_inference_available"])
+        self.assertEqual(repair["status"], "missing")
+        self.assertEqual(repair["reason"], "LLM_API_KEY not configured")
+        response = self.client.get("/admin/deployment/inference-verification/status")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["repair"]["mode"], "degraded_admin_repair")
 
     def test_admin_can_fetch_history_and_full_attestation_detail(self) -> None:
         record = self.database.create_inference_verification_record(
@@ -141,6 +188,7 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.assertEqual(body["trigger"], "manual")
         self.assertEqual(body["attestation_material"], {"quote": "manual"})
         self.assertEqual(len(self.database.list_inference_verification_records()), 1)
+        self.assertEqual(self.inference_repair.current_inference_repair_status()["mode"], "normal")
 
         audit_response = self.client.get("/admin/deployment/audit-log?table_name=inference_verification")
         self.assertEqual(audit_response.status_code, 200)
