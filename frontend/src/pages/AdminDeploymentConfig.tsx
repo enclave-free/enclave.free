@@ -75,6 +75,10 @@ export function AdminDeploymentConfig() {
   const {
     status: lifecycleStatus,
     loading: lifecycleLoading,
+    acknowledgeUnsupportedSurface,
+    updateRetentionPolicy,
+    previewRetention,
+    runScheduledRetention,
   } = useLifecycleStatus()
   const [tombstoneStatusFilter, setTombstoneStatusFilter] = useState<DeletionTombstoneStatusFilter>('all')
   const {
@@ -107,6 +111,25 @@ export function AdminDeploymentConfig() {
   const [exportError, setExportError] = useState<string | null>(null)
   const [retryingTombstoneId, setRetryingTombstoneId] = useState<number | null>(null)
   const [tombstoneRetryError, setTombstoneRetryError] = useState<string | null>(null)
+  const [acknowledgingSurfaceKey, setAcknowledgingSurfaceKey] = useState<string | null>(null)
+  const [unsupportedSurfaceError, setUnsupportedSurfaceError] = useState<string | null>(null)
+  const [retentionPolicyDrafts, setRetentionPolicyDrafts] = useState<Record<string, {
+    enabled: boolean
+    retention_window_days: number
+    scheduled_enforcement_enabled: boolean
+  }>>({})
+  const [savingRetentionPolicyKey, setSavingRetentionPolicyKey] = useState<string | null>(null)
+  const [retentionPolicyError, setRetentionPolicyError] = useState<string | null>(null)
+  const [retentionPreview, setRetentionPreview] = useState<{
+    counts?: {
+      stale_conversations?: number
+      document_artifacts?: number
+      skipped_classes?: number
+    }
+  } | null>(null)
+  const [retentionPreviewLoading, setRetentionPreviewLoading] = useState(false)
+  const [scheduledRetentionResult, setScheduledRetentionResult] = useState<{ status?: string; retry_results?: unknown[] } | null>(null)
+  const [scheduledRetentionLoading, setScheduledRetentionLoading] = useState(false)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -248,6 +271,23 @@ export function AdminDeploymentConfig() {
     },
   ]
 
+  useEffect(() => {
+    if (!Array.isArray(lifecycleStatus?.data_classes)) return
+    setRetentionPolicyDrafts((currentDrafts) => {
+      const nextDrafts = { ...currentDrafts }
+      lifecycleStatus.data_classes.forEach((dataClass) => {
+        if (!nextDrafts[dataClass.key] && dataClass.retention_policy) {
+          nextDrafts[dataClass.key] = {
+            enabled: dataClass.retention_policy.enabled,
+            retention_window_days: dataClass.retention_policy.retention_window_days,
+            scheduled_enforcement_enabled: dataClass.retention_policy.scheduled_enforcement_enabled,
+          }
+        }
+      })
+      return nextDrafts
+    })
+  }, [lifecycleStatus])
+
   const handleRetryTombstone = async (id: number) => {
     try {
       setRetryingTombstoneId(id)
@@ -257,6 +297,83 @@ export function AdminDeploymentConfig() {
       setTombstoneRetryError(err instanceof Error ? err.message : 'errors.failedToRetryDeletionTombstone')
     } finally {
       setRetryingTombstoneId(null)
+    }
+  }
+
+  const handleAcknowledgeUnsupportedSurface = async (key: string, acknowledged: boolean) => {
+    try {
+      setAcknowledgingSurfaceKey(key)
+      setUnsupportedSurfaceError(null)
+      await acknowledgeUnsupportedSurface(key, acknowledged)
+    } catch (err) {
+      setUnsupportedSurfaceError(err instanceof Error ? err.message : 'errors.failedToAcknowledgeUnsupportedSurface')
+    } finally {
+      setAcknowledgingSurfaceKey(null)
+    }
+  }
+
+  const updateRetentionPolicyDraft = (
+    key: string,
+    patch: Partial<{
+      enabled: boolean
+      retention_window_days: number
+      scheduled_enforcement_enabled: boolean
+    }>,
+  ) => {
+    const defaultDraft = {
+      enabled: false,
+      retention_window_days: 30,
+      scheduled_enforcement_enabled: false,
+    }
+    setRetentionPolicyDrafts((drafts) => ({
+      ...drafts,
+      [key]: {
+        ...defaultDraft,
+        ...(drafts[key] ?? {}),
+        ...patch,
+      },
+    }))
+  }
+
+  const handleSaveRetentionPolicy = async (key: string) => {
+    const draft = retentionPolicyDrafts[key]
+    if (!draft) return
+    try {
+      setSavingRetentionPolicyKey(key)
+      setRetentionPolicyError(null)
+      await updateRetentionPolicy(key, {
+        enabled: draft.enabled,
+        retention_window_days: Math.max(1, Number(draft.retention_window_days) || 1),
+        scheduled_enforcement_enabled: draft.scheduled_enforcement_enabled,
+      })
+    } catch (err) {
+      setRetentionPolicyError(err instanceof Error ? err.message : 'errors.failedToUpdateRetentionPolicy')
+    } finally {
+      setSavingRetentionPolicyKey(null)
+    }
+  }
+
+  const handlePreviewRetention = async () => {
+    try {
+      setRetentionPreviewLoading(true)
+      setRetentionPolicyError(null)
+      setRetentionPreview(await previewRetention())
+    } catch (err) {
+      setRetentionPolicyError(err instanceof Error ? err.message : 'errors.failedToPreviewRetention')
+    } finally {
+      setRetentionPreviewLoading(false)
+    }
+  }
+
+  const handleRunScheduledRetention = async () => {
+    try {
+      setScheduledRetentionLoading(true)
+      setRetentionPolicyError(null)
+      setScheduledRetentionResult(await runScheduledRetention())
+    } catch (err) {
+      setRetentionPolicyError(err instanceof Error ? err.message : 'errors.failedToRunScheduledRetention')
+    } finally {
+      setScheduledRetentionLoading(false)
     }
   }
 
@@ -1375,6 +1492,61 @@ export function AdminDeploymentConfig() {
           <p className="text-sm text-text-secondary mb-4">
             {t('adminDeployment.lifecycle.description', 'Current Operator-Controlled Privacy coverage across Instance data.')}
           </p>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handlePreviewRetention}
+              disabled={retentionPreviewLoading}
+              className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {retentionPreviewLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+              {t('adminDeployment.lifecycle.previewRetention', 'Preview Retention')}
+            </button>
+            <button
+              type="button"
+              onClick={handleRunScheduledRetention}
+              disabled={scheduledRetentionLoading}
+              className="inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {scheduledRetentionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+              {t('adminDeployment.lifecycle.runScheduledRetention', 'Run Scheduled')}
+            </button>
+          </div>
+          {retentionPreview && (
+            <p className="mb-3 text-xs text-text-secondary">
+              {t('adminDeployment.lifecycle.previewRetentionResult', 'Preview: {{conversations}} conversations, {{artifacts}} document artifacts, {{skipped}} skipped classes.', {
+                conversations: retentionPreview.counts?.stale_conversations ?? 0,
+                artifacts: retentionPreview.counts?.document_artifacts ?? 0,
+                skipped: retentionPreview.counts?.skipped_classes ?? 0,
+              })}
+            </p>
+          )}
+          {scheduledRetentionResult && (
+            <p className="mb-3 text-xs text-text-secondary">
+              {t('adminDeployment.lifecycle.scheduledRetentionResult', 'Scheduled run: {{status}} with {{retries}} tombstone retries.', {
+                status: scheduledRetentionResult.status ?? 'unknown',
+                retries: scheduledRetentionResult.retry_results?.length ?? 0,
+              })}
+            </p>
+          )}
+          {lifecycleStatus?.scheduled_retention && (
+            <p className="mb-3 text-xs text-text-secondary">
+              {t('adminDeployment.lifecycle.scheduledRetentionStatus', 'Scheduled classes: {{classes}}', {
+                classes: lifecycleStatus.scheduled_retention.enabled_classes.length > 0
+                  ? lifecycleStatus.scheduled_retention.enabled_classes.join(', ')
+                  : 'none',
+              })}
+            </p>
+          )}
+          {lifecycleStatus?.audit_coverage?.summary && (
+            <p className="mb-3 text-xs text-text-secondary">
+              {t('adminDeployment.lifecycle.auditCoverageStatus', 'Audit coverage: {{audited}} audited, {{exceptions}} exceptions, {{missing}} missing.', {
+                audited: lifecycleStatus.audit_coverage.summary.audited,
+                exceptions: lifecycleStatus.audit_coverage.summary.documented_exceptions,
+                missing: lifecycleStatus.audit_coverage.summary.missing,
+              })}
+            </p>
+          )}
 
           {Array.isArray(lifecycleStatus?.data_classes) && lifecycleStatus.data_classes.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
@@ -1402,6 +1574,54 @@ export function AdminDeploymentConfig() {
                       </div>
                     )}
                   </div>
+                  {dataClass.retention_policy && (
+                    <div className="mt-3 border-t border-border/60 pt-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="inline-flex items-center gap-2 text-xs text-text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={retentionPolicyDrafts[dataClass.key]?.enabled ?? dataClass.retention_policy.enabled}
+                            onChange={(event) => updateRetentionPolicyDraft(dataClass.key, { enabled: event.target.checked })}
+                            className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                          />
+                          {t('adminDeployment.lifecycle.retentionEnabled', 'Enabled')}
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-xs text-text-secondary">
+                          {t('adminDeployment.lifecycle.retentionWindow', 'Window')}
+                          <input
+                            type="number"
+                            min={1}
+                            value={retentionPolicyDrafts[dataClass.key]?.retention_window_days ?? dataClass.retention_policy.retention_window_days}
+                            onChange={(event) => updateRetentionPolicyDraft(dataClass.key, { retention_window_days: Number(event.target.value) })}
+                            className="w-20 rounded-md border border-border bg-background px-2 py-1 text-xs text-text"
+                          />
+                          {t('adminDeployment.lifecycle.retentionDays', 'days')}
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-xs text-text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={retentionPolicyDrafts[dataClass.key]?.scheduled_enforcement_enabled ?? dataClass.retention_policy.scheduled_enforcement_enabled}
+                            onChange={(event) => updateRetentionPolicyDraft(dataClass.key, { scheduled_enforcement_enabled: event.target.checked })}
+                            className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                          />
+                          {t('adminDeployment.lifecycle.scheduledEnforcement', 'Scheduled')}
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveRetentionPolicy(dataClass.key)}
+                        disabled={savingRetentionPolicyKey === dataClass.key}
+                        className="mt-3 inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingRetentionPolicyKey === dataClass.key ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                        {t('adminDeployment.lifecycle.saveRetentionPolicy', 'Save Policy')}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1409,6 +1629,65 @@ export function AdminDeploymentConfig() {
             <p className="text-xs text-text-muted">
               {t('adminDeployment.lifecycle.empty', 'Lifecycle status is not available.')}
             </p>
+          )}
+
+          {retentionPolicyError && (
+            <p className="mt-3 text-xs text-danger">
+              {t('adminDeployment.lifecycle.retentionPolicySaveFailed', 'Unable to save retention policy.')}
+            </p>
+          )}
+
+          {Array.isArray(lifecycleStatus?.unsupported_deployment_surfaces) && lifecycleStatus.unsupported_deployment_surfaces.length > 0 && (
+            <div className="mt-5 border-t border-border pt-4">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h4 className="text-sm font-medium text-text">
+                    {t('adminDeployment.lifecycle.unsupportedSurfacesTitle', 'Unsupported Deployment Surfaces')}
+                  </h4>
+                  <p className="text-xs text-text-secondary mt-1">
+                    {t('adminDeployment.lifecycle.unsupportedSurfacesDescription', 'These operational traces are disclosed here but remain outside product lifecycle control.')}
+                  </p>
+                </div>
+              </div>
+              {unsupportedSurfaceError && (
+                <p className="text-xs text-danger mb-3">
+                  {t('adminDeployment.lifecycle.unsupportedSurfaceAckFailed', 'Unable to update acknowledgement.')}
+                </p>
+              )}
+              <div className="grid gap-3 md:grid-cols-2">
+                {lifecycleStatus.unsupported_deployment_surfaces.map((surface) => (
+                  <div key={surface.key} className="bg-surface border border-border rounded-lg p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h5 className="text-sm font-medium text-text">{surface.label}</h5>
+                        <p className="text-xs text-text-secondary mt-1">{surface.summary}</p>
+                      </div>
+                      <span className="shrink-0 text-[10px] uppercase tracking-wide bg-surface-overlay text-text-secondary px-2 py-1 rounded">
+                        {formatLifecycleStatus(surface.status)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAcknowledgeUnsupportedSurface(surface.key, !surface.acknowledged)}
+                      disabled={acknowledgingSurfaceKey === surface.key}
+                      aria-pressed={surface.acknowledged}
+                      className="mt-3 inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {acknowledgingSurfaceKey === surface.key ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : surface.acknowledged ? (
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5" />
+                      )}
+                      {surface.acknowledged
+                        ? t('adminDeployment.lifecycle.acknowledgedSurface', 'Acknowledged')
+                        : t('adminDeployment.lifecycle.acknowledgeSurface', 'Acknowledge')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </Card>
 

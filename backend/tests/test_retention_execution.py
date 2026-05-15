@@ -56,6 +56,23 @@ class RetentionExecutionTest(unittest.TestCase):
         self.main = importlib.reload(main)
         self.database.init_schema()
         self.ingest.JOBS = self.ingest._load_jobs_from_db()
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+            }, sort_keys=True),
+        )
 
         self.original_scheduler = self.ingest.schedule_document_processing
         self.ingest.schedule_document_processing = lambda *_args, **_kwargs: None
@@ -181,6 +198,144 @@ class RetentionExecutionTest(unittest.TestCase):
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
+
+    def test_retention_preview_reports_eligible_counts_without_deleting(self) -> None:
+        stale_session_id = "preview-stale-session"
+        self.query._sessions[stale_session_id] = {
+            "id": stale_session_id,
+            "owner_type": "user",
+            "owner_id": "1",
+            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+            "messages": [],
+        }
+        upload = self.upload_text("Preview.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        artifact_path = self.mark_failed_job_stale(job_id)
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "preview")
+        self.assertFalse(body["destructive"])
+        self.assertEqual(body["counts"]["stale_conversations"], 1)
+        self.assertEqual(body["counts"]["document_artifacts"], 1)
+        self.assertIn(stale_session_id, self.query._sessions)
+        self.assertTrue(artifact_path.exists())
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
+
+    def test_disabled_retention_policy_skips_execution_without_deleting_candidates(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+            }, sort_keys=True),
+        )
+        stale_session_id = "disabled-policy-stale-session"
+        self.query._sessions[stale_session_id] = {
+            "id": stale_session_id,
+            "owner_type": "user",
+            "owner_id": "1",
+            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+            "messages": [],
+        }
+        upload = self.upload_text("DisabledPolicy.md")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        artifact_path = self.mark_failed_job_stale(job_id)
+
+        response = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(stale_session_id, self.query._sessions)
+        self.assertTrue(artifact_path.exists())
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
+        actions = {result["target_id"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["sage_session_memory"]["action"], "retention_skip_disabled_policy")
+        self.assertEqual(actions["uploaded_document_artifacts"]["action"], "retention_skip_disabled_policy")
+
+    def test_scheduled_retention_requires_opt_in_and_retries_incomplete_tombstones(self) -> None:
+        skipped = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+        self.assertEqual(skipped.status_code, 200)
+        self.assertEqual(skipped.json()["status"], "skipped")
+        self.assertEqual(skipped.json()["enabled_classes"], [])
+
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        tombstone_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="scheduled-retry-session",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+        self.lifecycle.delete_session_memory_for_conversation = lambda _session: self._successful_session_memory_delete()
+
+        response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("sage_session_memory", body["enabled_classes"])
+        self.assertEqual(body["retry_results"][0]["tombstone_id"], tombstone_id)
+        self.assertEqual(body["retry_results"][0]["status"], "completed")
+
+    async def _successful_session_memory_delete(self) -> dict:
+        return {
+            "status": "succeeded",
+            "retryable": False,
+            "counts": {"succeeded": 1, "skipped": 0, "failed": 0},
+            "results": [
+                {
+                    "target_kind": "session_memory",
+                    "target_id": "scheduled-retry-session",
+                    "action": "delete_session_memory",
+                    "status": "succeeded",
+                    "retryable": False,
+                    "detail": "Deleted Session Memory.",
+                }
+            ],
+        }
 
     def test_retention_creates_metadata_only_tombstone_when_session_memory_deletion_fails(self) -> None:
         stale_session_id = "stale-session"

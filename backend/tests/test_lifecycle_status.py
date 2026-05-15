@@ -68,6 +68,7 @@ class LifecycleStatusTest(unittest.TestCase):
 
         for key in (
             "user_profiles",
+            "user_memory",
             "document_library",
             "retrieval_index",
             "uploaded_document_artifacts",
@@ -85,6 +86,119 @@ class LifecycleStatusTest(unittest.TestCase):
             "stale active Conversation",
             session_memory["retention"]["summary"],
         )
+
+    def test_lifecycle_status_includes_disabled_default_retention_policy_for_each_class(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+
+        for data_class in body["data_classes"]:
+            policy = data_class["retention_policy"]
+            self.assertEqual(policy["lifecycle_data_class"], data_class["key"])
+            self.assertFalse(policy["enabled"])
+            self.assertGreater(policy["retention_window_days"], 0)
+            self.assertFalse(policy["scheduled_enforcement_enabled"])
+
+    def test_admin_can_update_retention_policy_for_lifecycle_data_class(self) -> None:
+        update = self.client.put(
+            "/admin/lifecycle/retention-policies/sage_session_memory",
+            json={
+                "enabled": True,
+                "retention_window_days": 45,
+                "scheduled_enforcement_enabled": True,
+            },
+        )
+
+        self.assertEqual(update.status_code, 200)
+        self.assertEqual(update.json()["policy"]["lifecycle_data_class"], "sage_session_memory")
+        self.assertTrue(update.json()["policy"]["enabled"])
+
+        response = self.client.get("/admin/lifecycle/status")
+        classes_by_key = {
+            data_class["key"]: data_class
+            for data_class in response.json()["data_classes"]
+        }
+        policy = classes_by_key["sage_session_memory"]["retention_policy"]
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["retention_window_days"], 45)
+        self.assertTrue(policy["scheduled_enforcement_enabled"])
+        self.assertFalse(classes_by_key["user_memory"]["retention_policy"]["enabled"])
+
+    def test_retention_policy_update_validates_window_and_requires_admin(self) -> None:
+        invalid = self.client.put(
+            "/admin/lifecycle/retention-policies/sage_session_memory",
+            json={
+                "enabled": True,
+                "retention_window_days": 0,
+                "scheduled_enforcement_enabled": False,
+            },
+        )
+        self.assertEqual(invalid.status_code, 422)
+
+        app = FastAPI()
+        app.include_router(self.lifecycle.router)
+        client = TestClient(app)
+        unauthenticated = client.put(
+            "/admin/lifecycle/retention-policies/sage_session_memory",
+            json={
+                "enabled": True,
+                "retention_window_days": 30,
+                "scheduled_enforcement_enabled": False,
+            },
+        )
+        self.assertIn(unauthenticated.status_code, (401, 403))
+
+    def test_audit_coverage_inventory_has_no_missing_supported_mutations(self) -> None:
+        response = self.client.get("/admin/lifecycle/audit-coverage")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["summary"]["guardrail_passed"])
+        self.assertEqual(body["summary"]["missing"], 0)
+        statuses = {item["status"] for item in body["items"]}
+        self.assertIn("audited", statuses)
+        self.assertIn("documented_exception", statuses)
+
+    def test_lifecycle_status_discloses_unacknowledged_unsupported_deployment_surfaces(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        surfaces = {
+            surface["key"]: surface
+            for surface in body["unsupported_deployment_surfaces"]
+        }
+
+        for key in (
+            "docker_logs",
+            "gateway_logs",
+            "host_backups",
+            "host_snapshots",
+            "sqlite_wal",
+            "postgres_wal",
+            "provider_traces",
+        ):
+            self.assertIn(key, surfaces)
+            self.assertEqual(surfaces[key]["status"], "unsupported")
+            self.assertFalse(surfaces[key]["acknowledged"])
+
+    def test_admin_can_acknowledge_unsupported_deployment_surface(self) -> None:
+        acknowledgement = self.client.post(
+            "/admin/lifecycle/unsupported-deployment-surfaces/docker_logs/acknowledgement",
+            json={"acknowledged": True},
+        )
+
+        self.assertEqual(acknowledgement.status_code, 200)
+
+        response = self.client.get("/admin/lifecycle/status")
+        self.assertEqual(response.status_code, 200)
+        surfaces = {
+            surface["key"]: surface
+            for surface in response.json()["unsupported_deployment_surfaces"]
+        }
+        self.assertTrue(surfaces["docker_logs"]["acknowledged"])
+        self.assertFalse(surfaces["gateway_logs"]["acknowledged"])
 
     def test_lifecycle_status_summarizes_deletion_tombstones(self) -> None:
         self.database.create_deletion_tombstone(
