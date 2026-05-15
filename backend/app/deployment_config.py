@@ -140,6 +140,13 @@ RATE_LIMIT_KEYS: Final[set[str]] = {
     "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR",
 }
 
+PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
+    "MOCK_EMAIL",
+    "MOCK_SMTP",
+    "SIMULATE_USER_AUTH",
+    "SIMULATE_ADMIN_AUTH",
+)
+
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
     """Convert database row to DeploymentConfigItem"""
@@ -152,6 +159,17 @@ def _config_to_item(config: dict) -> DeploymentConfigItem:
         description=config.get("description"),
         updated_at=config.get("updated_at"),
     )
+
+
+def _truthy_config_value(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"true", "1", "yes", "on"}
+
+
+def _deployment_config_value(config_dict: dict[str, str], key: str) -> str | None:
+    value = config_dict.get(key)
+    if value not in (None, ""):
+        return value
+    return os.getenv(key)
 
 
 def _sync_env_to_db() -> None:
@@ -594,6 +612,11 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
     # Warnings for common issues
     if config_dict.get("MOCK_SMTP", "").lower() == "true":
         warnings.append("MOCK_SMTP is enabled - emails will not be sent")
+
+    if auth.is_production_mode():
+        for key in PRODUCTION_UNSAFE_FLAGS:
+            if _truthy_config_value(_deployment_config_value(config_dict, key)):
+                errors.append(f"{key} must be disabled in production")
 
     if not config_dict.get("SMTP_HOST") and config_dict.get("MOCK_SMTP", "").lower() != "true":
         warnings.append("SMTP not configured - email features will not work")

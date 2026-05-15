@@ -38,6 +38,7 @@ from data_deletion import (
     summarize_deletion_results,
 )
 from query import delete_sessions_for_owner, pop_sessions_for_owner, sessions_for_owner
+from sql_safety import validate_sql_allowed_tables
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -1392,7 +1393,7 @@ async def send_magic_link(
 
     return MagicLinkResponse(
         success=True,
-        message="Magic link sent. Check your email."
+        message="If this address can sign in, we'll send a magic link."
     )
 
 
@@ -3423,6 +3424,13 @@ async def execute_db_query(request: DBQueryRequest, admin: dict = Depends(auth.r
                 success=False,
                 error=f"Query contains forbidden keyword"
             )
+
+    allowed, error = validate_sql_allowed_tables(sql)
+    if not allowed:
+        return DBQueryResponse(
+            success=False,
+            error=error,
+        )
 
     start_time = time.time()
 

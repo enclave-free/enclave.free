@@ -108,7 +108,7 @@ Use this checklist to:
 - [x] Magic link token is signed and time-limited.
 - [x] User session token is signed and time-limited.
 - [x] Chat/query access requires authenticated and approved users.
-- [ ] Add anti-enumeration response behavior for auth endpoints.
+- [x] Add anti-enumeration response behavior for auth endpoints.
 - [ ] Add abuse-resistant rate limiting that works across multiple backend instances for:
   - Auth endpoints
   - File upload endpoints
@@ -223,6 +223,7 @@ Use this checklist to:
   - Derived chunks/embeddings
   - Secrets and credentials
 - [ ] Verify all database queries use parameterized/prepared statements (no string concatenation).
+  - [x] Admin database explorer read-only endpoint enforces the shared SQL table allowlist.
 - [ ] Implement input validation for all user-supplied data (length, type, format).
 
 ### 5.2 At-rest controls
@@ -269,8 +270,8 @@ Use this checklist to:
 ## 6. Configuration and Environment Hardening Checklist
 
 - [ ] Set production env indicator (`SANCTUM_ENV=production` or equivalent).
-- [ ] Ensure `MOCK_EMAIL=false` in production.
-- [ ] Ensure simulation flags are disabled:
+- [x] Ensure `MOCK_EMAIL=false` in production.
+- [x] Ensure simulation flags are disabled:
   - `SIMULATE_USER_AUTH=false`
   - `SIMULATE_ADMIN_AUTH=false`
 - [ ] Set strong, stable `SECRET_KEY` via secret manager.
