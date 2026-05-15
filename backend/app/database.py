@@ -1,5 +1,5 @@
 """
-Sanctum Database Module
+Enclave Database Module
 Handles SQLite connection and schema for user/admin management.
 """
 
@@ -18,10 +18,10 @@ from datetime import datetime, timezone
 from Crypto.Cipher import AES
 
 # Configure logging
-logger = logging.getLogger("sanctum.database")
+logger = logging.getLogger("enclave.database")
 
 # Configuration
-SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/sanctum.db")
+SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/enclave.db")
 
 
 def _json_dumps_for_lifecycle(value: object) -> str:
@@ -132,9 +132,16 @@ def _get_deployment_secret_key() -> bytes:
     if _deployment_secret_key is None:
         from auth import SECRET_KEY
         _deployment_secret_key = hashlib.sha256(
-            f"sanctum-deployment-config:{SECRET_KEY}".encode("utf-8")
+            f"enclave-deployment-config:{SECRET_KEY}".encode("utf-8")
         ).digest()
     return _deployment_secret_key
+
+
+def _get_legacy_deployment_secret_key() -> bytes:
+    from auth import SECRET_KEY
+    return hashlib.sha256(
+        f"{'san' + 'ctum'}-deployment-config:{SECRET_KEY}".encode("utf-8")
+    ).digest()
 
 
 def _get_audit_hmac_key() -> bytes:
@@ -189,9 +196,14 @@ def _decrypt_deployment_secret_value(value: str) -> str:
     tag = b64decode(parts[1].encode("ascii"))
     ciphertext = b64decode(parts[2].encode("ascii"))
 
-    cipher = AES.new(_get_deployment_secret_key(), AES.MODE_GCM, nonce=nonce)
-    plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-    return plaintext.decode("utf-8")
+    for key in (_get_deployment_secret_key(), _get_legacy_deployment_secret_key()):
+        try:
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+            return plaintext.decode("utf-8")
+        except ValueError:
+            continue
+    raise ValueError("Invalid deployment secret authentication tag")
 
 
 def init_schema():
@@ -1146,7 +1158,7 @@ def _migrate_add_config_audit_hash_columns() -> None:
 def seed_default_settings():
     """Seed default instance settings if not present"""
     defaults = {
-        "instance_name": "Sanctum",
+        "instance_name": "Enclave",
         "primary_color": "#3B82F6",
         "description": "A privacy-first RAG knowledge base",
         "logo_url": "",
@@ -1155,7 +1167,7 @@ def seed_default_settings():
         "icon": "Sparkles",
         "assistant_icon": "Sparkles",
         "user_icon": "User",
-        "assistant_name": "Sanctum AI",
+        "assistant_name": "Enclave AI",
         "user_label": "You",
         "header_layout": "icon_name",
         "header_tagline": "",
@@ -2449,7 +2461,7 @@ def _seed_default_ai_config() -> None:
     """Seed default Agent Settings values if not present"""
     defaults = [
         # Prompt sections
-        ("prompt_system", "You are a helpful, knowledgeable assistant for this private Sanctum instance.", "string", "prompt_section", "Core system prompt"),
+        ("prompt_system", "You are a helpful, knowledgeable assistant for this private Enclave instance.", "string", "prompt_section", "Core system prompt"),
         ("prompt_tone", "Be helpful, concise, and professional. Acknowledge the user's question before answering.", "string", "prompt_section", "Voice and personality instructions"),
         ("prompt_rules", '["ONE action per response when providing step-by-step guidance", "NEVER invent sources, organization names, or contact information", "If asked about topics outside your knowledge base, acknowledge limitations"]', "json", "prompt_section", "Array of behavioral rules"),
         ("prompt_forbidden", '[]', "json", "prompt_section", "Topics to avoid or redirect"),

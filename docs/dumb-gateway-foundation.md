@@ -132,7 +132,7 @@ API=http://localhost:8000
 FRONTEND_ORIGIN=http://localhost:5173
 ADMIN_TOKEN="<admin session token>"
 USER_TOKEN="<approved user session token>"
-ADMIN_COOKIE="sanctum_admin_session=${ADMIN_TOKEN}; sanctum_csrf=<csrf-token>"
+ADMIN_COOKIE="enclave_admin_session=${ADMIN_TOKEN}; enclave_csrf=<csrf-token>"
 
 curl -i "$API/health"
 curl -i "$API/llm/chat" \

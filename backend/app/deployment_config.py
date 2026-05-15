@@ -1,5 +1,5 @@
 """
-Sanctum Deployment Configuration Router
+Enclave Deployment Configuration Router
 Handles environment settings, service health checks, and .env management.
 """
 
@@ -28,7 +28,7 @@ from models import (
     SuccessResponse,
 )
 
-logger = logging.getLogger("sanctum.deployment_config")
+logger = logging.getLogger("enclave.deployment_config")
 
 # Track when this module was loaded (service start time)
 # Used to determine which config changes require restart
@@ -71,7 +71,7 @@ ENV_CONFIG_MAP = {
     "SMTP_LAST_TEST_SUCCESS": {"category": "email", "description": "Whether last SMTP test was successful", "requires_restart": False},
     "SMTP_LAST_TEST_AT": {"category": "email", "description": "Timestamp of last SMTP test", "requires_restart": False},
     # Storage Settings
-    "SQLITE_PATH": {"category": "storage", "description": "SQLite database path", "requires_restart": True, "default": "/data/sanctum.db"},
+    "SQLITE_PATH": {"category": "storage", "description": "SQLite database path", "requires_restart": True, "default": "/data/enclave.db"},
     "UPLOADS_DIR": {"category": "storage", "description": "Uploads directory path", "requires_restart": True, "default": "/uploads"},
     "CONTENT_ENCRYPTION_KEY": {"category": "storage", "description": "Deployment-held key for backend-readable active content encryption", "requires_restart": False, "is_secret": True},
     "DOCUMENT_ARTIFACT_ENCRYPTION": {"category": "storage", "description": "Artifact Encryption Posture (required or disabled)", "requires_restart": False, "default": "required"},
@@ -98,7 +98,7 @@ ENV_CONFIG_MAP = {
     "API_BASE_URL": {"category": "domains", "description": "API subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:8000"},
     "ADMIN_BASE_URL": {"category": "domains", "description": "Admin panel subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:5173/admin"},
     "EMAIL_DOMAIN": {"category": "domains", "description": "Domain for email addresses", "requires_restart": False, "default": "localhost"},
-    "DKIM_SELECTOR": {"category": "domains", "description": "DKIM DNS record selector", "requires_restart": False, "default": "sanctum"},
+    "DKIM_SELECTOR": {"category": "domains", "description": "DKIM DNS record selector", "requires_restart": False, "default": "enclave"},
     "SPF_INCLUDE": {"category": "domains", "description": "SPF DNS include directive (e.g., include:_spf.google.com)", "requires_restart": False, "default": ""},
     "DMARC_POLICY": {"category": "domains", "description": "DMARC DNS policy record", "requires_restart": False, "default": "v=DMARC1; p=none"},
     "CORS_ORIGINS": {"category": "domains", "description": "Comma-separated allowed CORS origins", "requires_restart": True, "default": "http://localhost:5173"},
@@ -322,7 +322,7 @@ async def export_env_file(
         admin.get("pubkey", "unknown"),
         request.client.host if request.client else "unknown",
     )
-    lines = ["# Sanctum Configuration Export", f"# Generated: {datetime.now(timezone.utc).isoformat()}", ""]
+    lines = ["# Enclave Configuration Export", f"# Generated: {datetime.now(timezone.utc).isoformat()}", ""]
 
     # Get raw values from database (not masked)
     with database.get_cursor() as cursor:

@@ -44,7 +44,7 @@ function renderMessage(content: string) {
 describe('ChatMessage', () => {
   beforeEach(() => {
     stubLocalStorage()
-    localStorage.setItem('sanctum-theme', 'light')
+    localStorage.setItem('enclave-theme', 'light')
     localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify(DEFAULT_INSTANCE_CONFIG))
     vi.stubGlobal(
       'fetch',

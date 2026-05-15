@@ -1,5 +1,5 @@
 """
-Sanctum Config Loader
+Enclave Config Loader
 
 Centralized configuration loading with database-first approach.
 Reads deployment config from database, falls back to environment variables.
@@ -12,7 +12,7 @@ import logging
 import threading
 from typing import Optional, Any
 
-logger = logging.getLogger("sanctum.config_loader")
+logger = logging.getLogger("enclave.config_loader")
 
 # Placeholder used when masking secret values in API responses
 # This constant should be used consistently across the codebase
@@ -231,7 +231,7 @@ def get_smtp_config() -> dict:
         "user": _normalize_nonsecret_str(get_config("SMTP_USER", "")),
         # Passwords can legitimately contain leading/trailing whitespace; don't strip.
         "password": str(get_config("SMTP_PASS", "") or ""),
-        "from_address": _normalize_nonsecret_str(get_config("SMTP_FROM", "Sanctum <noreply@localhost>")),
+        "from_address": _normalize_nonsecret_str(get_config("SMTP_FROM", "Enclave <noreply@localhost>")),
         "timeout": _safe_int(get_config("SMTP_TIMEOUT", "10"), 10),
         "mock_mode": mock_mode.lower() == "true" if isinstance(mock_mode, str) else bool(mock_mode),
     }

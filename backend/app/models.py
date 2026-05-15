@@ -1,5 +1,5 @@
 """
-Sanctum Pydantic Models
+Enclave Pydantic Models
 Request and response models for user/admin management.
 """
 

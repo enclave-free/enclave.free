@@ -1,5 +1,5 @@
 """
-Sanctum Store Module
+Enclave Store Module
 Handles storing document chunks and embeddings to Qdrant.
 """
 
@@ -13,7 +13,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
 # Configure logging
-logger = logging.getLogger("sanctum.store")
+logger = logging.getLogger("enclave.store")
 
 # Configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
@@ -27,7 +27,7 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
 # Collection name for knowledge base
-COLLECTION_NAME = "sanctum_knowledge"
+COLLECTION_NAME = "enclave_knowledge"
 _LEGACY_PLAINTEXT_KEYS = {"text", "fact_text"}
 
 # Lazy-loaded resources

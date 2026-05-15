@@ -22,7 +22,7 @@ class DummySentenceTransformer:
 class AdminDbQueryEndpointTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "sanctum.db"
+        self.db_path = Path(self.tmp.name) / "enclave.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")

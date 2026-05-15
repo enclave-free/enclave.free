@@ -9,7 +9,7 @@ import database
 
 from .base import BaseTool, ToolDefinition, ToolResult
 
-logger = logging.getLogger("sanctum.tools.admin_config")
+logger = logging.getLogger("enclave.tools.admin_config")
 
 
 class AdminConfigTool(BaseTool):

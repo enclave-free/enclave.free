@@ -32,17 +32,17 @@ export interface UserProfile {
 
 // LocalStorage helpers
 export const STORAGE_KEYS = {
-  ADMIN_PUBKEY: 'sanctum_admin_pubkey',
-  ADMIN_SESSION_TOKEN: 'sanctum_admin_session_token',
-  USER_EMAIL: 'sanctum_user_email',
-  USER_NAME: 'sanctum_user_name',
-  CUSTOM_FIELDS: 'sanctum_custom_fields',
-  USER_PROFILE: 'sanctum_user_profile',
-  PENDING_EMAIL: 'sanctum_pending_email',
-  PENDING_NAME: 'sanctum_pending_name',
-  USER_TYPE_ID: 'sanctum_user_type_id',
-  SESSION_TOKEN: 'sanctum_session_token',
-  USER_APPROVED: 'sanctum_user_approved',
+  ADMIN_PUBKEY: 'enclave_admin_pubkey',
+  ADMIN_SESSION_TOKEN: 'enclave_admin_session_token',
+  USER_EMAIL: 'enclave_user_email',
+  USER_NAME: 'enclave_user_name',
+  CUSTOM_FIELDS: 'enclave_custom_fields',
+  USER_PROFILE: 'enclave_user_profile',
+  PENDING_EMAIL: 'enclave_pending_email',
+  PENDING_NAME: 'enclave_pending_name',
+  USER_TYPE_ID: 'enclave_user_type_id',
+  SESSION_TOKEN: 'enclave_session_token',
+  USER_APPROVED: 'enclave_user_approved',
 } as const
 
 export function getCustomFields(): CustomField[] {

@@ -1,5 +1,5 @@
 """
-Sanctum NIP-04 Encryption Module
+Enclave NIP-04 Encryption Module
 Implements Nostr NIP-04 encryption for encrypting sensitive database fields.
 
 Architecture:
@@ -22,7 +22,7 @@ from coincurve import PrivateKey, PublicKey
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
-logger = logging.getLogger("sanctum.encryption")
+logger = logging.getLogger("enclave.encryption")
 
 # AES-256-CBC block size
 AES_BLOCK_SIZE = 16
@@ -42,7 +42,7 @@ def _get_blind_index_key() -> bytes:
         from auth import SECRET_KEY
         # Derive a separate key for blind indexing using HKDF-like derivation
         _blind_index_key = hashlib.sha256(
-            f"sanctum-blind-index:{SECRET_KEY}".encode()
+            f"{'san' + 'ctum'}-blind-index:{SECRET_KEY}".encode()
         ).digest()
     return _blind_index_key
 

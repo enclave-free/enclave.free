@@ -703,7 +703,7 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
     SQLITE_PATH: {
       label: t('deploymentConfigItems.SQLITE_PATH.label', 'Database File'),
       description: t('deploymentConfigItems.SQLITE_PATH.description', 'Path to SQLite database'),
-      hint: t('deploymentConfigItems.SQLITE_PATH.hint', 'Path to the SQLite database file. Default: /data/sanctum.db'),
+      hint: t('deploymentConfigItems.SQLITE_PATH.hint', 'Path to the SQLite database file. Default: /data/enclave.db'),
     },
     UPLOADS_DIR: {
       label: t('deploymentConfigItems.UPLOADS_DIR.label', 'Uploads Folder'),
@@ -794,7 +794,7 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
     DKIM_SELECTOR: {
       label: t('deploymentConfigItems.DKIM_SELECTOR.label', 'DKIM Selector'),
       description: t('deploymentConfigItems.DKIM_SELECTOR.description', 'DKIM DNS record selector'),
-      hint: t('deploymentConfigItems.DKIM_SELECTOR.hint', 'Selector prefix for your DKIM TXT record. Default: sanctum. Your provider may require a specific selector.'),
+      hint: t('deploymentConfigItems.DKIM_SELECTOR.hint', 'Selector prefix for your DKIM TXT record. Default: enclave. Your provider may require a specific selector.'),
     },
     SPF_INCLUDE: {
       label: t('deploymentConfigItems.SPF_INCLUDE.label', 'SPF Include'),

@@ -155,7 +155,7 @@ export function AdminDatabaseExplorer() {
       
       // Get the filename from the Content-Disposition header
       const disposition = response.headers.get('Content-Disposition')
-      let filename = 'sanctum_backup.db'
+      let filename = 'enclave_backup.db'
       if (disposition) {
         const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
         if (filenameMatch) {

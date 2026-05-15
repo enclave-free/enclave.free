@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sanctum</title>
+    <title>Enclave</title>
     <!-- Fonts: Inter for UI, JetBrains Mono for code -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,7 +12,7 @@
     <script>
       (function() {
         // Apply dark mode
-        const theme = localStorage.getItem('sanctum-theme');
+        const theme = localStorage.getItem('enclave-theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (theme === 'dark' || (!theme && prefersDark)) {
           document.documentElement.classList.add('dark');
@@ -20,7 +20,7 @@
 
         // Apply accent color from cached config
         try {
-          const config = JSON.parse(localStorage.getItem('sanctum_instance_config') || '{}');
+          const config = JSON.parse(localStorage.getItem('enclave_instance_config') || '{}');
           const validColors = ['blue', 'purple', 'green', 'orange', 'pink', 'teal'];
           if (config.accentColor && validColors.includes(config.accentColor)) {
             document.documentElement.classList.add('accent-' + config.accentColor);
@@ -56,7 +56,7 @@
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-DOGsLugC.js"></script>
+    <script type="module" crossorigin src="/assets/index-CGQ5m1Oe.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-CRQNcf2N.css">
   </head>
   <body>

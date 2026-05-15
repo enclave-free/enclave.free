@@ -28,7 +28,7 @@ class LifecycleStatusTest(unittest.TestCase):
         import lifecycle
 
         self.previous_sqlite_path = os.environ.get("SQLITE_PATH")
-        self.db_path = Path(self.temp_dir.name) / "sanctum.db"
+        self.db_path = Path(self.temp_dir.name) / "enclave.db"
         os.environ["SQLITE_PATH"] = str(self.db_path)
 
         self.database = importlib.reload(database)

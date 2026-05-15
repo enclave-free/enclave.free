@@ -14,9 +14,12 @@ from Crypto.Cipher import AES
 import database
 
 
-ARTIFACT_PREFIX = b"sanctum-artifact::v1::"
+ARTIFACT_PREFIX = b"enclave-artifact::v1::"
+LEGACY_ARTIFACT_PREFIX = b"san" b"ctum-artifact::v1::"
 ARTIFACT_ENCRYPTION_KEY = "DOCUMENT_ARTIFACT_ENCRYPTION"
 CONTENT_ENCRYPTION_KEY = "CONTENT_ENCRYPTION_KEY"
+ARTIFACT_KEY_INFO = b"enclave/artifact/v1"
+LEGACY_ARTIFACT_KEY_INFO = b"san" b"ctum/artifact/v1"
 
 
 def artifact_encryption_posture() -> str:
@@ -78,18 +81,18 @@ def _key_bytes() -> bytes:
     key = _content_encryption_key_value()
     if not key:
         raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
-    return _derive_artifact_key(key)
+    return _derive_artifact_key(key, ARTIFACT_KEY_INFO)
 
 
-def _derive_artifact_key(key: str) -> bytes:
+def _derive_artifact_key(key: str, info: bytes) -> bytes:
     pseudo_random_key = hmac.new(
-        b"sanctum/artifact/v1",
+        info,
         key.encode("utf-8"),
         hashlib.sha256,
     ).digest()
     return hmac.new(
         pseudo_random_key,
-        b"sanctum/artifact/v1" + b"\x01",
+        info + b"\x01",
         hashlib.sha256,
     ).digest()
 
@@ -101,6 +104,13 @@ def _legacy_key_bytes() -> bytes:
     return hashlib.sha256(key.encode("utf-8")).digest()
 
 
+def _legacy_hkdf_key_bytes() -> bytes:
+    key = _content_encryption_key_value()
+    if not key:
+        raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
+    return _derive_artifact_key(key, LEGACY_ARTIFACT_KEY_INFO)
+
+
 def encrypt_bytes(plaintext: bytes) -> bytes:
     nonce = os.urandom(12)
     cipher = AES.new(_key_bytes(), AES.MODE_GCM, nonce=nonce)
@@ -110,7 +120,7 @@ def encrypt_bytes(plaintext: bytes) -> bytes:
 
 
 def is_encrypted_artifact(content: bytes) -> bool:
-    return content.startswith(ARTIFACT_PREFIX)
+    return content.startswith(ARTIFACT_PREFIX) or content.startswith(LEGACY_ARTIFACT_PREFIX)
 
 
 def decrypt_bytes(content: bytes) -> bytes:
@@ -122,16 +132,18 @@ def decrypt_bytes(content: bytes) -> bytes:
     """
     if not is_encrypted_artifact(content):
         return content
-    raw = base64.b64decode(content[len(ARTIFACT_PREFIX):])
+    prefix = ARTIFACT_PREFIX if content.startswith(ARTIFACT_PREFIX) else LEGACY_ARTIFACT_PREFIX
+    raw = base64.b64decode(content[len(prefix):])
     nonce = raw[:12]
     tag = raw[12:28]
     ciphertext = raw[28:]
-    try:
-        cipher = AES.new(_key_bytes(), AES.MODE_GCM, nonce=nonce)
-        return cipher.decrypt_and_verify(ciphertext, tag)
-    except ValueError:
-        cipher = AES.new(_legacy_key_bytes(), AES.MODE_GCM, nonce=nonce)
-        return cipher.decrypt_and_verify(ciphertext, tag)
+    for key in (_key_bytes(), _legacy_hkdf_key_bytes(), _legacy_key_bytes()):
+        try:
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            return cipher.decrypt_and_verify(ciphertext, tag)
+        except ValueError:
+            continue
+    raise ValueError("Encrypted artifact authentication failed")
 
 
 def encode_for_storage(content: bytes) -> bytes:

@@ -1,5 +1,5 @@
 """
-Sanctum Ingest Router
+Enclave Ingest Router
 Handles document upload, chunking, and storage to Qdrant.
 
 Job state is persisted to SQLite (via ingest_db module) to survive container restarts.
@@ -49,7 +49,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("sanctum.ingest")
+logger = logging.getLogger("enclave.ingest")
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
@@ -1107,7 +1107,7 @@ async def wipe_datastores(admin: dict = Depends(auth.require_admin)):
         client = get_qdrant_client()
         collections = {c.name for c in client.get_collections().collections}
         deleted = []
-        for name in (COLLECTION_NAME, "sanctum_smoke_test"):
+        for name in (COLLECTION_NAME, "enclave_smoke_test"):
             if name in collections:
                 client.delete_collection(name)
                 deleted.append(name)

@@ -17,7 +17,7 @@ from openai import OpenAI
 
 from .provider import LLMProvider, LLMResponse
 
-logger = logging.getLogger("sanctum.llm.sage_tinfoil")
+logger = logging.getLogger("enclave.llm.sage_tinfoil")
 
 
 class SageTinfoilProvider(LLMProvider):

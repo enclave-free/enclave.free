@@ -22,8 +22,8 @@ describe('Field primitives', () => {
     const input = screen.getByRole('textbox', { name: 'Instance name' })
     expect(input).toHaveAccessibleDescription('Shown in the Instance header')
 
-    await user.type(input, 'Sanctum')
-    expect(input).toHaveValue('Sanctum')
+    await user.type(input, 'Enclave')
+    expect(input).toHaveValue('Enclave')
   })
 
   it('announces textarea validation errors as field descriptions', async () => {

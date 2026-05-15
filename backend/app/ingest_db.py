@@ -1,5 +1,5 @@
 """
-Sanctum Ingest Database Module
+Enclave Ingest Database Module
 Handles SQLite persistence for ingest jobs and chunks.
 
 This module provides Create and Read operations for ingest job state.
@@ -18,7 +18,7 @@ from typing import Optional
 import content_artifacts
 from database import get_connection, get_cursor
 
-logger = logging.getLogger("sanctum.ingest_db")
+logger = logging.getLogger("enclave.ingest_db")
 
 
 # =============================================================================

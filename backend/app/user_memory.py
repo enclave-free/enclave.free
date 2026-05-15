@@ -7,7 +7,7 @@ from typing import Any
 
 import database
 
-logger = logging.getLogger("sanctum.user_memory")
+logger = logging.getLogger("enclave.user_memory")
 
 ALLOWED_AMBIENT_KINDS = {"preference", "communication_style", "interest"}
 MAX_AMBIENT_IMPORTANCE = 5

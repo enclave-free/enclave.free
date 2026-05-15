@@ -7,7 +7,7 @@ import { UserAuth } from './UserAuth'
 vi.mock('../context/InstanceConfigContext', () => ({
   useInstanceConfig: () => ({
     config: {
-      name: 'Sanctum',
+      name: 'Enclave',
     },
   }),
 }))

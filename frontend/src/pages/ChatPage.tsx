@@ -28,7 +28,7 @@ type AdminApplyState =
   | { state: 'error'; message: string }
 
 const CONFIG_TOOL_ID = 'admin-config'
-export const SANCTUM_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL
+export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL
 
 function slugify(value: string): string {
   return String(value || '')

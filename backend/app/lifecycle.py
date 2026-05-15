@@ -36,7 +36,7 @@ import store
 
 
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
-logger = logging.getLogger("sanctum.lifecycle")
+logger = logging.getLogger("enclave.lifecycle")
 _warned_missing_internal_agent_token = False
 _sage_client: httpx.AsyncClient | None = None
 _sage_client_timeout = httpx.Timeout(10.0, connect=5.0, read=10.0, write=10.0, pool=5.0)

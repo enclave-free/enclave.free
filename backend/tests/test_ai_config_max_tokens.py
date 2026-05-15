@@ -17,7 +17,7 @@ if str(APP_DIR) not in sys.path:
 class AIConfigMaxTokensTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "sanctum.db"
+        self.db_path = Path(self.tmp.name) / "enclave.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         os.environ["SQLITE_PATH"] = str(self.db_path)

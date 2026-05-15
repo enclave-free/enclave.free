@@ -80,7 +80,7 @@ i18n
     },
     detection: {
       order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'sanctum_language',
+      lookupLocalStorage: 'enclave_language',
       caches: ['localStorage'],
     },
   })

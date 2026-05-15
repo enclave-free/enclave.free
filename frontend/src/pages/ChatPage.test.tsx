@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChatPage, SANCTUM_USER_EMAIL_KEY } from './ChatPage'
+import { ChatPage, ENCLAVE_USER_EMAIL_KEY } from './ChatPage'
 import { InstanceConfigProvider } from '../context/InstanceConfigContext'
 import { ThemeProvider } from '../theme'
 import { DEFAULT_INSTANCE_CONFIG, INSTANCE_CONFIG_KEY } from '../types/instance'
@@ -47,9 +47,9 @@ describe('ChatPage', () => {
         store.clear()
       }),
     })
-    localStorage.setItem('sanctum-theme', 'light')
+    localStorage.setItem('enclave-theme', 'light')
     localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify(DEFAULT_INSTANCE_CONFIG))
-    localStorage.setItem(SANCTUM_USER_EMAIL_KEY, 'reader@example.com')
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'reader@example.com')
 
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input)

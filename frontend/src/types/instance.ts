@@ -37,7 +37,7 @@ export interface InstanceConfig {
 }
 
 export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
-  name: 'Sanctum',
+  name: 'Enclave',
   accentColor: 'blue',
   icon: 'Sparkles',
   logoUrl: '',
@@ -45,7 +45,7 @@ export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
   appleTouchIconUrl: '',
   assistantIcon: 'Sparkles',
   userIcon: 'User',
-  assistantName: 'Sanctum AI',
+  assistantName: 'Enclave AI',
   userLabel: 'You',
   headerLayout: 'icon_name',
   headerTagline: '',
@@ -125,7 +125,7 @@ export const CURATED_ICONS = [
   'RotateCw', 'RefreshCw',
 ] as const
 
-export const INSTANCE_CONFIG_KEY = 'sanctum_instance_config'
+export const INSTANCE_CONFIG_KEY = 'enclave_instance_config'
 
 export interface AccentColorConfig {
   name: string

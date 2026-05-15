@@ -1,5 +1,5 @@
 """
-Sanctum Retrieval Query Module
+Enclave Retrieval Query Module
 
 Session-aware Retrieval for querying the Document Library.
 Pipeline: Query → Embed → Vector Search → Model Provider → Answer
@@ -43,7 +43,7 @@ from utils import sanitize_profile_value
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
-logger = logging.getLogger("sanctum.query")
+logger = logging.getLogger("enclave.query")
 
 router = APIRouter(prefix="/query", tags=["query"])
 

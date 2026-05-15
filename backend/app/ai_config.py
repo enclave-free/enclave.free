@@ -1,5 +1,5 @@
 """
-Sanctum Agent Settings compatibility router.
+Enclave Agent Settings compatibility router.
 Handles prompt templates, Model Provider parameters, and session defaults.
 """
 
@@ -21,7 +21,7 @@ from models import (
     PromptPreviewResponse,
 )
 
-logger = logging.getLogger("sanctum.ai_config")
+logger = logging.getLogger("enclave.ai_config")
 
 router = APIRouter(prefix="/admin/ai-config", tags=["ai-config"])
 

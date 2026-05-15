@@ -17,10 +17,10 @@ if str(APP_DIR) not in sys.path:
 class DeploymentConfigRateLimitsTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "sanctum.db"
+        self.db_path = Path(self.tmp.name) / "enclave.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
-        self._orig_sanctum_env = os.environ.get("SANCTUM_ENV")
+        self._orig_enclave_env = os.environ.get("ENCLAVE_ENV")
         self._orig_mock_email = os.environ.get("MOCK_EMAIL")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
@@ -49,7 +49,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             self.database._connection = None
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
-        self._restore_env("SANCTUM_ENV", self._orig_sanctum_env)
+        self._restore_env("ENCLAVE_ENV", self._orig_enclave_env)
         self._restore_env("MOCK_EMAIL", self._orig_mock_email)
         self.tmp.cleanup()
 
@@ -85,7 +85,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
                 self.assertEqual(response.json()["value"], "42")
 
     def test_production_validation_rejects_testing_only_flags(self) -> None:
-        os.environ["SANCTUM_ENV"] = "production"
+        os.environ["ENCLAVE_ENV"] = "production"
         os.environ["MOCK_EMAIL"] = "true"
         self.database.update_deployment_config("MOCK_SMTP", "true", "test")
         self.database.update_deployment_config("SIMULATE_USER_AUTH", "true", "test")

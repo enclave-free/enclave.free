@@ -51,7 +51,7 @@ describe('AppHeader', () => {
   beforeEach(() => {
     mockIsAdminAuthenticated.mockReturnValue(false)
     stubLocalStorage()
-    localStorage.setItem('sanctum-theme', 'light')
+    localStorage.setItem('enclave-theme', 'light')
     localStorage.setItem(
       INSTANCE_CONFIG_KEY,
       JSON.stringify({
@@ -94,7 +94,7 @@ describe('AppHeader', () => {
     await waitFor(() => {
       expect(document.documentElement).toHaveClass('dark')
     })
-    expect(localStorage.getItem('sanctum-theme')).toBe('dark')
+    expect(localStorage.getItem('enclave-theme')).toBe('dark')
   })
 
   it('shows configured back navigation', async () => {

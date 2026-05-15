@@ -15,7 +15,7 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - sanctum-net
+      - enclave-net
 
   tinfoil-proxy:
     image: ghcr.io/tinfoilsh/tinfoil-cli:latest
@@ -39,11 +39,11 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      - sanctum-net
+      - enclave-net
 
   qdrant:
     image: qdrant/qdrant:v1.12.6
-    container_name: sanctum-qdrant
+    container_name: enclave-qdrant
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
@@ -53,11 +53,11 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - sanctum-net
+      - enclave-net
 
   searxng:
     image: searxng/searxng:latest
-    container_name: sanctum-searxng
+    container_name: enclave-searxng
     volumes:
       - ./searxng:/etc/searxng:ro
     environment:
@@ -69,12 +69,12 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - sanctum-net
+      - enclave-net
 
 volumes:
   qdrant_data:
   sage_postgres_data:
 
 networks:
-  sanctum-net:
+  enclave-net:
     driver: bridge

@@ -1,5 +1,5 @@
 """
-Sanctum Backend - FastAPI Application
+Enclave Backend - FastAPI Application
 RAG system with Qdrant vector search.
 Also provides user/admin management via SQLite.
 """
@@ -82,7 +82,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("sanctum.main")
+logger = logging.getLogger("enclave.main")
 
 admin_conversation_states: dict[str, dict] = {}
 _admin_conversation_states_lock = threading.Lock()
@@ -95,7 +95,7 @@ from deployment_config import router as deployment_config_router
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
 
-logger.info("Starting Sanctum API...")
+logger.info("Starting Enclave API...")
 
 
 def _audit_data_deletion_event(
@@ -136,7 +136,7 @@ def _best_effort_config_audit_event(**kwargs) -> None:
 
 
 app = FastAPI(
-    title="Sanctum API",
+    title="Enclave API",
     description="Privacy-first RAG system for curated knowledge",
     version="0.1.0"
 )
@@ -243,7 +243,7 @@ def _apply_security_headers(request: Request, response: Response) -> None:
 
 
 def _has_cookie_session(request: Request) -> bool:
-    """Whether request carries Sanctum auth cookies."""
+    """Whether request carries Enclave auth cookies."""
     return bool(
         request.cookies.get(auth.USER_SESSION_COOKIE_NAME)
         or request.cookies.get(auth.ADMIN_SESSION_COOKIE_NAME)
@@ -435,7 +435,7 @@ QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
 # Collection name for smoke test
-COLLECTION_NAME = "sanctum_smoke_test"
+COLLECTION_NAME = "enclave_smoke_test"
 
 
 class SmokeTestResult(BaseModel):
@@ -531,7 +531,7 @@ class VectorSearchRequest(BaseModel):
     """Request model for vector search endpoint"""
     query: str
     top_k: int = 5
-    collection: str = "sanctum_smoke_test"
+    collection: str = "enclave_smoke_test"
 
 
 class VectorSearchResultItem(BaseModel):
@@ -885,7 +885,7 @@ def get_qdrant_client():
 async def root():
     """Root endpoint"""
     return {
-        "name": "Sanctum API",
+        "name": "Enclave API",
         "version": "0.1.0",
         "status": "running"
     }
@@ -1771,7 +1771,7 @@ async def submit_reachout(
     if mode not in {"feedback", "help", "support"}:
         mode = "support"
 
-    instance_name = (database.get_setting("instance_name") or "Sanctum").strip() or "Sanctum"
+    instance_name = (database.get_setting("instance_name") or "Enclave").strip() or "Enclave"
     subject_prefix = (database.get_setting("reachout_subject_prefix") or "").strip()
 
     subject = f"[{instance_name}] {mode.title()}: user reachout"
@@ -1915,9 +1915,9 @@ async def send_test_email(
     </head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
         <div style="max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #333; margin-bottom: 24px;">Sanctum Test Email</h2>
+            <h2 style="color: #333; margin-bottom: 24px;">Enclave Test Email</h2>
             <p style="margin-bottom: 24px;">
-                This is a test email from your Sanctum instance.
+                This is a test email from your Enclave instance.
                 If you received this, your SMTP configuration is working correctly.
             </p>
             <p style="margin-top: 24px; font-size: 14px; color: #666;">
@@ -1927,7 +1927,7 @@ async def send_test_email(
     </body>
     </html>
     """
-    subject = "Sanctum Test Email"
+    subject = "Enclave Test Email"
 
     try:
         await asyncio.to_thread(_send_html_email_smtp, smtp, email, subject, html)
@@ -2018,7 +2018,7 @@ async def admin_auth(
     Authenticate or register an admin by verifying a signed Nostr event.
 
     The event must:
-    - Be kind 22242 (Sanctum auth event)
+    - Be kind 22242 (Enclave auth event)
     - Have action tag = "admin_auth"
     - Have valid BIP-340 Schnorr signature
     - Be signed within the last 5 minutes
@@ -3528,7 +3528,7 @@ async def export_database(background_tasks: BackgroundTasks, _admin: Dict = Depe
         # Generate filename with timestamp
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"sanctum_backup_{timestamp}.db"
+        filename = f"enclave_backup_{timestamp}.db"
         
         # Create a temporary file for the backup
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".db")

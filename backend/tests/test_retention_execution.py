@@ -30,7 +30,7 @@ class RetentionExecutionTest(unittest.TestCase):
             SentenceTransformer=DummySentenceTransformer,
         )
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "sanctum.db"
+        self.db_path = Path(self.tmp.name) / "enclave.db"
         self.uploads_dir = Path(self.tmp.name) / "uploads"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")

@@ -19,7 +19,7 @@ if str(APP_DIR) not in sys.path:
 class IngestBatchReplacementTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "sanctum.db"
+        self.db_path = Path(self.tmp.name) / "enclave.db"
         self.uploads_dir = Path(self.tmp.name) / "uploads"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
@@ -115,7 +115,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         artifact_path = Path(job["file_path"])
         self.assertTrue(artifact_path.exists())
         self.assertNotEqual(artifact_path.read_bytes(), b"operator knowledge")
-        self.assertTrue(artifact_path.read_bytes().startswith(b"sanctum-artifact::v1::"))
+        self.assertTrue(artifact_path.read_bytes().startswith(b"enclave-artifact::v1::"))
 
     def test_upload_allows_plaintext_artifact_when_operator_disables_encryption(self) -> None:
         self.database.update_setting_with_audit(
