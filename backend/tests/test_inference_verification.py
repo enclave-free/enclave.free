@@ -187,3 +187,41 @@ class InferenceVerificationTest(unittest.TestCase):
         self.assertEqual(audit_events[0]["failure_category"], "claim_mismatch")
         self.assertNotIn("attestation_material", audit_events[0])
         self.assertNotIn("full-attestation-material", str(audit_events[0]))
+
+    def test_verify_and_store_returns_record_when_status_change_audit_fails(self) -> None:
+        from inference_verification import InferenceVerificationResult, verify_and_store
+
+        class FakeVerifier:
+            def verify(self, **_kwargs):
+                return InferenceVerificationResult(
+                    provider_identity="sage",
+                    provider_endpoint="https://inference.tinfoil.sh/v1",
+                    model_identifier="kimi-k2-6",
+                    status="success",
+                    trigger="manual",
+                    expected_claims_fingerprint="expected",
+                    actual_claims_fingerprint="actual",
+                    verifier_version="fake/1",
+                    attestation_material={"quote": "full"},
+                )
+
+        class FakeStorage:
+            def create_inference_verification_record(self, **kwargs):
+                return {"id": 8, **kwargs}
+
+        def failing_audit(_event):
+            raise RuntimeError("audit unavailable")
+
+        record = verify_and_store(
+            verifier=FakeVerifier(),
+            storage=FakeStorage(),
+            provider_identity="sage",
+            provider_endpoint="https://inference.tinfoil.sh/v1",
+            model_identifier="kimi-k2-6",
+            expected_claims={"tee": "tdx"},
+            trigger="manual",
+            audit_status_change=failing_audit,
+        )
+
+        self.assertEqual(record["id"], 8)
+        self.assertEqual(record["status"], "success")

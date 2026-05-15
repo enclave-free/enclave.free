@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import logging
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -63,6 +64,7 @@ class InferenceVerificationStorage(Protocol):
 
 Fetcher = Callable[[str, dict[str, str], float], tuple[int, object]]
 StatusChangeAuditor = Callable[[dict[str, Any]], None]
+logger = logging.getLogger("enclave.inference_verification")
 
 
 def fingerprint_claims(claims: object) -> str:
@@ -204,7 +206,14 @@ def verify_and_store(
         expires_at=result.expires_at,
     )
     if audit_status_change is not None:
-        audit_status_change(inference_verification_status_change_event(record))
+        try:
+            audit_status_change(inference_verification_status_change_event(record))
+        except Exception:
+            logger.warning(
+                "Failed to audit inference verification status change record_id=%s",
+                record.get("id"),
+                exc_info=True,
+            )
     return record
 
 

@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import sys
 import tempfile
@@ -200,8 +201,10 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.assertEqual(entries_by_key["verification_status_changed"]["changed_by"], "admin-pubkey")
         self.assertIn('"status":"success"', entries_by_key["verification_status_changed"]["new_value"])
         self.assertIn('"trigger":"manual"', entries_by_key["verification_status_changed"]["new_value"])
-        self.assertNotIn("manual-attestation-material", entries_by_key["manual_verification"]["new_value"])
-        self.assertNotIn("manual-attestation-material", entries_by_key["verification_status_changed"]["new_value"])
+        manual_event = json.loads(entries_by_key["manual_verification"]["new_value"])
+        status_change_event = json.loads(entries_by_key["verification_status_changed"]["new_value"])
+        self.assertNotIn("attestation_material", manual_event)
+        self.assertNotIn("attestation_material", status_change_event)
 
     def test_manual_verification_requires_configured_model_provider_api_key(self) -> None:
         self.database.update_deployment_config("LLM_API_KEY", "", changed_by="admin-pubkey")
