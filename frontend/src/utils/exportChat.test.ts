@@ -119,4 +119,52 @@ describe('generateExport', () => {
     expect(exported).toContain('Web search')
     expect(exported).toContain('Found 3 relevant results.')
   })
+
+  it('exports only compact badges for minimal Conversation Trace metadata', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        trace: {
+          visibility: 'minimal',
+          reasoning: {
+            summary: 'Sage used Web search before answering.',
+          },
+          tools: [
+            {
+              id: 'web-search',
+              name: 'Web search',
+              status: 'success',
+              execution: 'server',
+              output_summary: 'Found 3 relevant results.',
+              warnings: [],
+              metadata: {},
+            },
+          ],
+          retrieval: [
+            {
+              source_type: 'document',
+              title: 'Tenant Rights Guide',
+              summary: 'Matched eviction timeline section.',
+            },
+          ],
+          suppressed: false,
+        },
+      },
+    ]
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    })
+
+    expect(exported).toContain('Conversation Trace')
+    expect(exported).toContain('Web search')
+    expect(exported).toContain('Tenant Rights Guide')
+    expect(exported).not.toContain('Sage used Web search before answering.')
+    expect(exported).not.toContain('Found 3 relevant results.')
+    expect(exported).not.toContain('Matched eviction timeline section.')
+  })
 })

@@ -32,16 +32,17 @@ function toConversationExportMessages(messages: Message[]): ConversationExportMe
 function formatTraceMarkdown(trace?: ConversationTrace | null): string {
   if (!trace || trace.visibility === 'off') return ''
   const lines: string[] = ['**Conversation Trace**']
-  if (trace.reasoning?.summary) {
+  const compactOnly = trace.visibility === 'minimal'
+  if (!compactOnly && trace.reasoning?.summary) {
     lines.push(`- ${trace.reasoning.summary}`)
   }
   for (const tool of trace.tools ?? []) {
-    const summary = tool.output_summary ? `: ${tool.output_summary}` : ''
+    const summary = !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : ''
     lines.push(`- Tool: ${tool.name}${summary}`)
   }
   for (const item of trace.retrieval ?? []) {
     const title = item.title || item.source_type || 'Retrieved source'
-    const summary = item.summary ? `: ${item.summary}` : ''
+    const summary = !compactOnly && item.summary ? `: ${item.summary}` : ''
     lines.push(`- Retrieval: ${title}${summary}`)
   }
   return `${lines.join('\n')}\n\n`
@@ -50,16 +51,17 @@ function formatTraceMarkdown(trace?: ConversationTrace | null): string {
 function formatTraceText(trace?: ConversationTrace | null): string {
   if (!trace || trace.visibility === 'off') return ''
   const lines: string[] = ['Conversation Trace']
-  if (trace.reasoning?.summary) {
+  const compactOnly = trace.visibility === 'minimal'
+  if (!compactOnly && trace.reasoning?.summary) {
     lines.push(`- ${trace.reasoning.summary}`)
   }
   for (const tool of trace.tools ?? []) {
-    const summary = tool.output_summary ? `: ${tool.output_summary}` : ''
+    const summary = !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : ''
     lines.push(`- Tool: ${tool.name}${summary}`)
   }
   for (const item of trace.retrieval ?? []) {
     const title = item.title || item.source_type || 'Retrieved source'
-    const summary = item.summary ? `: ${item.summary}` : ''
+    const summary = !compactOnly && item.summary ? `: ${item.summary}` : ''
     lines.push(`- Retrieval: ${title}${summary}`)
   }
   return `${lines.join('\n')}\n\n`
