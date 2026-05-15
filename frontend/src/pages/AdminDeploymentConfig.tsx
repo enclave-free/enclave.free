@@ -120,6 +120,7 @@ export function AdminDeploymentConfig() {
   }>>({})
   const [savingRetentionPolicyKey, setSavingRetentionPolicyKey] = useState<string | null>(null)
   const [retentionPolicyError, setRetentionPolicyError] = useState<string | null>(null)
+  const [retentionPreviewError, setRetentionPreviewError] = useState<string | null>(null)
   const [retentionPreview, setRetentionPreview] = useState<{
     counts?: {
       stale_conversations?: number
@@ -130,6 +131,7 @@ export function AdminDeploymentConfig() {
   const [retentionPreviewLoading, setRetentionPreviewLoading] = useState(false)
   const [scheduledRetentionResult, setScheduledRetentionResult] = useState<{ status?: string; retry_results?: unknown[] } | null>(null)
   const [scheduledRetentionLoading, setScheduledRetentionLoading] = useState(false)
+  const [scheduledRetentionError, setScheduledRetentionError] = useState<string | null>(null)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -276,8 +278,9 @@ export function AdminDeploymentConfig() {
     setRetentionPolicyDrafts((currentDrafts) => {
       const nextDrafts = { ...currentDrafts }
       lifecycleStatus.data_classes.forEach((dataClass) => {
-        if (!nextDrafts[dataClass.key] && dataClass.retention_policy) {
+        if (dataClass.retention_policy) {
           nextDrafts[dataClass.key] = {
+            ...(nextDrafts[dataClass.key] ?? {}),
             enabled: dataClass.retention_policy.enabled,
             retention_window_days: dataClass.retention_policy.retention_window_days,
             scheduled_enforcement_enabled: dataClass.retention_policy.scheduled_enforcement_enabled,
@@ -356,10 +359,10 @@ export function AdminDeploymentConfig() {
   const handlePreviewRetention = async () => {
     try {
       setRetentionPreviewLoading(true)
-      setRetentionPolicyError(null)
+      setRetentionPreviewError(null)
       setRetentionPreview(await previewRetention())
     } catch (err) {
-      setRetentionPolicyError(err instanceof Error ? err.message : 'errors.failedToPreviewRetention')
+      setRetentionPreviewError(err instanceof Error ? err.message : 'errors.failedToPreviewRetention')
     } finally {
       setRetentionPreviewLoading(false)
     }
@@ -368,10 +371,10 @@ export function AdminDeploymentConfig() {
   const handleRunScheduledRetention = async () => {
     try {
       setScheduledRetentionLoading(true)
-      setRetentionPolicyError(null)
+      setScheduledRetentionError(null)
       setScheduledRetentionResult(await runScheduledRetention())
     } catch (err) {
-      setRetentionPolicyError(err instanceof Error ? err.message : 'errors.failedToRunScheduledRetention')
+      setScheduledRetentionError(err instanceof Error ? err.message : 'errors.failedToRunScheduledRetention')
     } finally {
       setScheduledRetentionLoading(false)
     }
@@ -1646,6 +1649,16 @@ export function AdminDeploymentConfig() {
           {retentionPolicyError && (
             <p className="mt-3 text-xs text-danger">
               {t('adminDeployment.lifecycle.retentionPolicySaveFailed', 'Unable to save retention policy.')}
+            </p>
+          )}
+          {retentionPreviewError && (
+            <p className="mt-3 text-xs text-danger">
+              {t('adminDeployment.lifecycle.retentionPreviewFailed', 'Unable to preview retention.')}
+            </p>
+          )}
+          {scheduledRetentionError && (
+            <p className="mt-3 text-xs text-danger">
+              {t('adminDeployment.lifecycle.scheduledRetentionFailed', 'Unable to run scheduled retention.')}
             </p>
           )}
 

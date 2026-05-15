@@ -190,9 +190,19 @@ describe('AdminDeploymentConfig', () => {
         }))
       }
       if (endpoint === '/admin/lifecycle/unsupported-deployment-surfaces/docker_logs/acknowledgement') {
-        acknowledgedSurfaceKeys = ['docker_logs']
+        const body = JSON.parse(String(options?.body ?? '{}'))
+        acknowledgedSurfaceKeys = body.acknowledged === true ? ['docker_logs'] : []
         return Promise.resolve(Response.json({
-          unsupported_deployment_surfaces: [],
+          unsupported_deployment_surfaces: [
+            {
+              key: 'docker_logs',
+              label: 'Docker Logs',
+              category: 'runtime_logs',
+              summary: 'Container stdout/stderr logs are managed by the deployment runtime, not product lifecycle controls.',
+              status: 'unsupported',
+              acknowledged: acknowledgedSurfaceKeys.includes('docker_logs'),
+            },
+          ],
         }))
       }
       if (endpoint === '/admin/lifecycle/retention-policies/sage_session_memory') {

@@ -204,7 +204,7 @@ export interface LifecycleDataClass {
   deletion: LifecyclePosture
   retention: LifecyclePosture
   audit: LifecyclePosture
-  retention_policy: RetentionPolicy
+  retention_policy?: RetentionPolicy
   notes: string[]
 }
 

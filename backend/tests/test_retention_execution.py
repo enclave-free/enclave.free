@@ -333,6 +333,14 @@ class RetentionExecutionTest(unittest.TestCase):
                 (stale, "deployment_config", "data_deletion"),
             )
 
+        preview = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.json()["counts"]["audit_log_entries"], 1)
+        self.assertEqual(len(preview.json()["eligible"]["audit_log_entries"]), 1)
+
         response = self.client.post(
             "/admin/lifecycle/retention/run",
             json={"stale_conversation_days": 7, "document_artifact_days": 7},
@@ -359,6 +367,59 @@ class RetentionExecutionTest(unittest.TestCase):
 
         full_delete = self.client.delete("/admin/deployment/audit-log")
         self.assertEqual(full_delete.status_code, 405)
+
+    def test_scheduled_retention_reports_incomplete_when_retry_remains_incomplete(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id="still-incomplete-session",
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [],
+            },
+        )
+
+        async def fail_session_memory_delete(_session: dict) -> dict:
+            return {
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": "still-incomplete-session",
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "target_unavailable",
+                    }
+                ],
+            }
+
+        self.lifecycle.delete_session_memory_for_conversation = fail_session_memory_delete
+
+        response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "incomplete")
+        self.assertEqual(body["retry_results"][0]["status"], "incomplete")
 
     def test_disabled_retention_policy_skips_execution_without_deleting_candidates(self) -> None:
         self.database.update_setting(

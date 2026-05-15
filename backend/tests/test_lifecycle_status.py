@@ -87,18 +87,27 @@ class LifecycleStatusTest(unittest.TestCase):
             session_memory["retention"]["summary"],
         )
 
-    def test_lifecycle_status_includes_disabled_default_retention_policy_for_each_class(self) -> None:
+    def test_lifecycle_status_includes_disabled_default_retention_policy_for_enforced_classes(self) -> None:
         response = self.client.get("/admin/lifecycle/status")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
+        enforceable = {
+            "sage_session_memory",
+            "uploaded_document_artifacts",
+            "user_memory",
+            "audit_log",
+        }
 
         for data_class in body["data_classes"]:
-            policy = data_class["retention_policy"]
-            self.assertEqual(policy["lifecycle_data_class"], data_class["key"])
-            self.assertFalse(policy["enabled"])
-            self.assertGreater(policy["retention_window_days"], 0)
-            self.assertFalse(policy["scheduled_enforcement_enabled"])
+            if data_class["key"] in enforceable:
+                policy = data_class["retention_policy"]
+                self.assertEqual(policy["lifecycle_data_class"], data_class["key"])
+                self.assertFalse(policy["enabled"])
+                self.assertGreater(policy["retention_window_days"], 0)
+                self.assertFalse(policy["scheduled_enforcement_enabled"])
+            else:
+                self.assertNotIn("retention_policy", data_class)
 
     def test_admin_can_update_retention_policy_for_lifecycle_data_class(self) -> None:
         update = self.client.put(
@@ -125,6 +134,10 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertTrue(policy["scheduled_enforcement_enabled"])
         self.assertFalse(classes_by_key["user_memory"]["retention_policy"]["enabled"])
 
+        audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
+        self.assertEqual(audit_entries[0]["config_key"], "lifecycle_retention_policies")
+        self.assertEqual(audit_entries[0]["changed_by"], "admin-pubkey")
+
     def test_retention_policy_update_validates_window_and_requires_admin(self) -> None:
         invalid = self.client.put(
             "/admin/lifecycle/retention-policies/sage_session_memory",
@@ -148,6 +161,16 @@ class LifecycleStatusTest(unittest.TestCase):
             },
         )
         self.assertIn(unauthenticated.status_code, (401, 403))
+
+        unsupported = self.client.put(
+            "/admin/lifecycle/retention-policies/user_profiles",
+            json={
+                "enabled": True,
+                "retention_window_days": 30,
+                "scheduled_enforcement_enabled": False,
+            },
+        )
+        self.assertEqual(unsupported.status_code, 404)
 
     def test_audit_coverage_inventory_has_no_missing_supported_mutations(self) -> None:
         response = self.client.get("/admin/lifecycle/audit-coverage")
@@ -212,6 +235,9 @@ class LifecycleStatusTest(unittest.TestCase):
         }
         self.assertTrue(surfaces["docker_logs"]["acknowledged"])
         self.assertFalse(surfaces["gateway_logs"]["acknowledged"])
+        audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
+        self.assertEqual(audit_entries[0]["config_key"], "lifecycle_unsupported_surface_acknowledgements")
+        self.assertEqual(audit_entries[0]["changed_by"], "admin-pubkey")
 
     def test_lifecycle_status_summarizes_deletion_tombstones(self) -> None:
         self.database.create_deletion_tombstone(

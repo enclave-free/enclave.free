@@ -501,16 +501,25 @@ export function useLifecycleStatus() {
   }, [fetchStatus])
 
   const previewRetention = useCallback(async () => {
+    const policyByClass = (status?.data_classes ?? []).reduce<Record<string, RetentionPolicy>>((policies, dataClass) => {
+      if (dataClass.retention_policy) {
+        policies[dataClass.key] = dataClass.retention_policy
+      }
+      return policies
+    }, {})
     const response = await adminFetch('/admin/lifecycle/retention/preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stale_conversation_days: 30, document_artifact_days: 0 }),
+      body: JSON.stringify({
+        stale_conversation_days: policyByClass.sage_session_memory?.retention_window_days ?? 30,
+        document_artifact_days: policyByClass.uploaded_document_artifacts?.retention_window_days ?? 0,
+      }),
     })
     if (!response.ok) {
       throw new Error('errors.failedToPreviewRetention')
     }
     return response.json()
-  }, [])
+  }, [status])
 
   const runScheduledRetention = useCallback(async () => {
     const response = await adminFetch('/admin/lifecycle/retention/scheduled/run', {

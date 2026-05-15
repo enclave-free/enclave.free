@@ -264,6 +264,14 @@ UNSUPPORTED_DEPLOYMENT_SURFACES = [
 ]
 
 
+ENFORCED_RETENTION_DATA_CLASS_KEYS = {
+    "sage_session_memory",
+    "uploaded_document_artifacts",
+    "user_memory",
+    "audit_log",
+}
+
+
 SECURE_ERASE_SCOPE = {
     "status": "unsupported",
     "summary": (
@@ -294,7 +302,11 @@ class UnsupportedSurfaceAcknowledgementRequest(BaseModel):
 
 
 def _data_class_keys() -> set[str]:
-    return {data_class["key"] for data_class in DATA_CLASSES}
+    return {
+        data_class["key"]
+        for data_class in DATA_CLASSES
+        if data_class["key"] in ENFORCED_RETENTION_DATA_CLASS_KEYS
+    }
 
 
 def _default_retention_policy(data_class_key: str) -> dict:
@@ -347,15 +359,16 @@ def _data_classes_with_retention_policies() -> list[dict]:
     classes = []
     for data_class in DATA_CLASSES:
         class_copy = deepcopy(data_class)
-        class_copy["retention_policy"] = {
-            **_default_retention_policy(data_class["key"]),
-            **stored_policies.get(data_class["key"], {}),
-        }
+        if data_class["key"] in _data_class_keys():
+            class_copy["retention_policy"] = {
+                **_default_retention_policy(data_class["key"]),
+                **stored_policies.get(data_class["key"], {}),
+            }
         classes.append(class_copy)
     return classes
 
 
-def _update_retention_policy(data_class_key: str, request: RetentionPolicyUpdateRequest) -> dict:
+def _update_retention_policy(data_class_key: str, request: RetentionPolicyUpdateRequest, *, changed_by: str) -> dict:
     if data_class_key not in _data_class_keys():
         raise HTTPException(status_code=404, detail="Lifecycle Data Class not found")
     policies = _stored_retention_policies()
@@ -365,7 +378,11 @@ def _update_retention_policy(data_class_key: str, request: RetentionPolicyUpdate
         "retention_window_days": request.retention_window_days,
         "scheduled_enforcement_enabled": request.scheduled_enforcement_enabled,
     }
-    database.update_setting("lifecycle_retention_policies", json.dumps(policies, sort_keys=True))
+    database.update_setting_with_audit(
+        "lifecycle_retention_policies",
+        json.dumps(policies, sort_keys=True),
+        changed_by=changed_by,
+    )
     return _retention_policy_for(data_class_key)
 
 
@@ -399,7 +416,7 @@ def _unsupported_deployment_surfaces() -> list[dict]:
     return surfaces
 
 
-def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: bool) -> list[dict]:
+def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: bool, *, changed_by: str) -> list[dict]:
     valid_keys = {surface["key"] for surface in UNSUPPORTED_DEPLOYMENT_SURFACES}
     if surface_key not in valid_keys:
         raise HTTPException(status_code=404, detail="Unsupported deployment surface not found")
@@ -408,9 +425,10 @@ def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: boo
         acknowledged_keys.add(surface_key)
     else:
         acknowledged_keys.discard(surface_key)
-    database.update_setting(
+    database.update_setting_with_audit(
         "lifecycle_unsupported_surface_acknowledgements",
         json.dumps(sorted(acknowledged_keys)),
+        changed_by=changed_by,
     )
     return _unsupported_deployment_surfaces()
 
@@ -771,9 +789,11 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     conversation_days = _retention_policy_days("sage_session_memory", request.stale_conversation_days)
     document_days = _retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
     user_memory_days = _retention_policy_days("user_memory", 30)
+    audit_log_days = _retention_policy_days("audit_log", 30)
     conversation_cutoff = now - timedelta(days=conversation_days)
     document_cutoff = now - timedelta(days=document_days)
     user_memory_cutoff = now - timedelta(days=user_memory_days)
+    audit_log_cutoff = now - timedelta(days=audit_log_days)
 
     stale_conversations = []
     skipped_conversations = []
@@ -815,6 +835,12 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     if user_memory_policy["enabled"]:
         user_memories = _stale_user_memory_ids(user_memory_cutoff)
 
+    audit_log_entries = []
+    if audit_log_policy["enabled"]:
+        audit_log_entries = database.list_config_audit_log_compaction_candidates(
+            audit_log_cutoff.isoformat(),
+        )
+
     skipped_classes = []
     if "sage_session_memory" in stored_policies and not session_memory_policy["enabled"]:
         skipped_classes.append("sage_session_memory")
@@ -832,13 +858,13 @@ def preview_retention(request: RetentionRunRequest) -> dict:
             "stale_conversations": stale_conversations,
             "document_artifacts": document_artifacts,
             "user_memories": user_memories,
-            "audit_log_entries": [],
+            "audit_log_entries": audit_log_entries,
         },
         "counts": {
             "stale_conversations": len(stale_conversations),
             "document_artifacts": len(document_artifacts),
             "user_memories": len(user_memories),
-            "audit_log_entries": 0,
+            "audit_log_entries": len(audit_log_entries),
             "skipped_classes": len(skipped_classes),
         },
         "skipped_conversations": skipped_conversations,
@@ -1081,12 +1107,14 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
     )
 
     retry_results = []
+    attempted_retries = 0
     if request.retry_limit > 0:
         for tombstone in database.list_deletion_tombstones(status="incomplete"):
             if len(retry_results) >= request.retry_limit:
                 break
             if tombstone["lifecycle_data_class"] != "sage_session_memory":
                 continue
+            attempted_retries += 1
             deletion = await delete_session_memory_for_conversation({
                 "id": tombstone["conversation_id"],
                 "agent_runtime": "sage",
@@ -1111,8 +1139,15 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
                     "deletion": deletion,
                 })
 
+    final_status = retention["status"]
+    if attempted_retries > len(retry_results) or any(
+        result.get("status") != "completed"
+        for result in retry_results
+    ):
+        final_status = "incomplete"
+
     return {
-        "status": retention["status"],
+        "status": final_status,
         "enabled_classes": enabled_classes,
         "retry_results": retry_results,
         "retention": retention,
@@ -1133,12 +1168,13 @@ async def get_admin_audit_coverage(_admin: dict = Depends(auth.require_admin)):
 async def update_admin_unsupported_deployment_surface_acknowledgement(
     surface_key: str,
     request: UnsupportedSurfaceAcknowledgementRequest,
-    _admin: dict = Depends(auth.require_admin),
+    admin: dict = Depends(auth.require_admin),
 ):
     return {
         "unsupported_deployment_surfaces": _set_unsupported_surface_acknowledgement(
             surface_key,
             request.acknowledged,
+            changed_by=admin.get("pubkey", "unknown"),
         )
     }
 
@@ -1147,9 +1183,15 @@ async def update_admin_unsupported_deployment_surface_acknowledgement(
 async def update_admin_retention_policy(
     data_class_key: str,
     request: RetentionPolicyUpdateRequest,
-    _admin: dict = Depends(auth.require_admin),
+    admin: dict = Depends(auth.require_admin),
 ):
-    return {"policy": _update_retention_policy(data_class_key, request)}
+    return {
+        "policy": _update_retention_policy(
+            data_class_key,
+            request,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+    }
 
 
 @router.post("/retention/preview", response_model=dict)
