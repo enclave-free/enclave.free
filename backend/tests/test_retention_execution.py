@@ -760,6 +760,31 @@ class RetentionExecutionTest(unittest.TestCase):
                     "role": "user",
                     "content": "User-deleted content must not appear in tombstones.",
                     "timestamp": datetime.utcnow().isoformat(),
+                },
+                {
+                    "id": "msg_trace_delete",
+                    "role": "assistant",
+                    "content": "Assistant trace-bearing content must not appear in tombstones.",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "trace": {
+                        "visibility": "summary",
+                        "reasoning": {
+                            "summary": "Sensitive trace summary must be deleted with the conversation.",
+                        },
+                        "tools": [
+                            {
+                                "id": "db-query",
+                                "name": "Database",
+                                "status": "success",
+                                "execution": "server",
+                                "input_summary": "SELECT email FROM users WHERE email = '[redacted]'",
+                                "output_summary": "Database results were redacted from the trace.",
+                                "warnings": ["raw_results_redacted"],
+                            }
+                        ],
+                        "retrieval": [],
+                        "suppressed": False,
+                    },
                 }
             ],
         }
@@ -817,6 +842,9 @@ class RetentionExecutionTest(unittest.TestCase):
         serialized = json.dumps(tombstone)
         self.assertIn("target_unavailable", serialized)
         self.assertNotIn("User-deleted content", serialized)
+        self.assertNotIn("Assistant trace-bearing content", serialized)
+        self.assertNotIn("Sensitive trace summary", serialized)
+        self.assertNotIn("raw_results_redacted", serialized)
         entries = self.audit_entries("data_deletion")
         event = next(
             json.loads(entry["new_value"])
@@ -827,6 +855,9 @@ class RetentionExecutionTest(unittest.TestCase):
         event_json = json.dumps(event)
         self.assertIn("target_unavailable", event_json)
         self.assertNotIn("User-deleted content", event_json)
+        self.assertNotIn("Assistant trace-bearing content", event_json)
+        self.assertNotIn("Sensitive trace summary", event_json)
+        self.assertNotIn("raw_results_redacted", event_json)
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
