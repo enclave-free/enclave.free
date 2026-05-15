@@ -22,9 +22,13 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 # =============================================================================
 # EMBEDDING CONFIGURATION
 # =============================================================================
-# Embeddings run locally using sentence-transformers.
+# Default document embeddings use the same OpenAI-compatible Tinfoil proxy as
+# Sage. Set EMBEDDING_PROVIDER=local to use sentence-transformers instead.
 # =============================================================================
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "tinfoil").lower()
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL") or os.getenv("LLM_API_URL", "http://tinfoil-proxy:8089/v1")
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("TINFOIL_API_KEY")
 
 # Collection name for knowledge base
 COLLECTION_NAME = "enclave_knowledge"
@@ -33,6 +37,7 @@ _LEGACY_PLAINTEXT_KEYS = {"text", "fact_text"}
 # Lazy-loaded resources
 _qdrant_client = None
 _embedding_model = None
+_embedding_client = None
 
 
 def get_qdrant_client():
@@ -137,6 +142,9 @@ def rewrite_payload_without_plaintext(point_id: Any, payload: dict[str, Any]) ->
 
 def get_embedding_model():
     """Get or create local embedding model (sentence-transformers)"""
+    if EMBEDDING_PROVIDER != "local":
+        raise RuntimeError("Local embedding model requested while EMBEDDING_PROVIDER is not 'local'")
+
     global _embedding_model
     if _embedding_model is None:
         from sentence_transformers import SentenceTransformer
@@ -144,20 +152,47 @@ def get_embedding_model():
     return _embedding_model
 
 
+def get_embedding_client():
+    """Get or create OpenAI-compatible embedding client."""
+    global _embedding_client
+    if _embedding_client is None:
+        if not EMBEDDING_API_KEY:
+            raise RuntimeError(
+                "EMBEDDING_API_KEY, LLM_API_KEY, or TINFOIL_API_KEY is required for Tinfoil embeddings"
+            )
+        from openai import OpenAI
+
+        _embedding_client = OpenAI(
+            api_key=EMBEDDING_API_KEY,
+            base_url=EMBEDDING_API_URL,
+        )
+    return _embedding_client
+
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
     """
-    Embed a list of texts using the local sentence-transformers model.
+    Embed a list of texts using the configured embedding provider.
     Returns list of embedding vectors.
     """
+    if EMBEDDING_PROVIDER != "local":
+        client = get_embedding_client()
+        response = client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
     model = get_embedding_model()
     embeddings = model.encode(texts, show_progress_bar=False)
     return [emb.tolist() for emb in embeddings]
 
 
 def get_embedding_dimension() -> int:
-    """Get the dimension of embeddings from the local embedding model."""
-    model = get_embedding_model()
-    return model.get_sentence_embedding_dimension()
+    """Get the dimension of embeddings from the configured provider."""
+    if EMBEDDING_PROVIDER != "local":
+        return len(embed_texts(["dimension probe"])[0])
+
+    return get_embedding_model().get_sentence_embedding_dimension()
 
 
 def ensure_qdrant_collection():
@@ -208,6 +243,8 @@ def _store_chunk_sync(
         "job_id": job_id,  # Separate field for filtering by document
         "source_file": source_file,
         "content_ref": f"retrieval_chunk:{chunk_id}",
+        "embedding_provider": EMBEDDING_PROVIDER,
+        "embedding_model": EMBEDDING_MODEL,
     }
     if source_label:
         payload["source_label"] = source_label

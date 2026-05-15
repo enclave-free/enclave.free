@@ -9,7 +9,10 @@ services:
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat/multilingual-e5-base}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-tinfoil}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
+      - EMBEDDING_API_URL=${EMBEDDING_API_URL:-http://tinfoil-proxy:8089/v1}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${TINFOIL_API_KEY:-}}
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - TRANSFORMERS_OFFLINE=${TRANSFORMERS_OFFLINE:-0}
       - LLM_PROVIDER=${LLM_PROVIDER:-sage}
@@ -20,6 +23,8 @@ services:
       - SEARXNG_URL=http://searxng:8080
       - SQLITE_PATH=/data/enclave.db
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
+      - CONTENT_ENCRYPTION_KEY=${CONTENT_ENCRYPTION_KEY:-}
+      - DOCUMENT_ARTIFACT_ENCRYPTION=${DOCUMENT_ARTIFACT_ENCRYPTION:-auto}
       # Magic Link Auth configuration
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}

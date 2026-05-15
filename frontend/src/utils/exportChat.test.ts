@@ -79,4 +79,44 @@ describe('generateExport', () => {
     expect(exportedTxt).not.toContain('Prefers high detail answers.')
     expect(exportedTxt).not.toContain('importance')
   })
+
+  it('exports viewer-visible Conversation Trace metadata', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        trace: {
+          visibility: 'summary',
+          reasoning: {
+            summary: 'Sage used Web search before answering.',
+          },
+          tools: [
+            {
+              id: 'web-search',
+              name: 'Web search',
+              status: 'success',
+              execution: 'server',
+              output_summary: 'Found 3 relevant results.',
+              warnings: [],
+              metadata: {},
+            },
+          ],
+          retrieval: [],
+          suppressed: false,
+        },
+      },
+    ]
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    })
+
+    expect(exported).toContain('Conversation Trace')
+    expect(exported).toContain('Sage used Web search before answering.')
+    expect(exported).toContain('Web search')
+    expect(exported).toContain('Found 3 relevant results.')
+  })
 })

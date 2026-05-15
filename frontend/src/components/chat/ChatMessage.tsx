@@ -11,11 +11,36 @@ import { useInstanceConfig } from '../../context/InstanceConfigContext'
 import { DynamicIcon } from '../shared/DynamicIcon'
 import { Button } from '../ui'
 
+export interface ConversationTrace {
+  visibility: 'off' | 'minimal' | 'summary' | 'detailed'
+  reasoning?: {
+    summary?: string
+  }
+  tools?: Array<{
+    id: string
+    name: string
+    status?: string
+    execution?: string
+    input_summary?: string | null
+    output_summary?: string | null
+    warnings?: string[]
+    metadata?: Record<string, unknown>
+  }>
+  retrieval?: Array<{
+    source_type?: string
+    title?: string | null
+    summary?: string | null
+    score?: number | null
+  }>
+  suppressed?: boolean
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp?: Date
+  trace?: ConversationTrace | null
 }
 
 interface ChatMessageProps {
@@ -99,11 +124,54 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
   )
 }
 
+function ConversationTracePanel({ trace }: { trace: ConversationTrace }) {
+  const tools = trace.tools ?? []
+  const retrieval = trace.retrieval ?? []
+  const summary = trace.reasoning?.summary
+
+  if (trace.visibility === 'off') return null
+
+  return (
+    <div className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
+      <div className="mb-2 font-medium text-text">Conversation Trace</div>
+      {summary && <p className="mb-2 leading-relaxed">{summary}</p>}
+      {tools.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tools.map((tool, index) => (
+            <div key={`${tool.id}-${tool.input_summary ?? ''}-${index}`} className="rounded-md border border-border bg-surface px-2 py-1">
+              <span className="font-medium text-text">{tool.name}</span>
+              {tool.output_summary && <span className="ml-1">{tool.output_summary}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {retrieval.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {retrieval.map((item, index) => (
+            <div key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`} className="rounded-md border border-border bg-surface px-2 py-1">
+              <span className="font-medium text-text">{item.title || item.source_type || 'Retrieved source'}</span>
+              {item.summary && <span className="ml-1">{item.summary}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const { resolvedTheme } = useTheme()
+  const { t } = useTranslation()
   const { config } = useInstanceConfig()
+  const [copiedMessage, setCopiedMessage] = useState(false)
   const isUser = message.role === 'user'
   const label = isUser ? config.userLabel : config.assistantName
+
+  const handleCopyMessage = async () => {
+    await navigator.clipboard.writeText(message.content)
+    setCopiedMessage(true)
+    setTimeout(() => setCopiedMessage(false), 2000)
+  }
 
   const bubbleStyles = {
     soft: {
@@ -126,8 +194,27 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   const bubbleRadius = bubbleStyles[config.chatBubbleStyle] || bubbleStyles.soft
   const bubbleShadow = config.chatBubbleShadow ? 'shadow-md' : ''
-  const userBubbleClass = `inline-block max-w-72 sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
-  const assistantBubbleClass = `inline-block max-w-72 sm:max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 ${bubbleRadius.assistant} ${bubbleShadow}`
+  const userBubbleClass = `group/message relative inline-block max-w-72 sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 pr-11 ${bubbleRadius.user} ${bubbleShadow} ${config.chatBubbleShadow ? 'glow-accent' : ''}`
+  const assistantBubbleClass = `group/message relative inline-block max-w-72 sm:max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 pr-11 ${bubbleRadius.assistant} ${bubbleShadow}`
+  const copyButtonClass = isUser
+    ? 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-accent-text/75 opacity-70 transition hover:bg-white/15 hover:text-accent-text hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70'
+    : 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-text-muted opacity-70 transition hover:bg-surface-overlay hover:text-text focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40'
+  const copyIcon = copiedMessage ? (
+    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+  ) : (
+    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+  )
+  const copyAction = (
+    <button
+      type="button"
+      onClick={handleCopyMessage}
+      className={copyButtonClass}
+      aria-label={copiedMessage ? t('chat.messages.copied') : t('chat.messages.copy')}
+      title={copiedMessage ? t('chat.messages.copied') : t('chat.messages.copy')}
+    >
+      {copyIcon}
+    </button>
+  )
 
   return (
     <div className="animate-fade-in-up mb-4 last:mb-0">
@@ -146,10 +233,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
           )}
           {isUser ? (
             <div className={userBubbleClass}>
+              {copyAction}
               <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{message.content}</p>
             </div>
           ) : (
             <div className={assistantBubbleClass}>
+              {copyAction}
               <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -277,6 +366,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 >
                   {message.content}
                 </ReactMarkdown>
+                {message.trace && <ConversationTracePanel trace={message.trace} />}
               </div>
             </div>
           )}

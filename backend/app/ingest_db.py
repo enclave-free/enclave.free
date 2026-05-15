@@ -213,7 +213,7 @@ def upsert_retrieval_chunk(
     text: str,
 ) -> None:
     """Persist retrieval chunk text encrypted for backend hydration."""
-    encrypted_text = content_artifacts.encrypt_bytes(text.encode("utf-8")).decode("ascii")
+    stored_text = content_artifacts.encode_for_storage(text.encode("utf-8")).decode("utf-8")
     now = datetime.utcnow().isoformat()
     with get_cursor() as cursor:
         cursor.execute("""
@@ -234,7 +234,7 @@ def upsert_retrieval_chunk(
             chunk_index,
             source_file,
             len(text),
-            encrypted_text,
+            stored_text,
             now,
             now,
         ))

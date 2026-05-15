@@ -885,6 +885,7 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
                     chunk["store_result"] = result
                     processed += 1
                 except Exception as e:
+                    logger.exception("[%s] Failed to persist chunk %s", job_id, chunk_id)
                     chunk["status"] = "failed"
                     chunk["error"] = str(e)
                     failed += 1

@@ -2472,6 +2472,8 @@ def _seed_default_ai_config() -> None:
         ("max_tokens", "2048", "number", "parameter", "Maximum generated response tokens"),
         # Session defaults
         ("web_search_default", "false", "boolean", "default", "Web search active by default for new sessions"),
+        ("admin_trace_visibility", "detailed", "string", "default", "Conversation Trace visibility for Admin Conversations"),
+        ("user_trace_visibility", "minimal", "string", "default", "Conversation Trace visibility for User Conversations"),
     ]
 
     with get_cursor() as cursor:

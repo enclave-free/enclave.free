@@ -1,4 +1,4 @@
-import { Message } from '../components/chat/ChatMessage'
+import { ConversationTrace, Message } from '../components/chat/ChatMessage'
 
 export type ExportFormat = 'md' | 'txt'
 
@@ -18,7 +18,7 @@ interface ExportOptions {
   instanceName?: string
 }
 
-type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp'>
+type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp' | 'trace'>
 
 function formatTimestamp(date?: Date): string {
   if (!date) return ''
@@ -26,7 +26,43 @@ function formatTimestamp(date?: Date): string {
 }
 
 function toConversationExportMessages(messages: Message[]): ConversationExportMessage[] {
-  return messages.map(({ role, content, timestamp }) => ({ role, content, timestamp }))
+  return messages.map(({ role, content, timestamp, trace }) => ({ role, content, timestamp, trace }))
+}
+
+function formatTraceMarkdown(trace?: ConversationTrace | null): string {
+  if (!trace || trace.visibility === 'off') return ''
+  const lines: string[] = ['**Conversation Trace**']
+  if (trace.reasoning?.summary) {
+    lines.push(`- ${trace.reasoning.summary}`)
+  }
+  for (const tool of trace.tools ?? []) {
+    const summary = tool.output_summary ? `: ${tool.output_summary}` : ''
+    lines.push(`- Tool: ${tool.name}${summary}`)
+  }
+  for (const item of trace.retrieval ?? []) {
+    const title = item.title || item.source_type || 'Retrieved source'
+    const summary = item.summary ? `: ${item.summary}` : ''
+    lines.push(`- Retrieval: ${title}${summary}`)
+  }
+  return `${lines.join('\n')}\n\n`
+}
+
+function formatTraceText(trace?: ConversationTrace | null): string {
+  if (!trace || trace.visibility === 'off') return ''
+  const lines: string[] = ['Conversation Trace']
+  if (trace.reasoning?.summary) {
+    lines.push(`- ${trace.reasoning.summary}`)
+  }
+  for (const tool of trace.tools ?? []) {
+    const summary = tool.output_summary ? `: ${tool.output_summary}` : ''
+    lines.push(`- Tool: ${tool.name}${summary}`)
+  }
+  for (const item of trace.retrieval ?? []) {
+    const title = item.title || item.source_type || 'Retrieved source'
+    const summary = item.summary ? `: ${item.summary}` : ''
+    lines.push(`- Retrieval: ${title}${summary}`)
+  }
+  return `${lines.join('\n')}\n\n`
 }
 
 export function generateExport({ messages, format, title, translations, instanceName = 'Enclave' }: ExportOptions): string {
@@ -52,6 +88,7 @@ export function generateExport({ messages, format, title, translations, instance
       } else {
         // Assistant messages may contain markdown, preserve as-is
         content += `${message.content}\n\n`
+        content += formatTraceMarkdown(message.trace)
       }
 
       content += `---\n\n`
@@ -73,6 +110,9 @@ export function generateExport({ messages, format, title, translations, instance
 
     content += `${role}${time}:\n`
     content += `${message.content}\n\n`
+    if (message.role === 'assistant') {
+      content += formatTraceText(message.trace)
+    }
     content += `${'─'.repeat(40)}\n\n`
   })
 

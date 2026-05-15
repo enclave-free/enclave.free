@@ -26,6 +26,7 @@ import httpx
 
 import auth
 import ingest_db
+from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -90,6 +91,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
+    message_id: str
     session_id: str  # Return for continuity
     sources: list[dict]
     graph_context: dict
@@ -98,6 +100,7 @@ class QueryResponse(BaseModel):
     # Debug/trace info
     context_used: str  # The actual context passed to LLM (for debugging)
     temperature: float  # Temperature used
+    trace: Optional[ConversationTrace] = None
 
 
 @router.post("", response_model=QueryResponse)
@@ -263,14 +266,29 @@ async def query(
             user_memory_context=user_memory_context,
         )
         
+        message_id = f"msg_{uuid.uuid4().hex}"
+        trace = build_conversation_trace(
+            actor_type=user.get("type", "user"),
+            tools_used=[],
+            retrieval=[
+                RetrievalTrace(
+                    source_type=str(source.get("type") or "document"),
+                    title=str(source.get("source_file") or source.get("chunk_id") or "Retrieved source"),
+                    summary="Retrieved matching source context.",
+                    score=source.get("score"),
+                )
+                for source in sources
+            ],
+        )
+
         with session_lock:
             session["facts_gathered"].update(llm_session.get("facts_gathered", {}))
-            # Add assistant response to history
-            session["messages"].append({
-                "role": "assistant",
-                "content": answer,
-                "timestamp": datetime.utcnow().isoformat()
-            })
+            append_assistant_message_with_trace(
+                session,
+                content=answer,
+                message_id=message_id,
+                trace=trace,
+            )
 
             # Run dedicated fact extraction after response (more reliable than in-response tags)
             session["facts_gathered"] = _extract_facts_from_conversation(session)
@@ -310,6 +328,7 @@ async def query(
 
         return QueryResponse(
             answer=answer,
+            message_id=message_id,
             session_id=session_id,
             sources=sources,
             graph_context=graph_context,
@@ -317,6 +336,7 @@ async def query(
             search_term=search_term,  # Auto-search trigger (if web-search tool enabled)
             context_used=debug_prompt,  # For debugging - redacted to protect user data
             temperature=actual_temperature,
+            trace=trace,
         )
         
     except Exception as e:
@@ -386,6 +406,25 @@ def _session_lock(session: dict) -> threading.RLock:
 
 def _session_public_snapshot(session: dict) -> dict:
     return {key: deepcopy(value) for key, value in session.items() if key != "_lock"}
+
+
+def append_assistant_message_with_trace(
+    session: dict,
+    *,
+    content: str,
+    message_id: str,
+    trace: ConversationTrace | dict | None,
+) -> None:
+    """Append assistant turn metadata to a Conversation session."""
+    message = {
+        "id": message_id,
+        "role": "assistant",
+        "content": content,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    if trace is not None:
+        message["trace"] = trace.model_dump() if hasattr(trace, "model_dump") else trace
+    session["messages"].append(message)
 
 
 def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:

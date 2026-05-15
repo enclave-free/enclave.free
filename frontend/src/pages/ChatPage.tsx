@@ -449,10 +449,11 @@ export function ChatPage() {
       }
 
       const assistantMessage: Message = {
-        id: generateMessageId(),
+        id: typeof data.message_id === 'string' ? data.message_id : generateMessageId(),
         role: 'assistant',
         content: responseContent,
         timestamp: new Date(),
+        trace: data.trace ?? null,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -598,6 +599,11 @@ export function ChatPage() {
         }
       } catch {
         postApplyNotes.push(t('admin.configAssistant.applySummary.restartCheckFailedNetwork'))
+      }
+
+      const needsPageRefresh = results.some((r) => r.ok && r.path === '/admin/settings')
+      if (needsPageRefresh) {
+        postApplyNotes.push(t('admin.configAssistant.applySummary.pageRefreshRecommended'))
       }
 
       const summary = [baseSummary, ...postApplyNotes].join(' ') + failureSummary

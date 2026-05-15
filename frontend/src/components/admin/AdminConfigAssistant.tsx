@@ -351,11 +351,13 @@ export function AdminConfigAssistant({
     setError(null)
 
     try {
+      let baseToolContext: string | undefined
       if (!hasConfigTool) {
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
       } else {
         const snap = await buildSnapshot()
+        baseToolContext = snap.context
         setSnapshotInfo({ generatedAtIso: snap.generatedAtIso })
         secretsForRedactionRef.current = snap.secretValues
         deploymentSecretKeysRef.current = snap.deploymentSecretKeys
@@ -365,6 +367,7 @@ export function AdminConfigAssistant({
         content,
         tools: selectedTools,
         t,
+        baseToolContext,
         sessionId: conversationSessionId,
       })
       if (res.status === 401) {
@@ -374,13 +377,13 @@ export function AdminConfigAssistant({
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
       }
-      const data = await res.json() as { message?: string; session_id?: string }
+      const data = await res.json() as { message?: string; message_id?: string; session_id?: string; trace?: Message['trace'] }
       if (data.session_id) {
         setConversationSessionId(data.session_id)
       }
       const raw = String(data?.message || '')
 
-      const assistantId = generateMessageId()
+      const assistantId = data.message_id || generateMessageId()
 
       const display = shareSecrets
         ? redactSecrets(raw, secretsForRedactionRef.current)
@@ -391,6 +394,7 @@ export function AdminConfigAssistant({
         role: 'assistant',
         content: display,
         timestamp: new Date(),
+        trace: data.trace ?? null,
       }
       setMessages((prev) => [...prev, assistantMessage])
 
@@ -548,6 +552,11 @@ export function AdminConfigAssistant({
         }
       } catch {
         postApplyNotes.push(t('admin.configAssistant.applySummary.restartCheckFailedNetwork'))
+      }
+
+      const needsPageRefresh = results.some((r) => r.ok && r.path === '/admin/settings')
+      if (needsPageRefresh) {
+        postApplyNotes.push(t('admin.configAssistant.applySummary.pageRefreshRecommended'))
       }
 
       const summary = [baseSummary, ...postApplyNotes].join(' ') + failureSummary

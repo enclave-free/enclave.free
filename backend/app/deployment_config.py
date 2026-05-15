@@ -59,7 +59,10 @@ ENV_CONFIG_MAP = {
     "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python compatibility paths", "requires_restart": True},
     "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python compatibility paths", "requires_restart": False, "is_secret": True},
     # Embedding Settings
-    "EMBEDDING_MODEL": {"category": "embedding", "description": "Sentence transformer model", "requires_restart": True, "default": "intfloat/multilingual-e5-base"},
+    "EMBEDDING_PROVIDER": {"category": "embedding", "description": "Embedding provider: tinfoil or local", "requires_restart": True, "default": "tinfoil"},
+    "EMBEDDING_MODEL": {"category": "embedding", "description": "Embedding model identifier", "requires_restart": True, "default": "nomic-embed-text"},
+    "EMBEDDING_API_URL": {"category": "embedding", "description": "OpenAI-compatible embedding API base URL", "requires_restart": True, "default": "http://tinfoil-proxy:8089/v1"},
+    "EMBEDDING_API_KEY": {"category": "embedding", "description": "Embedding API key", "requires_restart": True, "is_secret": True},
     # Email Settings (no defaults - optional, user must configure)
     "SMTP_HOST": {"category": "email", "description": "SMTP server hostname", "requires_restart": False},
     "SMTP_PORT": {"category": "email", "description": "SMTP server port", "requires_restart": False},
@@ -74,7 +77,7 @@ ENV_CONFIG_MAP = {
     "SQLITE_PATH": {"category": "storage", "description": "SQLite database path", "requires_restart": True, "default": "/data/enclave.db"},
     "UPLOADS_DIR": {"category": "storage", "description": "Uploads directory path", "requires_restart": True, "default": "/uploads"},
     "CONTENT_ENCRYPTION_KEY": {"category": "storage", "description": "Deployment-held key for backend-readable active content encryption", "requires_restart": False, "is_secret": True},
-    "DOCUMENT_ARTIFACT_ENCRYPTION": {"category": "storage", "description": "Artifact Encryption Posture (required or disabled)", "requires_restart": False, "default": "required"},
+    "DOCUMENT_ARTIFACT_ENCRYPTION": {"category": "storage", "description": "Artifact Encryption Posture (auto, required, or disabled)", "requires_restart": False, "default": "auto"},
     # Qdrant Settings
     "QDRANT_HOST": {"category": "storage", "description": "Qdrant server hostname", "requires_restart": True, "default": "qdrant"},
     "QDRANT_PORT": {"category": "storage", "description": "Qdrant server port", "requires_restart": True, "default": "6333"},

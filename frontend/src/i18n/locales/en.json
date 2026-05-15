@@ -251,6 +251,7 @@
         "configValidationFailedNetwork": "Config validation: failed (network error).",
         "restartRequiredFor": "Restart required for: {{keys}}.",
         "restartRequiredNo": "Restart required: no.",
+        "pageRefreshRecommended": "Refresh this page to see theme updates.",
         "restartCheckFailedHttp": "Restart required check: failed (HTTP {{status}}).",
         "restartCheckFailedNetwork": "Restart required check: failed (network error)."
       }
@@ -734,7 +735,9 @@
       "searching": "Searching for \"{{term}}\"...",
       "searchingPrefix": "Searching",
       "searchResults": "I searched \"{{term}}\" for you:",
-      "newConversation": "New conversation"
+      "newConversation": "New conversation",
+      "copy": "Copy message",
+      "copied": "Copied message"
     },
     "code": {
       "copy": "Copy",

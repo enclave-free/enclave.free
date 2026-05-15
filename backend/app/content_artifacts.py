@@ -26,9 +26,13 @@ def artifact_encryption_posture() -> str:
     value = str(
         database.get_deployment_config_value(ARTIFACT_ENCRYPTION_KEY)
         or database.get_setting(ARTIFACT_ENCRYPTION_KEY)
-        or os.getenv(ARTIFACT_ENCRYPTION_KEY, "required")
+        or os.getenv(ARTIFACT_ENCRYPTION_KEY, "auto")
     ).strip().lower()
-    if value == "disabled":
+    if value in {"disabled", "required"}:
+        return value
+    if value in {"opportunistic", "auto", "enabled_if_configured"}:
+        return "disabled" if not content_encryption_key_configured() else "required"
+    if not content_encryption_key_configured():
         return "disabled"
     return "required"
 
@@ -44,6 +48,12 @@ def content_encryption_key_configured() -> bool:
     return bool(_content_encryption_key_value())
 
 
+def require_content_encryption_key() -> None:
+    """Raise if backend-readable active content encryption is not configured."""
+    if not content_encryption_key_configured():
+        raise RuntimeError("Content Encryption Key is required for encrypted active content storage.")
+
+
 def content_encryption_status() -> dict:
     if content_encryption_key_configured():
         return {
@@ -52,7 +62,7 @@ def content_encryption_status() -> dict:
         }
     return {
         "status": "not_configured",
-        "summary": "Content Encryption Key is not configured; encrypted active content writes cannot proceed.",
+        "summary": "Content Encryption Key is not configured; active content is stored as plaintext by default.",
     }
 
 
@@ -78,9 +88,8 @@ def artifact_encryption_status() -> dict:
 
 
 def _key_bytes() -> bytes:
+    require_content_encryption_key()
     key = _content_encryption_key_value()
-    if not key:
-        raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
     return _derive_artifact_key(key, ARTIFACT_KEY_INFO)
 
 

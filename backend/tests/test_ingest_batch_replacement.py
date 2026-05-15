@@ -97,13 +97,15 @@ class IngestBatchReplacementTest(unittest.TestCase):
             files={"file": (filename, content.encode("utf-8"), "text/plain")},
         )
 
-    def test_upload_requires_content_encryption_key_by_default(self) -> None:
+    def test_upload_allows_plaintext_active_content_without_key_by_default(self) -> None:
         os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
 
-        upload = self.upload_text("Handbook.md")
+        upload = self.upload_text("Handbook.md", "operator knowledge")
 
-        self.assertEqual(upload.status_code, 503)
-        self.assertIn("Content Encryption Key", upload.json()["detail"])
+        self.assertEqual(upload.status_code, 200)
+        job = self.ingest.JOBS[upload.json()["job_id"]]
+        artifact_path = Path(job["file_path"])
+        self.assertEqual(artifact_path.read_bytes(), b"operator knowledge")
 
     def test_upload_stores_encrypted_artifact_when_content_key_configured(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
@@ -162,7 +164,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
         finally:
             self.ingest.store_chunk = original_store_chunk
 
-    def test_retrieval_chunk_text_requires_content_key_even_when_artifacts_are_plaintext(self) -> None:
+    def test_processing_persists_plaintext_retrieval_chunk_text_without_key_by_default(self) -> None:
         self.database.update_setting_with_audit(
             "DOCUMENT_ARTIFACT_ENCRYPTION",
             "disabled",
@@ -170,19 +172,41 @@ class IngestBatchReplacementTest(unittest.TestCase):
         )
         os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
 
+        async def fake_store_chunk(*_args, **_kwargs):
+            return {"qdrant": {"points_inserted": 1}}
+
+        original_store_chunk = self.ingest.store_chunk
+        self.ingest.store_chunk = fake_store_chunk
+        try:
+            upload = self.upload_text("Handbook.md", "plaintext artifact and retrieval")
+            self.assertEqual(upload.status_code, 200)
+            job_id = upload.json()["job_id"]
+            artifact_path = Path(self.ingest.JOBS[job_id]["file_path"])
+            self.assertEqual(artifact_path.read_text(encoding="utf-8"), "plaintext artifact and retrieval")
+
+            asyncio.run(self.ingest.process_document(job_id, artifact_path, sample_percent=100.0))
+
+            job = self.ingest.JOBS[job_id]
+            self.assertEqual(job["status"], "completed")
+            self.assertEqual(job["processed_chunks"], 1)
+            self.assertEqual(job["failed_chunks"], 0)
+            raw_rows = self.ingest_db.list_retrieval_chunks(job_id)
+            self.assertEqual(raw_rows[0]["encrypted_text"], "plaintext artifact and retrieval")
+        finally:
+            self.ingest.store_chunk = original_store_chunk
+
+    def test_upload_requires_content_key_when_encryption_required(self) -> None:
+        self.database.update_setting_with_audit(
+            "DOCUMENT_ARTIFACT_ENCRYPTION",
+            "required",
+            changed_by="admin-pubkey",
+        )
+        os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+
         upload = self.upload_text("Handbook.md", "plaintext artifact but protected retrieval")
-        self.assertEqual(upload.status_code, 200)
-        job_id = upload.json()["job_id"]
-        artifact_path = Path(self.ingest.JOBS[job_id]["file_path"])
-        self.assertEqual(artifact_path.read_text(encoding="utf-8"), "plaintext artifact but protected retrieval")
-
-        asyncio.run(self.ingest.process_document(job_id, artifact_path, sample_percent=100.0))
-
-        job = self.ingest.JOBS[job_id]
-        self.assertEqual(job["status"], "completed_with_errors")
-        self.assertEqual(job["failed_chunks"], 1)
-        self.assertIn("Content Encryption Key", self.ingest.CHUNKS[self.ingest.generate_chunk_id(job_id, 0)]["error"])
-        self.assertEqual(self.ingest_db.list_retrieval_chunks(job_id), [])
+        self.assertEqual(upload.status_code, 503)
+        self.assertIn("Content Encryption Key", upload.json()["detail"])
+        self.assertEqual(self.ingest.JOBS, {})
 
     def complete_job(self, job_id: str) -> None:
         """Mark a job completed for state-machine tests; does not exercise process_document."""

@@ -180,6 +180,10 @@ _Avoid_: HTTPS, private API
 The ability for the **Operator** to verify meaningful claims about where and how model inference ran.
 _Avoid_: trusted API call
 
+**Inference Verification Record**:
+Operator-visible evidence, including full provider attestation material, that a **Model Provider** was checked against expected **Verifiable Inference** claims at a point in time.
+_Avoid_: raw attestation, provider debug payload
+
 **Trusted Execution Environment**:
 A verifiable isolated execution environment used to protect model inference from the surrounding infrastructure.
 _Avoid_: secure server, private hosting
@@ -272,6 +276,14 @@ _Avoid_: query session, chat session
 The messages, prompts, retrieved document excerpts, required context, user profile context, tool results, and other content sent to a **Model Provider** for inference.
 _Avoid_: user message, prompt text
 
+**Conversation Trace**:
+Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and safe reasoning summaries when available.
+_Avoid_: chain of thought, debug log, audit log, provider trace
+
+**Trace Visibility Policy**:
+The **Operator** configured **Instance Setting** or **Agent Setting** that determines which **Conversation Trace** details are visible for **Admin Conversations** and **User Conversations**.
+_Avoid_: debug mode, logging level, provider trace setting
+
 **Tool**:
 An action or information source that **Sage** can invoke during a **Conversation**.
 _Avoid_: endpoint, function call
@@ -311,6 +323,7 @@ _Avoid_: full snapshot, config dump
 - **Operator-Controlled Privacy** allows **External Integrations** when they are visible and configurable by the **Operator**
 - **Operator-Controlled Data Lifecycle** is part of **Operator-Controlled Privacy**
 - **Operator-Controlled Data Lifecycle** is described through **Lifecycle Data Classes**
+- **Inference Verification Records** are a **Lifecycle Data Class**
 - **Active Storage Lifecycle** is the first production-readiness target for **Operator-Controlled Data Lifecycle**
 - **Active Storage Lifecycle** excludes **Deployment Surfaces** unless a future decision promotes a surface into a supported **Lifecycle Data Class**
 - A **Lifecycle Data Class** is grouped by product meaning, not by **Storage Target**
@@ -373,6 +386,44 @@ _Avoid_: full snapshot, config dump
 - **Tinfoil** is the current preferred **Model Provider**
 - **Encrypted Inference** protects conversation content from surrounding infrastructure
 - **Verifiable Inference** lets the **Operator** verify meaningful execution claims
+- An **Inference Verification Record** captures the outcome of checking a **Model Provider** against expected **Verifiable Inference** claims
+- **Inference Verification Records** are historical records, with the latest record available as the current verification status
+- **Deployment Automation** should create **Inference Verification Records** at startup and when provider-relevant settings change
+- Startup should attempt **Verifiable Inference** checks before accepting protected model inference
+- If startup verification fails, the product should enter an admin-repair mode where normal **Conversation** traffic is blocked but admin surfaces, diagnostics, and manual verification remain available
+- An **Admin** may manually create an **Inference Verification Record** for troubleshooting
+- Normal **Conversation** traffic should fail closed when current **Verifiable Inference** status is failed or missing
+- Admin-only diagnostics may run when current **Verifiable Inference** status is failed or missing so the **Operator** can repair the **Deployment**
+- Stale **Inference Verification Records** should have a grace period before normal **Conversation** traffic fails closed
+- Model Provider calls that send **Conversation Content** or other user- or admin-derived product content should fail closed when current **Verifiable Inference** status is failed, missing, or stale beyond the grace period
+- Verification, health checks, model listing, and non-content diagnostics may run when current **Verifiable Inference** status is failed, missing, or stale
+- **Verifiable Inference** enforcement should be enabled by default for protected model inference
+- Any bypass for **Verifiable Inference** enforcement should be a conspicuous development-only **Deployment Setting**, not an ordinary **Instance Setting**
+- When **Verifiable Inference** enforcement is bypassed, product status and lifecycle posture should clearly report the weakened privacy posture
+- A current **Inference Verification Record** is the latest successful record for the configured **Model Provider** identity, model or runtime claim set, and provider endpoint within the freshness window
+- Changing provider-relevant settings should immediately make prior **Inference Verification Records** non-current for normal **Conversation** traffic
+- The near-term **Inference Verification Record** freshness window should default to 24 hours
+- **Sage** or its provider adapter performs **Verifiable Inference** checks because it owns model inference behavior
+- The **Enclave Control Plane** stores and exposes **Inference Verification Records** as operator-visible privacy evidence
+- **Inference Verification Records** are scoped to the **Deployment** but visible to the **Operator** through the **Instance**
+- Each **Conversation** response should reference the current **Inference Verification Record** that allowed the model inference
+- Referencing an **Inference Verification Record** from a **Conversation** response does not require per-turn provider attestation
+- **Inference Verification Records** should store normalized verification fields and full provider attestation material
+- Near-term **Inference Verification Records** should include provider identity, provider endpoint, model or runtime identifier, verification status, checked time, expiry time, trigger, expected claims fingerprint, actual claims fingerprint, verifier version, failure category, sanitized failure message, and full attestation material
+- Full attestation material should be visible to **Admins**, while ordinary **Users** should see at most high-level verification status
+- Failed **Inference Verification Records** should retain full provider attestation material when available
+- Provider attestation material should be redacted only when the verifier identifies secrets or credentials in the provider response
+- **Inference Verification Records** are separate from the **Audit Log**
+- Verification status changes, manual verification, and blocked **Conversation** traffic due to failed, missing, or stale **Verifiable Inference** status should create concise **Audit Log** events
+- The near-term verifier should use a provider-neutral verification interface with a Tinfoil implementation
+- The near-term **Admin** surface for **Inference Verification Records** should live with Model Provider configuration
+- The current **Inference Verification Record** view should show status, checked time, expiry time, provider claims, model or runtime claims, and manual verification controls
+- Historical **Inference Verification Records** should expose full provider attestation material to **Admins**
+- Normal chat surfaces should not expose detailed **Inference Verification Records** in the first version, except for a blocked-state message when **Conversation** traffic fails closed
+- **Inference Verification Records** should be retained indefinitely by default as operator-visible security evidence
+- Near-term lifecycle support for **Inference Verification Records** should include inventory and status before configurable retention or deletion controls
+- Full provider attestation material in **Inference Verification Records** should be encrypted at rest
+- Normalized **Inference Verification Record** metadata may remain queryable for status, history, lifecycle inventory, and audit correlation
 - A **Trusted Execution Environment** is one mechanism for **Verifiable Inference**
 - **Agent Personalization** may tailor **Agent Settings** for a **User** or **User Type**
 - The **Enclave Control Plane** owns the **Document Library**
@@ -478,6 +529,42 @@ _Avoid_: full snapshot, config dump
 - A **Conversation** may have **Session Memory**
 - A **Conversation** may include **Retrieval**, **Required Context**, and **User Profile** context
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
+- A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, and **Reasoning Summary** details
+- A **Conversation Trace** must not expose raw hidden chain of thought, raw provider trace blobs, full prompts, full unredacted tool outputs, decrypted database rows, secrets, or hidden system/developer instructions in ordinary chat surfaces
+- A **Reasoning Summary** is a safe summary of how **Sage** approached a response, not hidden chain of thought
+- The first **Reasoning Summary** implementation should be authored by **Sage** from orchestration events rather than relying on provider-specific raw reasoning APIs
+- Sanitized **Conversation Traces** should be persisted with the assistant turns they describe so refreshed conversations, exports, and admin troubleshooting remain coherent
+- Persisted **Conversation Traces** are assistant-turn metadata, preferably stored with the assistant message record and otherwise in a sidecar record keyed to that assistant turn
+- Assistant turns should have backend-generated stable message identifiers so streamed answer deltas, final responses, persisted **Conversation Traces**, exports, and deletion workflows can refer to the same turn
+- When **Trace Visibility Policy** is `off`, **Sage** should not persist **Conversation Traces** for future turns
+- Raw provider trace data, raw prompts, raw tool outputs, and raw reasoning should not be persisted as **Conversation Traces**
+- **Session Memory Deletion** should delete persisted **Conversation Traces** for the associated **Conversation**
+- Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
+- **Conversation Trace** should be exposed through a structured `trace` response object on both assistant-style and retrieval-first conversation routes
+- **Conversation Traces** should render inline with the assistant turn they describe, with minimal traces as compact badges and richer traces inside a collapsed per-message disclosure
+- The chat UI should prefer streaming **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
+- During streaming turns, the chat UI should show compact live status derived from **Conversation Trace** events and then collapse the final sanitized trace into the assistant turn's per-message trace panel
+- During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status to that turn, and attach the final sanitized **Conversation Trace** when it arrives
+- Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
+- Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
+- The **Agent Runtime** should own **Conversation Trace** redaction before returning traces to clients
+- Individual **Tools** and retrieval steps should emit safe trace drafts for their own work, and the **Agent Runtime** should compose those drafts into the final policy-filtered **Conversation Trace**
+- Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
+- Changes to **Trace Visibility Policy** should create **Audit Log** events because they change operator-visible conversation behavior
+- **Conversation Trace** redaction failures should suppress the trace without failing the associated chat response
+- **Conversation Trace** redaction failures should be visible to **Admins** as trace suppression and should create **Audit Log** events without exposing sensitive trace contents
+- **Trace Visibility Policy** should fully control trace presentation; viewers may expand or collapse a shown per-message disclosure but should not have a persistent local preference that hides enabled traces
+- **Trace Visibility Policy** should be configured in the admin **Agent Settings** surface rather than as a per-turn chat tool choice
+- **Admin Configuration Assistant** may propose **Trace Visibility Policy** changes through confirmed change sets because trace policy is an **Agent Setting**
+- Raising **User Conversation** trace visibility should be presented as a privacy-relevant configuration change, and `detailed` should remain invalid for **User Conversations**
+- **Tool Trace** for `db-query` should never expose raw SQL results and should summarize status, execution location, sanitized query intent, row counts, safe column metadata, truncation, and redaction warnings
+- **Admin Conversation** detailed traces may include validated read-only SQL only after sensitive literals are redacted
+- `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only
+- **Trace Visibility Policy** should be actor-specific, with separate defaults for **Admin Conversations** and **User Conversations**
+- **Trace Visibility Policy** belongs to **Agent Settings** because it shapes **Sage** conversation behavior and response metadata
+- The first **Trace Visibility Policy** implementation should not include per-**User Type** overrides, but the model may evolve to support them later
+- The default **Admin Conversation** trace posture should expose detailed sanitized traces for troubleshooting and configuration work
+- The default **User Conversation** trace posture should be minimal or off, exposing confidence-building summaries without operational detail
 - **Sage** may invoke **Tools** during a **Conversation**
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
@@ -705,6 +792,8 @@ _Avoid_: full snapshot, config dump
 - "generic LLM provider" does not capture the current provider requirement; resolved: **Tinfoil** is preferred because it supports encrypted, verifiable inference through a **Trusted Execution Environment**.
 - "LLM preference" understates the security constraint; resolved: use **Model Provider Requirement** for the encrypted inference and **Verifiable Inference** requirement.
 - "encrypted inference" should not be reduced to transport security; resolved: **Encrypted Inference** protects conversation content from surrounding infrastructure across the inference flow.
+- "Tinfoil attestations" is implementation-specific provider language; resolved: use **Inference Verification Record** for operator-visible evidence of **Verifiable Inference**, including full provider attestation material when available.
+- "Tinfoil verifier" overstates provider lock-in; resolved: use a provider-neutral verification interface with a Tinfoil implementation.
 - A **Trusted Execution Environment** should not be confused with the product requirement itself; resolved: **Verifiable Inference** is the property, and a TEE is the preferred mechanism.
 - "configuration" is overloaded; resolved: use **Instance Settings**, **Deployment Settings**, and **Agent Settings** for the three distinct concepts.
 - "user-type AI config" is implementation language; resolved: use **Agent Personalization** for operator rules that tailor Sage behavior by User or User Type.
