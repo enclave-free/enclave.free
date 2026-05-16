@@ -487,11 +487,11 @@ Enclave supports optional manual approval of new users before they can access th
 
 ## Development/Testing Modes
 
-The codebase includes mock email mode for local email testing. Prototype auth simulation flags are no longer supported.
+The codebase includes mock email mode for local email testing.
 
 ### Mock Email Mode
 
-With `MOCK_EMAIL=true`, magic links are logged to console instead of sent via SMTP. This is controlled by the backend environment variable.
+With `MOCK_EMAIL=true`, magic links are logged locally instead of sent via SMTP. With `MOCK_EMAIL=false`, the backend sends magic links through the configured SMTP provider.
 
 ### Configuration
 
