@@ -6,6 +6,7 @@ import types
 import unittest
 from pathlib import Path
 from typing import Any
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -53,16 +54,21 @@ class ConversationTraceTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
-        self._orig_protected_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
+        self._orig_llm_provider = os.environ.get("LLM_PROVIDER")
+        self._orig_llm_api_url = os.environ.get("LLM_API_URL")
+        self._orig_llm_model = os.environ.get("LLM_MODEL")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
-        os.environ["PROTECTED_INFERENCE_DEVELOPMENT_BYPASS"] = "true"
+        os.environ["LLM_PROVIDER"] = "sage"
+        os.environ["LLM_API_URL"] = ""
+        os.environ["LLM_MODEL"] = ""
 
         import database
         import auth
         import ai_config
         import deployment_config
+        import protected_inference
         import query
         import main
 
@@ -70,14 +76,11 @@ class ConversationTraceTest(unittest.TestCase):
         self.auth = importlib.reload(auth)
         self.ai_config = importlib.reload(ai_config)
         self.deployment_config = importlib.reload(deployment_config)
+        self.protected_inference = importlib.reload(protected_inference)
         self.query = importlib.reload(query)
         self.main = importlib.reload(main)
         self.database.init_schema()
-        self.database.update_deployment_config(
-            "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS",
-            "true",
-            changed_by="test",
-        )
+        self._create_current_inference_verification_record()
 
         self.provider = FakeProvider()
         self.main.get_sage_provider = lambda: self.provider
@@ -91,7 +94,9 @@ class ConversationTraceTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
-        self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_bypass)
+        self._restore_env("LLM_PROVIDER", self._orig_llm_provider)
+        self._restore_env("LLM_API_URL", self._orig_llm_api_url)
+        self._restore_env("LLM_MODEL", self._orig_llm_model)
         if self._orig_sentence_transformers is None:
             sys.modules.pop("sentence_transformers", None)
         else:
@@ -105,6 +110,21 @@ class ConversationTraceTest(unittest.TestCase):
         else:
             os.environ[name] = value
 
+    def _create_current_inference_verification_record(self) -> None:
+        now = datetime.now(timezone.utc)
+        self.database.create_inference_verification_record(
+            provider_identity="sage",
+            provider_endpoint="",
+            model_identifier="",
+            status="success",
+            trigger="test",
+            expected_claims_fingerprint=self.protected_inference.DEFAULT_EXPECTED_CLAIMS_FINGERPRINT,
+            actual_claims_fingerprint=self.protected_inference.DEFAULT_EXPECTED_CLAIMS_FINGERPRINT,
+            verifier_version="test",
+            checked_at=now,
+            expires_at=now + timedelta(hours=1),
+        )
+
     def authenticate_as_user(self) -> None:
         self.user_id = self.database.create_user(pubkey="a" * 64)
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
@@ -112,19 +132,9 @@ class ConversationTraceTest(unittest.TestCase):
             "pubkey": "a" * 64,
             "id": self.user_id,
         }
-        self.main.app.dependency_overrides[self.query.auth.require_admin_or_approved_user] = lambda: {
-            "type": "user",
-            "pubkey": "a" * 64,
-            "id": self.user_id,
-        }
 
     def authenticate_as_admin(self) -> None:
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
-            "type": "admin",
-            "id": 1,
-            "pubkey": "admin-pubkey",
-        }
-        self.main.app.dependency_overrides[self.query.auth.require_admin_or_approved_user] = lambda: {
             "type": "admin",
             "id": 1,
             "pubkey": "admin-pubkey",

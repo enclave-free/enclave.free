@@ -126,26 +126,6 @@ def _get_smtp_config() -> dict:
 
 
 # ============================================================================
-# DEPRECATED: Legacy module-level SMTP constants
-# ============================================================================
-# These constants are frozen at import time and will NOT reflect runtime
-# configuration changes. They are kept for backwards compatibility only.
-#
-# PREFERRED API: Use the runtime-aware accessor functions instead:
-#   - get_smtp_host() / get_smtp_port() / get_smtp_user() / etc.
-#   - Or use _get_smtp_config() to get the full config dict
-#
-# These legacy constants will be removed in a future version.
-# ============================================================================
-SMTP_HOST = _SMTP_DEFAULTS["host"]
-SMTP_PORT = _SMTP_DEFAULTS["port"]
-SMTP_USER = _SMTP_DEFAULTS["user"]
-SMTP_PASS = _SMTP_DEFAULTS["password"]
-SMTP_FROM = _SMTP_DEFAULTS["from_address"]
-SMTP_TIMEOUT = _SMTP_DEFAULTS["timeout"]
-
-
-# ============================================================================
 # Runtime-aware SMTP configuration accessors
 # ============================================================================
 # These functions read from config_loader at runtime, supporting dynamic

@@ -38,11 +38,9 @@ See `docs/admin-deployment-config.md` for UI behavior, validation, and restart r
 | `SECRET_KEY` | Token signing key; required in Compose, auto-generated only for non-Compose runs if unset | Required for Compose |
 | `SMTP_TIMEOUT` | SMTP connection timeout (seconds) | `10` |
 
-> **Note:** `MOCK_SMTP` is a deployment config UI alias for `MOCK_EMAIL`. If both are set, `MOCK_EMAIL` takes precedence. Use `MOCK_EMAIL` when setting environment variables directly.
-
 ## Development Mode
 
-For local development, leave `MOCK_EMAIL=true` (or set `MOCK_SMTP=true` in deployment config). Magic links will be logged to the console instead of sent via email:
+For local development, leave `MOCK_EMAIL=true`. Magic links will be logged to the console instead of sent via email:
 
 ```
 ============================================================
@@ -63,7 +61,7 @@ curl -X POST http://localhost:8000/auth/test-email \
   -d '{"email": "you@example.com"}'
 ```
 
-If mock mode is enabled (`MOCK_EMAIL=true` or `MOCK_SMTP=true`), the response indicates no email was actually sent.
+If mock mode is enabled (`MOCK_EMAIL=true`), the response indicates no email was actually sent.
 
 ## Provider Configuration Examples
 
@@ -192,7 +190,7 @@ The `/auth/magic-link` endpoint is rate-limited to 5 requests per minute per IP 
 
 ### Emails not sending
 
-1. Check that `MOCK_EMAIL=false` (or `MOCK_SMTP=false` in deployment config) is set
+1. Check that `MOCK_EMAIL=false` is set
 2. Verify `SMTP_HOST` is not empty
 3. Check backend logs for SMTP errors: `docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs backend`
 4. Test SMTP credentials with a tool like `swaks` or your provider's test feature

@@ -55,7 +55,6 @@
       "sentMagicLink": "Magikus linket küldtünk erre",
       "clickLink": "Kattints az e-mailben lévő linkre a bejelentkezéshez.",
       "checkSpam": "Nem látod? Nézd meg a spam mappát.",
-      "simulateMagicLink": "Magikus link kattintásának szimulálása",
       "forTesting": "Tesztelési célokra:",
       "dataProtectionTitle": "Hogyan védi a Enclave az adataidat",
       "noPasswordTitle": "Nincsenek tárolt jelszavak",
@@ -695,12 +694,9 @@
     "title": "Admin beállítás",
     "subtitle": "Csatlakozz a Nostr identitásoddal a példány kezeléséhez",
     "connectNostr": "Csatlakozás Nostrral",
-    "orForTesting": "vagy teszteléshez",
-    "continueMock": "Folytatás teszt identitással",
     "connecting": "Csatlakozás a bővítményhez...",
     "noExtension": "Nem található Nostr bővítmény",
     "installExtension": "Telepíts egy NIP-07 kompatibilis bővítményt a folytatáshoz",
-    "useMock": "Teszt identitás használata",
     "welcomeAdmin": "Üdv, Admin!",
     "connectedAs": "Csatlakozva mint",
     "redirecting": "Átirányítás a vezérlőpulthoz...",
@@ -897,7 +893,7 @@
       "gmailHint": "Használj alkalmazásjelszót — ne a Gmail jelszavadat. Előbb engedélyezd a kétlépcsős hitelesítést, majd hozz létre egy alkalmazásjelszót a Google Fiók biztonsági beállításaiban.",
       "goToPage": "Ugrás az oldalra",
       "mailgunHint": "Használd a Mailgun SMTP hitelesítő adataidat a domain beállítások oldalról. A hoszt általában smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — ha engedélyezve van, az e-mailek a konzolba kerülnek naplózásra küldés helyett. Fejlesztéshez hasznos.",
+      "mockEmail": "MOCK_EMAIL — ha engedélyezve van, az e-mailek a konzolba kerülnek naplózásra küldés helyett. Fejlesztéshez hasznos.",
       "overviewDesc": "Konfiguráld az SMTP beállításokat a kimenő e-mailek (meghívók, értesítések, jelszó-visszaállítások) engedélyezéséhez. Minden szolgáltató szabványos SMTP mezőket használ.",
       "overviewTitle": "E-mail (SMTP) áttekintés",
       "postmarkHint": "Használd a Postmark Server API tokenedet SMTP jelszóként. Az SMTP felhasználónév mindig ugyanaz a token.",
@@ -999,9 +995,7 @@
       "overviewDesc": "A biztonsági beállítások szabályozzák a hitelesítést, a munkamenet-kezelést és a fejlesztési rövidítéseket. Az alapértékek helyi fejlesztéshez vannak konfigurálva.",
       "overviewNote": "Éles környezetben győződj meg róla, hogy a szimulációs jelzők ki vannak kapcsolva, és a FRONTEND_URL megegyezik a valódi domaineddel.",
       "overviewTitle": "Biztonság áttekintése",
-      "overviewWhen": "Tekintsd át ezeket a beállításokat, mielőtt nyilvánosan elérhető szerverre telepítenéd.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — megkerüli az admin hitelesítést. Minden kérés admin felhasználótól érkezőként kezelődik.",
-      "simUserDesc": "SIMULATE_USER_AUTH — megkerüli a felhasználói hitelesítést. Minden kérés bejelentkezett felhasználótól érkezőként kezelődik."
+      "overviewWhen": "Tekintsd át ezeket a beállításokat, mielőtt nyilvánosan elérhető szerverre telepítenéd."
     },
     "sslHelp": {
       "ariaLabel": "SSL és HTTPS konfiguráció súgó",
@@ -1318,7 +1312,7 @@
       "description": "Feladó cím az e-mailekhez",
       "hint": "A \"feladó\" cím a kimenő e-mailekhez (pl. noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Teszt mód",
       "description": "E-mail küldés szimulálása",
       "hint": "Ha \"true\", az e-mailek naplózásra kerülnek küldés helyett. Hasznos fejlesztéshez."
@@ -1418,16 +1412,6 @@
       "description": "Állapotfigyelő végpont URL",
       "hint": "Állapotellenőrző URL külső monitorokhoz. Alapértelmezés: http://localhost:8000/health.",
       "label": "Állapotfigyelő URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Mock Nostr kapcsolódás gomb megjelenítése admin hitelesítéshez (csak tesztelésre)",
-      "hint": "Engedélyezze fejlesztéshez/teszteléshez. Megjelenít egy „Mock Connection” gombot az admin bejelentkezésnél, amely megkerüli a Nostr kiterjesztés követelményét. Éles környezetben le kell tiltani.",
-      "label": "Admin Hitelesítés Szimulálása"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Felhasználói ellenőrzés engedélyezése varázslatos link token nélkül (csak tesztelésre)",
-      "hint": "Engedélyezze fejlesztéshez/teszteléshez. Lehetővé teszi a felhasználók számára az e-mail ellenőrzés befejezését a varázslatos linkre kattintás nélkül. Éles környezetben le kell tiltani.",
-      "label": "Felhasználói Hitelesítés Szimulálása"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS include direktíva",

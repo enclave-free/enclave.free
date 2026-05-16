@@ -12,10 +12,6 @@ vi.mock('../context/InstanceConfigContext', () => ({
   }),
 }))
 
-vi.mock('../utils/publicConfig', () => ({
-  fetchPublicConfig: vi.fn(() => Promise.resolve({ simulateUserAuth: false })),
-}))
-
 describe('UserAuth', () => {
   beforeEach(() => {
     const storage = new Map<string, string>()

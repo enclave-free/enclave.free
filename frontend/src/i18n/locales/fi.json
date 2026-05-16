@@ -55,7 +55,6 @@
       "sentMagicLink": "Lähetimme taikalinkin osoitteeseen",
       "clickLink": "Klikkaa sähköpostissa olevaa linkkiä kirjautuaksesi.",
       "checkSpam": "Etkö näe sitä? Tarkista roskapostikansio.",
-      "simulateMagicLink": "Simuloi taikalinkin klikkausta",
       "forTesting": "Testaustarkoituksiin:",
       "dataProtectionTitle": "Miten Enclave suojaa tietojasi",
       "noPasswordTitle": "Ei tallennettuja salasanoja",
@@ -695,12 +694,9 @@
     "title": "Ylläpidon asetukset",
     "subtitle": "Yhdistä Nostr-identiteettisi hallitaksesi tätä instanssia",
     "connectNostr": "Yhdistä Nostrilla",
-    "orForTesting": "tai testausta varten",
-    "continueMock": "Jatka testihenkilöllisyydellä",
     "connecting": "Yhdistetään laajennukseen...",
     "noExtension": "Nostr-laajennusta ei löytynyt",
     "installExtension": "Asenna NIP-07-yhteensopiva laajennus jatkaaksesi",
-    "useMock": "Käytä testausidentiteettiä",
     "welcomeAdmin": "Tervetuloa, ylläpitäjä!",
     "connectedAs": "Yhdistetty nimellä",
     "redirecting": "Ohjataan kojelaudalle...",
@@ -897,7 +893,7 @@
       "gmailHint": "Käytä sovellussalasanaa — älä tavallista Gmail-salasanaasi. Ota ensin käyttöön kaksivaiheinen todennus ja luo sitten sovellussalasana Google-tilisi turvallisuusasetuksissa.",
       "goToPage": "Siirry sivulle",
       "mailgunHint": "Käytä Mailgun SMTP -tunnuksiasi verkkotunnusasetukset-sivulta. Isäntä on yleensä smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — kun käytössä, sähköpostit kirjataan konsoliin lähettämisen sijaan. Hyödyllinen kehityksessä.",
+      "mockEmail": "MOCK_EMAIL — kun käytössä, sähköpostit kirjataan konsoliin lähettämisen sijaan. Hyödyllinen kehityksessä.",
       "overviewDesc": "Määritä SMTP-asetukset lähtevän sähköpostin käyttöön ottamiseksi (kutsut, ilmoitukset, salasanojen nollaus). Kaikki palveluntarjoajat käyttävät vakio-SMTP-kenttiä.",
       "overviewTitle": "Sähköpostin (SMTP) yleiskatsaus",
       "postmarkHint": "Käytä Postmark Server API -tunnustasi SMTP-salasanana. SMTP-käyttäjänimi on aina sama tunnus.",
@@ -999,9 +995,7 @@
       "overviewDesc": "Turvallisuusasetukset ohjaavat todennusta, istunnonhallintaa ja kehitysoikoteitä. Oletusarvot on määritetty paikallista kehitystä varten.",
       "overviewNote": "Varmista tuotannossa, että simulointiliput ovat pois käytöstä ja FRONTEND_URL vastaa todellista verkkotunnustasi.",
       "overviewTitle": "Turvallisuuden yleiskatsaus",
-      "overviewWhen": "Tarkista nämä asetukset ennen julkiselle palvelimelle käyttöönottoa.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — ohittaa ylläpitäjän todennuksen. Kaikkia pyyntöjä käsitellään ylläpitäjäkäyttäjän lähettäminä.",
-      "simUserDesc": "SIMULATE_USER_AUTH — ohittaa käyttäjän todennuksen. Kaikkia pyyntöjä käsitellään kirjautuneen käyttäjän lähettäminä."
+      "overviewWhen": "Tarkista nämä asetukset ennen julkiselle palvelimelle käyttöönottoa."
     },
     "sslHelp": {
       "ariaLabel": "SSL- ja HTTPS-konfiguraation ohje",
@@ -1318,7 +1312,7 @@
       "description": "Sähköpostien lähettäjäosoite",
       "hint": "\"Lähettäjä\"-osoite lähteville sähköposteille (esim. noreply@sinundomainisi.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testitila",
       "description": "Simuloitu sähköpostin lähetys",
       "hint": "Kun \"true\", sähköpostit kirjataan lähettämisen sijaan. Hyödyllinen kehityksessä."
@@ -1418,16 +1412,6 @@
       "description": "Terveystarkkailun päätepisteen URL",
       "hint": "Terveystarkistus-URL ulkoisille tarkkailijoille. Oletus: http://localhost:8000/health.",
       "label": "Tarkkailun URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Näytä Mock-yhteyspainike ylläpitäjän todennukseen (vain testaus)",
-      "hint": "Ota käyttöön kehitystä/testausta varten. Näyttää \"Mock Connection\" -painikkeen ylläpitäjän kirjautumisessa, joka ohittaa Nostr-laajennusvaatimuksen. Pitäisi olla poissa käytöstä tuotannossa.",
-      "label": "Simuloi ylläpitäjän todennusta"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Salli käyttäjän varmennus ilman taikalinkkitunnusta (vain testaus)",
-      "hint": "Ota käyttöön kehitystä/testausta varten. Sallii käyttäjien suorittaa sähköpostivarmennetun linkin kautta varmennuksen napsauttamatta taikalinkkiä. Pitäisi olla poissa käytöstä tuotannossa.",
-      "label": "Simuloi käyttäjän todennusta"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS sisällytä -direktiivi",

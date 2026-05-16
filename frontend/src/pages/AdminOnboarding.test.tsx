@@ -3,14 +3,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminOnboarding } from './AdminOnboarding'
 import { fetchInstanceStatus } from '../utils/instanceStatus'
-import { fetchPublicConfig } from '../utils/publicConfig'
 
 vi.mock('../utils/instanceStatus', () => ({
   fetchInstanceStatus: vi.fn(),
-}))
-
-vi.mock('../utils/publicConfig', () => ({
-  fetchPublicConfig: vi.fn(),
 }))
 
 vi.mock('../utils/nostrAuth', () => ({
@@ -19,7 +14,6 @@ vi.mock('../utils/nostrAuth', () => ({
 }))
 
 const mockFetchInstanceStatus = vi.mocked(fetchInstanceStatus)
-const mockFetchPublicConfig = vi.mocked(fetchPublicConfig)
 
 describe('AdminOnboarding', () => {
   beforeEach(() => {
@@ -28,10 +22,6 @@ describe('AdminOnboarding', () => {
       setup_complete: false,
       ready_for_users: false,
       settings: {},
-    })
-    mockFetchPublicConfig.mockResolvedValue({
-      simulateUserAuth: false,
-      simulateAdminAuth: false,
     })
   })
 

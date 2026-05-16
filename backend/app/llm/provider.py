@@ -1,9 +1,8 @@
 """
-Model Provider base class and compatibility factory.
+Model Provider base class and factory.
 
 Provides an abstract interface for the configured OpenAI-compatible Model
 Provider path used by Python diagnostics and remaining utility routes.
-The LLM* names remain as public import compatibility aliases.
 """
 
 import os
@@ -44,11 +43,7 @@ class LLMProvider(ABC):
         pass
 
 
-ModelProviderResponse = LLMResponse
-ModelProvider = LLMProvider
-
-
-def get_provider(provider_name: Optional[str] = None) -> ModelProvider:
+def get_provider(provider_name: Optional[str] = None) -> LLMProvider:
     """
     Factory function to get the configured Model Provider adapter.
 
@@ -56,7 +51,7 @@ def get_provider(provider_name: Optional[str] = None) -> ModelProvider:
         provider_name: Optional service name override.
 
     Returns:
-        Configured ModelProvider instance.
+        Configured LLMProvider instance.
     """
     requested = (provider_name or os.getenv("LLM_PROVIDER", "sage")).strip().lower()
     if requested not in {"", "sage"}:
@@ -66,6 +61,6 @@ def get_provider(provider_name: Optional[str] = None) -> ModelProvider:
     return SageTinfoilProvider(provider_name=requested or "sage")
 
 
-def get_sage_provider() -> ModelProvider:
-    """Explicit Sage/Tinfoil-compatible provider accessor."""
+def get_sage_provider() -> LLMProvider:
+    """Explicit Sage/Tinfoil provider accessor."""
     return get_provider("sage")

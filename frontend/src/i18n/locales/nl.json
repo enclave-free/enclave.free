@@ -533,12 +533,9 @@
     "title": "Beheerderconfiguratie",
     "subtitle": "Verbind met je Nostr-identiteit om deze instantie te beheren",
     "connectNostr": "Verbinden met Nostr",
-    "orForTesting": "of voor testen",
-    "continueMock": "Doorgaan met mock-identiteit",
     "connecting": "Verbinden met extensie...",
     "noExtension": "Geen Nostr-extensie gevonden",
     "installExtension": "Installeer een NIP-07 compatibele extensie om door te gaan",
-    "useMock": "Mock gebruiken",
     "welcomeAdmin": "Welkom, Beheerder!",
     "connectedAs": "Verbonden als",
     "redirecting": "Doorsturen naar dashboard...",
@@ -610,7 +607,6 @@
       "sentMagicLink": "We hebben een magic link gestuurd naar",
       "clickLink": "Klik op de link in de e-mail om in te loggen.",
       "checkSpam": "Niet te zien? Controleer je spammap.",
-      "simulateMagicLink": "Klikken op magic link simuleren",
       "forTesting": "Voor testdoeleinden:",
       "dataProtectionTitle": "Hoe Enclave je gegevens beschermt",
       "noPasswordTitle": "Geen opgeslagen wachtwoorden",
@@ -934,7 +930,7 @@
       "gmailHint": "Gebruik een app-wachtwoord — niet je gewone Gmail-wachtwoord. Schakel eerst 2FA in en genereer vervolgens een app-wachtwoord in de beveiligingsinstellingen van je Google-account.",
       "goToPage": "Ga naar pagina",
       "mailgunHint": "Gebruik je Mailgun SMTP-inloggegevens van de domeininstellingenpagina. De host is doorgaans smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — wanneer ingeschakeld worden e-mails gelogd naar de console in plaats van verzonden. Handig voor ontwikkeling.",
+      "mockEmail": "MOCK_EMAIL — wanneer ingeschakeld worden e-mails gelogd naar de console in plaats van verzonden. Handig voor ontwikkeling.",
       "overviewDesc": "Configureer SMTP-instellingen om uitgaande e-mail in te schakelen (uitnodigingen, meldingen, wachtwoord-resets). Alle providers gebruiken standaard SMTP-velden.",
       "overviewTitle": "Overzicht e-mail (SMTP)",
       "postmarkHint": "Gebruik je Postmark Server API-token als SMTP-wachtwoord. De SMTP-gebruikersnaam is altijd hetzelfde token.",
@@ -1036,9 +1032,7 @@
       "overviewDesc": "Beveiligingsinstellingen bepalen authenticatie, sessiebeheer en ontwikkelingssnelkoppelingen. Standaardwaarden zijn geconfigureerd voor lokale ontwikkeling.",
       "overviewNote": "In productie, zorg ervoor dat simulatievlaggen uit staan en FRONTEND_URL overeenkomt met je werkelijke domein.",
       "overviewTitle": "Overzicht beveiliging",
-      "overviewWhen": "Controleer deze instellingen voordat je deployt naar een publiek toegankelijke server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — omzeilt beheerdersauthenticatie. Alle verzoeken worden behandeld alsof ze van een beheerder komen.",
-      "simUserDesc": "SIMULATE_USER_AUTH — omzeilt gebruikersauthenticatie. Alle verzoeken worden behandeld alsof ze van een ingelogde gebruiker komen."
+      "overviewWhen": "Controleer deze instellingen voordat je deployt naar een publiek toegankelijke server."
     },
     "sslHelp": {
       "ariaLabel": "Hulp bij SSL- en HTTPS-configuratie",
@@ -1307,7 +1301,7 @@
       "description": "Van-adres voor e-mails",
       "hint": "Het \"van\"-adres voor uitgaande e-mails (bijv. noreply@uwdomein.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testmodus",
       "description": "Gesimuleerde e-mailverzending",
       "hint": "Wanneer \"true\", worden e-mails gelogd in plaats van verzonden. Handig voor ontwikkeling."
@@ -1341,16 +1335,6 @@
       "label": "App-URL",
       "description": "Openbare URL van de applicatie",
       "hint": "De openbare URL waar gebruikers toegang hebben tot de app. Wordt gebruikt voor het genereren van magische links."
-    },
-    "SIMULATE_USER_AUTH": {
-      "label": "Gebruikersauth simuleren",
-      "description": "Gebruikersverificatie zonder magic-link-token toestaan (alleen testen)",
-      "hint": "Schakel in voor ontwikkeling/testen. Hiermee kunnen gebruikers e-mailverificatie voltooien zonder op de magic link te klikken. Moet uitgeschakeld zijn in productie."
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "label": "Beheerderauth simuleren",
-      "description": "Mock Nostr-verbindingsknop tonen voor beheerderauth (alleen testen)",
-      "hint": "Schakel in voor ontwikkeling/testen. Toont een \"Mock-verbinding\"-knop bij het inloggen als beheerder die de Nostr-extensie-eis omzeilt. Moet uitgeschakeld zijn in productie."
     },
     "BASE_DOMAIN": {
       "label": "Hoofddomein",

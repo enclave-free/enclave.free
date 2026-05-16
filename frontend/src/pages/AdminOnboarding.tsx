@@ -6,7 +6,6 @@ import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { NostrInfo, NostrExtensionLinks } from '../components/onboarding/NostrInfo'
 import { STORAGE_KEYS } from '../types/onboarding'
 import { authenticateWithNostr, hasNostrExtension, type AuthResult } from '../utils/nostrAuth'
-import { fetchPublicConfig } from '../utils/publicConfig'
 import { fetchInstanceStatus } from '../utils/instanceStatus'
 import { LANGUAGES } from '../utils/languages'
 import { Callout } from '../components/ui'
@@ -160,16 +159,8 @@ export function AdminOnboarding() {
   const [pubkey, setPubkey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
-  const [simulateAdminAuth, setSimulateAdminAuth] = useState(false)
   const [instanceInitialized, setInstanceInitialized] = useState<boolean | null>(null)
   const [initStep, setInitStep] = useState<1 | 2 | 3>(1)
-
-  // Fetch simulation setting on mount
-  useEffect(() => {
-    fetchPublicConfig().then((config) => {
-      setSimulateAdminAuth(config.simulateAdminAuth)
-    })
-  }, [])
 
   // Determine if this instance has been initiated (admin exists).
   useEffect(() => {
@@ -234,31 +225,6 @@ export function AdminOnboarding() {
       setError(err instanceof Error ? err.message : 'Failed to connect')
       setState('error')
     }
-  }
-
-  const handleMockConnect = async () => {
-    setState('connecting')
-    setError(null)
-
-    // Simulate connection delay
-    await new Promise((resolve) => setTimeout(resolve, 1200))
-
-    // Generate mock pubkey (64 hex chars like a real nostr pubkey)
-    const mockPubkey = Array.from({ length: 64 }, () =>
-      '0123456789abcdef'[Math.floor(Math.random() * 16)]
-    ).join('')
-
-    setPubkey(mockPubkey)
-    localStorage.setItem(STORAGE_KEYS.ADMIN_PUBKEY, mockPubkey)
-    // Note: Mock mode has no valid session token - admin API calls will fail with 401
-    // Use a real Nostr extension for full functionality
-    localStorage.setItem('enclave_admin_is_new', 'true')
-    setState('success')
-
-    // Redirect after showing success
-    setTimeout(() => {
-      navigate('/admin/setup')
-    }, 2000)
   }
 
   const handleRetry = () => {
@@ -515,26 +481,6 @@ export function AdminOnboarding() {
                     {t('instanceInitiation.connect', 'Connect with Nostr')}
                   </button>
 
-                  {simulateAdminAuth && (
-                    <>
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-border" />
-                        </div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className="px-3 bg-surface-raised text-text-muted">{t('adminOnboarding.orForTesting')}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleMockConnect}
-                        className="w-full text-sm text-text-muted hover:text-text py-2 transition-colors"
-                      >
-                        {t('adminOnboarding.continueMock')}
-                      </button>
-                    </>
-                  )}
-
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex items-center gap-2 mb-3">
                       <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
@@ -583,22 +529,14 @@ export function AdminOnboarding() {
 
                   <NostrExtensionLinks />
 
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleRetry}
-                      className={`btn btn-secondary btn-md ${simulateAdminAuth ? 'flex-1' : 'w-full'}`}
-                    >
-                      {t('common.tryAgain')}
-                    </button>
-                    {simulateAdminAuth && (
-                      <button
-                        onClick={handleMockConnect}
-                        className="btn btn-primary btn-md flex-1"
-                      >
-                        {t('adminOnboarding.useMock')}
-                      </button>
-                    )}
-                  </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleRetry}
+                    className="btn btn-secondary btn-md w-full"
+                  >
+                    {t('common.tryAgain')}
+                  </button>
+                </div>
                 </div>
               )}
 
@@ -654,26 +592,6 @@ export function AdminOnboarding() {
                 <Link2 className="w-5 h-5" />
                 {t('adminOnboarding.connectNostr')}
               </button>
-
-              {simulateAdminAuth && (
-                <>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="px-3 bg-surface-raised text-text-muted">{t('adminOnboarding.orForTesting')}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleMockConnect}
-                    className="w-full text-sm text-text-muted hover:text-text py-2 transition-colors"
-                  >
-                    {t('adminOnboarding.continueMock')}
-                  </button>
-                </>
-              )}
 
               <details className="group pt-2">
                 <summary className="flex items-center justify-center gap-2 text-sm text-text-muted hover:text-text cursor-pointer transition-colors py-2 list-none [&::-webkit-details-marker]:hidden">
@@ -750,18 +668,10 @@ export function AdminOnboarding() {
               <div className="flex gap-3">
                 <button
                   onClick={handleRetry}
-                  className={`btn btn-secondary btn-md ${simulateAdminAuth ? 'flex-1' : 'w-full'}`}
+                  className="btn btn-secondary btn-md w-full"
                 >
                   {t('common.tryAgain')}
                 </button>
-                {simulateAdminAuth && (
-                  <button
-                    onClick={handleMockConnect}
-                    className="btn btn-primary btn-md flex-1"
-                  >
-                    {t('adminOnboarding.useMock')}
-                  </button>
-                )}
               </div>
             </div>
           )}

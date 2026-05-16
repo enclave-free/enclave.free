@@ -55,7 +55,6 @@
       "sentMagicLink": "매직 링크를 보냈습니다",
       "clickLink": "로그인하려면 이메일의 링크를 클릭하세요.",
       "checkSpam": "보이지 않나요? 스팸 폴더를 확인하세요.",
-      "simulateMagicLink": "매직 링크 클릭 시뮬레이션",
       "forTesting": "테스트용:",
       "dataProtectionTitle": "Enclave이 데이터를 보호하는 방식",
       "noPasswordTitle": "저장되는 비밀번호 없음",
@@ -695,12 +694,9 @@
     "title": "관리자 설정",
     "subtitle": "이 인스턴스를 관리하려면 Nostr ID로 연결하세요",
     "connectNostr": "Nostr로 연결",
-    "orForTesting": "또는 테스트용",
-    "continueMock": "모의 ID로 계속",
     "connecting": "확장 프로그램에 연결 중...",
     "noExtension": "Nostr 확장 프로그램을 찾을 수 없음",
     "installExtension": "계속하려면 NIP-07 호환 확장 프로그램을 설치하세요",
-    "useMock": "모의 사용",
     "welcomeAdmin": "환영합니다, 관리자!",
     "connectedAs": "연결됨",
     "redirecting": "대시보드로 이동 중...",
@@ -897,7 +893,7 @@
       "gmailHint": "앱 비밀번호를 사용하세요 — 일반 Gmail 비밀번호가 아닙니다. 먼저 2단계 인증을 활성화한 다음 Google 계정 보안 설정에서 앱 비밀번호를 생성하세요.",
       "goToPage": "페이지로 이동",
       "mailgunHint": "도메인 설정 페이지에서 Mailgun SMTP 자격 증명을 사용하세요. 호스트는 일반적으로 smtp.mailgun.org입니다.",
-      "mockSmtp": "MOCK_SMTP — 활성화되면 이메일이 전송되지 않고 콘솔에 기록됩니다. 개발 시 유용합니다.",
+      "mockEmail": "MOCK_EMAIL — 활성화되면 이메일이 전송되지 않고 콘솔에 기록됩니다. 개발 시 유용합니다.",
       "overviewDesc": "발신 이메일(초대, 알림, 비밀번호 재설정)을 활성화하려면 SMTP 설정을 구성하세요. 모든 공급자는 표준 SMTP 필드를 사용합니다.",
       "overviewTitle": "이메일 (SMTP) 개요",
       "postmarkHint": "Postmark 서버 API 토큰을 SMTP 비밀번호로 사용하세요. SMTP 사용자 이름은 항상 동일한 토큰입니다.",
@@ -999,9 +995,7 @@
       "overviewDesc": "보안 설정은 인증, 세션 처리 및 개발 바로가기를 제어합니다. 기본값은 로컬 개발용으로 구성되어 있습니다.",
       "overviewNote": "프로덕션에서는 시뮬레이션 플래그가 꺼져 있고 FRONTEND_URL이 실제 도메인과 일치하는지 확인하세요.",
       "overviewTitle": "보안 개요",
-      "overviewWhen": "공개 서버에 배포하기 전에 이 설정을 검토하세요.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — 관리자 인증을 우회합니다. 모든 요청이 관리자 사용자로부터 온 것으로 처리됩니다.",
-      "simUserDesc": "SIMULATE_USER_AUTH — 사용자 인증을 우회합니다. 모든 요청이 로그인된 사용자로부터 온 것으로 처리됩니다."
+      "overviewWhen": "공개 서버에 배포하기 전에 이 설정을 검토하세요."
     },
     "sslHelp": {
       "ariaLabel": "SSL 및 HTTPS 구성 도움말",
@@ -1318,7 +1312,7 @@
       "description": "이메일 발신 주소",
       "hint": "발송 이메일의 \"발신자\" 주소 (예: noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "테스트 모드",
       "description": "이메일 발송 모의 실행",
       "hint": "\"true\"인 경우 이메일이 전송되지 않고 로그에 기록됩니다. 개발 시 유용합니다."
@@ -1418,16 +1412,6 @@
       "description": "상태 모니터링 엔드포인트 URL",
       "hint": "외부 모니터용 상태 확인 URL. 기본값: http://localhost:8000/health.",
       "label": "모니터링 URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "관리자 인증용 모의 Nostr 연결 버튼 표시 (테스트 전용)",
-      "hint": "개발/테스트용으로 활성화합니다. 관리자 로그인 시 Nostr 확장 프로그램 요구 사항을 우회하는 \"모의 연결\" 버튼을 표시합니다. 프로덕션에서는 비활성화해야 합니다.",
-      "label": "관리자 인증 시뮬레이션"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "매직 링크 토큰 없이 사용자 확인 허용 (테스트 전용)",
-      "hint": "개발/테스트용으로 활성화합니다. 사용자가 매직 링크를 클릭하지 않고 이메일 확인을 완료할 수 있도록 합니다. 프로덕션에서는 비활성화해야 합니다.",
-      "label": "사용자 인증 시뮬레이션"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS 포함 지시문",

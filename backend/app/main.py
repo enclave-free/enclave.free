@@ -938,49 +938,6 @@ async def verify_magic_link(
     return await _verify_magic_link_and_create_session(token, response)
 
 
-@app.post("/auth/dev-session", response_model=VerifyTokenResponse)
-async def create_dev_session(
-    body: MagicLinkRequest,
-    response: Response,
-    _: None = Depends(auth.require_instance_setup_complete),
-):
-    """
-    Development-only auth helper for simulated user onboarding.
-    Enabled only when SIMULATE_USER_AUTH=true and never in production mode.
-    """
-    if auth.is_production_mode() or not _get_simulation_setting("SIMULATE_USER_AUTH", "false"):
-        raise HTTPException(status_code=403, detail="Simulated auth is disabled")
-
-    email = body.email.strip().lower()
-    name = body.name.strip()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required")
-
-    user = database.get_user_by_email(email)
-    if not user:
-        user_id = database.create_user(email=email, name=name)
-        user = database.get_user(user_id)
-
-    session_token = auth.create_session_token(user["id"], email)
-    auth.set_user_session_cookie(response, session_token)
-    needs_onboarding, needs_user_type = _compute_onboarding_flags(user)
-
-    return VerifyTokenResponse(
-        success=True,
-        user=AuthUserResponse(
-            id=user["id"],
-            email=email,
-            name=name or user.get("name"),
-            user_type_id=user.get("user_type_id"),
-            approved=bool(user.get("approved", 1)),
-            created_at=user.get("created_at"),
-            needs_onboarding=needs_onboarding,
-            needs_user_type=needs_user_type,
-        ),
-        session_token=session_token,
-    )
-
-
 @app.get("/auth/me", response_model=SessionUserResponse)
 async def get_current_user(
     authorization: Optional[str] = Header(None),
@@ -1531,52 +1488,10 @@ async def get_public_settings():
 from models import PublicConfigResponse
 
 
-def _get_simulation_setting(key: str, default: str = "true") -> bool:
-    """Get a simulation setting from database with env var fallback.
-
-    Args:
-        key: The config key (e.g., "SIMULATE_USER_AUTH")
-        default: Default value if not found anywhere ("true" or "false")
-
-    Returns:
-        Boolean value of the setting
-    """
-    # First try database
-    db_value = database.get_deployment_config_value(key)
-    if db_value is not None:
-        return db_value.lower() in ("true", "1", "yes")
-
-    # Then try environment variable
-    env_value = os.getenv(key)
-    if env_value is not None:
-        return env_value.lower() in ("true", "1", "yes")
-
-    # Fall back to default
-    return default.lower() in ("true", "1", "yes")
-
-
 @app.get("/config/public", response_model=PublicConfigResponse)
 async def get_public_config() -> PublicConfigResponse:
-    """
-    Public endpoint: Get simulation/development settings.
-
-    Returns configuration flags that control testing features.
-    No authentication required - these settings affect client-side behavior.
-    """
-    simulate_user_auth = _get_simulation_setting("SIMULATE_USER_AUTH", "false")
-    simulate_admin_auth = _get_simulation_setting("SIMULATE_ADMIN_AUTH", "false")
-
-    # Defense-in-depth: never expose simulation flags as enabled in production.
-    if auth.is_production_mode():
-        if simulate_user_auth or simulate_admin_auth:
-            logger.warning("Simulation auth flags forced off in production mode")
-        simulate_user_auth = False
-        simulate_admin_auth = False
-
-    return PublicConfigResponse(
-        simulate_user_auth=simulate_user_auth,
-        simulate_admin_auth=simulate_admin_auth,
-    )
+    """Public endpoint for unauthenticated runtime settings."""
+    return PublicConfigResponse()
 
 
 @app.get("/admin/settings", response_model=InstanceSettingsResponse)

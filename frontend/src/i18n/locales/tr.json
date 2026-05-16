@@ -55,7 +55,6 @@
       "sentMagicLink": "Şu adrese sihirli bağlantı gönderdik",
       "clickLink": "Giriş yapmak için e-postadaki bağlantıya tıklayın.",
       "checkSpam": "Görmüyor musunuz? Spam klasörünü kontrol edin.",
-      "simulateMagicLink": "Sihirli bağlantı tıklamasını simüle et",
       "forTesting": "Test amaçları için:",
       "dataProtectionTitle": "Enclave verilerinizi nasıl korur",
       "noPasswordTitle": "Saklanan parola yok",
@@ -695,12 +694,9 @@
     "title": "Yönetici Kurulumu",
     "subtitle": "Bu örneği yönetmek için Nostr kimliğinizle bağlanın",
     "connectNostr": "Nostr ile Bağlan",
-    "orForTesting": "veya test için",
-    "continueMock": "Sahte kimlikle devam et",
     "connecting": "Uzantıya bağlanılıyor...",
     "noExtension": "Nostr uzantısı bulunamadı",
     "installExtension": "Devam etmek için NIP-07 uyumlu bir uzantı yükleyin",
-    "useMock": "Sahte kullan",
     "welcomeAdmin": "Hoş geldiniz, Yönetici!",
     "connectedAs": "Bağlandı:",
     "redirecting": "Panele yönlendiriliyor...",
@@ -897,7 +893,7 @@
       "gmailHint": "Bir Uygulama Parolası kullanın — normal Gmail parolanızı değil. Önce 2FA'yı etkinleştirin, ardından Google Hesabı güvenlik ayarlarınızda bir Uygulama Parolası oluşturun.",
       "goToPage": "Sayfaya git",
       "mailgunHint": "Alan adı ayarları sayfasındaki Mailgun SMTP kimlik bilgilerinizi kullanın. Ana bilgisayar genellikle smtp.mailgun.org'dur.",
-      "mockSmtp": "MOCK_SMTP — etkinleştirildiğinde, e-postalar gönderilmek yerine konsola kaydedilir. Geliştirme için kullanışlıdır.",
+      "mockEmail": "MOCK_EMAIL — etkinleştirildiğinde, e-postalar gönderilmek yerine konsola kaydedilir. Geliştirme için kullanışlıdır.",
       "overviewDesc": "Giden e-postayı (davetler, bildirimler, parola sıfırlama) etkinleştirmek için SMTP ayarlarını yapılandırın. Tüm sağlayıcılar standart SMTP alanlarını kullanır.",
       "overviewTitle": "E-posta (SMTP) Genel Bakış",
       "postmarkHint": "Postmark Sunucu API tokenınızı SMTP parolası olarak kullanın. SMTP kullanıcı adı her zaman aynı tokendir.",
@@ -999,9 +995,7 @@
       "overviewDesc": "Güvenlik ayarları kimlik doğrulamayı, oturum yönetimini ve geliştirme kısayollarını kontrol eder. Varsayılanlar yerel geliştirme için yapılandırılmıştır.",
       "overviewNote": "Üretimde, simülasyon bayraklarının kapalı olduğundan ve FRONTEND_URL'nin gerçek alan adınızla eşleştiğinden emin olun.",
       "overviewTitle": "Güvenlik Genel Bakış",
-      "overviewWhen": "Halka açık bir sunucuya dağıtmadan önce bu ayarları gözden geçirin.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — yönetici kimlik doğrulamasını atlar. Tüm istekler bir yönetici kullanıcıdan geliyormuş gibi işlenir.",
-      "simUserDesc": "SIMULATE_USER_AUTH — kullanıcı kimlik doğrulamasını atlar. Tüm istekler giriş yapmış bir kullanıcıdan geliyormuş gibi işlenir."
+      "overviewWhen": "Halka açık bir sunucuya dağıtmadan önce bu ayarları gözden geçirin."
     },
     "sslHelp": {
       "ariaLabel": "SSL ve HTTPS yapılandırma yardımı",
@@ -1318,7 +1312,7 @@
       "description": "E-postalar için gönderen adresi",
       "hint": "Giden e-postalar için \"kimden\" adresi (ör. noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Test Modu",
       "description": "E-posta gönderimini simüle et",
       "hint": "\"true\" olduğunda, e-postalar gönderilmek yerine günlüğe kaydedilir. Geliştirme için kullanışlıdır."
@@ -1418,16 +1412,6 @@
       "description": "Sağlık izleme uç noktası URL'si",
       "hint": "Harici izleyiciler için sağlık kontrolü URL'si. Varsayılan: http://localhost:8000/health.",
       "label": "İzleme URL'si"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Yönetici kimlik doğrulaması için sahte Nostr bağlantı düğmesini göster (yalnızca test)",
-      "hint": "Geliştirme/test için etkinleştirin. Yönetici girişinde Nostr uzantısı gereksinimini atlayan bir \"Sahte Bağlantı\" düğmesi gösterir. Üretimde devre dışı bırakılmalıdır.",
-      "label": "Yönetici Kimlik Doğrulamasını Simüle Et"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Sihirli bağlantı belirteci olmadan kullanıcı doğrulamasına izin ver (yalnızca test)",
-      "hint": "Geliştirme/test için etkinleştirin. Kullanıcıların sihirli bağlantıya tıklamadan e-posta doğrulamayı tamamlamasına olanak tanır. Üretimde devre dışı bırakılmalıdır.",
-      "label": "Kullanıcı Kimlik Doğrulamasını Simüle Et"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS include yönergesi",

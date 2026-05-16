@@ -55,7 +55,6 @@
       "sentMagicLink": "Chúng tôi đã gửi liên kết ma thuật tới",
       "clickLink": "Nhấn vào liên kết trong email để đăng nhập.",
       "checkSpam": "Không thấy? Hãy kiểm tra thư mục spam.",
-      "simulateMagicLink": "Mô phỏng nhấn vào liên kết ma thuật",
       "forTesting": "Cho mục đích thử nghiệm:",
       "dataProtectionTitle": "Enclave bảo vệ dữ liệu của bạn như thế nào",
       "noPasswordTitle": "Không lưu trữ mật khẩu",
@@ -697,12 +696,9 @@
     "title": "Thiết lập quản trị",
     "subtitle": "Kết nối với danh tính Nostr của bạn để quản lý phiên bản này",
     "connectNostr": "Kết nối với Nostr",
-    "orForTesting": "hoặc để thử nghiệm",
-    "continueMock": "Tiếp tục với danh tính giả",
     "connecting": "Đang kết nối với tiện ích...",
     "noExtension": "Không tìm thấy tiện ích Nostr",
     "installExtension": "Cài đặt tiện ích tương thích NIP-07 để tiếp tục",
-    "useMock": "Sử dụng danh tính giả",
     "welcomeAdmin": "Chào mừng, Quản trị viên!",
     "connectedAs": "Đã kết nối với tư cách",
     "redirecting": "Đang chuyển hướng đến bảng điều khiển...",
@@ -899,7 +895,7 @@
       "gmailHint": "Sử dụng Mật khẩu ứng dụng — không phải mật khẩu Gmail thông thường. Bật xác thực 2 bước trước, sau đó tạo Mật khẩu ứng dụng trong cài đặt bảo mật Tài khoản Google.",
       "goToPage": "Đi đến trang",
       "mailgunHint": "Sử dụng thông tin SMTP của Mailgun từ trang cài đặt tên miền. Máy chủ thường là smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — khi bật, email được ghi log vào console thay vì gửi đi. Hữu ích cho phát triển.",
+      "mockEmail": "MOCK_EMAIL — khi bật, email được ghi log vào console thay vì gửi đi. Hữu ích cho phát triển.",
       "overviewDesc": "Cấu hình cài đặt SMTP để bật email gửi đi (lời mời, thông báo, đặt lại mật khẩu). Tất cả nhà cung cấp sử dụng các trường SMTP tiêu chuẩn.",
       "overviewTitle": "Tổng quan Email (SMTP)",
       "postmarkHint": "Sử dụng token API Server của Postmark làm mật khẩu SMTP. Tên người dùng SMTP luôn là cùng một token.",
@@ -1001,9 +997,7 @@
       "overviewDesc": "Cài đặt bảo mật kiểm soát xác thực, quản lý phiên và lối tắt phát triển. Mặc định được cấu hình cho phát triển cục bộ.",
       "overviewNote": "Trong môi trường sản xuất, đảm bảo cờ mô phỏng đã tắt và FRONTEND_URL khớp với tên miền thực.",
       "overviewTitle": "Tổng quan bảo mật",
-      "overviewWhen": "Xem xét các cài đặt này trước khi triển khai lên máy chủ công cộng.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — bỏ qua xác thực quản trị. Tất cả yêu cầu được coi là đến từ người dùng quản trị.",
-      "simUserDesc": "SIMULATE_USER_AUTH — bỏ qua xác thực người dùng. Tất cả yêu cầu được coi là đến từ người dùng đã đăng nhập."
+      "overviewWhen": "Xem xét các cài đặt này trước khi triển khai lên máy chủ công cộng."
     },
     "sslHelp": {
       "ariaLabel": "Trợ giúp cấu hình SSL và HTTPS",
@@ -1320,7 +1314,7 @@
       "description": "Địa chỉ gửi cho email",
       "hint": "Địa chỉ \"from\" cho email gửi đi (ví dụ: noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Chế độ thử nghiệm",
       "description": "Giả lập gửi email",
       "hint": "Khi \"true\", email được ghi log thay vì gửi. Hữu ích cho phát triển."
@@ -1420,16 +1414,6 @@
       "description": "URL điểm cuối giám sát sức khỏe",
       "hint": "URL kiểm tra sức khỏe cho các công cụ giám sát bên ngoài. Mặc định: http://localhost:8000/health.",
       "label": "URL giám sát"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Hiển thị nút kết nối Nostr giả cho xác thực quản trị (chỉ thử nghiệm)",
-      "hint": "Bật cho phát triển/thử nghiệm. Hiển thị nút \"Kết nối giả\" trên đăng nhập quản trị để bỏ qua yêu cầu tiện ích mở rộng Nostr. Nên tắt trong môi trường sản xuất.",
-      "label": "Mô phỏng xác thực quản trị"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Cho phép xác minh người dùng mà không cần mã thông báo liên kết ma thuật (chỉ thử nghiệm)",
-      "hint": "Bật cho phát triển/thử nghiệm. Cho phép người dùng hoàn tất xác minh email mà không cần nhấp vào liên kết ma thuật. Nên tắt trong môi trường sản xuất.",
-      "label": "Mô phỏng xác thực người dùng"
     },
     "SPF_INCLUDE": {
       "description": "Chỉ thị SPF DNS include",

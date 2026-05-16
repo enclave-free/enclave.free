@@ -137,13 +137,6 @@ def _get_deployment_secret_key() -> bytes:
     return _deployment_secret_key
 
 
-def _get_legacy_deployment_secret_key() -> bytes:
-    from auth import SECRET_KEY
-    return hashlib.sha256(
-        f"{'san' + 'ctum'}-deployment-config:{SECRET_KEY}".encode("utf-8")
-    ).digest()
-
-
 def _get_audit_hmac_key() -> bytes:
     """Load and cache the secret key used for audit-chain HMACs."""
     global _audit_hmac_key
@@ -196,14 +189,12 @@ def _decrypt_deployment_secret_value(value: str) -> str:
     tag = b64decode(parts[1].encode("ascii"))
     ciphertext = b64decode(parts[2].encode("ascii"))
 
-    for key in (_get_deployment_secret_key(), _get_legacy_deployment_secret_key()):
-        try:
-            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-            return plaintext.decode("utf-8")
-        except ValueError:
-            continue
-    raise ValueError("Invalid deployment secret authentication tag")
+    cipher = AES.new(_get_deployment_secret_key(), AES.MODE_GCM, nonce=nonce)
+    try:
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    except ValueError as exc:
+        raise ValueError("Invalid deployment secret authentication tag") from exc
+    return plaintext.decode("utf-8")
 
 
 def init_schema():

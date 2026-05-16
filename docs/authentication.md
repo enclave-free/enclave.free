@@ -370,7 +370,7 @@ curl -X POST http://localhost:8000/auth/test-email \
 }
 ```
 
-If `MOCK_EMAIL=true` (or `MOCK_SMTP=true` via deployment config), the response notes that mock mode is enabled.
+If `MOCK_EMAIL=true`, the response notes that mock mode is enabled.
 
 **Errors:**
 - `401/403` - Unauthorized or not an admin
@@ -388,7 +388,6 @@ If `MOCK_EMAIL=true` (or `MOCK_SMTP=true` via deployment config), the response n
 | `SECRET_KEY` | Required in Compose | Key for signing tokens. Compose requires it; non-Compose backend runs can auto-generate and persist `/data/.secret_key` if unset |
 | `FRONTEND_URL` | `http://localhost:5173` | Base URL for magic link emails |
 | `MOCK_EMAIL` | `false` | Log magic links instead of sending emails (note: `.env.example` sets this to `true` for local dev) |
-| `MOCK_SMTP` | (alias) | Deployment-config alias for `MOCK_EMAIL` |
 | `SMTP_HOST` | (empty) | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USER` | (empty) | SMTP username |
@@ -397,7 +396,7 @@ If `MOCK_EMAIL=true` (or `MOCK_SMTP=true` via deployment config), the response n
 
 ### Development Mode (Mock Email)
 
-With `MOCK_EMAIL=true` (commonly enabled in local dev via `.env.example`), or `MOCK_SMTP=true` via deployment config, magic links are logged to the console instead of being sent via email:
+With `MOCK_EMAIL=true` (commonly enabled in local dev via `.env.example`), magic links are logged to the console instead of being sent via email:
 
 ```
 ============================================================
@@ -488,36 +487,21 @@ Enclave supports optional manual approval of new users before they can access th
 
 ## Development/Testing Modes
 
-The codebase includes several development conveniences that are disabled by default in production.
+The codebase includes mock email mode for local email testing. Prototype auth simulation flags are no longer supported.
 
 ### Mock Email Mode
 
-With `MOCK_EMAIL=true` (or `MOCK_SMTP=true` via deployment config), magic links are logged to console instead of sent via SMTP. This is controlled by the backend environment variable.
-
-### Simulation Flags (Backend)
-
-Mock auth features are controlled by backend config and exposed via `/config/public`.
-
-When enabled:
-- **`SIMULATE_ADMIN_AUTH=true`**: "Mock Connection" button appears on `/admin`
-  - Generates a fake 64-character hex pubkey
-  - Bypasses real NIP-07 extension signing
-  - Note: Admin API calls will fail (no valid session token)
-- **`SIMULATE_USER_AUTH=true`**: `/verify` can succeed without a token using `enclave_pending_email` (testing only)
-
-These flags can be set via the deployment config UI (`/admin/deployment`) or environment variables.
-Database values take precedence over env vars. Keep them disabled in production.
+With `MOCK_EMAIL=true`, magic links are logged to console instead of sent via SMTP. This is controlled by the backend environment variable.
 
 ### Configuration
 
 Add to your backend environment (e.g., `.env` or `docker-compose.app.yml`):
 ```bash
 # Development
-SIMULATE_ADMIN_AUTH=true
-SIMULATE_USER_AUTH=true
+MOCK_EMAIL=true
 
-# Production (default - no action needed)
-# SIMULATE_* not set or set to false
+# Production
+MOCK_EMAIL=false
 ```
 
 See "Production Hardening" below for complete production deployment guidance.

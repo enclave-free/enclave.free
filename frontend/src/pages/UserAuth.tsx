@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Mail, ShieldCheck, Lock, Timer } from 'lucide-react'
@@ -6,7 +6,6 @@ import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { Button, Callout, TextField } from '../components/ui'
 import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
 import { useInstanceConfig } from '../context/InstanceConfigContext'
-import { fetchPublicConfig } from '../utils/publicConfig'
 
 type TabType = 'signup' | 'login'
 type FormState = 'idle' | 'submitting' | 'success' | 'error'
@@ -93,9 +92,6 @@ interface SuccessMessageProps {
   sentMagicLink: string
   clickLink: string
   checkSpam: string
-  forTesting: string
-  simulateMagicLink: string
-  showSimulate: boolean
 }
 
 function SuccessMessage({
@@ -104,9 +100,6 @@ function SuccessMessage({
   sentMagicLink,
   clickLink,
   checkSpam,
-  forTesting,
-  simulateMagicLink,
-  showSimulate,
 }: SuccessMessageProps) {
   return (
     <div className="text-center py-6 animate-fade-in">
@@ -123,19 +116,6 @@ function SuccessMessage({
         <br />
         {checkSpam}
       </p>
-
-      {/* For testing: Link to mock verification */}
-      {showSimulate && (
-        <div className="mt-6 pt-4 border-t border-border">
-          <p className="text-xs text-text-muted mb-2">{forTesting}</p>
-          <Link
-            to="/verify"
-            className="text-sm text-accent hover:text-accent-hover font-medium transition-colors"
-          >
-            {simulateMagicLink}
-          </Link>
-        </div>
-      )}
     </div>
   )
 }
@@ -149,18 +129,6 @@ export function UserAuth() {
   const [errors, setErrors] = useState<Partial<FormData>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submittedEmail, setSubmittedEmail] = useState<string>('')
-  const [simulateUserAuth, setSimulateUserAuth] = useState<boolean>(false)
-
-  useEffect(() => {
-    fetchPublicConfig()
-      .then((publicConfig) => {
-        setSimulateUserAuth(publicConfig.simulateUserAuth)
-      })
-      .catch((error) => {
-        console.error('Failed to fetch public config:', error)
-        setSimulateUserAuth(false)
-      })
-  }, [])
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
@@ -265,9 +233,6 @@ export function UserAuth() {
           sentMagicLink={t('onboarding.auth.sentMagicLink')}
           clickLink={t('onboarding.auth.clickLink')}
           checkSpam={t('onboarding.auth.checkSpam')}
-          forTesting={t('onboarding.auth.forTesting')}
-          simulateMagicLink={t('onboarding.auth.simulateMagicLink')}
-          showSimulate={simulateUserAuth}
         />
       ) : (
         <>

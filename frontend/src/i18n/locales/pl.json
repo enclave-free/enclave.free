@@ -55,7 +55,6 @@
       "sentMagicLink": "Wysłaliśmy magiczny link na",
       "clickLink": "Kliknij link w e-mailu, aby się zalogować.",
       "checkSpam": "Nie widzisz? Sprawdź folder spam.",
-      "simulateMagicLink": "Symuluj kliknięcie magicznego linku",
       "forTesting": "Do celów testowych:",
       "dataProtectionTitle": "Jak Enclave chroni Twoje dane",
       "noPasswordTitle": "Brak przechowywanych haseł",
@@ -703,12 +702,9 @@
     "title": "Konfiguracja administratora",
     "subtitle": "Połącz się ze swoją tożsamością Nostr, aby zarządzać tą instancją",
     "connectNostr": "Połącz z Nostr",
-    "orForTesting": "lub do testów",
-    "continueMock": "Kontynuuj z fałszywą tożsamością",
     "connecting": "Łączenie z rozszerzeniem...",
     "noExtension": "Nie znaleziono rozszerzenia Nostr",
     "installExtension": "Zainstaluj rozszerzenie kompatybilne z NIP-07, aby kontynuować",
-    "useMock": "Użyj fałszywego",
     "welcomeAdmin": "Witaj, Administratorze!",
     "connectedAs": "Połączony jako",
     "redirecting": "Przekierowanie do panelu...",
@@ -905,7 +901,7 @@
       "gmailHint": "Użyj hasła aplikacji — nie zwykłego hasła Gmail. Najpierw włącz 2FA, a następnie wygeneruj hasło aplikacji w ustawieniach bezpieczeństwa konta Google.",
       "goToPage": "Przejdź do strony",
       "mailgunHint": "Użyj danych logowania SMTP z Mailgun ze strony ustawień domeny. Host to zazwyczaj smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — po włączeniu e-maile są logowane do konsoli zamiast wysyłane. Przydatne do rozwoju.",
+      "mockEmail": "MOCK_EMAIL — po włączeniu e-maile są logowane do konsoli zamiast wysyłane. Przydatne do rozwoju.",
       "overviewDesc": "Skonfiguruj ustawienia SMTP, aby włączyć wychodzącą pocztę e-mail (zaproszenia, powiadomienia, resetowanie haseł). Wszyscy dostawcy używają standardowych pól SMTP.",
       "overviewTitle": "Przegląd e-mail (SMTP)",
       "postmarkHint": "Użyj tokenu API serwera Postmark jako hasła SMTP. Nazwa użytkownika SMTP to zawsze ten sam token.",
@@ -1007,9 +1003,7 @@
       "overviewDesc": "Ustawienia bezpieczeństwa kontrolują uwierzytelnianie, zarządzanie sesjami i skróty deweloperskie. Domyślne ustawienia są skonfigurowane dla lokalnego rozwoju.",
       "overviewNote": "W środowisku produkcyjnym upewnij się, że flagi symulacji są wyłączone, a FRONTEND_URL odpowiada Twojej rzeczywistej domenie.",
       "overviewTitle": "Przegląd bezpieczeństwa",
-      "overviewWhen": "Przejrzyj te ustawienia przed wdrożeniem na serwer publiczny.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — pomija uwierzytelnianie administratora. Wszystkie żądania są traktowane jako pochodzące od użytkownika administratora.",
-      "simUserDesc": "SIMULATE_USER_AUTH — pomija uwierzytelnianie użytkownika. Wszystkie żądania są traktowane jako pochodzące od zalogowanego użytkownika."
+      "overviewWhen": "Przejrzyj te ustawienia przed wdrożeniem na serwer publiczny."
     },
     "sslHelp": {
       "ariaLabel": "Pomoc dotycząca konfiguracji SSL i HTTPS",
@@ -1326,7 +1320,7 @@
       "description": "Adres nadawcy dla e-maili",
       "hint": "Adres \"od\" dla wychodzących e-maili (np. noreply@twojadomena.pl)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Tryb testowy",
       "description": "Symulowane wysyłanie e-maili",
       "hint": "Gdy \"true\", e-maile są logowane zamiast wysyłane. Przydatne do rozwoju."
@@ -1426,16 +1420,6 @@
       "description": "Adres URL punktu końcowego monitorowania stanu",
       "hint": "Adres URL sprawdzania stanu dla zewnętrznych monitorów. Domyślnie: http://localhost:8000/health.",
       "label": "Adres URL monitorowania"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Pokaż przycisk symulacji połączenia Nostr dla uwierzytelniania administratora (tylko do testów)",
-      "hint": "Włącz do rozwoju/testowania. Pokazuje przycisk 'Symuluj połączenie' przy logowaniu administratora, który pomija wymóg rozszerzenia Nostr. Powinien być wyłączony w środowisku produkcyjnym.",
-      "label": "Symuluj uwierzytelnianie administratora"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Zezwól na weryfikację użytkownika bez tokenu magicznego linku (tylko do testów)",
-      "hint": "Włącz do rozwoju/testowania. Umożliwia użytkownikom ukończenie weryfikacji e-mail bez klikania magicznego linku. Powinien być wyłączony w środowisku produkcyjnym.",
-      "label": "Symuluj uwierzytelnianie użytkownika"
     },
     "SPF_INCLUDE": {
       "description": "Dyrektywa dołączania SPF DNS",

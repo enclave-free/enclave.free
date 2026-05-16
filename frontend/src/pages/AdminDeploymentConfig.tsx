@@ -2635,9 +2635,9 @@ export function AdminDeploymentConfig() {
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-mono text-text">MOCK_SMTP</p>
+                        <p className="text-sm font-mono text-text">MOCK_EMAIL</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.emailHelp.mockSmtp', 'Enable for development. Emails are logged to console instead of being sent.')}
+                          {t('adminDeployment.emailHelp.mockEmail', 'Enable for development. Emails are logged to console instead of being sent.')}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
@@ -3454,7 +3454,7 @@ export function AdminDeploymentConfig() {
                       {t('adminDeployment.securityHelp.overviewDesc', 'These settings affect authentication behavior and the URLs used in magic-link emails. Defaults are safe for local development.')}
                     </p>
                     <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                      <p className="text-xs text-text-muted mb-1">{t('adminDeployment.securityHelp.overviewNote', 'For production, keep simulation flags disabled and set a correct FRONTEND_URL.')}</p>
+                      <p className="text-xs text-text-muted mb-1">{t('adminDeployment.securityHelp.overviewNote', 'For production, set a correct FRONTEND_URL and keep auth flows tied to real email and Nostr verification.')}</p>
                       <p className="text-xs text-text-muted mt-2">
                         {t('adminDeployment.securityHelp.overviewWhen', 'Change these when moving from local testing to a public deployment.')}
                       </p>
@@ -3463,25 +3463,16 @@ export function AdminDeploymentConfig() {
                 ) : SECURITY_HELP_PAGES[securityHelpPage].content === 'dev' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.securityHelp.devDesc', 'These flags are for testing only and should be off in production.')}
+                      {t('adminDeployment.securityHelp.devDesc', 'Prototype simulated auth flags have been removed from the supported deployment surface.')}
                     </p>
-                    <div className="space-y-2">
-                      <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-medium text-text">SIMULATE_USER_AUTH</p>
-                        <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.securityHelp.simUserDesc', 'Bypasses magic-link verification for user logins.')}
-                        </p>
-                      </div>
-                      <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-medium text-text">SIMULATE_ADMIN_AUTH</p>
-                        <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.securityHelp.simAdminDesc', 'Shows a mock Nostr auth option in the admin flow.')}
-                        </p>
-                      </div>
+                    <div className="bg-surface-overlay border border-border rounded-lg p-3">
+                      <p className="text-xs text-text-muted">
+                        {t('adminDeployment.securityHelp.devNote', 'Use MOCK_EMAIL for local email testing; user and admin sessions still require the normal verification flow.')}
+                      </p>
                     </div>
                     <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 mt-4">
                       <p className="text-xs text-warning">
-                        {t('adminDeployment.securityHelp.devWarning', 'Never enable these flags in production environments.')}
+                        {t('adminDeployment.securityHelp.devWarning', 'Do not reintroduce auth bypass flags in production or local deployment settings.')}
                       </p>
                     </div>
                   </div>

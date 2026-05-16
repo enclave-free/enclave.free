@@ -63,23 +63,13 @@ CREATE TABLE IF NOT EXISTS ingest_jobs (
 | **Delete** | `delete_job()` | ✅ Implemented | Removes job row (API handles Qdrant + file cleanup) |
 | **Delete** | `purge_old_jobs(days)` | 📋 TODO | Cleanup utility |
 
-### Migration Helper
-
-| Function | Status | Notes |
-|----------|--------|-------|
-| `migrate_from_json(jobs_dict)` | ✅ Implemented | One-time import from legacy JSON |
-
----
-
 ## How It Works
 
 ### On Container Startup
 
 ```
-1. Check if legacy jobs_state.json exists
-2. If SQLite ingest_jobs table is empty → migrate from JSON
-3. Load all jobs from SQLite into memory (for fast access during processing)
-4. Resume any jobs with status 'pending' or 'processing'
+1. Load all jobs from SQLite into memory (for fast access during processing)
+2. Resume any jobs with status 'pending' or 'processing'
 ```
 
 ### On Document Upload (`POST /ingest/upload`)
