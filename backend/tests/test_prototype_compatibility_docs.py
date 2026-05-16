@@ -192,6 +192,15 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("removing legacy Qdrant plaintext payload handling", runbook)
         self.assertNotIn("Migration may land later", runbook)
 
+    def test_qdrant_plaintext_repair_docs_name_removal_readiness_criteria(self) -> None:
+        runbook = (REPO_ROOT / "docs/lifecycle-confidentiality-runbook.md").read_text(encoding="utf-8")
+
+        self.assertIn("support_removal_ready: true", runbook)
+        self.assertIn("active Qdrant index has no legacy plaintext Retrieval payloads", runbook)
+        self.assertIn("preview can inspect Qdrant successfully", runbook)
+        self.assertIn("operator-reviewed execution completed without `retrieval_payload` failures", runbook)
+        self.assertIn("backup/rollback expectations are documented", runbook)
+
 
 if __name__ == "__main__":
     unittest.main()

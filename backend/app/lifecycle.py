@@ -723,6 +723,15 @@ def preview_confidentiality_migration() -> dict:
             "actions": [],
         })["actions"].append(action)
 
+    removal_criteria = (
+        "No legacy plaintext Retrieval payloads remain in the active Qdrant index; "
+        "the Confidentiality Migration preview inspects Qdrant successfully; "
+        "at least one operator-reviewed migration execution has completed without "
+        "retrieval_payload failures; and backups/rollback expectations are documented "
+        "before deleting legacy payload repair support."
+    )
+    support_removal_ready = qdrant_available and not retrieval_actions
+
     return {
         "status": "ready" if artifact_actions or retrieval_actions else "nothing_to_migrate",
         "artifact_encryption": artifact_status,
@@ -731,6 +740,8 @@ def preview_confidentiality_migration() -> dict:
         "retrieval_payloads": retrieval_actions,
         "skipped": skipped,
         "expected_actions": artifact_actions + retrieval_actions,
+        "support_removal_ready": support_removal_ready,
+        "removal_criteria": removal_criteria,
         "secure_erase_claimed": False,
         "summary": (
             f"Preview found {len(artifact_actions)} plaintext artifact(s) and "

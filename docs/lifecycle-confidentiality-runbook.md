@@ -101,6 +101,8 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 Confirm per-document results show succeeded, skipped, or failed targets honestly. Migration may encrypt eligible artifacts, create encrypted chunk rows from recoverable legacy payload text, and rewrite Qdrant payloads to remove plaintext. It does not claim Secure Erase.
 
+Legacy Retrieval payload repair support can only be removed after the preview reports `support_removal_ready: true`, the active Qdrant index has no legacy plaintext Retrieval payloads, the preview can inspect Qdrant successfully, at least one operator-reviewed execution completed without `retrieval_payload` failures, and backup/rollback expectations are documented. Until then, keep preview, execute, idempotence, and partial-failure tests around the repair path.
+
 ## Cleanup Split
 
 Safe documentation and terminology cleanup can remove stale wording that implies the Confidentiality Migration is only planned, provided the docs continue to point operators at the preview and execute endpoints. Data-affecting cleanup remains a separate migration slice: removing legacy plaintext user/profile storage assumptions and removing legacy Qdrant plaintext payload handling require their own operator-reviewed plans and validation evidence. Do not bundle those migrations with wording-only lifecycle cleanup.

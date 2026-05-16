@@ -243,6 +243,9 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(body["status"], "ready")
         self.assertEqual(len(body["artifacts"]), 1)
         self.assertEqual(len(body["retrieval_payloads"]), 1)
+        self.assertFalse(body["support_removal_ready"])
+        self.assertIn("removal_criteria", body)
+        self.assertIn("No legacy plaintext Retrieval payloads remain", body["removal_criteria"])
         self.assertFalse(body["secure_erase_claimed"])
         self.assertNotIn("Secure Erase", body["summary"].replace("No Secure Erase claim is made.", ""))
 
@@ -313,11 +316,15 @@ class LifecycleStatusTest(unittest.TestCase):
         original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
         self.lifecycle.store.list_legacy_plaintext_payloads = lambda: []
         try:
+            preview = self.client.get("/admin/lifecycle/confidentiality-migration/preview")
             first = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
             second = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
         finally:
             self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
 
+        self.assertEqual(preview.status_code, 200)
+        self.assertTrue(preview.json()["support_removal_ready"])
+        self.assertFalse(preview.json()["secure_erase_claimed"])
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
         self.assertEqual(first.json()["results"], [])
