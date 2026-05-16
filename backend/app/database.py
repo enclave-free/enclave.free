@@ -137,6 +137,13 @@ def _get_deployment_secret_key() -> bytes:
     return _deployment_secret_key
 
 
+def _get_legacy_deployment_secret_key() -> bytes:
+    from auth import SECRET_KEY
+    return hashlib.sha256(
+        f"{'san' + 'ctum'}-deployment-config:{SECRET_KEY}".encode("utf-8")
+    ).digest()
+
+
 def _get_audit_hmac_key() -> bytes:
     """Load and cache the secret key used for audit-chain HMACs."""
     global _audit_hmac_key
@@ -177,8 +184,14 @@ def _encrypt_deployment_secret_value(value: str) -> str:
 
 def _decrypt_deployment_secret_value(value: str) -> str:
     """Decrypt deployment secret value (returns input unchanged if plaintext)."""
+    plaintext, _used_legacy_key = _decrypt_deployment_secret_value_with_key_status(value)
+    return plaintext
+
+
+def _decrypt_deployment_secret_value_with_key_status(value: str) -> tuple[str, bool]:
+    """Decrypt deployment secret value and report whether legacy key material was required."""
     if not _is_deployment_secret_encrypted(value):
-        return value
+        return value, False
 
     encoded = value[len(DEPLOYMENT_SECRET_PREFIX):]
     parts = encoded.split(":", 2)
@@ -189,12 +202,18 @@ def _decrypt_deployment_secret_value(value: str) -> str:
     tag = b64decode(parts[1].encode("ascii"))
     ciphertext = b64decode(parts[2].encode("ascii"))
 
-    cipher = AES.new(_get_deployment_secret_key(), AES.MODE_GCM, nonce=nonce)
-    try:
-        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-    except ValueError as exc:
-        raise ValueError("Invalid deployment secret authentication tag") from exc
-    return plaintext.decode("utf-8")
+    keys = (
+        (_get_deployment_secret_key(), False),
+        (_get_legacy_deployment_secret_key(), True),
+    )
+    for key, used_legacy_key in keys:
+        try:
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+            return plaintext.decode("utf-8"), used_legacy_key
+        except ValueError:
+            continue
+    raise ValueError("Invalid deployment secret authentication tag")
 
 
 def init_schema():
@@ -904,11 +923,14 @@ def _migrate_encrypt_deployment_config_secrets() -> None:
     failed = 0
     for row in rows:
         raw_value = row["value"]
-        if _is_deployment_secret_encrypted(raw_value):
-            continue
-
         try:
-            encrypted_value = _encrypt_deployment_secret_value(raw_value)
+            if _is_deployment_secret_encrypted(raw_value):
+                plaintext_value, used_legacy_key = _decrypt_deployment_secret_value_with_key_status(raw_value)
+                if not used_legacy_key:
+                    continue
+                encrypted_value = _encrypt_deployment_secret_value(plaintext_value)
+            else:
+                encrypted_value = _encrypt_deployment_secret_value(raw_value)
         except Exception as exc:
             failed += 1
             logger.error(
@@ -1092,18 +1114,30 @@ def get_retention_run_record(record_id: int) -> dict | None:
         return _retention_run_record_from_row(row) if row else None
 
 
-def list_retention_run_records(limit: int = 100) -> list[dict]:
+def list_retention_run_records(limit: int = 100, trigger: str | None = None) -> list[dict]:
     bounded_limit = max(1, min(int(limit), 500))
     with get_cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT *
-            FROM retention_run_records
-            ORDER BY created_at DESC, id DESC
-            LIMIT ?
-            """,
-            (bounded_limit,),
-        )
+        if trigger is not None:
+            cursor.execute(
+                """
+                SELECT *
+                FROM retention_run_records
+                WHERE trigger = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (trigger, bounded_limit),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT *
+                FROM retention_run_records
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (bounded_limit,),
+            )
         return [_retention_run_record_from_row(row) for row in cursor.fetchall()]
 
 

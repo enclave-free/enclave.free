@@ -965,7 +965,6 @@
       "usersToMigrate": "Migrálandó felhasználók",
       "warning": "Ez egy haladó művelet. A helytelen migrálás kizárhat a titkosított adatokból. Csak akkor folytasd, ha megérted a következményeket."
     },
-    "llmHelp": {},
     "revealFailed": "Nem sikerült felfedni az értéket. Ellenőrizd a Nostr bővítmény kapcsolatot.",
     "searchHelp": {
       "ariaLabel": "Webes keresés konfiguráció súgó",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "Feltöltés a szerverre..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Szövegfeldolgozás",
       "description": "Konfiguráld, hogyan elemzi a dokumentumokat",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "Mit kellene tudnom erről a témáról?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontextus darabok",
       "description": "Lekérendő darabok száma",
@@ -1347,7 +1342,6 @@
       "description": "Az alkalmazás nyilvános URL-je",
       "hint": "A nyilvános URL, ahol a felhasználók elérik az alkalmazást. Magikus linkek generálásához használatos."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Admin panel aldomain URL (opcionális)",
       "hint": "Csak akkor, ha az adminisztrációs felület külön domainen van. Példa: https://admin.example.com. Alapértelmezés: http://localhost:5173/admin.",

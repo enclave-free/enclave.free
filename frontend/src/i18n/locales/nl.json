@@ -1002,7 +1002,6 @@
       "usersToMigrate": "Te migreren gebruikers",
       "warning": "Dit is een geavanceerde bewerking. Onjuiste migratie kan je buitensluiten van versleutelde gegevens. Ga alleen verder als je de gevolgen begrijpt."
     },
-    "llmHelp": {},
     "revealFailed": "Kan de waarde niet onthullen. Controleer je Nostr-extensieverbinding.",
     "searchHelp": {
       "ariaLabel": "Hulp bij webzoekconfiguratie",
@@ -1170,7 +1169,6 @@
     }
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Tekstverwerking",
       "description": "Configureer hoe documenten worden geanalyseerd",
@@ -1258,9 +1256,6 @@
     }
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Contextfragmenten",
       "description": "Aantal fragmenten om op te halen",
@@ -1425,8 +1420,7 @@
       "label": "Monitoring-URL",
       "description": "URL voor gezondheidsmonitoring",
       "hint": "Gezondheidscontrole-URL voor externe monitors. Standaard: http://localhost:8000/health."
-    },
-    "LLM_API_KEY": {}
+    }
   },
   "colors": {
     "blue": "Blauw",

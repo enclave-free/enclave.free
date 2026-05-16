@@ -967,7 +967,6 @@
       "usersToMigrate": "Người dùng cần di chuyển",
       "warning": "Đây là thao tác nâng cao. Di chuyển không chính xác có thể khóa bạn khỏi dữ liệu đã mã hóa. Chỉ tiếp tục nếu bạn hiểu hệ quả."
     },
-    "llmHelp": {},
     "revealFailed": "Không thể hiển thị giá trị. Kiểm tra kết nối tiện ích mở rộng Nostr.",
     "searchHelp": {
       "ariaLabel": "Trợ giúp cấu hình tìm kiếm web",
@@ -1172,7 +1171,6 @@
     "uploadingStatus": "Đang tải lên máy chủ..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Xử lý văn bản",
       "description": "Cấu hình cách tài liệu được phân tích",
@@ -1271,9 +1269,6 @@
     "sampleQuestion": "Tôi nên biết gì về chủ đề này?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Khối ngữ cảnh",
       "description": "Số lượng khối cần truy xuất",
@@ -1349,7 +1344,6 @@
       "description": "URL công khai cho ứng dụng",
       "hint": "URL công khai nơi người dùng truy cập ứng dụng. Dùng để tạo liên kết ma thuật."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL tên miền phụ bảng điều khiển quản trị (tùy chọn)",
       "hint": "Chỉ khi giao diện người dùng quản trị nằm trên một tên miền riêng. Ví dụ: https://admin.example.com. Mặc định: http://localhost:5173/admin.",

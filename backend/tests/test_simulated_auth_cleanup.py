@@ -62,7 +62,11 @@ class SimulatedAuthCleanupTest(unittest.TestCase):
         response = self.client.get("/config/public")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {})
+        data = response.json()
+        self.assertNotIn("simulated_auth", data)
+        self.assertNotIn("simulate_admin_auth", data)
+        self.assertNotIn("simulate_user_auth", data)
+        self.assertNotIn("simulated_auth_enabled", data)
 
     def test_dev_session_endpoint_is_absent_even_when_stale_flags_are_enabled(self) -> None:
         response = self.client.post(

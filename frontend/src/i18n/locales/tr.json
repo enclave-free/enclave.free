@@ -965,7 +965,6 @@
       "usersToMigrate": "Taşınacak kullanıcılar",
       "warning": "Bu gelişmiş bir işlemdir. Yanlış taşıma, şifrelenmiş verilere erişiminizi kaybetmenize neden olabilir. Yalnızca sonuçlarını anlıyorsanız devam edin."
     },
-    "llmHelp": {},
     "revealFailed": "Değer gösterilemedi. Nostr uzantısı bağlantınızı kontrol edin.",
     "searchHelp": {
       "ariaLabel": "Web arama yapılandırma yardımı",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "Sunucuya yükleniyor..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Metin İşleme",
       "description": "Belgelerin nasıl analiz edileceğini yapılandırın",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "Bu konu hakkında ne bilmeliyim?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Bağlam Parçaları",
       "description": "Alınacak parça sayısı",
@@ -1347,7 +1342,6 @@
       "description": "Uygulama için genel URL",
       "hint": "Kullanıcıların uygulamaya eriştiği genel URL. Sihirli bağlantılar oluşturmak için kullanılır."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Yönetici paneli alt alan adı URL'si (isteğe bağlı)",
       "hint": "Yönetici kullanıcı arayüzü ayrı bir alan adındaysa. Örnek: https://admin.example.com. Varsayılan: http://localhost:5173/admin.",

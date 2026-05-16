@@ -1881,11 +1881,17 @@ export function AdminDeploymentConfig() {
                     const enabledClasses = Array.isArray(observation.enabled_classes)
                       ? observation.enabled_classes
                       : []
+                    const observationStatus = typeof observation.status === 'string'
+                      ? formatLifecycleStatus(observation.status)
+                      : t('common.unknown', 'Unknown')
+                    const lastRunStatus = typeof observation.last_run?.status === 'string'
+                      ? formatLifecycleStatus(observation.last_run.status)
+                      : t('common.unknown', 'Unknown')
                     return (
                       <div className="mt-2 space-y-1 text-xs text-text-secondary">
                         <p className="font-medium text-text">
                           {t('adminDeployment.lifecycle.schedulerObservation', 'Observation: {{status}}', {
-                            status: formatLifecycleStatus(observation.status),
+                            status: observationStatus,
                           })}
                         </p>
                         <p>{observation.summary}</p>
@@ -1898,7 +1904,7 @@ export function AdminDeploymentConfig() {
                           <>
                             <p>
                               {t('adminDeployment.lifecycle.schedulerLastRunStatus', 'Last run status: {{status}}', {
-                                status: formatLifecycleStatus(observation.last_run.status),
+                                status: lastRunStatus,
                               })}
                             </p>
                             <p>

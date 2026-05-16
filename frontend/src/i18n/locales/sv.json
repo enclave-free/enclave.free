@@ -965,7 +965,6 @@
       "usersToMigrate": "Användare att migrera",
       "warning": "Detta är en avancerad operation. Felaktig migrering kan låsa dig ute från krypterad data. Fortsätt bara om du förstår konsekvenserna."
     },
-    "llmHelp": {},
     "revealFailed": "Kunde inte visa värdet. Kontrollera anslutningen till ditt Nostr-tillägg.",
     "searchHelp": {
       "ariaLabel": "Hjälp för webbsökningskonfiguration",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "Laddar upp till server..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Textbearbetning",
       "description": "Konfigurera hur dokument analyseras",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "Vad bör jag veta om detta ämne?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontextfragment",
       "description": "Antal fragment att hämta",
@@ -1347,7 +1342,6 @@
       "description": "Offentlig URL för applikationen",
       "hint": "Den offentliga URL där användare kommer åt appen. Används för att generera magiska länkar."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL för administratörspanelens subdomän (valfritt)",
       "hint": "Endast om administratörsgränssnittet finns på en separat domän. Exempel: https://admin.example.com. Standard: http://localhost:5173/admin.",

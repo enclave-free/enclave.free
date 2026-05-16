@@ -170,7 +170,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertFalse(hasattr(self.auth, name))
 
-    def test_deployment_secret_decryption_rejects_legacy_key_material(self) -> None:
+    def test_deployment_secret_decryption_accepts_legacy_key_material_during_migration(self) -> None:
         plaintext = "old-secret-value"
         legacy_key = hashlib.sha256(
             f"{'san' + 'ctum'}-deployment-config:test-secret".encode("utf-8")
@@ -185,8 +185,39 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             f"{b64encode(ciphertext).decode('ascii')}"
         )
 
-        with self.assertRaises(ValueError):
-            self.database._decrypt_deployment_secret_value(legacy_encrypted)
+        self.assertEqual(
+            self.database._decrypt_deployment_secret_value(legacy_encrypted),
+            plaintext,
+        )
+
+    def test_deployment_secret_migration_reencrypts_legacy_key_material(self) -> None:
+        plaintext = "old-secret-value"
+        legacy_key = hashlib.sha256(
+            f"{'san' + 'ctum'}-deployment-config:test-secret".encode("utf-8")
+        ).digest()
+        nonce = b"1" * self.database.DEPLOYMENT_SECRET_NONCE_BYTES
+        cipher = AES.new(legacy_key, AES.MODE_GCM, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode("utf-8"))
+        legacy_encrypted = (
+            f"{self.database.DEPLOYMENT_SECRET_PREFIX}"
+            f"{b64encode(nonce).decode('ascii')}:"
+            f"{b64encode(tag).decode('ascii')}:"
+            f"{b64encode(ciphertext).decode('ascii')}"
+        )
+
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE deployment_config SET value = ? WHERE key = 'LLM_API_KEY'",
+                (legacy_encrypted,),
+            )
+
+        self.database._migrate_encrypt_deployment_config_secrets()
+
+        with self.database.get_cursor() as cursor:
+            cursor.execute("SELECT value FROM deployment_config WHERE key = 'LLM_API_KEY'")
+            stored = cursor.fetchone()["value"]
+        self.assertNotEqual(stored, legacy_encrypted)
+        self.assertEqual(self.database._decrypt_deployment_secret_value(stored), plaintext)
 
     def test_deployment_secret_decryption_accepts_canonical_key_material(self) -> None:
         encrypted = self.database._encrypt_deployment_secret_value("current-secret-value")

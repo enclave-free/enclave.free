@@ -967,7 +967,6 @@
       "usersToMigrate": "待迁移用户",
       "warning": "这是一个高级操作。错误的迁移可能导致你无法访问加密数据。仅在你理解其后果时才继续。"
     },
-    "llmHelp": {},
     "revealFailed": "显示值失败。请检查你的 Nostr 扩展连接。",
     "searchHelp": {
       "ariaLabel": "网络搜索配置帮助",
@@ -1172,7 +1171,6 @@
     "uploadingStatus": "正在上传到服务器..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "文本处理",
       "description": "配置文档分析方式",
@@ -1271,9 +1269,6 @@
     "sampleQuestion": "关于这个话题我应该了解什么？"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "上下文块数",
       "description": "检索的块数量",
@@ -1349,7 +1344,6 @@
       "description": "应用程序的公开 URL",
       "hint": "用户访问应用的公开 URL。用于生成魔法链接。"
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "管理面板子域名 URL（可选）",
       "hint": "仅当管理界面位于单独的域名时使用。示例：https://admin.example.com。默认值：http://localhost:5173/admin。",

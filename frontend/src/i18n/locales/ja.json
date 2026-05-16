@@ -965,7 +965,6 @@
       "usersToMigrate": "移行するユーザー",
       "warning": "これは上級者向けの操作です。不正な移行を行うと、暗号化データにアクセスできなくなる可能性があります。影響を理解した上でのみ続行してください。"
     },
-    "llmHelp": {},
     "revealFailed": "値の表示に失敗しました。Nostr拡張機能の接続を確認してください。",
     "searchHelp": {
       "ariaLabel": "ウェブ検索設定のヘルプ",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "サーバーにアップロード中..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "テキスト処理",
       "description": "ドキュメントの分析方法を設定",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "このトピックについて何を知っておくべきですか？"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "コンテキストチャンク数",
       "description": "取得するチャンクの数",
@@ -1347,7 +1342,6 @@
       "description": "アプリケーションの公開URL",
       "hint": "ユーザーがアプリにアクセスする公開URL。マジックリンクの生成に使用されます。"
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "管理パネルのサブドメインURL（オプション）",
       "hint": "管理UIが別のドメインにある場合のみ。例: https://admin.example.com。デフォルト: http://localhost:5173/admin。",

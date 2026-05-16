@@ -938,7 +938,6 @@
       "usersToMigrate": "Utenti da migrare",
       "warning": "Questa è un'operazione avanzata. Una migrazione errata può bloccarti l'accesso ai dati crittografati. Procedi solo se comprendi le implicazioni."
     },
-    "llmHelp": {},
     "revealFailed": "Impossibile rivelare il valore. Controlla la connessione della tua estensione Nostr.",
     "searchHelp": {
       "ariaLabel": "Guida alla configurazione della ricerca web",
@@ -1138,7 +1137,6 @@
     "uploadingStatus": "Caricamento sul server..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Elaborazione Testo",
       "description": "Configura come vengono analizzati i documenti",
@@ -1271,9 +1269,6 @@
     "sampleQuestion": "Cosa dovrei sapere su questo argomento?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Frammenti di contesto",
       "description": "Numero di frammenti da recuperare",
@@ -1349,7 +1344,6 @@
       "description": "URL pubblico dell'applicazione",
       "hint": "L'URL pubblico dove gli utenti accedono all'app. Usato per generare i link magici."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL sottodominio pannello di amministrazione (opzionale)",
       "hint": "Solo se l'interfaccia utente di amministrazione è su un dominio separato. Esempio: https://admin.example.com. Predefinito: http://localhost:5173/admin.",

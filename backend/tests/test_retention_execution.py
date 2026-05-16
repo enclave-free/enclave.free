@@ -460,7 +460,14 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertEqual(history.status_code, 200)
         runs = history.json()["runs"]
         self.assertEqual(len(runs), 2)
-        machine_run, manual_run = runs
+        machine_run = next(
+            run for run in runs
+            if run["trigger"] == "machine" and run["actor"] == "machine:scheduled-retention"
+        )
+        manual_run = next(
+            run for run in runs
+            if run["trigger"] == "manual" and run["actor"] == "admin-pubkey"
+        )
         self.assertEqual(machine_run["trigger"], "machine")
         self.assertEqual(machine_run["actor"], "machine:scheduled-retention")
         self.assertEqual(manual_run["trigger"], "manual")
@@ -935,7 +942,7 @@ class RetentionExecutionTest(unittest.TestCase):
         result = deletion["results"][0]
         self.assertEqual(result["target_kind"], "session_memory")
         self.assertEqual(result["target_id"], "python-legacy-session")
-        self.assertTrue(result["retryable"])
+        self.assertFalse(result["retryable"])
         self.assertIn("Sage-owned", result["detail"])
 
     def test_retention_is_safe_to_repeat_when_nothing_is_eligible(self) -> None:

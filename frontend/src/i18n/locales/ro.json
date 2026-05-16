@@ -981,7 +981,6 @@
       "usersToMigrate": "Utilizatori de migrat",
       "warning": "Aceasta este o operațiune avansată. O migrare incorectă te poate bloca din datele criptate. Continuă doar dacă înțelegi implicațiile."
     },
-    "llmHelp": {},
     "revealFailed": "Nu s-a putut dezvălui valoarea. Verifică conexiunea extensiei Nostr.",
     "searchHelp": {
       "ariaLabel": "Ajutor configurare căutare web",
@@ -1186,7 +1185,6 @@
     "uploadingStatus": "Se încarcă pe server..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Procesare text",
       "description": "Configurează modul în care sunt analizate documentele",
@@ -1285,9 +1283,6 @@
     "sampleQuestion": "Ce ar trebui să știu despre acest subiect?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Fragmente de context",
       "description": "Numărul de fragmente de recuperat",
@@ -1363,7 +1358,6 @@
       "description": "URL-ul public al aplicației",
       "hint": "URL-ul public unde utilizatorii accesează aplicația. Folosit pentru generarea linkurilor magice."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL subdomeniu panou de administrare (opțional)",
       "hint": "Numai dacă interfața de administrare este pe un domeniu separat. Exemplu: https://admin.example.com. Implicit: http://localhost:5173/admin.",

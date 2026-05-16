@@ -971,7 +971,6 @@
       "usersToMigrate": "Uživatelé k migraci",
       "warning": "Toto je pokročilá operace. Nesprávná migrace vás může uzamknout ze šifrovaných dat. Pokračujte pouze pokud rozumíte důsledkům."
     },
-    "llmHelp": {},
     "revealFailed": "Nepodařilo se odhalit hodnotu. Zkontrolujte připojení rozšíření Nostr.",
     "searchHelp": {
       "ariaLabel": "Nápověda ke konfiguraci webového vyhledávání",
@@ -1176,7 +1175,6 @@
     "uploadingStatus": "Nahrávání na server..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Zpracování textu",
       "description": "Nakonfigurujte, jak jsou dokumenty analyzovány",
@@ -1275,9 +1273,6 @@
     "sampleQuestion": "Co bych měl vědět o tomto tématu?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontextové části",
       "description": "Počet částí k načtení",
@@ -1353,7 +1348,6 @@
       "description": "Veřejná URL aplikace",
       "hint": "Veřejná URL, kde uživatelé přistupují k aplikaci. Používá se pro generování magických odkazů."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL subdomény panelu administrace (volitelné)",
       "hint": "Pouze pokud je administrátorské UI na samostatné doméně. Příklad: https://admin.example.com. Výchozí: http://localhost:5173/admin.",

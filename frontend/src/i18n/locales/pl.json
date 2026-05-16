@@ -973,7 +973,6 @@
       "usersToMigrate": "Użytkownicy do migracji",
       "warning": "Jest to zaawansowana operacja. Nieprawidłowa migracja może zablokować dostęp do zaszyfrowanych danych. Kontynuuj tylko wtedy, gdy rozumiesz konsekwencje."
     },
-    "llmHelp": {},
     "revealFailed": "Nie udało się ujawnić wartości. Sprawdź połączenie z rozszerzeniem Nostr.",
     "searchHelp": {
       "ariaLabel": "Pomoc dotycząca konfiguracji wyszukiwania w sieci",
@@ -1178,7 +1177,6 @@
     "uploadingStatus": "Przesyłanie na serwer..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Przetwarzanie tekstu",
       "description": "Skonfiguruj sposób analizy dokumentów",
@@ -1277,9 +1275,6 @@
     "sampleQuestion": "Co powinienem wiedzieć o tym temacie?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Fragmenty kontekstu",
       "description": "Liczba fragmentów do pobrania",
@@ -1355,7 +1350,6 @@
       "description": "Publiczny URL aplikacji",
       "hint": "Publiczny URL, pod którym użytkownicy uzyskują dostęp do aplikacji. Używany do generowania magicznych linków."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Adres URL subdomeny panelu administratora (opcjonalnie)",
       "hint": "Tylko jeśli interfejs użytkownika administratora znajduje się na osobnej domenie. Przykład: https://admin.example.com. Domyślnie: http://localhost:5173/admin.",

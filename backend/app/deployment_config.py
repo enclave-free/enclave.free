@@ -749,7 +749,8 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
                 errors.append(f"{port_key} must be a number")
 
     # Warnings for common issues
-    if config_dict.get("MOCK_EMAIL", "").lower() == "true":
+    mock_email_enabled = _truthy_config_value(_deployment_config_value(config_dict, "MOCK_EMAIL"))
+    if mock_email_enabled:
         warnings.append("MOCK_EMAIL is enabled - emails will not be sent")
 
     if auth.is_production_mode():
@@ -757,7 +758,7 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
                 errors.append(f"{key} must be disabled in production")
 
-    if not config_dict.get("SMTP_HOST") and config_dict.get("MOCK_EMAIL", "").lower() != "true":
+    if not config_dict.get("SMTP_HOST") and not mock_email_enabled:
         warnings.append("SMTP not configured - email features will not work")
 
     if not config_dict.get("SEARXNG_URL"):

@@ -965,7 +965,6 @@
       "usersToMigrate": "Siirrettäviä käyttäjiä",
       "warning": "Tämä on edistynyt toiminto. Virheellinen siirto voi estää pääsyn salattuihin tietoihin. Jatka vain, jos ymmärrät seuraukset."
     },
-    "llmHelp": {},
     "revealFailed": "Arvon paljastaminen epäonnistui. Tarkista Nostr-laajennuksesi yhteys.",
     "searchHelp": {
       "ariaLabel": "Verkkohaun konfiguraation ohje",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "Ladataan palvelimelle..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Tekstinkäsittely",
       "description": "Määritä dokumenttien analysointi",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "Mitä minun pitäisi tietää tästä aiheesta?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontekstipalat",
       "description": "Haettavien palojen määrä",
@@ -1347,7 +1342,6 @@
       "description": "Sovelluksen julkinen URL",
       "hint": "Julkinen URL, josta käyttäjät pääsevät sovellukseen. Käytetään taikalinkkien luomiseen."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Ylläpitäjän paneelin aliverkkotunnuksen URL (valinnainen)",
       "hint": "Vain jos ylläpitäjän käyttöliittymä on erillisessä verkkotunnuksessa. Esimerkki: https://admin.example.com. Oletus: http://localhost:5173/admin.",

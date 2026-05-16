@@ -936,7 +936,6 @@
       "usersToMigrate": "Zu migrierende Benutzer",
       "warning": "Dies ist eine erweiterte Operation. Eine fehlerhafte Migration kann dich von verschlüsselten Daten aussperren. Fahre nur fort, wenn du die Auswirkungen verstehst."
     },
-    "llmHelp": {},
     "revealFailed": "Wert konnte nicht angezeigt werden. Überprüfe deine Nostr-Erweiterungsverbindung.",
     "searchHelp": {
       "ariaLabel": "Hilfe zur Websuche-Konfiguration",
@@ -1136,7 +1135,6 @@
     "uploadingStatus": "Wird auf den Server hochgeladen..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Textverarbeitung",
       "description": "Konfiguriere, wie Dokumente analysiert werden",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "Was sollte ich über dieses Thema wissen?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontextabschnitte",
       "description": "Anzahl der abzurufenden Abschnitte",
@@ -1347,7 +1342,6 @@
       "description": "Öffentliche URL der Anwendung",
       "hint": "Die öffentliche URL, unter der Benutzer auf die App zugreifen. Wird für die Generierung von Magic-Links verwendet."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Subdomain-URL des Admin-Panels (optional)",
       "hint": "Nur wenn die Admin-Benutzeroberfläche auf einer separaten Domain liegt. Beispiel: https://admin.example.com. Standard: http://localhost:5173/admin.",

@@ -966,7 +966,6 @@
       "usersToMigrate": "待遷移的使用者",
       "warning": "這是一項進階操作。不正確的遷移可能會使你無法存取加密資料。請僅在了解其影響時才繼續。"
     },
-    "llmHelp": {},
     "revealFailed": "無法顯示該值。請檢查你的 Nostr 擴充功能連線。",
     "searchHelp": {
       "ariaLabel": "網路搜尋設定說明",
@@ -1171,7 +1170,6 @@
     "uploadingStatus": "正在上傳至伺服器..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "文字處理",
       "description": "設定文件分析方式",
@@ -1270,9 +1268,6 @@
     "sampleQuestion": "關於這個話題我應該了解什麼？"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "上下文區塊數",
       "description": "擷取的區塊數量",
@@ -1348,7 +1343,6 @@
       "description": "應用程式的公開 URL",
       "hint": "使用者存取應用程式的公開 URL。用於產生魔法連結。"
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "管理面板子網域 URL (選填)",
       "hint": "僅當管理 UI 位於單獨的網域時。範例：https://admin.example.com。預設：http://localhost:5173/admin。",

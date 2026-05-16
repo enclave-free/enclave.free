@@ -965,7 +965,6 @@
       "usersToMigrate": "Brugere til migrering",
       "warning": "Dette er en avanceret operation. Forkert migrering kan låse dig ude fra krypterede data. Fortsæt kun, hvis du forstår konsekvenserne."
     },
-    "llmHelp": {},
     "revealFailed": "Kunne ikke afsløre værdien. Kontroller din Nostr-udvidelsesforbindelse.",
     "searchHelp": {
       "ariaLabel": "Hjælp til websøgningskonfiguration",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "Uploader til server..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Tekstbehandling",
       "description": "Konfigurer, hvordan dokumenter analyseres",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "Hvad bør jeg vide om dette emne?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontekstdele",
       "description": "Antal dele der skal hentes",
@@ -1347,7 +1342,6 @@
       "description": "Offentlig URL for applikationen",
       "hint": "Den offentlige URL, hvor brugere tilgår appen. Bruges til generering af magiske links."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Adminpanel-underdomæne-URL (valgfrit)",
       "hint": "Kun hvis admin-brugerfladen er på et separat domæne. Eksempel: https://admin.example.com. Standard: http://localhost:5173/admin.",

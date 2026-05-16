@@ -966,7 +966,6 @@
       "usersToMigrate": "Brukere å migrere",
       "warning": "Dette er en avansert operasjon. Feil migrering kan stenge deg ute fra krypterte data. Fortsett bare hvis du forstår konsekvensene."
     },
-    "llmHelp": {},
     "revealFailed": "Kunne ikke avsløre verdien. Sjekk tilkoblingen til Nostr-utvidelsen din.",
     "searchHelp": {
       "ariaLabel": "Hjelp for nettsøk-konfigurasjon",
@@ -1171,7 +1170,6 @@
     "uploadingStatus": "Laster opp til server..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Tekstbehandling",
       "description": "Konfigurer hvordan dokumenter analyseres",
@@ -1270,9 +1268,6 @@
     "sampleQuestion": "Hva bør jeg vite om dette emnet?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontekstfragmenter",
       "description": "Antall fragmenter å hente",
@@ -1348,7 +1343,6 @@
       "description": "Offentlig URL for applikasjonen",
       "hint": "Den offentlige URL-en der brukere får tilgang til appen. Brukes til å generere magiske lenker."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL for administratorpanel-underdomene (valgfritt)",
       "hint": "Kun hvis administrator-grensesnittet er på et separat domene. Eksempel: https://admin.example.com. Standard: http://localhost:5173/admin.",

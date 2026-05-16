@@ -432,10 +432,7 @@ def _retention_scheduler_observation(enabled_classes: list[str]) -> dict:
             "last_run": None,
             "summary": "No Lifecycle Data Classes have scheduled Retention Execution enabled.",
         }
-    machine_runs = [
-        run for run in database.list_retention_run_records(limit=50)
-        if run.get("trigger") == "machine"
-    ]
+    machine_runs = database.list_retention_run_records(limit=50, trigger="machine")
     if not machine_runs:
         return {
             "status": "never_observed",
@@ -1069,29 +1066,30 @@ async def delete_session_memory_for_conversation(session: dict) -> dict:
     boundary for this prototype.
     """
     session_id = str(session.get("id", "unknown"))
-    if session.get("agent_runtime") == "sage":
-        try:
-            deletion = await post_sage_session_memory_delete({"conversation_id": session_id})
-            return _sanitize_lifecycle_deletion(deletion)
-        except Exception as exc:
-            return summarize_deletion_results([
-                deletion_target_failed(
-                    target_kind="session_memory",
-                    target_id=session_id,
-                    action="delete_session_memory",
-                    detail=categorize_error(exc),
-                    retryable=True,
-                )
-            ])
-    return summarize_deletion_results([
-        deletion_target_failed(
-            target_kind="session_memory",
-            target_id=session_id,
-            action="delete_session_memory",
-            detail="Session Memory deletion is supported only for Sage-owned Conversations.",
-            retryable=True,
-        )
-    ])
+    if session.get("agent_runtime") != "sage":
+        return summarize_deletion_results([
+            deletion_target_failed(
+                target_kind="session_memory",
+                target_id=session_id,
+                action="delete_session_memory",
+                detail="Session Memory deletion is Sage-owned; legacy Python runtime sessions are unsupported.",
+                retryable=False,
+            )
+        ])
+
+    try:
+        deletion = await post_sage_session_memory_delete({"conversation_id": session_id})
+        return _sanitize_lifecycle_deletion(deletion)
+    except Exception as exc:
+        return summarize_deletion_results([
+            deletion_target_failed(
+                target_kind="session_memory",
+                target_id=session_id,
+                action="delete_session_memory",
+                detail=categorize_error(exc),
+                retryable=True,
+            )
+        ])
 
 
 def _former_subject_ref(session: dict) -> str | None:

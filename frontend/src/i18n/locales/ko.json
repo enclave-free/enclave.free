@@ -965,7 +965,6 @@
       "usersToMigrate": "마이그레이션할 사용자",
       "warning": "이것은 고급 작업입니다. 잘못된 마이그레이션은 암호화된 데이터에 접근할 수 없게 만들 수 있습니다. 결과를 이해한 경우에만 진행하세요."
     },
-    "llmHelp": {},
     "revealFailed": "값을 표시하지 못했습니다. Nostr 확장 프로그램 연결을 확인하세요.",
     "searchHelp": {
       "ariaLabel": "웹 검색 구성 도움말",
@@ -1170,7 +1169,6 @@
     "uploadingStatus": "서버에 업로드 중..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "텍스트 처리",
       "description": "문서 분석 방식 설정",
@@ -1269,9 +1267,6 @@
     "sampleQuestion": "이 주제에 대해 무엇을 알아야 하나요?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "컨텍스트 청크 수",
       "description": "검색할 청크 수",
@@ -1347,7 +1342,6 @@
       "description": "애플리케이션의 공개 URL",
       "hint": "사용자가 앱에 접근하는 공개 URL. 매직 링크 생성에 사용됩니다."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "관리자 패널 서브도메인 URL (선택 사항)",
       "hint": "관리자 UI가 별도의 도메인에 있는 경우에만 해당합니다. 예: https://admin.example.com. 기본값: http://localhost:5173/admin.",

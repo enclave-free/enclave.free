@@ -536,7 +536,7 @@ See "Production Hardening" below for complete production deployment guidance.
 The following security features are implemented:
 - **Endpoint authentication** - All admin endpoints require valid session token
 - **Rate limiting** - Auth endpoints are rate-limited (5/min for magic-link, 10/min for admin auth)
-- **Simulated auth disabled by default** - Requires `SIMULATE_*` flags to enable
+- **Prototype auth simulation removed** - local testing uses real auth flows plus `MOCK_EMAIL=true`
 - **Stable SECRET_KEY support** - Compose requires an explicit shared key; non-Compose backend runs can persist `/data/.secret_key`
 
 ### Production Hardening
@@ -544,7 +544,7 @@ The following security features are implemented:
 Recommended production steps:
 - Set a stable `SECRET_KEY` in your environment and provide the same value to Python and Sage
 - Configure SMTP with a verified domain and SPF/DKIM/DMARC
-- Disable `SIMULATE_*` flags and `MOCK_EMAIL` in production
+- Set `MOCK_EMAIL=false` in production so magic links are sent through SMTP
 - Restrict admin access to trusted networks
 - Use HTTPS in front of the backend and configure `CORS_ORIGINS` appropriately
 

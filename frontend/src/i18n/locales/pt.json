@@ -937,7 +937,6 @@
       "usersToMigrate": "Usuários a migrar",
       "warning": "Esta é uma operação avançada. Uma migração incorreta pode bloqueá-lo dos dados criptografados. Prossiga apenas se entender as implicações."
     },
-    "llmHelp": {},
     "revealFailed": "Falha ao revelar o valor. Verifique a conexão da sua extensão Nostr.",
     "searchHelp": {
       "ariaLabel": "Ajuda de configuração de busca web",
@@ -1171,7 +1170,6 @@
     "uploadingStatus": "Carregando para o servidor..."
   },
   "configCategories": {
-    "llm": {},
     "embedding": {
       "label": "Processamento de Texto",
       "description": "Configure como os documentos são analisados",
@@ -1270,9 +1268,6 @@
     "sampleQuestion": "O que devo saber sobre este tópico?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {},
-    "LLM_MODEL": {},
-    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Fragmentos de contexto",
       "description": "Número de fragmentos a recuperar",
@@ -1348,7 +1343,6 @@
       "description": "URL pública do aplicativo",
       "hint": "A URL pública onde os usuários acessam o aplicativo. Usado para gerar links mágicos."
     },
-    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL do subdomínio do painel de administração (opcional)",
       "hint": "Somente se a interface de administração estiver em um domínio separado. Exemplo: https://admin.example.com. Padrão: http://localhost:5173/admin.",

@@ -1490,7 +1490,7 @@ from models import PublicConfigResponse
 
 @app.get("/config/public", response_model=PublicConfigResponse)
 async def get_public_config() -> PublicConfigResponse:
-    """Public endpoint for unauthenticated runtime settings."""
+    """get_public_config returns an intentionally minimal PublicConfigResponse; no runtime settings are exposed."""
     return PublicConfigResponse()
 
 
