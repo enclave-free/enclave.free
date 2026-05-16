@@ -2768,13 +2768,13 @@ export function AdminDeploymentConfig() {
                 {LLM_HELP_PAGES[llmHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side compatibility shims. The web app keeps the same user-facing API surface while the Gateway routes AI requests to Sage.')}
+                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata. The web app keeps the same user-facing API surface while the Gateway routes AI requests to Sage.')}
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_PROVIDER</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.providerField', 'Set this to "sage". Legacy "maple" remains only for compatibility with older config paths.')}
+                          {t('adminDeployment.llmHelp.providerField', 'Set this to "sage". This Python-side deployment setting supports diagnostics and verification metadata while Sage runtime configuration remains environment-driven.')}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">

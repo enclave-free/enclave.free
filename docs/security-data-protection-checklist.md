@@ -33,7 +33,7 @@ Use this checklist to:
 |---|---|---|---|---|---|
 | S4-1 | Protect ingest endpoints with auth | P0 | - | done | `backend/app/ingest.py` (Section 11 evidence) |
 | S4-2 | Restrict `/vector-search` and remove unsafe payload exposure | P0 | - | done | `backend/app/main.py` (Section 11 evidence) |
-| S4-3 | Enforce public query-session record ownership checks | P0 | - | done | `backend/app/query.py` (Section 11 evidence) |
+| S4-3 | Enforce public query-session record ownership checks | P0 | - | done | Sage-owned public query-session routes (Section 11 evidence) |
 | S4-4 | Replace wildcard CORS with explicit allowlist | P0 | - | done | `backend/app/main.py` (Section 11 evidence) |
 | S4-5 | Move bearer tokens out of `localStorage` | P0 | - | done | `frontend/src/utils/adminApi.ts`, `frontend/src/pages/VerifyMagicLink.tsx` (Section 11 evidence) |
 | S4-6 | Remove query-param token usage | P0 | - | done | `backend/app/main.py`, `frontend/src/pages/VerifyMagicLink.tsx` (Section 11 evidence) |
@@ -52,7 +52,7 @@ Use this checklist to:
 - [x] Single-admin constraint is enforced.
   Evidence: `backend/app/main.py`, `backend/app/database.py`
 - [x] Core chat/query routes require admin or approved user auth.
-  Evidence: `backend/app/main.py`, `backend/app/query.py`, `backend/app/auth.py`
+  Evidence: Sage-owned public Agent Runtime routes; Python issues and validates Enclave session material for Control Plane routes.
 - [x] User PII fields (email/name and encrypted custom fields) are encrypted at rest in SQLite.
   Evidence: `backend/app/database.py`, `backend/app/encryption.py`
 - [x] Email blind index exists for encrypted email lookup.
@@ -75,7 +75,7 @@ Use this checklist to:
 - [x] `/vector-search` is restricted to admin authentication.
   Evidence: `backend/app/main.py`, `backend/app/auth.py`
 - [x] Query sessions are owner-scoped and enforce access checks on create/reuse/read/delete.
-  Evidence: `backend/app/query.py`
+  Evidence: Public query-session routes are Sage-owned; Python lifecycle evidence covers Sage-to-Python deletion/tombstone reporting.
 - [x] Primary auth/session token usage moved to secure cookie flows (no active token-in-localStorage requirement).
   Evidence: `frontend/src/utils/adminApi.ts`, `frontend/src/pages/VerifyMagicLink.tsx`, `frontend/src/pages/ChatPage.tsx`
 - [x] Active auth flows no longer use query-string tokens for verification/session checks.
@@ -255,11 +255,11 @@ Use this checklist to:
 - [x] Define the first Sage Session Memory lifecycle deletion contract.
   Evidence: `runtime/sage/crates/sage-core/src/web_runtime.rs`, `backend/app/lifecycle.py::post_sage_session_memory_delete`, `backend/tests/test_retention_execution.py::test_retention_uses_sage_lifecycle_contract_and_sanitizes_failures`, `docs/internal-agent-contract.md`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
 - [x] Route public Conversation deletion through shared Session Memory lifecycle handling.
-  Evidence: `backend/app/query.py`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+  Evidence: Public query-session routes are Sage-owned; Python lifecycle evidence covers Sage-to-Python deletion/tombstone reporting in `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, and `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`.
 - [x] Route User deletion through shared Session Memory lifecycle handling and create metadata-only tombstones for incomplete targets.
-  Evidence: `backend/app/main.py`, `backend/app/query.py`, `backend/tests/test_user_deletion_lifecycle.py::test_user_deletion_creates_metadata_only_tombstone_when_session_memory_deletion_fails`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+  Evidence: `backend/app/main.py`, `backend/app/lifecycle.py`, `backend/tests/test_user_deletion_lifecycle.py::test_user_deletion_creates_metadata_only_tombstone_when_session_memory_deletion_fails`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
 - [x] Emit privacy-preserving lifecycle Audit Log evidence for Conversation deletion and tombstone retry workflows.
-  Evidence: `backend/app/lifecycle.py::audit_lifecycle_deletion`, `backend/app/query.py`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `backend/tests/test_retention_execution.py::test_admin_can_retry_incomplete_session_memory_tombstone`, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`
+  Evidence: `backend/app/lifecycle.py::audit_lifecycle_deletion`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `backend/tests/test_retention_execution.py::test_admin_can_retry_incomplete_session_memory_tombstone`, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`
 - [x] Re-check Conversation retention eligibility immediately before deletion and report skipped active candidates.
   Evidence: `backend/app/lifecycle.py::run_retention`, `backend/tests/test_retention_execution.py::test_retention_rechecks_conversation_activity_before_deleting_candidate`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
 - [x] Document implemented Active Storage Lifecycle guarantees and remaining limitations across security docs, session docs, runbooks, ADR-0006, ADR-0007, ADR-0015, and ADR-0016.
@@ -309,7 +309,7 @@ curl -i http://localhost:8000/ingest/pending
 curl -i -X POST http://localhost:8000/vector-search \
   -H 'Content-Type: application/json' \
   -d '{"query":"test","top_k":1}'
-curl -i http://localhost:8000/query/session/test-session-id
+curl -i -H 'Authorization: Bearer <token>' http://localhost:8000/query/session/test-session-id
 
 # S4-4: CORS should reject disallowed origins
 curl -i -X OPTIONS http://localhost:8000/health \

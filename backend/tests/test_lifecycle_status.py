@@ -114,7 +114,16 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(inference_records["audit"]["status"], "partial")
 
     def test_lifecycle_status_reports_active_storage_scope_and_confidentiality_posture(self) -> None:
-        response = self.client.get("/admin/lifecycle/status")
+        original_detector = self.lifecycle.store.detect_legacy_plaintext_payloads
+        self.lifecycle.store.detect_legacy_plaintext_payloads = lambda: {
+            "checked": False,
+            "legacy_plaintext_payloads": None,
+            "summary": "Qdrant payload confidentiality could not be inspected from this process.",
+        }
+        try:
+            response = self.client.get("/admin/lifecycle/status")
+        finally:
+            self.lifecycle.store.detect_legacy_plaintext_payloads = original_detector
 
         self.assertEqual(response.status_code, 200)
         body = response.json()

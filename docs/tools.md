@@ -1,22 +1,27 @@
 # Agent Runtime Tool Semantics
 
-This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which route owns execution and whether the turn is assistant-style or retrieval-first.
+This document describes the current tool behavior on the Sage hard-cut prototype. The important distinction is not just which tools exist, but which runtime owns the turn.
 
 ## Route-Level Behavior
 
-| Route | Runtime mode | Tool behavior |
+Gateway routes public Agent Runtime requests to Sage. Public clients should call the Gateway-facing paths and let Gateway dispatch to Sage:
+
+| Gateway route | Sage runtime mode | Tool behavior |
 | --- | --- | --- |
-| `/llm/chat` | stateful and memory-backed | optional server-side `web-search`; optional admin-only `db-query`; optional admin-only `admin-config`; optional admin `tool_context` injection |
-| `/llm/chat/stream` | stateful, memory-backed, assistant-style streaming | prepares explicitly selected tools/context first, then streams the final answer from the Model Provider |
-| `/query` | stateful and memory-backed | always retrieval-first; always has internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
+| `/llm/chat` | assistant-style, stateful, memory-backed | optional `web_search`; admin-only `db_query`; admin-only `admin_config`; optional admin trusted context |
+| `/llm/chat/stream` | assistant-style streaming | prepares explicitly selected tools/context first, then streams the final answer from the Model Provider |
+| `/query` | retrieval-first, stateful, memory-backed | initial document context plus internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
+
+Python no longer owns these public Agent Runtime routes. direct Python calls return `410 Gone` with `detail.code` set to `sage_route_required`; that is intentional Prototype Compatibility Debt cleanup, not a runtime outage. Python remains the Enclave Control Plane behind private/internal contracts for facts and actions such as safe database reads, document search, user profile context, and lifecycle operations.
 
 Current rule of thumb:
 
-- use `/llm/chat` for assistant-style turns, admin chat, config-assistant flows, and no-document user conversations
-- use `/llm/chat/stream` when the UI can consume assistant-style server-sent events and wants lower perceived latency
-- use `/query` for document-grounded, session-continuous user conversations
+- Call public Agent Runtime routes through Gateway, not directly against Python.
+- Use `/llm/chat` or `/llm/chat/stream` for assistant-style admin/user turns.
+- Use `/query` for document-grounded, session-continuous user conversations.
+- Use private Python `/internal/agent/*` endpoints only from Sage with the internal token.
 
-`/llm/chat/stream` is owned by Sage for public AI-route behavior. Python remains the Enclave Control Plane behind private/internal contracts for facts and actions such as safe database reads. Retrieval-first `/query/stream` is a separate follow-up scope; the first streaming slice only covers assistant-style chat. See [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md).
+See [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md) and [ADR-0017](adr/0017-remove-prototype-compatibility-debt-after-sage-hard-cut.md).
 
 ## Public Tool IDs
 
@@ -26,43 +31,43 @@ Current rule of thumb:
 | `db-query` | `db_query` | admins only | delegates to Python safe read-only admin DB query |
 | `admin-config` | `admin_config` | admins only | reads Scoped Config Context for Admin Conversations |
 
-`knowledge_search` is not a public frontend toggle. Sage registers it internally for `/query` so the agent can revisit Enclave document retrieval during the turn.
+`knowledge_search` is not a public frontend toggle. Sage registers it internally for retrieval-first turns so the agent can revisit Enclave document retrieval during the turn.
 
-## `/llm/chat`
+## Assistant-Style Turns
 
-`/llm/chat` is the assistant-style session route:
+Assistant-style Sage turns cover admin chat, config-assistant flows, web-search-only conversations, and no-document user conversations.
 
-- creates or resumes a `web_sessions` Conversation when `session_id` is provided
-- stores user and assistant turns in Session Memory
-- effective Agent Settings are loaded from Sage Postgres per request
-- selected tools may execute server-side before or during the agent turn
-- `tool_context` is accepted only for admins
+Sage owns:
 
-### Admin `tool_context`
+- Conversation/session creation and continuation
+- Session Memory writes
+- effective Agent Settings lookup
+- public tool choice and Model Provider calls
+- streamed answer and trace events
 
-Admins can send extra context in `tool_context` to help the model reason over client-side material such as:
+Python contributes Control Plane facts and actions over active contracts, such as `POST /admin/db/query` and active `/internal/agent/*` endpoints.
+
+### Admin Trusted Context
+
+Admins can send trusted context to help the model reason over client-side material such as:
 
 - decrypted DB rows
 - other trusted precomputed context
 
-When `tool_context` is present, clients should also send `client_executed_tools` so Sage does not re-run tools that have already been executed client-side.
+When trusted context is present, clients should also send `client_executed_tools` so Sage does not re-run tools that have already been executed client-side.
 
 Current frontend pattern for client-executed tools:
 
-1. optional client-side call to `POST /admin/tools/execute`
+1. optional client-side call to a Sage/Gateway tool path
 2. decrypt or format the returned data in the browser
-3. send the formatted text in `tool_context`
+3. send the formatted text as trusted context
 4. include `client_executed_tools`, usually `["db-query"]`
 
 `admin-config` is not client-executed. Admin clients send it as a normal tool ID, and Sage executes the admin-only runtime tool server-side.
 
-Non-admin use of `tool_context` is rejected with `403`.
+## Streaming Events
 
-## `/llm/chat/stream`
-
-`/llm/chat/stream` is the streaming companion to `/llm/chat`. It keeps the same assistant-style route ownership and compatibility model, but returns server-sent events instead of a single JSON response.
-
-Current event shape:
+`/llm/chat/stream` returns server-sent events from Sage:
 
 - `assistant_message_started`: announces the stable assistant message ID and session ID
 - `trace_status`: reports live preparation or answer-writing status
@@ -73,57 +78,19 @@ Current event shape:
 
 The turn is intentionally two-phase: Sage prepares explicitly selected tools and trusted context first, then streams the final answer directly from the configured Model Provider. This keeps `admin-config` and database-assisted Admin Conversations tool-aware without forcing token streaming through structured DSR/BAML parsing.
 
-### Example
+## Retrieval-First Turns
 
-```bash
-curl -X POST http://localhost:8000/llm/chat \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{
-    "message": "What changed in Bitcoin price today?",
-    "tools": ["web-search"],
-    "session_id": "existing-session-id-if-any"
-  }'
-```
+Retrieval-first Sage turns cover document-grounded, session-continuous conversations.
 
-## `/query`
+Sage owns:
 
-`/query` is the retrieval-first route:
+- public auth and session continuity
+- Session Memory writes
+- initial retrieval orchestration
+- `knowledge_search` availability during the turn
+- optional `web_search` and admin-only `db_query`
 
-- Sage verifies auth natively and then hydrates Enclave Control Plane actor metadata from Python
-- Sage loads or creates a durable public query-session record in `web_sessions`
-- Sage fetches initial Document context from Python
-- Sage stores user and assistant turns in Session Memory
-- Sage always has internal `knowledge_search` available
-
-If the request also enables `web-search`, Sage may run SearXNG during the turn. If an admin enables `db-query`, Sage may also call the Enclave Control Plane read-only DB tool during the turn.
-
-### Example
-
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{
-    "question": "How do these uploaded docs relate to recent regulation changes?",
-    "tools": ["web-search"],
-    "job_ids": ["job_123"],
-    "session_id": "existing-session-id-if-any"
-  }'
-```
-
-### Response Notes
-
-Current `/query` responses include:
-
-- `session_id`
-- `sources`
-- `graph_context`
-- `clarifying_questions`
-- `context_used`
-- `temperature`
-
-`search_term` is still present in the response shape for compatibility, but on the current Sage path it is reserved and returned as `null`.
+Python contributes active retrieval facts through the private Sage-to-Python contract, including `POST /internal/agent/document-search`.
 
 ## Admin DB Query Safety
 

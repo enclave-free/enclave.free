@@ -1065,10 +1065,10 @@
       "ariaLabel": "Sage runtime configuration help",
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side compatibility shims.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys only support Python compatibility paths.",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
       "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side compatibility shims.",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
       "overviewTitle": "Sage Runtime Overview",
       "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
@@ -1335,8 +1335,8 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Model Provider",
-      "description": "Model Provider compatibility label",
-      "hint": "Use \"sage\" for this prototype. Legacy \"maple\" remains only for compatibility."
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
       "label": "Model Name",

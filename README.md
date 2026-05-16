@@ -33,7 +33,7 @@ Public route ownership on this branch:
 | `/admin/ai-config/*` | Sage |
 | everything else | `core-backend` |
 
-The short version is: Sage is the Agent Runtime, Python is still the Enclave Control Plane, and the Gateway keeps the public API stable without owning application behavior. `/llm/chat/stream` is the assistant-style streaming companion to `/llm/chat`; it emits early assistant-turn, trace-status, answer-delta, final-trace, and completion events while preserving `/llm/chat` as the non-streaming compatibility path.
+The short version is: Sage is the Agent Runtime, Python is still the Enclave Control Plane, and the Gateway keeps the public API stable without owning application behavior. `/llm/chat/stream` is the assistant-style streaming companion to `/llm/chat`; it emits early assistant-turn, trace-status, answer-delta, final-trace, and completion events while keeping `/llm/chat` as the non-streaming companion path.
 
 ## Quick Start
 

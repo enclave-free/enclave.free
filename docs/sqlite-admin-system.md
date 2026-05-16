@@ -611,7 +611,7 @@ curl -X POST http://localhost:8000/admin/db/query \
   -d '{"sql": "SELECT * FROM users WHERE user_type_id = 1"}'
 ```
 
-**Encryption note:** This endpoint returns encrypted columns (`encrypted_*`) and their matching `ephemeral_pubkey_*` values. Decryption happens client-side in admin UIs via NIP-07. For the admin chat tool (`db-query`), see `docs/tools.md` for the `/admin/tools/execute` + `/llm/chat` flow using `tool_context` and `client_executed_tools`.
+**Encryption note:** This endpoint returns encrypted columns (`encrypted_*`) and their matching `ephemeral_pubkey_*` values. Decryption happens client-side in admin UIs via NIP-07. For the Sage-owned admin chat tool (`db-query`), see `docs/tools.md`; Sage authorizes the tool turn and delegates safe SQL execution to Python.
 
 #### CRUD Endpoints
 - `POST /admin/db/tables/{table_name}/rows` - Insert row

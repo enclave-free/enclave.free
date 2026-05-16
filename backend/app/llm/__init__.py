@@ -5,7 +5,6 @@ from .provider import (
     LLMResponse,
     ModelProvider,
     ModelProviderResponse,
-    get_maple_provider,
     get_provider,
     get_sage_provider,
 )
@@ -15,7 +14,6 @@ __all__ = [
     "LLMResponse",
     "ModelProvider",
     "ModelProviderResponse",
-    "get_maple_provider",
     "get_provider",
     "get_sage_provider",
 ]

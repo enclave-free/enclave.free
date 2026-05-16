@@ -22,7 +22,7 @@ It remains the canonical place for:
 - SMTP and email settings
 - frontend/domain/CORS settings exposed through Python
 - deployment health checks
-- Model Provider metadata used by Python-side health reporting and remaining legacy paths
+- Model Provider metadata used by Python-side health reporting and deployment diagnostics
 
 It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to Sage and is stored in Sage Postgres.
 
@@ -38,7 +38,7 @@ It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to
 
 Important consequence: changing admin deployment config does not automatically rewrite the Sage container environment.
 
-## Model Provider Compatibility Settings On This Prototype
+## Model Provider Deployment Settings On This Prototype
 
 Recommended current values in admin deployment config:
 
@@ -47,13 +47,13 @@ Recommended current values in admin deployment config:
 - `LLM_MODEL=kimi-k2-6`
 - `LLM_API_KEY=<tinfoil key or matching override>`
 
-These compatibility keys keep existing environment names and UI labels stable. What they affect today:
+These deployment keys keep existing environment names and UI labels stable while Sage runtime configuration remains env-driven. What they affect today:
 
 | Key | Primary effect |
 | --- | --- |
-| `LLM_PROVIDER` | Python-side Model Provider labeling and compatibility logic |
-| `LLM_API_URL` | Python health checks and legacy Python Model Provider client config |
-| `LLM_MODEL` | Python-side model metadata / remaining legacy client paths |
+| `LLM_PROVIDER` | Python-side Model Provider labeling and validation |
+| `LLM_API_URL` | Python health checks against the configured Model Provider endpoint |
+| `LLM_MODEL` | Python-side model metadata and diagnostics |
 | `LLM_API_KEY` | Python-side Model Provider auth unless left empty for env fallback |
 
 What actually drives Sage:

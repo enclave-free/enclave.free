@@ -35,15 +35,15 @@ Routes forwarded to Sage by `gateway/nginx.conf`:
 | Route family | Current owner | Notes |
 | --- | --- | --- |
 | `/health` | core-backend | public stack health target |
-| `/llm/chat` | Sage public route | stateless assistant-style route; legacy Python handler remains in `backend/app/main.py` |
-| `/query` | Sage public route | stateful retrieval-first route; legacy Python router remains in `backend/app/query.py` |
+| `/llm/chat` | Sage public route | stateless assistant-style route; direct Python calls tombstone with `sage_route_required` |
+| `/query` | Sage public route | stateful retrieval-first route; direct Python calls tombstone with `sage_route_required` |
 | `/query/session/*` | Sage | session inspection and delete |
-| `/session-defaults` | Sage public route | local AI defaults + Python document access defaults; legacy Python handler remains in `backend/app/main.py` |
-| `/admin/tools/execute` | Sage public route | admin-only public route; Python executes the safe DB action privately and also keeps a legacy handler in `backend/app/main.py` |
+| `/session-defaults` | Sage public route | local AI defaults + Python document access defaults; direct Python calls tombstone with `sage_route_required` |
+| `/admin/tools/execute` | Sage public route | admin-only public route; Python executes the safe DB action privately |
 | `/admin/ai-config/*` | Sage | public ownership and storage both live in Sage |
 | everything else | core-backend | existing Enclave product/control-plane APIs |
 
-Legacy Python implementations of `/llm/chat`, `/query`, `/session-defaults`, and `/admin/tools/execute` still exist in `backend/app/main.py` and `backend/app/query.py`. They are not the public path on this branch because `gateway/nginx.conf` routes those public requests to Sage, with Python used behind the private control-plane contract where needed.
+Python direct handlers for `/llm/chat`, `/query`, `/session-defaults`, and `/admin/tools/execute` are tombstones in `backend/app/main.py` and `backend/app/query.py`. Public requests go through `gateway/nginx.conf` to Sage, with Python used only behind the private control-plane contract where needed.
 
 ## Gateway Role
 
@@ -90,7 +90,7 @@ Compatibility endpoints still exist in Python but are not part of the main branc
 ### `/llm/chat`
 
 1. frontend calls `http://localhost:8000/llm/chat`
-2. `gateway/nginx.conf` forwards the public path to Sage, even though a legacy Python handler still exists in `backend/app/main.py`
+2. `gateway/nginx.conf` forwards the public path to Sage; direct Python calls return `410 Gone`
 3. Sage verifies auth natively from bearer or cookie session state
 4. Sage enforces CSRF if the request is cookie-authenticated and unsafe
 5. Sage loads effective Agent Settings from Postgres
@@ -104,7 +104,7 @@ This route is intentionally stateless. It uses `SageAgent::new_without_memory(..
 ### `/query`
 
 1. frontend calls `http://localhost:8000/query`
-2. `gateway/nginx.conf` forwards the public path to Sage, even though the legacy Python router still exists in `backend/app/query.py`
+2. `gateway/nginx.conf` forwards the public path to Sage; direct Python calls return `410 Gone`
 3. Sage verifies auth natively from bearer or cookie session state
 4. Sage loads effective Agent Settings from Postgres
 5. Sage loads or creates a durable public query-session record in Postgres
@@ -179,7 +179,7 @@ Important shared values still need coordinated configuration:
 
 ## Temporary Boundaries To Keep In Mind
 
-- Python still contains legacy AI route implementations because the cutover is done at the gateway, not by deleting old code yet.
+- Python still contains public Agent Runtime tombstones so accidental direct calls fail closed with `sage_route_required`.
 - The strongest long-term coupling is now the private `/internal/agent/*` contract, not nginx.
 - Deployment config is still not a single source of truth for the entire stack.
 - Query-session deletion is still a public session-record delete, not full Session Memory Deletion.

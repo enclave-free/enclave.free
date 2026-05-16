@@ -5,7 +5,6 @@ Also provides user/admin management via SQLite.
 """
 
 import asyncio
-import hashlib
 import json
 import os
 import uuid
@@ -18,19 +17,15 @@ import sqlite3
 import secrets
 import html
 import ipaddress
-import threading
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, Query, Depends, Request, BackgroundTasks, Response, Header, Cookie
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import QdrantClient
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 
 from llm import get_sage_provider
-from tools import init_tools, ToolOrchestrator, ToolCallInfo
-from conversation_trace import ConversationTrace, build_conversation_trace, build_live_trace_status
-from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
 from inference_repair import current_inference_repair_status
 from store import embed_texts
 import database
@@ -42,7 +37,6 @@ from data_deletion import (
 )
 from query import delete_sessions_for_owner, pop_sessions_for_owner, sessions_for_owner
 from sql_safety import validate_sql_allowed_tables
-from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
     AdminAuthRequest, AdminAuthResponse,
@@ -85,14 +79,14 @@ logging.basicConfig(
 logger = logging.getLogger("enclave.main")
 
 
-def _require_protected_inference_or_503(context: str) -> dict:
-    try:
-        return require_current_inference_verification(context=context)
-    except ProtectedInferenceBlocked as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-admin_conversation_states: dict[str, dict] = {}
-_admin_conversation_states_lock = threading.Lock()
+def _raise_sage_route_tombstone() -> None:
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "sage_route_required",
+            "message": "Sage owns this public Agent Runtime route. Use the Gateway so this request is routed to Sage.",
+        },
+    )
 
 # Import routers
 from ingest import router as ingest_router
@@ -470,89 +464,6 @@ class LLMTestResult(BaseModel):
     error: Optional[str] = None
 
 
-class ToolCallInfoResponse(BaseModel):
-    """Info about a tool that was called"""
-    tool_id: str
-    tool_name: str
-    query: Optional[str] = None
-
-
-class ChatRequest(BaseModel):
-    """Request model for chat endpoint"""
-    message: str
-    session_id: Optional[str] = None
-    tools: List[str] = []
-    conversation_history: List[dict] = []
-    tool_context: Optional[str] = None
-    # Optional explicit list of tools already executed client-side and embedded in tool_context.
-    # `None` keeps legacy behavior for older clients that only send tool_context.
-    client_executed_tools: Optional[List[str]] = None
-
-
-class ChatResponse(BaseModel):
-    """Response model for chat endpoint"""
-    message: str
-    message_id: str
-    session_id: Optional[str] = None
-    model: str
-    provider: str
-    tools_used: List[ToolCallInfoResponse] = []
-    trace: Optional[ConversationTrace] = None
-    inference_verification: Optional[dict] = None
-
-
-def _sse_event(event: str, data: dict) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
-
-
-class ToolExecuteRequest(BaseModel):
-    """Request model for executing a tool without LLM response (admin-only)."""
-    tool_id: str
-    query: str
-
-
-class ToolExecuteResponse(BaseModel):
-    """Response model for tool execution (admin-only)."""
-    success: bool
-    tool_id: str
-    tool_name: str
-    data: Optional[dict] = None
-    error: Optional[str] = None
-
-
-def _is_retryable_llm_content(content: str) -> bool:
-    normalized = " ".join((content or "").strip().lower().split())
-    return (
-        not normalized
-        or normalized == "i apologize, but i wasn't able to generate a response."
-        or normalized == "i apologize, but i was not able to generate a response."
-    )
-
-
-class QueryRequest(BaseModel):
-    """Request model for RAG query endpoint"""
-    question: str
-    top_k: int = 3
-    tools: List[str] = []
-
-
-class Citation(BaseModel):
-    """Citation from retrieved knowledge"""
-    claim_id: str
-    claim_text: str
-    source_title: str
-    source_url: Optional[str] = None
-
-
-class QueryResponse(BaseModel):
-    """Response model for RAG query endpoint"""
-    answer: str
-    citations: List[Citation]
-    model: str
-    provider: str
-    tools_used: List[ToolCallInfoResponse] = []
-
-
 class VectorSearchRequest(BaseModel):
     """Request model for vector search endpoint"""
     query: str
@@ -572,322 +483,6 @@ class VectorSearchResponse(BaseModel):
     results: List[VectorSearchResultItem]
     query_embedding_dim: int
     collection: str
-
-
-# Initialize tool registry
-_tool_registry = init_tools()
-
-
-def get_tool_orchestrator() -> ToolOrchestrator:
-    """Get a tool orchestrator instance"""
-    return ToolOrchestrator(_tool_registry)
-
-
-# Admin-only tools that require additional authorization
-ADMIN_ONLY_TOOLS = {"db-query", "admin-config"}
-
-
-def filter_tools_for_user(tools: List[str], user: dict) -> List[str]:
-    """Filter tool list based on user permissions.
-
-    Admin-only tools (like db-query) are removed if user is not an admin.
-    """
-    if not tools:
-        return tools
-
-    user_pubkey = user.get("pubkey")
-    is_admin = user.get("type") == "admin" or (user_pubkey and database.is_admin(user_pubkey))
-
-    if is_admin:
-        return tools  # Admins can use all tools
-
-    # Filter out admin-only tools for non-admins
-    return [t for t in tools if t not in ADMIN_ONLY_TOOLS]
-
-
-def _resolve_admin_subject_user_id(message: str) -> int | None:
-    match = re.search(r"\bsubject user\b\s*(?:to|is|=|:)?\s*(?:user\s*)?(\d+)\b", message, flags=re.IGNORECASE)
-    if not match:
-        match = re.search(r"\b(?:set|switch)\s+(?:the\s+)?subject\s+user\s+to\s+user\s+(\d+)\b", message, flags=re.IGNORECASE)
-    return int(match.group(1)) if match else None
-
-
-def _message_clears_subject_user(message: str) -> bool:
-    return bool(re.search(r"\b(clear|unset|remove)\s+(the\s+)?subject user\b", message, flags=re.IGNORECASE))
-
-
-def _admin_subject_user_context(session_id: str, message: str) -> dict | None:
-    requested_user_id = _resolve_admin_subject_user_id(message)
-
-    if _message_clears_subject_user(message):
-        with _admin_conversation_states_lock:
-            state = admin_conversation_states.setdefault(session_id, {})
-            state.pop("subject_user_id", None)
-            state.pop("pending_user_memory_change", None)
-        return None
-
-    subject_user = None
-    if requested_user_id is not None:
-        subject_user = database.get_user(requested_user_id)
-        if not subject_user:
-            raise HTTPException(status_code=404, detail="Subject User not found")
-        with _admin_conversation_states_lock:
-            state = admin_conversation_states.setdefault(session_id, {})
-            prev_subject_user_id = state.get("subject_user_id")
-            state["subject_user_id"] = requested_user_id
-            if prev_subject_user_id is not None and prev_subject_user_id != requested_user_id:
-                state.pop("pending_user_memory_change", None)
-        subject_user_id = requested_user_id
-    else:
-        with _admin_conversation_states_lock:
-            subject_user_id = admin_conversation_states.setdefault(session_id, {}).get("subject_user_id")
-
-    if not subject_user_id:
-        return None
-
-    if subject_user is None:
-        subject_user = database.get_user(subject_user_id)
-    if not subject_user:
-        with _admin_conversation_states_lock:
-            state = admin_conversation_states.setdefault(session_id, {})
-            if state.get("subject_user_id") == subject_user_id:
-                state.pop("subject_user_id", None)
-        return None
-
-    return {
-        "user": subject_user,
-        "memories": database.list_active_user_memories(subject_user_id, limit=20),
-    }
-
-
-def _admin_set_pending_user_memory_change(
-    session_id: str,
-    extracted_change: dict | None,
-    rejection_reason: str | None,
-    subject_user_id: int | None,
-    message: str,
-) -> tuple[dict | None, bool, dict | None]:
-    subject_user_required = False
-    rejected_user_memory_change = None
-    with _admin_conversation_states_lock:
-        state = admin_conversation_states.setdefault(session_id, {})
-        if extracted_change:
-            if rejection_reason:
-                state.pop("pending_user_memory_change", None)
-                rejected_user_memory_change = {**extracted_change, "reason": rejection_reason}
-            else:
-                state["pending_user_memory_change"] = extracted_change
-        elif subject_user_id is None and _message_requests_user_memory_write(message):
-            subject_user_required = True
-        return state.get("pending_user_memory_change"), subject_user_required, rejected_user_memory_change
-
-
-def _message_confirms_user_memory_change(message: str) -> bool:
-    positive = re.search(r"\bconfirm\b.*\buser memory\b|\bconfirm\b.*\bmemory\b", message, flags=re.IGNORECASE)
-    negated = re.search(r"\b(?:do not|don't|dont|never|not|no)\b.{0,20}\bconfirm\b", message, flags=re.IGNORECASE)
-    return bool(positive and not negated)
-
-
-def _message_requests_user_memory_write(message: str) -> bool:
-    return bool(
-        re.search(
-            r"\bremember\b.*\b(?:user|subject user)\b|\bwrite\b.*\buser memory\b|\bmemory\b.*\bKind:",
-            message,
-            flags=re.IGNORECASE,
-        )
-    )
-
-
-def _admin_user_memory_rejection_reason(change: dict) -> str | None:
-    content = str(change.get("content", "")).lower()
-    if any(term in content for term in SENSITIVE_TERMS):
-        return "sensitive"
-    if contains_direct_identifier(content):
-        return "sensitive"
-    return None
-
-
-def _clamp_int(value: str | None, default: int, lower: int, upper: int) -> int:
-    try:
-        parsed = int(value) if value is not None else default
-    except (TypeError, ValueError):
-        parsed = default
-    return max(lower, min(parsed, upper))
-
-
-def _clamp_float(value: str | None, default: float, lower: float, upper: float) -> float:
-    try:
-        parsed = float(value) if value is not None else default
-    except (TypeError, ValueError):
-        parsed = default
-    return max(lower, min(parsed, upper))
-
-
-def _normalize_admin_memory_kind(kind: str | None) -> str:
-    allowed_kinds = {"preference", "communication_style", "interest", "fact", "task"}
-    normalized = (kind or "preference").strip().lower()
-    return normalized if normalized in allowed_kinds else "preference"
-
-
-def _memory_belongs_to_subject(memory_id: int, subject_user_id: int) -> bool:
-    memory = database.get_user_memory(memory_id)
-    return bool(memory and memory.get("subject_user_id") == subject_user_id)
-
-
-def _extract_admin_memory_delete(message: str, subject_user_id: int | None) -> dict | None:
-    if subject_user_id is None:
-        return None
-    match = re.search(r"\bdelete\s+memory\s+(\d+)\b", message, flags=re.IGNORECASE)
-    if not match:
-        return None
-    memory_id = int(match.group(1))
-    if not _memory_belongs_to_subject(memory_id, subject_user_id):
-        return None
-    reason_match = re.search(r"\bReason:\s*(.*)$", message, flags=re.IGNORECASE)
-    return {
-        "action": "delete",
-        "subject_user_id": subject_user_id,
-        "memory_id": memory_id,
-        "reason": reason_match.group(1).strip() if reason_match else "admin-confirmed deletion",
-    }
-
-
-def _extract_admin_memory_supersede(message: str, subject_user_id: int | None) -> dict | None:
-    if subject_user_id is None:
-        return None
-    match = re.search(r"\bsupersede\s+memory\s+(\d+)\s+with:\s*(.*?)(?:\s+Importance:|\s+Confidence:|$)", message, flags=re.IGNORECASE)
-    if not match:
-        return None
-    memory_id = int(match.group(1))
-    if not _memory_belongs_to_subject(memory_id, subject_user_id):
-        return None
-    content = match.group(2).strip()
-    if not content:
-        return None
-    if content[-1] not in ".!?":
-        content += "."
-    importance_match = re.search(r"\bImportance:\s*(\d+)", message, flags=re.IGNORECASE)
-    confidence_match = re.search(r"\bConfidence:\s*(-?\d+(?:\.\d+)?)", message, flags=re.IGNORECASE)
-    return {
-        "action": "supersede",
-        "subject_user_id": subject_user_id,
-        "memory_id": memory_id,
-        "content": content,
-        "importance": _clamp_int(importance_match.group(1) if importance_match else None, 5, 1, 10),
-        "confidence": _clamp_float(confidence_match.group(1) if confidence_match else None, 1.0, 0.0, 1.0),
-    }
-
-
-def _extract_admin_memory_write(message: str, subject_user_id: int | None) -> dict | None:
-    if subject_user_id is None:
-        return None
-    if not re.search(r"\bremember\b|\bwrite\b.*\bmemory\b", message, flags=re.IGNORECASE):
-        return None
-
-    content_match = re.search(
-        r"(?:remember|memory)\s+(?:for\s+the\s+subject\s+user\s*:\s*)?(.*?)(?:\s+Kind:|\s+Importance:|\s+Confidence:|$)",
-        message,
-        flags=re.IGNORECASE,
-    )
-    if not content_match:
-        return None
-    content = content_match.group(1).strip()
-    content = re.sub(r"^for\s+the\s+subject\s+user\s*:\s*", "", content, flags=re.IGNORECASE).strip()
-    if not content:
-        return None
-    if content[-1] not in ".!?":
-        content += "."
-
-    kind_match = re.search(r"\bKind:\s*([A-Za-z_-]+)", message, flags=re.IGNORECASE)
-    importance_match = re.search(r"\bImportance:\s*(\d+)", message, flags=re.IGNORECASE)
-    confidence_match = re.search(r"\bConfidence:\s*(-?\d+(?:\.\d+)?)", message, flags=re.IGNORECASE)
-    return {
-        "action": "create",
-        "subject_user_id": subject_user_id,
-        "kind": _normalize_admin_memory_kind(kind_match.group(1) if kind_match else None),
-        "content": content,
-        "importance": _clamp_int(importance_match.group(1) if importance_match else None, 5, 1, 10),
-        "confidence": _clamp_float(confidence_match.group(1) if confidence_match else None, 1.0, 0.0, 1.0),
-    }
-
-
-def _confirm_pending_user_memory_change(session_id: str, admin: dict) -> dict | None:
-    with _admin_conversation_states_lock:
-        state = admin_conversation_states.setdefault(session_id, {})
-        pending = state.pop("pending_user_memory_change", None)
-    if not pending:
-        return None
-
-    try:
-        if pending.get("action") == "supersede":
-            memory_id = database.supersede_user_memory(
-                pending["memory_id"],
-                content=pending["content"],
-                importance=pending["importance"],
-                confidence=pending["confidence"],
-                source_kind="admin-confirmed",
-                source_conversation_id=session_id,
-                author_actor="admin",
-            )
-            _best_effort_config_audit_event(
-                table_name="user_memories",
-                config_key=str(pending["memory_id"]),
-                old_value=f"active memory_id={pending['memory_id']}",
-                new_value=(
-                    f"supersede subject_user_id={pending['subject_user_id']}; "
-                    f"memory_id={pending['memory_id']}; replacement_id={memory_id}; "
-                    f"importance={pending['importance']}; "
-                    f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
-                ),
-                changed_by=admin.get("pubkey", "unknown"),
-            )
-            result = database.get_user_memory(memory_id)
-        elif pending.get("action") == "delete":
-            database.soft_delete_user_memory(
-                pending["memory_id"],
-                deleted_by_actor="admin",
-                deletion_reason=pending["reason"],
-            )
-            _best_effort_config_audit_event(
-                table_name="user_memories",
-                config_key=str(pending["memory_id"]),
-                old_value=f"active memory_id={pending['memory_id']}",
-                new_value=(
-                    f"delete subject_user_id={pending['subject_user_id']}; "
-                    f"memory_id={pending['memory_id']}; "
-                    f"reason_sha256={hashlib.sha256(str(pending['reason']).encode('utf-8')).hexdigest()}"
-                ),
-                changed_by=admin.get("pubkey", "unknown"),
-            )
-            result = database.get_user_memory(pending["memory_id"])
-        else:
-            memory_id = database.create_user_memory(
-                subject_user_id=pending["subject_user_id"],
-                kind=pending["kind"],
-                content=pending["content"],
-                importance=pending["importance"],
-                confidence=pending["confidence"],
-                source_kind="admin-confirmed",
-                source_conversation_id=session_id,
-                author_actor="admin",
-            )
-            _best_effort_config_audit_event(
-                table_name="user_memories",
-                config_key=str(memory_id),
-                old_value=None,
-                new_value=(
-                    f"create subject_user_id={pending['subject_user_id']}; memory_id={memory_id}; "
-                    f"kind={pending['kind']}; importance={pending['importance']}; "
-                    f"content_sha256={hashlib.sha256(str(pending['content']).encode('utf-8')).hexdigest()}"
-                ),
-                changed_by=admin.get("pubkey", "unknown"),
-            )
-            result = database.get_user_memory(memory_id)
-    except Exception:
-        logger.error("Failed to confirm pending User Memory change", exc_info=True)
-        raise
-
-    return result
 
 
 def get_qdrant_client():
@@ -1033,10 +628,9 @@ async def llm_smoke_test():
         )
 
 
-@app.post("/llm/chat", response_model=ChatResponse)
+@app.post("/llm/chat")
 async def chat(
-    request: ChatRequest,
-    background_tasks: BackgroundTasks,
+    request: Request,
     user: dict = Depends(auth.require_admin_or_approved_user),
     _: None = Depends(chat_limiter),
 ):
@@ -1047,252 +641,12 @@ async def chat(
     If tools are specified, executes them and includes results in context.
     Requires authenticated admin OR approved user.
     """
-    try:
-        active_session_id = request.session_id or str(uuid.uuid4())
-        tools_used = []
-        prompt = request.message
-        seen_tool_keys = set()
-
-        def _merge_tools_used(existing: list[ToolCallInfoResponse], infos: list[ToolCallInfo]) -> list[ToolCallInfoResponse]:
-            merged = list(existing)
-            for info in infos:
-                key = (info.tool_id, info.query)
-                if key in seen_tool_keys:
-                    continue
-                seen_tool_keys.add(key)
-                merged.append(ToolCallInfoResponse(
-                    tool_id=info.tool_id,
-                    tool_name=info.tool_name,
-                    query=info.query
-                ))
-            return merged
-
-        tool_context_parts = []
-
-        if request.tool_context:
-            if user.get("type") != "admin":
-                raise HTTPException(status_code=403, detail="Tool context override is admin-only")
-
-            tool_context_parts.append(request.tool_context)
-
-            # Determine which tools were executed client-side.
-            # Legacy fallback: older clients implied db-query was already executed whenever
-            # tool_context was present.
-            client_executed_tools = request.client_executed_tools
-            if client_executed_tools is None:
-                client_executed_tools = ["db-query"] if "db-query" in request.tools else []
-
-            client_executed_set = set()
-            tools_used = []
-            for tool_id in client_executed_tools:
-                if tool_id not in request.tools:
-                    continue
-                tool = _tool_registry.get(tool_id)
-                if tool:
-                    client_executed_set.add(tool_id)
-                    key = (tool_id, request.message)
-                    if key not in seen_tool_keys:
-                        seen_tool_keys.add(key)
-                        tools_used.append(ToolCallInfoResponse(
-                            tool_id=tool_id,
-                            tool_name=tool.definition.name,
-                            query=request.message
-                        ))
-
-            # Allow remaining tools to run server-side.
-            allowed_tools = filter_tools_for_user(request.tools, user)
-            allowed_tools = [tool_id for tool_id in allowed_tools if tool_id not in client_executed_set]
-
-            if allowed_tools:
-                orchestrator = get_tool_orchestrator()
-                tool_context, tool_infos = await orchestrator.execute_tools(
-                    query=request.message,
-                    tool_ids=allowed_tools
-                )
-
-                if tool_context:
-                    tool_context_parts.append(tool_context)
-
-                tools_used = _merge_tools_used(tools_used, tool_infos)
-        else:
-            # Filter tools based on user permissions (admin-only tools removed for non-admins)
-            allowed_tools = filter_tools_for_user(request.tools, user)
-
-            # Execute tools if any are selected
-            if allowed_tools:
-                orchestrator = get_tool_orchestrator()
-                tool_context, tool_infos = await orchestrator.execute_tools(
-                    query=request.message,
-                    tool_ids=allowed_tools
-                )
-
-                # Convert ToolCallInfo to response format
-                tools_used = _merge_tools_used([], tool_infos)
-
-                if tool_context:
-                    tool_context_parts.append(tool_context)
-
-        # Import Agent Settings compatibility functions for dynamic prompt building
-        from ai_config import build_chat_prompt, get_llm_parameters
-
-        # Get user_type_id from authenticated user for per-type config
-        user_type_id = user.get("user_type_id")
-
-        # Get Model Provider parameters from Agent Settings (with user-type overrides if applicable)
-        llm_params = get_llm_parameters(user_type_id=user_type_id)
-        temperature = llm_params.get("temperature", 0.1)
-
-        # Get user profile context for chat personalization (unencrypted fields only)
-        user_profile_context = None
-        user_memory_context = None
-        subject_user_context = None
-        pending_user_memory_change = None
-        subject_user_required = False
-        confirm_pending_user_memory_change = False
-        rejected_user_memory_change = None
-        user_id = user.get("id")
-        if user_id and user_id != -1:  # Skip dev mode mock user (id=-1)
-            user_profile_context = database.get_user_chat_context_values(
-                user_id=user_id,
-                user_type_id=user_type_id
-            )
-            # Only pass if there's actual data
-            if not user_profile_context:
-                user_profile_context = None
-            if user.get("type") != "admin":
-                user_memory_context = database.list_active_user_memories(user_id, limit=20)
-                if not user_memory_context:
-                    user_memory_context = None
-        if user.get("type") == "admin":
-            subject_user_context = _admin_subject_user_context(active_session_id, request.message)
-            if _message_confirms_user_memory_change(request.message):
-                confirm_pending_user_memory_change = True
-            else:
-                subject_user_id = (subject_user_context or {}).get("user", {}).get("id")
-                extracted_change = (
-                    _extract_admin_memory_delete(request.message, subject_user_id)
-                    or _extract_admin_memory_supersede(request.message, subject_user_id)
-                    or _extract_admin_memory_write(request.message, subject_user_id)
-                )
-                if extracted_change:
-                    rejection_reason = _admin_user_memory_rejection_reason(extracted_change)
-                else:
-                    rejection_reason = None
-                (
-                    pending_user_memory_change,
-                    subject_user_required,
-                    rejected_user_memory_change,
-                ) = _admin_set_pending_user_memory_change(
-                    active_session_id,
-                    extracted_change,
-                    rejection_reason,
-                    subject_user_id,
-                    request.message,
-                )
-
-        # Build prompt using Agent Settings (with user-type overrides if applicable)
-        combined_context = "\n\n".join(tool_context_parts) if tool_context_parts else ""
-        prompt = build_chat_prompt(
-            message=request.message,
-            context=combined_context,
-            user_type_id=user_type_id,
-            conversation_history=request.conversation_history,
-            user_profile_context=user_profile_context,
-            user_memory_context=user_memory_context,
-            subject_user_context=subject_user_context,
-            pending_user_memory_change=pending_user_memory_change,
-            subject_user_required=subject_user_required,
-            rejected_user_memory_change=rejected_user_memory_change,
-        )
-
-        provider = get_sage_provider()
-        # Convert low-level provider connection failures into a user-friendly 503.
-        # This is especially common in local dev if the LLM container is restarting.
-        try:
-            if not provider.health_check():
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (health check failed).",
-                )
-            inference_record = _require_protected_inference_or_503("conversation")
-            result = provider.complete(prompt, temperature=temperature)
-            if _is_retryable_llm_content(result.content):
-                logger.warning(
-                    "Sage/Tinfoil returned retryable empty/generic chat content; retrying once"
-                )
-                inference_record = _require_protected_inference_or_503("conversation")
-                result = provider.complete(prompt, temperature=temperature)
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.exception("Sage/Tinfoil LLM error (%s)", provider.name)
-            connection_error_types: tuple[type[BaseException], ...] = ()
-            try:
-                import httpx
-                connection_error_types += (
-                    httpx.ConnectError,
-                    httpx.TimeoutException,
-                    httpx.NetworkError,
-                )
-            except ImportError:
-                pass
-            try:
-                from openai import APIConnectionError, APITimeoutError
-                connection_error_types += (APIConnectionError, APITimeoutError)
-            except ImportError:
-                pass
-            if connection_error_types and isinstance(e, connection_error_types):
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (connection error).",
-                )
-            raise
-        if confirm_pending_user_memory_change:
-            _confirm_pending_user_memory_change(active_session_id, user)
-            subject_user_context = _admin_subject_user_context(active_session_id, "")
-        message_id = f"msg_{uuid.uuid4().hex}"
-        trace = build_conversation_trace(
-            actor_type=user.get("type", "user"),
-            tools_used=[
-                ToolCallInfo(
-                    tool_id=tool.tool_id,
-                    tool_name=tool.tool_name,
-                    query=tool.query,
-                )
-                for tool in tools_used
-            ],
-        )
-        response_payload = ChatResponse(
-            message=result.content,
-            message_id=message_id,
-            session_id=active_session_id,
-            model=result.model,
-            provider=result.provider,
-            tools_used=tools_used,
-            trace=trace,
-            inference_verification=inference_verification_reference(inference_record),
-        )
-        if user.get("type") == "user" and user_id and user_id != -1 and not tools_used and not tool_context_parts:
-            from user_memory import capture_ambient_user_memory
-
-            background_tasks.add_task(
-                capture_ambient_user_memory,
-                subject_user_id=user_id,
-                user_message=request.message,
-                assistant_message=result.content,
-                provider=provider,
-            )
-        return response_payload
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    _raise_sage_route_tombstone()
 
 
 @app.post("/llm/chat/stream")
 async def chat_stream(
-    request: ChatRequest,
-    background_tasks: BackgroundTasks,
+    request: Request,
     user: dict = Depends(auth.require_admin_or_approved_user),
     _: None = Depends(chat_limiter),
 ):
@@ -1302,114 +656,16 @@ async def chat_stream(
     This first streaming slice preserves the existing chat execution path and
     streams the completed response as a single answer delta.
     """
-
-    async def event_stream():
-        try:
-            response_payload = await chat(
-                request=request,
-                background_tasks=background_tasks,
-                user=user,
-                _=None,
-            )
-            yield _sse_event(
-                "assistant_message_started",
-                {
-                    "message_id": response_payload.message_id,
-                    "session_id": response_payload.session_id,
-                },
-            )
-            if response_payload.message:
-                trace_status = build_live_trace_status(response_payload.trace)
-                if trace_status:
-                    yield _sse_event(
-                        "trace_status",
-                        {
-                            "message_id": response_payload.message_id,
-                            "status": trace_status,
-                        },
-                    )
-                yield _sse_event(
-                    "answer_delta",
-                    {
-                        "message_id": response_payload.message_id,
-                        "delta": response_payload.message,
-                    },
-                )
-            if response_payload.trace is not None:
-                yield _sse_event(
-                    "trace_final",
-                    {
-                        "message_id": response_payload.message_id,
-                        "trace": response_payload.trace.model_dump(),
-                    },
-                )
-            yield _sse_event(
-                "done",
-                {
-                    "message_id": response_payload.message_id,
-                    "session_id": response_payload.session_id,
-                    "inference_verification": response_payload.inference_verification,
-                },
-            )
-        except HTTPException as exc:
-            yield _sse_event(
-                "error",
-                {
-                    "status_code": exc.status_code,
-                    "detail": exc.detail,
-                },
-            )
-        except Exception as exc:
-            logger.exception("Streaming chat failed")
-            yield _sse_event(
-                "error",
-                {
-                    "status_code": 500,
-                    "detail": str(exc),
-                },
-            )
-
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    _raise_sage_route_tombstone()
 
 
-@app.post("/admin/tools/execute", response_model=ToolExecuteResponse)
-async def execute_admin_tool(request: ToolExecuteRequest, admin: dict = Depends(auth.require_admin)):
+@app.post("/admin/tools/execute")
+async def execute_admin_tool(request: Request, admin: dict = Depends(auth.require_admin)):
     """
     Execute an admin-only tool and return raw results.
     Used for client-side decryption flows (e.g., db-query with NIP-07).
     """
-    tool_id = request.tool_id
-    if tool_id not in ADMIN_ONLY_TOOLS:
-        raise HTTPException(status_code=403, detail=f"Tool '{tool_id}' is not admin-only or not allowed")
-
-    tool = _tool_registry.get(tool_id)
-    if not tool:
-        return ToolExecuteResponse(
-            success=False,
-            tool_id=tool_id,
-            tool_name=tool_id,
-            data=None,
-            error="Tool not found"
-        )
-
-    try:
-        result = await tool.execute(query=request.query)
-        return ToolExecuteResponse(
-            success=result.success,
-            tool_id=tool_id,
-            tool_name=tool.definition.name,
-            data=result.data,
-            error=result.error
-        )
-    except Exception as e:
-        logger.exception(f"Tool execution failed for '{tool_id}': {e}")
-        return ToolExecuteResponse(
-            success=False,
-            tool_id=tool_id,
-            tool_name=tool.definition.name if tool.definition else tool_id,
-            data=None,
-            error=str(e)
-        )
+    _raise_sage_route_tombstone()
 
 
 # NOTE: /query endpoint moved to query.py router (session-aware RAG)
@@ -2394,26 +1650,7 @@ async def get_session_defaults_public(
 
     If user_type_id is provided, returns defaults with user-type-specific overrides applied.
     """
-    try:
-        from ai_config import get_session_defaults
-        defaults = get_session_defaults(user_type_id)
-
-        # Get document defaults with user-type inheritance if applicable
-        if user_type_id is not None:
-            default_docs = database.get_active_documents_for_user_type(user_type_id)
-        else:
-            default_docs = database.get_default_active_documents()
-
-        return SessionDefaultsResponse(
-            web_search_enabled=defaults.get("web_search_default", False),
-            default_document_ids=default_docs
-        )
-    except Exception as e:
-        logger.error(f"Failed to get session defaults: {e}")
-        return SessionDefaultsResponse(
-            web_search_enabled=False,
-            default_document_ids=[]
-        )
+    _raise_sage_route_tombstone()
 
 
 @app.get("/admin/settings", response_model=InstanceSettingsResponse)
@@ -3190,12 +2427,6 @@ async def delete_user(
         if isinstance(results, list):
             session_memory_results.extend(results)
     pop_sessions_for_owner("user", str(user_id))
-    with _admin_conversation_states_lock:
-        for state in admin_conversation_states.values():
-            if state.get("subject_user_id") == user_id:
-                state.pop("subject_user_id", None)
-                state.pop("pending_user_memory_change", None)
-
     if not existing_user:
         if deleted_conversations:
             conversation_result = deletion_target_succeeded(

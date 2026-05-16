@@ -39,37 +39,42 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         os.environ["UPLOADS_DIR"] = str(self.uploads_dir)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        self._orig_internal_token = os.environ.get("INTERNAL_AGENT_TOKEN")
+        os.environ["INTERNAL_AGENT_TOKEN"] = "test-internal-token"
 
         import auth
         import database
         import ingest_db
+        import internal_agent
         import query
 
         self.auth = importlib.reload(auth)
         self.database = importlib.reload(database)
         self.ingest_db = importlib.reload(ingest_db)
         self.query = importlib.reload(query)
+        self.internal_agent = importlib.reload(internal_agent)
         self.database.init_schema()
         self.query._sessions.clear()
 
         app = FastAPI()
-        app.include_router(self.query.router)
+        app.include_router(self.internal_agent.router)
         app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
             "type": "admin",
             "id": 1,
             "pubkey": "admin-pubkey",
         }
         self.client = TestClient(app)
+        self.internal_headers = {"X-Internal-Agent-Token": "test-internal-token"}
 
-        self.original_embed_texts = self.query.embed_texts
+        self.original_internal_embed_texts = self.internal_agent.embed_texts
         self.original_call_llm = self.query._call_llm_contextual
         self.original_extract_facts = self.query._extract_facts_from_conversation
 
-        self.query.embed_texts = lambda _texts: [[0.1, 0.2, 0.3]]
+        self.internal_agent.embed_texts = lambda _texts: [[0.1, 0.2, 0.3]]
         self.query._extract_facts_from_conversation = lambda session: session.get("facts_gathered", {})
 
     def tearDown(self) -> None:
-        self.query.embed_texts = self.original_embed_texts
+        self.internal_agent.embed_texts = self.original_internal_embed_texts
         self.query._call_llm_contextual = self.original_call_llm
         self.query._extract_facts_from_conversation = self.original_extract_facts
         self.query._sessions.clear()
@@ -80,6 +85,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("CONTENT_ENCRYPTION_KEY", self._orig_content_encryption_key)
+        self._restore_env("INTERNAL_AGENT_TOKEN", self._orig_internal_token)
         self.tmp.cleanup()
 
     @staticmethod
@@ -124,21 +130,19 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             }
         ])
 
-        captured_contexts = []
-
-        def fake_llm(question, context, session, **_kwargs):
-            captured_contexts.append(context)
-            return "Hydrated answer.", [], f"=== CONTEXT ===\n{context}", None
-
-        self.query._call_llm_contextual = fake_llm
-
-        with patch.object(self.query.httpx, "post", side_effect=fake_post):
-            response = self.client.post("/query", json={"question": "What does the handbook say?"})
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "What does the handbook say?",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                },
+            )
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["answer"], "Hydrated answer.")
-        self.assertIn("Encrypted retrieval context reaches the model.", captured_contexts[0])
+        self.assertIn("Encrypted retrieval context reaches the model.", body["context"])
         self.assertEqual(body["sources"][0]["chunk_id"], "chunk-1")
         self.assertEqual(body["sources"][0]["source_file"], "Handbook.md")
         self.assertTrue(body["sources"][0]["hydrated"])
@@ -166,19 +170,18 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             }
         ])
 
-        captured_contexts = []
-
-        def _capture_and_respond(question, context, session, **_kwargs):
-            captured_contexts.append(context)
-            return "No context.", [], f"=== CONTEXT ===\n{context}", None
-
-        self.query._call_llm_contextual = _capture_and_respond
-
-        with patch.object(self.query.httpx, "post", side_effect=fake_post):
-            response = self.client.post("/query", json={"question": "What is available?"})
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "What is available?",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                },
+            )
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("unauthorized passage", captured_contexts[0])
+        self.assertNotIn("unauthorized passage", response.json()["context"])
         self.assertFalse(response.json()["sources"][0]["hydrated"])
         self.assertEqual(response.json()["sources"][0]["hydration_status"], "job_mismatch")
 
@@ -195,14 +198,16 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
                 },
             }
         ])
-        self.query._call_llm_contextual = lambda question, context, session, **_kwargs: (
-            "Missing chunk handled.", [], f"=== CONTEXT ===\n{context}", None
-        )
-
-        with patch.object(self.query.httpx, "post", side_effect=fake_post):
-            response = self.client.post("/query", json={"question": "What remains?"})
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "What remains?",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                },
+            )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["answer"], "Missing chunk handled.")
         self.assertFalse(response.json()["sources"][0]["hydrated"])
         self.assertEqual(response.json()["sources"][0]["hydration_status"], "missing")

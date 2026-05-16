@@ -1,10 +1,10 @@
 """
-OpenAI-compatible provider for Sage/Tinfoil and legacy-compatible runtimes.
+OpenAI-compatible provider for Sage/Tinfoil.
 
 The current prototype routes public AI traffic through Sage and Tinfoil. The
 Python control plane still uses this provider for legacy utility paths and
-health checks. Generic LLM_* keys are canonical; MAPLE_* aliases are retained
-only as deprecated compatibility fallbacks.
+health checks. Generic LLM_* keys are canonical for Python-side deployment
+metadata and diagnostics.
 """
 
 import logging
@@ -21,28 +21,25 @@ logger = logging.getLogger("enclave.llm.sage_tinfoil")
 
 
 class SageTinfoilProvider(LLMProvider):
-    """Generic OpenAI-compatible endpoint used by Python compatibility paths."""
+    """Generic OpenAI-compatible endpoint used by Python diagnostics."""
 
     def __init__(self, provider_name: str = "sage") -> None:
         self._lock = threading.RLock()
-        self.provider_name = provider_name if provider_name in {"sage", "maple"} else "sage"
+        self.provider_name = "sage"
 
         try:
             from config_loader import get_config
 
             self.base_url = (
                 get_config("LLM_API_URL")
-                or get_config("MAPLE_BASE_URL")
                 or "http://tinfoil-proxy:8089/v1"
             )
-            self.api_key = get_config("LLM_API_KEY") or get_config("MAPLE_API_KEY") or ""
-            self.default_model = get_config("LLM_MODEL") or get_config("MAPLE_MODEL") or "kimi-k2-6"
+            self.api_key = get_config("LLM_API_KEY") or ""
+            self.default_model = get_config("LLM_MODEL") or "kimi-k2-6"
         except ImportError:
-            self.base_url = os.getenv("LLM_API_URL") or os.getenv(
-                "MAPLE_BASE_URL", "http://tinfoil-proxy:8089/v1"
-            )
-            self.api_key = os.getenv("LLM_API_KEY") or os.getenv("MAPLE_API_KEY", "")
-            self.default_model = os.getenv("LLM_MODEL") or os.getenv("MAPLE_MODEL", "kimi-k2-6")
+            self.base_url = os.getenv("LLM_API_URL") or "http://tinfoil-proxy:8089/v1"
+            self.api_key = os.getenv("LLM_API_KEY", "")
+            self.default_model = os.getenv("LLM_MODEL", "kimi-k2-6")
 
         self._init_client()
 
@@ -60,9 +57,9 @@ class SageTinfoilProvider(LLMProvider):
             try:
                 from config_loader import get_config
 
-                new_base_url = get_config("LLM_API_URL") or get_config("MAPLE_BASE_URL") or self.base_url
-                new_api_key = get_config("LLM_API_KEY") or get_config("MAPLE_API_KEY") or self.api_key
-                new_model = get_config("LLM_MODEL") or get_config("MAPLE_MODEL") or self.default_model
+                new_base_url = get_config("LLM_API_URL") or self.base_url
+                new_api_key = get_config("LLM_API_KEY") or self.api_key
+                new_model = get_config("LLM_MODEL") or self.default_model
 
                 if new_base_url != self.base_url or new_api_key != self.api_key:
                     self.base_url = new_base_url

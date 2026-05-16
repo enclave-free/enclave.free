@@ -497,7 +497,7 @@
       "compact": "קומפקטי",
       "expand": "הרחב",
       "shareSecretsTitle": "שתף משתני סביבה סודיים",
-      "shareSecretsHint": "כבוי כברירת מחדל. הפעל תחילה את כלי התצורה. כשהוא מופעל, ערכי תצורת פריסה סודיים נחשפים בצד הלקוח ונשלחים ל-Maple.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "רגיש",
       "emptyPrompt": "שאלו על כל תצורת ניהול. אם תרצו שהעוזר יציע ויחיל שינויים, בקשו ממנו לכלול JSON change set.",
       "pendingChanges": "שינויים ממתינים",
@@ -977,19 +977,19 @@
       "usersToMigrate": "משתמשים להעברה",
       "warning": "זוהי פעולה מתקדמת. העברה שגויה עלולה לנעול אותך מנתונים מוצפנים. המשך רק אם אתה מבין את ההשלכות."
     },
-    "leaveEmptyForLlmApiKey": "השאר ריק כדי לנקות את העקיפה ולהשתמש בגיבוי .env MAPLE_API_KEY.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — מפתח ה-API שלך ל-Maple. ממפה ל-MAPLE_API_KEY.",
-      "apiKeyLabel": "מפתח API של Maple",
-      "ariaLabel": "עזרה בתצורת Maple LLM",
-      "exampleConfig": "דוגמת הגדרה",
-      "goToPage": "עבור לעמוד",
-      "mapleExtra": "הגדר LLM_API_KEY למפתח ה-Maple שלך מ-{{mapleSignupUrl}}. מקשי LLM_* ממפים לכינויי MAPLE_*.",
-      "mapleHint": "Maple הוא ה-backend הסטנדרטי של LLM עבור Enclave.",
-      "modelField": "LLM_MODEL — מזהה מודל Maple (לדוגמה: kimi-k2.5).",
-      "overviewDesc": "Enclave משתמש ב-Maple כשירות ה-LLM הסטנדרטי שלו. Maple מספקת API תואם OpenAI מתחת למכסה המנוע.",
-      "overviewTitle": "סקירה כללית של Maple LLM",
-      "providerField": "LLM_PROVIDER — קבוע ל-\"maple\" לתאימות."
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "נכשל בחשיפת הערך. בדוק את חיבור הרחבת Nostr שלך.",
     "searchHelp": {
@@ -1198,9 +1198,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "הגדר את הסקת Maple",
-      "hint": "Enclave הוא Maple-בלבד עבור הסקת LLM. הגדר את מודל Maple/הגדרות API כאן. שינויים דורשים הפעלה מחדש."
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "עיבוד טקסט",
@@ -1301,19 +1301,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "שירות AI",
-      "description": "ספק LLM (Maple בלבד)",
-      "hint": "Maple הוא הערך היחיד הנתמך. מפתח זה נשאר לתאימות."
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "שם המודל",
-      "description": "שם/מזהה המודל",
-      "hint": "מזהה מודל ה-Maple לשימוש (לדוגמה: \"kimi-k2.5\")."
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "נקודת קצה API",
-      "description": "כתובת URL בסיסית לבקשות API",
-      "hint": "כתובת ה-URL הבסיסית של Maple API. ברירת מחדל: http://maple-proxy:8080/v1."
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "קטעי הקשר",
@@ -1391,9 +1391,9 @@
       "hint": "כתובת ה-URL הציבורית בה משתמשים ניגשים לאפליקציה. משמשת ליצירת קישורי קסם."
     },
     "LLM_API_KEY": {
-      "label": "מפתח API",
-      "description": "מפתח API של Maple (סודי)",
-      "hint": "ממפה ל-MAPLE_API_KEY. השאר ריק כדי לנקות את העקיפה ולהשתמש בגיבוי .env."
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "כתובת URL של תת-דומיין לפאנל הניהול (אופציונלי)",
@@ -1775,7 +1775,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "בדוק זרימות אימות קישור קסם ו-Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "בדוק הגבלת קצב על ידי שליחת בקשות מהירות לנקודות קצה מוגבלות קצב.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "בדוק את זרימת יצירת המשתמש עם שדות דינמיים המבוססים על סוג משתמש.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "בודק קישוריות לשירות Maple LLM.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "צינור ה-RAG המלא: הטמעה ← חיפוש ← שליפה ← יצירה.",
       "this_is_where_the_magic_happens_e98c18": "— כאן קורה הקסם:",
       "toggle_theme_9b0eaf": "החלף ערכת נושא",

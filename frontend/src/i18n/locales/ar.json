@@ -497,7 +497,7 @@
       "compact": "مضغوط",
       "expand": "توسيع",
       "shareSecretsTitle": "مشاركة متغيرات البيئة السرّية",
-      "shareSecretsHint": "معطل افتراضياً. قم بتمكين أداة التكوين أولاً. عند التمكين، يتم الكشف عن قيم تكوين النشر السرية من جانب العميل وإرسالها إلى Maple.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "حساس",
       "emptyPrompt": "اطرح أسئلة حول أي إعداد إداري. إذا أردت من المساعد اقتراح التغييرات وتطبيقها، اطلب منه تضمين مجموعة تغييرات JSON.",
       "pendingChanges": "تغييرات معلّقة",
@@ -977,19 +977,19 @@
       "usersToMigrate": "المستخدمون المراد ترحيلهم",
       "warning": "هذه عملية متقدمة. الترحيل غير الصحيح قد يحرمك من الوصول إلى البيانات المشفرة. تابع فقط إذا كنت تفهم الآثار المترتبة."
     },
-    "leaveEmptyForLlmApiKey": "اتركه فارغًا لمسح التجاوز واستخدام خيار MAPLE_API_KEY الاحتياطي في .env.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — مفتاح API الخاص بك لـ Maple. يتوافق مع MAPLE_API_KEY.",
-      "apiKeyLabel": "مفتاح API لـ Maple",
-      "ariaLabel": "مساعدة في تكوين LLM لـ Maple",
-      "exampleConfig": "مثال على التكوين",
-      "goToPage": "الذهاب إلى الصفحة",
-      "mapleExtra": "عيّن LLM_API_KEY على مفتاح Maple الخاص بك من {{mapleSignupUrl}}. تتوافق مفاتيح LLM_* مع الأسماء المستعارة MAPLE_*.",
-      "mapleHint": "Maple هو الخلفية القياسية لنموذج LLM لـ Enclave.",
-      "modelField": "LLM_MODEL — معرف نموذج Maple (على سبيل المثال: kimi-k2.5).",
-      "overviewDesc": "يستخدم Enclave Maple كخدمة LLM القياسية الخاصة به. يوفر Maple واجهة برمجة تطبيقات متوافقة مع OpenAI.",
-      "overviewTitle": "نظرة عامة على LLM من Maple",
-      "providerField": "LLM_PROVIDER — ثابت على \"maple\" للتوافق."
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "فشل في كشف القيمة. تحقق من اتصال إضافة Nostr الخاصة بك.",
     "searchHelp": {
@@ -1198,9 +1198,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "ذكاء اصطناعي من Maple",
-      "description": "تكوين استدلال Maple",
-      "hint": "Enclave هو Maple فقط لاستدلال LLM. قم بتكوين إعدادات نموذج/API لـ Maple هنا. تتطلب التغييرات إعادة التشغيل."
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "معالجة النصوص",
@@ -1301,19 +1301,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "خدمة الذكاء الاصطناعي",
-      "description": "مزود LLM (Maple فقط)",
-      "hint": "Maple هي القيمة المدعومة الوحيدة. يظل هذا المفتاح للتوافق."
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "اسم النموذج",
-      "description": "اسم/معرف النموذج",
-      "hint": "معرف نموذج Maple المراد استخدامه (مثل: \"kimi-k2.5\")."
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "نقطة نهاية API",
-      "description": "عنوان URL الأساسي لطلبات API",
-      "hint": "عنوان URL الأساسي لـ Maple API. الافتراضي: http://maple-proxy:8080/v1."
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "أجزاء السياق",
@@ -1391,9 +1391,9 @@
       "hint": "عنوان URL العام حيث يصل المستخدمون إلى التطبيق. يُستخدم لإنشاء روابط سحرية."
     },
     "LLM_API_KEY": {
-      "label": "مفتاح API",
-      "description": "مفتاح Maple API (سري)",
-      "hint": "يتوافق مع MAPLE_API_KEY. اتركه فارغًا لمسح التجاوز واستخدام خيار .env الاحتياطي."
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "عنوان URL للنطاق الفرعي للوحة الإدارة (اختياري)",
@@ -1775,7 +1775,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "اختبار الرابط السحري وتدفقات مصادقة Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "اختبار تحديد المعدل عن طريق إرسال طلبات سريعة إلى نقاط النهاية ذات المعدل المحدود.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "اختبار تدفق إنشاء المستخدمين مع حقول ديناميكية بناءً على نوع المستخدم.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "يختبر الاتصال بخدمة Maple LLM.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "مسار RAG الكامل: تضمين ← بحث ← استرجاع ← توليد.",
       "this_is_where_the_magic_happens_e98c18": "— هذا هو المكان الذي يحدث فيه السحر:",
       "toggle_theme_9b0eaf": "تبديل السمة",

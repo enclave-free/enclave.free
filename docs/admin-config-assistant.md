@@ -42,14 +42,14 @@ Defense-in-depth:
 - Full chat admin mode: `frontend/src/pages/ChatPage.tsx`
 - Shares the same chat send runtime as `ChatPage`:
   - `frontend/src/utils/llmChat.ts` (`sendLlmChatWithUnifiedTools`)
-- Transport: uses `POST /llm/chat` with:
+- Transport: sends the normal public `POST /llm/chat` request to the Gateway-facing API base. Gateway routes this request to Sage; direct Python `/llm/chat` and `/session-defaults` calls tombstone with `410 Gone` in the hard-cut prototype.
   - `tools` (same admin-visible tool IDs as full chat: `web-search`, `db-query`, `admin-config`)
   - `admin-config` admin-only Sage runtime tool (enables scoped config context + change-set workflow)
   - `tool_context` only for trusted client-executed context, such as decrypted DB rows
   - `client_executed_tools` (explicitly communicates any tools already run client-side)
 
 Tool defaults:
-- Reads `/session-defaults` and applies `web_search_enabled` default on load (same default source as full chat).
+- Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
 - In current frontend behavior, admin `/chat` uses this assistant pipeline (runtime tools + changeset review/apply) and does not use document-scope Retrieval mode.
 
 Sidebar behavior:

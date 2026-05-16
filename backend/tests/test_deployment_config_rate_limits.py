@@ -101,6 +101,15 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertIn("SIMULATE_USER_AUTH must be disabled in production", body["errors"])
         self.assertIn("SIMULATE_ADMIN_AUTH must be disabled in production", body["errors"])
 
+    def test_llm_provider_rejects_maple_compatibility_label(self) -> None:
+        response = self.client.put(
+            "/admin/deployment/config/LLM_PROVIDER",
+            json={"value": "maple"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], 'LLM_PROVIDER only supports "sage"')
+
 
 if __name__ == "__main__":
     unittest.main()

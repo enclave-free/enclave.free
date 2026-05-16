@@ -507,7 +507,7 @@
       "compact": "Компактний",
       "expand": "Розгорнути",
       "shareSecretsTitle": "Поділитися секретними змінними середовища",
-      "shareSecretsHint": "Вимкнено за замовчуванням. Спочатку увімкніть інструмент конфігурації. Якщо увімкнено, секретні значення конфігурації розгортання розкриваються на стороні клієнта та надсилаються до Maple.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Чутливо",
       "emptyPrompt": "Ставте запитання про будь-яку адмін-конфігурацію. Якщо хочете, щоб помічник запропонував і застосував зміни, попросіть його додати JSON change set.",
       "pendingChanges": "Відкладені зміни",
@@ -987,19 +987,19 @@
       "usersToMigrate": "Користувачів для міграції",
       "warning": "Це розширена операція. Неправильна міграція може заблокувати вам доступ до зашифрованих даних. Продовжуйте лише якщо розумієте наслідки."
     },
-    "leaveEmptyForLlmApiKey": "Залиште порожнім, щоб очистити перевизначення та використовувати запасний варіант MAPLE_API_KEY із .env.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — ваш ключ Maple API. Відповідає MAPLE_API_KEY.",
-      "apiKeyLabel": "Ключ Maple API",
-      "ariaLabel": "Довідка з конфігурації Maple LLM",
-      "exampleConfig": "Приклад конфігурації",
-      "goToPage": "Перейти на сторінку",
-      "mapleExtra": "Встановіть LLM_API_KEY як ваш ключ Maple з {{mapleSignupUrl}}. Ключі LLM_* відповідають псевдонімам MAPLE_*.",
-      "mapleHint": "Maple є стандартним LLM-бек-ендом для Enclave.",
-      "modelField": "LLM_MODEL — ідентифікатор моделі Maple (наприклад: kimi-k2.5).",
-      "overviewDesc": "Enclave використовує Maple як стандартний сервіс LLM. Maple надає API, сумісний з OpenAI.",
-      "overviewTitle": "Огляд Maple LLM",
-      "providerField": "LLM_PROVIDER — зафіксовано на \"maple\" для сумісності."
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "Не вдалося показати значення. Перевірте підключення розширення Nostr.",
     "searchHelp": {
@@ -1208,9 +1208,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "Налаштувати висновок Maple",
-      "hint": "Enclave підтримує лише Maple для LLM-висновку. Налаштуйте модель Maple/налаштування API тут. Зміни вимагають перезапуску."
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "Обробка тексту",
@@ -1311,19 +1311,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "Сервіс ШІ",
-      "description": "Провайдер LLM (тільки Maple)",
-      "hint": "Maple є єдиним підтримуваним значенням. Цей ключ залишається для сумісності."
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "Назва моделі",
-      "description": "Назва/ідентифікатор моделі",
-      "hint": "Ідентифікатор моделі Maple для використання (наприклад, \"kimi-k2.5\")."
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "API-ендпоінт",
-      "description": "Базовий URL для API-запитів",
-      "hint": "Базовий URL-адреса Maple API. За замовчуванням: http://maple-proxy:8080/v1."
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "Фрагменти контексту",
@@ -1401,9 +1401,9 @@
       "hint": "Публічний URL, за яким користувачі отримують доступ до додатку. Використовується для генерації магічних посилань."
     },
     "LLM_API_KEY": {
-      "label": "API-ключ",
-      "description": "Ключ Maple API (секретний)",
-      "hint": "Відповідає MAPLE_API_KEY. Залиште порожнім, щоб очистити перевизначення та використовувати запасний варіант із .env."
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "URL-адреса субдомену панелі адміністратора (необов’язково)",
@@ -1785,7 +1785,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Перевірте чарівне посилання та потоки автентифікації Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Перевірте обмеження швидкості, надсилаючи швидкі запити до кінцевих точок з обмеженням швидкості.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Протестуйте потік створення користувачів з динамічними полями на основі типу користувача.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Перевіряє підключення до сервісу Maple LLM.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Повний конвеєр RAG: вбудовування → пошук → отримання → генерація.",
       "this_is_where_the_magic_happens_e98c18": "— Тут відбувається диво:",
       "toggle_theme_9b0eaf": "Змінити тему",

@@ -14,7 +14,7 @@ Compared with the original Sage hard-cut prototype:
 - Sage now verifies Enclave bearer and cookie sessions natively
 - Sage now enforces CSRF for its own unsafe cookie-authenticated routes
 - Sage now stores Agent Settings and per-user-type overrides in Postgres
-- Sage no longer depends on `POST /internal/agent/auth-context`
+- Sage now resolves actors natively instead of asking Python for auth context
 
 The public route surface is unchanged:
 
@@ -85,11 +85,10 @@ Active internal endpoints used by Sage on this branch:
 
 The endpoint shapes are documented in [internal-agent-contract.md](internal-agent-contract.md).
 
-Compatibility endpoints still exist in Python, but they are no longer part of the main Sage call graph:
+Removed or tombstoned Python compatibility endpoints are no longer part of the Sage call graph:
 
-- `GET /internal/agent/session-defaults`
-- `GET /internal/agent/ai-config/effective`
-- `POST /internal/agent/auth-context`
+- `GET /internal/agent/session-defaults` returns `410 Gone` with `internal_contract_removed`
+- `GET /internal/agent/ai-config/effective` returns `410 Gone` with `internal_contract_removed`
 
 The important point is that Sage now resolves the actor itself and only asks Python for Enclave Control Plane facts and actions.
 
@@ -189,4 +188,4 @@ Best remaining productization tasks:
 - decide whether Python Deployment Settings should eventually control Sage runtime env too
 - define whether deleting a public query-session record should also perform Session Memory Deletion
 - add browser-level automated tests for cookie auth + CSRF on Sage-owned routes
-- remove or clearly quarantine legacy Python AI implementations that are no longer public
+- keep Python public Agent Runtime tombstones small and explicit so accidental direct calls fail closed

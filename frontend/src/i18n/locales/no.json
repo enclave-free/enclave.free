@@ -498,7 +498,7 @@
       "compact": "Kompakt",
       "expand": "Utvid",
       "shareSecretsTitle": "Del hemmelige miljøvariabler",
-      "shareSecretsHint": "Av som standard. Aktiver konfigurasjonsverktøyet først. Når aktivert, blir hemmelige distribusjonskonfigurasjonsverdier avslørt på klientsiden og sendt til Maple.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Sensitiv",
       "emptyPrompt": "Still spørsmål om hvilken som helst admin-konfigurasjon. Hvis du vil at assistenten skal foreslå og bruke endringer, be den inkludere et JSON change set.",
       "pendingChanges": "Ventende endringer",
@@ -978,19 +978,19 @@
       "usersToMigrate": "Brukere å migrere",
       "warning": "Dette er en avansert operasjon. Feil migrering kan stenge deg ute fra krypterte data. Fortsett bare hvis du forstår konsekvensene."
     },
-    "leaveEmptyForLlmApiKey": "La stå tomt for å fjerne overstyring og bruke .env MAPLE_API_KEY som reserve.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — din Maple API-nøkkel. Tilsvarer MAPLE_API_KEY.",
-      "apiKeyLabel": "Maple API-nøkkel",
-      "ariaLabel": "Hjelp for Maple LLM-konfigurasjon",
-      "exampleConfig": "Eksempelkonfigurasjon",
-      "goToPage": "Gå til side",
-      "mapleExtra": "Sett LLM_API_KEY til Maple-nøkkelen din fra {{mapleSignupUrl}}. LLM_*-nøkler tilsvarer MAPLE_*-aliaser.",
-      "mapleHint": "Maple er den eneste LLM-backend for Enclave.",
-      "modelField": "LLM_MODEL — Maple-modellidentifikator (for eksempel: kimi-k2.5).",
-      "overviewDesc": "Enclave bruker Maple som sin eneste støttede LLM-tjeneste. Maple tilbyr et OpenAI-kompatibelt API under panseret.",
-      "overviewTitle": "Oversikt over Maple LLM",
-      "providerField": "LLM_PROVIDER — fastsatt til \"maple\" for kompatibilitet."
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "Kunne ikke avsløre verdien. Sjekk tilkoblingen til Nostr-utvidelsen din.",
     "searchHelp": {
@@ -1199,9 +1199,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "Konfigurer Maple-inferens",
-      "hint": "Enclave bruker kun Maple for LLM-inferens. Konfigurer Maple-modell/API-innstillinger her. Endringer krever omstart."
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "Tekstbehandling",
@@ -1302,19 +1302,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "AI-tjeneste",
-      "description": "LLM-leverandør (kun Maple)",
-      "hint": "Maple er den eneste støttede verdien. Denne nøkkelen beholdes for kompatibilitet."
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "Modellnavn",
-      "description": "Modellnavn/identifikator",
-      "hint": "Maple-modellidentifikatoren som skal brukes (f.eks. \"kimi-k2.5\")."
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "API-endepunkt",
-      "description": "Basis-URL for API-forespørsler",
-      "hint": "Maple API base-URL. Standard: http://maple-proxy:8080/v1."
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "Kontekstfragmenter",
@@ -1392,9 +1392,9 @@
       "hint": "Den offentlige URL-en der brukere får tilgang til appen. Brukes til å generere magiske lenker."
     },
     "LLM_API_KEY": {
-      "label": "API-nøkkel",
-      "description": "Maple API-nøkkel (hemmelig)",
-      "hint": "Tilsvarer MAPLE_API_KEY. La stå tomt for å fjerne overstyring og bruke .env som reserve."
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "URL for administratorpanel-underdomene (valgfritt)",
@@ -1776,7 +1776,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Test magisk lenke og Nostr-autentiseringsflyter.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Test hastighetsbegrensning ved å sende raske forespørsler til hastighetsbegrensede endepunkter.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Test arbeidsflyten for brukeroppretting med dynamiske felt basert på brukertype.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tester tilkoblingen til Maple LLM-tjenesten.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Den komplette RAG-pipelinen: bygge inn → søke → hente → generere.",
       "this_is_where_the_magic_happens_e98c18": "— Her skjer magien:",
       "toggle_theme_9b0eaf": "Bytt tema",

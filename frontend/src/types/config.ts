@@ -649,8 +649,8 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
   return {
     LLM_PROVIDER: {
       label: t('deploymentConfigItems.LLM_PROVIDER.label', 'Model Provider'),
-      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'Model Provider compatibility label'),
-      hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Use "sage" for this prototype. Legacy "maple" is retained only for compatibility.'),
+      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'Python-side Model Provider label'),
+      hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Use "sage" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata.'),
     },
     LLM_MODEL: {
       label: t('deploymentConfigItems.LLM_MODEL.label', 'Model Name'),

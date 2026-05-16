@@ -497,7 +497,7 @@
       "compact": "Kompakt",
       "expand": "Genişlet",
       "shareSecretsTitle": "Gizli ortam değişkenlerini paylaş",
-      "shareSecretsHint": "Varsayılan olarak kapalıdır. Önce Yapılandırma aracını etkinleştirin. Etkinleştirildiğinde, gizli dağıtım yapılandırma değerleri istemci tarafında gösterilir ve Maple'a gönderilir.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Hassas",
       "emptyPrompt": "Herhangi bir yönetici yapılandırması hakkında soru sorun. Asistanın değişiklik önermesini ve uygulamasını istiyorsanız, JSON change set eklemesini isteyin.",
       "pendingChanges": "Bekleyen değişiklikler",
@@ -977,19 +977,19 @@
       "usersToMigrate": "Taşınacak kullanıcılar",
       "warning": "Bu gelişmiş bir işlemdir. Yanlış taşıma, şifrelenmiş verilere erişiminizi kaybetmenize neden olabilir. Yalnızca sonuçlarını anlıyorsanız devam edin."
     },
-    "leaveEmptyForLlmApiKey": "Geçersiz kılmayı temizlemek ve .env MAPLE_API_KEY yedeklemesini kullanmak için boş bırakın.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — Maple API anahtarınız. MAPLE_API_KEY ile eşleşir.",
-      "apiKeyLabel": "Maple API Anahtarı",
-      "ariaLabel": "Maple LLM yapılandırma yardımı",
-      "exampleConfig": "Örnek yapılandırma",
-      "goToPage": "Sayfaya git",
-      "mapleExtra": "LLM_API_KEY'i {{mapleSignupUrl}} adresindeki Maple anahtarınıza ayarlayın. LLM_* anahtarları MAPLE_* takma adlarına eşleşir.",
-      "mapleHint": "Maple, Enclave için standart LLM arka ucudur.",
-      "modelField": "LLM_MODEL — Maple model tanımlayıcısı (örneğin: kimi-k2.5).",
-      "overviewDesc": "Enclave, standart LLM hizmeti olarak Maple'ı kullanır. Maple, kaputun altında OpenAI uyumlu bir API sağlar.",
-      "overviewTitle": "Maple LLM Genel Bakış",
-      "providerField": "LLM_PROVIDER — uyumluluk için \"maple\" olarak sabitlenmiştir."
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "Değer gösterilemedi. Nostr uzantısı bağlantınızı kontrol edin.",
     "searchHelp": {
@@ -1198,9 +1198,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "Maple çıkarımını yapılandırın",
-      "hint": "Enclave, LLM çıkarımı için yalnızca Maple'ı kullanır. Maple modeli/API ayarlarını buradan yapılandırın. Değişiklikler yeniden başlatma gerektirir."
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "Metin İşleme",
@@ -1301,19 +1301,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "Yapay Zeka Servisi",
-      "description": "LLM sağlayıcısı (yalnızca Maple)",
-      "hint": "Maple tek desteklenen değerdir. Bu anahtar uyumluluk için kalır."
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "Model Adı",
-      "description": "Model adı/tanımlayıcısı",
-      "hint": "Kullanılacak Maple model tanımlayıcısı (örn. \"kimi-k2.5\")."
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "API Uç Noktası",
-      "description": "API istekleri için temel URL",
-      "hint": "Maple API temel URL'si. Varsayılan: http://maple-proxy:8080/v1."
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "Bağlam Parçaları",
@@ -1391,9 +1391,9 @@
       "hint": "Kullanıcıların uygulamaya eriştiği genel URL. Sihirli bağlantılar oluşturmak için kullanılır."
     },
     "LLM_API_KEY": {
-      "label": "API Anahtarı",
-      "description": "Maple API anahtarı (gizli)",
-      "hint": "MAPLE_API_KEY ile eşleşir. Geçersiz kılmayı temizlemek ve .env yedeklemesini kullanmak için boş bırakın."
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "Yönetici paneli alt alan adı URL'si (isteğe bağlı)",
@@ -1775,7 +1775,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Sihirli bağlantı ve Nostr kimlik doğrulama akışlarını test edin.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Oran sınırlı uç noktalara hızlı istekler göndererek oran sınırlamasını test edin.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Kullanıcı türüne göre dinamik alanlarla kullanıcı oluşturma akışını test edin.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Maple LLM hizmetine bağlantıyı test eder.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Tam RAG boru hattı: göm → ara → al → oluştur.",
       "this_is_where_the_magic_happens_e98c18": "— Sihrin gerçekleştiği yer burası:",
       "toggle_theme_9b0eaf": "Temayı değiştir",

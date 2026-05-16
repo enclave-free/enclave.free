@@ -101,6 +101,16 @@ def _require_internal_token(x_internal_agent_token: Optional[str] = Header(None)
         raise HTTPException(status_code=403, detail="Invalid internal agent token")
 
 
+def _raise_removed_internal_contract() -> None:
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "internal_contract_removed",
+            "message": "This endpoint is not part of the active Sage-to-Python contract.",
+        },
+    )
+
+
 def _serialize_ai_config_value(value_type: str, value: str):
     if value_type == "number":
         try:
@@ -341,6 +351,7 @@ async def document_access(user_type_id: Optional[int] = None):
 
 @router.get("/session-defaults", dependencies=[Depends(_require_internal_token)])
 async def internal_session_defaults(user_type_id: Optional[int] = None):
+    _raise_removed_internal_contract()
     defaults = get_session_defaults(user_type_id)
     default_docs = (
         database.get_active_documents_for_user_type(user_type_id)
@@ -369,6 +380,7 @@ async def admin_db_query(request: InternalAdminDbQueryRequest):
 
 @router.get("/ai-config/effective", response_model=InternalAIConfigResponse, dependencies=[Depends(_require_internal_token)])
 async def effective_ai_config(user_type_id: Optional[int] = None) -> InternalAIConfigResponse:
+    _raise_removed_internal_contract()
     effective = database.get_effective_ai_config(user_type_id)
     prompt_sections: dict[str, object] = {}
     parameters: dict[str, object] = {}

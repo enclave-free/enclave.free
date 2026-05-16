@@ -245,20 +245,14 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertNotIn("secret", serialized)
         self.assertNotIn("Deleted user conversation content", serialized)
 
-    def test_admin_subject_binding_cleanup_is_not_reported_as_conversation_deletion(self) -> None:
+    def test_user_deletion_without_conversations_reports_no_conversation_deletion(self) -> None:
         self.query._sessions.clear()
-        self.main.admin_conversation_states["admin-session"] = {
-            "subject_user_id": self.user_id,
-            "pending_user_memory_change": {"action": "create"},
-        }
 
         response = self.client.delete(f"/users/{self.user_id}")
 
         self.assertEqual(response.status_code, 200)
         actions = {result["action"]: result for result in response.json()["deletion"]["results"]}
         self.assertEqual(actions["delete_conversations"]["status"], "skipped")
-        self.assertNotIn("subject_user_id", self.main.admin_conversation_states["admin-session"])
-        self.assertNotIn("pending_user_memory_change", self.main.admin_conversation_states["admin-session"])
 
     def test_user_deletion_requires_authentication(self) -> None:
         self.main.app.dependency_overrides.clear()

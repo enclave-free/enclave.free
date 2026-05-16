@@ -102,27 +102,6 @@ class InstanceStatusTest(unittest.TestCase):
         self.assertFalse(protected["protected_inference_available"])
         self.assertEqual(protected["reason"], "LLM_API_KEY not configured")
 
-    def test_degraded_admin_repair_blocks_normal_chat_before_generation(self) -> None:
-        class FakeProvider:
-            name = "sage"
-
-            def health_check(self) -> bool:
-                return True
-
-            def complete(self, *_args, **_kwargs):
-                raise AssertionError("chat generation should not run in degraded admin-repair mode")
-
-        self.inference_repair.mark_startup_verification_unavailable(
-            status="missing",
-            reason="LLM_API_KEY not configured",
-        )
-        self.main.get_sage_provider = lambda: FakeProvider()
-
-        response = self.client.post("/llm/chat", json={"message": "hello"})
-
-        self.assertEqual(response.status_code, 503)
-        self.assertIn("Protected inference is unavailable", response.json()["detail"])
-
     def test_degraded_admin_repair_keeps_diagnostics_available(self) -> None:
         class FakeProvider:
             name = "sage"

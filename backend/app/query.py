@@ -10,42 +10,21 @@ Key principles:
 - Cite sources accurately
 """
 
-import os
 import re
 import logging
 import threading
-import uuid
-import json
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-
-import httpx
 
 import auth
 import ingest_db
-from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace, build_live_trace_status
-from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
-from data_deletion import (
-    deletion_target_failed,
-    deletion_target_skipped,
-    deletion_target_succeeded,
-    summarize_deletion_results,
-)
-from store import (
-    embed_texts,
-    COLLECTION_NAME,
-    QDRANT_HOST,
-    QDRANT_PORT,
-)
+from conversation_trace import ConversationTrace
+from protected_inference import ProtectedInferenceBlocked, require_current_inference_verification
 from llm import get_sage_provider
 from utils import sanitize_profile_value
-from rate_limit import RateLimiter
-from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
 logger = logging.getLogger("enclave.query")
 
@@ -59,70 +38,25 @@ def _require_protected_inference_or_503(context: str) -> dict:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-# Configuration
-TOP_K_VECTORS = int(os.getenv("RAG_TOP_K", "8"))  # More context for nuance
-GRAPH_HOPS = int(os.getenv("RAG_GRAPH_HOPS", "2"))
-QUERY_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_QUERY_PER_MINUTE", "90"))
+def _raise_sage_route_tombstone() -> None:
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "sage_route_required",
+            "message": "Sage owns this public Agent Runtime route. Use the Gateway so this request is routed to Sage.",
+        },
+    )
+
 
 # Simple in-memory session store (replace with Redis/DB for production)
 _sessions: dict[str, dict] = {}
 _sessions_lock = threading.RLock()
 
 
-def _rate_limit_key(request: Request) -> str:
-    """Prefer auth identity for rate limiting; fallback to client IP."""
-    return _stable_rate_limit_key(request)
-
-
-query_limiter = RateLimiter(
-    limit=QUERY_RATE_LIMIT_PER_MINUTE,
-    window_seconds=60,
-    key_func=_rate_limit_key,
-)
-
-
-def _sse_event(event: str, data: dict) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
-
-
-class Message(BaseModel):
-    role: str  # "user" or "assistant"
-    content: str
-    timestamp: Optional[str] = None
-
-
-class QueryRequest(BaseModel):
-    question: str
-    session_id: Optional[str] = None  # For conversation continuity
-    top_k: Optional[int] = None
-    graph_hops: Optional[int] = None
-    # Optional context the user provides upfront
-    jurisdiction: Optional[str] = None  # e.g., "California", "Germany"
-    situation_details: Optional[str] = None  # Any facts they share
-    tools: list[str] = []  # Tool IDs enabled for this request
-    job_ids: Optional[list[str]] = None  # Filter to specific documents by job ID
-
-
-class QueryResponse(BaseModel):
-    answer: str
-    message_id: str
-    session_id: str  # Return for continuity
-    sources: list[dict]
-    graph_context: dict
-    clarifying_questions: list[str]  # Questions we need answered
-    search_term: Optional[str] = None  # Auto-search term (if search tool enabled)
-    # Debug/trace info
-    context_used: str  # The actual context passed to LLM (for debugging)
-    temperature: float  # Temperature used
-    trace: Optional[ConversationTrace] = None
-    inference_verification: Optional[dict] = None
-
-
-@router.post("", response_model=QueryResponse)
+@router.post("")
 async def query(
-    request: QueryRequest,
+    request: Request,
     user: dict = Depends(auth.require_admin_or_approved_user),
-    _: None = Depends(query_limiter),
 ):
     """
     Retrieval query with session support.
@@ -134,303 +68,16 @@ async def query(
     4. Send context + history + query to the Model Provider
     5. Return answer with clarifying questions if needed
     """
-    from ai_config import get_llm_parameters
-
-    question = request.question
-
-    # Get user_type_id from authenticated user for per-type config
-    user_type_id = user.get("user_type_id")
-
-    llm_params = get_llm_parameters(user_type_id=user_type_id) or {}
-
-    # Get top_k from config if not specified in request
-    if request.top_k is not None:
-        top_k = request.top_k
-    else:
-        try:
-            top_k = int(llm_params.get("top_k", TOP_K_VECTORS))
-        except (ValueError, TypeError):
-            top_k = TOP_K_VECTORS
-    hops = min(request.graph_hops or GRAPH_HOPS, 2)
-    
-    # Session management
-    session_id = request.session_id or str(uuid.uuid4())
-    session = _get_or_create_session(session_id, user)
-    session_lock = _session_lock(session)
-    
-    with session_lock:
-        # Add user context if provided
-        if request.jurisdiction and not session.get("jurisdiction"):
-            session["jurisdiction"] = request.jurisdiction
-        if request.situation_details:
-            session["situation_details"] = session.get("situation_details", "") + "\n" + request.situation_details
-
-        # Add user message to history
-        session["messages"].append({
-            "role": "user",
-            "content": question,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-    
-    logger.info(f"RAG query (session={session_id[:8]}): '{question[:50]}...'")
-    
-    try:
-        # Import database module once at the start of the function
-        import database
-
-        # 1. Embed the query (include conversation context for better retrieval)
-        with session_lock:
-            search_query = _build_search_query(question, session)
-        query_embedding = embed_texts([f"query: {search_query}"])[0]
-
-        # 2. Build filter for document access control
-        # Admins can search all documents; non-admin users are restricted to their allowed documents
-        search_filter = None
-        is_admin_user = user.get("type") == "admin"
-
-        if is_admin_user:
-            # Admins: only filter if they explicitly request specific job_ids
-            if request.job_ids and len(request.job_ids) > 0:
-                search_filter = {
-                    "should": [
-                        {"key": "job_id", "match": {"value": job_id}}
-                        for job_id in request.job_ids
-                    ]
-                }
-                logger.debug(f"Admin filtering search to {len(request.job_ids)} documents")
-        else:
-            # Non-admin users: always filter to their allowed documents
-            if user_type_id is None:
-                # No user type means no document access for non-admin users.
-                # Avoid querying availability with None to prevent global access.
-                available_job_ids: set[str] = set()
-            else:
-                available_job_ids = set(database.get_available_documents_for_user_type(user_type_id))
-
-            if request.job_ids and len(request.job_ids) > 0:
-                # User requested specific documents - intersect with allowed
-                allowed_job_ids = [jid for jid in request.job_ids if jid in available_job_ids]
-            else:
-                # No specific request - use all allowed documents for their user type
-                allowed_job_ids = list(available_job_ids)
-
-            if not allowed_job_ids:
-                # No accessible documents - return zero results
-                logger.warning(f"User has no accessible documents (user_type_id={user_type_id})")
-                search_filter = {"must": [{"key": "job_id", "match": {"value": "__impossible__"}}]}
-            else:
-                # Build OR filter: match any of the allowed job_ids
-                search_filter = {
-                    "should": [
-                        {"key": "job_id", "match": {"value": job_id}}
-                        for job_id in allowed_job_ids
-                    ]
-                }
-                logger.debug(f"Filtering search to {len(allowed_job_ids)} documents for user_type_id={user_type_id}")
-
-        # 3. Vector search in Qdrant
-        qdrant_url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/collections/{COLLECTION_NAME}/points/search"
-        search_payload = {
-            "vector": query_embedding,
-            "limit": top_k,
-            "with_payload": True,
-        }
-        if search_filter:
-            search_payload["filter"] = search_filter
-
-        search_response = httpx.post(
-            qdrant_url,
-            json=search_payload,
-            timeout=30.0,
-        )
-        search_response.raise_for_status()
-        search_results = search_response.json().get("result", [])
-        
-        # Extract sources and chunk texts
-        sources, entity_names, chunk_texts = _process_search_results(search_results)
-
-        # Graph context no longer used - simple vector search only
-        graph_context = {"actions": [], "risks": [], "guidance": [], "warnings": [], "resources": [], "preconditions": []}
-
-        # 4. Build context and call LLM with context-aware prompt
-        context = _build_context(chunk_texts, sources)
-        with session_lock:
-            session["_last_sources"] = sources  # For dynamic citation
-            llm_session = _session_public_snapshot(session)
-
-        # Get user profile context for chat personalization (unencrypted fields only)
-        # Skip for dev mode (id=-1) and admin accounts (no user profile in users table)
-        user_profile_context = None
-        user_memory_context = None
-        user_id = user.get("id")
-        if user_id and user_id != -1 and user.get("type") != "admin":
-            user_profile_context = database.get_user_chat_context_values(
-                user_id=user_id,
-                user_type_id=user_type_id
-            )
-            # Only pass if there's actual data
-            if not user_profile_context:
-                user_profile_context = None
-            user_memory_context = database.list_active_user_memories(user_id, limit=20)
-            if not user_memory_context:
-                user_memory_context = None
-
-        answer, clarifying_questions, full_prompt, search_term, inference_record = _call_llm_contextual(
-            question, context, llm_session, tools=request.tools, user_type_id=user_type_id,
-            user_profile_context=user_profile_context,
-            user_memory_context=user_memory_context,
-        )
-        
-        message_id = f"msg_{uuid.uuid4().hex}"
-        trace = build_conversation_trace(
-            actor_type=user.get("type", "user"),
-            tools_used=[],
-            retrieval=[
-                RetrievalTrace(
-                    source_type=str(source.get("type") or "document"),
-                    title=str(source.get("source_file") or source.get("chunk_id") or "Retrieved source"),
-                    summary="Retrieved matching source context.",
-                    score=source.get("score"),
-                )
-                for source in sources
-            ],
-        )
-
-        with session_lock:
-            session["facts_gathered"].update(llm_session.get("facts_gathered", {}))
-            append_assistant_message_with_trace(
-                session,
-                content=answer,
-                message_id=message_id,
-                trace=trace,
-            )
-
-            # Run dedicated fact extraction after response (more reliable than in-response tags)
-            session["facts_gathered"] = _extract_facts_from_conversation(session)
-
-            # Update jurisdiction from extracted facts if we got location/country
-            if not session.get("jurisdiction"):
-                facts = session.get("facts_gathered", {})
-                if facts.get("location"):
-                    session["jurisdiction"] = facts["location"]
-
-            # Track what we still need to know
-            if clarifying_questions:
-                session["pending_questions"] = clarifying_questions
-        
-        # Get actual temperature for response (same logic as _call_llm_contextual)
-        try:
-            actual_temperature = float(llm_params.get("temperature", 0.1))
-        except (ValueError, TypeError):
-            actual_temperature = 0.1
-
-        logger.info(f"RAG complete. Answer: {len(answer)} chars, {len(clarifying_questions)} clarifying Qs, search_term={search_term}, facts={session.get('facts_gathered', {})}")
-
-        # Redact user profile and memory sections from debug output to avoid exposing sensitive data
-        # Use line-anchored pattern to avoid stopping at === inside values
-        debug_prompt = re.sub(
-            r'^=== USER PROFILE ===.*?(?=^===|\Z)',
-            '=== USER PROFILE ===\n[REDACTED]\n\n',
-            full_prompt,
-            flags=re.MULTILINE | re.DOTALL
-        )
-        debug_prompt = re.sub(
-            r'^=== USER MEMORY ===.*?(?=^===|\Z)',
-            '=== USER MEMORY ===\n[REDACTED]\n\n',
-            debug_prompt,
-            flags=re.MULTILINE | re.DOTALL
-        )
-
-        return QueryResponse(
-            answer=answer,
-            message_id=message_id,
-            session_id=session_id,
-            sources=sources,
-            graph_context=graph_context,
-            clarifying_questions=clarifying_questions,
-            search_term=search_term,  # Auto-search trigger (if web-search tool enabled)
-            context_used=debug_prompt,  # For debugging - redacted to protect user data
-            temperature=actual_temperature,
-            trace=trace,
-            inference_verification=inference_verification_reference(inference_record),
-        )
-        
-    except Exception as e:
-        logger.error(f"RAG query failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    _raise_sage_route_tombstone()
 
 
 @router.post("/stream")
 async def query_stream(
-    request: QueryRequest,
+    request: Request,
     user: dict = Depends(auth.require_admin_or_approved_user),
-    _: None = Depends(query_limiter),
 ):
     """Streaming Retrieval Conversation endpoint with final trace events."""
-
-    async def event_stream():
-        try:
-            response_payload = await query(request=request, user=user, _=None)
-            yield _sse_event(
-                "assistant_message_started",
-                {
-                    "message_id": response_payload.message_id,
-                    "session_id": response_payload.session_id,
-                },
-            )
-            if response_payload.answer:
-                trace_status = build_live_trace_status(response_payload.trace)
-                if trace_status:
-                    yield _sse_event(
-                        "trace_status",
-                        {
-                            "message_id": response_payload.message_id,
-                            "status": trace_status,
-                        },
-                    )
-                yield _sse_event(
-                    "answer_delta",
-                    {
-                        "message_id": response_payload.message_id,
-                        "delta": response_payload.answer,
-                    },
-                )
-            if response_payload.trace is not None:
-                yield _sse_event(
-                    "trace_final",
-                    {
-                        "message_id": response_payload.message_id,
-                        "trace": response_payload.trace.model_dump(),
-                    },
-                )
-            yield _sse_event(
-                "done",
-                {
-                    "message_id": response_payload.message_id,
-                    "session_id": response_payload.session_id,
-                    "search_term": response_payload.search_term,
-                    "inference_verification": response_payload.inference_verification,
-                },
-            )
-        except HTTPException as exc:
-            yield _sse_event(
-                "error",
-                {
-                    "status_code": exc.status_code,
-                    "detail": exc.detail,
-                },
-            )
-        except Exception as exc:
-            logger.exception("Streaming Retrieval query failed")
-            yield _sse_event(
-                "error",
-                {
-                    "status_code": 500,
-                    "detail": str(exc),
-                },
-            )
-
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    _raise_sage_route_tombstone()
 
 
 def _session_owner_for_user(user: dict) -> tuple[str, str]:
@@ -945,111 +592,10 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 @router.get("/session/{session_id}")
 async def get_session(session_id: str, user: dict = Depends(auth.require_admin_or_approved_user)):
     """Get session history and state. Requires auth."""
-    with _sessions_lock:
-        if session_id not in _sessions:
-            raise HTTPException(status_code=404, detail="Session not found")
-        session = _sessions[session_id]
-        if not _can_access_session(user, session):
-            raise HTTPException(status_code=403, detail="Session access denied")
-        with _session_lock(session):
-            return _session_public_snapshot(session)
+    _raise_sage_route_tombstone()
 
 
 @router.delete("/session/{session_id}")
 async def delete_session(session_id: str, user: dict = Depends(auth.require_admin_or_approved_user)):
     """Delete a session. Requires auth."""
-    deleted_session = None
-    with _sessions_lock:
-        if session_id in _sessions:
-            session = _sessions[session_id]
-            if not _can_access_session(user, session):
-                raise HTTPException(status_code=403, detail="Session access denied")
-            _sessions[session_id] = _freeze_session_snapshot(session)
-            deleted_session = _sessions.pop(session_id)
-    if deleted_session is None:
-        deletion = summarize_deletion_results([
-            deletion_target_skipped(
-                target_kind="conversation",
-                target_id=session_id,
-                action="delete_session_record",
-                detail="Conversation record was already absent.",
-            )
-        ])
-        import lifecycle
-        lifecycle.audit_lifecycle_deletion(
-            config_key=f"conversation:{session_id}:delete",
-            changed_by=user.get("pubkey", str(user.get("id", "unknown"))),
-            workflow="delete_conversation",
-            target_id=session_id,
-            deletion=deletion,
-        )
-        return {"status": "deleted", "deletion": deletion}
-
-    import lifecycle
-
-    try:
-        session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(deleted_session)
-    except Exception as exc:
-        logger.warning(
-            "Failed to delete Session Memory for Conversation session_id=%s: %s",
-            session_id,
-            exc,
-            exc_info=True,
-        )
-        session_memory_deletion = summarize_deletion_results([
-            deletion_target_failed(
-                target_kind="session_memory",
-                target_id=session_id,
-                action="delete_session_memory",
-                detail=lifecycle.categorize_error(exc),
-                retryable=True,
-            )
-        ])
-    if session_memory_deletion["status"] != "succeeded":
-        try:
-            lifecycle.create_session_memory_tombstone(
-                session=deleted_session,
-                source="user_conversation_delete" if user.get("type") != "admin" else "admin_conversation_delete",
-                workflow="delete_conversation",
-                deletion=session_memory_deletion,
-            )
-        except Exception as exc:
-            logger.exception(
-                "Failed to create Session Memory deletion tombstone for session_id=%s",
-                session_id,
-            )
-            with _sessions_lock:
-                if session_id not in _sessions:
-                    restored_session = deepcopy(dict(deleted_session))
-                    restored_session["_lock"] = threading.RLock()
-                    _sessions[session_id] = restored_session
-            session_memory_deletion = summarize_deletion_results([
-                *session_memory_deletion.get("results", []),
-                deletion_target_failed(
-                    target_kind="deletion_tombstone",
-                    target_id=session_id,
-                    action="create_session_memory_tombstone",
-                    detail=lifecycle.categorize_error(exc),
-                    retryable=True,
-                ),
-            ])
-    session_memory_results = session_memory_deletion.get("results", [])
-    if not isinstance(session_memory_results, list):
-        session_memory_results = []
-    deletion = summarize_deletion_results([
-        deletion_target_succeeded(
-            target_kind="conversation",
-            target_id=session_id,
-            action="delete_session_record",
-            detail="Deleted active Conversation record.",
-        ),
-        *session_memory_results,
-    ])
-    lifecycle.audit_lifecycle_deletion(
-        config_key=f"conversation:{session_id}:delete",
-        changed_by=user.get("pubkey", str(user.get("id", "unknown"))),
-        workflow="delete_conversation",
-        target_id=session_id,
-        deletion=deletion,
-    )
-    return {"status": "deleted", "deletion": deletion}
+    _raise_sage_route_tombstone()

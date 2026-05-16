@@ -330,7 +330,7 @@
       "compact": "紧凑",
       "expand": "展开",
       "shareSecretsTitle": "共享机密环境变量",
-      "shareSecretsHint": "默认关闭。首先启用配置工具。启用后，秘密部署配置值将在客户端显示并发送到Maple。",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "敏感",
       "emptyPrompt": "你可以询问任何管理员配置问题。如果希望助手提出并应用更改，请要求其包含 JSON 变更集。",
       "pendingChanges": "待处理更改",
@@ -980,19 +980,19 @@
       "usersToMigrate": "待迁移用户",
       "warning": "这是一个高级操作。错误的迁移可能导致你无法访问加密数据。仅在你理解其后果时才继续。"
     },
-    "leaveEmptyForLlmApiKey": "留空以清除覆盖并使用 .env MAPLE_API_KEY 备用。",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — 您的 Maple API 密钥。映射到 MAPLE_API_KEY。",
-      "apiKeyLabel": "Maple API 密钥",
-      "ariaLabel": "Maple LLM 配置帮助",
-      "exampleConfig": "示例配置",
-      "goToPage": "前往页面",
-      "mapleExtra": "将 LLM_API_KEY 设置为您的 {{mapleSignupUrl}} 的 Maple 密钥。LLM_* 密钥映射到 MAPLE_* 别名。",
-      "mapleHint": "Maple 是 Enclave 的标准 LLM 后端。",
-      "modelField": "LLM_MODEL — Maple 模型标识符（例如：kimi-k2.5）。",
-      "overviewDesc": "Enclave 使用 Maple 作为其标准 LLM 服务。Maple 在底层提供 OpenAI 兼容的 API。",
-      "overviewTitle": "Maple LLM 概述",
-      "providerField": "LLM_PROVIDER — 为兼容性固定为 \"maple\"。"
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "显示值失败。请检查你的 Nostr 扩展连接。",
     "searchHelp": {
@@ -1201,9 +1201,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "配置 Maple 推理",
-      "hint": "Enclave 仅支持 Maple 进行 LLM 推理。在此处配置 Maple 模型/API 设置。更改需要重启。"
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "文本处理",
@@ -1304,19 +1304,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "AI 服务",
-      "description": "LLM 提供商（仅限 Maple）",
-      "hint": "Maple 是唯一支持的值。此密钥保留用于兼容性。"
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "模型名称",
-      "description": "模型名称/标识符",
-      "hint": "要使用的 Maple 模型标识符（例如：“kimi-k2.5”）。"
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "API 端点",
-      "description": "API 请求的基础 URL",
-      "hint": "Maple API 基础 URL。默认：http://maple-proxy:8080/v1。"
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "上下文块数",
@@ -1394,9 +1394,9 @@
       "hint": "用户访问应用的公开 URL。用于生成魔法链接。"
     },
     "LLM_API_KEY": {
-      "label": "API 密钥",
-      "description": "Maple API 密钥（秘密）",
-      "hint": "映射到 MAPLE_API_KEY。留空以清除覆盖并使用 .env 备用。"
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "管理面板子域名 URL（可选）",
@@ -1778,7 +1778,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "测试魔术链接和 Nostr 认证流程。",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "通过向受速率限制的端点发送快速请求来测试速率限制。",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "测试基于用户类型的动态字段的用户创建流程。",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "测试与 Maple LLM 服务的连接。",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "完整的 RAG 管道：嵌入 → 搜索 → 检索 → 生成。",
       "this_is_where_the_magic_happens_e98c18": "— 这就是奇迹发生的地方：",
       "toggle_theme_9b0eaf": "切换主题",

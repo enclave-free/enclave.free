@@ -41,7 +41,7 @@ Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these
 
 Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /llm/chat/stream`, `POST /query`, `GET /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
 
-`POST /llm/chat/stream` is the assistant-style streaming route described by [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md). It keeps `/llm/chat` available as the non-streaming compatibility path, emits assistant message, live trace-status, answer-delta, final sanitized trace, completion, and safe error events, and uses a two-phase turn: explicitly selected tools/context first, then final answer streaming from the configured Model Provider. Retrieval-first `/query/stream` is deliberately outside this first streaming slice.
+`POST /llm/chat/stream` is the assistant-style streaming route described by [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md). It keeps `/llm/chat` available as the non-streaming companion path, emits assistant message, live trace-status, answer-delta, final sanitized trace, completion, and safe error events, and uses a two-phase turn: explicitly selected tools/context first, then final answer streaming from the configured Model Provider. Retrieval-first `/query/stream` is deliberately outside this first streaming slice.
 
 ## Sage To Python Private Control-Plane Contract
 
@@ -82,9 +82,9 @@ If this prototype gets productized, the biggest architecture decision is no long
 ## Current Temporary Pieces
 
 - deployment/runtime config is still split across Python Deployment Settings, Sage env, and Gateway config
-- legacy Python `/llm/chat` and `/query` code still exists in-repo even though the gateway bypasses it
+- Direct Python calls to public Agent Runtime routes return `410 Gone` with `sage_route_required`; the supported path is Gateway to Sage
 - supported active Conversation deletion now removes the public `/query` session record and associated Sage Session Memory, but scheduled retention for all historical Session Memory/log surfaces is still future work
-- compatibility internal endpoints such as `/internal/agent/auth-context` and `/internal/agent/ai-config/effective` still exist in Python even though Sage no longer needs them on this branch
+- Obsolete internal compatibility endpoints return `internal_contract_removed`; Sage should use only the active private control-plane contract listed above
 
 ## Branch Note
 

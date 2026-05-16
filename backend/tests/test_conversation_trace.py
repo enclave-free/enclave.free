@@ -145,22 +145,6 @@ class ConversationTraceTest(unittest.TestCase):
             "pubkey": "admin-pubkey",
         }
 
-    def test_chat_response_includes_backend_message_id_and_minimal_user_trace(self) -> None:
-        self.authenticate_as_user()
-
-        response = self.client.post(
-            "/llm/chat",
-            json={"message": "Can you help?", "tools": []},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertTrue(body["message_id"].startswith("msg_"))
-        self.assertEqual(body["trace"]["visibility"], "minimal")
-        self.assertEqual(body["trace"]["reasoning"]["summary"], "Sage answered from the conversation context and configured instructions.")
-        self.assertEqual(body["trace"]["tools"], [])
-        self.assertEqual(body["trace"]["retrieval"], [])
-
     def test_trace_visibility_policy_is_seeded_as_agent_settings(self) -> None:
         self.authenticate_as_admin()
 
@@ -198,24 +182,6 @@ class ConversationTraceTest(unittest.TestCase):
             and entry["new_value"] == "summary"
             for entry in entries
         ))
-
-    def test_trace_policy_off_omits_trace_from_future_chat_turns(self) -> None:
-        self.authenticate_as_user()
-        self.assertTrue(
-            self.database.update_ai_config(
-                "user_trace_visibility",
-                "off",
-                changed_by="admin-pubkey",
-            )
-        )
-
-        response = self.client.post(
-            "/llm/chat",
-            json={"message": "Can you help?", "tools": []},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["trace"])
 
     def test_db_query_trace_redacts_raw_sql_literals_and_results(self) -> None:
         from conversation_trace import build_conversation_trace
@@ -340,113 +306,3 @@ class ConversationTraceTest(unittest.TestCase):
         serialized = str(entries)
         self.assertIn("trace_suppressed", serialized)
         self.assertNotIn("super-secret-value", serialized)
-
-    def test_retrieval_session_history_persists_assistant_trace(self) -> None:
-        self.authenticate_as_user()
-        self.stub_retrieval_query()
-        session_id = "trace-session"
-
-        query_response = self.client.post(
-            "/query",
-            json={"question": "What does the policy say?", "session_id": session_id},
-        )
-        response = self.client.get(f"/query/session/{session_id}")
-
-        self.assertEqual(query_response.status_code, 200)
-        self.assertEqual(response.status_code, 200)
-        messages = response.json()["messages"]
-        self.assertEqual(messages[-1]["id"], query_response.json()["message_id"])
-        self.assertEqual(messages[-1]["trace"], query_response.json()["trace"])
-
-    def test_deleted_retrieval_session_no_longer_exposes_persisted_trace(self) -> None:
-        import query
-
-        self.authenticate_as_user()
-        self.stub_retrieval_query()
-        session_id = "delete-trace-session"
-
-        create_response = self.client.post(
-            "/query",
-            json={"question": "What does the policy say?", "session_id": session_id},
-        )
-
-        delete_response = self.client.delete(f"/query/session/{session_id}")
-        get_response = self.client.get(f"/query/session/{session_id}")
-
-        self.assertEqual(create_response.status_code, 200)
-        self.assertEqual(delete_response.status_code, 200)
-        self.assertEqual(get_response.status_code, 404)
-        self.assertNotIn(session_id, query._sessions)
-
-    def test_streaming_chat_emits_message_delta_trace_and_done_events(self) -> None:
-        self.authenticate_as_user()
-
-        with self.client.stream(
-            "POST",
-            "/llm/chat/stream",
-            json={"message": "Can you help?", "tools": []},
-        ) as response:
-            self.assertEqual(response.status_code, 200)
-            body = "".join(response.iter_text())
-
-        self.assertIn("event: assistant_message_started", body)
-        self.assertIn("event: trace_status", body)
-        self.assertIn("event: answer_delta", body)
-        self.assertIn("event: trace_final", body)
-        self.assertIn("event: done", body)
-        self.assertIn('"message_id":"msg_', body)
-        self.assertIn('"visibility":"minimal"', body)
-
-    def test_streaming_query_emits_message_delta_trace_and_done_events(self) -> None:
-        self.authenticate_as_user()
-        self.stub_retrieval_query()
-
-        with self.client.stream(
-            "POST",
-            "/query/stream",
-            json={"question": "What does the policy say?", "session_id": "query-stream-session"},
-        ) as response:
-            self.assertEqual(response.status_code, 200)
-            body = "".join(response.iter_text())
-
-        self.assertIn("event: assistant_message_started", body)
-        self.assertIn("event: trace_status", body)
-        self.assertIn("event: answer_delta", body)
-        self.assertIn("event: trace_final", body)
-        self.assertIn("event: done", body)
-        self.assertIn('"message_id":"msg_', body)
-        self.assertIn('"visibility":"minimal"', body)
-
-    def stub_retrieval_query(self) -> None:
-        import query
-
-        class FakeSearchResponse:
-            def raise_for_status(self) -> None:
-                pass
-
-            def json(self) -> dict:
-                return {
-                    "result": [
-                        {
-                            "score": 0.82,
-                            "payload": {
-                                "type": "chunk",
-                                "chunk_id": "chunk-1",
-                                "job_id": "job-1",
-                                "source_file": "Policy.pdf",
-                                "text": "Policy context",
-                            },
-                        }
-                    ]
-                }
-
-        query.embed_texts = lambda _texts: [[0.1, 0.2, 0.3]]
-        query.httpx.post = lambda *_args, **_kwargs: FakeSearchResponse()
-        query._call_llm_contextual = lambda *_args, **_kwargs: (
-            "The policy says yes.",
-            [],
-            "=== PROMPT ===\nredacted",
-            "housing advocate",
-            None,
-        )
-        query._extract_facts_from_conversation = lambda _session: {}

@@ -732,7 +732,7 @@ async def require_admin_or_approved_user(
     - A valid admin session token, OR
     - A valid approved user session token
     
-    Use this on endpoints (like /llm/chat) that should be accessible to both admins and users.
+    Use this on shared authenticated endpoints that should be accessible to both admins and users.
     """
     import database
 

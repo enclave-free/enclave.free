@@ -497,7 +497,7 @@
       "compact": "コンパクト",
       "expand": "拡張",
       "shareSecretsTitle": "秘密の環境変数を共有",
-      "shareSecretsHint": "デフォルトでは無効です。まず、設定ツールを有効にしてください。有効にすると、機密のデプロイ設定値がクライアント側で表示され、Mapleに送信されます。",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "機密",
       "emptyPrompt": "管理設定について質問してください。アシスタントに変更の提案と適用をさせたい場合は、JSON の change set を含めるよう依頼してください。",
       "pendingChanges": "保留中の変更",
@@ -977,19 +977,19 @@
       "usersToMigrate": "移行するユーザー",
       "warning": "これは上級者向けの操作です。不正な移行を行うと、暗号化データにアクセスできなくなる可能性があります。影響を理解した上でのみ続行してください。"
     },
-    "leaveEmptyForLlmApiKey": "上書きを解除して.env MAPLE_API_KEY フォールバックを使用するには、空欄にしてください。",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — お使いのMaple APIキー。MAPLE_API_KEYにマッピングされます。",
-      "apiKeyLabel": "Maple APIキー",
-      "ariaLabel": "Maple LLM構成ヘルプ",
-      "exampleConfig": "設定例",
-      "goToPage": "ページへ移動",
-      "mapleExtra": "LLM_API_KEYを{{mapleSignupUrl}}から取得したあなたのMapleキーに設定してください。LLM_*キーはMAPLE_*エイリアスにマッピングされます。",
-      "mapleHint": "Maple は Enclave の標準 LLM バックエンドです。",
-      "modelField": "LLM_MODEL — Mapleモデル識別子 (例: kimi-k2.5)。",
-      "overviewDesc": "Enclaveは標準のLLMサービスとしてMapleを使用しています。Mapleは内部的にOpenAI互換のAPIを提供しています。",
-      "overviewTitle": "Maple LLM概要",
-      "providerField": "LLM_PROVIDER — 互換性のため「maple」に固定されています。"
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "値の表示に失敗しました。Nostr拡張機能の接続を確認してください。",
     "searchHelp": {
@@ -1198,9 +1198,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "Maple推論を設定する",
-      "hint": "EnclaveはLLM推論においてMaple専用です。Mapleモデル/API設定はここで構成します。変更には再起動が必要です。"
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "テキスト処理",
@@ -1301,19 +1301,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "AIサービス",
-      "description": "LLMプロバイダー（mapleのみ）",
-      "hint": "Mapleは唯一サポートされている値です。このキーは互換性のために残されています。"
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "モデル名",
-      "description": "モデル名/識別子",
-      "hint": "使用するMapleモデル識別子（例: \"kimi-k2.5\"）。"
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "APIエンドポイント",
-      "description": "APIリクエストのベースURL",
-      "hint": "Maple APIのベースURL。デフォルト: http://maple-proxy:8080/v1。"
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "コンテキストチャンク数",
@@ -1391,9 +1391,9 @@
       "hint": "ユーザーがアプリにアクセスする公開URL。マジックリンクの生成に使用されます。"
     },
     "LLM_API_KEY": {
-      "label": "APIキー",
-      "description": "Maple APIキー (シークレット)",
-      "hint": "MAPLE_API_KEY にマッピングされます。オーバーライドをクリアして.envフォールバックを使用するには、空のままにしてください。"
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "管理パネルのサブドメインURL（オプション）",
@@ -1775,7 +1775,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "マジックリンクとNostr認証フローをテストします。",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "レート制限されたエンドポイントに高速リクエストを送信して、レート制限をテストします。",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "ユーザータイプに基づいた動的フィールドを持つユーザー作成フローをテストします。",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Maple LLMサービスへの接続をテストします。",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "完全なRAGパイプライン：埋め込み → 検索 → 取得 → 生成。",
       "this_is_where_the_magic_happens_e98c18": "— ここで魔法が起こります:",
       "toggle_theme_9b0eaf": "テーマを切り替え",

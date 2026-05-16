@@ -122,12 +122,12 @@ def _configured_model_provider() -> dict:
 # Environment variable to config key mapping
 # These are the keys we allow managing through the UI
 ENV_CONFIG_MAP = {
-    # Model Provider compatibility settings.
-    # LLM_* names are public/deployment compatibility keys, not Sage Agent Settings.
-    "LLM_PROVIDER": {"category": "llm", "description": "Model Provider label for Python compatibility paths", "requires_restart": True, "default": "sage"},
-    "LLM_MODEL": {"category": "llm", "description": "Model identifier for Python compatibility paths", "requires_restart": False},
-    "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python compatibility paths", "requires_restart": True},
-    "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python compatibility paths", "requires_restart": False, "is_secret": True},
+    # Python-side Model Provider deployment metadata.
+    # LLM_* names are not live Sage Agent Settings.
+    "LLM_PROVIDER": {"category": "llm", "description": "Model Provider label for Python diagnostics and verification metadata", "requires_restart": True, "default": "sage"},
+    "LLM_MODEL": {"category": "llm", "description": "Model identifier for Python diagnostics and verification metadata", "requires_restart": False},
+    "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python diagnostics and verification metadata", "requires_restart": True},
+    "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python diagnostics and verification metadata", "requires_restart": False, "is_secret": True},
     # Embedding Settings
     "EMBEDDING_PROVIDER": {"category": "embedding", "description": "Embedding provider: tinfoil or local", "requires_restart": True, "default": "tinfoil"},
     "EMBEDDING_MODEL": {"category": "embedding", "description": "Embedding model identifier", "requires_restart": True, "default": "nomic-embed-text"},
@@ -252,10 +252,8 @@ def _sync_env_to_db() -> None:
     """
     Sync current environment variables to the database.
     Only syncs keys that are in ENV_CONFIG_MAP and don't already exist in DB.
-    Uses legacy Maple key translation for compatibility where present.
     """
-    # Import key translation from config_loader
-    from config_loader import KEY_TRANSLATION, EMAIL_KEY_TRANSLATION
+    from config_loader import EMAIL_KEY_TRANSLATION
 
     for key, meta in ENV_CONFIG_MAP.items():
         if key in FORBIDDEN_KEYS:
@@ -266,26 +264,21 @@ def _sync_env_to_db() -> None:
         # This preserves expected `.env` behavior while still exposing the key in admin config.
         preserve_env_fallback = key == "LLM_API_KEY"
 
-        # Try to get value from env, with legacy Maple key translation
+        # Try to get value from env.
         value = None
 
         if not preserve_env_fallback:
             # 1. Try the original key
             value = os.getenv(key)
 
-            # 2. If not found, try legacy Maple-translated key
-            if value is None and key in KEY_TRANSLATION:
-                translated_key = KEY_TRANSLATION[key]
-                value = os.getenv(translated_key)
-
-            # 3. If not found, try email key translation
+            # 2. If not found, try email key translation
             if value is None and key in EMAIL_KEY_TRANSLATION:
                 translated_key = EMAIL_KEY_TRANSLATION[key]
                 value = os.getenv(translated_key)
 
         if key == "LLM_PROVIDER":
             value = (value or meta.get("default", "sage") or "sage").strip().lower()
-            if value not in {"sage", "maple"}:
+            if value not in {"sage"}:
                 value = "sage"
 
         # 4. Fall back to default from config map
@@ -306,7 +299,7 @@ def _sync_env_to_db() -> None:
             )
             should_force_supported_provider = (
                 key == "LLM_PROVIDER"
-                and str(existing_value or "").strip().lower() not in {"sage", "maple"}
+                and str(existing_value or "").strip().lower() not in {"sage"}
             )
 
             if should_backfill_value or should_sync_metadata or should_force_supported_provider:
@@ -684,8 +677,8 @@ async def update_deployment_config_value(
 
     if key == "LLM_PROVIDER":
         normalized = str(value_to_save or "").strip().lower()
-        if normalized not in ("", "sage", "maple"):
-            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage" or legacy "maple"')
+        if normalized not in ("", "sage"):
+            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage"')
         value_to_save = normalized or "sage"
 
     # Get admin pubkey for audit log

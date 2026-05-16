@@ -2,7 +2,7 @@
 Model Provider base class and compatibility factory.
 
 Provides an abstract interface for the configured OpenAI-compatible Model
-Provider path used by Python compatibility checks and legacy utility routes.
+Provider path used by Python diagnostics and remaining utility routes.
 The LLM* names remain as public import compatibility aliases.
 """
 
@@ -59,9 +59,8 @@ def get_provider(provider_name: Optional[str] = None) -> ModelProvider:
         Configured ModelProvider instance.
     """
     requested = (provider_name or os.getenv("LLM_PROVIDER", "sage")).strip().lower()
-    if requested not in {"", "sage", "maple"}:
-        logger.warning("Unsupported Model Provider compatibility label %r requested; forcing sage-compatible provider", requested)
-        requested = "sage"
+    if requested not in {"", "sage"}:
+        raise ValueError(f'Unsupported Model Provider "{requested}"; only "sage" is supported')
 
     from .sage_tinfoil import SageTinfoilProvider
     return SageTinfoilProvider(provider_name=requested or "sage")
@@ -70,8 +69,3 @@ def get_provider(provider_name: Optional[str] = None) -> ModelProvider:
 def get_sage_provider() -> ModelProvider:
     """Explicit Sage/Tinfoil-compatible provider accessor."""
     return get_provider("sage")
-
-
-def get_maple_provider() -> ModelProvider:
-    """Deprecated compatibility accessor for old Maple-era imports."""
-    return get_provider("maple")

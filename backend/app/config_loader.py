@@ -24,14 +24,6 @@ _cache_time: float = 0
 _cache_lock = threading.Lock()
 CACHE_TTL = 60  # seconds
 
-# Key translation map for legacy Maple-backed Model Provider config.
-# The prototype prefers generic LLM_* keys but still honors old aliases.
-KEY_TRANSLATION = {
-    "LLM_API_URL": "MAPLE_BASE_URL",
-    "LLM_MODEL": "MAPLE_MODEL",
-    "LLM_API_KEY": "MAPLE_API_KEY",
-}
-
 # Email config translation
 EMAIL_KEY_TRANSLATION = {
     "MOCK_SMTP": "MOCK_EMAIL",
@@ -50,9 +42,8 @@ def _get_provider() -> str:
                 configured = str(value).strip().lower()
     if not configured:
         configured = os.getenv("LLM_PROVIDER", "sage").strip().lower()
-    if configured not in {"", "sage", "maple"}:
-        logger.warning("Unsupported LLM_PROVIDER=%r detected; using sage", configured)
-        return "sage"
+    if configured not in {"", "sage"}:
+        raise ValueError(f'Unsupported LLM_PROVIDER "{configured}"; only "sage" is supported')
     return configured or "sage"
 
 
@@ -144,20 +135,6 @@ def get_config(key: str, default: Any = None) -> Any:
             # This makes it possible to "remove" a DB override without deleting rows.
             if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
                 return value
-
-    # Try key translation for legacy Maple-specific aliases.
-    if key in KEY_TRANSLATION:
-        translated_key = KEY_TRANSLATION[key]
-        # Check cache for translated key (thread-safe read)
-        with _cache_lock:
-            if translated_key in _config_cache:
-                value = _config_cache[translated_key]
-                if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
-                    return value
-        # Fall back to env var with translated key
-        env_value = os.getenv(translated_key)
-        if env_value is not None:
-            return env_value
 
     # Try email key translation
     if key in EMAIL_KEY_TRANSLATION:

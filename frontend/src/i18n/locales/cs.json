@@ -505,7 +505,7 @@
       "compact": "Kompaktní",
       "expand": "Rozšířit",
       "shareSecretsTitle": "Sdílet tajné proměnné prostředí",
-      "shareSecretsHint": "Ve výchozím nastavení vypnuto. Nejprve povolte nástroj Konfigurace. Když je povoleno, hodnoty tajné konfigurace nasazení se odhalí na straně klienta a odešlou do Maple.",
+      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Citlivé",
       "emptyPrompt": "Ptejte se na libovolnou administrátorskou konfiguraci. Pokud chcete, aby asistent navrhl a provedl změny, požádejte ho o JSON change set.",
       "pendingChanges": "Čekající změny",
@@ -985,19 +985,19 @@
       "usersToMigrate": "Uživatelé k migraci",
       "warning": "Toto je pokročilá operace. Nesprávná migrace vás může uzamknout ze šifrovaných dat. Pokračujte pouze pokud rozumíte důsledkům."
     },
-    "leaveEmptyForLlmApiKey": "Ponechte prázdné pro zrušení přepsání a použití záložního klíče .env MAPLE_API_KEY.",
+    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
-      "apiKeyField": "LLM_API_KEY – váš klíč API Maple. Mapuje se na MAPLE_API_KEY.",
-      "apiKeyLabel": "Klíč API Maple",
-      "ariaLabel": "Nápověda pro konfiguraci Maple LLM",
-      "exampleConfig": "Příklad konfigurace",
-      "goToPage": "Přejít na stránku",
-      "mapleExtra": "Nastavte LLM_API_KEY na váš klíč Maple z {{mapleSignupUrl}}. Klíče LLM_* se mapují na aliasy MAPLE_*.",
-      "mapleHint": "Maple je standardní backend LLM pro Enclave.",
-      "modelField": "LLM_MODEL – identifikátor modelu Maple (například: kimi-k2.5).",
-      "overviewDesc": "Enclave používá Maple jako svou standardní službu LLM. Maple poskytuje pod kapotou API kompatibilní s OpenAI.",
-      "overviewTitle": "Přehled Maple LLM",
-      "providerField": "LLM_PROVIDER – pevně nastaveno na \"maple\" pro kompatibilitu."
+      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
+      "apiKeyLabel": "Tinfoil API Key",
+      "ariaLabel": "Sage runtime configuration help",
+      "exampleConfig": "Example configuration",
+      "goToPage": "Go to page",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewTitle": "Sage Runtime Overview",
+      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
     "revealFailed": "Nepodařilo se odhalit hodnotu. Zkontrolujte připojení rozšíření Nostr.",
     "searchHelp": {
@@ -1206,9 +1206,9 @@
   },
   "configCategories": {
     "llm": {
-      "label": "Maple AI",
-      "description": "Konfigurace odvozování Maple",
-      "hint": "Enclave je pouze Maple pro odvozování LLM. Zde nakonfigurujte model Maple/nastavení API. Změny vyžadují restart."
+      "label": "Sage Agent Runtime",
+      "description": "Configure Sage + Tinfoil inference",
+      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
     },
     "embedding": {
       "label": "Zpracování textu",
@@ -1309,19 +1309,19 @@
   },
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
-      "label": "AI služba",
-      "description": "Poskytovatel LLM (pouze Maple)",
-      "hint": "Maple je jediná podporovaná hodnota. Tento klíč zůstává pro kompatibilitu."
+      "label": "Model Provider",
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
-      "label": "Název modelu",
-      "description": "Název/identifikátor modelu",
-      "hint": "Identifikátor modelu Maple, který se má použít (např. \"kimi-k2.5\")."
+      "label": "Model Name",
+      "description": "Model name/identifier",
+      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
     },
     "LLM_API_URL": {
-      "label": "API koncový bod",
-      "description": "Základní URL pro API požadavky",
-      "hint": "Základní URL API Maple. Výchozí: http://maple-proxy:8080/v1."
+      "label": "API Endpoint",
+      "description": "Model Provider API base URL",
+      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
     },
     "RAG_TOP_K": {
       "label": "Kontextové části",
@@ -1399,9 +1399,9 @@
       "hint": "Veřejná URL, kde uživatelé přistupují k aplikaci. Používá se pro generování magických odkazů."
     },
     "LLM_API_KEY": {
-      "label": "API klíč",
-      "description": "Klíč API Maple (tajný)",
-      "hint": "Mapuje se na MAPLE_API_KEY. Ponechte prázdné pro zrušení přepsání a použití záložního klíče .env."
+      "label": "API Key",
+      "description": "Tinfoil API key (secret)",
+      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
     },
     "ADMIN_BASE_URL": {
       "description": "URL subdomény panelu administrace (volitelné)",
@@ -1783,7 +1783,7 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Testujte toky kouzelného odkazu a autentizace Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Testujte omezování rychlosti odesíláním rychlých požadavků na koncové body s omezenou rychlostí.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Testujte tok vytváření uživatelů s dynamickými poli na základě typu uživatele.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testuje konektivitu ke službě Maple LLM.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Kompletní RAG pipeline: vložení → vyhledávání → načtení → generování.",
       "this_is_where_the_magic_happens_e98c18": "— Zde se děje kouzlo:",
       "toggle_theme_9b0eaf": "Přepnout motiv",
