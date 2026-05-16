@@ -243,7 +243,7 @@ Use this checklist to:
 ### 5.4 Retention and deletion
 
 - [x] Admin can delete active Documents with structured per-target status for metadata, uploaded artifact, Retrieval entries, and runtime state.
-- [x] Admin can clean up failed and superseded Document ingestion artifacts without deleting current Documents or in-flight replacements.
+- [x] Retention can clean up failed, superseded, abandoned, and orphaned Document artifacts without deleting current successful Documents or their current retrieval entries.
 - [x] User deletion removes active User Profile/access state, purges Sage-owned User Memory, and clears active Conversation state with structured lifecycle status.
 - [x] Add operator-invoked retention execution for stale active Conversation state and failed/superseded Document artifacts.
 - [x] Add admin-visible metadata-only deletion tombstones for incomplete Session Memory deletion during operator-invoked retention.

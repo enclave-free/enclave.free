@@ -1876,24 +1876,42 @@ export function AdminDeploymentConfig() {
                     })}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.retention_scheduler.summary}</p>
-                  {lifecycleStatus.retention_scheduler.observation && (
-                    <div className="mt-2 space-y-1 text-xs text-text-secondary">
-                      <p className="font-medium text-text">
-                        {t('adminDeployment.lifecycle.schedulerObservation', 'Observation: {{status}}', {
-                          status: formatLifecycleStatus(lifecycleStatus.retention_scheduler.observation.status),
-                        })}
-                      </p>
-                      <p>{lifecycleStatus.retention_scheduler.observation.summary}</p>
-                      {lifecycleStatus.retention_scheduler.observation.last_run && (
-                        <p>
-                          {t('adminDeployment.lifecycle.schedulerLastRun', 'Last run: {{trigger}} by {{actor}}', {
-                            trigger: lifecycleStatus.retention_scheduler.observation.last_run.trigger,
-                            actor: lifecycleStatus.retention_scheduler.observation.last_run.actor,
+                  {lifecycleStatus.retention_scheduler.observation && (() => {
+                    const observation = lifecycleStatus.retention_scheduler.observation
+                    const enabledClasses = Array.isArray(observation.enabled_classes)
+                      ? observation.enabled_classes
+                      : []
+                    return (
+                      <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                        <p className="font-medium text-text">
+                          {t('adminDeployment.lifecycle.schedulerObservation', 'Observation: {{status}}', {
+                            status: formatLifecycleStatus(observation.status),
                           })}
                         </p>
-                      )}
-                    </div>
-                  )}
+                        <p>{observation.summary}</p>
+                        <p>
+                          {t('adminDeployment.lifecycle.schedulerEnabledClasses', 'Scheduler enabled classes: {{classes}}', {
+                            classes: enabledClasses.length > 0 ? enabledClasses.join(', ') : 'none',
+                          })}
+                        </p>
+                        {observation.last_run && (
+                          <>
+                            <p>
+                              {t('adminDeployment.lifecycle.schedulerLastRunStatus', 'Last run status: {{status}}', {
+                                status: formatLifecycleStatus(observation.last_run.status),
+                              })}
+                            </p>
+                            <p>
+                              {t('adminDeployment.lifecycle.schedulerLastRun', 'Last run: {{trigger}} by {{actor}}', {
+                                trigger: observation.last_run.trigger,
+                                actor: observation.last_run.actor,
+                              })}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
             </div>

@@ -539,6 +539,7 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Artifact Encryption Posture: Encrypted')).toBeInTheDocument()
     expect(screen.getByText('Retention Scheduler: External or manual')).toBeInTheDocument()
     expect(screen.getByText('Observation: Disabled')).toBeInTheDocument()
+    expect(screen.getByText('Scheduler enabled classes: none')).toBeInTheDocument()
     expect(screen.getByText('Confidentiality: Partial')).toBeInTheDocument()
     expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
     expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
@@ -646,6 +647,8 @@ describe('AdminDeploymentConfig', () => {
         }),
       )
     })
+    expect(await within(lifecycleStatus).findByText('Scheduler enabled classes: sage_session_memory')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Last run status: Succeeded')).toBeInTheDocument()
   })
 
   it('lets admins preview retention, run scheduled retention, and see audit coverage', async () => {

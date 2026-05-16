@@ -22,12 +22,24 @@ ARTIFACT_KEY_INFO = b"enclave/artifact/v1"
 LEGACY_ARTIFACT_KEY_INFO = b"san" b"ctum/artifact/v1"
 
 
-def artifact_encryption_posture() -> str:
-    value = str(
+def _artifact_encryption_setting_value() -> str | None:
+    value = (
         database.get_deployment_config_value(ARTIFACT_ENCRYPTION_KEY)
         or database.get_setting(ARTIFACT_ENCRYPTION_KEY)
-        or os.getenv(ARTIFACT_ENCRYPTION_KEY, "auto")
-    ).strip().lower()
+        or os.getenv(ARTIFACT_ENCRYPTION_KEY)
+    )
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized or None
+
+
+def _artifact_encryption_is_implicit_auto() -> bool:
+    return _artifact_encryption_setting_value() in {None, "opportunistic", "auto", "enabled_if_configured"}
+
+
+def artifact_encryption_posture() -> str:
+    value = _artifact_encryption_setting_value() or "auto"
     if value in {"disabled", "required"}:
         return value
     if value in {"opportunistic", "auto", "enabled_if_configured"}:
@@ -69,6 +81,12 @@ def content_encryption_status() -> dict:
 def artifact_encryption_status() -> dict:
     posture = artifact_encryption_posture()
     if posture == "disabled":
+        if _artifact_encryption_is_implicit_auto() and not content_encryption_key_configured():
+            return {
+                "posture": "disabled",
+                "status": "not_configured",
+                "summary": "Artifact encryption is not configured because no Content Encryption Key is configured.",
+            }
         return {
             "posture": "disabled",
             "status": "plaintext_by_operator_choice",

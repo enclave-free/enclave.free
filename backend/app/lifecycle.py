@@ -8,12 +8,14 @@ coverage, including gaps, instead of implying complete guarantees.
 
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import logging
 import os
 from pathlib import Path
 import tempfile
 import secrets
+import stat
 
 from fastapi import APIRouter, Depends
 from fastapi import Header, HTTPException
@@ -123,7 +125,7 @@ DATA_CLASSES = [
         },
         "retention": {
             "status": "partial",
-            "summary": "Operators can invoke age-based Data Retention for stale active User Memory without exposing raw memory content in lifecycle evidence.",
+            "summary": "Retention removes stale expirable or superseded User Memory without exposing raw memory content in lifecycle evidence.",
         },
         "audit": {
             "status": "partial",
@@ -144,7 +146,7 @@ DATA_CLASSES = [
         },
         "retention": {
             "status": "partial",
-            "summary": "Operators can invoke retention cleanup for failed and superseded Document ingestion artifacts.",
+            "summary": "Retention cleanup removes failed, superseded, abandoned, and orphaned Document artifacts without deleting current successful Documents.",
         },
         "audit": {
             "status": "partial",
@@ -333,6 +335,8 @@ SECURE_ERASE_SCOPE = {
 class RetentionRunRequest(BaseModel):
     stale_conversation_days: int = Field(default=30, ge=0)
     document_artifact_days: int = Field(default=0, ge=0)
+    preview_token: str | None = None
+    confirm_current_counts: bool = False
 
 
 class ScheduledRetentionRunRequest(BaseModel):
@@ -1297,7 +1301,11 @@ def _stale_user_memory_ids(cutoff: datetime) -> list[int]:
             """
             SELECT id
             FROM user_memories
-            WHERE status = 'active'
+            WHERE (
+                (status = 'active' AND retention_class = 'expirable')
+                OR status = 'superseded'
+                OR retention_class = 'superseded'
+            )
               AND datetime(updated_at) <= datetime(?)
             ORDER BY updated_at ASC, id ASC
             LIMIT 1000
@@ -1305,6 +1313,83 @@ def _stale_user_memory_ids(cutoff: datetime) -> list[int]:
             (cutoff.isoformat(),),
         )
         return [int(row["id"]) for row in cursor.fetchall()]
+
+
+def _document_artifact_candidates(cutoff: datetime) -> list[dict]:
+    candidates: list[dict] = []
+    known_artifact_paths: set[str] = set()
+    job_limit = 1000
+    job_offset = 0
+    while True:
+        jobs = ingest_db.list_jobs(limit=job_limit, offset=job_offset)
+        if not jobs:
+            break
+        for job in jobs:
+            file_path = job.get("file_path")
+            if file_path:
+                try:
+                    known_artifact_paths.add(str(Path(file_path).resolve()))
+                except OSError:
+                    known_artifact_paths.add(file_path)
+
+            reason = ingest._document_artifact_cleanup_reason(job)
+            if not reason:
+                continue
+            updated_at = _parse_timestamp(job.get("updated_at"))
+            if updated_at and updated_at <= cutoff:
+                candidates.append({
+                    "job_id": job["job_id"],
+                    "filename": job.get("filename", "unknown"),
+                    "reason": reason,
+                    "job": job,
+                })
+        if len(jobs) < job_limit:
+            break
+        job_offset += job_limit
+
+    candidates.extend(_orphaned_uploaded_document_artifacts(cutoff, known_artifact_paths))
+    return candidates
+
+
+def _orphaned_uploaded_document_artifacts(cutoff: datetime, known_artifact_paths: set[str]) -> list[dict]:
+    uploads_root = ingest.UPLOADS_DIR
+    try:
+        resolved_root = uploads_root.resolve()
+    except OSError:
+        return []
+    if not resolved_root.exists():
+        return []
+
+    candidates: list[dict] = []
+    for path in sorted(resolved_root.iterdir()):
+        if path.is_symlink():
+            continue
+        if not path.is_file():
+            continue
+        try:
+            resolved_path = path.resolve()
+            file_stat = resolved_path.stat()
+        except OSError:
+            continue
+        if str(resolved_path) in known_artifact_paths:
+            continue
+        if stat.S_ISREG(file_stat.st_mode) is False:
+            continue
+        modified_at = datetime.fromtimestamp(file_stat.st_mtime, timezone.utc).replace(tzinfo=None)
+        if modified_at > cutoff:
+            continue
+        candidates.append({
+            "job_id": f"orphaned-upload:{path.name}",
+            "filename": path.name,
+            "reason": "orphaned_uploaded_artifact",
+            "job": {
+                "job_id": f"orphaned-upload:{path.name}",
+                "filename": path.name,
+                "file_path": str(resolved_path),
+                "status": "orphaned",
+            },
+        })
+    return candidates
 
 
 def preview_retention(request: RetentionRunRequest) -> dict:
@@ -1338,26 +1423,14 @@ def preview_retention(request: RetentionRunRequest) -> dict:
 
     document_artifacts = []
     if document_artifact_policy["enabled"]:
-        job_limit = 1000
-        job_offset = 0
-        while True:
-            jobs = ingest_db.list_jobs(limit=job_limit, offset=job_offset)
-            if not jobs:
-                break
-            for job in jobs:
-                reason = ingest._document_artifact_cleanup_reason(job)
-                if not reason:
-                    continue
-                updated_at = _parse_timestamp(job.get("updated_at"))
-                if updated_at and updated_at <= document_cutoff:
-                    document_artifacts.append({
-                        "job_id": job["job_id"],
-                        "filename": job.get("filename", "unknown"),
-                        "reason": reason,
-                    })
-            if len(jobs) < job_limit:
-                break
-            job_offset += job_limit
+        document_artifacts = [
+            {
+                "job_id": candidate["job_id"],
+                "filename": candidate["filename"],
+                "reason": candidate["reason"],
+            }
+            for candidate in _document_artifact_candidates(document_cutoff)
+        ]
 
     user_memories = []
     if user_memory_policy["enabled"]:
@@ -1379,7 +1452,7 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     if "audit_log" in stored_policies and not audit_log_policy["enabled"]:
         skipped_classes.append("audit_log")
 
-    return {
+    preview = {
         "status": "preview",
         "destructive": False,
         "eligible": {
@@ -1398,6 +1471,24 @@ def preview_retention(request: RetentionRunRequest) -> dict:
         "skipped_conversations": skipped_conversations,
         "skipped_classes": skipped_classes,
     }
+    preview["preview_token"] = _retention_preview_token(request, preview)
+    return preview
+
+
+def _retention_preview_token(request: RetentionRunRequest, preview: dict) -> str:
+    token_payload = {
+        "request": {
+            "stale_conversation_days": request.stale_conversation_days,
+            "document_artifact_days": request.document_artifact_days,
+        },
+        "eligible": preview["eligible"],
+        "counts": preview["counts"],
+        "skipped_conversations": preview["skipped_conversations"],
+        "skipped_classes": preview["skipped_classes"],
+        "retention_policies": _stored_retention_policies(),
+    }
+    serialized = json.dumps(token_payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 async def run_retention(
@@ -1406,8 +1497,23 @@ async def run_retention(
     *,
     create_run_record: bool = True,
     trigger: str = "manual",
+    require_preview_confirmation: bool = True,
 ) -> dict:
     started_at = datetime.utcnow()
+    if require_preview_confirmation and not request.confirm_current_counts:
+        current_preview = preview_retention(request)
+        if request.preview_token != current_preview["preview_token"]:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": (
+                        "Manual Retention Execution requires a fresh preview token "
+                        "or explicit current-count confirmation."
+                    ),
+                    "current_preview": current_preview,
+                },
+            )
+
     now = started_at
     stored_policies = _stored_retention_policies()
     session_memory_policy = _retention_policy_for("sage_session_memory")
@@ -1496,38 +1602,14 @@ async def run_retention(
         ))
 
     if document_artifact_policy["enabled"]:
-        job_limit = 1000
-        job_offset = 0
-        jobs_to_check = []
-        while True:
-            jobs = ingest_db.list_jobs(limit=job_limit, offset=job_offset)
-            if not jobs:
-                break
-            jobs_to_check.extend(jobs)
-            if len(jobs) < job_limit:
-                break
-            job_offset += job_limit
-
-        for job in jobs_to_check:
-            reason = ingest._document_artifact_cleanup_reason(job)
-            if not reason:
-                continue
-            updated_at = _parse_timestamp(job.get("updated_at"))
-            if updated_at is None:
-                logger.warning(
-                    "Skipping retention cleanup for document job with missing or invalid updated_at",
-                    extra={"job_id": job.get("job_id"), "updated_at": job.get("updated_at")},
-                )
-                continue
-            if updated_at > document_cutoff:
-                continue
-
-            job_id = job["job_id"]
+        for candidate in _document_artifact_candidates(document_cutoff):
+            job = candidate["job"]
+            job_id = candidate["job_id"]
             deletion_response = await ingest._delete_document_job_artifacts(job_id, job)
             retained["document_artifacts"].append({
                 "job_id": job_id,
-                "filename": job.get("filename", "unknown"),
-                "reason": reason,
+                "filename": candidate["filename"],
+                "reason": candidate["reason"],
                 "deletion": deletion_response["deletion"],
             })
             results.extend(deletion_response["deletion"]["results"])
@@ -1669,6 +1751,7 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
         admin,
         create_run_record=False,
         trigger=trigger,
+        require_preview_confirmation=False,
     )
 
     retry_results = []
@@ -1830,6 +1913,17 @@ async def list_admin_retention_runs(
     _admin: dict = Depends(auth.require_admin),
 ):
     return {"runs": database.list_retention_run_records(limit=limit)}
+
+
+@router.get("/retention-runs/{run_id}", response_model=dict)
+async def get_admin_retention_run(
+    run_id: int,
+    _admin: dict = Depends(auth.require_admin),
+):
+    run = database.get_retention_run_record(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Retention Run Record not found")
+    return {"run": run}
 
 
 @router.post("/deletion-tombstones/{tombstone_id}/retry", response_model=dict)

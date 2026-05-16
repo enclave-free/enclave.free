@@ -530,6 +530,8 @@ def init_schema():
             importance INTEGER NOT NULL DEFAULT 5,
             confidence REAL NOT NULL DEFAULT 1.0,
             status TEXT NOT NULL DEFAULT 'active',
+            retention_class TEXT NOT NULL DEFAULT 'durable'
+                CHECK (retention_class IN ('durable', 'expirable', 'superseded')),
             source_kind TEXT NOT NULL,
             source_conversation_id TEXT,
             author_actor TEXT NOT NULL,
@@ -569,6 +571,7 @@ def init_schema():
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
+    _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -852,6 +855,43 @@ def _migrate_deletion_tombstones_status_check() -> None:
         "Migration: Rebuilt deletion_tombstones with status CHECK constraint (%s rows)",
         count,
     )
+    cursor.close()
+
+
+def _migrate_add_user_memory_retention_class() -> None:
+    """Add conservative retention class metadata to existing User Memory records."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(user_memories)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "retention_class" not in columns:
+        cursor.execute(
+            """
+            ALTER TABLE user_memories
+            ADD COLUMN retention_class TEXT NOT NULL DEFAULT 'durable'
+            CHECK (retention_class IN ('durable', 'expirable', 'superseded'))
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE user_memories
+            SET retention_class = 'superseded'
+            WHERE status = 'superseded'
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE user_memories
+            SET retention_class = 'expirable'
+            WHERE source_kind = 'ambient'
+              AND status != 'superseded'
+              AND retention_class = 'durable'
+            """
+        )
+        conn.commit()
+        logger.info("Migration: Added 'retention_class' column to user_memories table")
+
     cursor.close()
 
 
@@ -2181,6 +2221,12 @@ def _require_non_empty_user_memory_text(value: str, field_name: str) -> str:
     return value.strip()
 
 
+def _user_memory_retention_class_for_source(source_kind: str) -> str:
+    if source_kind.strip().lower() == "ambient":
+        return "expirable"
+    return "durable"
+
+
 def _user_memory_row_to_dict(row: sqlite3.Row) -> dict:
     memory = dict(row)
     memory["confidence"] = float(memory["confidence"])
@@ -2197,6 +2243,7 @@ def create_user_memory(
     source_kind: str,
     source_conversation_id: str | None = None,
     author_actor: str,
+    retention_class: str | None = None,
 ) -> int:
     """Create active Sage-owned User Memory, skipping obvious active duplicates."""
     kind = _require_non_empty_user_memory_text(kind, "kind")
@@ -2206,10 +2253,19 @@ def create_user_memory(
     source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
     author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
+    normalized_retention_class = (
+        retention_class.strip().lower()
+        if isinstance(retention_class, str) and retention_class.strip()
+        else _user_memory_retention_class_for_source(source_kind)
+    )
+    if normalized_retention_class not in {"durable", "expirable", "superseded"}:
+        raise ValueError("User Memory retention_class must be durable, expirable, or superseded")
+    if normalized_retention_class == "superseded":
+        normalized_retention_class = _user_memory_retention_class_for_source(source_kind)
 
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT id
+            SELECT id, retention_class
             FROM user_memories
             WHERE subject_user_id = ?
               AND normalized_kind = ?
@@ -2219,6 +2275,16 @@ def create_user_memory(
         """, (subject_user_id, normalized_kind, normalized_content))
         existing = cursor.fetchone()
         if existing:
+            if normalized_retention_class == "durable" and existing["retention_class"] != "durable":
+                cursor.execute(
+                    """
+                    UPDATE user_memories
+                    SET retention_class = 'durable',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (existing["id"],),
+                )
             return int(existing["id"])
 
         cursor.execute("""
@@ -2231,10 +2297,11 @@ def create_user_memory(
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
         """, (
             subject_user_id,
             kind.strip(),
@@ -2243,6 +2310,7 @@ def create_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
+            normalized_retention_class,
             source_kind,
             source_conversation_id,
             author_actor,
@@ -2278,6 +2346,7 @@ def list_active_user_memories(subject_user_id: int, limit: int = 20) -> list[dic
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor,
@@ -2309,6 +2378,7 @@ def get_user_memory(memory_id: int) -> dict | None:
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor,
@@ -2381,6 +2451,7 @@ def supersede_user_memory(
         cursor.execute("""
             UPDATE user_memories
             SET status = 'superseded',
+                retention_class = 'superseded',
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
               AND status = 'active'
@@ -2398,11 +2469,12 @@ def supersede_user_memory(
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor,
                 supersedes_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)
         """, (
             old_memory["subject_user_id"],
             old_memory["kind"],
@@ -2411,6 +2483,7 @@ def supersede_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
+            _user_memory_retention_class_for_source(source_kind),
             source_kind,
             source_conversation_id,
             author_actor,

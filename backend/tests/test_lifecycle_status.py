@@ -20,8 +20,11 @@ class LifecycleStatusTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.previous_uploads_dir = os.environ.get("UPLOADS_DIR")
         self.previous_content_encryption_key = os.environ.get("CONTENT_ENCRYPTION_KEY")
+        self.previous_artifact_encryption = os.environ.get("DOCUMENT_ARTIFACT_ENCRYPTION")
         self.previous_retention_automation_token = os.environ.get("RETENTION_AUTOMATION_TOKEN")
         os.environ["UPLOADS_DIR"] = str(Path(self.temp_dir.name) / "uploads")
+        os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+        os.environ.pop("DOCUMENT_ARTIFACT_ENCRYPTION", None)
 
         import auth
         import database
@@ -60,6 +63,10 @@ class LifecycleStatusTest(unittest.TestCase):
             os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
         else:
             os.environ["CONTENT_ENCRYPTION_KEY"] = self.previous_content_encryption_key
+        if self.previous_artifact_encryption is None:
+            os.environ.pop("DOCUMENT_ARTIFACT_ENCRYPTION", None)
+        else:
+            os.environ["DOCUMENT_ARTIFACT_ENCRYPTION"] = self.previous_artifact_encryption
         if self.previous_retention_automation_token is None:
             os.environ.pop("RETENTION_AUTOMATION_TOKEN", None)
         else:

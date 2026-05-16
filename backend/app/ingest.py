@@ -14,7 +14,7 @@ import logging
 import math
 import random
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -59,6 +59,7 @@ UPLOAD_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_UPLOAD_PER_MINUTE", "20
 MAX_BATCH_FILES = int(os.getenv("MAX_BATCH_FILES", "100"))
 MAX_BATCH_BYTES = int(os.getenv("MAX_BATCH_BYTES", str(250 * 1024 * 1024)))
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".txt", ".md"}
+ABANDONED_INGESTION_TIMEOUT_MINUTES = int(os.getenv("ABANDONED_INGESTION_TIMEOUT_MINUTES", "60"))
 
 # Valid ontology IDs for document extraction
 VALID_ONTOLOGIES = {"general", "bitcoin"}
@@ -169,9 +170,24 @@ def _document_artifact_cleanup_reason(job: dict) -> str | None:
     status = job.get("status")
     if status == "failed":
         return "failed_ingestion"
+    if status in {"pending", "processing"} and _is_abandoned_ingestion_job(job):
+        return "abandoned_ingestion"
     if job.get("replaced_by_job_id") and not bool(job.get("is_current", 1)):
         return "superseded_document"
     return None
+
+
+def _is_abandoned_ingestion_job(job: dict) -> bool:
+    updated_at = job.get("updated_at")
+    if not updated_at:
+        return False
+    try:
+        updated = datetime.fromisoformat(str(updated_at).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if updated.tzinfo is not None:
+        updated = updated.astimezone().replace(tzinfo=None)
+    return updated <= datetime.utcnow() - timedelta(minutes=ABANDONED_INGESTION_TIMEOUT_MINUTES)
 
 
 def _audit_document_action(

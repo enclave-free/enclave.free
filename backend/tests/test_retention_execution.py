@@ -7,6 +7,7 @@ import sys
 import tempfile
 import types
 import unittest
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -153,6 +154,19 @@ class RetentionExecutionTest(unittest.TestCase):
             )
         return Path(job["file_path"])
 
+    def mark_job_stale(self, job_id: str, *, status: str) -> Path:
+        job = self.ingest.JOBS[job_id]
+        job["status"] = status
+        stale = (datetime.utcnow() - timedelta(days=10)).isoformat()
+        job["updated_at"] = stale
+        self.ingest._sync_job_to_db(job_id)
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE ingest_jobs SET status = ?, updated_at = ? WHERE job_id = ?",
+                (status, stale, job_id),
+            )
+        return Path(job["file_path"])
+
     def audit_entries(self, table_name: str) -> list[dict]:
         response = self.client.get(f"/admin/deployment/audit-log?table_name={table_name}")
         self.assertEqual(response.status_code, 200)
@@ -162,16 +176,16 @@ class RetentionExecutionTest(unittest.TestCase):
         with self.database.get_cursor() as cursor:
             cursor.execute(
                 "INSERT INTO users (pubkey, approved) VALUES (?, ?)",
-                ("c" * 64, 1),
+                (uuid.uuid4().hex + uuid.uuid4().hex, 1),
             )
             user_id = int(cursor.lastrowid)
         memory_id = self.database.create_user_memory(
             subject_user_id=user_id,
             kind="preference",
             content=content,
-            source_kind="conversation",
+            source_kind="ambient",
             source_conversation_id="memory-source-conversation",
-            author_actor="sage",
+            author_actor="sage:ambient_capture",
         )
         stale = (datetime.utcnow() - timedelta(days=10)).isoformat()
         with self.database.get_cursor() as cursor:
@@ -180,6 +194,46 @@ class RetentionExecutionTest(unittest.TestCase):
                 (stale, stale, memory_id),
             )
         return memory_id
+
+    def test_retention_only_targets_expirable_or_superseded_user_memory(self) -> None:
+        durable_id = self.create_stale_user_memory(content="Durable memory must survive retention.")
+        expirable_id = self.create_stale_user_memory(content="Expirable memory can be retained.")
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE user_memories
+                SET source_kind = 'admin-confirmed',
+                    author_actor = 'admin',
+                    retention_class = 'durable'
+                WHERE id = ?
+                """,
+                (durable_id,),
+            )
+
+        preview = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+
+        self.assertEqual(preview.status_code, 200)
+        preview_body = preview.json()
+        self.assertEqual(preview_body["counts"]["user_memories"], 1)
+        self.assertEqual(preview_body["eligible"]["user_memories"], [expirable_id])
+        self.assertNotIn("Durable memory", json.dumps(preview_body))
+        self.assertNotIn("Expirable memory", json.dumps(preview_body))
+
+        run = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
+        )
+
+        self.assertEqual(run.status_code, 200)
+        run_body = run.json()
+        self.assertEqual(run_body["retained"]["user_memories"], [expirable_id])
+        self.assertEqual(self.database.get_user_memory(expirable_id)["status"], "deleted")
+        self.assertEqual(self.database.get_user_memory(durable_id)["status"], "active")
+        self.assertNotIn("Durable memory", json.dumps(run_body))
+        self.assertNotIn("Expirable memory", json.dumps(run_body))
 
     def test_retention_deletes_stale_conversations_and_failed_document_artifacts(self) -> None:
         stale_session_id = "stale-session"
@@ -205,7 +259,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -231,6 +285,58 @@ class RetentionExecutionTest(unittest.TestCase):
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
+
+    def test_scheduled_retention_cleans_abandoned_and_orphaned_artifacts_but_keeps_current_documents(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": True,
+                    "retention_window_days": 0,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        abandoned_upload = self.upload_text("Abandoned.md")
+        abandoned_job_id = abandoned_upload.json()["job_id"]
+        abandoned_path = self.mark_job_stale(abandoned_job_id, status="processing")
+        current_upload = self.upload_text("Current.md")
+        current_job_id = current_upload.json()["job_id"]
+        current_path = Path(self.ingest.JOBS[current_job_id]["file_path"])
+        self.ingest.JOBS[current_job_id]["status"] = "completed"
+        self.ingest._sync_job_to_db(current_job_id)
+        active_processing_upload = self.upload_text("ActiveProcessing.md")
+        active_processing_job_id = active_processing_upload.json()["job_id"]
+        active_processing_path = Path(self.ingest.JOBS[active_processing_job_id]["file_path"])
+        self.ingest.JOBS[active_processing_job_id]["status"] = "processing"
+        self.ingest._sync_job_to_db(active_processing_job_id)
+        orphan_path = self.uploads_dir / "orphaned-upload.md"
+        orphan_path.write_text("orphaned uploaded document body must not appear in lifecycle evidence", encoding="utf-8")
+        stale_mtime = (datetime.utcnow() - timedelta(days=10)).timestamp()
+        os.utime(orphan_path, (stale_mtime, stale_mtime))
+        external_target = Path(self.tmp.name) / "external-target.md"
+        external_target.write_text("external symlink target must not be managed by retention", encoding="utf-8")
+        symlink_path = self.uploads_dir / "external-link.md"
+        symlink_path.symlink_to(external_target)
+
+        response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 0})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        retained_artifacts = body["retention"]["retained"]["document_artifacts"]
+        reasons = {artifact["reason"] for artifact in retained_artifacts}
+        self.assertIn("abandoned_ingestion", reasons)
+        self.assertIn("orphaned_uploaded_artifact", reasons)
+        self.assertFalse(abandoned_path.exists())
+        self.assertFalse(orphan_path.exists())
+        self.assertTrue(symlink_path.exists())
+        self.assertTrue(external_target.exists())
+        self.assertTrue(current_path.exists())
+        self.assertTrue(active_processing_path.exists())
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(current_job_id))
+        self.assertIsNotNone(self.ingest.ingest_db.get_job(active_processing_job_id))
+        self.assertNotIn("orphaned uploaded document body", json.dumps(body))
 
     def test_scheduled_retention_creates_metadata_only_run_record(self) -> None:
         self.database.update_setting(
@@ -269,7 +375,73 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertIn("user_memory", run["counts"]["by_class"])
         self.assertEqual(run["counts"]["by_class"]["user_memory"]["succeeded"], 1)
         self.assertNotIn("Run record must not expose this memory", json.dumps(run))
+        detail = self.client.get(f"/admin/lifecycle/retention-runs/{run['id']}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["run"]["id"], run["id"])
+        self.assertNotIn("Run record must not expose this memory", json.dumps(detail.json()))
         self.assertEqual(self.database.get_user_memory(memory_id)["status"], "deleted")
+
+    def test_scheduled_session_memory_failure_creates_sanitized_run_record_and_tombstone(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        session_id = "scheduled-session-failure"
+        self.query._sessions[session_id] = {
+            "id": session_id,
+            "owner_type": "user",
+            "owner_id": "42",
+            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Scheduled retention must never keep this conversation text.",
+                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
+                },
+            ],
+        }
+
+        async def fail_session_memory_deletion(_session: dict) -> dict:
+            return {
+                "status": "failed",
+                "retryable": True,
+                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
+                "results": [
+                    {
+                        "target_kind": "session_memory",
+                        "target_id": session_id,
+                        "action": "delete_session_memory",
+                        "status": "failed",
+                        "retryable": True,
+                        "detail": "target_unavailable",
+                    }
+                ],
+            }
+
+        self.lifecycle.delete_session_memory_for_conversation = fail_session_memory_deletion
+
+        response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 0})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "partial_failure")
+        self.assertEqual(body["run_record"]["status"], "partial_failure")
+        self.assertEqual(body["run_record"]["counts"]["by_class"]["sage_session_memory"]["failed"], 1)
+        self.assertNotIn("Scheduled retention must never keep this conversation text", json.dumps(body))
+        tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
+        self.assertEqual(tombstones.status_code, 200)
+        self.assertEqual(tombstones.json()["tombstones"][0]["conversation_id"], session_id)
+        self.assertNotIn(
+            "Scheduled retention must never keep this conversation text",
+            json.dumps(tombstones.json()),
+        )
 
     def test_lifecycle_status_reports_scheduler_observation(self) -> None:
         self.database.update_setting(
@@ -406,7 +578,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -423,6 +595,38 @@ class RetentionExecutionTest(unittest.TestCase):
         retention_event = json.loads(entries[0]["new_value"])
         self.assertEqual(retention_event["workflow"], "run_retention")
         self.assertNotIn("Raw memory content", json.dumps(retention_event))
+
+    def test_manual_retention_run_requires_fresh_preview_or_current_count_confirmation(self) -> None:
+        memory_id = self.create_stale_user_memory(content="Preview freshness memory stays private.")
+
+        blocked = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(self.database.get_user_memory(memory_id)["status"], "active")
+        self.assertIn("preview", blocked.json()["detail"]["message"].lower())
+        self.assertNotIn("Preview freshness memory", json.dumps(blocked.json()))
+
+        preview = self.client.post(
+            "/admin/lifecycle/retention/preview",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+        )
+        self.assertEqual(preview.status_code, 200)
+        preview_token = preview.json()["preview_token"]
+
+        run = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={
+                "stale_conversation_days": 7,
+                "document_artifact_days": 7,
+                "preview_token": preview_token,
+            },
+        )
+
+        self.assertEqual(run.status_code, 200)
+        self.assertIn(memory_id, run.json()["retained"]["user_memories"])
+        self.assertEqual(self.database.get_user_memory(memory_id)["status"], "deleted")
 
     def test_audit_log_retention_compacts_sensitive_detail_without_full_deletion(self) -> None:
         self.database.update_setting(
@@ -471,7 +675,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -589,7 +793,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -704,7 +908,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -779,7 +983,7 @@ class RetentionExecutionTest(unittest.TestCase):
         self.lifecycle.delete_session_memory_for_conversation = flaky_session_memory_deletion
         retention = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
         self.assertEqual(retention.status_code, 200)
         tombstone = self.client.get("/admin/lifecycle/deletion-tombstones").json()["tombstones"][0]
@@ -862,7 +1066,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1083,11 +1287,11 @@ class RetentionExecutionTest(unittest.TestCase):
     def test_retention_is_safe_to_repeat_when_nothing_is_eligible(self) -> None:
         first = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
         second = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(first.status_code, 200)
@@ -1140,7 +1344,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1194,7 +1398,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1218,7 +1422,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         response = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -1276,7 +1480,7 @@ class RetentionExecutionTest(unittest.TestCase):
 
         run = self.client.post(
             "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7},
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
         )
         self.assertEqual(run.status_code, 200)
         self.assertIn(memory_id, run.json()["retained"]["user_memories"])
