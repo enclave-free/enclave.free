@@ -501,7 +501,11 @@ def _confidentiality_posture_for_data_class(data_class_key: str) -> dict:
             return retrieval_status
         return {
             "status": "partial",
-            "summary": "New Qdrant Retrieval Index entries store vector data and minimal metadata; legacy plaintext payloads may remain until confidentiality migration lands.",
+            "summary": (
+                "New Qdrant Retrieval Index entries store vector data and minimal metadata; "
+                "legacy plaintext payloads may remain until the Confidentiality Migration "
+                "preview/execute workflow inspects and repairs eligible records."
+            ),
         }
     if data_class_key == "user_profiles":
         return {

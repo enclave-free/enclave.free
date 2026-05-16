@@ -183,6 +183,15 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertEqual(missing, [])
 
+    def test_lifecycle_cleanup_docs_split_safe_wording_from_data_migrations(self) -> None:
+        runbook = (REPO_ROOT / "docs/lifecycle-confidentiality-runbook.md").read_text(encoding="utf-8")
+
+        self.assertIn("Safe documentation and terminology cleanup", runbook)
+        self.assertIn("Data-affecting cleanup remains a separate migration slice", runbook)
+        self.assertIn("removing legacy plaintext user/profile storage assumptions", runbook)
+        self.assertIn("removing legacy Qdrant plaintext payload handling", runbook)
+        self.assertNotIn("Migration may land later", runbook)
+
 
 if __name__ == "__main__":
     unittest.main()

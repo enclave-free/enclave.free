@@ -158,6 +158,8 @@ class LifecycleStatusTest(unittest.TestCase):
         retrieval = classes_by_key["retrieval_index"]["confidentiality"]
         self.assertEqual(retrieval["status"], "partial")
         self.assertIn("Qdrant", retrieval["summary"])
+        self.assertIn("Confidentiality Migration", retrieval["summary"])
+        self.assertNotIn("migration lands", retrieval["summary"])
 
     def test_lifecycle_status_reports_mixed_when_required_artifacts_include_legacy_plaintext(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
