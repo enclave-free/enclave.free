@@ -18,7 +18,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 import database
-from ai_config import get_session_defaults
 from query import _build_context, _build_search_query, _process_search_results
 from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
@@ -61,13 +60,6 @@ class InternalAdminDbQueryRequest(BaseModel):
     sql: str
 
 
-class InternalAIConfigResponse(BaseModel):
-    prompt_sections: dict[str, object]
-    parameters: dict[str, object]
-    defaults: dict[str, object]
-    compiled_prompt: str
-
-
 class InternalUserRecordResponse(BaseModel):
     id: int
     type: Literal["user"] = "user"
@@ -99,72 +91,6 @@ def _require_internal_token(x_internal_agent_token: Optional[str] = Header(None)
         raise HTTPException(status_code=503, detail="Internal agent token not configured")
     if not x_internal_agent_token or x_internal_agent_token != INTERNAL_AGENT_TOKEN:
         raise HTTPException(status_code=403, detail="Invalid internal agent token")
-
-
-def _raise_removed_internal_contract() -> None:
-    raise HTTPException(
-        status_code=410,
-        detail={
-            "code": "internal_contract_removed",
-            "message": "This endpoint is not part of the active Sage-to-Python contract.",
-        },
-    )
-
-
-def _serialize_ai_config_value(value_type: str, value: str):
-    if value_type == "number":
-        try:
-            parsed = float(value)
-        except (TypeError, ValueError):
-            return value
-        return int(parsed) if float(parsed).is_integer() else parsed
-    if value_type == "boolean":
-        return str(value).strip().lower() == "true"
-    if value_type == "json":
-        try:
-            import json
-            return json.loads(value)
-        except Exception:
-            return value
-    return value
-
-
-def _build_compiled_prompt(user_type_id: Optional[int]) -> str:
-    effective = database.get_effective_ai_config(user_type_id)
-    by_key = {row["key"]: _serialize_ai_config_value(row["value_type"], row["value"]) for row in effective}
-    rules = by_key.get("prompt_rules", [])
-    forbidden = by_key.get("prompt_forbidden", [])
-
-    lines = [
-        "PROFILE: enclave_web_v1",
-        "",
-        "=== TONE ===",
-        str(by_key.get("prompt_tone", "")),
-        "",
-        "=== RULES ===",
-    ]
-
-    if isinstance(rules, list) and rules:
-        lines.extend(f"{idx}. {rule}" for idx, rule in enumerate(rules, start=1))
-    else:
-        lines.append("1. Be accurate, concise, and operationally useful.")
-
-    lines.extend(["", "=== FORBIDDEN ==="])
-    if isinstance(forbidden, list) and forbidden:
-        lines.extend(f"- {rule}" for rule in forbidden)
-    else:
-        lines.append("- None configured")
-
-    lines.extend(
-        [
-            "",
-            "=== DEFAULTS ===",
-            f"temperature={by_key.get('temperature', 0.1)}",
-            f"top_k={by_key.get('top_k', 8)}",
-            f"web_search_default={by_key.get('web_search_default', False)}",
-        ]
-    )
-    return "\n".join(lines)
 
 
 def _build_accessible_job_ids(user: InternalActorContext, requested_job_ids: Optional[list[str]]) -> list[str]:
@@ -349,21 +275,6 @@ async def document_access(user_type_id: Optional[int] = None):
     }
 
 
-@router.get("/session-defaults", dependencies=[Depends(_require_internal_token)])
-async def internal_session_defaults(user_type_id: Optional[int] = None):
-    _raise_removed_internal_contract()
-    defaults = get_session_defaults(user_type_id)
-    default_docs = (
-        database.get_active_documents_for_user_type(user_type_id)
-        if user_type_id is not None
-        else database.get_default_active_documents()
-    )
-    return {
-        "web_search_enabled": defaults.get("web_search_default", False),
-        "default_document_ids": default_docs,
-    }
-
-
 @router.get("/user-profile-context/{user_id}", dependencies=[Depends(_require_internal_token)])
 async def user_profile_context(user_id: int, user_type_id: Optional[int] = None):
     return {
@@ -376,31 +287,6 @@ async def user_profile_context(user_id: int, user_type_id: Optional[int] = None)
 @router.post("/admin-db-query", dependencies=[Depends(_require_internal_token)])
 async def admin_db_query(request: InternalAdminDbQueryRequest):
     return _execute_safe_select(request.sql)
-
-
-@router.get("/ai-config/effective", response_model=InternalAIConfigResponse, dependencies=[Depends(_require_internal_token)])
-async def effective_ai_config(user_type_id: Optional[int] = None) -> InternalAIConfigResponse:
-    _raise_removed_internal_contract()
-    effective = database.get_effective_ai_config(user_type_id)
-    prompt_sections: dict[str, object] = {}
-    parameters: dict[str, object] = {}
-    defaults: dict[str, object] = {}
-
-    for row in effective:
-        parsed = _serialize_ai_config_value(row["value_type"], row["value"])
-        if row["category"] == "prompt_section":
-            prompt_sections[row["key"]] = parsed
-        elif row["category"] == "parameter":
-            parameters[row["key"]] = parsed
-        elif row["category"] == "default":
-            defaults[row["key"]] = parsed
-
-    return InternalAIConfigResponse(
-        prompt_sections=prompt_sections,
-        parameters=parameters,
-        defaults=defaults,
-        compiled_prompt=_build_compiled_prompt(user_type_id),
-    )
 
 
 @router.get("/health", dependencies=[Depends(_require_internal_token)])

@@ -143,10 +143,8 @@ DB Explorer:
 Admin Chat (db-query tool):
 - Default tool path returns encrypted values (ciphertext + ephemeral keys).
 - The admin chat tool flow goes through Gateway to Sage; Python remains the internal safe DB executor for read-only Enclave Control Plane SQL.
-- If the admin has NIP-07, the frontend can decrypt results client-side and send decrypted trusted context through the Sage-owned chat turn.
-- This keeps private keys in the browser while allowing the LLM to use plaintext for that request.
-- Retrieval-first turns do not use client-executed DB context; `db-query` is an admin assistant-style tool.
-- If decryption fails (missing key or no NIP-07), the frontend falls back to the encrypted tool path.
+- The frontend does not pre-run `db-query` or call `/admin/tools/execute`; it sends `db-query` as a normal Sage-owned tool ID.
+- Retrieval-first turns do not run `db-query`; it is an admin assistant-style Sage tool.
 - Sage authorizes the admin tool request and delegates safe read-only SQL execution to Python.
 
 ## Pre-Admin Onboarding Gate

@@ -14,7 +14,7 @@ import logging
 import math
 import random
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -185,9 +185,12 @@ def _is_abandoned_ingestion_job(job: dict) -> bool:
         updated = datetime.fromisoformat(str(updated_at).replace("Z", "+00:00"))
     except ValueError:
         return False
-    if updated.tzinfo is not None:
-        updated = updated.astimezone().replace(tzinfo=None)
-    return updated <= datetime.utcnow() - timedelta(minutes=ABANDONED_INGESTION_TIMEOUT_MINUTES)
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=timezone.utc)
+    else:
+        updated = updated.astimezone(timezone.utc)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=ABANDONED_INGESTION_TIMEOUT_MINUTES)
+    return updated <= cutoff
 
 
 def _audit_document_action(

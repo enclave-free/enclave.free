@@ -330,7 +330,6 @@
       "compact": "Συμπαγές",
       "expand": "Επέκταση",
       "shareSecretsTitle": "Κοινοποίηση μυστικών μεταβλητών περιβάλλοντος",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Ευαίσθητο",
       "emptyPrompt": "Κάντε ερωτήσεις για οποιαδήποτε ρύθμιση διαχειριστή. Αν θέλετε ο βοηθός να προτείνει και να εφαρμόσει αλλαγές, ζητήστε του να συμπεριλάβει ένα JSON change set.",
       "pendingChanges": "Εκκρεμείς αλλαγές",
@@ -717,14 +716,6 @@
       "roleAssistant": "Βοηθός",
       "footer": "Εξήχθη από {{instanceName}}",
       "exportedOn": "Εξήχθη στις {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Εκτελεσμένο SQL: {{sql}}",
-      "noResults": "Το ερώτημα δεν επέστρεψε αποτελέσματα.",
-      "resultsCount": "Αποτελέσματα ερωτήματος βάσης δεδομένων ({{count}} γραμμές):",
-      "resultsTruncated": "(Τα αποτελέσματα περικόπηκαν σε 100 γραμμές)",
-      "resultsCount_one": "Αποτέλεσμα ερωτήματος βάσης δεδομένων ({{count}} γραμμή):",
-      "resultsCount_other": "Αποτελέσματα ερωτήματος βάσης δεδομένων ({{count}} γραμμές):"
     }
   },
   "errors": {
@@ -980,20 +971,7 @@
       "usersToMigrate": "Χρήστες προς μετεγκατάσταση",
       "warning": "Αυτή είναι μια προχωρημένη λειτουργία. Λανθασμένη μετεγκατάσταση μπορεί να σας αποκλείσει από τα κρυπτογραφημένα δεδομένα. Προχωρήστε μόνο αν κατανοείτε τις συνέπειες."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "Αποτυχία αποκάλυψης της τιμής. Ελέγξτε τη σύνδεση της επέκτασης Nostr σας.",
     "searchHelp": {
       "ariaLabel": "Βοήθεια διαμόρφωσης αναζήτησης web",
@@ -1200,11 +1178,7 @@
     "uploadingStatus": "Μεταφόρτωση στον διακομιστή..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "Επεξεργασία Κειμένου",
       "description": "Ρυθμίστε πώς αναλύονται τα έγγραφα",
@@ -1303,21 +1277,9 @@
     "sampleQuestion": "Τι πρέπει να ξέρω για αυτό το θέμα;"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Τμήματα πλαισίου",
       "description": "Αριθμός τμημάτων προς ανάκτηση",
@@ -1393,11 +1355,7 @@
       "description": "Δημόσιο URL για την εφαρμογή",
       "hint": "Το δημόσιο URL όπου οι χρήστες έχουν πρόσβαση στην εφαρμογή. Χρησιμοποιείται για τη δημιουργία μαγικών συνδέσμων."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL υποτομέα πίνακα διαχείρισης (προαιρετικό)",
       "hint": "Μόνο εάν το UI διαχείρισης βρίσκεται σε ξεχωριστό τομέα. Παράδειγμα: https://admin.example.com. Προεπιλογή: http://localhost:5173/admin.",
@@ -1778,7 +1736,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Δοκιμάστε τον μαγικό σύνδεσμο και τις ροές ελέγχου ταυτότητας Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Δοκιμάστε τον περιορισμό ρυθμού στέλνοντας γρήγορα αιτήματα σε τελικά σημεία με περιορισμένο ρυθμό.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Δοκιμάστε τη ροή δημιουργίας χρηστών με δυναμικά πεδία βάσει του τύπου χρήστη.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Η πλήρης ροή RAG: ενσωμάτωση → αναζήτηση → ανάκτηση → παραγωγή.",
       "this_is_where_the_magic_happens_e98c18": "— Εδώ συμβαίνει η μαγεία:",
       "toggle_theme_9b0eaf": "Εναλλαγή θέματος",

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import os
 import sys
@@ -54,7 +56,6 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.query = importlib.reload(query)
         self.internal_agent = importlib.reload(internal_agent)
         self.database.init_schema()
-        self.query._sessions.clear()
 
         app = FastAPI()
         app.include_router(self.internal_agent.router)
@@ -67,17 +68,11 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.internal_headers = {"X-Internal-Agent-Token": "test-internal-token"}
 
         self.original_internal_embed_texts = self.internal_agent.embed_texts
-        self.original_call_llm = self.query._call_llm_contextual
-        self.original_extract_facts = self.query._extract_facts_from_conversation
 
         self.internal_agent.embed_texts = lambda _texts: [[0.1, 0.2, 0.3]]
-        self.query._extract_facts_from_conversation = lambda session: session.get("facts_gathered", {})
 
     def tearDown(self) -> None:
         self.internal_agent.embed_texts = self.original_internal_embed_texts
-        self.query._call_llm_contextual = self.original_call_llm
-        self.query._extract_facts_from_conversation = self.original_extract_facts
-        self.query._sessions.clear()
         if self.database._connection is not None:
             self.database._connection.close()
             self.database._connection = None

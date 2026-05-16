@@ -85,10 +85,7 @@ Active internal endpoints used by Sage on this branch:
 
 The endpoint shapes are documented in [internal-agent-contract.md](internal-agent-contract.md).
 
-Removed or tombstoned Python compatibility endpoints are no longer part of the Sage call graph:
-
-- `GET /internal/agent/session-defaults` returns `410 Gone` with `internal_contract_removed`
-- `GET /internal/agent/ai-config/effective` returns `410 Gone` with `internal_contract_removed`
+Removed Python compatibility endpoints are absent from the Sage call graph and the Enclave Control Plane.
 
 The important point is that Sage now resolves the actor itself and only asks Python for Enclave Control Plane facts and actions.
 
@@ -188,4 +185,4 @@ Best remaining productization tasks:
 - decide whether Python Deployment Settings should eventually control Sage runtime env too
 - define whether deleting a public query-session record should also perform Session Memory Deletion
 - add browser-level automated tests for cookie auth + CSRF on Sage-owned routes
-- keep Python public Agent Runtime tombstones small and explicit so accidental direct calls fail closed
+- keep obsolete public Agent Runtime handlers absent from Python so the Enclave Control Plane cannot become a rollback runtime

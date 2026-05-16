@@ -414,8 +414,8 @@ _Avoid_: full snapshot, config dump
 - A **User** belongs to at most one **User Type**
 - **Sage** is the **Agent Runtime** inside the **Enclave Free Prototype**
 - The **Enclave Control Plane** provides operator-owned facts and actions to **Sage**
-- Sage-owned public **Agent Runtime** routes should not keep duplicate Python behavior as a rollback path
-- Direct calls to obsolete Python public **Agent Runtime** routes should fail clearly rather than execute legacy behavior
+- Sage-owned public **Agent Runtime** routes should not keep duplicate Python behavior or Python tombstones as rollback paths
+- Obsolete Python public **Agent Runtime** routes should be absent after the Sage hard cut rather than failing through compatibility tombstones
 - Unused internal Sage-to-Python compatibility endpoints are **Prototype Compatibility Debt**
 - Sage should depend only on the active private **Enclave Control Plane** contract, and obsolete internal endpoints should fail clearly rather than preserve old ownership boundaries
 - **Instance Settings** belong to the **Instance**
@@ -484,6 +484,7 @@ _Avoid_: full snapshot, config dump
 - Only current completed **Documents** are visible to **Users** for **Document Access** and **Retrieval**
 - **Document Access** determines which **Documents** are available before **Retrieval** or **Required Context** is applied
 - **Retrieval** is an **Agent Runtime** capability over the **Document Library**, even when the current implementation asks the **Enclave Control Plane** to execute the search
+- Public **Conversation** session discovery and storage belong to **Sage**, not the **Enclave Control Plane**
 - **Required Context** is selected outside the agent's discretion and passed to **Sage** for use in the conversation
 - A **User Type** has zero or more **Onboarding Questions**
 - A user belongs to at most one **User Type**

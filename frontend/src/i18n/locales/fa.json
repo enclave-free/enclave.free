@@ -328,7 +328,6 @@
       "compact": "فشرده",
       "expand": "گسترش",
       "shareSecretsTitle": "اشتراک‌گذاری متغیرهای محیطی محرمانه",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "حساس",
       "emptyPrompt": "درباره هر پیکربندی مدیریتی سؤال بپرسید. اگر می‌خواهید دستیار تغییرات را پیشنهاد و اعمال کند، از او بخواهید یک JSON change set ارائه دهد.",
       "pendingChanges": "تغییرات در انتظار",
@@ -715,13 +714,6 @@
       "roleAssistant": "دستیار",
       "footer": "صادر شده از {{instanceName}}",
       "exportedOn": "صادر شده در {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "SQL اجرا شده: {{sql}}",
-      "noResults": "پرس‌وجو نتیجه‌ای نداشت.",
-      "resultsCount_one": "نتیجه پرس‌وجوی پایگاه داده ({{count}} ردیف):",
-      "resultsCount_other": "نتایج پرس‌وجوی پایگاه داده ({{count}} ردیف):",
-      "resultsTruncated": "(نتایج به ۱۰۰ ردیف محدود شد)"
     }
   },
   "errors": {
@@ -977,20 +969,7 @@
       "usersToMigrate": "کاربران برای مهاجرت",
       "warning": "این یک عملیات پیشرفته است. مهاجرت نادرست می‌تواند شما را از داده‌های رمزگذاری شده قفل کند. فقط در صورت درک عواقب ادامه دهید."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "نمایش مقدار ناموفق بود. اتصال افزونه Nostr خود را بررسی کنید.",
     "searchHelp": {
       "ariaLabel": "راهنمای پیکربندی جستجوی وب",
@@ -1197,11 +1176,7 @@
     "uploadingStatus": "در حال بارگذاری در سرور..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "پردازش متن",
       "description": "پیکربندی نحوه تحلیل اسناد",
@@ -1300,21 +1275,9 @@
     "sampleQuestion": "درباره این موضوع چه باید بدانم؟"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "قطعات زمینه",
       "description": "تعداد قطعات برای بازیابی",
@@ -1390,11 +1353,7 @@
       "description": "URL عمومی برنامه",
       "hint": "URL عمومی که کاربران به برنامه دسترسی دارند. برای ایجاد لینک‌های جادویی استفاده می‌شود."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "نشانی وب زیردامنه پنل مدیریت (اختیاری)",
       "hint": "فقط در صورتی که رابط کاربری مدیریت در یک دامنه جداگانه باشد. مثال: https://admin.example.com. پیش‌فرض: http://localhost:5173/admin.",
@@ -1775,7 +1734,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "جریان‌های احراز هویت لینک جادویی و Nostr را تست کنید.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "محدودیت نرخ را با ارسال درخواست‌های سریع به نقاط پایانی محدود شده تست کنید.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "جریان ایجاد کاربر را با فیلدهای پویا بر اساس نوع کاربر تست کنید.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "پایپ لاین کامل RAG: تعبیه ← جستجو ← بازیابی ← تولید.",
       "this_is_where_the_magic_happens_e98c18": "— اینجاست که جادو اتفاق می‌افتد:",
       "toggle_theme_9b0eaf": "تغییر پوسته",

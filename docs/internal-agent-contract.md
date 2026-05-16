@@ -323,17 +323,11 @@ Example unsafe SQL response:
 }
 ```
 
-## Compatibility-Only Endpoints
+## Removed Endpoints
 
-These endpoints may still exist in Python for older local paths, but Sage does
-not depend on them in the current public route graph:
-
-- `GET /internal/agent/session-defaults`
-- `GET /internal/agent/ai-config/effective`
-- any old `auth-context` endpoint references
-
-Do not add new Sage dependencies on compatibility-only endpoints without
-promoting them here as active contract endpoints.
+Obsolete compatibility-only endpoints are absent from Python. Do not add new
+Sage dependencies on removed endpoints without promoting them here as active
+contract endpoints.
 
 ## Change Rules
 

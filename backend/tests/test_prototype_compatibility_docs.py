@@ -10,16 +10,17 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
 
         self.assertIn("Gateway routes public Agent Runtime requests to Sage", tools)
-        self.assertIn("direct Python calls return `410 Gone`", tools)
-        self.assertIn("`sage_route_required`", tools)
+        self.assertIn("Python no longer owns or exposes these public Agent Runtime routes", tools)
+        self.assertIn("routes are absent from the Enclave Control Plane", tools)
+        self.assertNotIn("sage_route_required", tools)
         self.assertNotIn("use `/llm/chat` for assistant-style turns", tools)
         self.assertNotIn("Current `/query` responses include", tools)
 
-    def test_current_architecture_names_python_tombstones_not_legacy_runtime(self) -> None:
+    def test_current_architecture_names_absent_python_handlers_not_legacy_runtime(self) -> None:
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
 
-        self.assertIn("Python direct handlers for `/llm/chat`, `/query`, `/session-defaults`, and `/admin/tools/execute` are tombstones", architecture)
-        self.assertIn("fail closed with `sage_route_required`", architecture)
+        self.assertIn("Python does not expose public handlers for `/llm/chat`, `/query`, `/session-defaults`, or `/admin/tools/execute`", architecture)
+        self.assertIn("obsolete public Agent Runtime routes are absent from the Enclave Control Plane", architecture)
         self.assertNotIn("legacy Python handler remains", architecture)
         self.assertNotIn("legacy Python router still exists", architecture)
         self.assertNotIn("legacy AI route implementations", architecture)
@@ -38,7 +39,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertIn("Gateway routes this request to Sage", assistant)
         self.assertIn("Sage-owned session defaults", assistant)
-        self.assertIn("direct Python `/llm/chat` and `/session-defaults` calls tombstone", assistant)
+        self.assertIn("Python does not expose public `/llm/chat` or `/session-defaults` handlers", assistant)
         self.assertNotIn("Transport: uses `POST /llm/chat`", assistant)
         self.assertNotIn("Reads `/session-defaults`", assistant)
 
@@ -72,16 +73,16 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
     def test_dumb_gateway_docs_do_not_keep_removed_internal_compatibility_endpoints_alive(self) -> None:
         gateway = (REPO_ROOT / "docs/dumb-gateway-foundation.md").read_text(encoding="utf-8")
 
-        self.assertIn("Removed or tombstoned Python compatibility endpoints", gateway)
-        self.assertIn("`internal_contract_removed`", gateway)
+        self.assertIn("Removed Python compatibility endpoints are absent", gateway)
+        self.assertNotIn("internal_contract_removed", gateway)
         self.assertNotIn("Compatibility endpoints still exist in Python", gateway)
         self.assertNotIn("`POST /internal/agent/auth-context`", gateway)
 
-    def test_sage_cutover_docs_name_tombstones_instead_of_legacy_python_runtime(self) -> None:
+    def test_sage_cutover_docs_name_absent_handlers_instead_of_legacy_python_runtime(self) -> None:
         cutover = (REPO_ROOT / "docs/prototype-sage-cutover.md").read_text(encoding="utf-8")
 
-        self.assertIn("Direct Python calls to public Agent Runtime routes return `410 Gone`", cutover)
-        self.assertIn("Obsolete internal compatibility endpoints return `internal_contract_removed`", cutover)
+        self.assertIn("Python no longer exposes public Agent Runtime handlers", cutover)
+        self.assertIn("Obsolete internal compatibility endpoints are absent from Python", cutover)
         self.assertNotIn("legacy Python `/llm/chat` and `/query` code still exists", cutover)
         self.assertNotIn("compatibility internal endpoints", cutover)
 

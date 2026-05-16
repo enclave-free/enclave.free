@@ -159,15 +159,6 @@
       "roleAssistant": "Асистент",
       "footer": "Експортовано з {{instanceName}}",
       "exportedOn": "Експортовано {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Виконано SQL: {{sql}}",
-      "noResults": "Запит не повернув результатів.",
-      "resultsCount_one": "Результат запиту до бази даних ({{count}} рядок):",
-      "resultsCount_few": "Результати запиту до бази даних ({{count}} рядки):",
-      "resultsCount_many": "Результати запиту до бази даних ({{count}} рядків):",
-      "resultsCount_other": "Результати запиту до бази даних ({{count}} рядків):",
-      "resultsTruncated": "(Результати обмежено до 100 рядків)"
     }
   },
   "common": {
@@ -507,7 +498,6 @@
       "compact": "Компактний",
       "expand": "Розгорнути",
       "shareSecretsTitle": "Поділитися секретними змінними середовища",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Чутливо",
       "emptyPrompt": "Ставте запитання про будь-яку адмін-конфігурацію. Якщо хочете, щоб помічник запропонував і застосував зміни, попросіть його додати JSON change set.",
       "pendingChanges": "Відкладені зміни",
@@ -987,20 +977,7 @@
       "usersToMigrate": "Користувачів для міграції",
       "warning": "Це розширена операція. Неправильна міграція може заблокувати вам доступ до зашифрованих даних. Продовжуйте лише якщо розумієте наслідки."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "Не вдалося показати значення. Перевірте підключення розширення Nostr.",
     "searchHelp": {
       "ariaLabel": "Довідка з конфігурації веб-пошуку",
@@ -1207,11 +1184,7 @@
     "uploadingStatus": "Завантаження на сервер..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "Обробка тексту",
       "description": "Налаштування аналізу документів",
@@ -1310,21 +1283,9 @@
     "sampleQuestion": "Що мені слід знати про цю тему?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Фрагменти контексту",
       "description": "Кількість фрагментів для отримання",
@@ -1400,11 +1361,7 @@
       "description": "Публічний URL додатку",
       "hint": "Публічний URL, за яким користувачі отримують доступ до додатку. Використовується для генерації магічних посилань."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL-адреса субдомену панелі адміністратора (необов’язково)",
       "hint": "Тільки якщо інтерфейс адміністратора знаходиться на окремому домені. Приклад: https://admin.example.com. За замовчуванням: http://localhost:5173/admin.",
@@ -1785,7 +1742,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Перевірте чарівне посилання та потоки автентифікації Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Перевірте обмеження швидкості, надсилаючи швидкі запити до кінцевих точок з обмеженням швидкості.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Протестуйте потік створення користувачів з динамічними полями на основі типу користувача.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Повний конвеєр RAG: вбудовування → пошук → отримання → генерація.",
       "this_is_where_the_magic_happens_e98c18": "— Тут відбувається диво:",
       "toggle_theme_9b0eaf": "Змінити тему",

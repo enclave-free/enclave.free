@@ -24,8 +24,10 @@ class SageTinfoilProvider(LLMProvider):
     """Generic OpenAI-compatible endpoint used by Python diagnostics."""
 
     def __init__(self, provider_name: str = "sage") -> None:
+        if provider_name != "sage":
+            raise ValueError('SageTinfoilProvider only supports provider_name="sage"')
         self._lock = threading.RLock()
-        self.provider_name = "sage"
+        self.provider_name = provider_name
 
         try:
             from config_loader import get_config

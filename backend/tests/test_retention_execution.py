@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import asyncio
 import json
 import os
 import sys
@@ -47,7 +48,6 @@ class RetentionExecutionTest(unittest.TestCase):
         import deployment_config
         import ingest
         import lifecycle
-        import query
         import main
 
         self.database = importlib.reload(database)
@@ -55,7 +55,6 @@ class RetentionExecutionTest(unittest.TestCase):
         self.deployment_config = importlib.reload(deployment_config)
         self.ingest = importlib.reload(ingest)
         self.lifecycle = importlib.reload(lifecycle)
-        self.query = importlib.reload(query)
         self.main = importlib.reload(main)
         self.database.init_schema()
         self.ingest.JOBS = self.ingest._load_jobs_from_db()
@@ -110,7 +109,6 @@ class RetentionExecutionTest(unittest.TestCase):
         self.main.app.dependency_overrides.clear()
         self.ingest.schedule_document_processing = self.original_scheduler
         self.ingest.delete_document_chunks = self.original_chunk_deleter
-        self.query._sessions.clear()
         if self.database._connection is not None:
             self.database._connection.close()
             self.database._connection = None
@@ -235,23 +233,7 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertNotIn("Durable memory", json.dumps(run_body))
         self.assertNotIn("Expirable memory", json.dumps(run_body))
 
-    def test_retention_deletes_stale_conversations_and_failed_document_artifacts(self) -> None:
-        stale_session_id = "stale-session"
-        recent_session_id = "recent-session"
-        self.query._sessions[stale_session_id] = {
-            "id": stale_session_id,
-            "owner_type": "user",
-            "owner_id": "1",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [],
-        }
-        self.query._sessions[recent_session_id] = {
-            "id": recent_session_id,
-            "owner_type": "user",
-            "owner_id": "1",
-            "created_at": datetime.utcnow().isoformat(),
-            "messages": [],
-        }
+    def test_retention_skips_sage_session_memory_discovery_and_deletes_failed_document_artifacts(self) -> None:
         upload = self.upload_text("Broken.md")
         self.assertEqual(upload.status_code, 200)
         job_id = upload.json()["job_id"]
@@ -265,14 +247,12 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["status"], "succeeded")
-        self.assertIn(stale_session_id, body["retained"]["stale_conversations"])
-        self.assertNotIn(stale_session_id, self.query._sessions)
-        self.assertIn(recent_session_id, self.query._sessions)
+        self.assertEqual(body["retained"]["stale_conversations"], [])
         self.assertFalse(artifact_path.exists())
         self.assertIsNone(self.ingest.ingest_db.get_job(job_id))
         self.assertIn(job_id, self.deleted_chunk_job_ids)
         actions = {result["action"]: result for result in body["deletion"]["results"]}
-        self.assertEqual(actions["retention_delete_stale_conversation"]["status"], "succeeded")
+        self.assertEqual(actions["retention_skip_sage_owned_discovery"]["status"], "skipped")
         self.assertEqual(actions["delete_document_metadata"]["status"], "succeeded")
         self.assertIn("run_record", body)
         self.assertEqual(body["run_record"]["trigger"], "manual")
@@ -381,7 +361,7 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertNotIn("Run record must not expose this memory", json.dumps(detail.json()))
         self.assertEqual(self.database.get_user_memory(memory_id)["status"], "deleted")
 
-    def test_scheduled_session_memory_failure_creates_sanitized_run_record_and_tombstone(self) -> None:
+    def test_scheduled_session_memory_retention_records_sage_owned_discovery_skip(self) -> None:
         self.database.update_setting(
             "lifecycle_retention_policies",
             json.dumps({
@@ -393,55 +373,19 @@ class RetentionExecutionTest(unittest.TestCase):
                 },
             }, sort_keys=True),
         )
-        session_id = "scheduled-session-failure"
-        self.query._sessions[session_id] = {
-            "id": session_id,
-            "owner_type": "user",
-            "owner_id": "42",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Scheduled retention must never keep this conversation text.",
-                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-                },
-            ],
-        }
-
-        async def fail_session_memory_deletion(_session: dict) -> dict:
-            return {
-                "status": "failed",
-                "retryable": True,
-                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
-                "results": [
-                    {
-                        "target_kind": "session_memory",
-                        "target_id": session_id,
-                        "action": "delete_session_memory",
-                        "status": "failed",
-                        "retryable": True,
-                        "detail": "target_unavailable",
-                    }
-                ],
-            }
-
-        self.lifecycle.delete_session_memory_for_conversation = fail_session_memory_deletion
 
         response = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 0})
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["status"], "partial_failure")
-        self.assertEqual(body["run_record"]["status"], "partial_failure")
-        self.assertEqual(body["run_record"]["counts"]["by_class"]["sage_session_memory"]["failed"], 1)
-        self.assertNotIn("Scheduled retention must never keep this conversation text", json.dumps(body))
+        self.assertEqual(body["status"], "succeeded")
+        self.assertEqual(body["run_record"]["status"], "succeeded")
+        self.assertEqual(body["run_record"]["counts"]["by_class"]["sage_session_memory"]["skipped"], 1)
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["retention_skip_sage_owned_discovery"]["status"], "skipped")
         tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
         self.assertEqual(tombstones.status_code, 200)
-        self.assertEqual(tombstones.json()["tombstones"][0]["conversation_id"], session_id)
-        self.assertNotIn(
-            "Scheduled retention must never keep this conversation text",
-            json.dumps(tombstones.json()),
-        )
+        self.assertEqual(tombstones.json()["tombstones"], [])
 
     def test_lifecycle_status_reports_scheduler_observation(self) -> None:
         self.database.update_setting(
@@ -529,14 +473,6 @@ class RetentionExecutionTest(unittest.TestCase):
             self.assertIsNotNone(run["audit_entry_hash"])
 
     def test_retention_preview_reports_eligible_counts_without_deleting(self) -> None:
-        stale_session_id = "preview-stale-session"
-        self.query._sessions[stale_session_id] = {
-            "id": stale_session_id,
-            "owner_type": "user",
-            "owner_id": "1",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [],
-        }
         upload = self.upload_text("Preview.md")
         self.assertEqual(upload.status_code, 200)
         job_id = upload.json()["job_id"]
@@ -551,9 +487,8 @@ class RetentionExecutionTest(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["status"], "preview")
         self.assertFalse(body["destructive"])
-        self.assertEqual(body["counts"]["stale_conversations"], 1)
+        self.assertEqual(body["counts"]["stale_conversations"], 0)
         self.assertEqual(body["counts"]["document_artifacts"], 1)
-        self.assertIn(stale_session_id, self.query._sessions)
         self.assertTrue(artifact_path.exists())
         self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
 
@@ -777,14 +712,6 @@ class RetentionExecutionTest(unittest.TestCase):
                 },
             }, sort_keys=True),
         )
-        stale_session_id = "disabled-policy-stale-session"
-        self.query._sessions[stale_session_id] = {
-            "id": stale_session_id,
-            "owner_type": "user",
-            "owner_id": "1",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [],
-        }
         upload = self.upload_text("DisabledPolicy.md")
         self.assertEqual(upload.status_code, 200)
         job_id = upload.json()["job_id"]
@@ -798,7 +725,6 @@ class RetentionExecutionTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertIn(stale_session_id, self.query._sessions)
         self.assertTrue(artifact_path.exists())
         self.assertIsNotNone(self.ingest.ingest_db.get_job(job_id))
         actions = {result["target_id"]: result for result in body["deletion"]["results"]}
@@ -871,24 +797,16 @@ class RetentionExecutionTest(unittest.TestCase):
             ],
         }
 
-    def test_retention_creates_metadata_only_tombstone_when_session_memory_deletion_fails(self) -> None:
-        stale_session_id = "stale-session"
-        self.query._sessions[stale_session_id] = {
-            "id": stale_session_id,
-            "owner_type": "user",
-            "owner_id": "42",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Sensitive conversation text must not survive in lifecycle evidence.",
-                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-                },
-            ],
-        }
-
-        async def fail_session_memory_deletion(_session: dict) -> dict:
-            return {
+    def test_admin_can_retry_incomplete_session_memory_tombstone(self) -> None:
+        stale_session_id = "retry-session"
+        tombstone_id = self.database.create_deletion_tombstone(
+            lifecycle_data_class="sage_session_memory",
+            conversation_id=stale_session_id,
+            former_subject_ref="deleted_user:42",
+            status="incomplete",
+            source="retention_execution",
+            workflow="run_retention",
+            deletion={
                 "status": "failed",
                 "retryable": True,
                 "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
@@ -902,68 +820,10 @@ class RetentionExecutionTest(unittest.TestCase):
                         "detail": "target_unavailable",
                     }
                 ],
-            }
-
-        self.lifecycle.delete_session_memory_for_conversation = fail_session_memory_deletion
-
-        response = self.client.post(
-            "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
+            },
         )
 
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["status"], "partial_failure")
-        self.assertNotIn(stale_session_id, self.query._sessions)
-
-        tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
-        self.assertEqual(tombstones.status_code, 200)
-        items = tombstones.json()["tombstones"]
-        self.assertEqual(len(items), 1)
-        tombstone = items[0]
-        self.assertEqual(tombstone["status"], "incomplete")
-        self.assertEqual(tombstone["conversation_id"], stale_session_id)
-        self.assertEqual(tombstone["former_subject_ref"], "deleted_user:42")
-        self.assertEqual(tombstone["source"], "retention_execution")
-        serialized = json.dumps(tombstone)
-        self.assertIn("target_unavailable", serialized)
-        self.assertNotIn("Sensitive conversation text", serialized)
-
-    def test_admin_can_retry_incomplete_session_memory_tombstone(self) -> None:
-        stale_session_id = "retry-session"
-        self.query._sessions[stale_session_id] = {
-            "id": stale_session_id,
-            "owner_type": "user",
-            "owner_id": "42",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Retry must not reveal this message.",
-                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-                },
-            ],
-        }
-        attempts = {"count": 0}
-
-        async def flaky_session_memory_deletion(_session: dict) -> dict:
-            attempts["count"] += 1
-            if attempts["count"] == 1:
-                return {
-                    "status": "failed",
-                    "retryable": True,
-                    "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
-                    "results": [
-                        {
-                            "target_kind": "session_memory",
-                            "target_id": stale_session_id,
-                            "action": "delete_session_memory",
-                            "status": "failed",
-                            "retryable": True,
-                            "detail": "target_unavailable",
-                        }
-                    ],
-                }
+        async def successful_sage_delete(_payload: dict) -> dict:
             return {
                 "status": "succeeded",
                 "retryable": False,
@@ -980,15 +840,9 @@ class RetentionExecutionTest(unittest.TestCase):
                 ],
             }
 
-        self.lifecycle.delete_session_memory_for_conversation = flaky_session_memory_deletion
-        retention = self.client.post(
-            "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
-        )
-        self.assertEqual(retention.status_code, 200)
-        tombstone = self.client.get("/admin/lifecycle/deletion-tombstones").json()["tombstones"][0]
+        self.lifecycle.post_sage_session_memory_delete = successful_sage_delete
 
-        retry = self.client.post(f"/admin/lifecycle/deletion-tombstones/{tombstone['id']}/retry")
+        retry = self.client.post(f"/admin/lifecycle/deletion-tombstones/{tombstone_id}/retry")
 
         self.assertEqual(retry.status_code, 200)
         body = retry.json()
@@ -1008,7 +862,7 @@ class RetentionExecutionTest(unittest.TestCase):
         )
         self.assertEqual(retry_event["status"], "succeeded")
 
-        repeat_retry = self.client.post(f"/admin/lifecycle/deletion-tombstones/{tombstone['id']}/retry")
+        repeat_retry = self.client.post(f"/admin/lifecycle/deletion-tombstones/{tombstone_id}/retry")
 
         self.assertEqual(repeat_retry.status_code, 409)
         repeat_body = repeat_retry.json()["detail"]
@@ -1026,22 +880,8 @@ class RetentionExecutionTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    def test_retention_uses_sage_lifecycle_contract_and_sanitizes_failures(self) -> None:
+    def test_session_memory_deletion_uses_sage_lifecycle_contract_and_sanitizes_failures(self) -> None:
         stale_session_id = "sage-backed-session"
-        self.query._sessions[stale_session_id] = {
-            "id": stale_session_id,
-            "agent_runtime": "sage",
-            "owner_type": "user",
-            "owner_id": "42",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Do not persist this Sage-backed message.",
-                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-                },
-            ],
-        }
         calls: list[dict] = []
 
         async def fake_sage_delete(payload: dict) -> dict:
@@ -1064,16 +904,22 @@ class RetentionExecutionTest(unittest.TestCase):
 
         self.lifecycle.post_sage_session_memory_delete = fake_sage_delete
 
-        response = self.client.post(
-            "/admin/lifecycle/retention/run",
-            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
-        )
+        deletion = asyncio.run(self.lifecycle.delete_session_memory_for_conversation({
+            "id": stale_session_id,
+            "agent_runtime": "sage",
+            "owner_type": "user",
+            "owner_id": "42",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Do not persist this Sage-backed message.",
+                },
+            ],
+        }))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "partial_failure")
+        self.assertEqual(deletion["status"], "failed")
         self.assertEqual(calls, [{"conversation_id": stale_session_id}])
-        tombstone = self.client.get("/admin/lifecycle/deletion-tombstones").json()["tombstones"][0]
-        serialized = json.dumps(tombstone)
+        serialized = json.dumps(deletion)
         self.assertIn("target_unavailable", serialized)
         self.assertNotIn("postgres://", serialized)
         self.assertNotIn("secret", serialized)
@@ -1094,49 +940,9 @@ class RetentionExecutionTest(unittest.TestCase):
         body = second.json()
         self.assertEqual(body["status"], "succeeded")
         self.assertEqual(body["deletion"]["counts"]["skipped"], 1)
-        self.assertEqual(body["deletion"]["results"][0]["action"], "run_retention")
+        self.assertEqual(body["deletion"]["results"][0]["action"], "retention_skip_sage_owned_discovery")
 
-    def test_retention_rechecks_conversation_activity_before_deleting_candidate(self) -> None:
-        first_session_id = "first-stale-session"
-        revived_session_id = "revived-stale-session"
-        stale_created = (datetime.utcnow() - timedelta(days=10)).isoformat()
-        revived_session = None
-        for session_id in (first_session_id, revived_session_id):
-            session = {
-                "id": session_id,
-                "owner_type": "user",
-                "owner_id": "42",
-                "created_at": stale_created,
-                "messages": [],
-            }
-            self.query._sessions[session_id] = session
-            if session_id == revived_session_id:
-                revived_session = session
-
-        async def revive_second_session(_session: dict) -> dict:
-            revived_session["messages"].append({
-                "role": "assistant",
-                "content": "This activity should keep the Conversation active.",
-                "timestamp": datetime.utcnow().isoformat(),
-            })
-            return {
-                "status": "succeeded",
-                "retryable": False,
-                "counts": {"succeeded": 1, "skipped": 0, "failed": 0},
-                "results": [
-                    {
-                        "target_kind": "session_memory",
-                        "target_id": first_session_id,
-                        "action": "delete_session_memory",
-                        "status": "succeeded",
-                        "retryable": False,
-                        "detail": "Deleted Sage Session Memory.",
-                    }
-                ],
-            }
-
-        self.lifecycle.delete_session_memory_for_conversation = revive_second_session
-
+    def test_retention_reports_sage_owned_session_memory_discovery(self) -> None:
         response = self.client.post(
             "/admin/lifecycle/retention/run",
             json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
@@ -1144,29 +950,13 @@ class RetentionExecutionTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertIn(first_session_id, body["retained"]["stale_conversations"])
-        self.assertIn(revived_session_id, body["retained"]["skipped_conversations"])
-        self.assertNotIn(first_session_id, self.query._sessions)
-        self.assertIn(revived_session_id, self.query._sessions)
-        actions = {result["target_id"]: result for result in body["deletion"]["results"]}
-        self.assertEqual(actions[revived_session_id]["status"], "skipped")
-        self.assertEqual(actions[revived_session_id]["action"], "retention_skip_active_conversation")
+        self.assertEqual(body["retained"]["stale_conversations"], [])
+        self.assertEqual(body["retained"]["skipped_conversations"], [])
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["retention_skip_sage_owned_discovery"]["status"], "skipped")
 
-    def test_retention_skips_conversations_with_incomplete_deletion_tombstones(self) -> None:
+    def test_retention_does_not_scan_python_sessions_for_incomplete_deletion_tombstones(self) -> None:
         tombstoned_session_id = "tombstoned-stale-session"
-        self.query._sessions[tombstoned_session_id] = {
-            "id": tombstoned_session_id,
-            "owner_type": "user",
-            "owner_id": "42",
-            "created_at": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "This tombstoned Conversation must not be deleted again.",
-                    "timestamp": (datetime.utcnow() - timedelta(days=10)).isoformat(),
-                }
-            ],
-        }
         self.database.create_deletion_tombstone(
             lifecycle_data_class="sage_session_memory",
             conversation_id=tombstoned_session_id,
@@ -1198,12 +988,10 @@ class RetentionExecutionTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertIn(tombstoned_session_id, self.query._sessions)
         self.assertNotIn(tombstoned_session_id, body["retained"]["stale_conversations"])
-        self.assertIn(tombstoned_session_id, body["retained"]["skipped_conversations"])
-        actions = {result["target_id"]: result for result in body["deletion"]["results"]}
-        self.assertEqual(actions[tombstoned_session_id]["status"], "skipped")
-        self.assertEqual(actions[tombstoned_session_id]["action"], "retention_skip_tombstoned_conversation")
+        self.assertNotIn(tombstoned_session_id, body["retained"]["skipped_conversations"])
+        actions = {result["action"]: result for result in body["deletion"]["results"]}
+        self.assertEqual(actions["retention_skip_sage_owned_discovery"]["status"], "skipped")
 
     def test_retention_reports_partial_failure_for_retryable_document_cleanup(self) -> None:
         upload = self.upload_text("Broken.md")

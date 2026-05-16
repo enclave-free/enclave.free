@@ -82,9 +82,9 @@ If this prototype gets productized, the biggest architecture decision is no long
 ## Current Temporary Pieces
 
 - deployment/runtime config is still split across Python Deployment Settings, Sage env, and Gateway config
-- Direct Python calls to public Agent Runtime routes return `410 Gone` with `sage_route_required`; the supported path is Gateway to Sage
+- Python no longer exposes public Agent Runtime handlers; the supported path is Gateway to Sage
 - supported active Conversation deletion now removes the public `/query` session record and associated Sage Session Memory, but scheduled retention for all historical Session Memory/log surfaces is still future work
-- Obsolete internal compatibility endpoints return `internal_contract_removed`; Sage should use only the active private control-plane contract listed above
+- Obsolete internal compatibility endpoints are absent from Python; Sage should use only the active private control-plane contract listed above
 
 ## Branch Note
 

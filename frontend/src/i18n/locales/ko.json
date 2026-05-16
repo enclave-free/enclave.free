@@ -159,13 +159,6 @@
       "roleAssistant": "어시스턴트",
       "footer": "{{instanceName}}에서 내보냄",
       "exportedOn": "{{timestamp}}에 내보냄"
-    },
-    "database": {
-      "executedSql": "실행된 SQL: {{sql}}",
-      "noResults": "쿼리가 결과를 반환하지 않았습니다.",
-      "resultsCount_one": "데이터베이스 쿼리 결과 ({{count}}행):",
-      "resultsCount_other": "데이터베이스 쿼리 결과 ({{count}}행):",
-      "resultsTruncated": "(결과가 100행으로 잘렸습니다)"
     }
   },
   "common": {
@@ -497,7 +490,6 @@
       "compact": "컴팩트",
       "expand": "확장",
       "shareSecretsTitle": "비밀 환경 변수 공유",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "민감",
       "emptyPrompt": "관리자 구성에 대해 질문하세요. 도우미가 변경을 제안하고 적용하도록 하려면 JSON 변경 세트를 포함해 달라고 요청하세요.",
       "pendingChanges": "대기 중인 변경사항",
@@ -977,20 +969,7 @@
       "usersToMigrate": "마이그레이션할 사용자",
       "warning": "이것은 고급 작업입니다. 잘못된 마이그레이션은 암호화된 데이터에 접근할 수 없게 만들 수 있습니다. 결과를 이해한 경우에만 진행하세요."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "값을 표시하지 못했습니다. Nostr 확장 프로그램 연결을 확인하세요.",
     "searchHelp": {
       "ariaLabel": "웹 검색 구성 도움말",
@@ -1197,11 +1176,7 @@
     "uploadingStatus": "서버에 업로드 중..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "텍스트 처리",
       "description": "문서 분석 방식 설정",
@@ -1300,21 +1275,9 @@
     "sampleQuestion": "이 주제에 대해 무엇을 알아야 하나요?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "컨텍스트 청크 수",
       "description": "검색할 청크 수",
@@ -1390,11 +1353,7 @@
       "description": "애플리케이션의 공개 URL",
       "hint": "사용자가 앱에 접근하는 공개 URL. 매직 링크 생성에 사용됩니다."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "관리자 패널 서브도메인 URL (선택 사항)",
       "hint": "관리자 UI가 별도의 도메인에 있는 경우에만 해당합니다. 예: https://admin.example.com. 기본값: http://localhost:5173/admin.",
@@ -1775,7 +1734,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "매직 링크 및 Nostr 인증 흐름 테스트.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "속도 제한이 적용되는 엔드포인트에 빠른 요청을 보내 속도 제한을 테스트합니다.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "사용자 유형에 따라 동적 필드를 사용하여 사용자 생성 흐름을 테스트합니다.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "완전한 RAG 파이프라인: 임베딩 → 검색 → 검색 → 생성.",
       "this_is_where_the_magic_happens_e98c18": "— 여기서 마법이 일어납니다:",
       "toggle_theme_9b0eaf": "테마 전환",

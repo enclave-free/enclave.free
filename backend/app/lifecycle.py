@@ -17,7 +17,7 @@ import tempfile
 import secrets
 import stat
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi import Header, HTTPException
 import httpx
 from pydantic import BaseModel, Field
@@ -33,7 +33,6 @@ from data_deletion import (
 )
 import ingest
 import ingest_db
-import query
 import store
 
 
@@ -75,20 +74,6 @@ async def close_sage_client() -> None:
     if _sage_client is not None:
         await _sage_client.aclose()
         _sage_client = None
-
-
-def _session_last_activity(session: dict) -> datetime | None:
-    messages = session.get("messages") or []
-    last_activity = None
-    for message in messages:
-        if not isinstance(message, dict):
-            continue
-        message_time = _parse_timestamp(message.get("timestamp"))
-        if message_time and (last_activity is None or message_time > last_activity):
-            last_activity = message_time
-    if last_activity:
-        return last_activity
-    return _parse_timestamp(session.get("created_at"))
 
 
 DATA_CLASSES = [
@@ -1177,10 +1162,13 @@ def _retention_counts_by_class(results: list[dict]) -> dict:
         "deletion_tombstone": "deletion_tombstone",
     }
     for result in results:
-        class_key = target_class_map.get(
-            str(result.get("target_kind", "")),
-            str(result.get("target_kind") or "unknown"),
-        )
+        if result.get("target_kind") == "lifecycle_data_class":
+            class_key = str(result.get("target_id") or "lifecycle_data_class")
+        else:
+            class_key = target_class_map.get(
+                str(result.get("target_kind", "")),
+                str(result.get("target_kind") or "unknown"),
+            )
         status = str(result.get("status") or "unknown")
         if class_key not in by_class:
             by_class[class_key] = {"succeeded": 0, "skipped": 0, "failed": 0}
@@ -1399,27 +1387,15 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
     user_memory_policy = _retention_policy_for("user_memory")
     audit_log_policy = _retention_policy_for("audit_log")
-    conversation_days = _retention_policy_days("sage_session_memory", request.stale_conversation_days)
     document_days = _retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
     user_memory_days = _retention_policy_days("user_memory", 30)
     audit_log_days = _retention_policy_days("audit_log", 30)
-    conversation_cutoff = now - timedelta(days=conversation_days)
     document_cutoff = now - timedelta(days=document_days)
     user_memory_cutoff = now - timedelta(days=user_memory_days)
     audit_log_cutoff = now - timedelta(days=audit_log_days)
 
     stale_conversations = []
     skipped_conversations = []
-    if session_memory_policy["enabled"]:
-        with query._sessions_lock:
-            for session_id, session in list(query._sessions.items()):
-                with query._session_lock(session):
-                    last_activity = _session_last_activity(session)
-                if last_activity and last_activity <= conversation_cutoff:
-                    if database.has_incomplete_deletion_tombstone_for_conversation(session_id):
-                        skipped_conversations.append(session_id)
-                    else:
-                        stale_conversations.append(session_id)
 
     document_artifacts = []
     if document_artifact_policy["enabled"]:
@@ -1520,9 +1496,6 @@ async def run_retention(
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
     user_memory_policy = _retention_policy_for("user_memory")
     audit_log_policy = _retention_policy_for("audit_log")
-    conversation_cutoff = now - timedelta(
-        days=_retention_policy_days("sage_session_memory", request.stale_conversation_days)
-    )
     document_cutoff = now - timedelta(
         days=_retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
     )
@@ -1537,68 +1510,19 @@ async def run_retention(
         "audit_log_entries": 0,
     }
 
-    stale_sessions = []
     if session_memory_policy["enabled"]:
-        with query._sessions_lock:
-            stale_session_ids = []
-            for session_id, session in list(query._sessions.items()):
-                with query._session_lock(session):
-                    last_activity = _session_last_activity(session)
-                if last_activity and last_activity <= conversation_cutoff:
-                    stale_session_ids.append(session_id)
-
-            for session_id in stale_session_ids:
-                if database.has_incomplete_deletion_tombstone_for_conversation(session_id):
-                    retained["skipped_conversations"].append(session_id)
-                    results.append(deletion_target_skipped(
-                        target_kind="conversation",
-                        target_id=session_id,
-                        action="retention_skip_tombstoned_conversation",
-                        detail="Skipped Conversation because an incomplete Deletion Tombstone already tracks its lifecycle deletion.",
-                    ))
-                    continue
-                session = query._sessions.pop(session_id, None)
-                if session is not None:
-                    stale_sessions.append((session_id, session))
+        results.append(deletion_target_skipped(
+            target_kind="lifecycle_data_class",
+            target_id="sage_session_memory",
+            action="retention_skip_sage_owned_discovery",
+            detail="Skipped Sage Session Memory retention because Conversation session discovery is owned by Sage.",
+        ))
     elif "sage_session_memory" in stored_policies:
         results.append(deletion_target_skipped(
             target_kind="lifecycle_data_class",
             target_id="sage_session_memory",
             action="retention_skip_disabled_policy",
             detail="Skipped Sage Session Memory retention because its Data Retention policy is disabled.",
-        ))
-
-    for session_id, session in stale_sessions:
-        with query._session_lock(session):
-            last_activity = _session_last_activity(session)
-            became_active = bool(last_activity and last_activity > conversation_cutoff)
-        if became_active:
-            with query._sessions_lock:
-                query._sessions[session_id] = session
-            retained["skipped_conversations"].append(session_id)
-            results.append(deletion_target_skipped(
-                target_kind="conversation",
-                target_id=session_id,
-                action="retention_skip_active_conversation",
-                detail="Skipped Conversation because it became active before retention deletion.",
-            ))
-            continue
-
-        retained["stale_conversations"].append(session_id)
-        session_memory_deletion = await delete_session_memory_for_conversation(session)
-        if session_memory_deletion["status"] != "succeeded":
-            create_session_memory_tombstone(
-                session=session,
-                source="retention_execution",
-                workflow="run_retention",
-                deletion=session_memory_deletion,
-            )
-        results.extend(session_memory_deletion["results"])
-        results.append(deletion_target_succeeded(
-            target_kind="conversation",
-            target_id=session_id,
-            action="retention_delete_stale_conversation",
-            detail="Deleted stale active Conversation state.",
         ))
 
     if document_artifact_policy["enabled"]:
@@ -1738,6 +1662,7 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
         return {
             "status": "skipped",
             "enabled_classes": [],
+            "deletion": deletion,
             "retry_results": [],
             "run_record": run_record,
             "retention": {"status": deletion["status"], "deletion": deletion, "retained": {}},
@@ -1813,6 +1738,7 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
     return {
         "status": final_status,
         "enabled_classes": enabled_classes,
+        "deletion": run_deletion,
         "retry_results": retry_results,
         "run_record": run_record,
         "retention": retention,
@@ -1909,7 +1835,7 @@ async def list_admin_deletion_tombstones(
 
 @router.get("/retention-runs", response_model=dict)
 async def list_admin_retention_runs(
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=500),
     _admin: dict = Depends(auth.require_admin),
 ):
     return {"runs": database.list_retention_run_records(limit=limit)}

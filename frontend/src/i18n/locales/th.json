@@ -159,13 +159,6 @@
       "roleAssistant": "ผู้ช่วย",
       "footer": "ส่งออกจาก {{instanceName}}",
       "exportedOn": "ส่งออกเมื่อ {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "คำสั่ง SQL ที่ดำเนินการ: {{sql}}",
-      "noResults": "คิวรีไม่พบผลลัพธ์",
-      "resultsCount_one": "ผลลัพธ์คิวรีฐานข้อมูล ({{count}} แถว):",
-      "resultsCount_other": "ผลลัพธ์คิวรีฐานข้อมูล ({{count}} แถว):",
-      "resultsTruncated": "(ผลลัพธ์ถูกตัดเหลือ 100 แถว)"
     }
   },
   "common": {
@@ -497,7 +490,6 @@
       "compact": "กะทัดรัด",
       "expand": "ขยาย",
       "shareSecretsTitle": "แชร์ตัวแปรสภาพแวดล้อมลับ",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "ละเอียดอ่อน",
       "emptyPrompt": "ถามเกี่ยวกับการตั้งค่าผู้ดูแลระบบใด ๆ ได้ หากต้องการให้ผู้ช่วยเสนอและใช้การเปลี่ยนแปลง ให้บอกให้รวม JSON change set",
       "pendingChanges": "การเปลี่ยนแปลงที่รอดำเนินการ",
@@ -977,20 +969,7 @@
       "usersToMigrate": "ผู้ใช้ที่จะย้าย",
       "warning": "นี่เป็นการดำเนินการขั้นสูง การย้ายที่ไม่ถูกต้องอาจทำให้คุณไม่สามารถเข้าถึงข้อมูลที่เข้ารหัสได้ ดำเนินการเฉพาะเมื่อคุณเข้าใจผลกระทบ"
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "ไม่สามารถแสดงค่าได้ ตรวจสอบการเชื่อมต่อส่วนขยาย Nostr ของคุณ",
     "searchHelp": {
       "ariaLabel": "ความช่วยเหลือการกำหนดค่าการค้นหาเว็บ",
@@ -1197,11 +1176,7 @@
     "uploadingStatus": "กำลังอัปโหลดไปยังเซิร์ฟเวอร์..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "การประมวลผลข้อความ",
       "description": "กำหนดค่าวิธีการวิเคราะห์เอกสาร",
@@ -1300,21 +1275,9 @@
     "sampleQuestion": "ฉันควรรู้อะไรเกี่ยวกับหัวข้อนี้?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "จำนวนส่วนบริบท",
       "description": "จำนวนส่วนที่จะดึงข้อมูล",
@@ -1390,11 +1353,7 @@
       "description": "URL สาธารณะสำหรับแอปพลิเคชัน",
       "hint": "URL สาธารณะที่ผู้ใช้เข้าถึงแอป ใช้สำหรับสร้างลิงก์มหัศจรรย์"
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL โดเมนย่อยของแผงผู้ดูแลระบบ (ไม่บังคับ)",
       "hint": "เฉพาะในกรณีที่ UI ของผู้ดูแลระบบอยู่บนโดเมนที่แยกต่างหาก ตัวอย่าง: https://admin.example.com ค่าเริ่มต้น: http://localhost:5173/admin",
@@ -1775,7 +1734,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "ทดสอบการเชื่อมโยง Magic Link และโฟลว์การตรวจสอบสิทธิ์ Nostr",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "ทดสอบการจำกัดอัตราโดยการส่งคำขออย่างรวดเร็วไปยังปลายทางที่จำกัดอัตรา",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "ทดสอบโฟลว์การสร้างผู้ใช้ด้วยฟิลด์ไดนามิกตามประเภทผู้ใช้",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "ไปป์ไลน์ RAG ที่สมบูรณ์: ฝัง → ค้นหา → ดึงข้อมูล → สร้าง",
       "this_is_where_the_magic_happens_e98c18": "— นี่คือที่ที่ความมหัศจรรย์เกิดขึ้น:",
       "toggle_theme_9b0eaf": "สลับธีม",

@@ -328,7 +328,6 @@
       "compact": "Ringkas",
       "expand": "Perluas",
       "shareSecretsTitle": "Bagikan variabel environment rahasia",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Sensitif",
       "emptyPrompt": "Ajukan pertanyaan tentang konfigurasi admin apa pun. Jika Anda ingin asisten mengusulkan dan menerapkan perubahan, minta agar menyertakan JSON change set.",
       "pendingChanges": "Perubahan tertunda",
@@ -715,13 +714,6 @@
       "roleAssistant": "Asisten",
       "footer": "Diekspor dari {{instanceName}}",
       "exportedOn": "Diekspor pada {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "SQL yang dijalankan: {{sql}}",
-      "noResults": "Query tidak mengembalikan hasil.",
-      "resultsCount_one": "Hasil query database ({{count}} baris):",
-      "resultsCount_other": "Hasil query database ({{count}} baris):",
-      "resultsTruncated": "(Hasil dipotong menjadi 100 baris)"
     }
   },
   "errors": {
@@ -977,20 +969,7 @@
       "usersToMigrate": "Pengguna yang akan dimigrasikan",
       "warning": "Ini adalah operasi lanjutan. Migrasi yang salah dapat mengunci Anda dari data terenkripsi. Lanjutkan hanya jika Anda memahami konsekuensinya."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "Gagal menampilkan nilai. Periksa koneksi ekstensi Nostr Anda.",
     "searchHelp": {
       "ariaLabel": "Bantuan konfigurasi pencarian web",
@@ -1197,11 +1176,7 @@
     "uploadingStatus": "Mengunggah ke server..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "Pemrosesan Teks",
       "description": "Konfigurasi cara dokumen dianalisis",
@@ -1300,21 +1275,9 @@
     "sampleQuestion": "Apa yang harus saya ketahui tentang topik ini?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Potongan Konteks",
       "description": "Jumlah potongan yang diambil",
@@ -1390,11 +1353,7 @@
       "description": "URL publik untuk aplikasi",
       "hint": "URL publik tempat pengguna mengakses aplikasi. Digunakan untuk menghasilkan tautan ajaib."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL subdomain panel admin (opsional)",
       "hint": "Hanya jika UI admin berada di domain terpisah. Contoh: https://admin.example.com. Default: http://localhost:5173/admin.",
@@ -1775,7 +1734,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Uji tautan ajaib dan alur otentikasi Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Uji pembatasan kecepatan dengan mengirimkan permintaan cepat ke endpoint yang dibatasi kecepatan.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Uji alur pembuatan pengguna dengan bidang dinamis berdasarkan jenis pengguna.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Pipa RAG lengkap: semat → cari → ambil → hasilkan.",
       "this_is_where_the_magic_happens_e98c18": "— Di sinilah keajaiban terjadi:",
       "toggle_theme_9b0eaf": "Ganti tema",

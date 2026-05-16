@@ -159,15 +159,6 @@
       "roleAssistant": "Asistent",
       "footer": "Exportováno z {{instanceName}}",
       "exportedOn": "Exportováno {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Provedený SQL: {{sql}}",
-      "noResults": "Dotaz nevrátil žádné výsledky.",
-      "resultsCount": "Výsledky databázového dotazu ({{count}} řádků):",
-      "resultsTruncated": "(Výsledky zkráceny na 100 řádků)",
-      "resultsCount_one": "Výsledek databázového dotazu ({{count}} řádek):",
-      "resultsCount_few": "Výsledky databázového dotazu ({{count}} řádky):",
-      "resultsCount_other": "Výsledky databázového dotazu ({{count}} řádků):"
     }
   },
   "common": {
@@ -505,7 +496,6 @@
       "compact": "Kompaktní",
       "expand": "Rozšířit",
       "shareSecretsTitle": "Sdílet tajné proměnné prostředí",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Citlivé",
       "emptyPrompt": "Ptejte se na libovolnou administrátorskou konfiguraci. Pokud chcete, aby asistent navrhl a provedl změny, požádejte ho o JSON change set.",
       "pendingChanges": "Čekající změny",
@@ -985,20 +975,7 @@
       "usersToMigrate": "Uživatelé k migraci",
       "warning": "Toto je pokročilá operace. Nesprávná migrace vás může uzamknout ze šifrovaných dat. Pokračujte pouze pokud rozumíte důsledkům."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "Nepodařilo se odhalit hodnotu. Zkontrolujte připojení rozšíření Nostr.",
     "searchHelp": {
       "ariaLabel": "Nápověda ke konfiguraci webového vyhledávání",
@@ -1205,11 +1182,7 @@
     "uploadingStatus": "Nahrávání na server..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "Zpracování textu",
       "description": "Nakonfigurujte, jak jsou dokumenty analyzovány",
@@ -1308,21 +1281,9 @@
     "sampleQuestion": "Co bych měl vědět o tomto tématu?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Kontextové části",
       "description": "Počet částí k načtení",
@@ -1398,11 +1359,7 @@
       "description": "Veřejná URL aplikace",
       "hint": "Veřejná URL, kde uživatelé přistupují k aplikaci. Používá se pro generování magických odkazů."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL subdomény panelu administrace (volitelné)",
       "hint": "Pouze pokud je administrátorské UI na samostatné doméně. Příklad: https://admin.example.com. Výchozí: http://localhost:5173/admin.",
@@ -1783,7 +1740,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Testujte toky kouzelného odkazu a autentizace Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Testujte omezování rychlosti odesíláním rychlých požadavků na koncové body s omezenou rychlostí.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Testujte tok vytváření uživatelů s dynamickými poli na základě typu uživatele.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Kompletní RAG pipeline: vložení → vyhledávání → načtení → generování.",
       "this_is_where_the_magic_happens_e98c18": "— Zde se děje kouzlo:",
       "toggle_theme_9b0eaf": "Přepnout motiv",

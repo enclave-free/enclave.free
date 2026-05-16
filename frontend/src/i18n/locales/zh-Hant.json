@@ -329,7 +329,6 @@
       "compact": "精簡",
       "expand": "展開",
       "shareSecretsTitle": "分享機密環境變數",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "敏感",
       "emptyPrompt": "你可以詢問任何管理員設定問題。若希望助手提出並套用變更，請要求它包含 JSON 變更集。",
       "pendingChanges": "待處理變更",
@@ -716,13 +715,6 @@
       "roleAssistant": "助手",
       "footer": "從{{instanceName}}匯出",
       "exportedOn": "匯出時間：{{timestamp}}"
-    },
-    "database": {
-      "executedSql": "已執行 SQL：{{sql}}",
-      "noResults": "查詢未返回結果。",
-      "resultsCount_one": "資料庫查詢結果（{{count}} 行）：",
-      "resultsCount_other": "資料庫查詢結果（{{count}} 行）：",
-      "resultsTruncated": "（結果已截斷至 100 行）"
     }
   },
   "errors": {
@@ -978,20 +970,7 @@
       "usersToMigrate": "待遷移的使用者",
       "warning": "這是一項進階操作。不正確的遷移可能會使你無法存取加密資料。請僅在了解其影響時才繼續。"
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "無法顯示該值。請檢查你的 Nostr 擴充功能連線。",
     "searchHelp": {
       "ariaLabel": "網路搜尋設定說明",
@@ -1198,11 +1177,7 @@
     "uploadingStatus": "正在上傳至伺服器..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "文字處理",
       "description": "設定文件分析方式",
@@ -1301,21 +1276,9 @@
     "sampleQuestion": "關於這個話題我應該了解什麼？"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "上下文區塊數",
       "description": "擷取的區塊數量",
@@ -1391,11 +1354,7 @@
       "description": "應用程式的公開 URL",
       "hint": "使用者存取應用程式的公開 URL。用於產生魔法連結。"
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "管理面板子網域 URL (選填)",
       "hint": "僅當管理 UI 位於單獨的網域時。範例：https://admin.example.com。預設：http://localhost:5173/admin。",
@@ -1776,7 +1735,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "測試魔術鏈接和Nostr身份驗證流程。",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "通過向受速率限制的端點發送快速請求來測試速率限制。",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "測試基於用戶類型的動態字段的用戶創建流程。",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "完整的RAG管道：嵌入 → 搜索 → 檢索 → 生成。",
       "this_is_where_the_magic_happens_e98c18": "— 這就是奇蹟發生的地方：",
       "toggle_theme_9b0eaf": "切換主題",

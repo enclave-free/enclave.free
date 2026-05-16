@@ -159,15 +159,6 @@
       "roleAssistant": "Asystent",
       "footer": "Wyeksportowano z {{instanceName}}",
       "exportedOn": "Wyeksportowano {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Wykonany SQL: {{sql}}",
-      "noResults": "Zapytanie nie zwróciło wyników.",
-      "resultsCount_one": "Wynik zapytania do bazy danych ({{count}} wiersz):",
-      "resultsCount_few": "Wyniki zapytania do bazy danych ({{count}} wiersze):",
-      "resultsCount_many": "Wyniki zapytania do bazy danych ({{count}} wierszy):",
-      "resultsCount_other": "Wyniki zapytania do bazy danych ({{count}} wierszy):",
-      "resultsTruncated": "(Wyniki skrócone do 100 wierszy)"
     }
   },
   "common": {
@@ -507,7 +498,6 @@
       "compact": "Kompaktowy",
       "expand": "Rozszerz",
       "shareSecretsTitle": "Udostępnij tajne zmienne środowiskowe",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Wrażliwe",
       "emptyPrompt": "Zadawaj pytania o dowolną konfigurację administratora. Jeśli chcesz, aby asystent zaproponował i zastosował zmiany, poproś o dołączenie JSON change set.",
       "pendingChanges": "Oczekujące zmiany",
@@ -987,20 +977,7 @@
       "usersToMigrate": "Użytkownicy do migracji",
       "warning": "Jest to zaawansowana operacja. Nieprawidłowa migracja może zablokować dostęp do zaszyfrowanych danych. Kontynuuj tylko wtedy, gdy rozumiesz konsekwencje."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "Nie udało się ujawnić wartości. Sprawdź połączenie z rozszerzeniem Nostr.",
     "searchHelp": {
       "ariaLabel": "Pomoc dotycząca konfiguracji wyszukiwania w sieci",
@@ -1207,11 +1184,7 @@
     "uploadingStatus": "Przesyłanie na serwer..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "Przetwarzanie tekstu",
       "description": "Skonfiguruj sposób analizy dokumentów",
@@ -1310,21 +1283,9 @@
     "sampleQuestion": "Co powinienem wiedzieć o tym temacie?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Fragmenty kontekstu",
       "description": "Liczba fragmentów do pobrania",
@@ -1400,11 +1361,7 @@
       "description": "Publiczny URL aplikacji",
       "hint": "Publiczny URL, pod którym użytkownicy uzyskują dostęp do aplikacji. Używany do generowania magicznych linków."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "Adres URL subdomeny panelu administratora (opcjonalnie)",
       "hint": "Tylko jeśli interfejs użytkownika administratora znajduje się na osobnej domenie. Przykład: https://admin.example.com. Domyślnie: http://localhost:5173/admin.",
@@ -1785,7 +1742,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Testuj magiczny link i przepływy uwierzytelniania Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Testuj ograniczanie szybkości, wysyłając szybkie żądania do punktów końcowych z ograniczeniem szybkości.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Testuj przepływ tworzenia użytkowników z dynamicznymi polami w oparciu o typ użytkownika.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Kompletny potok RAG: osadź → wyszukaj → pobierz → wygeneruj.",
       "this_is_where_the_magic_happens_e98c18": "— To tutaj dzieje się magia:",
       "toggle_theme_9b0eaf": "Przełącz motyw",

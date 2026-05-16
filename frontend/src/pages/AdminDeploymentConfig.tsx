@@ -1891,7 +1891,7 @@ export function AdminDeploymentConfig() {
                         <p>{observation.summary}</p>
                         <p>
                           {t('adminDeployment.lifecycle.schedulerEnabledClasses', 'Scheduler enabled classes: {{classes}}', {
-                            classes: enabledClasses.length > 0 ? enabledClasses.join(', ') : 'none',
+                            classes: enabledClasses.length > 0 ? enabledClasses.join(', ') : t('common.none', 'None'),
                           })}
                         </p>
                         {observation.last_run && (
@@ -1958,7 +1958,7 @@ export function AdminDeploymentConfig() {
               {t('adminDeployment.lifecycle.scheduledRetentionStatus', 'Scheduled classes: {{classes}}', {
                 classes: lifecycleStatus.scheduled_retention.enabled_classes.length > 0
                   ? lifecycleStatus.scheduled_retention.enabled_classes.join(', ')
-                  : 'none',
+                  : t('common.none', 'None'),
               })}
             </p>
           )}

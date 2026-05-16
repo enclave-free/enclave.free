@@ -35,7 +35,6 @@ from data_deletion import (
     deletion_target_succeeded,
     summarize_deletion_results,
 )
-from query import delete_sessions_for_owner, pop_sessions_for_owner, sessions_for_owner
 from sql_safety import validate_sql_allowed_tables
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -78,19 +77,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("enclave.main")
 
-
-def _raise_sage_route_tombstone() -> None:
-    raise HTTPException(
-        status_code=410,
-        detail={
-            "code": "sage_route_required",
-            "message": "Sage owns this public Agent Runtime route. Use the Gateway so this request is routed to Sage.",
-        },
-    )
-
 # Import routers
 from ingest import router as ingest_router
-from query import router as query_router
 from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 import deployment_config
@@ -302,7 +290,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(ingest_router)
-app.include_router(query_router)
 app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(key_migration_router)
@@ -626,54 +613,6 @@ async def llm_smoke_test():
             health=False,
             error=str(e)
         )
-
-
-@app.post("/llm/chat")
-async def chat(
-    request: Request,
-    user: dict = Depends(auth.require_admin_or_approved_user),
-    _: None = Depends(chat_limiter),
-):
-    """
-    Chat endpoint with optional tool support.
-
-    Takes a user message and optional list of tool IDs.
-    If tools are specified, executes them and includes results in context.
-    Requires authenticated admin OR approved user.
-    """
-    _raise_sage_route_tombstone()
-
-
-@app.post("/llm/chat/stream")
-async def chat_stream(
-    request: Request,
-    user: dict = Depends(auth.require_admin_or_approved_user),
-    _: None = Depends(chat_limiter),
-):
-    """
-    Streaming chat endpoint with compact Conversation Trace events.
-
-    This first streaming slice preserves the existing chat execution path and
-    streams the completed response as a single answer delta.
-    """
-    _raise_sage_route_tombstone()
-
-
-@app.post("/admin/tools/execute")
-async def execute_admin_tool(request: Request, admin: dict = Depends(auth.require_admin)):
-    """
-    Execute an admin-only tool and return raw results.
-    Used for client-side decryption flows (e.g., db-query with NIP-07).
-    """
-    _raise_sage_route_tombstone()
-
-
-# NOTE: /query endpoint moved to query.py router (session-aware RAG)
-# The query.py module provides:
-# - Session-aware conversation history
-# - Vector search retrieval
-# - Configurable system prompts
-# - Fact extraction for context
 
 
 @app.post("/vector-search", response_model=VectorSearchResponse)
@@ -1640,19 +1579,6 @@ async def get_public_config() -> PublicConfigResponse:
     )
 
 
-@app.get("/session-defaults", response_model=SessionDefaultsResponse)
-async def get_session_defaults_public(
-    user_type_id: Optional[int] = Query(None, description="User type ID for type-specific defaults")
-) -> SessionDefaultsResponse:
-    """
-    Public endpoint: Get session defaults for chat initialization.
-    No authentication required - returns safe defaults for new Conversations.
-
-    If user_type_id is provided, returns defaults with user-type-specific overrides applied.
-    """
-    _raise_sage_route_tombstone()
-
-
 @app.get("/admin/settings", response_model=InstanceSettingsResponse)
 async def get_settings(admin: dict = Depends(auth.require_admin)):
     """Get all instance settings (requires admin auth)"""
@@ -2392,57 +2318,14 @@ async def delete_user(
     """Delete a user (self or admin)."""
     _require_self_or_admin(user_id, requester)
     existing_user = database.get_user(user_id)
-    deleted_conversation_sessions = sessions_for_owner("user", str(user_id))
-    deleted_conversations = len(deleted_conversation_sessions)
     session_memory_results = []
-    for session in deleted_conversation_sessions:
-        session_id = str(session.get("id", "unknown"))
-        try:
-            session_memory_deletion = await lifecycle.delete_session_memory_for_conversation(session)
-        except Exception as exc:
-            logger.warning(
-                "Failed to delete Session Memory during User deletion user_id=%s session_id=%s: %s",
-                user_id,
-                session_id,
-                exc,
-                exc_info=True,
-            )
-            session_memory_deletion = summarize_deletion_results([
-                deletion_target_failed(
-                    target_kind="session_memory",
-                    target_id=session_id,
-                    action="delete_session_memory",
-                    detail=lifecycle.categorize_error(exc),
-                    retryable=True,
-                )
-            ])
-        if session_memory_deletion["status"] != "succeeded":
-            lifecycle.create_session_memory_tombstone(
-                session=session,
-                source="user_deletion",
-                workflow="delete_user",
-                deletion=session_memory_deletion,
-            )
-        results = session_memory_deletion.get("results", [])
-        if isinstance(results, list):
-            session_memory_results.extend(results)
-    pop_sessions_for_owner("user", str(user_id))
     if not existing_user:
-        if deleted_conversations:
-            conversation_result = deletion_target_succeeded(
-                target_kind="conversation",
-                target_id=str(user_id),
-                action="delete_conversations",
-                detail=f"Deleted {deleted_conversations} active Conversation records for this User.",
-            )
-            conversation_result["count"] = deleted_conversations
-        else:
-            conversation_result = deletion_target_skipped(
-                target_kind="conversation",
-                target_id=str(user_id),
-                action="delete_conversations",
-                detail="No active Conversations were found for the deleted User.",
-            )
+        conversation_result = deletion_target_skipped(
+            target_kind="conversation",
+            target_id=str(user_id),
+            action="delete_conversations",
+            detail="Conversation session discovery is owned by Sage.",
+        )
         deletion = summarize_deletion_results([
             deletion_target_skipped(
                 target_kind="user_profile",
@@ -2480,7 +2363,6 @@ async def delete_user(
 
     lifecycle_delete = database.delete_user_lifecycle(user_id)
     memory_count = lifecycle_delete["user_memories_deleted"]
-    conversation_count = deleted_conversations
     if memory_count:
         user_memory_result = deletion_target_succeeded(
             target_kind="user_memory",
@@ -2497,21 +2379,12 @@ async def delete_user(
             detail="No Sage-owned User Memory records were found for this User.",
         )
 
-    if conversation_count:
-        conversation_result = deletion_target_succeeded(
-            target_kind="conversation",
-            target_id=str(user_id),
-            action="delete_conversations",
-            detail=f"Deleted {conversation_count} active Conversation records for this User.",
-        )
-        conversation_result["count"] = conversation_count
-    else:
-        conversation_result = deletion_target_skipped(
-            target_kind="conversation",
-            target_id=str(user_id),
-            action="delete_conversations",
-            detail="No active Conversations were found for this User.",
-        )
+    conversation_result = deletion_target_skipped(
+        target_kind="conversation",
+        target_id=str(user_id),
+        action="delete_conversations",
+        detail="Conversation session discovery is owned by Sage.",
+    )
 
     deletion = summarize_deletion_results([
         deletion_target_succeeded(

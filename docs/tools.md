@@ -12,7 +12,7 @@ Gateway routes public Agent Runtime requests to Sage. Public clients should call
 | `/llm/chat/stream` | assistant-style streaming | prepares explicitly selected tools/context first, then streams the final answer from the Model Provider |
 | `/query` | retrieval-first, stateful, memory-backed | initial document context plus internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
 
-Python no longer owns these public Agent Runtime routes. direct Python calls return `410 Gone` with `detail.code` set to `sage_route_required`; that is intentional Prototype Compatibility Debt cleanup, not a runtime outage. Python remains the Enclave Control Plane behind private/internal contracts for facts and actions such as safe database reads, document search, user profile context, and lifecycle operations.
+Python no longer owns or exposes these public Agent Runtime routes. Direct Python calls are unsupported because the routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches the request to Sage. Python remains the Enclave Control Plane behind private/internal contracts for facts and actions such as safe database reads, document search, user profile context, and lifecycle operations.
 
 Current rule of thumb:
 
@@ -49,21 +49,13 @@ Python contributes Control Plane facts and actions over active contracts, such a
 
 ### Admin Trusted Context
 
-Admins can send trusted context to help the model reason over client-side material such as:
+Admins can send trusted context to help the model reason over explicitly prepared client-side material such as:
 
-- decrypted DB rows
 - other trusted precomputed context
 
-When trusted context is present, clients should also send `client_executed_tools` so Sage does not re-run tools that have already been executed client-side.
+Prototype clients no longer send `client_executed_tools`. Trusted context is just additional context; selected tools still belong to the Sage runtime for the turn.
 
-Current frontend pattern for client-executed tools:
-
-1. optional client-side call to a Sage/Gateway tool path
-2. decrypt or format the returned data in the browser
-3. send the formatted text as trusted context
-4. include `client_executed_tools`, usually `["db-query"]`
-
-`admin-config` is not client-executed. Admin clients send it as a normal tool ID, and Sage executes the admin-only runtime tool server-side.
+Current frontend behavior is intentionally boring: `web-search`, `db-query`, and `admin-config` are sent as normal tool IDs. The frontend does not call `/admin/tools/execute` or pre-run `db-query`; Sage authorizes and orchestrates the tool turn, delegating safe read-only SQL execution to Python internally when needed.
 
 ## Streaming Events
 

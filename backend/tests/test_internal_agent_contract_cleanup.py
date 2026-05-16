@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from httpx import Response
 
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
@@ -52,21 +53,18 @@ class InternalAgentContractCleanupTest(unittest.TestCase):
         else:
             os.environ[name] = value
 
-    def assert_compatibility_tombstone(self, response) -> None:
-        self.assertEqual(response.status_code, 410)
-        body = response.json()
-        self.assertEqual(body["detail"]["code"], "internal_contract_removed")
-        self.assertIn("not part of the active Sage-to-Python contract", body["detail"]["message"])
+    def assert_removed_endpoint_absent(self, response: Response) -> None:
+        self.assertEqual(response.status_code, 404)
 
-    def test_internal_session_defaults_compatibility_endpoint_is_tombstoned(self) -> None:
+    def test_internal_session_defaults_compatibility_endpoint_is_absent(self) -> None:
         response = self.client.get("/internal/agent/session-defaults", headers=self.headers)
 
-        self.assert_compatibility_tombstone(response)
+        self.assert_removed_endpoint_absent(response)
 
-    def test_internal_ai_config_effective_compatibility_endpoint_is_tombstoned(self) -> None:
+    def test_internal_ai_config_effective_compatibility_endpoint_is_absent(self) -> None:
         response = self.client.get("/internal/agent/ai-config/effective", headers=self.headers)
 
-        self.assert_compatibility_tombstone(response)
+        self.assert_removed_endpoint_absent(response)
 
     def test_internal_health_remains_available(self) -> None:
         response = self.client.get("/internal/agent/health", headers=self.headers)

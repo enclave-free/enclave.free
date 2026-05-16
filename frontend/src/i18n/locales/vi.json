@@ -159,13 +159,6 @@
       "roleAssistant": "Trợ lý",
       "footer": "Xuất từ {{instanceName}}",
       "exportedOn": "Xuất lúc {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Đã thực thi SQL: {{sql}}",
-      "noResults": "Truy vấn không trả về kết quả.",
-      "resultsCount_one": "Kết quả truy vấn cơ sở dữ liệu ({{count}} dòng):",
-      "resultsCount_other": "Kết quả truy vấn cơ sở dữ liệu ({{count}} dòng):",
-      "resultsTruncated": "(Kết quả đã bị cắt ngắn còn 100 dòng)"
     }
   },
   "common": {
@@ -499,7 +492,6 @@
       "compact": "Gọn",
       "expand": "Mở rộng",
       "shareSecretsTitle": "Chia sẻ biến môi trường bí mật",
-      "shareSecretsHint": "Off by default. Enable Config tool first. When enabled, secret deployment config values are revealed client-side and sent to Sage for this prototype flow.",
       "sensitive": "Nhạy cảm",
       "emptyPrompt": "Hỏi về bất kỳ cấu hình quản trị nào. Nếu muốn trợ lý đề xuất và áp dụng thay đổi, hãy yêu cầu nó kèm JSON change set.",
       "pendingChanges": "Thay đổi đang chờ",
@@ -979,20 +971,7 @@
       "usersToMigrate": "Người dùng cần di chuyển",
       "warning": "Đây là thao tác nâng cao. Di chuyển không chính xác có thể khóa bạn khỏi dữ liệu đã mã hóa. Chỉ tiếp tục nếu bạn hiểu hệ quả."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
-      "apiKeyLabel": "Tinfoil API Key",
-      "ariaLabel": "Sage runtime configuration help",
-      "exampleConfig": "Example configuration",
-      "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
-      "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "overviewTitle": "Sage Runtime Overview",
-      "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
-    },
+    "llmHelp": {},
     "revealFailed": "Không thể hiển thị giá trị. Kiểm tra kết nối tiện ích mở rộng Nostr.",
     "searchHelp": {
       "ariaLabel": "Trợ giúp cấu hình tìm kiếm web",
@@ -1199,11 +1178,7 @@
     "uploadingStatus": "Đang tải lên máy chủ..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Sage Agent Runtime",
-      "description": "Configure Sage + Tinfoil inference",
-      "hint": "This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Changes require a restart."
-    },
+    "llm": {},
     "embedding": {
       "label": "Xử lý văn bản",
       "description": "Cấu hình cách tài liệu được phân tích",
@@ -1302,21 +1277,9 @@
     "sampleQuestion": "Tôi nên biết gì về chủ đề này?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Model Provider",
-      "description": "Python-side Model Provider label",
-      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
-    },
-    "LLM_MODEL": {
-      "label": "Model Name",
-      "description": "Model name/identifier",
-      "hint": "The Tinfoil model identifier Sage should use (e.g., \"kimi-k2-6\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Endpoint",
-      "description": "Model Provider API base URL",
-      "hint": "Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1."
-    },
+    "LLM_PROVIDER": {},
+    "LLM_MODEL": {},
+    "LLM_API_URL": {},
     "RAG_TOP_K": {
       "label": "Khối ngữ cảnh",
       "description": "Số lượng khối cần truy xuất",
@@ -1392,11 +1355,7 @@
       "description": "URL công khai cho ứng dụng",
       "hint": "URL công khai nơi người dùng truy cập ứng dụng. Dùng để tạo liên kết ma thuật."
     },
-    "LLM_API_KEY": {
-      "label": "API Key",
-      "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
-    },
+    "LLM_API_KEY": {},
     "ADMIN_BASE_URL": {
       "description": "URL tên miền phụ bảng điều khiển quản trị (tùy chọn)",
       "hint": "Chỉ khi giao diện người dùng quản trị nằm trên một tên miền riêng. Ví dụ: https://admin.example.com. Mặc định: http://localhost:5173/admin.",
@@ -1777,7 +1736,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Kiểm tra liên kết thần kỳ và luồng xác thực Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Kiểm tra giới hạn tỷ lệ bằng cách gửi các yêu cầu nhanh đến các điểm cuối bị giới hạn tỷ lệ.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Kiểm tra quy trình tạo người dùng với các trường động dựa trên loại người dùng.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tests connectivity to the configured Model Provider path.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Quy trình RAG hoàn chỉnh: nhúng → tìm kiếm → truy xuất → tạo.",
       "this_is_where_the_magic_happens_e98c18": "— Đây là nơi phép thuật xảy ra:",
       "toggle_theme_9b0eaf": "Chuyển đổi giao diện",

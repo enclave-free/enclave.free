@@ -757,13 +757,6 @@
       "roleAssistant": "Assistant",
       "footer": "Exported from {{instanceName}}",
       "exportedOn": "Exported on {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Executed SQL: {{sql}}",
-      "noResults": "Query returned no results.",
-      "resultsCount_one": "Database query result ({{count}} row):",
-      "resultsCount_other": "Database query results ({{count}} rows):",
-      "resultsTruncated": "(Results truncated to 100 rows)"
     }
   },
   "errors": {
