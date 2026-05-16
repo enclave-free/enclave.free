@@ -201,6 +201,22 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("operator-reviewed execution completed without `retrieval_payload` failures", runbook)
         self.assertIn("backup/rollback expectations are documented", runbook)
 
+    def test_user_profile_plaintext_migration_plan_exists_before_removal(self) -> None:
+        plan = (REPO_ROOT / "docs/user-profile-plaintext-migration-plan.md").read_text(encoding="utf-8")
+        docs_index = (REPO_ROOT / "docs/README.md").read_text(encoding="utf-8")
+        checklist = (REPO_ROOT / "docs/security-data-protection-checklist.md").read_text(encoding="utf-8")
+
+        self.assertIn("users.email", plan)
+        self.assertIn("users.name", plan)
+        self.assertIn("user_field_values.value", plan)
+        self.assertIn("get_user_by_email", plan)
+        self.assertIn("migrate_encrypt_existing_data", plan)
+        self.assertIn("backup and rollback", plan)
+        self.assertIn("Do not remove plaintext-era columns or fallback reads", plan)
+        self.assertIn("public/admin interface tests", plan)
+        self.assertIn("user-profile-plaintext-migration-plan.md", docs_index)
+        self.assertIn("operator-reviewed profile migration proves removal is safe", checklist)
+
 
 if __name__ == "__main__":
     unittest.main()
