@@ -16,7 +16,7 @@ import random
 import asyncio
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, TypedDict
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks, Depends, Request
 from pydantic import BaseModel
@@ -165,9 +165,30 @@ def _clear_job_chunks(job_id: str) -> None:
         CHUNKS.pop(cid, None)
 
 
-def _document_artifact_cleanup_reason(job: dict) -> str | None:
+class IngestionJob(TypedDict, total=False):
+    id: str
+    job_id: str
+    status: str
+    filename: str
+    file_path: str
+    total_chunks: int
+    processed_chunks: int
+    failed_chunks: int
+    error: str | None
+    updated_at: str
+    replaced_by_job_id: str | None
+    is_current: int | bool
+    sample_percent: float
+    metadata: dict[str, Any]
+
+
+def _document_artifact_cleanup_reason(job: IngestionJob) -> str | None:
     """Return why a job is eligible for lifecycle artifact cleanup."""
     status = job.get("status")
+    job_id = str(job.get("job_id") or job.get("id") or "")
+    active_task = TASKS.get(job_id)
+    if active_task is not None and not active_task.done():
+        return None
     if status == "failed":
         return "failed_ingestion"
     if status in {"pending", "processing"} and _is_abandoned_ingestion_job(job):
@@ -177,7 +198,11 @@ def _document_artifact_cleanup_reason(job: dict) -> str | None:
     return None
 
 
-def _is_abandoned_ingestion_job(job: dict) -> bool:
+def _is_abandoned_ingestion_job(job: IngestionJob) -> bool:
+    job_id = str(job.get("job_id") or job.get("id") or "")
+    active_task = TASKS.get(job_id)
+    if active_task is not None and not active_task.done():
+        return False
     updated_at = job.get("updated_at")
     if not updated_at:
         return False
@@ -484,8 +509,7 @@ def schedule_document_processing(job_id: str, file_path: Path, sample_percent: f
     task.add_done_callback(_finish_task)
 
 
-@router.on_event("startup")
-async def load_jobs_and_resume():
+async def load_jobs_and_resume() -> None:
     """Load jobs from SQLite on startup and resume incomplete jobs."""
     global JOBS
 

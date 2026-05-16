@@ -138,8 +138,9 @@ class IngestBatchReplacementTest(unittest.TestCase):
             + base64.b64encode(nonce + tag + ciphertext)
         )
 
-        self.assertFalse(content_artifacts.is_encrypted_artifact(legacy_artifact))
-        self.assertNotEqual(content_artifacts.decrypt_bytes(legacy_artifact), b"operator knowledge")
+        self.assertTrue(content_artifacts.is_encrypted_artifact(legacy_artifact))
+        with self.assertRaisesRegex(ValueError, "Legacy encrypted document artifact format"):
+            content_artifacts.decrypt_bytes(legacy_artifact)
 
     def test_upload_allows_plaintext_artifact_when_operator_disables_encryption(self) -> None:
         self.database.update_setting_with_audit(

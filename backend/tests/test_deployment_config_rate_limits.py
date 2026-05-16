@@ -27,6 +27,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_mock_email = os.environ.get("MOCK_EMAIL")
         self._orig_mock_smtp = os.environ.get("MOCK_SMTP")
         self._orig_protected_inference_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
+        self._orig_simulate_user_auth = os.environ.get("SIMULATE_USER_AUTH")
+        self._orig_simulate_admin_auth = os.environ.get("SIMULATE_ADMIN_AUTH")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
 
@@ -58,6 +60,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("MOCK_EMAIL", self._orig_mock_email)
         self._restore_env("MOCK_SMTP", self._orig_mock_smtp)
         self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_inference_bypass)
+        self._restore_env("SIMULATE_USER_AUTH", self._orig_simulate_user_auth)
+        self._restore_env("SIMULATE_ADMIN_AUTH", self._orig_simulate_admin_auth)
         self.tmp.cleanup()
 
     @staticmethod

@@ -475,6 +475,10 @@ def init_schema():
         ON retention_run_records(created_at DESC, id DESC)
     """)
     cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_retention_run_records_trigger_created
+        ON retention_run_records(trigger, created_at DESC, id DESC)
+    """)
+    cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
         ON deletion_tombstones(status, updated_at DESC)
     """)

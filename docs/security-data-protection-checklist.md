@@ -304,11 +304,13 @@ Use this checklist to:
 Run from repo root with stack running:
 
 ```bash
-# S4-1/S4-2/S4-3: Unauthenticated requests should fail on protected endpoints
+# S4-1/S4-2: Unauthenticated requests should fail on protected endpoints
 curl -i http://localhost:8000/ingest/pending
 curl -i -X POST http://localhost:8000/vector-search \
   -H 'Content-Type: application/json' \
   -d '{"query":"test","top_k":1}'
+
+# S4-3: Authenticated requests should succeed on owned query-session records
 curl -i -H 'Authorization: Bearer <token>' http://localhost:8000/query/session/test-session-id
 
 # S4-4: CORS should reject disallowed origins

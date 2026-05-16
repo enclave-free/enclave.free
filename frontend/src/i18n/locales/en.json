@@ -1081,7 +1081,7 @@
       "ariaLabel": "Security configuration help",
       "devDesc": "These flags bypass real authentication and let you access the app without a Nostr key. They exist only for local development and testing.",
       "devTitle": "Development Flags",
-      "devWarning": "Do not expose local testing email settings as a production auth bypass.",
+      "devWarning": "Local testing email settings only change how emails are sent for development and must not be used in production; they do not bypass authentication.",
       "frontendDesc": "FRONTEND_URL tells the backend where the frontend is hosted, used for CORS, redirects, and cookie scoping.",
       "frontendNote": "This must match exactly — including scheme (http/https) and port. Mismatches cause CORS errors.",
       "frontendTitle": "Frontend & Sessions",

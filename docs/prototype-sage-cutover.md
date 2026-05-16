@@ -90,6 +90,19 @@ If this prototype gets productized, the biggest architecture decision is no long
 
 The pinned Sage runtime lives in `runtime/sage`.
 
+### Runtime/Sage Audit
+
+- Submodule provenance: `runtime/sage` is pinned to commit `658516722c56f7a6451e454c26f234f11e829515` from `https://github.com/enclave-free/sage.git`.
+- Upstream stability: Sage is an internal Enclave runtime, so reviewer validation should use repository activity rather than package releases: inspect recent commits, open issues/PRs, and maintainer activity before advancing the submodule pointer.
+- Integration evidence: this prototype exercises the submodule through the Docker Compose `sage` service and the documented Sage contract checks, including `cargo check -p sage-core` from `runtime/sage` and the `backend/tests/test_5b_sage_route_smoke.py` smoke coverage listed in `docs/integration-tests.md`.
+- Security/stability checks: verify the Sage license and dependency tree at the pinned commit, review toolchain requirements from the submodule manifests, run dependency audit tooling appropriate for the Rust workspace, and regenerate an SBOM/checksum before merging a pointer update.
+- Reproducible verification:
+  1. `git submodule update --init runtime/sage`
+  2. `cd runtime/sage && git rev-parse HEAD` should print `658516722c56f7a6451e454c26f234f11e829515`.
+  3. `cargo check -p sage-core`
+  4. From the prototype root, run the Sage route smoke tests documented in `docs/integration-tests.md`.
+  5. Regenerate the SBOM or checksum artifact used by the release process and attach it with the CI job names/artifacts that exercised `runtime/sage`.
+
 For the current branch-specific direction, pair this file with:
 
 - [dumb-gateway-foundation.md](dumb-gateway-foundation.md)

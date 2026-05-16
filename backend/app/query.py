@@ -21,7 +21,14 @@ def _build_search_query(question: str, session: dict) -> str:
         parts.append(f"jurisdiction: {session['jurisdiction']}")
 
     if session.get("situation_details"):
-        parts.append(session["situation_details"][-500:])
+        situation_details = session["situation_details"]
+        if isinstance(situation_details, str):
+            details_text = situation_details
+        elif isinstance(situation_details, (list, tuple)):
+            details_text = " ".join(str(detail) for detail in situation_details)
+        else:
+            details_text = str(situation_details)
+        parts.append(details_text[-500:])
 
     return " ".join(parts)
 
@@ -68,7 +75,15 @@ def _process_search_results(search_results: list) -> tuple[list, set, list]:
             entity_names.add(payload.get("from_entity", ""))
             entity_names.add(payload.get("to_entity", ""))
 
-        for name in payload.get("entity_names", []):
+        raw_entity_names = payload.get("entity_names")
+        if isinstance(raw_entity_names, str):
+            payload_entity_names = [raw_entity_names]
+        elif isinstance(raw_entity_names, (list, tuple, set)):
+            payload_entity_names = raw_entity_names
+        else:
+            payload_entity_names = []
+
+        for name in payload_entity_names:
             entity_names.add(name)
 
     entity_names.discard("")

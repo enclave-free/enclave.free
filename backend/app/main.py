@@ -78,7 +78,7 @@ logging.basicConfig(
 logger = logging.getLogger("enclave.main")
 
 # Import routers
-from ingest import router as ingest_router
+from ingest import load_jobs_and_resume, router as ingest_router
 from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
 import deployment_config
@@ -304,6 +304,7 @@ async def startup_event():
     smtp_status = auth.verify_smtp_config()
     if smtp_status["configured"] and not smtp_status["mock_mode"] and not smtp_status["connection_ok"]:
         logger.warning("SMTP is configured but connection test failed - email sending may not work")
+    await load_jobs_and_resume()
     deployment_config.run_startup_inference_verification()
 
 

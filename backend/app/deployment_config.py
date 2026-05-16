@@ -517,6 +517,8 @@ async def get_deployment_config_by_key(key: str, admin: dict = Depends(auth.requ
     """
     if key in FORBIDDEN_KEYS:
         raise HTTPException(status_code=403, detail="Access to this key is forbidden")
+    if key not in ENV_CONFIG_MAP:
+        raise HTTPException(status_code=404, detail=f"Config key not found: {key}")
 
     config = database.get_deployment_config(key)
     if not config:

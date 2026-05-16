@@ -1959,15 +1959,20 @@ export function AdminDeploymentConfig() {
               })}
             </p>
           )}
-          {lifecycleStatus?.scheduled_retention && (
+          {lifecycleStatus?.scheduled_retention && (() => {
+            const enabledClasses = Array.isArray(lifecycleStatus.scheduled_retention.enabled_classes)
+              ? lifecycleStatus.scheduled_retention.enabled_classes
+              : []
+            return (
             <p className="mb-3 text-xs text-text-secondary">
               {t('adminDeployment.lifecycle.scheduledRetentionStatus', 'Scheduled classes: {{classes}}', {
-                classes: lifecycleStatus.scheduled_retention.enabled_classes.length > 0
-                  ? lifecycleStatus.scheduled_retention.enabled_classes.join(', ')
+                classes: enabledClasses.length > 0
+                  ? enabledClasses.join(', ')
                   : t('common.none', 'None'),
               })}
             </p>
-          )}
+            )
+          })()}
           {lifecycleStatus?.audit_coverage?.summary && (
             <p className="mb-3 text-xs text-text-secondary">
               {t('adminDeployment.lifecycle.auditCoverageStatus', 'Audit coverage: {{audited}} audited, {{exceptions}} exceptions, {{missing}} missing.', {

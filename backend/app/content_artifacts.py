@@ -1,6 +1,7 @@
 """Backend-readable content artifact encryption for active storage."""
 
 import base64
+import binascii
 import hashlib
 import hmac
 import os
@@ -15,6 +16,7 @@ import database
 
 
 ARTIFACT_PREFIX = b"enclave-artifact::v1::"
+OLD_ARTIFACT_PREFIX = b"sanctum-artifact::v1::"
 ARTIFACT_ENCRYPTION_KEY = "DOCUMENT_ARTIFACT_ENCRYPTION"
 CONTENT_ENCRYPTION_KEY = "CONTENT_ENCRYPTION_KEY"
 ARTIFACT_KEY_INFO = b"enclave/artifact/v1"
@@ -131,7 +133,17 @@ def encrypt_bytes(plaintext: bytes) -> bytes:
 
 
 def is_encrypted_artifact(content: bytes) -> bool:
-    return content.startswith(ARTIFACT_PREFIX)
+    return content.startswith((ARTIFACT_PREFIX, OLD_ARTIFACT_PREFIX))
+
+
+def _is_legacy_encrypted_artifact(content: bytes) -> bool:
+    if not content.startswith(OLD_ARTIFACT_PREFIX):
+        return False
+    try:
+        raw = base64.b64decode(content[len(OLD_ARTIFACT_PREFIX):], validate=True)
+    except (binascii.Error, ValueError):
+        return False
+    return len(raw) > 28
 
 
 def decrypt_bytes(content: bytes) -> bytes:
@@ -141,6 +153,16 @@ def decrypt_bytes(content: bytes) -> bytes:
     Callers that need to know whether plaintext was verified should check
     is_encrypted_artifact before treating the output as authenticated plaintext.
     """
+    if content.startswith(OLD_ARTIFACT_PREFIX):
+        detail = (
+            "valid legacy nonce/tag/ciphertext envelope"
+            if _is_legacy_encrypted_artifact(content)
+            else "malformed legacy envelope"
+        )
+        raise ValueError(
+            "Legacy encrypted document artifact format sanctum-artifact::v1 is not supported by "
+            f"the active reader ({detail}). Run the confidentiality migration to rewrite this artifact."
+        )
     if not is_encrypted_artifact(content):
         return content
     raw = base64.b64decode(content[len(ARTIFACT_PREFIX):])

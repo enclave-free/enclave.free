@@ -49,7 +49,6 @@ export async function fetchPublicConfig(): Promise<PublicConfig> {
         return DEFAULT_CONFIG
       }
 
-      await response.json()
       const result: PublicConfig = {}
 
       // Only update cache if generation hasn't changed (no cache clear during fetch)
