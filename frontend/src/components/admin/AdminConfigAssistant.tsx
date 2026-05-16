@@ -427,8 +427,16 @@ export function AdminConfigAssistant({
         if (streamSessionId) {
           setConversationSessionId(streamSessionId)
         }
+        if (streamMessageId) {
+          setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, { traceStatus: null }))
+        }
         streamed = true
       } catch (streamError) {
+        if (streamMessageId && raw.trim()) {
+          setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, { traceStatus: null }))
+          setError(streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'))
+          return
+        }
         if (streamMessageId) {
           setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
         }

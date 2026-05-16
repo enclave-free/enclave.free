@@ -23,7 +23,7 @@ scripts/tests/
 ├── RAG/                    # Document ingestion persistence tests (1x, 1 planned)
 │   ├── test-config.json    # Test fixtures and constants
 │   └── test_2a_document_persistence.py
-└── TOOLS/                  # Tool behavior parity checks (1x)
+└── TOOLS/                  # Tool behavior parity and route smoke checks
     └── test_4a_unified_chat_tools_parity.py
 ```
 
@@ -66,6 +66,8 @@ test_{number}{letter}_{description}.py
 | 3C | `test_3c_auth_hardening_regression.py` | AUTH | Validate ingest/vector auth, session ownership, and CSRF behavior |
 | 3D | `test_3d_phase3_config_integrity.py` | AUTH | Validate secret-at-rest encryption and audit hash-chain verification |
 | 4A | `test_4a_unified_chat_tools_parity.py` | TOOLS | Verify `/llm/chat` `tools_used` parity across full-chat and admin-bubble payload shapes |
+| 5B | `test_5b_sage_route_smoke.py` | TOOLS | Smoke-test Sage-owned public routes and auth/CSRF boundaries |
+| 5C | `test_5c_chat_streaming_transport.py` | TOOLS | Verify `/llm/chat/stream` assistant events, Admin Config streaming, and Database trace redaction through the Docker gateway |
 
 ---
 

@@ -447,6 +447,11 @@ export function ChatPage() {
           }
           streamed = true
         } catch (streamError) {
+          if (streamMessageId && streamContent.trim()) {
+            updateAssistantMessage(streamMessageId, { traceStatus: null })
+            setError(streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'))
+            return
+          }
           if (streamMessageId) {
             setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
           }
@@ -508,6 +513,9 @@ export function ChatPage() {
             },
           })
           if (streamSessionId) setConversationSessionId(streamSessionId)
+          if (streamMessageId) {
+            updateAssistantMessage(streamMessageId, { traceStatus: null })
+          }
           if (hasConfigTool) {
             const extracted = extractAdminAssistantChangeSetStrict(streamContent)
             if (extracted.ok) {
@@ -520,6 +528,11 @@ export function ChatPage() {
           }
           streamed = true
         } catch (streamError) {
+          if (streamMessageId && streamContent.trim()) {
+            updateAssistantMessage(streamMessageId, { traceStatus: null })
+            setError(streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'))
+            return
+          }
           if (streamMessageId) {
             setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
           }

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools, sendQueryStream } from './llmChat'
+import { adminFetch, isAdminAuthenticated } from './adminApi'
+import { decryptField, hasNip04Support } from './encryption'
 
 vi.mock('./adminApi', () => ({
   adminFetch: vi.fn(),
@@ -105,6 +107,76 @@ describe('sendLlmChatWithUnifiedTools', () => {
     ])
     expect(events[1].data).toEqual({ message_id: 'msg_1', status: 'Using Web search' })
     expect(events[2].data).toEqual({ message_id: 'msg_1', delta: 'Hello' })
+  })
+
+  it('streams admin-config as an explicit backend tool without requiring client context', async () => {
+    const encoder = new TextEncoder()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"msg_1"}\n\n'))
+          controller.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } }
+    )))
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'Check my deployment config',
+      tools: ['admin-config'],
+      t: (key) => key,
+      onEvent: vi.fn(),
+    })
+
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'Check my deployment config',
+      tools: ['admin-config'],
+    })
+  })
+
+  it('streams database questions with decrypted client-executed context when admin keys are available', async () => {
+    vi.mocked(isAdminAuthenticated).mockReturnValue(true)
+    vi.mocked(hasNip04Support).mockReturnValue(true)
+    vi.mocked(decryptField).mockResolvedValue('decrypted secret')
+    vi.mocked(adminFetch).mockResolvedValue(Response.json({
+      success: true,
+      data: {
+        sql: 'SELECT encrypted_value, ephemeral_pubkey FROM settings',
+        columns: ['encrypted_value', 'ephemeral_pubkey'],
+        rows: [{ encrypted_value: 'ciphertext', ephemeral_pubkey: 'pubkey' }],
+        row_count: 1,
+      },
+    }))
+    const encoder = new TextEncoder()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"msg_1"}\n\n'))
+          controller.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } }
+    )))
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'What is in settings?',
+      tools: ['db-query'],
+      t: (key, options) => {
+        if (key === 'chat.database.executedSql') return `SQL: ${options?.sql}`
+        if (key === 'chat.database.resultsCount') return `Rows: ${options?.count}`
+        return key
+      },
+      onEvent: vi.fn(),
+    })
+
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'What is in settings?',
+      tools: ['db-query'],
+      tool_context: 'SQL: SELECT encrypted_value, ephemeral_pubkey FROM settings\n\nRows: 1\n\nvalue\n-----\ndecrypted secret',
+      client_executed_tools: ['db-query'],
+    })
   })
 
   it('parses stream events split across chunks with CRLF boundaries', async () => {

@@ -553,6 +553,13 @@ _Avoid_: full snapshot, config dump
 - Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
 - The **Agent Runtime** should own **Conversation Trace** redaction before returning traces to clients
+- The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
+- The first **Conversation Streaming Transport** implementation should target assistant-style **Admin Conversations** and **User Conversations** before retrieval-first **Conversations**
+- Assistant-style **Conversation Streaming Transport** should remain tool-aware so admin configuration and database-assisted **Admin Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
+- Assistant-style **Conversation Streaming Transport** should use a two-phase turn: structured tool/context preparation first, then streamable final answer generation
+- The first assistant-style **Conversation Streaming Transport** implementation should execute explicitly selected **Tools** only, not introduce model-chosen tool planning
+- Assistant-style **Conversation Streaming Transport** should wait for explicitly selected **Tools** to finish before streaming final answer text, while exposing live trace status during tool execution
+- In the first assistant-style **Conversation Streaming Transport** implementation, the final answer phase should stream directly from the configured **Model Provider** rather than through structured DSR/BAML parsing
 - Individual **Tools** and retrieval steps should emit safe trace drafts for their own work, and the **Agent Runtime** should compose those drafts into the final policy-filtered **Conversation Trace**
 - Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
 - Changes to **Trace Visibility Policy** should create **Audit Log** events because they change operator-visible conversation behavior
