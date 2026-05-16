@@ -108,6 +108,10 @@ _Avoid_: instance, tenant
 A deployment-owned machine actor that invokes approved operational workflows for an **Instance**.
 _Avoid_: admin user, service account, bot admin
 
+**Prototype Compatibility Debt**:
+Transitional code, configuration aliases, documentation, or UI copy that preserves obsolete prototype behavior after the current **Sage** and **Enclave Control Plane** boundary has become the source of truth.
+_Avoid_: data migration, confidentiality migration, rollback plan
+
 **Instance Initiation**:
 The first-time setup act where the first **Admin** authenticates and makes an **Instance** ready for configuration and user onboarding.
 _Avoid_: registration, installation
@@ -389,6 +393,9 @@ _Avoid_: full snapshot, config dump
 - A **Deployment** usually runs one **Instance** in the prototype
 - **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
 - **Deployment Automation** may invoke scheduled operational workflows without representing a human **Admin** action
+- **Prototype Compatibility Debt** can be removed when it preserves obsolete prototype behavior rather than an active product or migration boundary
+- **Prototype Compatibility Debt** excludes **Confidentiality Migration** safeguards until legacy plaintext active content storage has been resolved
+- Plaintext fallback for existing active content is a **Confidentiality Migration** concern, not **Prototype Compatibility Debt**, until the relevant storage state has been verified and migrated
 - A **Deployment** includes a **Gateway**
 - The **Gateway** routes requests to **Sage** or the **Enclave Control Plane**
 - The **Gateway** does not own product correctness
@@ -407,12 +414,21 @@ _Avoid_: full snapshot, config dump
 - A **User** belongs to at most one **User Type**
 - **Sage** is the **Agent Runtime** inside the **Enclave Free Prototype**
 - The **Enclave Control Plane** provides operator-owned facts and actions to **Sage**
+- Sage-owned public **Agent Runtime** routes should not keep duplicate Python behavior as a rollback path
+- Direct calls to obsolete Python public **Agent Runtime** routes should fail clearly rather than execute legacy behavior
+- Unused internal Sage-to-Python compatibility endpoints are **Prototype Compatibility Debt**
+- Sage should depend only on the active private **Enclave Control Plane** contract, and obsolete internal endpoints should fail clearly rather than preserve old ownership boundaries
 - **Instance Settings** belong to the **Instance**
 - **Deployment Settings** belong to the **Deployment**
 - **Agent Settings** belong to **Sage**
 - **Model Provider** is an **Agent Setting**
 - A **Model Provider** must satisfy the **Model Provider Requirement**
 - **Tinfoil** is the current preferred **Model Provider**
+- Maple-era provider labels, aliases, and UI copy are **Prototype Compatibility Debt** in the **Enclave Free Prototype**
+- The **Enclave Free Prototype** should fail clearly rather than silently honoring Maple-era **Model Provider** aliases
+- Generic deployment-facing `LLM_*` settings may remain while they describe Python-side **Deployment Settings**, diagnostics, and verification metadata
+- Generic deployment-facing `LLM_*` settings should not be described as live Sage **Agent Settings** until runtime configuration is unified
+- Admin-facing copy should not teach obsolete **Model Provider** labels or imply that Python deployment config live-edits Sage runtime environment
 - **Encrypted Inference** protects conversation content from surrounding infrastructure
 - **Verifiable Inference** lets the **Operator** verify meaningful execution claims
 - An **Inference Verification Record** captures the outcome of checking a **Model Provider** against expected **Verifiable Inference** claims
