@@ -135,6 +135,40 @@ describe('sendLlmChatWithUnifiedTools', () => {
     })
   })
 
+  it('sends recent conversation history with streamed admin chat turns', async () => {
+    const encoder = new TextEncoder()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"msg_1"}\n\n'))
+          controller.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } }
+    )))
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'your suggestions above',
+      tools: ['admin-config'],
+      t: (key) => key,
+      conversationHistory: [
+        { role: 'user', content: 'Change more of the copy.' },
+        { role: 'assistant', content: 'I recommend updating Instance Name, Assistant Name, and Reachout Title.' },
+      ],
+      onEvent: vi.fn(),
+    })
+
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'your suggestions above',
+      tools: ['admin-config'],
+      conversation_history: [
+        { role: 'user', content: 'Change more of the copy.' },
+        { role: 'assistant', content: 'I recommend updating Instance Name, Assistant Name, and Reachout Title.' },
+      ],
+    })
+  })
+
   it('streams database questions with decrypted client-executed context when admin keys are available', async () => {
     vi.mocked(isAdminAuthenticated).mockReturnValue(true)
     vi.mocked(hasNip04Support).mockReturnValue(true)

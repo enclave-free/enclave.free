@@ -603,6 +603,7 @@ def build_chat_prompt(
     message: str,
     context: str = "",
     user_type_id: int | None = None,
+    conversation_history: list[dict] | None = None,
     user_profile_context: dict[str, str] | None = None,
     user_memory_context: list[dict] | None = None,
     subject_user_context: dict | None = None,
@@ -618,6 +619,7 @@ def build_chat_prompt(
         message: The user's message/question
         context: Optional tool context (search results, database results, etc.)
         user_type_id: If provided, uses user-type-specific prompt sections.
+        conversation_history: Optional recent user/assistant messages from this chat.
         user_profile_context: Optional dict of {field_name: value} for user profile
             data to include in the prompt for personalization.
         user_memory_context: Optional active User Memory records to include as Sage-owned
@@ -757,6 +759,19 @@ def build_chat_prompt(
         parts.append("=== REFERENCE INFORMATION ===")
         parts.append("Use the following information to help answer the question:")
         parts.append(context)
+
+    if conversation_history:
+        recent_history = [
+            item for item in conversation_history
+            if item.get("role") in {"user", "assistant"} and str(item.get("content", "")).strip()
+        ][-8:]
+        if recent_history:
+            parts.append("")
+            parts.append("=== RECENT CONVERSATION ===")
+            for item in recent_history:
+                role = "User" if item.get("role") == "user" else "Assistant"
+                content = sanitize_profile_value(str(item.get("content", "")).strip())[:2000]
+                parts.append(f"{role}: {content}")
 
     # The question
     parts.append("")

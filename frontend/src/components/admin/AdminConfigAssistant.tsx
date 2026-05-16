@@ -387,6 +387,7 @@ export function AdminConfigAssistant({
           t,
           baseToolContext,
           sessionId: conversationSessionId,
+          conversationHistory: messages.map(({ role, content }) => ({ role, content })),
           onEvent: (event, payload) => {
             const data = payload as Record<string, unknown>
             if (event === 'assistant_message_started') {
@@ -450,6 +451,7 @@ export function AdminConfigAssistant({
           t,
           baseToolContext,
           sessionId: conversationSessionId,
+          conversationHistory: messages.map(({ role, content }) => ({ role, content })),
         })
       if (res.status === 401) {
         window.location.href = '/admin'

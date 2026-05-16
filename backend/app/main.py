@@ -482,6 +482,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     tools: List[str] = []
+    conversation_history: List[dict] = []
     tool_context: Optional[str] = None
     # Optional explicit list of tools already executed client-side and embedded in tool_context.
     # `None` keeps legacy behavior for older clients that only send tool_context.
@@ -1195,6 +1196,7 @@ async def chat(
             message=request.message,
             context=combined_context,
             user_type_id=user_type_id,
+            conversation_history=request.conversation_history,
             user_profile_context=user_profile_context,
             user_memory_context=user_memory_context,
             subject_user_context=subject_user_context,

@@ -478,6 +478,7 @@ export function ChatPage() {
             tools: backendTools,
             t,
             sessionId: conversationSessionId,
+            conversationHistory: messages.map(({ role, content }) => ({ role, content })),
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>
               if (event === 'assistant_message_started') {
@@ -545,6 +546,7 @@ export function ChatPage() {
           tools: backendTools,
           t,
           sessionId: conversationSessionId,
+          conversationHistory: messages.map(({ role, content }) => ({ role, content })),
         })
       }
 

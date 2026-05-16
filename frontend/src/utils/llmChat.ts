@@ -128,6 +128,7 @@ interface SendLlmChatOptions {
   t: TranslateFn
   baseToolContext?: string
   sessionId?: string | null
+  conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
 }
 
 interface SendLlmChatStreamOptions extends SendLlmChatOptions {
@@ -149,6 +150,7 @@ async function buildUnifiedChatBody({
   t,
   baseToolContext,
   sessionId,
+  conversationHistory,
 }: SendLlmChatOptions): Promise<Record<string, unknown>> {
   const toolContextParts: string[] = []
   if (baseToolContext && baseToolContext.trim()) {
@@ -197,6 +199,20 @@ async function buildUnifiedChatBody({
   }
   if (sessionId) {
     body.session_id = sessionId
+  }
+  const recentHistory = (conversationHistory || [])
+    .filter((message) => (
+      (message.role === 'user' || message.role === 'assistant') &&
+      typeof message.content === 'string' &&
+      message.content.trim()
+    ))
+    .slice(-8)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.slice(0, 2000),
+    }))
+  if (recentHistory.length > 0) {
+    body.conversation_history = recentHistory
   }
 
   if (toolContextParts.length > 0) {
