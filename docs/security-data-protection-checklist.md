@@ -316,17 +316,20 @@ curl -i -X OPTIONS http://localhost:8000/health \
 
 # S4-7: Verify only expected ports are published
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
+lsof -nP -iTCP:8000 -sTCP:LISTEN
 
 # Smoke checks expected to remain available
 curl -i http://localhost:8000/test
 curl -i http://localhost:8000/llm/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/llm/test
 ```
 
 Expected outcome:
 - Protected endpoints return `401` or `403` when unauthenticated.
 - CORS preflight for disallowed origins does not return `Access-Control-Allow-Origin`.
 - Published ports match least-privilege expectations (no `0.0.0.0` binds on internal services).
-- Health/smoke endpoints continue to return successful responses.
+- Health/smoke endpoints continue to return successful responses from the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:8000`, stop it before trusting host `localhost:8000` smoke results.
 
 **Note:** S4-5 (localStorage token removal) and S4-6 (query-param token removal) require browser DevTools inspection — verify that `localStorage` no longer stores session tokens and that auth flows do not pass tokens in URL query strings.
 

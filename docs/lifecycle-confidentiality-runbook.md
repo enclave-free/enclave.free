@@ -66,10 +66,16 @@ npm test -- --run src/pages/AdminDeploymentConfig.test.tsx
 Smoke the live backend when the stack is running:
 
 ```bash
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
+lsof -nP -iTCP:8000 -sTCP:LISTEN
 curl http://localhost:8000/test
 curl http://localhost:8000/llm/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/llm/test
 curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/admin/lifecycle/status
 ```
+
+The host curls must reach the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:8000`, stop it before trusting `localhost:8000` smoke responses.
 
 ## Confidentiality Checks
 

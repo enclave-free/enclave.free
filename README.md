@@ -77,9 +77,19 @@ First startup will:
 ### Verify Setup
 
 ```bash
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
+lsof -nP -iTCP:8000 -sTCP:LISTEN
 curl http://localhost:8000/test
 curl http://localhost:8000/health
 curl http://localhost:8000/llm/test
+```
+
+The smoke URLs are expected to hit the Compose `enclave-api-gateway` container. If `lsof` shows a local process such as `python3` already listening on `127.0.0.1:8000`, stop it before trusting `localhost:8000`; otherwise the smoke curls may report another server's 404s instead of the gateway result. To bypass host port ambiguity while debugging the stack, run the same checks from inside the gateway container:
+
+```bash
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/health
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/llm/test
 ```
 
 Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the frontend Test Dashboard. Open `http://localhost:5173/` after startup and confirm the dashboard loads and responds.

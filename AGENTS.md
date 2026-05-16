@@ -35,9 +35,12 @@ npm run preview   # serve dist/
 ```
 Smoke tests:
 ```bash
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
+lsof -nP -iTCP:8000 -sTCP:LISTEN
 curl http://localhost:8000/test
 curl http://localhost:8000/llm/test
 ```
+These curls must reach the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:8000`, stop that process or verify through the gateway container with `docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test` before treating a 404 as product behavior.
 
 ## Coding Style & Naming Conventions
 Python uses 4-space indentation and type hints. Prefer `snake_case` for functions/modules and `CamelCase` for classes/Pydantic models. TypeScript/TSX uses 2-space indentation and single quotes; React components are `PascalCase.tsx` (e.g., `ChatPage.tsx`). Keep Tailwind class lists readable and reuse shared components in `frontend/src/components/`.

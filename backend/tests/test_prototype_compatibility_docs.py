@@ -165,6 +165,24 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("Evidence: `backend/app/query.py`", checklist)
         self.assertNotIn("curl -i http://localhost:8000/query/session/test-session-id", checklist)
 
+    def test_smoke_docs_name_gateway_and_port_shadowing_check(self) -> None:
+        checked_paths = [
+            REPO_ROOT / "README.md",
+            REPO_ROOT / "AGENTS.md",
+            REPO_ROOT / "docs/security-data-protection-checklist.md",
+            REPO_ROOT / "docs/lifecycle-confidentiality-runbook.md",
+        ]
+
+        missing = []
+        for path in checked_paths:
+            text = path.read_text(encoding="utf-8")
+            if "enclave-api-gateway" not in text:
+                missing.append(f"{path.relative_to(REPO_ROOT)}: gateway container")
+            if "lsof -nP -iTCP:8000 -sTCP:LISTEN" not in text:
+                missing.append(f"{path.relative_to(REPO_ROOT)}: port shadowing check")
+
+        self.assertEqual(missing, [])
+
 
 if __name__ == "__main__":
     unittest.main()
