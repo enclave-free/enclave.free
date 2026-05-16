@@ -14,9 +14,17 @@ This runbook supports Issue #57 and Issues #58-#67. It is the operator-facing ve
 
 The unsupported Deployment Surfaces remain outside these guarantees: runtime logs, WAL files, database backups, snapshots, provider traces, Docker logs, browser caches, and copied exports. This is not a Secure Erase program.
 
+## Active Storage Lifecycle Boundaries
+
+Scheduled Retention Execution in this milestone targets only the supported classes exposed in Data Lifecycle Status: stale Sage Session Memory, eligible User Memory, uploaded Document artifacts that are failed, superseded, abandoned, or orphaned, and compactable non-lifecycle Audit Log detail. It does not replace subject-request deletion workflows.
+
+The following active-storage records are not scheduled for deletion in this milestone: active User Profiles, current Document Library records, current Retrieval Index entries, and Inference Verification Records. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists, because they are governance evidence for model-provider posture rather than ordinary content.
+
+See `docs/adr/0006-retention-and-deletion-are-operator-controlled-but-incomplete.md` for the overall lifecycle boundary and `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md` for why governance evidence is preserved while old sensitive detail may be compacted.
+
 ## Scheduled Retention Automation
 
-Use external cron, deployment automation, or another trusted scheduler as the v1 scheduler path. The product exposes a narrow machine endpoint so automation does not reuse a human Admin browser session:
+Use external cron, deployment automation, or another trusted external scheduler as the v1 scheduler path. The product exposes a narrow machine endpoint so automation does not reuse a human Admin browser session:
 
 ```bash
 curl -X POST "$BACKEND_URL/admin/lifecycle/retention/scheduled/automation/run" \
@@ -26,6 +34,12 @@ curl -X POST "$BACKEND_URL/admin/lifecycle/retention/scheduled/automation/run" \
 ```
 
 The backend reads `RETENTION_AUTOMATION_TOKEN` from environment configuration. Generate a high-entropy token, store it in the deployment secret manager, give only the scheduler access, rotate it by replacing the environment value and redeploying, and revoke it by removing or replacing the value. Audit Log evidence should show `machine:scheduled-retention` rather than a human Admin key.
+
+Every manual or machine-triggered Retention Execution should leave metadata-only Retention Run Records and tamper-evident Audit Log evidence. Retention Run Records store actor, trigger, policy snapshot, timestamps, aggregate status, counts, sanitized per-class results, tombstone references, and Audit Log linkage; they must not preserve Conversation Content, raw User Memory, uploaded Document content, or raw provider attestation material.
+
+Data Lifecycle Status reports Retention Scheduler Observation from Retention Run Records and the current Scheduled Retention Policy. Expected observation states are disabled, never observed, healthy, stale, or failing. Treat `never_observed`, `stale`, and `failing` as operator follow-up signals: confirm the external scheduler is installed, confirm it sends `X-Retention-Automation-Token`, inspect `/admin/lifecycle/retention-runs`, and verify the linked Audit Log evidence.
+
+See `docs/adr/0015-external-retention-scheduler-with-product-owned-run-records.md` for the decision to keep scheduling deployment-owned while making run evidence product-owned.
 
 Manual Admin controls remain available through `/admin/lifecycle/retention/preview`, `/admin/lifecycle/retention/run`, and `/admin/lifecycle/retention/scheduled/run`.
 

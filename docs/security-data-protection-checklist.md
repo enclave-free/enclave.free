@@ -159,6 +159,8 @@ Use this checklist to:
   Evidence: `GET /admin/lifecycle/status`, `frontend/src/pages/AdminDeploymentConfig.tsx`
 - [x] Data Lifecycle Status distinguishes Active Storage Lifecycle from unsupported Deployment Surfaces, reports Scheduled Retention Policy separately from Retention Scheduler execution, and exposes Content Encryption Key / Artifact Encryption Posture.
   Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `backend/tests/test_lifecycle_status.py`
+- [x] Data Lifecycle Status reports Retention Scheduler Observation from metadata-only Retention Run Records created by manual or external Retention Scheduler execution.
+  Evidence: `backend/app/database.py`, `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `docs/adr/0015-external-retention-scheduler-with-product-owned-run-records.md`
 
 ### 3.2 Admin data access and key management
 
@@ -260,8 +262,10 @@ Use this checklist to:
   Evidence: `backend/app/lifecycle.py::audit_lifecycle_deletion`, `backend/app/query.py`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `backend/tests/test_retention_execution.py::test_admin_can_retry_incomplete_session_memory_tombstone`, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`
 - [x] Re-check Conversation retention eligibility immediately before deletion and report skipped active candidates.
   Evidence: `backend/app/lifecycle.py::run_retention`, `backend/tests/test_retention_execution.py::test_retention_rechecks_conversation_activity_before_deleting_candidate`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
-- [x] Document implemented lifecycle guarantees and remaining limitations across security docs, session docs, ADR-0006, and ADR-0007.
-- [ ] Define scheduled retention policy for uploads/chunks/sessions/logs.
+- [x] Document implemented Active Storage Lifecycle guarantees and remaining limitations across security docs, session docs, runbooks, ADR-0006, ADR-0007, ADR-0015, and ADR-0016.
+- [x] State that active User Profiles, current Document Library records, current Retrieval Index entries, and Inference Verification Records are not scheduled for deletion in this milestone.
+- [x] State that Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
+- [ ] Define retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
 - [ ] Add secure erase process where applicable.
 - [ ] Define complete historical log/session retention and deletion policy.
 

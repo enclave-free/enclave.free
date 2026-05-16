@@ -88,13 +88,14 @@ Sage verifies the session token itself, hydrates the user/admin record from Pyth
 
 Current nuance:
 
+- Active Storage Lifecycle controls are visible in the Admin Data Lifecycle Status surface
 - active Conversation deletion removes the public `web_sessions` row and associated Sage Session Memory for that Conversation
 - public Conversation deletion, User deletion, and operator-invoked retention share Session Memory lifecycle handling
 - incomplete Sage Session Memory deletion creates an admin-visible metadata-only deletion tombstone for manual retry
 - deletion tombstones and lifecycle Audit Log events preserve sanitized lifecycle status and retry evidence, not Conversation Content
 - retention re-checks Conversation activity immediately before deletion and skips candidates that became active
-- scheduled retention for every historical Session Memory or log surface is still not implemented
-- Although shown as Scheduled Retention Policy in Data Lifecycle Status, this prototype still relies on manual or external Retention Scheduler execution
+- scheduled retention depends on an external Retention Scheduler and produces metadata-only Retention Run Records plus Retention Scheduler Observation
+- unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces remain outside product lifecycle control
 
 ## Debugging
 

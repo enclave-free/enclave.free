@@ -124,6 +124,10 @@ The Data Lifecycle Status panel is the current operator-visible inventory for th
 
 This split is important because a class can have deletion, retention, audit, and confidentiality states that move independently.
 
+Scheduled retention is deployment-owned in this milestone. Use an external Retention Scheduler to call the automation endpoint, then verify Retention Scheduler Observation in this panel. Observation is derived from metadata-only Retention Run Records and can report disabled, never observed, healthy, stale, or failing. See `docs/adr/0015-external-retention-scheduler-with-product-owned-run-records.md` and `docs/lifecycle-confidentiality-runbook.md`.
+
+The Active Storage Lifecycle does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, or Inference Verification Records for deletion in this milestone. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
+
 ## Common Operator Workflow
 
 1. use the admin deployment UI to inspect health and manage Python-owned settings
