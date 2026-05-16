@@ -33,7 +33,7 @@ import type {
   NostrEvent,
 } from '../types/config'
 
-// --- Agent Settings Compatibility Hooks ---
+// --- Agent Settings Hooks ---
 
 export function useAIConfig(userTypeId?: number | null) {
   const [config, setConfig] = useState<AIConfigResponse | AIConfigResponseWithInheritance | null>(null)

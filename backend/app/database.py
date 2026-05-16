@@ -331,7 +331,7 @@ def init_schema():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_field_definitions_type ON user_field_definitions(user_type_id)")
     # Note: idx_user_field_definitions_encryption created in _migrate_add_encryption_enabled_column()
 
-    # Agent Settings table - keeps the compatibility table name ai_config.
+    # Agent Settings table. The ai_config name is shared with Sage's current schema.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -475,7 +475,7 @@ def init_schema():
         WHERE status = 'incomplete'
     """)
 
-    # Agent Settings user-type overrides - keeps the compatibility table name.
+    # Agent Settings user-type overrides. The table name is shared with Sage's current schema.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config_user_type_overrides (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

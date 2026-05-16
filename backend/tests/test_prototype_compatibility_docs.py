@@ -111,6 +111,25 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("legacy Python Model Provider client config", deployment)
         self.assertNotIn("remaining legacy client paths", deployment)
 
+    def test_agent_settings_surface_is_not_described_as_compatibility_layer(self) -> None:
+        checked_paths = [
+            REPO_ROOT / "backend/app/ai_config.py",
+            REPO_ROOT / "backend/app/database.py",
+            REPO_ROOT / "backend/app/models.py",
+            REPO_ROOT / "frontend/src/types/config.ts",
+            REPO_ROOT / "frontend/src/hooks/useAdminConfig.ts",
+        ]
+
+        violations = []
+        for path in checked_paths:
+            text = path.read_text(encoding="utf-8")
+            if "Agent Settings Compatibility" in text or "compatibility router" in text:
+                violations.append(str(path.relative_to(REPO_ROOT)))
+            if "keeps the compatibility table name" in text:
+                violations.append(str(path.relative_to(REPO_ROOT)))
+
+        self.assertEqual(violations, [])
+
     def test_mock_email_docs_and_locales_do_not_teach_mock_smtp_alias(self) -> None:
         checked_paths = [
             REPO_ROOT / "docs/email-auth.md",

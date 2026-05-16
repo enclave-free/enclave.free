@@ -423,7 +423,7 @@ class RowMutationResponse(BaseModel):
     error: Optional[str] = None
 
 
-# --- Agent Settings Compatibility Models ---
+# --- Agent Settings Models ---
 
 class AIConfigItem(BaseModel):
     """Single Agent Settings item"""
