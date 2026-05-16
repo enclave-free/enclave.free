@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import json
 import os
@@ -218,7 +220,9 @@ class RetentionExecutionTest(unittest.TestCase):
         actions = {result["action"]: result for result in body["deletion"]["results"]}
         self.assertEqual(actions["retention_delete_stale_conversation"]["status"], "succeeded")
         self.assertEqual(actions["delete_document_metadata"]["status"], "succeeded")
-
+        self.assertIn("run_record", body)
+        self.assertEqual(body["run_record"]["trigger"], "manual")
+        self.assertEqual(body["run_record"]["actor"], "admin-pubkey")
         entries = self.audit_entries("data_deletion")
         retention_event = json.loads(entries[0]["new_value"])
         self.assertEqual(retention_event["workflow"], "run_retention")
@@ -227,6 +231,130 @@ class RetentionExecutionTest(unittest.TestCase):
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
+
+    def test_scheduled_retention_creates_metadata_only_run_record(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "user_memory": {
+                    "lifecycle_data_class": "user_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+        memory_id = self.create_stale_user_memory(content="Run record must not expose this memory.")
+        response = self.client.post(
+            "/admin/lifecycle/retention/scheduled/run",
+            json={"retry_limit": 0},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "succeeded")
+        self.assertIn("run_record", body)
+        self.assertEqual(body["run_record"]["trigger"], "manual")
+        self.assertEqual(body["run_record"]["actor"], "admin-pubkey")
+
+        history = self.client.get("/admin/lifecycle/retention-runs")
+        self.assertEqual(history.status_code, 200)
+        runs = history.json()["runs"]
+        self.assertEqual(len(runs), 1)
+        run = runs[0]
+        self.assertEqual(run["id"], body["run_record"]["id"])
+        self.assertEqual(run["status"], "succeeded")
+        self.assertEqual(run["trigger"], "manual")
+        self.assertEqual(run["actor"], "admin-pubkey")
+        self.assertIn("user_memory", run["counts"]["by_class"])
+        self.assertEqual(run["counts"]["by_class"]["user_memory"]["succeeded"], 1)
+        self.assertNotIn("Run record must not expose this memory", json.dumps(run))
+        self.assertEqual(self.database.get_user_memory(memory_id)["status"], "deleted")
+
+    def test_lifecycle_status_reports_scheduler_observation(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "user_memory": {
+                    "lifecycle_data_class": "user_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+
+        before = self.client.get("/admin/lifecycle/status")
+        self.assertEqual(before.status_code, 200)
+        before_scheduler = before.json()["retention_scheduler"]
+        self.assertEqual(before_scheduler["observation"]["status"], "never_observed")
+        self.assertEqual(before_scheduler["observation"]["enabled_classes"], ["user_memory"])
+
+        original_token = os.environ.get("RETENTION_AUTOMATION_TOKEN")
+        os.environ["RETENTION_AUTOMATION_TOKEN"] = "retention-token"
+        try:
+            run = self.client.post(
+                "/admin/lifecycle/retention/scheduled/automation/run",
+                json={"retry_limit": 0},
+                headers={"X-Retention-Automation-Token": "retention-token"},
+            )
+        finally:
+            self._restore_env("RETENTION_AUTOMATION_TOKEN", original_token)
+        self.assertEqual(run.status_code, 200)
+
+        after = self.client.get("/admin/lifecycle/status")
+        self.assertEqual(after.status_code, 200)
+        observation = after.json()["retention_scheduler"]["observation"]
+        self.assertEqual(observation["status"], "healthy")
+        self.assertEqual(observation["last_run"]["trigger"], "machine")
+        self.assertEqual(observation["last_run"]["actor"], "machine:scheduled-retention")
+
+    def test_manual_and_machine_scheduled_runs_share_evidence_shape(self) -> None:
+        self.database.update_setting(
+            "lifecycle_retention_policies",
+            json.dumps({
+                "user_memory": {
+                    "lifecycle_data_class": "user_memory",
+                    "enabled": True,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": True,
+                },
+            }, sort_keys=True),
+        )
+
+        manual = self.client.post(
+            "/admin/lifecycle/retention/scheduled/run",
+            json={"retry_limit": 0},
+        )
+        self.assertEqual(manual.status_code, 200)
+
+        original_token = os.environ.get("RETENTION_AUTOMATION_TOKEN")
+        os.environ["RETENTION_AUTOMATION_TOKEN"] = "retention-token"
+        try:
+            machine = self.client.post(
+                "/admin/lifecycle/retention/scheduled/automation/run",
+                json={"retry_limit": 0},
+                headers={"X-Retention-Automation-Token": "retention-token"},
+            )
+        finally:
+            self._restore_env("RETENTION_AUTOMATION_TOKEN", original_token)
+        self.assertEqual(machine.status_code, 200)
+
+        history = self.client.get("/admin/lifecycle/retention-runs")
+        self.assertEqual(history.status_code, 200)
+        runs = history.json()["runs"]
+        self.assertEqual(len(runs), 2)
+        machine_run, manual_run = runs
+        self.assertEqual(machine_run["trigger"], "machine")
+        self.assertEqual(machine_run["actor"], "machine:scheduled-retention")
+        self.assertEqual(manual_run["trigger"], "manual")
+        self.assertEqual(manual_run["actor"], "admin-pubkey")
+        for run in (manual_run, machine_run):
+            self.assertIn("policy_snapshot", run)
+            self.assertIn("counts", run)
+            self.assertIn("results", run)
+            self.assertIsNotNone(run["audit_log_id"])
+            self.assertIsNotNone(run["audit_entry_hash"])
 
     def test_retention_preview_reports_eligible_counts_without_deleting(self) -> None:
         stale_session_id = "preview-stale-session"

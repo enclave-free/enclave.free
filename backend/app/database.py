@@ -442,6 +442,28 @@ def init_schema():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS retention_run_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trigger TEXT NOT NULL CHECK(trigger IN ('manual', 'machine')),
+            actor TEXT NOT NULL,
+            status TEXT NOT NULL,
+            policy_snapshot JSON NOT NULL,
+            counts JSON NOT NULL,
+            results JSON NOT NULL,
+            tombstone_refs JSON NOT NULL,
+            audit_log_id INTEGER,
+            audit_entry_hash TEXT,
+            started_at TIMESTAMP NOT NULL,
+            finished_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_retention_run_records_created
+        ON retention_run_records(created_at DESC, id DESC)
+    """)
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
         ON deletion_tombstones(status, updated_at DESC)
@@ -919,7 +941,7 @@ def _insert_config_audit_log(
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
-) -> None:
+) -> dict:
     """
     Insert tamper-evident audit event with hash-chain linkage.
 
@@ -946,6 +968,7 @@ def _insert_config_audit_log(
         """,
         (table_name, config_key, old_value, new_value, changed_by, changed_at, prev_hash, entry_hash),
     )
+    return {"id": int(cursor.lastrowid), "entry_hash": entry_hash}
 
 
 def log_config_audit_event(
@@ -954,7 +977,7 @@ def log_config_audit_event(
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
-) -> None:
+) -> dict:
     """
     Public helper for writing tamper-evident config audit events.
 
@@ -963,7 +986,94 @@ def log_config_audit_event(
     from forking the hash chain.
     """
     with get_write_cursor() as cursor:
-        _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+        return _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+
+
+def create_retention_run_record(
+    *,
+    trigger: str,
+    actor: str,
+    status: str,
+    policy_snapshot: dict,
+    counts: dict,
+    results: list[dict],
+    tombstone_refs: list[dict],
+    audit_log_id: int | None,
+    audit_entry_hash: str | None,
+    started_at: str,
+    finished_at: str,
+) -> dict:
+    if trigger not in {"manual", "machine"}:
+        raise ValueError("Unsupported Retention Run trigger")
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO retention_run_records (
+                trigger,
+                actor,
+                status,
+                policy_snapshot,
+                counts,
+                results,
+                tombstone_refs,
+                audit_log_id,
+                audit_entry_hash,
+                started_at,
+                finished_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trigger,
+                actor,
+                status,
+                json.dumps(policy_snapshot, sort_keys=True),
+                json.dumps(counts, sort_keys=True),
+                json.dumps(results, sort_keys=True),
+                json.dumps(tombstone_refs, sort_keys=True),
+                audit_log_id,
+                audit_entry_hash,
+                started_at,
+                finished_at,
+            ),
+        )
+        record_id = int(cursor.lastrowid)
+    record = get_retention_run_record(record_id)
+    if record is None:
+        raise RuntimeError("Created Retention Run Record could not be loaded")
+    return record
+
+
+def _retention_run_record_from_row(row: sqlite3.Row) -> dict:
+    record = dict(row)
+    for key in ("policy_snapshot", "counts", "results", "tombstone_refs"):
+        try:
+            record[key] = json.loads(record[key])
+        except (TypeError, json.JSONDecodeError):
+            record[key] = {} if key in {"policy_snapshot", "counts"} else []
+    return record
+
+
+def get_retention_run_record(record_id: int) -> dict | None:
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM retention_run_records WHERE id = ?", (record_id,))
+        row = cursor.fetchone()
+        return _retention_run_record_from_row(row) if row else None
+
+
+def list_retention_run_records(limit: int = 100) -> list[dict]:
+    bounded_limit = max(1, min(int(limit), 500))
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT *
+            FROM retention_run_records
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+            """,
+            (bounded_limit,),
+        )
+        return [_retention_run_record_from_row(row) for row in cursor.fetchall()]
 
 
 def create_deletion_tombstone(

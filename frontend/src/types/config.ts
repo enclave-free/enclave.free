@@ -226,6 +226,18 @@ export interface ArtifactEncryptionStatus extends LifecyclePosture {
 export interface RetentionSchedulerStatus {
   status: string
   summary: string
+  observation?: {
+    status: 'disabled' | 'never_observed' | 'healthy' | 'stale' | 'failing'
+    enabled_classes: string[]
+    last_run: null | {
+      id: number
+      status: string
+      trigger: 'manual' | 'machine'
+      actor: string
+      finished_at: string
+    }
+    summary: string
+  }
 }
 
 export interface LifecycleDataClass {

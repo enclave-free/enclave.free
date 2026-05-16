@@ -426,6 +426,59 @@ def _retention_policy_for(data_class_key: str) -> dict:
     }
 
 
+def _scheduled_retention_enabled_classes(policies: dict[str, dict] | None = None) -> list[str]:
+    source = policies if policies is not None else _stored_retention_policies()
+    return sorted([
+        key
+        for key, policy in source.items()
+        if policy.get("enabled") and policy.get("scheduled_enforcement_enabled")
+    ])
+
+
+def _retention_scheduler_observation(enabled_classes: list[str]) -> dict:
+    if not enabled_classes:
+        return {
+            "status": "disabled",
+            "enabled_classes": [],
+            "last_run": None,
+            "summary": "No Lifecycle Data Classes have scheduled Retention Execution enabled.",
+        }
+    machine_runs = [
+        run for run in database.list_retention_run_records(limit=50)
+        if run.get("trigger") == "machine"
+    ]
+    if not machine_runs:
+        return {
+            "status": "never_observed",
+            "enabled_classes": enabled_classes,
+            "last_run": None,
+            "summary": "Scheduled Retention Policy is enabled, but no Retention Scheduler run has been observed.",
+        }
+    last_run = machine_runs[0]
+    finished_at = _parse_timestamp(last_run.get("finished_at"))
+    if last_run.get("status") in {"failed", "partial_failure", "incomplete"}:
+        status = "failing"
+        summary = "The most recent Retention Scheduler run did not fully succeed."
+    elif finished_at and finished_at < datetime.utcnow() - timedelta(hours=48):
+        status = "stale"
+        summary = "The most recent Retention Scheduler run is older than the expected observation window."
+    else:
+        status = "healthy"
+        summary = "A recent Retention Scheduler run created lifecycle evidence."
+    return {
+        "status": status,
+        "enabled_classes": enabled_classes,
+        "last_run": {
+            "id": last_run.get("id"),
+            "status": last_run.get("status"),
+            "trigger": last_run.get("trigger"),
+            "actor": last_run.get("actor"),
+            "finished_at": last_run.get("finished_at"),
+        },
+        "summary": summary,
+    }
+
+
 def _data_classes_with_retention_policies() -> list[dict]:
     stored_policies = _stored_retention_policies()
     classes = []
@@ -835,6 +888,9 @@ def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: boo
 def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
     policies = _stored_retention_policies()
+    enabled_classes = _scheduled_retention_enabled_classes(policies)
+    retention_scheduler = deepcopy(RETENTION_SCHEDULER_SCOPE)
+    retention_scheduler["observation"] = _retention_scheduler_observation(enabled_classes)
     return {
         "lifecycle_scope": deepcopy(LIFECYCLE_SCOPE),
         "data_classes": _data_classes_with_retention_policies(),
@@ -843,13 +899,9 @@ def get_lifecycle_status() -> dict:
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "scheduled_retention": {
-            "enabled_classes": sorted([
-                key
-                for key, policy in policies.items()
-                if policy.get("enabled") and policy.get("scheduled_enforcement_enabled")
-            ]),
+            "enabled_classes": enabled_classes,
         },
-        "retention_scheduler": deepcopy(RETENTION_SCHEDULER_SCOPE),
+        "retention_scheduler": retention_scheduler,
         "audit_coverage": get_audit_coverage_inventory(),
         "deletion_tombstones": database.summarize_deletion_tombstones(),
     }
@@ -1079,9 +1131,9 @@ def _parse_timestamp(value: object) -> datetime | None:
         return None
 
 
-def _audit_retention_run(*, changed_by: str, deletion: dict) -> None:
+def _audit_retention_run(*, changed_by: str, deletion: dict) -> dict | None:
     try:
-        database.log_config_audit_event(
+        return database.log_config_audit_event(
             table_name="data_deletion",
             config_key=f"retention:{datetime.utcnow().isoformat()}",
             old_value=None,
@@ -1102,6 +1154,72 @@ def _audit_retention_run(*, changed_by: str, deletion: dict) -> None:
             exc,
             exc_info=True,
         )
+    return None
+
+
+def _retention_counts_by_class(results: list[dict]) -> dict:
+    by_class: dict[str, dict[str, int]] = {}
+    target_class_map = {
+        "conversation": "sage_session_memory",
+        "session_memory": "sage_session_memory",
+        "user_memory": "user_memory",
+        "audit_log": "audit_log",
+        "document_artifact": "uploaded_document_artifacts",
+        "document_metadata": "uploaded_document_artifacts",
+        "retrieval_index": "uploaded_document_artifacts",
+        "runtime_document_state": "uploaded_document_artifacts",
+        "lifecycle_data_class": "lifecycle_data_class",
+        "retention": "retention",
+        "deletion_tombstone": "deletion_tombstone",
+    }
+    for result in results:
+        class_key = target_class_map.get(
+            str(result.get("target_kind", "")),
+            str(result.get("target_kind") or "unknown"),
+        )
+        status = str(result.get("status") or "unknown")
+        if class_key not in by_class:
+            by_class[class_key] = {"succeeded": 0, "skipped": 0, "failed": 0}
+        if status not in by_class[class_key]:
+            by_class[class_key][status] = 0
+        by_class[class_key][status] += 1
+    return {"by_class": by_class}
+
+
+def _retention_tombstone_refs(results: list[dict], retry_results: list[dict] | None = None) -> list[dict]:
+    refs = []
+    for result in retry_results or []:
+        tombstone_id = result.get("tombstone_id")
+        if tombstone_id is not None:
+            refs.append({"tombstone_id": tombstone_id, "status": result.get("status")})
+    return refs
+
+
+def _create_retention_run_record(
+    *,
+    trigger: str,
+    actor: str,
+    policy_snapshot: dict,
+    deletion: dict,
+    retry_results: list[dict] | None,
+    audit_event: dict | None,
+    started_at: datetime,
+    finished_at: datetime,
+) -> dict:
+    results = list(deletion.get("results") or [])
+    return database.create_retention_run_record(
+        trigger=trigger,
+        actor=actor,
+        status=str(deletion.get("status") or "unknown"),
+        policy_snapshot=policy_snapshot,
+        counts=_retention_counts_by_class(results),
+        results=results,
+        tombstone_refs=_retention_tombstone_refs(results, retry_results),
+        audit_log_id=audit_event.get("id") if audit_event else None,
+        audit_entry_hash=audit_event.get("entry_hash") if audit_event else None,
+        started_at=started_at.isoformat(),
+        finished_at=finished_at.isoformat(),
+    )
 
 
 def _audit_deletion_tombstone_retry(*, changed_by: str, tombstone: dict, deletion: dict) -> None:
@@ -1282,8 +1400,15 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     }
 
 
-async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
-    now = datetime.utcnow()
+async def run_retention(
+    request: RetentionRunRequest,
+    admin: dict,
+    *,
+    create_run_record: bool = True,
+    trigger: str = "manual",
+) -> dict:
+    started_at = datetime.utcnow()
+    now = started_at
     stored_policies = _stored_retention_policies()
     session_memory_policy = _retention_policy_for("sage_session_memory")
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
@@ -1473,18 +1598,35 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
         ))
 
     deletion = summarize_deletion_results(results)
-    _audit_retention_run(
+    audit_event = _audit_retention_run(
         changed_by=admin.get("pubkey", "unknown"),
         deletion=deletion,
     )
-    return {
+    response = {
         "status": deletion["status"],
         "retained": retained,
         "deletion": deletion,
+        "audit_event": audit_event,
     }
+    if create_run_record:
+        actor = admin.get("pubkey") or admin.get("actor") or "unknown"
+        response["run_record"] = _create_retention_run_record(
+            trigger=trigger,
+            actor=actor,
+            policy_snapshot={"retention_policies": stored_policies},
+            deletion=deletion,
+            retry_results=[],
+            audit_event=audit_event,
+            started_at=started_at,
+            finished_at=datetime.utcnow(),
+        )
+    return response
 
 
 async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: dict) -> dict:
+    started_at = datetime.utcnow()
+    trigger = "machine" if admin.get("type") == "machine" else "manual"
+    actor = admin.get("pubkey") or admin.get("actor") or "unknown"
     scheduled_policies = {
         key: policy
         for key, policy in _stored_retention_policies().items()
@@ -1500,11 +1642,22 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
                 detail="No Lifecycle Data Classes have scheduled Retention Execution enabled.",
             )
         ])
-        _audit_retention_run(changed_by=admin.get("pubkey", "unknown"), deletion=deletion)
+        audit_event = _audit_retention_run(changed_by=actor, deletion=deletion)
+        run_record = _create_retention_run_record(
+            trigger=trigger,
+            actor=actor,
+            policy_snapshot={"scheduled_policies": scheduled_policies},
+            deletion=deletion,
+            retry_results=[],
+            audit_event=audit_event,
+            started_at=started_at,
+            finished_at=datetime.utcnow(),
+        )
         return {
             "status": "skipped",
             "enabled_classes": [],
             "retry_results": [],
+            "run_record": run_record,
             "retention": {"status": deletion["status"], "deletion": deletion, "retained": {}},
         }
 
@@ -1514,6 +1667,8 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
             document_artifact_days=_retention_policy_days("uploaded_document_artifacts", 0),
         ),
         admin,
+        create_run_record=False,
+        trigger=trigger,
     )
 
     retry_results = []
@@ -1556,10 +1711,27 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
     ):
         final_status = "incomplete"
 
+    run_deletion = retention["deletion"]
+    if final_status != retention["status"]:
+        run_deletion = {
+            **run_deletion,
+            "status": final_status,
+        }
+    run_record = _create_retention_run_record(
+        trigger=trigger,
+        actor=actor,
+        policy_snapshot={"scheduled_policies": scheduled_policies},
+        deletion=run_deletion,
+        retry_results=retry_results,
+        audit_event=retention.get("audit_event"),
+        started_at=started_at,
+        finished_at=datetime.utcnow(),
+    )
     return {
         "status": final_status,
         "enabled_classes": enabled_classes,
         "retry_results": retry_results,
+        "run_record": run_record,
         "retention": retention,
     }
 
@@ -1650,6 +1822,14 @@ async def list_admin_deletion_tombstones(
     if status is not None and status not in {"incomplete", "completed"}:
         raise HTTPException(status_code=400, detail="Unsupported deletion tombstone status")
     return {"tombstones": database.list_deletion_tombstones(status=status)}
+
+
+@router.get("/retention-runs", response_model=dict)
+async def list_admin_retention_runs(
+    limit: int = 100,
+    _admin: dict = Depends(auth.require_admin),
+):
+    return {"runs": database.list_retention_run_records(limit=limit)}
 
 
 @router.post("/deletion-tombstones/{tombstone_id}/retry", response_model=dict)

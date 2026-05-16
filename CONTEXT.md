@@ -52,6 +52,14 @@ _Avoid_: retention scheduler, cron job
 The technical automation that invokes scheduled **Retention Execution** without a human pressing a product control.
 _Avoid_: scheduled retention policy, retention setting
 
+**Retention Scheduler Observation**:
+Operator-visible evidence that scheduled **Retention Execution** has run recently and what lifecycle result it produced.
+_Avoid_: cron health, scheduler guarantee
+
+**Retention Run Record**:
+A metadata-only product record of one **Retention Execution** run used for lifecycle status, scheduler observation, and repair workflows.
+_Avoid_: audit log entry, deleted data archive
+
 **Data Deletion**:
 The **Operator** controlled action or workflow that removes **Instance** data from active storage according to **Data Retention** rules or a specific deletion request.
 _Avoid_: cleanup, hide, archive
@@ -244,6 +252,10 @@ _Avoid_: user fields, profile fields
 Sage-owned durable context about a specific **User** that supports subtle personalization across **Conversations**.
 _Avoid_: user profile, session memory, profile fields, user-facing memory manager
 
+**User Memory Retention Class**:
+The lifecycle category that determines whether a **User Memory** item is durable, expirable, or eligible because it has been superseded.
+_Avoid_: memory type, importance score
+
 **Session Memory**:
 The conversation-specific information **Sage** retains to support an ongoing agent interaction.
 _Avoid_: user profile, chat history
@@ -341,8 +353,21 @@ _Avoid_: full snapshot, config dump
 - A **Scheduled Retention Policy** identifies which **Lifecycle Data Classes** scheduled **Retention Execution** should include
 - A **Retention Scheduler** triggers scheduled **Retention Execution** automatically
 - The first **Scheduled Retention Policy** support may exist before the product includes its own **Retention Scheduler**
+- An externally configured **Retention Scheduler** is acceptable for the first production-ready **Active Storage Lifecycle** milestone if missing or stale scheduler execution is visible to the **Operator**
+- A **Retention Scheduler Observation** can be healthy even when no data was eligible for deletion if the run created lifecycle and **Audit Log** evidence
+- The first scheduled enforcement slice of **Active Storage Lifecycle** covers **Sage Session Memory**, **Uploaded Document Artifacts**, **User Memory**, and sensitive **Audit Log** detail
+- The first scheduled enforcement slice of **Active Storage Lifecycle** does not schedule deletion of active **User Profiles**, current **Document Library** records, current **Retrieval Index** entries, or **Inference Verification Records**
+- **Inference Verification Records** remain indefinitely retained until a separate evidence-retention policy exists
+- Scheduled **Uploaded Document Artifacts** retention cleans failed, superseded, orphaned, or abandoned artifacts rather than current successful **Document Library** records
+- Scheduled **Sage Session Memory** retention uses **Conversation** last activity rather than creation time when deciding staleness
+- Scheduled **Audit Log** retention compacts sensitive detail while preserving lifecycle and governance evidence; it does not delete whole **Audit Log** rows in the first scheduled enforcement slice
 - **Retention Execution** reports results per **Lifecycle Data Class**
+- **Retention Execution** evidence should preserve metadata-only run status, counts, per-class outcomes, retry references, and sanitized failure categories without preserving deleted content
+- A **Retention Run Record** is the operational source for lifecycle status and scheduler observation, while the **Audit Log** is the tamper-evident governance trail for the same run
+- Manual and machine-triggered **Retention Execution** should create the same kind of **Retention Run Record** with different actor and trigger metadata
+- Scheduled **User Memory** retention should remove stale expirable or superseded **User Memory**, not active Admin-confirmed **User Memory** merely because it is old
 - Destructive **Retention Execution** requires explicit **Admin** confirmation and should make eligibility or result counts visible
+- Human-triggered **Retention Execution** should require fresh preview or current eligibility counts, while machine-triggered scheduled **Retention Execution** runs from the policy snapshot and is reviewed afterward
 - A dry-run or preview for broad **Retention Execution** is desired but not required for the first slice
 - Operator-invoked **Retention Execution** should create an **Audit Log** event even when no data changes
 - **Data Deletion** executes **Data Retention** decisions or specific deletion requests
@@ -501,6 +526,9 @@ _Avoid_: full snapshot, config dump
 - **User Memory** for a **Subject User** may be loaded into an **Admin Conversation** when clearly labeled
 - **User Profile** and **User Memory** may both inform a **Conversation** but should be labeled separately
 - Ambient **User Memory** capture should be controlled by a simple **Instance Setting**
+- Ambient **User Memory** should default to an expirable **User Memory Retention Class**
+- Admin-authored **User Memory** should default to a durable **User Memory Retention Class**
+- Superseded **User Memory** is eligible for scheduled retention after its retention window
 - **Session Memory** belongs to the **Agent Runtime**
 - **Session Memory Deletion** must remove the **Session Memory** associated with a **Conversation**
 - **Session Memory Deletion** is logical active-storage deletion in the first version, not **Secure Erase**

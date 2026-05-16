@@ -1876,6 +1876,24 @@ export function AdminDeploymentConfig() {
                     })}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.retention_scheduler.summary}</p>
+                  {lifecycleStatus.retention_scheduler.observation && (
+                    <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                      <p className="font-medium text-text">
+                        {t('adminDeployment.lifecycle.schedulerObservation', 'Observation: {{status}}', {
+                          status: formatLifecycleStatus(lifecycleStatus.retention_scheduler.observation.status),
+                        })}
+                      </p>
+                      <p>{lifecycleStatus.retention_scheduler.observation.summary}</p>
+                      {lifecycleStatus.retention_scheduler.observation.last_run && (
+                        <p>
+                          {t('adminDeployment.lifecycle.schedulerLastRun', 'Last run: {{trigger}} by {{actor}}', {
+                            trigger: lifecycleStatus.retention_scheduler.observation.last_run.trigger,
+                            actor: lifecycleStatus.retention_scheduler.observation.last_run.actor,
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
