@@ -1,4 +1,4 @@
-"""Sanctum OpenAI-compatible Model Provider module."""
+"""Enclave OpenAI-compatible Model Provider module."""
 
 from .provider import (
     LLMProvider,

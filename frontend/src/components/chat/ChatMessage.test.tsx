@@ -25,15 +25,16 @@ function stubLocalStorage() {
   })
 }
 
-function renderMessage(content: string) {
+function renderMessage(content: string, role: 'user' | 'assistant' = 'assistant', trace?: Parameters<typeof ChatMessage>[0]['message']['trace']) {
   return render(
     <ThemeProvider>
       <InstanceConfigProvider>
         <ChatMessage
           message={{
             id: 'message-1',
-            role: 'assistant',
+            role,
             content,
+            trace,
           }}
         />
       </InstanceConfigProvider>
@@ -44,7 +45,7 @@ function renderMessage(content: string) {
 describe('ChatMessage', () => {
   beforeEach(() => {
     stubLocalStorage()
-    localStorage.setItem('sanctum-theme', 'light')
+    localStorage.setItem('enclave-theme', 'light')
     localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify(DEFAULT_INSTANCE_CONFIG))
     vi.stubGlobal(
       'fetch',
@@ -129,5 +130,109 @@ describe('ChatMessage', () => {
     await user.click(screen.getByRole('button', { name: 'Copy code' }))
 
     expect(clipboardWriteText).toHaveBeenCalledWith('const answer = 42')
+  })
+
+  it('copies the full assistant message from the message copy icon', async () => {
+    const user = userEvent.setup()
+    stubClipboard()
+    const content = 'Here is a useful answer with **markdown**.'
+
+    renderMessage(content)
+
+    await user.click(screen.getByRole('button', { name: 'Copy message' }))
+
+    expect(clipboardWriteText).toHaveBeenCalledWith(content)
+    expect(screen.getByRole('button', { name: 'Copied message' })).toBeInTheDocument()
+  })
+
+  it('copies user messages from the same message copy icon', async () => {
+    const user = userEvent.setup()
+    stubClipboard()
+    const content = 'Please make this easy to copy.'
+
+    renderMessage(content, 'user')
+
+    await user.click(screen.getByRole('button', { name: 'Copy message' }))
+
+    expect(clipboardWriteText).toHaveBeenCalledWith(content)
+  })
+
+  it('renders assistant Conversation Trace details inline', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'summary',
+      reasoning: {
+        summary: 'Sage used Web search before answering.',
+      },
+      tools: [
+        {
+          id: 'web-search',
+          name: 'Web search',
+          status: 'success',
+          execution: 'server',
+          input_summary: 'current policy updates',
+          output_summary: 'Found 3 relevant results.',
+          warnings: [],
+          metadata: {},
+        },
+      ],
+      retrieval: [],
+      suppressed: false,
+    })
+
+    expect(screen.getByText('Conversation Trace')).toBeInTheDocument()
+    expect(screen.getByText('Sage used Web search before answering.')).toBeInTheDocument()
+    expect(screen.getByText('Web search')).toBeInTheDocument()
+    expect(screen.getByText('Found 3 relevant results.')).toBeInTheDocument()
+  })
+
+  it('renders minimal assistant trace as compact usage badges', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'minimal',
+      reasoning: {
+        summary: 'Sage used internal context before answering.',
+      },
+      tools: [
+        {
+          id: 'web-search',
+          name: 'Web search',
+          status: 'success',
+          execution: 'server',
+          output_summary: 'Found 3 relevant results.',
+        },
+      ],
+      retrieval: [
+        {
+          source_type: 'document',
+          title: 'Tenant Rights Guide',
+          summary: 'Matched eviction timeline section.',
+        },
+      ],
+      suppressed: false,
+    })
+
+    expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sage used internal context before answering.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Found 3 relevant results.')).not.toBeInTheDocument()
+    expect(screen.getByText('Web search')).toBeInTheDocument()
+    expect(screen.getByText('Tenant Rights Guide')).toBeInTheDocument()
+  })
+
+  it('renders compact live trace status while a streamed assistant turn is in progress', () => {
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-1',
+              role: 'assistant',
+              content: 'Partial answer',
+              traceStatus: 'Writing answer...',
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    )
+
+    expect(screen.getByText('Writing answer...')).toBeInTheDocument()
   })
 })

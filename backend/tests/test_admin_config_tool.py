@@ -24,17 +24,19 @@ class FakeProvider:
 
     def __init__(self) -> None:
         self.prompts: list[str] = []
+        self.responses: list[str] = ["Config context received."]
 
     def health_check(self) -> bool:
         return True
 
     def complete(self, prompt: str, temperature: float = 0.1) -> Any:
         self.prompts.append(prompt)
+        content = self.responses.pop(0) if self.responses else "Config context received."
         return type(
             "LLMResult",
             (),
             {
-                "content": "Config context received.",
+                "content": content,
                 "model": "fake-model",
                 "provider": self.name,
             },
@@ -44,7 +46,7 @@ class FakeProvider:
 class AdminConfigToolChatTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "sanctum.db"
+        self.db_path = Path(self.tmp.name) / "enclave.db"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
@@ -65,7 +67,7 @@ class AdminConfigToolChatTest(unittest.TestCase):
         self.auth = importlib.reload(auth)
         self.main = importlib.reload(main)
         self.database.init_schema()
-        self.database.update_setting("instance_name", "Test Sanctum")
+        self.database.update_setting("instance_name", "Test Enclave")
         self.database.upsert_deployment_config(
             key="SMTP_HOST",
             value="smtp.example.com",
@@ -136,7 +138,26 @@ class AdminConfigToolChatTest(unittest.TestCase):
         self.assertTrue(self.provider.prompts)
         self.assertIn("SCOPED CONFIG CONTEXT", self.provider.prompts[0])
         self.assertIn("instance_name", self.provider.prompts[0])
-        self.assertIn("Test Sanctum", self.provider.prompts[0])
+        self.assertIn("Test Enclave", self.provider.prompts[0])
+
+    def test_admin_chat_retries_generic_model_failure_once(self) -> None:
+        self.provider.responses = [
+            "I apologize, but I wasn't able to generate a response.",
+            "You should configure the Agent Settings for PPST.",
+        ]
+
+        response = self.client.post(
+            "/llm/chat",
+            json={
+                "message": "What configs should we still setup?",
+                "tools": ["admin-config"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["message"], "You should configure the Agent Settings for PPST.")
+        self.assertEqual(len(self.provider.prompts), 2)
 
     def test_user_chat_cannot_execute_admin_config_tool(self) -> None:
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
@@ -158,7 +179,7 @@ class AdminConfigToolChatTest(unittest.TestCase):
         self.assertEqual(payload["tools_used"], [])
         self.assertTrue(self.provider.prompts)
         self.assertNotIn("SCOPED CONFIG CONTEXT", self.provider.prompts[-1])
-        self.assertNotIn("Test Sanctum", self.provider.prompts[-1])
+        self.assertNotIn("Test Enclave", self.provider.prompts[-1])
 
     def test_admin_config_tool_scopes_deployment_settings_for_email_questions(self) -> None:
         response = self.client.post(

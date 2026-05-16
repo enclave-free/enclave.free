@@ -7,12 +7,16 @@ This document describes the current tool behavior on the Sage hard-cut prototype
 | Route | Runtime mode | Tool behavior |
 | --- | --- | --- |
 | `/llm/chat` | stateful and memory-backed | optional server-side `web-search`; optional admin-only `db-query`; optional admin-only `admin-config`; optional admin `tool_context` injection |
+| `/llm/chat/stream` | stateful, memory-backed, assistant-style streaming | prepares explicitly selected tools/context first, then streams the final answer from the Model Provider |
 | `/query` | stateful and memory-backed | always retrieval-first; always has internal `knowledge_search`; may also run `web_search` and admin-only `db_query` |
 
 Current rule of thumb:
 
 - use `/llm/chat` for assistant-style turns, admin chat, config-assistant flows, and no-document user conversations
+- use `/llm/chat/stream` when the UI can consume assistant-style server-sent events and wants lower perceived latency
 - use `/query` for document-grounded, session-continuous user conversations
+
+`/llm/chat/stream` is owned by Sage for public AI-route behavior. Python remains the Enclave Control Plane behind private/internal contracts for facts and actions such as safe database reads. Retrieval-first `/query/stream` is a separate follow-up scope; the first streaming slice only covers assistant-style chat. See [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md).
 
 ## Public Tool IDs
 
@@ -53,6 +57,21 @@ Current frontend pattern for client-executed tools:
 `admin-config` is not client-executed. Admin clients send it as a normal tool ID, and Sage executes the admin-only runtime tool server-side.
 
 Non-admin use of `tool_context` is rejected with `403`.
+
+## `/llm/chat/stream`
+
+`/llm/chat/stream` is the streaming companion to `/llm/chat`. It keeps the same assistant-style route ownership and compatibility model, but returns server-sent events instead of a single JSON response.
+
+Current event shape:
+
+- `assistant_message_started`: announces the stable assistant message ID and session ID
+- `trace_status`: reports live preparation or answer-writing status
+- `answer_delta`: appends user-visible answer text to the assistant turn
+- `trace_final`: attaches the final sanitized Conversation Trace when Trace Visibility Policy allows it
+- `done`: completes the turn and returns session/provider/tool metadata
+- `error`: reports a safe stream error without exposing raw provider traces, prompts, secrets, or database rows
+
+The turn is intentionally two-phase: Sage prepares explicitly selected tools and trusted context first, then streams the final answer directly from the configured Model Provider. This keeps `admin-config` and database-assisted Admin Conversations tool-aware without forcing token streaming through structured DSR/BAML parsing.
 
 ### Example
 

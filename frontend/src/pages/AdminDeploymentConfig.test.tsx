@@ -58,6 +58,9 @@ describe('AdminDeploymentConfig', () => {
   let tombstoneFetchShouldFail = false
   let tombstonesFixture: unknown[] | null
   let acknowledgedSurfaceKeys: string[]
+  let artifactEncryptionPosture: 'required' | 'disabled'
+  let verificationStatus = 'current'
+  let verificationRecordDetailRequested = false
   let sessionMemoryRetentionPolicy = {
     enabled: false,
     retention_window_days: 30,
@@ -70,6 +73,9 @@ describe('AdminDeploymentConfig', () => {
     tombstoneFetchShouldFail = false
     tombstonesFixture = null
     acknowledgedSurfaceKeys = []
+    artifactEncryptionPosture = 'required'
+    verificationStatus = 'current'
+    verificationRecordDetailRequested = false
     sessionMemoryRetentionPolicy = {
       enabled: false,
       retention_window_days: 30,
@@ -84,7 +90,16 @@ describe('AdminDeploymentConfig', () => {
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/deployment/config') {
         return Promise.resolve(Response.json({
-          llm: [],
+          llm: [
+            {
+              key: 'LLM_PROVIDER',
+              value: 'sage',
+              is_secret: false,
+              requires_restart: true,
+              category: 'llm',
+              description: 'Model Provider',
+            },
+          ],
           embedding: [],
           email: [],
           storage: [],
@@ -111,11 +126,100 @@ describe('AdminDeploymentConfig', () => {
           changed_keys_requiring_restart: [],
         }))
       }
+      if (endpoint === '/admin/deployment/inference-verification/status') {
+        return Promise.resolve(Response.json({
+          status: verificationStatus,
+          checked_at: '2026-05-15T12:00:00Z',
+          expires_at: '2026-05-16T12:00:00Z',
+          expected_claims_fingerprint: 'expected-fingerprint',
+          configured_provider: {
+            provider_identity: 'sage',
+            provider_endpoint: 'https://inference.tinfoil.sh/v1',
+            model_identifier: 'kimi-k2-6',
+          },
+          record: verificationStatus === 'current'
+            ? {
+              id: 42,
+              provider_identity: 'sage',
+              provider_endpoint: 'https://inference.tinfoil.sh/v1',
+              model_identifier: 'kimi-k2-6',
+              checked_at: '2026-05-15T12:00:00Z',
+              expires_at: '2026-05-16T12:00:00Z',
+              verifier_version: 'test-verifier/1',
+            }
+            : null,
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/records') {
+        return Promise.resolve(Response.json({
+          records: [
+            {
+              id: 42,
+              status: 'success',
+              trigger: 'manual',
+              provider_identity: 'sage',
+              provider_endpoint: 'https://inference.tinfoil.sh/v1',
+              model_identifier: 'kimi-k2-6',
+              checked_at: '2026-05-15T12:00:00Z',
+              expires_at: '2026-05-16T12:00:00Z',
+              verifier_version: 'test-verifier/1',
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/records/42') {
+        verificationRecordDetailRequested = true
+        return Promise.resolve(Response.json({
+          id: 42,
+          status: 'success',
+          trigger: 'manual',
+          attestation_material: {
+            quote: 'full-attestation-material',
+          },
+        }))
+      }
+      if (endpoint === '/admin/deployment/inference-verification/verify') {
+        verificationStatus = 'current'
+        return Promise.resolve(Response.json({
+          id: 43,
+          status: 'success',
+          trigger: 'manual',
+          provider_identity: 'sage',
+          provider_endpoint: 'https://inference.tinfoil.sh/v1',
+          model_identifier: 'kimi-k2-6',
+          checked_at: '2026-05-15T12:05:00Z',
+          expires_at: '2026-05-16T12:05:00Z',
+          attestation_material: {
+            quote: 'manual-attestation-material',
+          },
+        }))
+      }
       if (endpoint.startsWith('/admin/deployment/audit-log')) {
         return Promise.resolve(Response.json({ entries: [] }))
       }
       if (endpoint === '/admin/lifecycle/status') {
         return Promise.resolve(Response.json({
+          lifecycle_scope: {
+            key: 'active_storage_lifecycle',
+            label: 'Active Storage Lifecycle',
+            summary: 'Lifecycle controls apply to supported Lifecycle Data Classes in active product storage.',
+            excludes: 'Deployment Surfaces such as logs and backups.',
+          },
+          content_encryption: {
+            status: 'configured',
+            summary: 'Content Encryption Key is configured for backend-readable active content storage.',
+          },
+          artifact_encryption: {
+            posture: artifactEncryptionPosture,
+            status: artifactEncryptionPosture === 'required' ? 'encrypted' : 'plaintext_by_operator_choice',
+            summary: artifactEncryptionPosture === 'required'
+              ? 'Uploaded Document artifacts are encrypted in active storage for new writes.'
+              : 'Uploaded Document artifacts are stored as plaintext by explicit Operator choice.',
+          },
+          retention_scheduler: {
+            status: 'external_or_manual',
+            summary: 'Scheduled Retention Policy marks classes for retention; this prototype does not include its own Retention Scheduler.',
+          },
           data_classes: [
             {
               key: 'sage_session_memory',
@@ -133,6 +237,10 @@ describe('AdminDeploymentConfig', () => {
               audit: {
                 status: 'not_started',
                 summary: 'Session Memory lifecycle actions are not yet represented in the Audit Log.',
+              },
+              confidentiality: {
+                status: 'partial',
+                summary: 'Persistent Session Memory confidentiality is owned by Sage.',
               },
               retention_policy: {
                 lifecycle_data_class: 'sage_session_memory',
@@ -186,6 +294,17 @@ describe('AdminDeploymentConfig', () => {
                 completed: 1,
               },
             },
+          },
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/artifact-encryption-posture') {
+        const body = JSON.parse(String(options?.body ?? '{}'))
+        artifactEncryptionPosture = body.posture === 'disabled' ? 'disabled' : 'required'
+        return Promise.resolve(Response.json({
+          artifact_encryption: {
+            posture: artifactEncryptionPosture,
+            status: artifactEncryptionPosture === 'required' ? 'encrypted' : 'plaintext_by_operator_choice',
+            summary: 'Artifact Encryption Posture updated.',
           },
         }))
       }
@@ -322,6 +441,70 @@ describe('AdminDeploymentConfig', () => {
     expect(within(securitySettings).getByText('Chat Rate Limit')).toBeInTheDocument()
   })
 
+  it('shows current Model Provider verification status', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const verification = await screen.findByRole('group', { name: 'Inference Verification' })
+    expect(within(verification).getByText('Current')).toBeInTheDocument()
+    expect(within(verification).getByText('sage')).toBeInTheDocument()
+    expect(within(verification).getByText('kimi-k2-6')).toBeInTheDocument()
+    expect(within(verification).getByText('https://inference.tinfoil.sh/v1')).toBeInTheDocument()
+    expect(within(verification).getByText(/Expected claims: expected-fingerprint/)).toBeInTheDocument()
+  })
+
+  it('lets admins trigger manual inference verification', async () => {
+    const user = userEvent.setup()
+    verificationStatus = 'missing'
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const verification = await screen.findByRole('group', { name: 'Inference Verification' })
+    expect(within(verification).getByText('Missing')).toBeInTheDocument()
+
+    await user.click(within(verification).getByRole('button', { name: 'Verify Now' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/deployment/inference-verification/verify',
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+    expect(await within(verification).findByText('Manual verification succeeded')).toBeInTheDocument()
+  })
+
+  it('shows verification history and full attestation detail on demand', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const verification = await screen.findByRole('group', { name: 'Inference Verification' })
+    expect(within(verification).getByText('Record #42')).toBeInTheDocument()
+    expect(within(verification).queryByText('full-attestation-material')).not.toBeInTheDocument()
+
+    await user.click(within(verification).getByRole('button', { name: 'Inspect Attestation' }))
+
+    expect(await within(verification).findByText(/full-attestation-material/)).toBeInTheDocument()
+    expect(verificationRecordDetailRequested).toBe(true)
+  })
+
   it('shows operator-controlled privacy lifecycle status', async () => {
     render(
       <MemoryRouter initialEntries={['/admin/deployment']}>
@@ -335,6 +518,11 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Sage Session Memory')).toBeInTheDocument()
     expect(screen.getByText('Owner: Sage')).toBeInTheDocument()
     expect(screen.getByText('Deletion: Complete')).toBeInTheDocument()
+    expect(screen.getByText('Active Storage Lifecycle')).toBeInTheDocument()
+    expect(screen.getByText('Content Encryption Key: Configured')).toBeInTheDocument()
+    expect(screen.getByText('Artifact Encryption Posture: Encrypted')).toBeInTheDocument()
+    expect(screen.getByText('Retention Scheduler: External or manual')).toBeInTheDocument()
+    expect(screen.getByText('Confidentiality: Partial')).toBeInTheDocument()
     expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
     expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
     expect(screen.getByText('Incomplete tombstones: 1')).toBeInTheDocument()
@@ -343,6 +531,37 @@ describe('AdminDeploymentConfig', () => {
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/lifecycle/status')
     })
+  })
+
+  it('lets admins mark uploaded artifacts as plaintext by operator choice', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    const lifecycleStatusCallsBeforeToggle = mockAdminFetch.mock.calls.filter(([endpoint]) => endpoint === '/admin/lifecycle/status').length
+    await user.click(within(lifecycleStatus).getByRole('button', { name: 'Disabled' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/lifecycle/artifact-encryption-posture',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ posture: 'disabled' }),
+        }),
+      )
+    })
+    await waitFor(() => {
+      const lifecycleStatusCalls = mockAdminFetch.mock.calls.filter(([endpoint]) => endpoint === '/admin/lifecycle/status')
+      expect(lifecycleStatusCalls.length).toBeGreaterThan(lifecycleStatusCallsBeforeToggle)
+    })
+    expect(await within(lifecycleStatus).findByText('Artifact Encryption Posture: Plaintext by Operator Choice')).toBeInTheDocument()
   })
 
   it('shows unsupported deployment surfaces and lets admins acknowledge one', async () => {

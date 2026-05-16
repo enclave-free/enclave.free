@@ -6,8 +6,9 @@ import re
 from typing import Any
 
 import database
+from protected_inference import ProtectedInferenceBlocked, require_current_inference_verification
 
-logger = logging.getLogger("sanctum.user_memory")
+logger = logging.getLogger("enclave.user_memory")
 
 ALLOWED_AMBIENT_KINDS = {"preference", "communication_style", "interest"}
 MAX_AMBIENT_IMPORTANCE = 5
@@ -73,6 +74,7 @@ def capture_ambient_user_memory(
             user_message=user_message,
             assistant_message=assistant_message,
         )
+        require_current_inference_verification(context="user_memory_extraction")
         result = provider.complete(prompt, temperature=0.0)
         memories = _parse_extractor_output(result.content)
         for memory in memories:
@@ -89,6 +91,8 @@ def capture_ambient_user_memory(
                     source_conversation_id=None,
                     author_actor="sage",
                 )
+    except ProtectedInferenceBlocked:
+        logger.info("Ambient User Memory capture skipped because protected inference is unavailable")
     except Exception:
         logger.exception("Ambient User Memory capture failed")
 

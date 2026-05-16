@@ -1,4 +1,4 @@
-import { Message } from '../components/chat/ChatMessage'
+import { ConversationTrace, Message } from '../components/chat/ChatMessage'
 
 export type ExportFormat = 'md' | 'txt'
 
@@ -18,7 +18,7 @@ interface ExportOptions {
   instanceName?: string
 }
 
-type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp'>
+type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp' | 'trace'>
 
 function formatTimestamp(date?: Date): string {
   if (!date) return ''
@@ -26,10 +26,48 @@ function formatTimestamp(date?: Date): string {
 }
 
 function toConversationExportMessages(messages: Message[]): ConversationExportMessage[] {
-  return messages.map(({ role, content, timestamp }) => ({ role, content, timestamp }))
+  return messages.map(({ role, content, timestamp, trace }) => ({ role, content, timestamp, trace }))
 }
 
-export function generateExport({ messages, format, title, translations, instanceName = 'Sanctum' }: ExportOptions): string {
+function formatTraceMarkdown(trace?: ConversationTrace | null): string {
+  if (!trace || trace.visibility === 'off') return ''
+  const lines: string[] = ['**Conversation Trace**']
+  const compactOnly = trace.visibility === 'minimal'
+  if (!compactOnly && trace.reasoning?.summary) {
+    lines.push(`- ${trace.reasoning.summary}`)
+  }
+  for (const tool of trace.tools ?? []) {
+    const summary = !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : ''
+    lines.push(`- Tool: ${tool.name}${summary}`)
+  }
+  for (const item of trace.retrieval ?? []) {
+    const title = item.title || item.source_type || 'Retrieved source'
+    const summary = !compactOnly && item.summary ? `: ${item.summary}` : ''
+    lines.push(`- Retrieval: ${title}${summary}`)
+  }
+  return `${lines.join('\n')}\n\n`
+}
+
+function formatTraceText(trace?: ConversationTrace | null): string {
+  if (!trace || trace.visibility === 'off') return ''
+  const lines: string[] = ['Conversation Trace']
+  const compactOnly = trace.visibility === 'minimal'
+  if (!compactOnly && trace.reasoning?.summary) {
+    lines.push(`- ${trace.reasoning.summary}`)
+  }
+  for (const tool of trace.tools ?? []) {
+    const summary = !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : ''
+    lines.push(`- Tool: ${tool.name}${summary}`)
+  }
+  for (const item of trace.retrieval ?? []) {
+    const title = item.title || item.source_type || 'Retrieved source'
+    const summary = !compactOnly && item.summary ? `: ${item.summary}` : ''
+    lines.push(`- Retrieval: ${title}${summary}`)
+  }
+  return `${lines.join('\n')}\n\n`
+}
+
+export function generateExport({ messages, format, title, translations, instanceName = 'Enclave' }: ExportOptions): string {
   const timestamp = new Date().toLocaleString()
   const exportTitle = title || translations.defaultTitle
   const footerText = translations.footer.replace('{{instanceName}}', instanceName)
@@ -52,6 +90,7 @@ export function generateExport({ messages, format, title, translations, instance
       } else {
         // Assistant messages may contain markdown, preserve as-is
         content += `${message.content}\n\n`
+        content += formatTraceMarkdown(message.trace)
       }
 
       content += `---\n\n`
@@ -73,6 +112,9 @@ export function generateExport({ messages, format, title, translations, instance
 
     content += `${role}${time}:\n`
     content += `${message.content}\n\n`
+    if (message.role === 'assistant') {
+      content += formatTraceText(message.trace)
+    }
     content += `${'─'.repeat(40)}\n\n`
   })
 
@@ -84,7 +126,7 @@ export function downloadExport(options: ExportOptions): void {
   const content = generateExport(options)
   const extension = options.format === 'md' ? 'md' : 'txt'
   const mimeType = options.format === 'md' ? 'text/markdown' : 'text/plain'
-  const filename = `sanctum-chat-${Date.now()}.${extension}`
+  const filename = `enclave-chat-${Date.now()}.${extension}`
 
   const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
   const url = URL.createObjectURL(blob)

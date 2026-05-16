@@ -20,6 +20,7 @@ import type {
   ServiceHealthResponse,
   DeploymentValidationResponse,
   LifecycleStatusResponse,
+  ArtifactEncryptionPosture,
   DeletionTombstone,
   DeletionTombstonesResponse,
   DeletionTombstoneStatusFilter,
@@ -500,6 +501,18 @@ export function useLifecycleStatus() {
     await fetchStatus()
   }, [fetchStatus])
 
+  const updateArtifactEncryptionPosture = useCallback(async (posture: ArtifactEncryptionPosture) => {
+    const response = await adminFetch('/admin/lifecycle/artifact-encryption-posture', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posture }),
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToUpdateArtifactEncryptionPosture')
+    }
+    await fetchStatus()
+  }, [fetchStatus])
+
   const previewRetention = useCallback(async () => {
     const policyByClass = (status?.data_classes ?? []).reduce<Record<string, RetentionPolicy>>((policies, dataClass) => {
       if (dataClass.retention_policy) {
@@ -542,6 +555,7 @@ export function useLifecycleStatus() {
     refresh: fetchStatus,
     acknowledgeUnsupportedSurface,
     updateRetentionPolicy,
+    updateArtifactEncryptionPosture,
     previewRetention,
     runScheduledRetention,
   }

@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChatPage, SANCTUM_USER_EMAIL_KEY } from './ChatPage'
+import { ChatPage, ENCLAVE_USER_EMAIL_KEY } from './ChatPage'
 import { InstanceConfigProvider } from '../context/InstanceConfigContext'
 import { ThemeProvider } from '../theme'
 import { DEFAULT_INSTANCE_CONFIG, INSTANCE_CONFIG_KEY } from '../types/instance'
-import { sendLlmChatWithUnifiedTools } from '../utils/llmChat'
+import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools } from '../utils/llmChat'
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -15,6 +15,7 @@ vi.mock('../utils/adminApi', () => ({
 }))
 
 vi.mock('../utils/llmChat', () => ({
+  sendLlmChatStreamWithUnifiedTools: vi.fn(),
   sendLlmChatWithUnifiedTools: vi.fn(),
 }))
 
@@ -47,9 +48,9 @@ describe('ChatPage', () => {
         store.clear()
       }),
     })
-    localStorage.setItem('sanctum-theme', 'light')
+    localStorage.setItem('enclave-theme', 'light')
     localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify(DEFAULT_INSTANCE_CONFIG))
-    localStorage.setItem(SANCTUM_USER_EMAIL_KEY, 'reader@example.com')
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'reader@example.com')
 
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
@@ -135,6 +136,7 @@ describe('ChatPage', () => {
 
   it('contains chat request failures in a named error note', async () => {
     const user = (await import('@testing-library/user-event')).default.setup()
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockRejectedValueOnce(new Error('Stream unavailable'))
     vi.mocked(sendLlmChatWithUnifiedTools).mockRejectedValueOnce(new Error('Model gateway unavailable'))
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper })
@@ -150,5 +152,57 @@ describe('ChatPage', () => {
 
     const errorNote = await screen.findByRole('note', { name: 'Chat request error' })
     expect(errorNote).toHaveTextContent('Model gateway unavailable')
+  })
+
+  it('clears the live trace status when a chat stream finishes without a final trace', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-stream', session_id: 'session-1' })
+      onEvent('trace_status', { message_id: 'msg-stream', status: 'Writing answer...' })
+      onEvent('answer_delta', { message_id: 'msg-stream', delta: 'Streamed hello.' })
+      onEvent('done', { message_id: 'msg-stream', session_id: 'session-1' })
+    })
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: 'Docs 1' }))
+    await user.click(screen.getByRole('button', { name: /operator-handbook/ }))
+
+    await user.type(screen.getByRole('textbox', { name: 'Ask anything...' }), 'Hello')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    expect(await screen.findByText('Streamed hello.')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText('Writing answer...')).not.toBeInTheDocument()
+    })
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled()
+  })
+
+  it('surfaces stream errors without retrying after answer text has started', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-stream', session_id: 'session-1' })
+      onEvent('answer_delta', { message_id: 'msg-stream', delta: 'Partial answer.' })
+      onEvent('error', { message_id: 'msg-stream', detail: 'Model stream interrupted' })
+    })
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: 'Docs 1' }))
+    await user.click(screen.getByRole('button', { name: /operator-handbook/ }))
+
+    await user.type(screen.getByRole('textbox', { name: 'Ask anything...' }), 'Hello')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    expect(await screen.findByText('Partial answer.')).toBeInTheDocument()
+    const errorNote = await screen.findByRole('note', { name: 'Chat request error' })
+    expect(errorNote).toHaveTextContent('Model stream interrupted')
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled()
   })
 })

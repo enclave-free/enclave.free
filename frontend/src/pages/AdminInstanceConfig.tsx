@@ -514,7 +514,7 @@ export function AdminInstanceConfig() {
               label={t('admin.instanceConfig.assistantNameLabel', 'Assistant display name')}
               value={previewAssistantName}
               onChange={(e) => handleAssistantNameChange(e.target.value)}
-              placeholder={t('admin.instanceConfig.assistantNamePlaceholder', 'e.g., Sanctum AI')}
+              placeholder={t('admin.instanceConfig.assistantNamePlaceholder', 'e.g., Enclave AI')}
             />
             <TextField
               label={t('admin.instanceConfig.userLabelLabel', 'User label')}

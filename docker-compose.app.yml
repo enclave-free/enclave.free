@@ -9,7 +9,10 @@ services:
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat/multilingual-e5-base}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-tinfoil}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
+      - EMBEDDING_API_URL=${EMBEDDING_API_URL:-http://tinfoil-proxy:8089/v1}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${TINFOIL_API_KEY:-}}
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - TRANSFORMERS_OFFLINE=${TRANSFORMERS_OFFLINE:-0}
       - LLM_PROVIDER=${LLM_PROVIDER:-sage}
@@ -18,8 +21,10 @@ services:
       - LLM_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - SAGE_WEB_URL=http://sage:3000
       - SEARXNG_URL=http://searxng:8080
-      - SQLITE_PATH=/data/sanctum.db
+      - SQLITE_PATH=/data/enclave.db
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
+      - CONTENT_ENCRYPTION_KEY=${CONTENT_ENCRYPTION_KEY:-}
+      - DOCUMENT_ARTIFACT_ENCRYPTION=${DOCUMENT_ARTIFACT_ENCRYPTION:-auto}
       # Magic Link Auth configuration
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
@@ -30,7 +35,7 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
-      - SMTP_FROM=${SMTP_FROM:-Sanctum <noreply@localhost>}
+      - SMTP_FROM=${SMTP_FROM:-Enclave <noreply@localhost>}
       # Simulation settings for development/testing
       - SIMULATE_USER_AUTH=${SIMULATE_USER_AUTH:-false}
       - SIMULATE_ADMIN_AUTH=${SIMULATE_ADMIN_AUTH:-false}
@@ -53,7 +58,7 @@ services:
       - embedding_cache:/root/.cache/huggingface
       - sqlite_data:/data
     networks:
-      - sanctum-net
+      - enclave-net
 
   sage:
     build:
@@ -79,9 +84,9 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
       - SEARXNG_URL=http://searxng:8080
-      - USER_SESSION_COOKIE_NAME=${USER_SESSION_COOKIE_NAME:-sanctum_session}
-      - ADMIN_SESSION_COOKIE_NAME=${ADMIN_SESSION_COOKIE_NAME:-sanctum_admin_session}
-      - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-sanctum_csrf}
+      - USER_SESSION_COOKIE_NAME=${USER_SESSION_COOKIE_NAME:-enclave_session}
+      - ADMIN_SESSION_COOKIE_NAME=${ADMIN_SESSION_COOKIE_NAME:-enclave_admin_session}
+      - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-enclave_csrf}
       - RUST_LOG=${RUST_LOG:-info}
     depends_on:
       postgres:
@@ -101,7 +106,7 @@ services:
       retries: 5
       start_period: 20s
     networks:
-      - sanctum-net
+      - enclave-net
 
   backend:
     image: nginx:1.27-alpine
@@ -122,13 +127,13 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - sanctum-net
+      - enclave-net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: sanctum-frontend
+    container_name: enclave-frontend
     ports:
       - "127.0.0.1:5173:5173"
     dns:
@@ -143,7 +148,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     networks:
-      - sanctum-net
+      - enclave-net
 
 volumes:
   embedding_cache:
@@ -151,5 +156,5 @@ volumes:
   sage_workspace:
 
 networks:
-  sanctum-net:
+  enclave-net:
     driver: bridge

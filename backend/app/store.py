@@ -1,5 +1,5 @@
 """
-Sanctum Store Module
+Enclave Store Module
 Handles storing document chunks and embeddings to Qdrant.
 """
 
@@ -13,7 +13,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
 # Configure logging
-logger = logging.getLogger("sanctum.store")
+logger = logging.getLogger("enclave.store")
 
 # Configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
@@ -22,16 +22,22 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 # =============================================================================
 # EMBEDDING CONFIGURATION
 # =============================================================================
-# Embeddings run locally using sentence-transformers.
+# Default document embeddings use the same OpenAI-compatible Tinfoil proxy as
+# Sage. Set EMBEDDING_PROVIDER=local to use sentence-transformers instead.
 # =============================================================================
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "tinfoil").lower()
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL") or os.getenv("LLM_API_URL", "http://tinfoil-proxy:8089/v1")
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("TINFOIL_API_KEY")
 
 # Collection name for knowledge base
-COLLECTION_NAME = "sanctum_knowledge"
+COLLECTION_NAME = "enclave_knowledge"
+_LEGACY_PLAINTEXT_KEYS = {"text", "fact_text"}
 
 # Lazy-loaded resources
 _qdrant_client = None
 _embedding_model = None
+_embedding_client = None
 
 
 def get_qdrant_client():
@@ -42,8 +48,103 @@ def get_qdrant_client():
     return _qdrant_client
 
 
+def detect_legacy_plaintext_payloads(limit: int = 500) -> dict[str, Any]:
+    """Best-effort scan for legacy Qdrant payloads that still contain raw text."""
+    legacy_count = 0
+    affected = []
+    try:
+        client = get_qdrant_client()
+        next_offset = None
+        while True:
+            points, next_offset = client.scroll(
+                collection_name=COLLECTION_NAME,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False,
+                offset=next_offset,
+            )
+            for point in points:
+                payload = getattr(point, "payload", None) or {}
+                if any(payload.get(key) for key in _LEGACY_PLAINTEXT_KEYS):
+                    legacy_count += 1
+                    affected.append({
+                        "point_id": str(getattr(point, "id", "")),
+                        "chunk_id": payload.get("chunk_id"),
+                        "job_id": payload.get("job_id"),
+                        "source_file": payload.get("source_file"),
+                    })
+            if next_offset is None:
+                break
+    except Exception as exc:
+        logger.warning("Could not inspect Qdrant payload confidentiality: %s", exc)
+        return {
+            "checked": False,
+            "legacy_plaintext_payloads": None,
+            "summary": "Qdrant payload confidentiality could not be inspected from this process.",
+        }
+
+    return {
+        "checked": True,
+        "legacy_plaintext_payloads": legacy_count,
+        "affected": affected,
+        "summary": (
+            f"Found {legacy_count} Qdrant points with legacy plaintext payload text."
+            if legacy_count
+            else "No legacy plaintext Qdrant payload text was detected in the inspected active index."
+        ),
+    }
+
+
+def list_legacy_plaintext_payloads(limit: int = 500) -> list[dict[str, Any]]:
+    """Return legacy Qdrant payloads with recoverable text for confidentiality migration."""
+    client = get_qdrant_client()
+    legacy_points = []
+    next_offset = None
+    while True:
+        points, next_offset = client.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+            offset=next_offset,
+        )
+        for point in points:
+            payload = getattr(point, "payload", None) or {}
+            text = payload.get("text") or payload.get("fact_text")
+            if not text:
+                continue
+            legacy_points.append({
+                "point_id": getattr(point, "id", None),
+                "chunk_id": payload.get("chunk_id"),
+                "job_id": payload.get("job_id"),
+                "source_file": payload.get("source_file"),
+                "text": text,
+                "payload": payload,
+            })
+        if next_offset is None:
+            break
+    return legacy_points
+
+
+def rewrite_payload_without_plaintext(point_id: Any, payload: dict[str, Any]) -> None:
+    """Overwrite a Qdrant payload while preserving retrieval metadata and removing raw text."""
+    minimized_payload = {
+        key: value
+        for key, value in payload.items()
+        if key not in _LEGACY_PLAINTEXT_KEYS
+    }
+    get_qdrant_client().overwrite_payload(
+        collection_name=COLLECTION_NAME,
+        points=[point_id],
+        payload=minimized_payload,
+    )
+
+
 def get_embedding_model():
     """Get or create local embedding model (sentence-transformers)"""
+    if EMBEDDING_PROVIDER != "local":
+        raise RuntimeError("Local embedding model requested while EMBEDDING_PROVIDER is not 'local'")
+
     global _embedding_model
     if _embedding_model is None:
         from sentence_transformers import SentenceTransformer
@@ -51,20 +152,47 @@ def get_embedding_model():
     return _embedding_model
 
 
+def get_embedding_client():
+    """Get or create OpenAI-compatible embedding client."""
+    global _embedding_client
+    if _embedding_client is None:
+        if not EMBEDDING_API_KEY:
+            raise RuntimeError(
+                "EMBEDDING_API_KEY, LLM_API_KEY, or TINFOIL_API_KEY is required for Tinfoil embeddings"
+            )
+        from openai import OpenAI
+
+        _embedding_client = OpenAI(
+            api_key=EMBEDDING_API_KEY,
+            base_url=EMBEDDING_API_URL,
+        )
+    return _embedding_client
+
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
     """
-    Embed a list of texts using the local sentence-transformers model.
+    Embed a list of texts using the configured embedding provider.
     Returns list of embedding vectors.
     """
+    if EMBEDDING_PROVIDER != "local":
+        client = get_embedding_client()
+        response = client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
     model = get_embedding_model()
     embeddings = model.encode(texts, show_progress_bar=False)
     return [emb.tolist() for emb in embeddings]
 
 
 def get_embedding_dimension() -> int:
-    """Get the dimension of embeddings from the local embedding model."""
-    model = get_embedding_model()
-    return model.get_sentence_embedding_dimension()
+    """Get the dimension of embeddings from the configured provider."""
+    if EMBEDDING_PROVIDER != "local":
+        return len(embed_texts(["dimension probe"])[0])
+
+    return get_embedding_model().get_sentence_embedding_dimension()
 
 
 def ensure_qdrant_collection():
@@ -90,6 +218,7 @@ def _store_chunk_sync(
     chunk_id: str,
     source_text: str,
     source_file: str,
+    source_label: str | None = None,
 ) -> dict[str, Any]:
     logger.info(f"[{chunk_id}] Storing chunk to Qdrant...")
     qdrant_result = {"points_inserted": 0}
@@ -108,16 +237,22 @@ def _store_chunk_sync(
     chunk_point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"chunk:{chunk_id}"))
     # Extract job_id from chunk_id (format: {job_id}_chunk_XXXX)
     job_id = chunk_id.split('_chunk_')[0] if '_chunk_' in chunk_id else chunk_id
+    payload = {
+        "type": "chunk",
+        "chunk_id": chunk_id,
+        "job_id": job_id,  # Separate field for filtering by document
+        "source_file": source_file,
+        "content_ref": f"retrieval_chunk:{chunk_id}",
+        "embedding_provider": EMBEDDING_PROVIDER,
+        "embedding_model": EMBEDDING_MODEL,
+    }
+    if source_label:
+        payload["source_label"] = source_label
+
     point = PointStruct(
         id=chunk_point_id,
         vector=embedding,
-        payload={
-            "type": "chunk",
-            "chunk_id": chunk_id,
-            "job_id": job_id,  # Separate field for filtering by document
-            "text": source_text[:2000],  # Store more text for context
-            "source_file": source_file,
-        }
+        payload=payload,
     )
 
     # Insert to Qdrant
@@ -137,6 +272,7 @@ async def store_chunks_to_qdrant(
     chunk_id: str,
     source_text: str,
     source_file: str,
+    source_label: str | None = None,
 ) -> dict[str, Any]:
     """
     Store a text chunk and its embedding to Qdrant.
@@ -150,6 +286,7 @@ async def store_chunks_to_qdrant(
         chunk_id,
         source_text,
         source_file,
+        source_label,
     )
 
 

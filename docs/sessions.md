@@ -33,9 +33,9 @@ Bearer requests are not subject to cookie CSRF checks.
 
 ### Cookie Names
 
-- `USER_SESSION_COOKIE_NAME` default: `sanctum_session`
-- `ADMIN_SESSION_COOKIE_NAME` default: `sanctum_admin_session`
-- `CSRF_COOKIE_NAME` default: `sanctum_csrf`
+- `USER_SESSION_COOKIE_NAME` default: `enclave_session`
+- `ADMIN_SESSION_COOKIE_NAME` default: `enclave_admin_session`
+- `CSRF_COOKIE_NAME` default: `enclave_csrf`
 
 Those names must stay aligned across Python, Sage, and the frontend.
 
@@ -94,6 +94,7 @@ Current nuance:
 - deletion tombstones and lifecycle Audit Log events preserve sanitized lifecycle status and retry evidence, not Conversation Content
 - retention re-checks Conversation activity immediately before deletion and skips candidates that became active
 - scheduled retention for every historical Session Memory or log surface is still not implemented
+- Although shown as Scheduled Retention Policy in Data Lifecycle Status, this prototype still relies on manual or external Retention Scheduler execution
 
 ## Debugging
 

@@ -16,6 +16,10 @@ _Avoid_: local-only, offline-only
 The product boundary where the **Operator** can understand, configure or invoke, and review lifecycle handling for each operator-visible class of **Instance** data.
 _Avoid_: cleanup, full compliance, guaranteed erasure
 
+**Active Storage Lifecycle**:
+The portion of **Operator-Controlled Data Lifecycle** that covers supported **Lifecycle Data Classes** in product-owned active **Storage Targets**.
+_Avoid_: secure erase, deployment lifecycle, host compliance
+
 **Lifecycle Data Class**:
 An operator-visible category of **Instance** data whose retention, deletion, and audit posture can be described independently.
 _Avoid_: table, storage backend, log surface
@@ -40,6 +44,14 @@ _Avoid_: cleanup, storage duration
 The act of applying **Data Retention** rules to eligible **Instance** data.
 _Avoid_: data retention, cleanup job
 
+**Scheduled Retention Policy**:
+An **Operator** configured **Data Retention** rule that marks a **Lifecycle Data Class** for scheduled **Retention Execution**.
+_Avoid_: retention scheduler, cron job
+
+**Retention Scheduler**:
+The technical automation that invokes scheduled **Retention Execution** without a human pressing a product control.
+_Avoid_: scheduled retention policy, retention setting
+
 **Data Deletion**:
 The **Operator** controlled action or workflow that removes **Instance** data from active storage according to **Data Retention** rules or a specific deletion request.
 _Avoid_: cleanup, hide, archive
@@ -47,6 +59,22 @@ _Avoid_: cleanup, hide, archive
 **Secure Erase**:
 A stronger deletion guarantee that reduces recoverability from underlying storage, logs, backups, or snapshots.
 _Avoid_: data deletion, logical deletion
+
+**Content Encryption Key**:
+A deployment-held key used to encrypt product-owned active content storage that backend workflows must still read.
+_Avoid_: admin key, user key, secure erase
+
+**Artifact Encryption Posture**:
+The **Deployment** choice that determines whether uploaded **Document** artifacts are encrypted in active storage or explicitly stored as plaintext.
+_Avoid_: secure erase, document access, end-to-end encryption
+
+**Retrieval Content Posture**:
+The confidentiality posture for chunk text used to hydrate **Retrieval** context after vector search.
+_Avoid_: retrieval index posture, artifact encryption posture
+
+**Confidentiality Migration**:
+A repair workflow that brings existing active content storage into the current confidentiality posture.
+_Avoid_: retention execution, secure erase, cleanup
 
 **Audit Log**:
 An operator-visible record of security-relevant or state-changing actions within an **Instance**.
@@ -67,6 +95,10 @@ _Avoid_: tenant, workspace, deployment
 **Deployment**:
 The technical environment that runs an **Instance**.
 _Avoid_: instance, tenant
+
+**Deployment Automation**:
+A deployment-owned machine actor that invokes approved operational workflows for an **Instance**.
+_Avoid_: admin user, service account, bot admin
 
 **Instance Initiation**:
 The first-time setup act where the first **Admin** authenticates and makes an **Instance** ready for configuration and user onboarding.
@@ -147,6 +179,10 @@ _Avoid_: HTTPS, private API
 **Verifiable Inference**:
 The ability for the **Operator** to verify meaningful claims about where and how model inference ran.
 _Avoid_: trusted API call
+
+**Inference Verification Record**:
+Operator-visible evidence, including full provider attestation material, that a **Model Provider** was checked against expected **Verifiable Inference** claims at a point in time.
+_Avoid_: raw attestation, provider debug payload
 
 **Trusted Execution Environment**:
 A verifiable isolated execution environment used to protect model inference from the surrounding infrastructure.
@@ -240,6 +276,18 @@ _Avoid_: query session, chat session
 The messages, prompts, retrieved document excerpts, required context, user profile context, tool results, and other content sent to a **Model Provider** for inference.
 _Avoid_: user message, prompt text
 
+**Conversation Trace**:
+Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and safe reasoning summaries when available.
+_Avoid_: chain of thought, debug log, audit log, provider trace
+
+**Conversation Streaming Transport**:
+A conversation response path that sends assistant turn, live trace status, answer deltas, and completion events to the client as they become available.
+_Avoid_: streaming-shaped response, fake streaming, delayed batch response
+
+**Trace Visibility Policy**:
+The **Operator** configured **Instance Setting** or **Agent Setting** that determines which **Conversation Trace** details are visible for **Admin Conversations** and **User Conversations**.
+_Avoid_: debug mode, logging level, provider trace setting
+
 **Tool**:
 An action or information source that **Sage** can invoke during a **Conversation**.
 _Avoid_: endpoint, function call
@@ -279,6 +327,9 @@ _Avoid_: full snapshot, config dump
 - **Operator-Controlled Privacy** allows **External Integrations** when they are visible and configurable by the **Operator**
 - **Operator-Controlled Data Lifecycle** is part of **Operator-Controlled Privacy**
 - **Operator-Controlled Data Lifecycle** is described through **Lifecycle Data Classes**
+- **Inference Verification Records** are a **Lifecycle Data Class**
+- **Active Storage Lifecycle** is the first production-readiness target for **Operator-Controlled Data Lifecycle**
+- **Active Storage Lifecycle** excludes **Deployment Surfaces** unless a future decision promotes a surface into a supported **Lifecycle Data Class**
 - A **Lifecycle Data Class** is grouped by product meaning, not by **Storage Target**
 - A **Lifecycle Data Class** may span one or more **Storage Targets**
 - A **Lifecycle Data Class** has its own lifecycle support status
@@ -287,6 +338,9 @@ _Avoid_: full snapshot, config dump
 - **Data Retention** is part of **Operator-Controlled Privacy**
 - **Retention Execution** applies **Data Retention** rules
 - **Retention Execution** may be operator-invoked before it is scheduled automatically
+- A **Scheduled Retention Policy** identifies which **Lifecycle Data Classes** scheduled **Retention Execution** should include
+- A **Retention Scheduler** triggers scheduled **Retention Execution** automatically
+- The first **Scheduled Retention Policy** support may exist before the product includes its own **Retention Scheduler**
 - **Retention Execution** reports results per **Lifecycle Data Class**
 - Destructive **Retention Execution** requires explicit **Admin** confirmation and should make eligibility or result counts visible
 - A dry-run or preview for broad **Retention Execution** is desired but not required for the first slice
@@ -294,9 +348,22 @@ _Avoid_: full snapshot, config dump
 - **Data Deletion** executes **Data Retention** decisions or specific deletion requests
 - **Data Deletion** removes data from active product storage unless a specific **Secure Erase** guarantee is stated
 - Product copy should avoid "permanent deletion" or "delete forever" unless a **Secure Erase** or backup-retention guarantee exists
+- A **Content Encryption Key** protects active content storage at rest without making it end-to-end encrypted from backend workflows
+- A **Content Encryption Key** belongs to the **Deployment** rather than the **Admin**
+- **Artifact Encryption Posture** is a **Deployment Setting**, not an **Instance Setting**
+- **Artifact Encryption Posture** should default to encrypted active storage when a **Content Encryption Key** is configured
+- Plaintext uploaded artifacts are an explicit **Operator** choice reported in lifecycle status, not the default privacy posture
+- Changes to **Artifact Encryption Posture** should create **Audit Log** evidence
+- Changing **Artifact Encryption Posture** affects future uploaded **Documents** unless a separate migration workflow rewrites existing artifacts
+- **Retrieval Content Posture** should require encrypted chunk text in active product storage
+- **Retrieval Content Posture** is separate from **Artifact Encryption Posture** because derived chunk text is a distinct active content surface
+- **Confidentiality Migration** is required before legacy plaintext active content storage can be reported as fully matching an encrypted posture
+- **Confidentiality Migration** should report per-document results and avoid claiming **Secure Erase**
 - An **Audit Log** supports **Operator-Controlled Privacy** by making important **Instance** changes visible after the fact
 - **Enclave Free Prototype** integrates **Sage** directly into the product runtime
 - A **Deployment** usually runs one **Instance** in the prototype
+- **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
+- **Deployment Automation** may invoke scheduled operational workflows without representing a human **Admin** action
 - A **Deployment** includes a **Gateway**
 - The **Gateway** routes requests to **Sage** or the **Enclave Control Plane**
 - The **Gateway** does not own product correctness
@@ -323,6 +390,44 @@ _Avoid_: full snapshot, config dump
 - **Tinfoil** is the current preferred **Model Provider**
 - **Encrypted Inference** protects conversation content from surrounding infrastructure
 - **Verifiable Inference** lets the **Operator** verify meaningful execution claims
+- An **Inference Verification Record** captures the outcome of checking a **Model Provider** against expected **Verifiable Inference** claims
+- **Inference Verification Records** are historical records, with the latest record available as the current verification status
+- **Deployment Automation** should create **Inference Verification Records** at startup and when provider-relevant settings change
+- Startup should attempt **Verifiable Inference** checks before accepting protected model inference
+- If startup verification fails, the product should enter an admin-repair mode where normal **Conversation** traffic is blocked but admin surfaces, diagnostics, and manual verification remain available
+- An **Admin** may manually create an **Inference Verification Record** for troubleshooting
+- Normal **Conversation** traffic should fail closed when current **Verifiable Inference** status is failed or missing
+- Admin-only diagnostics may run when current **Verifiable Inference** status is failed or missing so the **Operator** can repair the **Deployment**
+- Stale **Inference Verification Records** should have a grace period before normal **Conversation** traffic fails closed
+- Model Provider calls that send **Conversation Content** or other user- or admin-derived product content should fail closed when current **Verifiable Inference** status is failed, missing, or stale beyond the grace period
+- Verification, health checks, model listing, and non-content diagnostics may run when current **Verifiable Inference** status is failed, missing, or stale
+- **Verifiable Inference** enforcement should be enabled by default for protected model inference
+- Any bypass for **Verifiable Inference** enforcement should be a conspicuous development-only **Deployment Setting**, not an ordinary **Instance Setting**
+- When **Verifiable Inference** enforcement is bypassed, product status and lifecycle posture should clearly report the weakened privacy posture
+- A current **Inference Verification Record** is the latest successful record for the configured **Model Provider** identity, model or runtime claim set, and provider endpoint within the freshness window
+- Changing provider-relevant settings should immediately make prior **Inference Verification Records** non-current for normal **Conversation** traffic
+- The near-term **Inference Verification Record** freshness window should default to 24 hours
+- **Sage** or its provider adapter performs **Verifiable Inference** checks because it owns model inference behavior
+- The **Enclave Control Plane** stores and exposes **Inference Verification Records** as operator-visible privacy evidence
+- **Inference Verification Records** are scoped to the **Deployment** but visible to the **Operator** through the **Instance**
+- Each **Conversation** response should reference the current **Inference Verification Record** that allowed the model inference
+- Referencing an **Inference Verification Record** from a **Conversation** response does not require per-turn provider attestation
+- **Inference Verification Records** should store normalized verification fields and full provider attestation material
+- Near-term **Inference Verification Records** should include provider identity, provider endpoint, model or runtime identifier, verification status, checked time, expiry time, trigger, expected claims fingerprint, actual claims fingerprint, verifier version, failure category, sanitized failure message, and full attestation material
+- Full attestation material should be visible to **Admins**, while ordinary **Users** should see at most high-level verification status
+- Failed **Inference Verification Records** should retain full provider attestation material when available
+- Provider attestation material should be redacted only when the verifier identifies secrets or credentials in the provider response
+- **Inference Verification Records** are separate from the **Audit Log**
+- Verification status changes, manual verification, and blocked **Conversation** traffic due to failed, missing, or stale **Verifiable Inference** status should create concise **Audit Log** events
+- The near-term verifier should use a provider-neutral verification interface with a Tinfoil implementation
+- The near-term **Admin** surface for **Inference Verification Records** should live with Model Provider configuration
+- The current **Inference Verification Record** view should show status, checked time, expiry time, provider claims, model or runtime claims, and manual verification controls
+- Historical **Inference Verification Records** should expose full provider attestation material to **Admins**
+- Normal chat surfaces should not expose detailed **Inference Verification Records** in the first version, except for a blocked-state message when **Conversation** traffic fails closed
+- **Inference Verification Records** should be retained indefinitely by default as operator-visible security evidence
+- Near-term lifecycle support for **Inference Verification Records** should include inventory and status before configurable retention or deletion controls
+- Full provider attestation material in **Inference Verification Records** should be encrypted at rest
+- Normalized **Inference Verification Record** metadata may remain queryable for status, history, lifecycle inventory, and audit correlation
 - A **Trusted Execution Environment** is one mechanism for **Verifiable Inference**
 - **Agent Personalization** may tailor **Agent Settings** for a **User** or **User Type**
 - The **Enclave Control Plane** owns the **Document Library**
@@ -428,6 +533,50 @@ _Avoid_: full snapshot, config dump
 - A **Conversation** may have **Session Memory**
 - A **Conversation** may include **Retrieval**, **Required Context**, and **User Profile** context
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
+- A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, and **Reasoning Summary** details
+- A **Conversation Trace** must not expose raw hidden chain of thought, raw provider trace blobs, full prompts, full unredacted tool outputs, decrypted database rows, secrets, or hidden system/developer instructions in ordinary chat surfaces
+- A **Reasoning Summary** is a safe summary of how **Sage** approached a response, not hidden chain of thought
+- The first **Reasoning Summary** implementation should be authored by **Sage** from orchestration events rather than relying on provider-specific raw reasoning APIs
+- Sanitized **Conversation Traces** should be persisted with the assistant turns they describe so refreshed conversations, exports, and admin troubleshooting remain coherent
+- Persisted **Conversation Traces** are assistant-turn metadata, preferably stored with the assistant message record and otherwise in a sidecar record keyed to that assistant turn
+- Assistant turns should have backend-generated stable message identifiers so streamed answer deltas, final responses, persisted **Conversation Traces**, exports, and deletion workflows can refer to the same turn
+- When **Trace Visibility Policy** is `off`, **Sage** should not persist **Conversation Traces** for future turns
+- Raw provider trace data, raw prompts, raw tool outputs, and raw reasoning should not be persisted as **Conversation Traces**
+- **Session Memory Deletion** should delete persisted **Conversation Traces** for the associated **Conversation**
+- Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
+- **Conversation Trace** should be exposed through a structured `trace` response object on both assistant-style and retrieval-first conversation routes
+- **Conversation Traces** should render inline with the assistant turn they describe, with minimal traces as compact badges and richer traces inside a collapsed per-message disclosure
+- The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
+- **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
+- During streaming turns, the chat UI should show compact live status derived from **Conversation Trace** events and then collapse the final sanitized trace into the assistant turn's per-message trace panel
+- During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status to that turn, and attach the final sanitized **Conversation Trace** when it arrives
+- Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
+- Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
+- The **Agent Runtime** should own **Conversation Trace** redaction before returning traces to clients
+- The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
+- The first **Conversation Streaming Transport** implementation should target assistant-style **Admin Conversations** and **User Conversations** before retrieval-first **Conversations**
+- Assistant-style **Conversation Streaming Transport** should remain tool-aware so admin configuration and database-assisted **Admin Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
+- Assistant-style **Conversation Streaming Transport** should use a two-phase turn: structured tool/context preparation first, then streamable final answer generation
+- The first assistant-style **Conversation Streaming Transport** implementation should execute explicitly selected **Tools** only, not introduce model-chosen tool planning
+- Assistant-style **Conversation Streaming Transport** should wait for explicitly selected **Tools** to finish before streaming final answer text, while exposing live trace status during tool execution
+- In the first assistant-style **Conversation Streaming Transport** implementation, the final answer phase should stream directly from the configured **Model Provider** rather than through structured DSR/BAML parsing
+- Individual **Tools** and retrieval steps should emit safe trace drafts for their own work, and the **Agent Runtime** should compose those drafts into the final policy-filtered **Conversation Trace**
+- Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
+- Changes to **Trace Visibility Policy** should create **Audit Log** events because they change operator-visible conversation behavior
+- **Conversation Trace** redaction failures should suppress the trace without failing the associated chat response
+- **Conversation Trace** redaction failures should be visible to **Admins** as trace suppression and should create **Audit Log** events without exposing sensitive trace contents
+- **Trace Visibility Policy** should fully control trace presentation; viewers may expand or collapse a shown per-message disclosure but should not have a persistent local preference that hides enabled traces
+- **Trace Visibility Policy** should be configured in the admin **Agent Settings** surface rather than as a per-turn chat tool choice
+- **Admin Configuration Assistant** may propose **Trace Visibility Policy** changes through confirmed change sets because trace policy is an **Agent Setting**
+- Raising **User Conversation** trace visibility should be presented as a privacy-relevant configuration change, and `detailed` should remain invalid for **User Conversations**
+- **Tool Trace** for `db-query` should never expose raw SQL results and should summarize status, execution location, sanitized query intent, row counts, safe column metadata, truncation, and redaction warnings
+- **Admin Conversation** detailed traces may include validated read-only SQL only after sensitive literals are redacted
+- `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only
+- **Trace Visibility Policy** should be actor-specific, with separate defaults for **Admin Conversations** and **User Conversations**
+- **Trace Visibility Policy** belongs to **Agent Settings** because it shapes **Sage** conversation behavior and response metadata
+- The first **Trace Visibility Policy** implementation should not include per-**User Type** overrides, but the model may evolve to support them later
+- The default **Admin Conversation** trace posture should expose detailed sanitized traces for troubleshooting and configuration work
+- The default **User Conversation** trace posture should be minimal or off, exposing confidence-building summaries without operational detail
 - **Sage** may invoke **Tools** during a **Conversation**
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
@@ -453,14 +602,35 @@ _Avoid_: full snapshot, config dump
 > **Dev:** "If an Operator has a 30-day retention rule, has old data been deleted automatically?"
 > **Domain expert:** "Not necessarily. **Data Retention** is the rule; **Retention Execution** is the action that applies it, and it may be operator-invoked before scheduling exists."
 >
+> **Dev:** "If the admin marks a lifecycle class as scheduled, does the app now run cleanup by itself?"
+> **Domain expert:** "No. That is a **Scheduled Retention Policy**. A **Retention Scheduler** is the separate automation that invokes scheduled **Retention Execution**."
+>
 > **Dev:** "If retention succeeds for uploaded artifacts but fails for Sage memory, did retention succeed?"
 > **Domain expert:** "**Retention Execution** should report results per **Lifecycle Data Class**. One class can succeed while another fails or remains unsupported."
 >
 > **Dev:** "If Document deletion is marked complete, does that mean every backup and log trace is gone?"
 > **Domain expert:** "No. A complete **Lifecycle Support Status** is scoped to the stated **Lifecycle Data Class** and supported **Storage Targets**, not every **Deployment Surface**."
 >
+> **Dev:** "Should uploaded Documents be encrypted to the Admin's Nostr key?"
+> **Domain expert:** "No. The backend still needs to read Documents for ingestion and **Retrieval**, so active content storage should use a **Content Encryption Key** rather than the **Admin** key."
+>
+> **Dev:** "Can an Operator choose plaintext uploaded artifacts?"
+> **Domain expert:** "Yes, but that is an explicit **Artifact Encryption Posture** choice for the **Deployment** and should be visible in lifecycle status."
+>
+> **Dev:** "If the Operator turns artifact encryption on, are old uploaded files automatically encrypted?"
+> **Domain expert:** "No. **Artifact Encryption Posture** governs future writes unless a separate migration workflow rewrites existing artifacts, and the **Audit Log** should record the posture change."
+>
+> **Dev:** "If uploaded artifacts are plaintext by choice, can Retrieval chunks also be plaintext?"
+> **Domain expert:** "No. **Retrieval Content Posture** is stricter: chunk text should be encrypted in active product storage and Qdrant should stay minimized."
+>
+> **Dev:** "If we add encryption today, can old plaintext content be marked protected?"
+> **Domain expert:** "Not until **Confidentiality Migration** rewrites or verifies existing active content storage. Until then, lifecycle status should report a mixed posture."
+>
 > **Dev:** "Does lifecycle governance mean every trace is securely erased immediately?"
 > **Domain expert:** "No. **Operator-Controlled Data Lifecycle** first means the **Operator** can see each operator-visible data class, configure or invoke supported lifecycle actions, and review truthful status for unsupported surfaces."
+>
+> **Dev:** "What should we make production-ready first?"
+> **Domain expert:** "Start with **Active Storage Lifecycle**: make the product-owned active storage targets truthful, configurable where supported, auditable, and repairable before claiming control over deployment logs, backups, snapshots, or provider traces."
 >
 > **Dev:** "If I delete a User, does that delete Docker logs, gateway logs, backups, and every provider trace?"
 > **Domain expert:** "No. Those are **Deployment Surfaces** unless and until the product promotes them into supported **Lifecycle Data Classes** with explicit lifecycle controls."
@@ -476,6 +646,9 @@ _Avoid_: full snapshot, config dump
 
 > **Dev:** "Is the instance the Docker stack?"
 > **Domain expert:** "No. The **Instance** is the operator-controlled product space and data boundary; the **Deployment** is the technical environment running it."
+
+> **Dev:** "Should a cron job use the Admin's browser session to run retention?"
+> **Domain expert:** "No. That would confuse a human **Admin** action with **Deployment Automation**. A deployment-owned machine actor should invoke scheduled workflows when the product supports that path."
 
 > **Dev:** "Should the gateway decide how AI routes work?"
 > **Domain expert:** "No. The **Gateway** routes requests; **Sage** and the **Enclave Control Plane** own behavior and correctness."
@@ -607,11 +780,15 @@ _Avoid_: full snapshot, config dump
 - "data lifecycle governance" can imply full compliance-grade records management; resolved: **Operator-Controlled Data Lifecycle** means inventory, supported policy/action, evidence, and honest unsupported status before it means complete secure erasure across every technical surface.
 - "logs" and "backups" can be mistaken for supported product records; resolved: treat them as **Deployment Surfaces** until a specific one is promoted into a **Lifecycle Data Class**.
 - "retention is implemented" can confuse a configured rule with data-changing enforcement; resolved: **Data Retention** is policy and **Retention Execution** is the act of applying it.
-- **Data Retention** is a policy concept even where implementation is incomplete; current gaps include scheduled retention policy, secure erase semantics, log retention, and complete historical session retention.
+- "scheduled retention" can confuse policy with automation; resolved: **Scheduled Retention Policy** is the configuration, while **Retention Scheduler** is the automated trigger.
+- **Data Retention** is a policy concept even where implementation is incomplete; current gaps include product-owned **Retention Scheduler**, secure erase semantics, log retention, and complete historical session retention.
 - **Data Deletion** is distinct from hiding or archiving data; supported Document, User, Conversation, and User Memory deletion paths now return structured lifecycle status, while remaining gaps should be treated as product work rather than glossary ambiguity.
 - **Audit Log** should not be confused with debug or server logs; current audit coverage includes configuration, user governance, document governance, User Memory, and Data Deletion workflows but is not complete for every state-changing action.
+- "production-ready lifecycle" can accidentally include host backups, runtime logs, snapshots, and provider traces; resolved: the first plan targets **Active Storage Lifecycle**, while those remain **Deployment Surfaces** disclosed to the **Operator**.
+- "encrypted documents" can imply Admin-key or user-key encryption; resolved: backend-readable document and retrieval storage should use a **Content Encryption Key** unless a future end-to-end workflow is explicitly designed.
 - External services used by a deployment should be named as **External Integrations**, not treated as hidden platform-owned dependencies.
 - "instance" can mean a running server process; resolved: **Instance** means the operator-controlled product space and data boundary, while **Deployment** means the technical environment.
+- "cron" or "scheduler" can be mistaken for a human admin action; resolved: scheduled machine-triggered workflows should be attributed to **Deployment Automation**.
 - "gateway" can imply an API policy layer; resolved: **Gateway** is routing infrastructure and should not own product correctness.
 - "operator" and "admin" are distinct: **Operator** is the responsible person or organization, while **Admin** is the authenticated control identity.
 - "admin" can imply a general staff role; resolved: **Admin** is currently the single operator identity for an **Instance**.
@@ -627,6 +804,8 @@ _Avoid_: full snapshot, config dump
 - "generic LLM provider" does not capture the current provider requirement; resolved: **Tinfoil** is preferred because it supports encrypted, verifiable inference through a **Trusted Execution Environment**.
 - "LLM preference" understates the security constraint; resolved: use **Model Provider Requirement** for the encrypted inference and **Verifiable Inference** requirement.
 - "encrypted inference" should not be reduced to transport security; resolved: **Encrypted Inference** protects conversation content from surrounding infrastructure across the inference flow.
+- "Tinfoil attestations" is implementation-specific provider language; resolved: use **Inference Verification Record** for operator-visible evidence of **Verifiable Inference**, including full provider attestation material when available.
+- "Tinfoil verifier" overstates provider lock-in; resolved: use a provider-neutral verification interface with a Tinfoil implementation.
 - A **Trusted Execution Environment** should not be confused with the product requirement itself; resolved: **Verifiable Inference** is the property, and a TEE is the preferred mechanism.
 - "configuration" is overloaded; resolved: use **Instance Settings**, **Deployment Settings**, and **Agent Settings** for the three distinct concepts.
 - "user-type AI config" is implementation language; resolved: use **Agent Personalization** for operator rules that tailor Sage behavior by User or User Type.

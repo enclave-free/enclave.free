@@ -1,10 +1,10 @@
-# SearXNG configuration for Sanctum
+# SearXNG configuration for Enclave
 # https://docs.searxng.org/admin/settings/settings.html
 
 use_default_settings: true
 
 general:
-  instance_name: "Sanctum Search"
+  instance_name: "Enclave Search"
   privacypolicy_url: false
   donation_url: false
   contact_url: false
@@ -21,7 +21,7 @@ server:
   limiter: false
   image_proxy: false
   method: "GET"
-  secret_key: "sanctum-searxng-secret-key"
+  secret_key: "enclave-searxng-secret-key"
 
 ui:
   static_use_hash: true

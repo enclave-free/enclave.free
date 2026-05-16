@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sanctum Restore Script
+# Enclave Restore Script
 # Restores Neo4j and Qdrant data from a backup
 #
 # Usage: ./scripts/restore.sh [backup_dir]
@@ -13,7 +13,7 @@ set -euo pipefail
 # Configuration
 QDRANT_HOST="${QDRANT_HOST:-localhost}"
 QDRANT_PORT="${QDRANT_PORT:-6333}"
-QDRANT_COLLECTION="${QDRANT_COLLECTION:-sanctum_knowledge}"
+QDRANT_COLLECTION="${QDRANT_COLLECTION:-enclave_knowledge}"
 NEO4J_VOLUME="${NEO4J_VOLUME:-hrf-26-hackathon_neo4j_data}"
 QDRANT_VOLUME="${QDRANT_VOLUME:-hrf-26-hackathon_qdrant_data}"
 BACKUP_BASE="${BACKUP_BASE:-./backups}"
@@ -113,13 +113,13 @@ confirm_restore() {
 check_services() {
     local services_running=false
     
-    if docker ps --format '{{.Names}}' | grep -q "sanctum-neo4j"; then
-        log_warn "Neo4j container is running (sanctum-neo4j)"
+    if docker ps --format '{{.Names}}' | grep -q "enclave-neo4j"; then
+        log_warn "Neo4j container is running (enclave-neo4j)"
         services_running=true
     fi
     
-    if docker ps --format '{{.Names}}' | grep -q "sanctum-qdrant"; then
-        log_warn "Qdrant container is running (sanctum-qdrant)"
+    if docker ps --format '{{.Names}}' | grep -q "enclave-qdrant"; then
+        log_warn "Qdrant container is running (enclave-qdrant)"
         services_running=true
     fi
     
@@ -259,7 +259,7 @@ restore_uploads() {
 main() {
     echo ""
     log_info "========================================="
-    log_info "Sanctum Restore Script"
+    log_info "Enclave Restore Script"
     log_info "========================================="
     echo ""
     

@@ -1,13 +1,14 @@
 """
-Sanctum Deployment Configuration Router
+Enclave Deployment Configuration Router
 Handles environment settings, service health checks, and .env management.
 """
 
 import os
 import time
+import json
 import logging
 from datetime import datetime, timezone
-from typing import Final, Optional
+from typing import Final, Mapping, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -15,6 +16,8 @@ import httpx
 
 import auth
 import database
+from inference_verification import TinfoilVerifier, fingerprint_claims, verify_and_store
+from inference_repair import current_inference_repair_status, mark_startup_verification_unavailable, mark_verification_record
 from rate_limit import RateLimiter
 from models import (
     DeploymentConfigItem,
@@ -28,7 +31,7 @@ from models import (
     SuccessResponse,
 )
 
-logger = logging.getLogger("sanctum.deployment_config")
+logger = logging.getLogger("enclave.deployment_config")
 
 # Track when this module was loaded (service start time)
 # Used to determine which config changes require restart
@@ -49,6 +52,73 @@ config_export_limiter = RateLimiter(
 )
 
 
+def current_expected_claims() -> dict:
+    """Return the configured expected Verifiable Inference claims for v1."""
+    return {}
+
+
+def current_expected_claims_fingerprint() -> str:
+    return fingerprint_claims(current_expected_claims())
+
+
+def _audit_inference_verification_status_change(event: dict, *, changed_by: str) -> None:
+    database.log_config_audit_event(
+        table_name="inference_verification",
+        config_key="verification_status_changed",
+        old_value=None,
+        new_value=json.dumps(event, separators=(",", ":")),
+        changed_by=changed_by,
+    )
+
+
+def run_startup_inference_verification() -> dict:
+    """
+    Attempt Verifiable Inference during startup without crash-looping the app.
+    Admin repair surfaces remain available if startup verification cannot pass.
+    """
+    configured = _configured_model_provider()
+    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    if not api_key:
+        logger.warning("Startup Verifiable Inference skipped: LLM_API_KEY not configured")
+        return mark_startup_verification_unavailable(
+            status="missing",
+            reason="LLM_API_KEY not configured",
+        )
+
+    try:
+        record = verify_and_store(
+            verifier=TinfoilVerifier(),
+            storage=database,
+            expected_claims=current_expected_claims(),
+            trigger="startup",
+            api_key=api_key,
+            audit_status_change=lambda event: _audit_inference_verification_status_change(
+                event,
+                changed_by="system:startup",
+            ),
+            **configured,
+        )
+    except Exception as exc:
+        logger.exception("Startup Verifiable Inference failed without a stored record")
+        return mark_startup_verification_unavailable(
+            status="failed",
+            reason=str(exc),
+        )
+
+    return mark_verification_record(
+        record,
+        reason="startup_verification_current" if record.get("status") == "success" else "startup_verification_failed",
+    )
+
+
+def _configured_model_provider() -> dict:
+    return {
+        "provider_identity": database.get_deployment_config_value("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage"),
+        "provider_endpoint": database.get_deployment_config_value("LLM_API_URL") or os.getenv("LLM_API_URL", ""),
+        "model_identifier": database.get_deployment_config_value("LLM_MODEL") or os.getenv("LLM_MODEL", ""),
+    }
+
+
 # Environment variable to config key mapping
 # These are the keys we allow managing through the UI
 ENV_CONFIG_MAP = {
@@ -59,7 +129,10 @@ ENV_CONFIG_MAP = {
     "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python compatibility paths", "requires_restart": True},
     "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python compatibility paths", "requires_restart": False, "is_secret": True},
     # Embedding Settings
-    "EMBEDDING_MODEL": {"category": "embedding", "description": "Sentence transformer model", "requires_restart": True, "default": "intfloat/multilingual-e5-base"},
+    "EMBEDDING_PROVIDER": {"category": "embedding", "description": "Embedding provider: tinfoil or local", "requires_restart": True, "default": "tinfoil"},
+    "EMBEDDING_MODEL": {"category": "embedding", "description": "Embedding model identifier", "requires_restart": True, "default": "nomic-embed-text"},
+    "EMBEDDING_API_URL": {"category": "embedding", "description": "OpenAI-compatible embedding API base URL", "requires_restart": True, "default": "http://tinfoil-proxy:8089/v1"},
+    "EMBEDDING_API_KEY": {"category": "embedding", "description": "Embedding API key", "requires_restart": True, "is_secret": True},
     # Email Settings (no defaults - optional, user must configure)
     "SMTP_HOST": {"category": "email", "description": "SMTP server hostname", "requires_restart": False},
     "SMTP_PORT": {"category": "email", "description": "SMTP server port", "requires_restart": False},
@@ -71,8 +144,10 @@ ENV_CONFIG_MAP = {
     "SMTP_LAST_TEST_SUCCESS": {"category": "email", "description": "Whether last SMTP test was successful", "requires_restart": False},
     "SMTP_LAST_TEST_AT": {"category": "email", "description": "Timestamp of last SMTP test", "requires_restart": False},
     # Storage Settings
-    "SQLITE_PATH": {"category": "storage", "description": "SQLite database path", "requires_restart": True, "default": "/data/sanctum.db"},
+    "SQLITE_PATH": {"category": "storage", "description": "SQLite database path", "requires_restart": True, "default": "/data/enclave.db"},
     "UPLOADS_DIR": {"category": "storage", "description": "Uploads directory path", "requires_restart": True, "default": "/uploads"},
+    "CONTENT_ENCRYPTION_KEY": {"category": "storage", "description": "Deployment-held key for backend-readable active content encryption", "requires_restart": False, "is_secret": True},
+    "DOCUMENT_ARTIFACT_ENCRYPTION": {"category": "storage", "description": "Artifact Encryption Posture (auto, required, or disabled)", "requires_restart": False, "default": "auto"},
     # Qdrant Settings
     "QDRANT_HOST": {"category": "storage", "description": "Qdrant server hostname", "requires_restart": True, "default": "qdrant"},
     "QDRANT_PORT": {"category": "storage", "description": "Qdrant server port", "requires_restart": True, "default": "6333"},
@@ -82,6 +157,7 @@ ENV_CONFIG_MAP = {
     "FRONTEND_URL": {"category": "security", "description": "Frontend application URL", "requires_restart": False, "default": "http://localhost:5173"},
     "SIMULATE_USER_AUTH": {"category": "security", "description": "Allow user verification without magic link token (testing only)", "requires_restart": False, "default": "false"},
     "SIMULATE_ADMIN_AUTH": {"category": "security", "description": "Show mock Nostr connection button for admin auth (testing only)", "requires_restart": False, "default": "false"},
+    "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS": {"category": "security", "description": "Development-only bypass for Verifiable Inference enforcement; weakens privacy posture", "requires_restart": False, "default": "false"},
     "RATE_LIMIT_CHAT_PER_MINUTE": {"category": "security", "description": "Chat requests per minute", "requires_restart": True, "default": "120"},
     "RATE_LIMIT_QUERY_PER_MINUTE": {"category": "security", "description": "Retrieval query requests per minute", "requires_restart": True, "default": "90"},
     "RATE_LIMIT_UPLOAD_PER_MINUTE": {"category": "security", "description": "Document upload requests per minute", "requires_restart": True, "default": "20"},
@@ -96,7 +172,7 @@ ENV_CONFIG_MAP = {
     "API_BASE_URL": {"category": "domains", "description": "API subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:8000"},
     "ADMIN_BASE_URL": {"category": "domains", "description": "Admin panel subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:5173/admin"},
     "EMAIL_DOMAIN": {"category": "domains", "description": "Domain for email addresses", "requires_restart": False, "default": "localhost"},
-    "DKIM_SELECTOR": {"category": "domains", "description": "DKIM DNS record selector", "requires_restart": False, "default": "sanctum"},
+    "DKIM_SELECTOR": {"category": "domains", "description": "DKIM DNS record selector", "requires_restart": False, "default": "enclave"},
     "SPF_INCLUDE": {"category": "domains", "description": "SPF DNS include directive (e.g., include:_spf.google.com)", "requires_restart": False, "default": ""},
     "DMARC_POLICY": {"category": "domains", "description": "DMARC DNS policy record", "requires_restart": False, "default": "v=DMARC1; p=none"},
     "CORS_ORIGINS": {"category": "domains", "description": "Comma-separated allowed CORS origins", "requires_restart": True, "default": "http://localhost:5173"},
@@ -124,7 +200,9 @@ ALLOWED_AUDIT_TABLES = {
     "document_defaults_user_type_overrides",
     "document_actions",
     "data_deletion",
+    "inference_verification",
     "instance_settings",
+    "conversation_trace",
     "user_approval",
     "user_memories",
     "user_types",
@@ -138,6 +216,13 @@ RATE_LIMIT_KEYS: Final[set[str]] = {
     "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR",
 }
 
+PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
+    "MOCK_EMAIL",
+    "MOCK_SMTP",
+    "SIMULATE_USER_AUTH",
+    "SIMULATE_ADMIN_AUTH",
+)
+
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
     """Convert database row to DeploymentConfigItem"""
@@ -150,6 +235,17 @@ def _config_to_item(config: dict) -> DeploymentConfigItem:
         description=config.get("description"),
         updated_at=config.get("updated_at"),
     )
+
+
+def _truthy_config_value(value: Optional[str]) -> bool:
+    return str(value or "").strip().lower() in {"true", "1", "yes", "on"}
+
+
+def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Optional[str]:
+    value = config_dict.get(key)
+    if value not in (None, ""):
+        return value
+    return os.getenv(key)
 
 
 def _sync_env_to_db() -> None:
@@ -286,6 +382,87 @@ async def get_deployment_config(admin: dict = Depends(auth.require_admin)):
     return response
 
 
+@router.get("/inference-verification/status", response_model=dict)
+async def get_inference_verification_status(admin: dict = Depends(auth.require_admin)):
+    """
+    Get current Verifiable Inference status for the configured Model Provider.
+    Requires admin authentication.
+    """
+    configured = _configured_model_provider()
+    status = database.get_current_inference_verification_status(
+        **configured,
+        expected_claims_fingerprint=current_expected_claims_fingerprint(),
+    )
+    return {
+        **status,
+        "configured_provider": configured,
+        "expected_claims_fingerprint": current_expected_claims_fingerprint(),
+        "repair": current_inference_repair_status(),
+    }
+
+
+@router.get("/inference-verification/records", response_model=dict)
+async def list_inference_verification_records(
+    limit: int = Query(default=100, ge=1, le=500),
+    admin: dict = Depends(auth.require_admin),
+):
+    """
+    List Inference Verification Record metadata without full attestation material.
+    Requires admin authentication.
+    """
+    return {"records": database.list_inference_verification_records(limit=limit)}
+
+
+@router.get("/inference-verification/records/{record_id}", response_model=dict)
+async def get_inference_verification_record(record_id: int, admin: dict = Depends(auth.require_admin)):
+    """
+    Fetch a single Inference Verification Record including full attestation material.
+    Requires admin authentication.
+    """
+    record = database.get_inference_verification_record(record_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Inference Verification Record not found")
+    return record
+
+
+@router.post("/inference-verification/verify", response_model=dict)
+async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
+    """
+    Run manual Verifiable Inference for the configured Model Provider.
+    Requires admin authentication.
+    """
+    configured = _configured_model_provider()
+    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="LLM_API_KEY not configured")
+    changed_by = admin.get("pubkey", "admin")
+    record = verify_and_store(
+        verifier=TinfoilVerifier(),
+        storage=database,
+        expected_claims=current_expected_claims(),
+        trigger="manual",
+        api_key=api_key,
+        audit_status_change=lambda event: _audit_inference_verification_status_change(event, changed_by=changed_by),
+        **configured,
+    )
+    mark_verification_record(
+        record,
+        reason="manual_verification_current" if record.get("status") == "success" else "manual_verification_failed",
+    )
+    database.log_config_audit_event(
+        table_name="inference_verification",
+        config_key="manual_verification",
+        old_value=None,
+        new_value=json.dumps({
+            "record_id": record.get("id"),
+            "status": record.get("status"),
+            "trigger": record.get("trigger"),
+        }, separators=(",", ":")),
+        changed_by=changed_by,
+    )
+    return record
+
+
 @router.get("/config/export", response_class=PlainTextResponse)
 async def export_env_file(
     request: Request,
@@ -302,7 +479,7 @@ async def export_env_file(
         admin.get("pubkey", "unknown"),
         request.client.host if request.client else "unknown",
     )
-    lines = ["# Sanctum Configuration Export", f"# Generated: {datetime.now(timezone.utc).isoformat()}", ""]
+    lines = ["# Enclave Configuration Export", f"# Generated: {datetime.now(timezone.utc).isoformat()}", ""]
 
     # Get raw values from database (not masked)
     with database.get_cursor() as cursor:
@@ -592,6 +769,11 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
     # Warnings for common issues
     if config_dict.get("MOCK_SMTP", "").lower() == "true":
         warnings.append("MOCK_SMTP is enabled - emails will not be sent")
+
+    if auth.is_production_mode():
+        for key in PRODUCTION_UNSAFE_FLAGS:
+            if _truthy_config_value(_deployment_config_value(config_dict, key)):
+                errors.append(f"{key} must be disabled in production")
 
     if not config_dict.get("SMTP_HOST") and config_dict.get("MOCK_SMTP", "").lower() != "true":
         warnings.append("SMTP not configured - email features will not work")

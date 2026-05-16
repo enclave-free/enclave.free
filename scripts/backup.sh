@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sanctum Backup Script
+# Enclave Backup Script
 # Creates backups of Neo4j and Qdrant data stores
 #
 # Usage: ./scripts/backup.sh [backup_dir]
@@ -13,7 +13,7 @@ set -euo pipefail
 # Configuration
 QDRANT_HOST="${QDRANT_HOST:-localhost}"
 QDRANT_PORT="${QDRANT_PORT:-6333}"
-QDRANT_COLLECTION="${QDRANT_COLLECTION:-sanctum_knowledge}"
+QDRANT_COLLECTION="${QDRANT_COLLECTION:-enclave_knowledge}"
 NEO4J_VOLUME="${NEO4J_VOLUME:-hrf-26-hackathon_neo4j_data}"
 QDRANT_VOLUME="${QDRANT_VOLUME:-hrf-26-hackathon_qdrant_data}"
 

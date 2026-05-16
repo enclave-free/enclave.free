@@ -15,7 +15,7 @@ Use the default five-label triage vocabulary: `needs-triage`, `needs-info`, `rea
 Use a multi-context layout rooted one level up at `/Users/plebdev/Desktop/code/enclave-free`, covering `enclave.free`, `sage`, and `enclave.free-prototype`. See `docs/agents/domain.md`.
 
 ## Project Structure & Module Organization
-Sanctum is a Docker Compose stack. The root includes `docker-compose.infra.yml`, `docker-compose.app.yml`, environment files, and `docs/` for longer guides. The FastAPI backend lives in `backend/app/` (LLM providers in `backend/app/llm/`). The Vite + React frontend lives in `frontend/src/` with pages, components, and i18n files under `frontend/src/i18n/locales/`. Runtime ingest artifacts are stored in `uploads/` (mounted into the backend container).
+Enclave is a Docker Compose stack. The root includes `docker-compose.infra.yml`, `docker-compose.app.yml`, environment files, and `docs/` for longer guides. The FastAPI backend lives in `backend/app/` (LLM providers in `backend/app/llm/`). The Vite + React frontend lives in `frontend/src/` with pages, components, and i18n files under `frontend/src/i18n/locales/`. Runtime ingest artifacts are stored in `uploads/` (mounted into the backend container).
 
 ## Build, Test, and Development Commands
 Run the full stack from the repo root:

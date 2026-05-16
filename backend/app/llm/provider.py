@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-logger = logging.getLogger("sanctum.llm.provider")
+logger = logging.getLogger("enclave.llm.provider")
 
 
 @dataclass

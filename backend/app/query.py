@@ -1,5 +1,5 @@
 """
-Sanctum Retrieval Query Module
+Enclave Retrieval Query Module
 
 Session-aware Retrieval for querying the Document Library.
 Pipeline: Query → Embed → Vector Search → Model Provider → Answer
@@ -15,16 +15,21 @@ import re
 import logging
 import threading
 import uuid
+import json
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import httpx
 
 import auth
+import ingest_db
+from conversation_trace import ConversationTrace, RetrievalTrace, build_conversation_trace, build_live_trace_status
+from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -42,9 +47,16 @@ from utils import sanitize_profile_value
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
-logger = logging.getLogger("sanctum.query")
+logger = logging.getLogger("enclave.query")
 
 router = APIRouter(prefix="/query", tags=["query"])
+
+
+def _require_protected_inference_or_503(context: str) -> dict:
+    try:
+        return require_current_inference_verification(context=context)
+    except ProtectedInferenceBlocked as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # Configuration
@@ -69,6 +81,10 @@ query_limiter = RateLimiter(
 )
 
 
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
+
+
 class Message(BaseModel):
     role: str  # "user" or "assistant"
     content: str
@@ -89,6 +105,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
+    message_id: str
     session_id: str  # Return for continuity
     sources: list[dict]
     graph_context: dict
@@ -97,6 +114,8 @@ class QueryResponse(BaseModel):
     # Debug/trace info
     context_used: str  # The actual context passed to LLM (for debugging)
     temperature: float  # Temperature used
+    trace: Optional[ConversationTrace] = None
+    inference_verification: Optional[dict] = None
 
 
 @router.post("", response_model=QueryResponse)
@@ -256,20 +275,35 @@ async def query(
             if not user_memory_context:
                 user_memory_context = None
 
-        answer, clarifying_questions, full_prompt, search_term = _call_llm_contextual(
+        answer, clarifying_questions, full_prompt, search_term, inference_record = _call_llm_contextual(
             question, context, llm_session, tools=request.tools, user_type_id=user_type_id,
             user_profile_context=user_profile_context,
             user_memory_context=user_memory_context,
         )
         
+        message_id = f"msg_{uuid.uuid4().hex}"
+        trace = build_conversation_trace(
+            actor_type=user.get("type", "user"),
+            tools_used=[],
+            retrieval=[
+                RetrievalTrace(
+                    source_type=str(source.get("type") or "document"),
+                    title=str(source.get("source_file") or source.get("chunk_id") or "Retrieved source"),
+                    summary="Retrieved matching source context.",
+                    score=source.get("score"),
+                )
+                for source in sources
+            ],
+        )
+
         with session_lock:
             session["facts_gathered"].update(llm_session.get("facts_gathered", {}))
-            # Add assistant response to history
-            session["messages"].append({
-                "role": "assistant",
-                "content": answer,
-                "timestamp": datetime.utcnow().isoformat()
-            })
+            append_assistant_message_with_trace(
+                session,
+                content=answer,
+                message_id=message_id,
+                trace=trace,
+            )
 
             # Run dedicated fact extraction after response (more reliable than in-response tags)
             session["facts_gathered"] = _extract_facts_from_conversation(session)
@@ -309,6 +343,7 @@ async def query(
 
         return QueryResponse(
             answer=answer,
+            message_id=message_id,
             session_id=session_id,
             sources=sources,
             graph_context=graph_context,
@@ -316,11 +351,86 @@ async def query(
             search_term=search_term,  # Auto-search trigger (if web-search tool enabled)
             context_used=debug_prompt,  # For debugging - redacted to protect user data
             temperature=actual_temperature,
+            trace=trace,
+            inference_verification=inference_verification_reference(inference_record),
         )
         
     except Exception as e:
         logger.error(f"RAG query failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def query_stream(
+    request: QueryRequest,
+    user: dict = Depends(auth.require_admin_or_approved_user),
+    _: None = Depends(query_limiter),
+):
+    """Streaming Retrieval Conversation endpoint with final trace events."""
+
+    async def event_stream():
+        try:
+            response_payload = await query(request=request, user=user, _=None)
+            yield _sse_event(
+                "assistant_message_started",
+                {
+                    "message_id": response_payload.message_id,
+                    "session_id": response_payload.session_id,
+                },
+            )
+            if response_payload.answer:
+                trace_status = build_live_trace_status(response_payload.trace)
+                if trace_status:
+                    yield _sse_event(
+                        "trace_status",
+                        {
+                            "message_id": response_payload.message_id,
+                            "status": trace_status,
+                        },
+                    )
+                yield _sse_event(
+                    "answer_delta",
+                    {
+                        "message_id": response_payload.message_id,
+                        "delta": response_payload.answer,
+                    },
+                )
+            if response_payload.trace is not None:
+                yield _sse_event(
+                    "trace_final",
+                    {
+                        "message_id": response_payload.message_id,
+                        "trace": response_payload.trace.model_dump(),
+                    },
+                )
+            yield _sse_event(
+                "done",
+                {
+                    "message_id": response_payload.message_id,
+                    "session_id": response_payload.session_id,
+                    "search_term": response_payload.search_term,
+                    "inference_verification": response_payload.inference_verification,
+                },
+            )
+        except HTTPException as exc:
+            yield _sse_event(
+                "error",
+                {
+                    "status_code": exc.status_code,
+                    "detail": exc.detail,
+                },
+            )
+        except Exception as exc:
+            logger.exception("Streaming Retrieval query failed")
+            yield _sse_event(
+                "error",
+                {
+                    "status_code": 500,
+                    "detail": str(exc),
+                },
+            )
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 def _session_owner_for_user(user: dict) -> tuple[str, str]:
@@ -385,6 +495,25 @@ def _session_lock(session: dict) -> threading.RLock:
 
 def _session_public_snapshot(session: dict) -> dict:
     return {key: deepcopy(value) for key, value in session.items() if key != "_lock"}
+
+
+def append_assistant_message_with_trace(
+    session: dict,
+    *,
+    content: str,
+    message_id: str,
+    trace: ConversationTrace | dict | None,
+) -> None:
+    """Append assistant turn metadata to a Conversation session."""
+    message = {
+        "id": message_id,
+        "role": "assistant",
+        "content": content,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    if trace is not None:
+        message["trace"] = trace.model_dump() if hasattr(trace, "model_dump") else trace
+    session["messages"].append(message)
 
 
 def delete_sessions_for_owner(owner_type: str, owner_id: str) -> int:
@@ -527,26 +656,82 @@ def _process_search_results(search_results: list) -> tuple[list, set, list]:
         payload = result.get("payload", {})
         score = result.get("score", 0)
         
-        sources.append({
+        source = {
             "score": score,
             "type": payload.get("type", "unknown"),
-            "text": payload.get("text") or payload.get("fact_text", ""),
+            "text": "",
             "chunk_id": payload.get("chunk_id", ""),
             "source_file": payload.get("source_file", ""),
-        })
+            "hydrated": False,
+            "hydration_status": "not_applicable",
+        }
+
+        payload_text = payload.get("text") or payload.get("fact_text", "")
+        if payload.get("type") == "chunk":
+            hydrated_text, hydration_status = _hydrate_chunk_text(payload)
+            source["hydrated"] = hydrated_text is not None
+            source["hydration_status"] = hydration_status
+            if hydrated_text is not None:
+                source["text"] = hydrated_text
+                chunk_texts.append(hydrated_text)
+            elif payload.get("text") and hydration_status != "missing_payload_job_id":
+                source["text"] = payload["text"]
+                source["hydration_status"] = "legacy_payload"
+                chunk_texts.append(payload["text"])
+        elif payload_text:
+            source["text"] = payload_text
+            chunk_texts.append(payload_text)
+
+        sources.append(source)
         
         if payload.get("type") == "fact":
             entity_names.add(payload.get("from_entity", ""))
             entity_names.add(payload.get("to_entity", ""))
-        
-        if payload.get("text"):
-            chunk_texts.append(payload.get("text"))
         
         for name in payload.get("entity_names", []):
             entity_names.add(name)
     
     entity_names.discard("")
     return sources, entity_names, chunk_texts
+
+
+def _hydrate_chunk_text(payload: dict) -> tuple[str | None, str]:
+    """Hydrate minimized Qdrant chunk hits from encrypted product-owned storage."""
+    chunk_id = payload.get("chunk_id")
+    if not chunk_id:
+        return None, "missing_chunk_id"
+
+    payload_job_id = payload.get("job_id")
+    if not payload_job_id:
+        logger.warning("Retrieval chunk hydration skipped for %s: missing payload job_id", chunk_id)
+        return None, "missing_payload_job_id"
+
+    try:
+        chunk = ingest_db.get_retrieval_chunk(chunk_id)
+    except Exception as exc:
+        logger.warning("Retrieval chunk hydration failed for %s: %s", chunk_id, exc)
+        return None, "error"
+
+    if chunk is None:
+        return None, "missing"
+    if chunk.get("text") is None and chunk.get("decryption_error"):
+        logger.warning(
+            "Retrieval chunk hydration failed for %s: %s",
+            chunk_id,
+            chunk.get("decryption_error"),
+        )
+        return None, "decryption_error"
+
+    if chunk.get("job_id") != payload_job_id:
+        logger.warning(
+            "Retrieval chunk hydration skipped for %s: payload job_id %s does not match stored job_id %s",
+            chunk_id,
+            payload_job_id,
+            chunk.get("job_id"),
+        )
+        return None, "job_mismatch"
+
+    return chunk["text"], "hydrated"
 
 
 def _build_context(chunk_texts: list[str], sources: list[dict]) -> str:
@@ -571,7 +756,7 @@ def _call_llm_contextual(
     user_type_id: int | None = None,
     user_profile_context: dict[str, str] | None = None,
     user_memory_context: list[dict] | None = None,
-) -> tuple[str, list[str], str, Optional[str]]:
+) -> tuple[str, list[str], str, Optional[str], dict | None]:
     """
     Call LLM with context-aware prompt.
     Returns (answer, list of clarifying questions, full_prompt for debugging, search_term or None).
@@ -715,6 +900,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
 
 === RESPOND ==="""
 
+    inference_record = _require_protected_inference_or_503("rag_query")
     response = llm.complete(prompt, temperature=temperature)
     answer = response.content
     
@@ -753,7 +939,7 @@ Make search terms specific: "[SEARCH: local library hours downtown]"
             clarifying_questions.append(stripped[1:].strip())
     
     # Return answer, questions, full prompt for debugging, and search term
-    return answer, clarifying_questions, prompt, search_term
+    return answer, clarifying_questions, prompt, search_term, inference_record
 
 
 @router.get("/session/{session_id}")

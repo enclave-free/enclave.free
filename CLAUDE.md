@@ -18,7 +18,7 @@ Use a multi-context layout rooted one level up from this repo, covering `enclave
 
 ## Project Overview
 
-Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for building and querying curated knowledge bases. The stack uses FastAPI (Python 3.11) and Qdrant for vector search.
+Enclave is a privacy-first Retrieval-Augmented Generation (RAG) system for building and querying curated knowledge bases. The stack uses FastAPI (Python 3.11) and Qdrant for vector search.
 
 ## Common Commands
 
@@ -47,7 +47,7 @@ curl http://localhost:8000/health  # Health check
 
 ## Architecture
 
-**Services** (all on Docker network `sanctum-net`):
+**Services** (all on Docker network `enclave-net`):
 - **Core backend** (internal port 8000): FastAPI control plane with uvicorn hot-reload
 - **Gateway** (host port 8000): nginx route splitter for the stable public API
 - **Qdrant** (ports 6333/6334): Vector database for semantic search
@@ -68,8 +68,8 @@ curl http://localhost:8000/health  # Health check
 - `docker-compose.app.yml` - App services
 
 **Data Model**:
-- Qdrant collection: `sanctum_knowledge` for ingested documents
-- Qdrant collection: `sanctum_smoke_test` for test data
+- Qdrant collection: `enclave_knowledge` for ingested documents
+- Qdrant collection: `enclave_smoke_test` for test data
 - Embeddings: 768-dimensional vectors
 - Embedding model: `intfloat/multilingual-e5-base` (uses "passage: " prefix convention)
 
@@ -111,7 +111,7 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs backen
 The database schema changed but the old database file persists. Reset the SQLite volume:
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down
-docker volume rm sanctum_sqlite_data
+docker volume rm enclave_sqlite_data
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build
 ```
 

@@ -32,7 +32,7 @@ COMPOSE_ARGS = [
     "-f",
     "docker-compose.app.yml",
 ]
-DEFAULT_DB_PATH = "/data/sanctum.db"
+DEFAULT_DB_PATH = "/data/enclave.db"
 
 
 def load_container_env(service: str = "core-backend") -> dict[str, str]:

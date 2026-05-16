@@ -9,7 +9,7 @@ import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../../types/config'
 import { API_BASE } from '../../types/onboarding'
 import { extractAdminAssistantChangeSetStrict, redactSecrets, type AdminAssistantChangeSet } from '../../utils/adminAssistant'
-import { sendLlmChatWithUnifiedTools } from '../../utils/llmChat'
+import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools } from '../../utils/llmChat'
 
 type SnapshotResult = {
   context: string
@@ -35,8 +35,20 @@ interface AdminConfigAssistantProps {
 
 const CONFIG_TOOL_ID = 'admin-config'
 
+export const TRACE_POLICY_CONTEXT_LINES = [
+  '- Trace Visibility Policy is an Agent Setting. Use PUT /admin/ai-config/admin_trace_visibility or PUT /admin/ai-config/user_trace_visibility.',
+  '- Valid trace visibility values are off, minimal, summary, and detailed for Admin Conversations; User Conversations only allow off, minimal, or summary.',
+  '- Raising User Conversation trace visibility is privacy-relevant. Explain that users will see more Conversation Trace metadata before proposing the change.',
+]
+
 function generateMessageId() {
   return `admin-msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function patchAssistantMessage(messages: Message[], id: string, patch: Partial<Message>): Message[] {
+  return messages.map((message) => (
+    message.id === id ? { ...message, ...patch } : message
+  ))
 }
 
 function slugify(value: string): string {
@@ -215,7 +227,7 @@ export function AdminConfigAssistant({
     lines.push(`Generated: ${generatedAtIso}`)
     lines.push('')
     lines.push('RULES')
-    lines.push('- You are assisting the instance admin in configuring Sanctum.')
+    lines.push('- You are assisting the instance admin in configuring Enclave.')
     lines.push('- Never ask for or assume access to the admin Nostr private key (nsec). It is held in NIP-07 and is not available here.')
     lines.push('- Treat all secret environment variables as highly sensitive.')
     lines.push('- Do not echo secrets back into chat. If you must reference them, say "[REDACTED]".')
@@ -234,7 +246,7 @@ export function AdminConfigAssistant({
     }, null, 2))
     lines.push('```')
     lines.push('Notes:')
-    lines.push('- Instance settings are updated via PUT /admin/settings with a JSON body of keys (example: {"instance_name":"My Sanctum","primary_color":"#F7931A"}).')
+    lines.push('- Instance settings are updated via PUT /admin/settings with a JSON body of keys (example: {"instance_name":"My Enclave","primary_color":"#F7931A"}).')
     lines.push('- primary_color accepts either a preset name (blue, purple, green, orange, pink, teal) or any valid hex color like "#F7931A".')
     lines.push('- status_icon_set must be one of: classic, minimal, playful.')
     lines.push('- typography_preset must be one of: modern, grotesk, humanist.')
@@ -244,6 +256,7 @@ export function AdminConfigAssistant({
     lines.push('- When referencing user types in a single change set, you may use the placeholder "@type:<slug>" anywhere a numeric user_type_id is required.')
     lines.push('  slug rules: lowercase; non-alphanumeric becomes "_"; trim leading/trailing "_" (example: "Bitcoin Designer" -> "@type:bitcoin_designer").')
     lines.push('- Valid user field types: text, email, number, textarea, select, checkbox, date, url.')
+    lines.push(...TRACE_POLICY_CONTEXT_LINES)
     lines.push('Only include allowed mutation endpoints. Avoid including secret values unless the admin explicitly requested setting them.')
     lines.push('')
 
@@ -351,22 +364,93 @@ export function AdminConfigAssistant({
     setError(null)
 
     try {
+      let baseToolContext: string | undefined
       if (!hasConfigTool) {
         setSnapshotInfo(null)
         setApplyState({ state: 'idle' })
       } else {
         const snap = await buildSnapshot()
+        baseToolContext = snap.context
         setSnapshotInfo({ generatedAtIso: snap.generatedAtIso })
         secretsForRedactionRef.current = snap.secretValues
         deploymentSecretKeysRef.current = snap.deploymentSecretKeys
       }
 
-      const res = await sendLlmChatWithUnifiedTools({
-        content,
-        tools: selectedTools,
-        t,
-        sessionId: conversationSessionId,
-      })
+      let streamed = false
+      let streamMessageId: string | null = null
+      let raw = ''
+      let streamSessionId: string | null = null
+      try {
+        await sendLlmChatStreamWithUnifiedTools({
+          content,
+          tools: selectedTools,
+          t,
+          baseToolContext,
+          sessionId: conversationSessionId,
+          onEvent: (event, payload) => {
+            const data = payload as Record<string, unknown>
+            if (event === 'assistant_message_started') {
+              const assistantId = typeof data.message_id === 'string' ? data.message_id : generateMessageId()
+              streamMessageId = assistantId
+              if (typeof data.session_id === 'string') streamSessionId = data.session_id
+              setMessages((prev) => [...prev, {
+                id: assistantId,
+                role: 'assistant',
+                content: '',
+                timestamp: new Date(),
+                traceStatus: t('chat.trace.writing', 'Writing answer...'),
+              }])
+            } else if (event === 'trace_status' && streamMessageId) {
+              const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
+              setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, { traceStatus: status }))
+            } else if (event === 'answer_delta' && streamMessageId) {
+              const delta = typeof data.delta === 'string' ? data.delta : ''
+              raw += delta
+              const display = shareSecrets
+                ? redactSecrets(raw, secretsForRedactionRef.current)
+                : raw
+              setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, {
+                content: display,
+              }))
+            } else if (event === 'trace_final' && streamMessageId) {
+              setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, {
+                trace: data.trace as Message['trace'],
+                traceStatus: null,
+              }))
+            } else if (event === 'done') {
+              if (typeof data.session_id === 'string') streamSessionId = data.session_id
+            } else if (event === 'error') {
+              throw new Error(typeof data.detail === 'string' ? data.detail : t('errors.failedToSendMessage'))
+            }
+          },
+        })
+        if (streamSessionId) {
+          setConversationSessionId(streamSessionId)
+        }
+        if (streamMessageId) {
+          setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, { traceStatus: null }))
+        }
+        streamed = true
+      } catch (streamError) {
+        if (streamMessageId && raw.trim()) {
+          setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, { traceStatus: null }))
+          setError(streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'))
+          return
+        }
+        if (streamMessageId) {
+          setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
+        }
+        console.warn('Streaming admin assistant failed; falling back to non-streaming chat:', streamError)
+      }
+
+      if (!streamed) {
+        const res = await sendLlmChatWithUnifiedTools({
+          content,
+          tools: selectedTools,
+          t,
+          baseToolContext,
+          sessionId: conversationSessionId,
+        })
       if (res.status === 401) {
         window.location.href = '/admin'
         return
@@ -374,13 +458,13 @@ export function AdminConfigAssistant({
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
       }
-      const data = await res.json() as { message?: string; session_id?: string }
+      const data = await res.json() as { message?: string; message_id?: string; session_id?: string; trace?: Message['trace'] }
       if (data.session_id) {
         setConversationSessionId(data.session_id)
       }
-      const raw = String(data?.message || '')
+      raw = String(data?.message || '')
 
-      const assistantId = generateMessageId()
+      const assistantId = data.message_id || generateMessageId()
 
       const display = shareSecrets
         ? redactSecrets(raw, secretsForRedactionRef.current)
@@ -391,8 +475,10 @@ export function AdminConfigAssistant({
         role: 'assistant',
         content: display,
         timestamp: new Date(),
+        trace: data.trace ?? null,
       }
       setMessages((prev) => [...prev, assistantMessage])
+      }
 
       if (hasConfigTool) {
         const extracted = extractAdminAssistantChangeSetStrict(raw)
@@ -548,6 +634,11 @@ export function AdminConfigAssistant({
         }
       } catch {
         postApplyNotes.push(t('admin.configAssistant.applySummary.restartCheckFailedNetwork'))
+      }
+
+      const needsPageRefresh = results.some((r) => r.ok && r.path === '/admin/settings')
+      if (needsPageRefresh) {
+        postApplyNotes.push(t('admin.configAssistant.applySummary.pageRefreshRecommended'))
       }
 
       const summary = [baseSummary, ...postApplyNotes].join(' ') + failureSummary

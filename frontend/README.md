@@ -1,6 +1,6 @@
-# Sanctum Frontend
+# Enclave Frontend
 
-React-based frontend for the Sanctum RAG system.
+React-based frontend for the Enclave RAG system.
 
 ## Tech Stack
 
@@ -88,32 +88,32 @@ NIP-07 is a Nostr standard that allows websites to request your public key from 
 
 | Key | Purpose |
 |-----|---------|
-| `sanctum_admin_pubkey` | Admin's Nostr public key |
-| `sanctum_admin_session_token` | Admin session token |
-| `sanctum_user_email` | Verified user email |
-| `sanctum_user_name` | User's display name |
-| `sanctum_custom_fields` | Admin-configured custom fields schema |
-| `sanctum_user_profile` | User's completed profile data |
-| `sanctum_pending_email` | Email awaiting verification |
-| `sanctum_pending_name` | Name awaiting verification |
-| `sanctum_session_token` | User session token |
-| `sanctum_user_type_id` | Selected user type ID |
-| `sanctum_user_approved` | User approval status (see Security Note below) |
-| `sanctum_instance_config` | Instance branding configuration |
-| `sanctum_language` | User's selected language code (e.g., "en", "es", "ja") |
+| `enclave_admin_pubkey` | Admin's Nostr public key |
+| `enclave_admin_session_token` | Admin session token |
+| `enclave_user_email` | Verified user email |
+| `enclave_user_name` | User's display name |
+| `enclave_custom_fields` | Admin-configured custom fields schema |
+| `enclave_user_profile` | User's completed profile data |
+| `enclave_pending_email` | Email awaiting verification |
+| `enclave_pending_name` | Name awaiting verification |
+| `enclave_session_token` | User session token |
+| `enclave_user_type_id` | Selected user type ID |
+| `enclave_user_approved` | User approval status (see Security Note below) |
+| `enclave_instance_config` | Instance branding configuration |
+| `enclave_language` | User's selected language code (e.g., "en", "es", "ja") |
 
 ### Security Considerations
 
-**Session Tokens**: Session tokens (`sanctum_session_token`, `sanctum_admin_session_token`) are stored in localStorage for simplicity. In XSS scenarios, an attacker could access these tokens. For production deployments with high security requirements, consider implementing httpOnly cookie-based sessions.
+**Session Tokens**: Session tokens (`enclave_session_token`, `enclave_admin_session_token`) are stored in localStorage for simplicity. In XSS scenarios, an attacker could access these tokens. For production deployments with high security requirements, consider implementing httpOnly cookie-based sessions.
 
-**Approval Status**: The `sanctum_user_approved` localStorage value controls UI routing only. Approval status is validated server-side on each API request—unauthorized API access returns 403 Forbidden.
+**Approval Status**: The `enclave_user_approved` localStorage value controls UI routing only. Approval status is validated server-side on each API request—unauthorized API access returns 403 Forbidden.
 
 ## Instance Branding
 
 Admins can fully customize the instance branding at `/admin/instance`:
 
 ### Display Name
-Custom name shown in headers and onboarding screens (default: "Sanctum").
+Custom name shown in headers and onboarding screens (default: "Enclave").
 
 ### Icon
 Choose from 60+ curated Lucide icons for the instance logo. Icons are searchable and organized by category.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -49,6 +49,34 @@ type ValidationState = {
   configFingerprint: string
 }
 
+type InferenceVerificationRecord = {
+  id: number
+  status?: string
+  trigger?: string
+  provider_identity?: string | null
+  provider_endpoint?: string | null
+  model_identifier?: string | null
+  checked_at?: string | null
+  expires_at?: string | null
+  verifier_version?: string | null
+  claims_fingerprint?: string | null
+  attestation_material?: unknown
+  error?: string | null
+}
+
+type InferenceVerificationStatus = {
+  status: string
+  checked_at?: string | null
+  expires_at?: string | null
+  expected_claims_fingerprint?: string | null
+  configured_provider?: {
+    provider_identity?: string | null
+    provider_endpoint?: string | null
+    model_identifier?: string | null
+  } | null
+  record?: InferenceVerificationRecord | null
+}
+
 export function AdminDeploymentConfig() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -77,6 +105,7 @@ export function AdminDeploymentConfig() {
     loading: lifecycleLoading,
     acknowledgeUnsupportedSurface,
     updateRetentionPolicy,
+    updateArtifactEncryptionPosture,
     previewRetention,
     runScheduledRetention,
   } = useLifecycleStatus()
@@ -132,6 +161,19 @@ export function AdminDeploymentConfig() {
   const [scheduledRetentionResult, setScheduledRetentionResult] = useState<{ status?: string; retry_results?: unknown[] } | null>(null)
   const [scheduledRetentionLoading, setScheduledRetentionLoading] = useState(false)
   const [scheduledRetentionError, setScheduledRetentionError] = useState<string | null>(null)
+  const [artifactPostureUpdating, setArtifactPostureUpdating] = useState(false)
+  const [artifactPostureError, setArtifactPostureError] = useState<string | null>(null)
+  const [inferenceVerificationStatus, setInferenceVerificationStatus] = useState<InferenceVerificationStatus | null>(null)
+  const [inferenceVerificationRecords, setInferenceVerificationRecords] = useState<InferenceVerificationRecord[]>([])
+  const [inferenceVerificationLoading, setInferenceVerificationLoading] = useState(false)
+  const [inferenceVerificationError, setInferenceVerificationError] = useState<string | null>(null)
+  const [manualVerificationLoading, setManualVerificationLoading] = useState(false)
+  const [manualVerificationMessage, setManualVerificationMessage] = useState<string | null>(null)
+  const [manualVerificationError, setManualVerificationError] = useState<string | null>(null)
+  const [selectedVerificationRecordId, setSelectedVerificationRecordId] = useState<number | null>(null)
+  const [selectedVerificationRecord, setSelectedVerificationRecord] = useState<InferenceVerificationRecord | null>(null)
+  const [selectedVerificationLoading, setSelectedVerificationLoading] = useState(false)
+  const [selectedVerificationError, setSelectedVerificationError] = useState<string | null>(null)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -250,8 +292,99 @@ export function AdminDeploymentConfig() {
     return isNaN(date.getTime()) ? value : date.toLocaleString()
   }
 
+  const parseAdminResponseError = async (response: Response, fallback: string) => {
+    try {
+      const body = await response.json()
+      return typeof body?.detail === 'string' ? body.detail : fallback
+    } catch {
+      return fallback
+    }
+  }
+
+  const formatVerificationStatus = (status?: string | null) => {
+    if (!status) return t('common.unknown', 'Unknown')
+    if (status === 'current') return t('adminDeployment.inferenceVerification.current', 'Current')
+    if (status === 'missing') return t('adminDeployment.inferenceVerification.missing', 'Missing')
+    if (status === 'expired') return t('adminDeployment.inferenceVerification.expired', 'Expired')
+    if (status === 'failed') return t('adminDeployment.inferenceVerification.failed', 'Failed')
+    if (status === 'success') return t('adminDeployment.inferenceVerification.success', 'Success')
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+  }
+
+  const loadInferenceVerification = useCallback(async () => {
+    setInferenceVerificationLoading(true)
+    setInferenceVerificationError(null)
+    try {
+      const [statusResponse, recordsResponse] = await Promise.all([
+        adminFetch('/admin/deployment/inference-verification/status'),
+        adminFetch('/admin/deployment/inference-verification/records'),
+      ])
+
+      if (!statusResponse.ok) {
+        throw new Error(await parseAdminResponseError(statusResponse, t('adminDeployment.inferenceVerification.statusLoadFailed', 'Failed to load inference verification status')))
+      }
+      if (!recordsResponse.ok) {
+        throw new Error(await parseAdminResponseError(recordsResponse, t('adminDeployment.inferenceVerification.historyLoadFailed', 'Failed to load inference verification history')))
+      }
+
+      const statusBody = await statusResponse.json()
+      const recordsBody = await recordsResponse.json()
+      setInferenceVerificationStatus(statusBody)
+      setInferenceVerificationRecords(Array.isArray(recordsBody?.records) ? recordsBody.records : [])
+    } catch (err) {
+      setInferenceVerificationError(err instanceof Error ? err.message : t('adminDeployment.inferenceVerification.loadFailed', 'Failed to load inference verification'))
+    } finally {
+      setInferenceVerificationLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (authChecked) {
+      void loadInferenceVerification()
+    }
+  }, [authChecked, loadInferenceVerification])
+
+  const handleManualInferenceVerification = async () => {
+    setManualVerificationLoading(true)
+    setManualVerificationMessage(null)
+    setManualVerificationError(null)
+    try {
+      const response = await adminFetch('/admin/deployment/inference-verification/verify', { method: 'POST' })
+      if (!response.ok) {
+        throw new Error(await parseAdminResponseError(response, t('adminDeployment.inferenceVerification.manualFailed', 'Manual verification failed')))
+      }
+      await response.json()
+      setManualVerificationMessage(t('adminDeployment.inferenceVerification.manualSucceeded', 'Manual verification succeeded'))
+      await loadInferenceVerification()
+    } catch (err) {
+      setManualVerificationError(err instanceof Error ? err.message : t('adminDeployment.inferenceVerification.manualFailed', 'Manual verification failed'))
+    } finally {
+      setManualVerificationLoading(false)
+    }
+  }
+
+  const handleInspectInferenceVerificationRecord = async (recordId: number) => {
+    setSelectedVerificationRecordId(recordId)
+    setSelectedVerificationRecord(null)
+    setSelectedVerificationError(null)
+    setSelectedVerificationLoading(true)
+    try {
+      const response = await adminFetch(`/admin/deployment/inference-verification/records/${recordId}`)
+      if (!response.ok) {
+        throw new Error(await parseAdminResponseError(response, t('adminDeployment.inferenceVerification.detailLoadFailed', 'Failed to load attestation detail')))
+      }
+      setSelectedVerificationRecord(await response.json())
+    } catch (err) {
+      setSelectedVerificationError(err instanceof Error ? err.message : t('adminDeployment.inferenceVerification.detailLoadFailed', 'Failed to load attestation detail'))
+    } finally {
+      setSelectedVerificationLoading(false)
+    }
+  }
+
   const formatLifecycleStatus = (status: string) => {
     if (status === 'not_started') return t('adminDeployment.lifecycle.notStarted', 'Not Started')
+    if (status === 'not_configured') return t('adminDeployment.lifecycle.notConfigured', 'Not Configured')
+    if (status === 'plaintext_by_operator_choice') return t('adminDeployment.lifecycle.plaintextByOperatorChoice', 'Plaintext by Operator Choice')
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
   }
 
@@ -377,6 +510,18 @@ export function AdminDeploymentConfig() {
       setScheduledRetentionError(err instanceof Error ? err.message : 'errors.failedToRunScheduledRetention')
     } finally {
       setScheduledRetentionLoading(false)
+    }
+  }
+
+  const handleArtifactPostureChange = async (posture: 'required' | 'disabled') => {
+    try {
+      setArtifactPostureUpdating(true)
+      setArtifactPostureError(null)
+      await updateArtifactEncryptionPosture(posture)
+    } catch (err) {
+      setArtifactPostureError(err instanceof Error ? err.message : 'errors.failedToUpdateArtifactEncryptionPosture')
+    } finally {
+      setArtifactPostureUpdating(false)
     }
   }
 
@@ -871,7 +1016,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'yourname@gmail.com',
         SMTP_PASS: 'xxxx-xxxx-xxxx-xxxx',
-        SMTP_FROM: 'Sanctum <yourname@gmail.com>',
+        SMTP_FROM: 'Enclave <yourname@gmail.com>',
       },
     },
     {
@@ -882,7 +1027,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'postmaster@mg.yourdomain.com',
         SMTP_PASS: 'your-mailgun-smtp-password',
-        SMTP_FROM: 'Sanctum <noreply@mg.yourdomain.com>',
+        SMTP_FROM: 'Enclave <noreply@mg.yourdomain.com>',
       },
     },
     {
@@ -893,7 +1038,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'apikey',
         SMTP_PASS: 'SG.your-sendgrid-api-key',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'Enclave <noreply@yourdomain.com>',
       },
     },
     {
@@ -904,7 +1049,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'your-ses-smtp-username',
         SMTP_PASS: 'your-ses-smtp-password',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'Enclave <noreply@yourdomain.com>',
       },
     },
     {
@@ -915,7 +1060,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'your-server-api-token',
         SMTP_PASS: 'your-server-api-token',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'Enclave <noreply@yourdomain.com>',
       },
     },
     {
@@ -926,7 +1071,7 @@ export function AdminDeploymentConfig() {
         SMTP_PORT: '587',
         SMTP_USER: 'your-brevo-login-email',
         SMTP_PASS: 'your-smtp-key',
-        SMTP_FROM: 'Sanctum <noreply@yourdomain.com>',
+        SMTP_FROM: 'Enclave <noreply@yourdomain.com>',
       },
     },
   ]
@@ -1258,6 +1403,169 @@ export function AdminDeploymentConfig() {
   // Get translated config categories
   const configCategories = getConfigCategories(t)
 
+  const renderInferenceVerificationPanel = () => {
+    const provider = inferenceVerificationStatus?.configured_provider
+    const statusLabel = formatVerificationStatus(inferenceVerificationStatus?.status)
+    const statusTone = inferenceVerificationStatus?.status === 'current'
+      ? 'text-success bg-success/10 border-success/20'
+      : 'text-warning bg-warning/10 border-warning/20'
+
+    return (
+      <div
+        role="group"
+        aria-label={t('adminDeployment.inferenceVerification.ariaLabel', 'Inference Verification')}
+        className="mb-4 rounded-lg border border-border bg-surface p-4"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-text flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-accent" />
+              {t('adminDeployment.inferenceVerification.title', 'Inference Verification')}
+            </h4>
+            <p className="mt-1 text-xs text-text-muted">
+              {t('adminDeployment.inferenceVerification.summary', 'Admin-only evidence that protected inference is running on the expected Model Provider.')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => void loadInferenceVerification()}
+              disabled={inferenceVerificationLoading || manualVerificationLoading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${inferenceVerificationLoading ? 'animate-spin' : ''}`} />
+              {t('adminDeployment.refresh', 'Refresh')}
+            </button>
+            <button
+              onClick={() => void handleManualInferenceVerification()}
+              disabled={manualVerificationLoading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-text hover:bg-accent-hover disabled:opacity-50"
+            >
+              {manualVerificationLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              {t('adminDeployment.inferenceVerification.verifyNow', 'Verify Now')}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-border bg-surface-overlay p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs uppercase tracking-wide text-text-muted">
+                {t('adminDeployment.inferenceVerification.status', 'Status')}
+              </span>
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusTone}`}>
+                {statusLabel}
+              </span>
+            </div>
+            <dl className="mt-3 space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.checkedAt', 'Checked')}</dt>
+                <dd className="text-right text-text">{formatTimestamp(inferenceVerificationStatus?.checked_at ?? inferenceVerificationStatus?.record?.checked_at)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.expiresAt', 'Expires')}</dt>
+                <dd className="text-right text-text">{formatTimestamp(inferenceVerificationStatus?.expires_at ?? inferenceVerificationStatus?.record?.expires_at)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="sr-only">{t('adminDeployment.inferenceVerification.expectedClaims', 'Expected claims')}</dt>
+                <dd className="max-w-full truncate text-right font-mono text-text">
+                  {t('adminDeployment.inferenceVerification.expectedClaimsValue', 'Expected claims: {{fingerprint}}', {
+                    fingerprint: inferenceVerificationStatus?.expected_claims_fingerprint ?? t('common.unknown', 'Unknown'),
+                  })}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-lg border border-border bg-surface-overlay p-3">
+            <span className="text-xs uppercase tracking-wide text-text-muted">
+              {t('adminDeployment.inferenceVerification.providerClaims', 'Provider Claims')}
+            </span>
+            <dl className="mt-3 space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.provider', 'Provider')}</dt>
+                <dd className="text-right text-text">{provider?.provider_identity ?? t('common.unknown', 'Unknown')}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.model', 'Model')}</dt>
+                <dd className="text-right text-text">{provider?.model_identifier ?? t('common.unknown', 'Unknown')}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-muted">{t('adminDeployment.inferenceVerification.endpoint', 'Endpoint')}</dt>
+                <dd className="max-w-[12rem] truncate text-right text-text">{provider?.provider_endpoint ?? t('common.unknown', 'Unknown')}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        {inferenceVerificationError && (
+          <p className="mt-3 text-xs text-error">{inferenceVerificationError}</p>
+        )}
+        {manualVerificationMessage && (
+          <p className="mt-3 text-xs font-medium text-success">{manualVerificationMessage}</p>
+        )}
+        {manualVerificationError && (
+          <p className="mt-3 text-xs font-medium text-error">{manualVerificationError}</p>
+        )}
+
+        <div className="mt-4 border-t border-border pt-4">
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-text-muted flex items-center gap-2">
+            <History className="w-3.5 h-3.5" />
+            {t('adminDeployment.inferenceVerification.history', 'Verification History')}
+          </h5>
+          <div className="mt-2 space-y-2">
+            {inferenceVerificationRecords.length === 0 ? (
+              <p className="text-xs text-text-muted">
+                {t('adminDeployment.inferenceVerification.emptyHistory', 'No verification records yet.')}
+              </p>
+            ) : inferenceVerificationRecords.map((record) => (
+              <div key={record.id} className="rounded-lg border border-border bg-surface-overlay p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-text">
+                      {t('adminDeployment.inferenceVerification.recordTitle', 'Record #{{id}}', { id: record.id })}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {formatVerificationStatus(record.status)} · {record.trigger ?? t('common.unknown', 'Unknown')} · {formatTimestamp(record.checked_at)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void handleInspectInferenceVerificationRecord(record.id)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    {t('adminDeployment.inferenceVerification.inspectAttestation', 'Inspect Attestation')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedVerificationRecordId && (
+            <div className="mt-3 rounded-lg border border-border bg-surface-overlay p-3">
+              <h6 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                {t('adminDeployment.inferenceVerification.fullAttestation', 'Full Attestation Material')}
+              </h6>
+              {selectedVerificationLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {t('common.loading', 'Loading')}
+                </div>
+              )}
+              {selectedVerificationError && (
+                <p className="mt-2 text-xs text-error">{selectedVerificationError}</p>
+              )}
+              {selectedVerificationRecord && (
+                <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-surface px-3 py-2 text-xs text-text font-mono whitespace-pre-wrap">
+                  {JSON.stringify(selectedVerificationRecord.attestation_material ?? selectedVerificationRecord, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // Render a config category section
   const renderCategory = (category: ConfigCategory, items: DeploymentConfigItem[]) => {
     if (items.length === 0) return null
@@ -1368,6 +1676,8 @@ export function AdminDeploymentConfig() {
         {'hint' in meta && meta.hint && (
           <p className="text-xs text-text-muted mb-4">{meta.hint}</p>
         )}
+
+        {category === 'llm' && renderInferenceVerificationPanel()}
 
         <div className="space-y-2">
           {items.map(renderConfigItem)}
@@ -1495,6 +1805,15 @@ export function AdminDeploymentConfig() {
           <p className="text-sm text-text-secondary mb-4">
             {t('adminDeployment.lifecycle.description', 'Current Operator-Controlled Privacy coverage across Instance data.')}
           </p>
+          {lifecycleStatus?.lifecycle_scope && (
+            <div className="mb-4 rounded-lg border border-border bg-surface p-3">
+              <p className="text-xs font-medium text-text">{lifecycleStatus.lifecycle_scope.label}</p>
+              <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.lifecycle_scope.summary}</p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t('adminDeployment.lifecycle.scopeExcludes', 'Excludes: {{excludes}}', { excludes: lifecycleStatus.lifecycle_scope.excludes })}
+              </p>
+            </div>
+          )}
           {lifecycleStatus?.secure_erase && (
             <div className="mb-4 rounded-lg border border-border bg-surface p-3">
               <p className="text-xs font-medium text-text">
@@ -1505,6 +1824,60 @@ export function AdminDeploymentConfig() {
               <p className="mt-1 text-xs text-text-secondary">
                 {lifecycleStatus.secure_erase.summary}
               </p>
+            </div>
+          )}
+          {(lifecycleStatus?.content_encryption || lifecycleStatus?.artifact_encryption || lifecycleStatus?.retention_scheduler) && (
+            <div className="mb-4 grid gap-3 md:grid-cols-3">
+              {lifecycleStatus?.content_encryption && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-text">
+                    {t('adminDeployment.lifecycle.contentEncryptionKey', 'Content Encryption Key: {{status}}', {
+                      status: formatLifecycleStatus(lifecycleStatus.content_encryption.status),
+                    })}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.content_encryption.summary}</p>
+                </div>
+              )}
+              {lifecycleStatus?.artifact_encryption && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-text">
+                    {t('adminDeployment.lifecycle.artifactEncryptionPosture', 'Artifact Encryption Posture: {{status}}', {
+                      status: formatLifecycleStatus(lifecycleStatus.artifact_encryption.status),
+                    })}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.artifact_encryption.summary}</p>
+                  <div className="mt-3 inline-flex rounded-lg border border-border bg-background p-1" role="group" aria-label={t('adminDeployment.lifecycle.artifactPostureLabel', 'Artifact encryption posture')}>
+                    {(['required', 'disabled'] as const).map((posture) => (
+                      <button
+                        key={posture}
+                        type="button"
+                        onClick={() => handleArtifactPostureChange(posture)}
+                        disabled={artifactPostureUpdating}
+                        aria-pressed={lifecycleStatus.artifact_encryption?.posture === posture}
+                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                          lifecycleStatus.artifact_encryption?.posture === posture
+                            ? 'bg-accent text-white'
+                            : 'text-text-secondary hover:bg-surface-overlay'
+                        } disabled:cursor-not-allowed disabled:opacity-70`}
+                      >
+                        {posture === 'required'
+                          ? t('adminDeployment.lifecycle.artifactPostureRequired', 'Required')
+                          : t('adminDeployment.lifecycle.artifactPostureDisabled', 'Disabled')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {lifecycleStatus?.retention_scheduler && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-text">
+                    {t('adminDeployment.lifecycle.retentionSchedulerStatus', 'Retention Scheduler: {{status}}', {
+                      status: formatLifecycleStatus(lifecycleStatus.retention_scheduler.status),
+                    })}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.retention_scheduler.summary}</p>
+                </div>
+              )}
             </div>
           )}
           <div className="mb-4 flex flex-wrap gap-2">
@@ -1582,6 +1955,9 @@ export function AdminDeploymentConfig() {
                     <p>{t('adminDeployment.lifecycle.deletion', 'Deletion: {{status}}', { status: formatLifecycleStatus(dataClass.deletion.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.retention', 'Retention: {{status}}', { status: formatLifecycleStatus(dataClass.retention.status) })}</p>
                     <p>{t('adminDeployment.lifecycle.audit', 'Audit: {{status}}', { status: formatLifecycleStatus(dataClass.audit.status) })}</p>
+                    {dataClass.confidentiality && (
+                      <p>{t('adminDeployment.lifecycle.confidentiality', 'Confidentiality: {{status}}', { status: formatLifecycleStatus(dataClass.confidentiality.status) })}</p>
+                    )}
                     {lifecycleStatus.deletion_tombstones?.by_class?.[dataClass.key] && (
                       <div className="pt-2 mt-1 border-t border-border/60 grid gap-1">
                         <p>{t('adminDeployment.lifecycle.incompleteTombstones', 'Incomplete tombstones: {{count}}', { count: lifecycleStatus.deletion_tombstones.by_class[dataClass.key].incomplete })}</p>
@@ -1659,6 +2035,11 @@ export function AdminDeploymentConfig() {
           {scheduledRetentionError && (
             <p className="mt-3 text-xs text-danger">
               {t('adminDeployment.lifecycle.scheduledRetentionFailed', 'Unable to run scheduled retention.')}
+            </p>
+          )}
+          {artifactPostureError && (
+            <p className="mt-3 text-xs text-danger">
+              {t('adminDeployment.lifecycle.artifactPostureFailed', 'Unable to update artifact encryption posture.')}
             </p>
           )}
 
@@ -2770,7 +3151,7 @@ export function AdminDeploymentConfig() {
                 {STORAGE_HELP_PAGES[storageHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.storageHelp.overviewDesc', 'This section controls where Sanctum keeps its data. Most admins can leave the defaults. You only need to change this if you’re moving files to a new disk, using external storage, or running on custom infrastructure.')}
+                      {t('adminDeployment.storageHelp.overviewDesc', 'This section controls where Enclave keeps its data. Most admins can leave the defaults. You only need to change this if you’re moving files to a new disk, using external storage, or running on custom infrastructure.')}
                     </p>
                     <div className="bg-surface-overlay border border-border rounded-lg p-3">
                       <p className="text-xs text-text-muted">
@@ -2811,7 +3192,7 @@ export function AdminDeploymentConfig() {
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">SQLITE_PATH</p>
-                        <p className="text-xs text-text-muted mt-1">/data/sanctum.db</p>
+                        <p className="text-xs text-text-muted mt-1">/data/enclave.db</p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">UPLOADS_DIR</p>
@@ -2845,7 +3226,7 @@ export function AdminDeploymentConfig() {
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-xs text-text-muted mb-1">{t('adminDeployment.storageHelp.backupStep2', '2) Copy data')}</p>
-                        <p className="text-xs text-text">{t('adminDeployment.storageHelp.backupStep2Desc', 'Copy /data/sanctum.db and /uploads, plus Qdrant snapshots if used.')}</p>
+                        <p className="text-xs text-text">{t('adminDeployment.storageHelp.backupStep2Desc', 'Copy /data/enclave.db and /uploads, plus Qdrant snapshots if used.')}</p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-xs text-text-muted mb-1">{t('adminDeployment.storageHelp.backupStep3', '3) Restore')}</p>

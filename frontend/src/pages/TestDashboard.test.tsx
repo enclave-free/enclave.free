@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -30,8 +30,8 @@ describe('TestDashboard', () => {
         store.clear()
       }),
     })
-    localStorage.setItem('sanctum-theme', 'light')
-    localStorage.setItem('sanctum_admin_pubkey', 'admin-pubkey')
+    localStorage.setItem('enclave-theme', 'light')
+    localStorage.setItem('enclave_admin_pubkey', 'admin-pubkey')
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: false,
       addEventListener: vi.fn(),
@@ -77,18 +77,20 @@ describe('TestDashboard', () => {
     renderDashboard()
 
     const sectionHeader = screen.getByRole('button', { name: /10\..*Authentication Testing/ })
+    const sectionContent = document.getElementById(sectionHeader.getAttribute('aria-controls') ?? '')
     expect(sectionHeader).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('Magic Link Authentication')).not.toBeInTheDocument()
+    expect(sectionContent).toHaveAttribute('aria-hidden', 'true')
 
     await user.click(sectionHeader)
 
     expect(sectionHeader).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('Magic Link Authentication')).toBeInTheDocument()
+    expect(sectionContent).toHaveAttribute('aria-hidden', 'false')
+    expect(within(sectionContent as HTMLElement).getByText('Magic Link Authentication')).toBeInTheDocument()
 
     await user.click(sectionHeader)
 
     expect(sectionHeader).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('Magic Link Authentication')).not.toBeInTheDocument()
+    expect(sectionContent).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('keeps the dashboard theme toggle reachable by accessible name', async () => {

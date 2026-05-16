@@ -1,5 +1,5 @@
 """
-Sanctum Agent Settings compatibility router.
+Enclave Agent Settings compatibility router.
 Handles prompt templates, Model Provider parameters, and session defaults.
 """
 
@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 import auth
 import database
+from conversation_trace import validate_trace_visibility
 from utils import sanitize_profile_value
 from models import (
     AIConfigItem,
@@ -21,7 +22,7 @@ from models import (
     PromptPreviewResponse,
 )
 
-logger = logging.getLogger("sanctum.ai_config")
+logger = logging.getLogger("enclave.ai_config")
 
 router = APIRouter(prefix="/admin/ai-config", tags=["ai-config"])
 
@@ -68,6 +69,18 @@ def validate_max_tokens(value: str) -> int:
         )
 
     return validated
+
+
+def validate_trace_visibility_setting(key: str, value: str) -> str:
+    actor_type = "admin" if key == "admin_trace_visibility" else "user"
+    try:
+        return validate_trace_visibility(actor_type, value)
+    except ValueError as exc:
+        actor_label = "Admin Conversation" if actor_type == "admin" else "User Conversation"
+        raise HTTPException(
+            status_code=400,
+            detail=f"{actor_label} trace visibility is invalid: {exc}",
+        ) from exc
 
 
 @router.get("", response_model=AIConfigResponse)
@@ -171,6 +184,8 @@ async def update_ai_config_value(
         elif key == "max_tokens":
             max_tokens = validate_max_tokens(update.value)
             update.value = str(max_tokens)
+        elif key in {"admin_trace_visibility", "user_trace_visibility"}:
+            update.value = validate_trace_visibility_setting(key, update.value)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 

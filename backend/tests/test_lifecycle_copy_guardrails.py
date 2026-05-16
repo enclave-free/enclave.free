@@ -15,6 +15,7 @@ class LifecycleCopyGuardrailsTest(unittest.TestCase):
             REPO_ROOT / "docs/security.md",
             REPO_ROOT / "docs/internal-agent-contract.md",
             REPO_ROOT / "docs/security-data-protection-checklist.md",
+            REPO_ROOT / "docs/lifecycle-confidentiality-runbook.md",
             REPO_ROOT / "docs/adr/0006-retention-and-deletion-are-operator-controlled-but-incomplete.md",
             REPO_ROOT / "docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md",
         ]
@@ -46,6 +47,27 @@ class LifecycleCopyGuardrailsTest(unittest.TestCase):
         self.assertIn("WAL, backups, snapshots, logs", adr)
         self.assertIn("Deletion Tombstone", adr)
         self.assertIn("scheduled retention for every historical Session Memory or log surface is still not implemented", sessions)
+
+    def test_lifecycle_confidentiality_runbook_covers_regression_and_scheduler_paths(self) -> None:
+        runbook = (REPO_ROOT / "docs/lifecycle-confidentiality-runbook.md").read_text(encoding="utf-8")
+
+        for expected in [
+            "Issue #57",
+            "Issues #58-#67",
+            "RETENTION_AUTOMATION_TOKEN",
+            "X-Retention-Automation-Token",
+            "/admin/lifecycle/retention/scheduled/automation/run",
+            "external cron",
+            "unsupported Deployment Surfaces",
+            "Secure Erase",
+            "backend.tests.test_ingest_batch_replacement",
+            "backend.tests.test_query_retrieval_hydration",
+            "backend.tests.test_lifecycle_status",
+            "npm test -- --run src/pages/AdminDeploymentConfig.test.tsx",
+            "/admin/lifecycle/confidentiality-migration/preview",
+            "/admin/lifecycle/confidentiality-migration/execute",
+        ]:
+            self.assertIn(expected, runbook)
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ Start with the current-state docs below. They are the files that describe the ac
 
 - [admin-config-assistant.md](admin-config-assistant.md): admin config assistant bubble and change-apply flow.
 - [admin-key-recovery-runbook.md](admin-key-recovery-runbook.md): admin key recovery procedures.
+- [lifecycle-confidentiality-runbook.md](lifecycle-confidentiality-runbook.md): Active Storage Lifecycle confidentiality regression and scheduled retention operations.
 - [sqlite-encryption.md](sqlite-encryption.md): SQLite encryption model and migration notes.
 - [upstream-sync.md](upstream-sync.md): notes for syncing from upstream `enclave.free`.
 
@@ -34,4 +35,4 @@ Start with the current-state docs below. They are the files that describe the ac
 - [user-reachout.md](user-reachout.md): authenticated user email reachout flow.
 - [data-protection-notice-template.md](data-protection-notice-template.md): adaptable user-facing privacy notice template.
 
-Some older docs still use legacy `Sanctum` naming because that is how parts of the product and database were originally labeled. Use the docs in the `Start Here` section as the current architecture source of truth.
+Some older docs still use legacy `Enclave` naming because that is how parts of the product and database were originally labeled. Use the docs in the `Start Here` section as the current architecture source of truth.

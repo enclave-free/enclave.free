@@ -189,10 +189,42 @@ export interface DeploymentValidationResponse {
 
 // --- Data Lifecycle Types ---
 
-export type LifecycleStatusValue = 'complete' | 'partial' | 'not_started' | 'unsupported'
+export type LifecycleStatusValue =
+  | 'complete'
+  | 'partial'
+  | 'not_started'
+  | 'unsupported'
+  | 'encrypted'
+  | 'mixed'
+  | 'plaintext_by_operator_choice'
+  | 'not_configured'
+  | 'configured'
+
+export type ArtifactEncryptionPosture = 'required' | 'disabled'
 
 export interface LifecyclePosture {
   status: LifecycleStatusValue
+  summary: string
+}
+
+export interface LifecycleScope {
+  key: string
+  label: string
+  summary: string
+  excludes: string
+}
+
+export interface ContentEncryptionStatus {
+  status: 'configured' | 'not_configured'
+  summary: string
+}
+
+export interface ArtifactEncryptionStatus extends LifecyclePosture {
+  posture: ArtifactEncryptionPosture
+}
+
+export interface RetentionSchedulerStatus {
+  status: string
   summary: string
 }
 
@@ -204,6 +236,7 @@ export interface LifecycleDataClass {
   deletion: LifecyclePosture
   retention: LifecyclePosture
   audit: LifecyclePosture
+  confidentiality?: LifecyclePosture
   retention_policy?: RetentionPolicy
   notes: string[]
 }
@@ -225,6 +258,10 @@ export interface UnsupportedDeploymentSurface {
 }
 
 export interface LifecycleStatusResponse {
+  lifecycle_scope?: LifecycleScope
+  content_encryption?: ContentEncryptionStatus
+  artifact_encryption?: ArtifactEncryptionStatus
+  retention_scheduler?: RetentionSchedulerStatus
   data_classes: LifecycleDataClass[]
   secure_erase?: LifecyclePosture
   unsupported_deployment_surfaces?: UnsupportedDeploymentSurface[]
@@ -666,7 +703,7 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
     SQLITE_PATH: {
       label: t('deploymentConfigItems.SQLITE_PATH.label', 'Database File'),
       description: t('deploymentConfigItems.SQLITE_PATH.description', 'Path to SQLite database'),
-      hint: t('deploymentConfigItems.SQLITE_PATH.hint', 'Path to the SQLite database file. Default: /data/sanctum.db'),
+      hint: t('deploymentConfigItems.SQLITE_PATH.hint', 'Path to the SQLite database file. Default: /data/enclave.db'),
     },
     UPLOADS_DIR: {
       label: t('deploymentConfigItems.UPLOADS_DIR.label', 'Uploads Folder'),
@@ -757,7 +794,7 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
     DKIM_SELECTOR: {
       label: t('deploymentConfigItems.DKIM_SELECTOR.label', 'DKIM Selector'),
       description: t('deploymentConfigItems.DKIM_SELECTOR.description', 'DKIM DNS record selector'),
-      hint: t('deploymentConfigItems.DKIM_SELECTOR.hint', 'Selector prefix for your DKIM TXT record. Default: sanctum. Your provider may require a specific selector.'),
+      hint: t('deploymentConfigItems.DKIM_SELECTOR.hint', 'Selector prefix for your DKIM TXT record. Default: enclave. Your provider may require a specific selector.'),
     },
     SPF_INCLUDE: {
       label: t('deploymentConfigItems.SPF_INCLUDE.label', 'SPF Include'),

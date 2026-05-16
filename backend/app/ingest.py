@@ -1,5 +1,5 @@
 """
-Sanctum Ingest Router
+Enclave Ingest Router
 Handles document upload, chunking, and storage to Qdrant.
 
 Job state is persisted to SQLite (via ingest_db module) to survive container restarts.
@@ -22,6 +22,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Background
 from pydantic import BaseModel
 
 import auth
+import content_artifacts
 from data_deletion import (
     deletion_target_failed,
     deletion_target_skipped,
@@ -48,7 +49,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("sanctum.ingest")
+logger = logging.getLogger("enclave.ingest")
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
@@ -257,6 +258,12 @@ def _missing_document_deletion_response(job_id: str) -> dict:
                 detail="Retrieval entries were already absent or cannot be located for an absent document.",
             ),
             deletion_target_skipped(
+                target_kind="retrieval_chunk_text",
+                target_id=job_id,
+                action="delete_retrieval_chunk_text",
+                detail="Encrypted retrieval chunk text was already absent.",
+            ),
+            deletion_target_skipped(
                 target_kind="runtime_document_state",
                 target_id=job_id,
                 action="delete_runtime_document_state",
@@ -288,6 +295,24 @@ async def _delete_document_job_artifacts(job_id: str, job: dict) -> dict:
             action="delete_retrieval_index",
             retryable=True,
             detail=f"Failed to delete document chunks from vector database: {e}",
+        ))
+
+    try:
+        deleted_text_rows = ingest_db.delete_retrieval_chunks_for_job(job_id)
+        results.append(deletion_target_succeeded(
+            target_kind="retrieval_chunk_text",
+            target_id=job_id,
+            action="delete_retrieval_chunk_text",
+            detail=f"Deleted {deleted_text_rows} encrypted retrieval chunk rows.",
+        ))
+    except Exception as e:
+        logger.error(f"[{job_id}] Failed to delete encrypted retrieval chunk text: {e}")
+        results.append(deletion_target_failed(
+            target_kind="retrieval_chunk_text",
+            target_id=job_id,
+            action="delete_retrieval_chunk_text",
+            retryable=True,
+            detail=f"Failed to delete encrypted retrieval chunk text: {e}",
         ))
 
     file_path_value = job.get("file_path")
@@ -640,7 +665,22 @@ async def queue_document_ingestion(
     content_sha256 = hashlib.sha256(content).hexdigest()
     job_id = generate_job_id(canonical_name)
     file_path = UPLOADS_DIR / f"{job_id}_{safe_storage_filename(original_filename)}"
-    await asyncio.to_thread(file_path.write_bytes, content)
+    try:
+        storage_content = content_artifacts.encode_for_storage(content)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    try:
+        await asyncio.to_thread(file_path.write_bytes, storage_content)
+    except OSError as exc:
+        logger.exception("Failed to write uploaded artifact for %s to %s", job_id, file_path)
+        _audit_document_action(
+            config_key=f"document:{job_id}:write_artifact",
+            action="write_artifact_failed",
+            changed_by=changed_by,
+            old_value=None,
+            new_value={"filename": canonical_name, "error": str(exc)},
+        )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     now = datetime.utcnow().isoformat()
     JOBS[job_id] = {
@@ -762,22 +802,25 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
 
-        # Get file extension
-        suffix = file_path.suffix.lower()
-        logger.debug(f"[{job_id}] File type: {suffix}")
+        with content_artifacts.processing_path(file_path, temp_dir=UPLOADS_DIR) as processing_file_path:
+            # Get file extension
+            suffix = processing_file_path.suffix.lower()
+            logger.debug(f"[{job_id}] File type: {suffix}")
 
-        # Extract text based on file type
-        if suffix == ".pdf":
-            logger.info(f"[{job_id}] Extracting text from PDF...")
-            text = await asyncio.to_thread(extract_pdf_text, file_path)
-        elif suffix == ".txt":
-            logger.info(f"[{job_id}] Reading text file...")
-            text = file_path.read_text(encoding="utf-8")
-        elif suffix == ".md":
-            logger.info(f"[{job_id}] Reading markdown file...")
-            text = file_path.read_text(encoding="utf-8")
-        else:
-            raise ValueError(f"Unsupported file type: {suffix}")
+            # Extract text based on file type
+            # read_text/extract_pdf_text return a self-contained str; chunking happens after
+            # content_artifacts.processing_path removes any temporary decrypted file.
+            if suffix == ".pdf":
+                logger.info(f"[{job_id}] Extracting text from PDF...")
+                text = await asyncio.to_thread(extract_pdf_text, processing_file_path)
+            elif suffix == ".txt":
+                logger.info(f"[{job_id}] Reading text file...")
+                text = processing_file_path.read_text(encoding="utf-8")
+            elif suffix == ".md":
+                logger.info(f"[{job_id}] Reading markdown file...")
+                text = processing_file_path.read_text(encoding="utf-8")
+            else:
+                raise ValueError(f"Unsupported file type: {suffix}")
 
         logger.info(f"[{job_id}] Extracted {len(text)} characters")
 
@@ -830,10 +873,19 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
                         chunk_text_content=chunk["text"],
                         source_file=chunk["source_file"],
                     )
+                    # Store encrypted chunk text only after Qdrant accepts the point to avoid orphan rows.
+                    ingest_db.upsert_retrieval_chunk(
+                        chunk_id=chunk_id,
+                        job_id=chunk["job_id"],
+                        chunk_index=chunk["index"],
+                        source_file=chunk["source_file"],
+                        text=chunk["text"],
+                    )
                     chunk["status"] = "stored"
                     chunk["store_result"] = result
                     processed += 1
                 except Exception as e:
+                    logger.exception("[%s] Failed to persist chunk %s", job_id, chunk_id)
                     chunk["status"] = "failed"
                     chunk["error"] = str(e)
                     failed += 1
@@ -1056,7 +1108,7 @@ async def wipe_datastores(admin: dict = Depends(auth.require_admin)):
         client = get_qdrant_client()
         collections = {c.name for c in client.get_collections().collections}
         deleted = []
-        for name in (COLLECTION_NAME, "sanctum_smoke_test"):
+        for name in (COLLECTION_NAME, "enclave_smoke_test"):
             if name in collections:
                 client.delete_collection(name)
                 deleted.append(name)
@@ -1486,7 +1538,18 @@ async def get_chunk(chunk_id: str, admin: dict = Depends(auth.require_admin)):
     Get a specific chunk details.
     """
     if chunk_id not in CHUNKS:
-        raise HTTPException(status_code=404, detail=f"Chunk not found: {chunk_id}")
+        persisted_chunk = ingest_db.get_retrieval_chunk(chunk_id)
+        if not persisted_chunk:
+            raise HTTPException(status_code=404, detail=f"Chunk not found: {chunk_id}")
+        return {
+            "chunk_id": persisted_chunk["chunk_id"],
+            "job_id": persisted_chunk["job_id"],
+            "index": persisted_chunk["chunk_index"],
+            "source_file": persisted_chunk["source_file"],
+            "status": "stored",
+            "text": persisted_chunk["text"],
+            "char_count": persisted_chunk["char_count"],
+        }
 
     chunk = CHUNKS[chunk_id]
 

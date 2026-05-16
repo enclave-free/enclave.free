@@ -1,14 +1,14 @@
-# Sanctum — Planned Architecture (Graph-First RAG)
+# Enclave — Planned Architecture (Graph-First RAG)
 
-> **Note:** This document describes the **planned** architecture for Sanctum's future graph-first RAG system using Neo4j + Graphiti. For the **current** implementation (SQLite + Qdrant), see [ARCHITECTURE_CURRENT.md](./ARCHITECTURE_CURRENT.md).
+> **Note:** This document describes the **planned** architecture for Enclave's future graph-first RAG system using Neo4j + Graphiti. For the **current** implementation (SQLite + Qdrant), see [ARCHITECTURE_CURRENT.md](./ARCHITECTURE_CURRENT.md).
 >
 > **Status:** Not implemented. The current MVP uses a simpler SQLite + Qdrant stack. This architecture represents a future evolution when graph-based knowledge representation becomes necessary.
 
 ---
 
-Sanctum is a privacy-first Retrieval-Augmented Generation (RAG) system for building, maintaining, and querying curated knowledge bases. Sanctum is designed to be domain-agnostic and fully configurable for any use case requiring privacy, accuracy, and explainability.
+Enclave is a privacy-first Retrieval-Augmented Generation (RAG) system for building, maintaining, and querying curated knowledge bases. Enclave is designed to be domain-agnostic and fully configurable for any use case requiring privacy, accuracy, and explainability.
 
-Sanctum runs locally as a Docker Compose application. It combines a structured knowledge graph, a vector search index, and a secure OpenAI-compatible LLM layer to produce grounded, explainable answers — without relying on public RAG services or opaque cloud infrastructure.
+Enclave runs locally as a Docker Compose application. It combines a structured knowledge graph, a vector search index, and a secure OpenAI-compatible LLM layer to produce grounded, explainable answers — without relying on public RAG services or opaque cloud infrastructure.
 
 ---
 
@@ -146,7 +146,7 @@ Typical relationships include:
 - Practice REQUIRES Concept or Tool
 - Concept RELATED_TO Concept
 
-These entity types and relationships are examples. Sanctum's ontology is fully configurable based on your domain's needs.
+These entity types and relationships are examples. Enclave's ontology is fully configurable based on your domain's needs.
 
 Provenance is a first-class concern. All claims are expected to reference sources.
 
@@ -154,7 +154,7 @@ Provenance is a first-class concern. All claims are expected to reference source
 
 ## LLM Provider
 
-Sanctum uses a secure OpenAI-compatible LLM service provider. In the current prototype, Sage is the public route owner for AI runtime ingress and policy enforcement.
+Enclave uses a secure OpenAI-compatible LLM service provider. In the current prototype, Sage is the public route owner for AI runtime ingress and policy enforcement.
 
 The backend orchestrator invokes the OpenAI-compatible provider for generation and structured extraction on Sage's behalf where the service layer still owns that workflow.
 
@@ -162,7 +162,7 @@ The provider:
 - Is OpenAI-compatible
 - Provides secure transport and execution
 - Supports **structured outputs**, which Graphiti depends on
-- Allows Sanctum to enforce JSON schemas and deterministic extraction
+- Allows Enclave to enforce JSON schemas and deterministic extraction
 
 Sage and the backend orchestrator both treat the LLM provider as a generation and extraction service, not a decision-maker.
 
@@ -170,7 +170,7 @@ Sage and the backend orchestrator both treat the LLM provider as a generation an
 
 ## Local LLM Option
 
-Sanctum optionally supports **Ollama** for local inference.
+Enclave optionally supports **Ollama** for local inference.
 
 Ollama can be used:
 - for local testing
@@ -211,7 +211,7 @@ This enables full rehydration of the system on another machine.
 
 ## Scope and Non-Goals
 
-Sanctum is not:
+Enclave is not:
 
 - an autonomous agent
 - a generic chatbot
@@ -237,4 +237,4 @@ The current implementation is designed to allow this evolution when scale and co
 
 ## Embedding Model
 
-Sanctum uses local, open-source sentence embeddings (e.g., BGE/E5-class models) selected for universality, robustness, and CPU-friendly operation.
+Enclave uses local, open-source sentence embeddings (e.g., BGE/E5-class models) selected for universality, robustness, and CPU-friendly operation.

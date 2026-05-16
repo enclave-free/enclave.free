@@ -31,6 +31,7 @@ On `proto/dumb-gateway-foundation`, the cutover is still the same hard cut, but 
 Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these paths. Some operations still call Python internally for Enclave Control Plane logic, most notably safe DB execution.
 
 - `POST /llm/chat`
+- `POST /llm/chat/stream`
 - `POST /query`
 - `GET /query/session/{session_id}`
 - `DELETE /query/session/{session_id}`
@@ -38,7 +39,9 @@ Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these
 - `POST /admin/tools/execute`
 - `/admin/ai-config/*`
 
-Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /query`, `GET /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
+Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /llm/chat/stream`, `POST /query`, `GET /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
+
+`POST /llm/chat/stream` is the assistant-style streaming route described by [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md). It keeps `/llm/chat` available as the non-streaming compatibility path, emits assistant message, live trace-status, answer-delta, final sanitized trace, completion, and safe error events, and uses a two-phase turn: explicitly selected tools/context first, then final answer streaming from the configured Model Provider. Retrieval-first `/query/stream` is deliberately outside this first streaming slice.
 
 ## Sage To Python Private Control-Plane Contract
 

@@ -1,5 +1,5 @@
 """
-Sanctum Backend - FastAPI Application
+Enclave Backend - FastAPI Application
 RAG system with Qdrant vector search.
 Also provides user/admin management via SQLite.
 """
@@ -21,15 +21,18 @@ import ipaddress
 import threading
 from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, Query, Depends, Request, BackgroundTasks, Response, Header, Cookie
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import QdrantClient
 from pydantic import BaseModel
 from typing import Optional, List, Dict
-from sentence_transformers import SentenceTransformer
 
 from llm import get_sage_provider
 from tools import init_tools, ToolOrchestrator, ToolCallInfo
+from conversation_trace import ConversationTrace, build_conversation_trace, build_live_trace_status
+from protected_inference import ProtectedInferenceBlocked, inference_verification_reference, require_current_inference_verification
+from inference_repair import current_inference_repair_status
+from store import embed_texts
 import database
 from data_deletion import (
     deletion_target_failed,
@@ -38,6 +41,7 @@ from data_deletion import (
     summarize_deletion_results,
 )
 from query import delete_sessions_for_owner, pop_sessions_for_owner, sessions_for_owner
+from sql_safety import validate_sql_allowed_tables
 from user_memory import SENSITIVE_TERMS, contains_direct_identifier
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
@@ -73,15 +77,19 @@ import lifecycle
 from rate_limit import RateLimiter
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
-# Embedding model config
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
-
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("sanctum.main")
+logger = logging.getLogger("enclave.main")
+
+
+def _require_protected_inference_or_503(context: str) -> dict:
+    try:
+        return require_current_inference_verification(context=context)
+    except ProtectedInferenceBlocked as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 admin_conversation_states: dict[str, dict] = {}
 _admin_conversation_states_lock = threading.Lock()
@@ -91,10 +99,11 @@ from ingest import router as ingest_router
 from query import router as query_router
 from ai_config import router as ai_config_router
 from deployment_config import router as deployment_config_router
+import deployment_config
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
 
-logger.info("Starting Sanctum API...")
+logger.info("Starting Enclave API...")
 
 
 def _audit_data_deletion_event(
@@ -135,7 +144,7 @@ def _best_effort_config_audit_event(**kwargs) -> None:
 
 
 app = FastAPI(
-    title="Sanctum API",
+    title="Enclave API",
     description="Privacy-first RAG system for curated knowledge",
     version="0.1.0"
 )
@@ -242,7 +251,7 @@ def _apply_security_headers(request: Request, response: Response) -> None:
 
 
 def _has_cookie_session(request: Request) -> bool:
-    """Whether request carries Sanctum auth cookies."""
+    """Whether request carries Enclave auth cookies."""
     return bool(
         request.cookies.get(auth.USER_SESSION_COOKIE_NAME)
         or request.cookies.get(auth.ADMIN_SESSION_COOKIE_NAME)
@@ -314,6 +323,7 @@ async def startup_event():
     smtp_status = auth.verify_smtp_config()
     if smtp_status["configured"] and not smtp_status["mock_mode"] and not smtp_status["connection_ok"]:
         logger.warning("SMTP is configured but connection test failed - email sending may not work")
+    deployment_config.run_startup_inference_verification()
 
 
 @app.on_event("shutdown")
@@ -434,7 +444,7 @@ QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
 # Collection name for smoke test
-COLLECTION_NAME = "sanctum_smoke_test"
+COLLECTION_NAME = "enclave_smoke_test"
 
 
 class SmokeTestResult(BaseModel):
@@ -481,10 +491,17 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     """Response model for chat endpoint"""
     message: str
+    message_id: str
     session_id: Optional[str] = None
     model: str
     provider: str
     tools_used: List[ToolCallInfoResponse] = []
+    trace: Optional[ConversationTrace] = None
+    inference_verification: Optional[dict] = None
+
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
 
 
 class ToolExecuteRequest(BaseModel):
@@ -500,6 +517,15 @@ class ToolExecuteResponse(BaseModel):
     tool_name: str
     data: Optional[dict] = None
     error: Optional[str] = None
+
+
+def _is_retryable_llm_content(content: str) -> bool:
+    normalized = " ".join((content or "").strip().lower().split())
+    return (
+        not normalized
+        or normalized == "i apologize, but i wasn't able to generate a response."
+        or normalized == "i apologize, but i was not able to generate a response."
+    )
 
 
 class QueryRequest(BaseModel):
@@ -530,7 +556,7 @@ class VectorSearchRequest(BaseModel):
     """Request model for vector search endpoint"""
     query: str
     top_k: int = 5
-    collection: str = "sanctum_smoke_test"
+    collection: str = "enclave_smoke_test"
 
 
 class VectorSearchResultItem(BaseModel):
@@ -545,18 +571,6 @@ class VectorSearchResponse(BaseModel):
     results: List[VectorSearchResultItem]
     query_embedding_dim: int
     collection: str
-
-
-# Lazy-loaded embedding model singleton
-_embedding_model = None
-
-
-def get_embedding_model():
-    """Get or create the embedding model (lazy singleton)"""
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
-    return _embedding_model
 
 
 # Initialize tool registry
@@ -884,7 +898,7 @@ def get_qdrant_client():
 async def root():
     """Root endpoint"""
     return {
-        "name": "Sanctum API",
+        "name": "Enclave API",
         "version": "0.1.0",
         "status": "running"
     }
@@ -1198,7 +1212,14 @@ async def chat(
                     status_code=503,
                     detail=f"Sage/Tinfoil service '{provider.name}' is unavailable (health check failed).",
                 )
+            inference_record = _require_protected_inference_or_503("conversation")
             result = provider.complete(prompt, temperature=temperature)
+            if _is_retryable_llm_content(result.content):
+                logger.warning(
+                    "Sage/Tinfoil returned retryable empty/generic chat content; retrying once"
+                )
+                inference_record = _require_protected_inference_or_503("conversation")
+                result = provider.complete(prompt, temperature=temperature)
         except HTTPException:
             raise
         except Exception as e:
@@ -1227,12 +1248,27 @@ async def chat(
         if confirm_pending_user_memory_change:
             _confirm_pending_user_memory_change(active_session_id, user)
             subject_user_context = _admin_subject_user_context(active_session_id, "")
+        message_id = f"msg_{uuid.uuid4().hex}"
+        trace = build_conversation_trace(
+            actor_type=user.get("type", "user"),
+            tools_used=[
+                ToolCallInfo(
+                    tool_id=tool.tool_id,
+                    tool_name=tool.tool_name,
+                    query=tool.query,
+                )
+                for tool in tools_used
+            ],
+        )
         response_payload = ChatResponse(
             message=result.content,
+            message_id=message_id,
             session_id=active_session_id,
             model=result.model,
             provider=result.provider,
-            tools_used=tools_used
+            tools_used=tools_used,
+            trace=trace,
+            inference_verification=inference_verification_reference(inference_record),
         )
         if user.get("type") == "user" and user_id and user_id != -1 and not tools_used and not tool_context_parts:
             from user_memory import capture_ambient_user_memory
@@ -1249,6 +1285,89 @@ async def chat(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/llm/chat/stream")
+async def chat_stream(
+    request: ChatRequest,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(auth.require_admin_or_approved_user),
+    _: None = Depends(chat_limiter),
+):
+    """
+    Streaming chat endpoint with compact Conversation Trace events.
+
+    This first streaming slice preserves the existing chat execution path and
+    streams the completed response as a single answer delta.
+    """
+
+    async def event_stream():
+        try:
+            response_payload = await chat(
+                request=request,
+                background_tasks=background_tasks,
+                user=user,
+                _=None,
+            )
+            yield _sse_event(
+                "assistant_message_started",
+                {
+                    "message_id": response_payload.message_id,
+                    "session_id": response_payload.session_id,
+                },
+            )
+            if response_payload.message:
+                trace_status = build_live_trace_status(response_payload.trace)
+                if trace_status:
+                    yield _sse_event(
+                        "trace_status",
+                        {
+                            "message_id": response_payload.message_id,
+                            "status": trace_status,
+                        },
+                    )
+                yield _sse_event(
+                    "answer_delta",
+                    {
+                        "message_id": response_payload.message_id,
+                        "delta": response_payload.message,
+                    },
+                )
+            if response_payload.trace is not None:
+                yield _sse_event(
+                    "trace_final",
+                    {
+                        "message_id": response_payload.message_id,
+                        "trace": response_payload.trace.model_dump(),
+                    },
+                )
+            yield _sse_event(
+                "done",
+                {
+                    "message_id": response_payload.message_id,
+                    "session_id": response_payload.session_id,
+                    "inference_verification": response_payload.inference_verification,
+                },
+            )
+        except HTTPException as exc:
+            yield _sse_event(
+                "error",
+                {
+                    "status_code": exc.status_code,
+                    "detail": exc.detail,
+                },
+            )
+        except Exception as exc:
+            logger.exception("Streaming chat failed")
+            yield _sse_event(
+                "error",
+                {
+                    "status_code": 500,
+                    "detail": str(exc),
+                },
+            )
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @app.post("/admin/tools/execute", response_model=ToolExecuteResponse)
@@ -1317,8 +1436,7 @@ async def vector_search(
     """
     try:
         # 1. Embed the query
-        model = get_embedding_model()
-        query_embedding = model.encode(f"query: {request.query}").tolist()
+        query_embedding = embed_texts([f"query: {request.query}"])[0]
 
         # 2. Search Qdrant
         qdrant = get_qdrant_client()
@@ -1392,7 +1510,7 @@ async def send_magic_link(
 
     return MagicLinkResponse(
         success=True,
-        message="Magic link sent. Check your email."
+        message="If this address can sign in, we'll send a magic link."
     )
 
 
@@ -1770,7 +1888,7 @@ async def submit_reachout(
     if mode not in {"feedback", "help", "support"}:
         mode = "support"
 
-    instance_name = (database.get_setting("instance_name") or "Sanctum").strip() or "Sanctum"
+    instance_name = (database.get_setting("instance_name") or "Enclave").strip() or "Enclave"
     subject_prefix = (database.get_setting("reachout_subject_prefix") or "").strip()
 
     subject = f"[{instance_name}] {mode.title()}: user reachout"
@@ -1914,9 +2032,9 @@ async def send_test_email(
     </head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
         <div style="max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #333; margin-bottom: 24px;">Sanctum Test Email</h2>
+            <h2 style="color: #333; margin-bottom: 24px;">Enclave Test Email</h2>
             <p style="margin-bottom: 24px;">
-                This is a test email from your Sanctum instance.
+                This is a test email from your Enclave instance.
                 If you received this, your SMTP configuration is working correctly.
             </p>
             <p style="margin-top: 24px; font-size: 14px; color: #666;">
@@ -1926,7 +2044,7 @@ async def send_test_email(
     </body>
     </html>
     """
-    subject = "Sanctum Test Email"
+    subject = "Enclave Test Email"
 
     try:
         await asyncio.to_thread(_send_html_email_smtp, smtp, email, subject, html)
@@ -2017,7 +2135,7 @@ async def admin_auth(
     Authenticate or register an admin by verifying a signed Nostr event.
 
     The event must:
-    - Be kind 22242 (Sanctum auth event)
+    - Be kind 22242 (Enclave auth event)
     - Have action tag = "admin_auth"
     - Have valid BIP-340 Schnorr signature
     - Be signed within the last 5 minutes
@@ -2200,7 +2318,8 @@ async def get_instance_status():
         initialized=database.has_admin(),
         setup_complete=database.is_instance_setup_complete(),
         ready_for_users=database.is_instance_setup_complete(),
-        settings=settings
+        settings=settings,
+        protected_inference=current_inference_repair_status(),
     )
 
 
@@ -3424,6 +3543,13 @@ async def execute_db_query(request: DBQueryRequest, admin: dict = Depends(auth.r
                 error=f"Query contains forbidden keyword"
             )
 
+    allowed, error = validate_sql_allowed_tables(sql)
+    if not allowed:
+        return DBQueryResponse(
+            success=False,
+            error=error,
+        )
+
     start_time = time.time()
 
     try:
@@ -3520,7 +3646,7 @@ async def export_database(background_tasks: BackgroundTasks, _admin: Dict = Depe
         # Generate filename with timestamp
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"sanctum_backup_{timestamp}.db"
+        filename = f"enclave_backup_{timestamp}.db"
         
         # Create a temporary file for the backup
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".db")

@@ -23,7 +23,7 @@ from query import _build_context, _build_search_query, _process_search_results
 from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
 
-logger = logging.getLogger("sanctum.internal_agent")
+logger = logging.getLogger("enclave.internal_agent")
 
 router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 

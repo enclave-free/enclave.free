@@ -1,7 +1,7 @@
 """
-Sanctum Seed Script
+Enclave Seed Script
 Seeds Qdrant with a test embedding.
-Uses intfloat/multilingual-e5-base for CPU-friendly, Spanish-capable embeddings.
+Uses the shared backend embedding provider.
 Also initializes SQLite database for user/admin management.
 """
 
@@ -15,13 +15,13 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 import database
 
 # Use unified embedding from store.py
-from store import get_embedding_model, embed_texts, EMBEDDING_MODEL
+from store import embed_texts, get_embedding_dimension, EMBEDDING_MODEL, EMBEDDING_PROVIDER
 
 # Configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
-COLLECTION_NAME = "sanctum_smoke_test"
+COLLECTION_NAME = "enclave_smoke_test"
 
 # Seed data - Spanish sentence about knowledge
 SEED_CLAIM = {
@@ -51,8 +51,8 @@ def seed_qdrant(client):
     """Seed Qdrant with the claim embedding"""
     print("\nSeeding Qdrant...")
 
-    model = get_embedding_model()
-    vector_dim = model.get_sentence_embedding_dimension()
+    vector_dim = get_embedding_dimension()
+    print(f"  Embedding provider: {EMBEDDING_PROVIDER}")
     print(f"  Embedding model: {EMBEDDING_MODEL}")
     print(f"  Vector dimension: {vector_dim}")
 
@@ -127,7 +127,7 @@ def seed_sqlite():
 def main():
     """Main seeding function"""
     print("=" * 60)
-    print("Sanctum Seed Script")
+    print("Enclave Seed Script")
     print("=" * 60)
 
     # Initialize SQLite first (no external service to wait for)

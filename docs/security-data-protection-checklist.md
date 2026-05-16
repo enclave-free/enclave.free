@@ -1,7 +1,7 @@
 # Security and Data Protection Checklist
 
 Last updated: 2026-05-14
-Scope: Sanctum current repository state (code/config review)
+Scope: Enclave current repository state (code/config review)
 
 ## Purpose
 
@@ -82,8 +82,12 @@ Use this checklist to:
   Evidence: `backend/app/main.py`, `frontend/src/pages/VerifyMagicLink.tsx`, `frontend/src/pages/TestDashboard.tsx`
 - [x] CORS now uses explicit allowlist origins compatible with credentialed cookies.
   Evidence: `backend/app/main.py`
-- [ ] Uploaded files and chunk payload text are plaintext at rest.
-  Evidence: `backend/app/ingest.py`, `backend/app/store.py`
+- [x] New Uploaded Document artifacts are encrypted at rest by default when a Content Encryption Key is configured; operators may explicitly choose plaintext artifact storage.
+  Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`
+- [x] New Retrieval Index writes store vectors and minimal metadata only; encrypted chunk text lives in SQLite.
+  Evidence: `backend/app/store.py`, `backend/app/ingest_db.py`, `backend/tests/test_store_minimized_payload.py`, `backend/tests/test_ingest_batch_replacement.py`
+- [ ] Legacy Retrieval Index payloads may still contain plaintext until the Confidentiality Migration runs.
+  Evidence: `docs/adr/0011-minimize-retrieval-index-and-encrypt-chunk-text.md`
 - [x] Deployment secrets are now encrypted at rest in SQLite.
   Evidence: `backend/app/database.py` (Section 3.3, Section 5.2)
 - [x] User approval, auto-approval, User Type administration, and User Type migration actions are covered by the tamper-evident Audit Log.
@@ -104,7 +108,7 @@ Use this checklist to:
 - [x] Magic link token is signed and time-limited.
 - [x] User session token is signed and time-limited.
 - [x] Chat/query access requires authenticated and approved users.
-- [ ] Add anti-enumeration response behavior for auth endpoints.
+- [x] Add anti-enumeration response behavior for auth endpoints.
 - [ ] Add abuse-resistant rate limiting that works across multiple backend instances for:
   - Auth endpoints
   - File upload endpoints
@@ -119,6 +123,10 @@ Use this checklist to:
 - [x] Prevent session data leakage across users (session ownership checks).
 - [x] Move user auth tokens from `localStorage` to secure, httpOnly cookies.
 - [x] Stop passing user session tokens in query strings.
+- [x] Encrypt new uploaded document artifacts at rest by default when `CONTENT_ENCRYPTION_KEY` is configured.
+  Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`
+- [x] Remove plaintext chunk text from new Retrieval Index payloads.
+  Evidence: `backend/app/store.py`, `backend/tests/test_store_minimized_payload.py`
 
 ### 2.3 Web application security
 
@@ -149,6 +157,8 @@ Use this checklist to:
   Evidence: `backend/app/database.py`, `backend/app/auth.py`, `backend/app/main.py`
 - [x] Add an admin-visible Data Lifecycle Status surface as the current source of truth for lifecycle coverage and known gaps.
   Evidence: `GET /admin/lifecycle/status`, `frontend/src/pages/AdminDeploymentConfig.tsx`
+- [x] Data Lifecycle Status distinguishes Active Storage Lifecycle from unsupported Deployment Surfaces, reports Scheduled Retention Policy separately from Retention Scheduler execution, and exposes Content Encryption Key / Artifact Encryption Posture.
+  Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `backend/tests/test_lifecycle_status.py`
 
 ### 3.2 Admin data access and key management
 
@@ -213,13 +223,15 @@ Use this checklist to:
   - Derived chunks/embeddings
   - Secrets and credentials
 - [ ] Verify all database queries use parameterized/prepared statements (no string concatenation).
+  - [x] Admin database explorer read-only endpoint enforces the shared SQL table allowlist.
 - [ ] Implement input validation for all user-supplied data (length, type, format).
 
 ### 5.2 At-rest controls
 
 - [x] PII fields in `users`/`user_field_values` are encrypted.
 - [ ] Uploaded files in `uploads/` encrypted at rest.
-- [ ] Qdrant payload text minimized or encrypted.
+- [x] Qdrant payload text minimized for new ingestion.
+  Evidence: `backend/app/store.py`, `backend/tests/test_store_minimized_payload.py`
 - [x] Deployment secrets encrypted at rest in SQLite.
 
 ### 5.3 In-transit controls
@@ -257,9 +269,9 @@ Use this checklist to:
 
 ## 6. Configuration and Environment Hardening Checklist
 
-- [ ] Set production env indicator (`SANCTUM_ENV=production` or equivalent).
-- [ ] Ensure `MOCK_EMAIL=false` in production.
-- [ ] Ensure simulation flags are disabled:
+- [ ] Set production env indicator (`ENCLAVE_ENV=production` or equivalent).
+- [x] Ensure `MOCK_EMAIL=false` in production.
+- [x] Ensure simulation flags are disabled:
   - `SIMULATE_USER_AUTH=false`
   - `SIMULATE_ADMIN_AUTH=false`
 - [ ] Set strong, stable `SECRET_KEY` via secret manager.
@@ -367,7 +379,7 @@ Use these guardrails while security fixes are in progress:
   - `POST /vector-search` unauthenticated: `401`
   - `GET /query/session/test-session-id` unauthenticated: `401`
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
-  - Published ports: `sanctum-backend` and `sanctum-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
+  - Published ports: `enclave-backend` and `enclave-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
   - Smoke endpoints: `GET /test` -> `200`, `GET /llm/test` -> `200`
 - S4-5 / S4-6 manual browser verification (DevTools):
   - S4-5 (localStorage token removal): Inspected `Application > Local Storage` in browser DevTools after login — no auth/session tokens stored in `localStorage`. Tokens are transmitted exclusively via secure cookies.

@@ -66,6 +66,12 @@ function _readUserTypeId(value: unknown): number | string | undefined {
   return undefined
 }
 
+function _readTraceVisibility(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toLowerCase()
+  return ['off', 'minimal', 'summary', 'detailed'].includes(normalized) ? normalized : undefined
+}
+
 /**
  * Normalize common-but-unsupported request shapes into supported ones.
  *
@@ -204,6 +210,25 @@ function _safeJsonParse(value: string): unknown | null {
   }
 }
 
+function _extractRawJsonCandidates(text: string): string[] {
+  const trimmed = text.trim()
+  if (!trimmed.includes('"requests"')) return []
+
+  const candidates: string[] = []
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    candidates.push(trimmed)
+  }
+
+  const firstBrace = trimmed.indexOf('{')
+  const lastBrace = trimmed.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = trimmed.slice(firstBrace, lastBrace + 1)
+    if (!candidates.includes(candidate)) candidates.push(candidate)
+  }
+
+  return candidates
+}
+
 function _coerceChangeSet(parsed: unknown): AdminAssistantChangeSet | null {
   if (!parsed || typeof parsed !== 'object') return null
   const obj = parsed as Record<string, unknown>
@@ -237,11 +262,12 @@ function _coerceChangeSet(parsed: unknown): AdminAssistantChangeSet | null {
  */
 export function extractAdminAssistantChangeSetStrict(text: string): ExtractChangeSetResult {
   const blocks = _extractJsonCodeBlocks(text)
-  if (blocks.length === 0) return { ok: false, error: 'No JSON code block found' }
+  const candidateTexts = blocks.length > 0 ? blocks : _extractRawJsonCandidates(text)
+  if (candidateTexts.length === 0) return { ok: false, error: 'No JSON change set found' }
 
   const candidates: AdminAssistantChangeSet[] = []
-  for (const block of blocks) {
-    const parsed = _safeJsonParse(block)
+  for (const candidateText of candidateTexts) {
+    const parsed = _safeJsonParse(candidateText)
     const coerced = _coerceChangeSet(parsed)
     if (coerced) candidates.push(coerced)
   }
@@ -328,6 +354,13 @@ export function validateAdminAssistantChangeSet(
 
     const allowed = allowedPathByMethod[req.method].some((re) => re.test(req.path))
     if (!allowed) return { ok: false, error: `Disallowed request: ${req.method} ${req.path}` }
+
+    if (req.method === 'PUT' && pathLower === '/admin/ai-config/user_trace_visibility') {
+      const value = _isPlainObject(req.body) ? _readTraceVisibility(req.body.value) : undefined
+      if (value === 'detailed') {
+        return { ok: false, error: 'User Conversation trace visibility cannot be detailed' }
+      }
+    }
   }
 
   return { ok: true }
