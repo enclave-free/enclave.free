@@ -32,12 +32,10 @@ For a more exhaustive engineering checklist, see `docs/security-data-protection-
 - Protect admin private keys.
   - Read `docs/admin-key-recovery-runbook.md`.
 
-### 2. Disable Dev/Simulation Paths
+### 2. Disable Dev Paths
 
 - Ensure these are false in production:
   - `MOCK_EMAIL=false`
-  - `SIMULATE_USER_AUTH=false`
-  - `SIMULATE_ADMIN_AUTH=false`
 
 ### 3. Enforce TLS End-to-End
 

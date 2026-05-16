@@ -1,12 +1,15 @@
 import importlib
+import hashlib
 import os
 import sys
 import tempfile
 import unittest
+from base64 import b64encode
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from Crypto.Cipher import AES
 
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
@@ -22,6 +25,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_enclave_env = os.environ.get("ENCLAVE_ENV")
         self._orig_mock_email = os.environ.get("MOCK_EMAIL")
+        self._orig_mock_smtp = os.environ.get("MOCK_SMTP")
+        self._orig_protected_inference_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
 
@@ -51,6 +56,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("ENCLAVE_ENV", self._orig_enclave_env)
         self._restore_env("MOCK_EMAIL", self._orig_mock_email)
+        self._restore_env("MOCK_SMTP", self._orig_mock_smtp)
+        self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_inference_bypass)
         self.tmp.cleanup()
 
     @staticmethod
@@ -87,9 +94,6 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
     def test_production_validation_rejects_testing_only_flags(self) -> None:
         os.environ["ENCLAVE_ENV"] = "production"
         os.environ["MOCK_EMAIL"] = "true"
-        self.database.update_deployment_config("MOCK_SMTP", "true", "test")
-        self.database.update_deployment_config("SIMULATE_USER_AUTH", "true", "test")
-        self.database.update_deployment_config("SIMULATE_ADMIN_AUTH", "true", "test")
 
         response = self.client.post("/admin/deployment/config/validate")
 
@@ -97,9 +101,53 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         body = response.json()
         self.assertFalse(body["valid"])
         self.assertIn("MOCK_EMAIL must be disabled in production", body["errors"])
-        self.assertIn("MOCK_SMTP must be disabled in production", body["errors"])
-        self.assertIn("SIMULATE_USER_AUTH must be disabled in production", body["errors"])
-        self.assertIn("SIMULATE_ADMIN_AUTH must be disabled in production", body["errors"])
+
+    def test_simulated_auth_flags_are_not_exposed_as_config(self) -> None:
+        os.environ["SIMULATE_USER_AUTH"] = "true"
+        os.environ["SIMULATE_ADMIN_AUTH"] = "true"
+
+        response = self.client.get("/admin/deployment/config")
+
+        self.assertEqual(response.status_code, 200)
+        exposed_keys = {
+            item["key"]
+            for section in response.json().values()
+            if isinstance(section, list)
+            for item in section
+        }
+        self.assertNotIn("SIMULATE_USER_AUTH", exposed_keys)
+        self.assertNotIn("SIMULATE_ADMIN_AUTH", exposed_keys)
+
+    def test_mock_email_is_the_only_supported_mock_mail_config_key(self) -> None:
+        os.environ["MOCK_SMTP"] = "true"
+        os.environ["MOCK_EMAIL"] = "false"
+
+        import config_loader
+
+        self.config_loader = importlib.reload(config_loader)
+        self.config_loader.invalidate_cache()
+
+        response = self.client.get("/admin/deployment/config")
+
+        self.assertEqual(response.status_code, 200)
+        email_keys = {item["key"] for item in response.json()["email"]}
+        self.assertIn("MOCK_EMAIL", email_keys)
+        self.assertNotIn("MOCK_SMTP", email_keys)
+        self.assertFalse(self.config_loader.get_smtp_config()["mock_mode"])
+
+    def test_protected_inference_development_bypass_is_not_exposed_as_config(self) -> None:
+        os.environ["PROTECTED_INFERENCE_DEVELOPMENT_BYPASS"] = "true"
+
+        response = self.client.get("/admin/deployment/config")
+
+        self.assertEqual(response.status_code, 200)
+        exposed_keys = {
+            item["key"]
+            for section in response.json().values()
+            if isinstance(section, list)
+            for item in section
+        }
+        self.assertNotIn("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", exposed_keys)
 
     def test_llm_provider_rejects_maple_compatibility_label(self) -> None:
         response = self.client.put(
@@ -109,6 +157,44 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], 'LLM_PROVIDER only supports "sage"')
+
+    def test_smtp_import_time_constants_are_not_exported(self) -> None:
+        for name in (
+            "SMTP_HOST",
+            "SMTP_PORT",
+            "SMTP_USER",
+            "SMTP_PASS",
+            "SMTP_FROM",
+            "SMTP_TIMEOUT",
+        ):
+            with self.subTest(name=name):
+                self.assertFalse(hasattr(self.auth, name))
+
+    def test_deployment_secret_decryption_rejects_legacy_key_material(self) -> None:
+        plaintext = "old-secret-value"
+        legacy_key = hashlib.sha256(
+            f"{'san' + 'ctum'}-deployment-config:test-secret".encode("utf-8")
+        ).digest()
+        nonce = b"0" * self.database.DEPLOYMENT_SECRET_NONCE_BYTES
+        cipher = AES.new(legacy_key, AES.MODE_GCM, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode("utf-8"))
+        legacy_encrypted = (
+            f"{self.database.DEPLOYMENT_SECRET_PREFIX}"
+            f"{b64encode(nonce).decode('ascii')}:"
+            f"{b64encode(tag).decode('ascii')}:"
+            f"{b64encode(ciphertext).decode('ascii')}"
+        )
+
+        with self.assertRaises(ValueError):
+            self.database._decrypt_deployment_secret_value(legacy_encrypted)
+
+    def test_deployment_secret_decryption_accepts_canonical_key_material(self) -> None:
+        encrypted = self.database._encrypt_deployment_secret_value("current-secret-value")
+
+        self.assertEqual(
+            self.database._decrypt_deployment_secret_value(encrypted),
+            "current-secret-value",
+        )
 
 
 if __name__ == "__main__":

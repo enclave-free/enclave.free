@@ -55,7 +55,6 @@
       "sentMagicLink": "Vi har sendt et magisk link til",
       "clickLink": "Klik på linket i e-mailen for at logge ind.",
       "checkSpam": "Kan du ikke se det? Tjek din spammappe.",
-      "simulateMagicLink": "Simuler klik på magisk link",
       "forTesting": "Til testformål:",
       "dataProtectionTitle": "Sådan beskytter Enclave dine data",
       "noPasswordTitle": "Ingen gemte adgangskoder",
@@ -695,12 +694,9 @@
     "title": "Admin-opsætning",
     "subtitle": "Forbind med din Nostr-identitet for at administrere denne instans",
     "connectNostr": "Forbind med Nostr",
-    "orForTesting": "eller til test",
-    "continueMock": "Fortsæt med mock-identitet",
     "connecting": "Forbinder til udvidelse...",
     "noExtension": "Ingen Nostr-udvidelse fundet",
     "installExtension": "Installer en NIP-07-kompatibel udvidelse for at fortsætte",
-    "useMock": "Brug mock",
     "welcomeAdmin": "Velkommen, Admin!",
     "connectedAs": "Forbundet som",
     "redirecting": "Omdirigerer til dashboard...",
@@ -897,7 +893,7 @@
       "gmailHint": "Brug en App-adgangskode — ikke din almindelige Gmail-adgangskode. Aktiver 2FA først, og generer derefter en App-adgangskode i dine Google-kontosikkerhedsindstillinger.",
       "goToPage": "Gå til side",
       "mailgunHint": "Brug dine Mailgun SMTP-legitimationsoplysninger fra domæneindstillingssiden. Værten er typisk smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — når aktiveret, logges e-mails til konsollen i stedet for at blive sendt. Nyttigt til udvikling.",
+      "mockEmail": "MOCK_EMAIL — når aktiveret, logges e-mails til konsollen i stedet for at blive sendt. Nyttigt til udvikling.",
       "overviewDesc": "Konfigurer SMTP-indstillinger for at aktivere udgående e-mail (invitationer, notifikationer, nulstilling af adgangskoder). Alle udbydere bruger standard SMTP-felter.",
       "overviewTitle": "Oversigt over e-mail (SMTP)",
       "postmarkHint": "Brug dit Postmark Server API-token som SMTP-adgangskode. SMTP-brugernavnet er altid det samme token.",
@@ -999,9 +995,7 @@
       "overviewDesc": "Sikkerhedsindstillinger styrer godkendelse, sessionshåndtering og udviklingsgenveje. Standardindstillinger er konfigureret til lokal udvikling.",
       "overviewNote": "I produktion skal du sikre, at simuleringsflags er slået fra, og at FRONTEND_URL matcher dit rigtige domæne.",
       "overviewTitle": "Sikkerhedsoversigt",
-      "overviewWhen": "Gennemgå disse indstillinger, før du deployer til en offentligt tilgængelig server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — omgår admin-godkendelse. Alle anmodninger behandles som kommende fra en admin-bruger.",
-      "simUserDesc": "SIMULATE_USER_AUTH — omgår brugergodkendelse. Alle anmodninger behandles som kommende fra en logget ind-bruger."
+      "overviewWhen": "Gennemgå disse indstillinger, før du deployer til en offentligt tilgængelig server."
     },
     "sslHelp": {
       "ariaLabel": "Hjælp til SSL- og HTTPS-konfiguration",
@@ -1318,7 +1312,7 @@
       "description": "Fra-adresse for e-mails",
       "hint": "\"Fra\"-adressen for udgående e-mails (f.eks. noreply@dindomæne.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testtilstand",
       "description": "Simuleret e-mail-afsendelse",
       "hint": "Når \"true\", logges e-mails i stedet for at blive sendt. Nyttigt til udvikling."
@@ -1418,16 +1412,6 @@
       "description": "URL for sundhedsovervågningsslutpunkt",
       "hint": "Health check URL for eksterne monitorer. Standard: http://localhost:8000/health.",
       "label": "Overvågnings-URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Vis knap for mock Nostr-forbindelse for admin-godkendelse (kun test)",
-      "hint": "Aktiver for udvikling/test. Viser en \"Mock Connection\"-knap ved admin-login, der omgår Nostr-udvidelseskravet. Bør deaktiveres i produktion.",
-      "label": "Simuler Admin-godkendelse"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Tillad brugerverifikation uden magic link token (kun test)",
-      "hint": "Aktiver for udvikling/test. Giver brugere mulighed for at fuldføre e-mailverifikation uden at klikke på magic link. Bør deaktiveres i produktion.",
-      "label": "Simuler brugergodkendelse"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS include-direktiv",

@@ -925,6 +925,19 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertNotIn("secret", serialized)
         self.assertNotIn("Do not persist this Sage-backed message", serialized)
 
+    def test_session_memory_deletion_rejects_non_sage_legacy_conversations(self) -> None:
+        deletion = asyncio.run(self.lifecycle.delete_session_memory_for_conversation({
+            "id": "python-legacy-session",
+            "agent_runtime": "python",
+        }))
+
+        self.assertEqual(deletion["status"], "failed")
+        result = deletion["results"][0]
+        self.assertEqual(result["target_kind"], "session_memory")
+        self.assertEqual(result["target_id"], "python-legacy-session")
+        self.assertTrue(result["retryable"])
+        self.assertIn("Sage-owned", result["detail"])
+
     def test_retention_is_safe_to_repeat_when_nothing_is_eligible(self) -> None:
         first = self.client.post(
             "/admin/lifecycle/retention/run",

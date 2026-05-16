@@ -486,22 +486,9 @@ def schedule_document_processing(job_id: str, file_path: Path, sample_percent: f
 
 @router.on_event("startup")
 async def load_jobs_and_resume():
-    """Load jobs from SQLite on startup, migrate JSON if needed, and resume incomplete jobs."""
+    """Load jobs from SQLite on startup and resume incomplete jobs."""
     global JOBS
-    
-    # One-time migration: import from legacy JSON file if exists and DB is empty
-    json_file = Path(os.getenv("LOGS_DIR", "/logs")) / "jobs_state.json"
-    if json_file.exists():
-        existing_jobs = ingest_db.list_jobs(limit=1)
-        if len(existing_jobs) == 0:
-            logger.info("SQLite empty, migrating from legacy JSON file...")
-            try:
-                legacy_jobs = json.loads(json_file.read_text(encoding="utf-8"))
-                migrated = ingest_db.migrate_from_json(legacy_jobs)
-                logger.info(f"Migrated {migrated} jobs from JSON to SQLite")
-            except Exception as e:
-                logger.error(f"Failed to migrate from JSON: {e}")
-    
+
     # Load from SQLite
     JOBS = _load_jobs_from_db()
     logger.info(f"Loaded {len(JOBS)} jobs from SQLite")

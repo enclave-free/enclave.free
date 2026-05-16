@@ -1050,9 +1050,8 @@ async def post_sage_session_memory_delete(payload: dict) -> dict:
 async def delete_session_memory_for_conversation(session: dict) -> dict:
     """Delete Sage Session Memory for a Conversation.
 
-    The Python fallback only knows about legacy in-memory Conversation state.
-    Sage-backed deletion will replace this boundary through the internal
-    lifecycle contract.
+    Sage-backed deletion is the only supported Session Memory lifecycle
+    boundary for this prototype.
     """
     session_id = str(session.get("id", "unknown"))
     if session.get("agent_runtime") == "sage":
@@ -1070,11 +1069,12 @@ async def delete_session_memory_for_conversation(session: dict) -> dict:
                 )
             ])
     return summarize_deletion_results([
-        deletion_target_succeeded(
+        deletion_target_failed(
             target_kind="session_memory",
             target_id=session_id,
             action="delete_session_memory",
-            detail="No separate Sage Session Memory target exists for this legacy Conversation.",
+            detail="Session Memory deletion is supported only for Sage-owned Conversations.",
+            retryable=True,
         )
     ])
 

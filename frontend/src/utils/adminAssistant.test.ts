@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import * as adminAssistant from './adminAssistant'
 import { extractAdminAssistantChangeSetStrict } from './adminAssistant'
 
 describe('extractAdminAssistantChangeSetStrict', () => {
@@ -97,6 +98,59 @@ describe('extractAdminAssistantChangeSetStrict', () => {
     expect(extracted.ok).toBe(false)
     if (!extracted.ok) {
       expect(extracted.error).toContain('User Conversation')
+    }
+  })
+
+  it('does not export the old non-strict change set extractor', () => {
+    expect('extractAdminAssistantChangeSet' in adminAssistant).toBe(false)
+  })
+
+  it('does not normalize user type alias body keys', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      requests: [
+        {
+          method: 'POST',
+          path: '/admin/user-types',
+          body: {
+            name: 'Members',
+            order: 2,
+          },
+        },
+      ],
+    })
+
+    const extracted = extractAdminAssistantChangeSetStrict(raw)
+
+    expect(extracted.ok).toBe(true)
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0].body).toEqual({ name: 'Members' })
+    }
+  })
+
+  it('does not normalize user field alias body keys', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      requests: [
+        {
+          method: 'POST',
+          path: '/admin/user-fields',
+          body: {
+            label: 'Chapter',
+            type: 'text',
+            order: 3,
+            includeInChat: true,
+            userTypeId: '4',
+          },
+        },
+      ],
+    })
+
+    const extracted = extractAdminAssistantChangeSetStrict(raw)
+
+    expect(extracted.ok).toBe(true)
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0].body).toEqual({})
     }
   })
 })

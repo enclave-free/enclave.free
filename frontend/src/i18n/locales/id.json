@@ -533,12 +533,9 @@
     "title": "Pengaturan Admin",
     "subtitle": "Hubungkan dengan identitas Nostr Anda untuk mengelola instance ini",
     "connectNostr": "Hubungkan dengan Nostr",
-    "orForTesting": "atau untuk pengujian",
-    "continueMock": "Lanjutkan dengan identitas tiruan",
     "connecting": "Menghubungkan ke ekstensi...",
     "noExtension": "Ekstensi Nostr tidak ditemukan",
     "installExtension": "Instal ekstensi yang kompatibel dengan NIP-07 untuk melanjutkan",
-    "useMock": "Gunakan tiruan",
     "welcomeAdmin": "Selamat datang, Admin!",
     "connectedAs": "Terhubung sebagai",
     "redirecting": "Mengalihkan ke dashboard...",
@@ -610,7 +607,6 @@
       "sentMagicLink": "Kami mengirimkan tautan ajaib ke",
       "clickLink": "Klik tautan di email untuk masuk.",
       "checkSpam": "Tidak terlihat? Periksa folder spam Anda.",
-      "simulateMagicLink": "Simulasikan klik tautan ajaib",
       "forTesting": "Untuk tujuan pengujian:",
       "dataProtectionTitle": "Bagaimana Enclave melindungi data Anda",
       "noPasswordTitle": "Tanpa kata sandi tersimpan",
@@ -897,7 +893,7 @@
       "gmailHint": "Gunakan Kata Sandi Aplikasi — bukan kata sandi Gmail biasa Anda. Aktifkan 2FA terlebih dahulu, lalu buat Kata Sandi Aplikasi di pengaturan keamanan Akun Google Anda.",
       "goToPage": "Buka halaman",
       "mailgunHint": "Gunakan kredensial SMTP Mailgun Anda dari halaman pengaturan domain. Host biasanya smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — saat diaktifkan, email dicatat ke konsol alih-alih dikirim. Berguna untuk pengembangan.",
+      "mockEmail": "MOCK_EMAIL — saat diaktifkan, email dicatat ke konsol alih-alih dikirim. Berguna untuk pengembangan.",
       "overviewDesc": "Konfigurasi pengaturan SMTP untuk mengaktifkan email keluar (undangan, notifikasi, reset kata sandi). Semua penyedia menggunakan field SMTP standar.",
       "overviewTitle": "Gambaran Umum Email (SMTP)",
       "postmarkHint": "Gunakan token API Server Postmark Anda sebagai kata sandi SMTP. Nama pengguna SMTP selalu token yang sama.",
@@ -999,9 +995,7 @@
       "overviewDesc": "Pengaturan keamanan mengontrol autentikasi, penanganan sesi, dan pintasan pengembangan. Default dikonfigurasi untuk pengembangan lokal.",
       "overviewNote": "Di produksi, pastikan flag simulasi dinonaktifkan dan FRONTEND_URL sesuai dengan domain nyata Anda.",
       "overviewTitle": "Gambaran Umum Keamanan",
-      "overviewWhen": "Tinjau pengaturan ini sebelum men-deploy ke server yang menghadap publik.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — melewati autentikasi admin. Semua permintaan diperlakukan seolah-olah berasal dari pengguna admin.",
-      "simUserDesc": "SIMULATE_USER_AUTH — melewati autentikasi pengguna. Semua permintaan diperlakukan seolah-olah berasal dari pengguna yang sudah masuk."
+      "overviewWhen": "Tinjau pengaturan ini sebelum men-deploy ke server yang menghadap publik."
     },
     "sslHelp": {
       "ariaLabel": "Bantuan konfigurasi SSL dan HTTPS",
@@ -1318,7 +1312,7 @@
       "description": "Alamat pengirim untuk email",
       "hint": "Alamat \"from\" untuk email keluar (misalnya noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Mode Uji",
       "description": "Simulasi pengiriman email",
       "hint": "Ketika \"true\", email dicatat alih-alih dikirim. Berguna untuk pengembangan."
@@ -1418,16 +1412,6 @@
       "description": "URL titik akhir pemantauan kesehatan",
       "hint": "URL pemeriksaan kesehatan untuk monitor eksternal. Default: http://localhost:8000/health.",
       "label": "URL Pemantauan"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Tampilkan tombol koneksi Nostr tiruan untuk otentikasi admin (hanya pengujian)",
-      "hint": "Aktifkan untuk pengembangan/pengujian. Menampilkan tombol \"Koneksi Tiruan\" pada login admin yang melewati persyaratan ekstensi Nostr. Harus dinonaktifkan di produksi.",
-      "label": "Simulasikan Otentikasi Admin"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Izinkan verifikasi pengguna tanpa token tautan ajaib (hanya pengujian)",
-      "hint": "Aktifkan untuk pengembangan/pengujian. Mengizinkan pengguna untuk menyelesaikan verifikasi email tanpa mengklik tautan ajaib. Harus dinonaktifkan di produksi.",
-      "label": "Simulasikan Otentikasi Pengguna"
     },
     "SPF_INCLUDE": {
       "description": "Direktif include DNS SPF",

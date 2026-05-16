@@ -275,9 +275,7 @@ Use this checklist to:
 
 - [ ] Set production env indicator (`ENCLAVE_ENV=production` or equivalent).
 - [x] Ensure `MOCK_EMAIL=false` in production.
-- [x] Ensure simulation flags are disabled:
-  - `SIMULATE_USER_AUTH=false`
-  - `SIMULATE_ADMIN_AUTH=false`
+- [x] Auth simulation flags are not part of the supported deployment surface.
 - [ ] Set strong, stable `SECRET_KEY` via secret manager.
 - [ ] Restrict backend and infra ports to private networks/VPN where possible.
 - [ ] Remove dev-only reload mode in production runtime.

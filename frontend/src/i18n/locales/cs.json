@@ -55,7 +55,6 @@
       "sentMagicLink": "Poslali jsme magický odkaz na",
       "clickLink": "Klikněte na odkaz v e-mailu a přihlaste se.",
       "checkSpam": "Nevidíte ho? Zkontrolujte složku spam.",
-      "simulateMagicLink": "Simulovat kliknutí na magický odkaz",
       "forTesting": "Pro testovací účely:",
       "dataProtectionTitle": "Jak Enclave chrání vaše data",
       "noPasswordTitle": "Žádná uložená hesla",
@@ -701,12 +700,9 @@
     "title": "Nastavení správce",
     "subtitle": "Připojte se svou Nostr identitou pro správu této instance",
     "connectNostr": "Připojit s Nostr",
-    "orForTesting": "nebo pro testování",
-    "continueMock": "Pokračovat s testovací identitou",
     "connecting": "Připojování k rozšíření...",
     "noExtension": "Nebylo nalezeno rozšíření Nostr",
     "installExtension": "Pro pokračování nainstalujte rozšíření kompatibilní s NIP-07",
-    "useMock": "Použít testovací",
     "welcomeAdmin": "Vítejte, administrátore!",
     "connectedAs": "Připojeno jako",
     "redirecting": "Přesměrování na panel...",
@@ -903,7 +899,7 @@
       "gmailHint": "Použijte heslo aplikace — ne běžné heslo Gmailu. Nejprve zapněte 2FA, poté vygenerujte heslo aplikace v nastavení zabezpečení účtu Google.",
       "goToPage": "Přejít na stránku",
       "mailgunHint": "Použijte své SMTP přihlašovací údaje Mailgun ze stránky nastavení domény. Hostitel je obvykle smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — pokud je povoleno, e-maily se zaznamenávají do konzole místo odesílání. Užitečné pro vývoj.",
+      "mockEmail": "MOCK_EMAIL — pokud je povoleno, e-maily se zaznamenávají do konzole místo odesílání. Užitečné pro vývoj.",
       "overviewDesc": "Nakonfigurujte nastavení SMTP pro povolení odchozích e-mailů (pozvánky, oznámení, resetování hesel). Všichni poskytovatelé používají standardní SMTP pole.",
       "overviewTitle": "Přehled e-mailu (SMTP)",
       "postmarkHint": "Použijte svůj token API serveru Postmark jako SMTP heslo. SMTP uživatelské jméno je vždy stejný token.",
@@ -1005,9 +1001,7 @@
       "overviewDesc": "Nastavení zabezpečení řídí autentizaci, správu relací a vývojové zkratky. Výchozí nastavení jsou nakonfigurována pro lokální vývoj.",
       "overviewNote": "V produkci se ujistěte, že simulační příznaky jsou vypnuté a FRONTEND_URL odpovídá vaší skutečné doméně.",
       "overviewTitle": "Přehled zabezpečení",
-      "overviewWhen": "Zkontrolujte tato nastavení před nasazením na veřejně přístupný server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — obchází autentizaci správce. Všechny požadavky jsou zpracovány, jako by přicházely od správce.",
-      "simUserDesc": "SIMULATE_USER_AUTH — obchází autentizaci uživatele. Všechny požadavky jsou zpracovány, jako by přicházely od přihlášeného uživatele."
+      "overviewWhen": "Zkontrolujte tato nastavení před nasazením na veřejně přístupný server."
     },
     "sslHelp": {
       "ariaLabel": "Nápověda ke konfiguraci SSL a HTTPS",
@@ -1324,7 +1318,7 @@
       "description": "Adresa odesílatele pro e-maily",
       "hint": "Adresa \"od\" pro odchozí e-maily (např. noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testovací režim",
       "description": "Simulace odesílání e-mailů",
       "hint": "Když je \"true\", e-maily se zaznamenávají místo odesílání. Užitečné pro vývoj."
@@ -1424,16 +1418,6 @@
       "description": "URL koncového bodu monitorování stavu",
       "hint": "URL pro kontrolu stavu pro externí monitory. Výchozí: http://localhost:8000/health.",
       "label": "URL monitorování"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Zobrazit tlačítko pro simulované připojení Nostr pro administrátorskou autentizaci (pouze pro testování)",
-      "hint": "Povolte pro vývoj/testování. Zobrazí tlačítko \"Simulované připojení\" na přihlašovací stránce administrátora, které obchází požadavek na rozšíření Nostr. Mělo by být zakázáno v produkci.",
-      "label": "Simulovat administrátorskou autentizaci"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Povolit ověření uživatele bez tokenu magic link (pouze pro testování)",
-      "hint": "Povolte pro vývoj/testování. Umožňuje uživatelům dokončit ověření e-mailu bez kliknutí na magic link. Mělo by být zakázáno v produkci.",
-      "label": "Simulovat uživatelskou autentizaci"
     },
     "SPF_INCLUDE": {
       "description": "Direktiva pro zahrnutí SPF DNS",

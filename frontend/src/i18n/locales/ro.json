@@ -55,7 +55,6 @@
       "sentMagicLink": "Am trimis un link magic către",
       "clickLink": "Fă clic pe linkul din email pentru a te autentifica.",
       "checkSpam": "Nu îl vezi? Verifică folderul de spam.",
-      "simulateMagicLink": "Simulează clic pe linkul magic",
       "forTesting": "În scopuri de testare:",
       "dataProtectionTitle": "Cum protejează Enclave datele tale",
       "noPasswordTitle": "Fără parole stocate",
@@ -711,12 +710,9 @@
     "title": "Configurare admin",
     "subtitle": "Conectează-te cu identitatea ta Nostr pentru a gestiona această instanță",
     "connectNostr": "Conectează-te cu Nostr",
-    "orForTesting": "sau pentru testare",
-    "continueMock": "Continuă cu identitate simulată",
     "connecting": "Se conectează la extensie...",
     "noExtension": "Nu s-a găsit extensia Nostr",
     "installExtension": "Instalează o extensie compatibilă NIP-07 pentru a continua",
-    "useMock": "Folosește identitate simulată",
     "welcomeAdmin": "Bine ai venit, Admin!",
     "connectedAs": "Conectat ca",
     "redirecting": "Redirecționare către panou...",
@@ -913,7 +909,7 @@
       "gmailHint": "Folosește o parolă de aplicație — nu parola ta obișnuită Gmail. Activează mai întâi 2FA, apoi generează o parolă de aplicație din setările de securitate ale contului Google.",
       "goToPage": "Accesează pagina",
       "mailgunHint": "Folosește credențialele SMTP Mailgun din pagina de setări a domeniului. Gazda este de obicei smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — când este activat, emailurile sunt înregistrate în consolă în loc să fie trimise. Util pentru dezvoltare.",
+      "mockEmail": "MOCK_EMAIL — când este activat, emailurile sunt înregistrate în consolă în loc să fie trimise. Util pentru dezvoltare.",
       "overviewDesc": "Configurează setările SMTP pentru a activa emailul de ieșire (invitații, notificări, resetări de parolă). Toți furnizorii folosesc câmpuri SMTP standard.",
       "overviewTitle": "Prezentare generală Email (SMTP)",
       "postmarkHint": "Folosește tokenul API al serverului Postmark ca parolă SMTP. Numele de utilizator SMTP este întotdeauna același token.",
@@ -1015,9 +1011,7 @@
       "overviewDesc": "Setările de securitate controlează autentificarea, gestionarea sesiunilor și scurtăturile de dezvoltare. Valorile implicite sunt configurate pentru dezvoltare locală.",
       "overviewNote": "În producție, asigură-te că flagurile de simulare sunt dezactivate și FRONTEND_URL corespunde domeniului tău real.",
       "overviewTitle": "Prezentare generală securitate",
-      "overviewWhen": "Revizuiește aceste setări înainte de a implementa pe un server cu acces public.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — ocolește autentificarea administratorului. Toate cererile sunt tratate ca venind de la un utilizator administrator.",
-      "simUserDesc": "SIMULATE_USER_AUTH — ocolește autentificarea utilizatorului. Toate cererile sunt tratate ca venind de la un utilizator autentificat."
+      "overviewWhen": "Revizuiește aceste setări înainte de a implementa pe un server cu acces public."
     },
     "sslHelp": {
       "ariaLabel": "Ajutor configurare SSL și HTTPS",
@@ -1334,7 +1328,7 @@
       "description": "Adresa de la pentru emailuri",
       "hint": "Adresa \"de la\" pentru emailurile trimise (de ex. noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Mod de testare",
       "description": "Simulare trimitere email",
       "hint": "Când este \"true\", emailurile sunt înregistrate în loc să fie trimise. Util pentru dezvoltare."
@@ -1434,16 +1428,6 @@
       "description": "URL punct final monitorizare sănătate",
       "hint": "URL de verificare a sănătății pentru monitorii externi. Implicit: http://localhost:8000/health.",
       "label": "URL Monitorizare"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Afișează butonul de conectare Nostr fals pentru autentificarea administratorului (doar pentru testare)",
-      "hint": "Activați pentru dezvoltare/testare. Afișează un buton 'Conexiune falsă' la conectarea administratorului care ocolește cerința extensiei Nostr. Ar trebui dezactivat în producție.",
-      "label": "Simulează autentificarea administratorului"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Permite verificarea utilizatorului fără jeton magic link (doar pentru testare)",
-      "hint": "Activați pentru dezvoltare/testare. Permite utilizatorilor să finalizeze verificarea e-mailului fără a face clic pe linkul magic. Ar trebui dezactivat în producție.",
-      "label": "Simulează autentificarea utilizatorului"
     },
     "SPF_INCLUDE": {
       "description": "Directiva SPF DNS include",

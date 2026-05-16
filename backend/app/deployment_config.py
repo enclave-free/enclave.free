@@ -139,7 +139,7 @@ ENV_CONFIG_MAP = {
     "SMTP_USER": {"category": "email", "description": "SMTP username", "requires_restart": False, "is_secret": True},
     "SMTP_PASS": {"category": "email", "description": "SMTP password", "requires_restart": False, "is_secret": True},
     "SMTP_FROM": {"category": "email", "description": "From email address", "requires_restart": False},
-    "MOCK_SMTP": {"category": "email", "description": "Enable mock email mode", "requires_restart": False},
+    "MOCK_EMAIL": {"category": "email", "description": "Enable mock email mode", "requires_restart": False},
     # SMTP test status keys (internal, set by test-email endpoint)
     "SMTP_LAST_TEST_SUCCESS": {"category": "email", "description": "Whether last SMTP test was successful", "requires_restart": False},
     "SMTP_LAST_TEST_AT": {"category": "email", "description": "Timestamp of last SMTP test", "requires_restart": False},
@@ -155,9 +155,6 @@ ENV_CONFIG_MAP = {
     "SEARXNG_URL": {"category": "search", "description": "SearXNG instance URL", "requires_restart": False, "default": "http://searxng:8080"},
     # Security Settings
     "FRONTEND_URL": {"category": "security", "description": "Frontend application URL", "requires_restart": False, "default": "http://localhost:5173"},
-    "SIMULATE_USER_AUTH": {"category": "security", "description": "Allow user verification without magic link token (testing only)", "requires_restart": False, "default": "false"},
-    "SIMULATE_ADMIN_AUTH": {"category": "security", "description": "Show mock Nostr connection button for admin auth (testing only)", "requires_restart": False, "default": "false"},
-    "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS": {"category": "security", "description": "Development-only bypass for Verifiable Inference enforcement; weakens privacy posture", "requires_restart": False, "default": "false"},
     "RATE_LIMIT_CHAT_PER_MINUTE": {"category": "security", "description": "Chat requests per minute", "requires_restart": True, "default": "120"},
     "RATE_LIMIT_QUERY_PER_MINUTE": {"category": "security", "description": "Retrieval query requests per minute", "requires_restart": True, "default": "90"},
     "RATE_LIMIT_UPLOAD_PER_MINUTE": {"category": "security", "description": "Document upload requests per minute", "requires_restart": True, "default": "20"},
@@ -218,9 +215,6 @@ RATE_LIMIT_KEYS: Final[set[str]] = {
 
 PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
     "MOCK_EMAIL",
-    "MOCK_SMTP",
-    "SIMULATE_USER_AUTH",
-    "SIMULATE_ADMIN_AUTH",
 )
 
 
@@ -253,8 +247,6 @@ def _sync_env_to_db() -> None:
     Sync current environment variables to the database.
     Only syncs keys that are in ENV_CONFIG_MAP and don't already exist in DB.
     """
-    from config_loader import EMAIL_KEY_TRANSLATION
-
     for key, meta in ENV_CONFIG_MAP.items():
         if key in FORBIDDEN_KEYS:
             continue
@@ -270,11 +262,6 @@ def _sync_env_to_db() -> None:
         if not preserve_env_fallback:
             # 1. Try the original key
             value = os.getenv(key)
-
-            # 2. If not found, try email key translation
-            if value is None and key in EMAIL_KEY_TRANSLATION:
-                translated_key = EMAIL_KEY_TRANSLATION[key]
-                value = os.getenv(translated_key)
 
         if key == "LLM_PROVIDER":
             value = (value or meta.get("default", "sage") or "sage").strip().lower()
@@ -350,6 +337,8 @@ async def get_deployment_config(admin: dict = Depends(auth.require_admin)):
 
     response = DeploymentConfigResponse()
     for config in all_config:
+        if config["key"] not in ENV_CONFIG_MAP:
+            continue
         item = _config_to_item(config)
         category = config["category"]
 
@@ -760,15 +749,15 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
                 errors.append(f"{port_key} must be a number")
 
     # Warnings for common issues
-    if config_dict.get("MOCK_SMTP", "").lower() == "true":
-        warnings.append("MOCK_SMTP is enabled - emails will not be sent")
+    if config_dict.get("MOCK_EMAIL", "").lower() == "true":
+        warnings.append("MOCK_EMAIL is enabled - emails will not be sent")
 
     if auth.is_production_mode():
         for key in PRODUCTION_UNSAFE_FLAGS:
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
                 errors.append(f"{key} must be disabled in production")
 
-    if not config_dict.get("SMTP_HOST") and config_dict.get("MOCK_SMTP", "").lower() != "true":
+    if not config_dict.get("SMTP_HOST") and config_dict.get("MOCK_EMAIL", "").lower() != "true":
         warnings.append("SMTP not configured - email features will not work")
 
     if not config_dict.get("SEARXNG_URL"):
@@ -918,7 +907,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
 
     # Check SMTP (if configured)
     smtp_host = config_dict.get("SMTP_HOST") or os.getenv("SMTP_HOST", "")
-    mock_smtp = (config_dict.get("MOCK_SMTP") or os.getenv("MOCK_SMTP", "")).lower() == "true"
+    mock_smtp = (config_dict.get("MOCK_EMAIL") or os.getenv("MOCK_EMAIL", "")).lower() == "true"
 
     if mock_smtp:
         services.append(ServiceHealthItem(

@@ -55,7 +55,6 @@
       "sentMagicLink": "次の宛先にマジックリンクを送信しました",
       "clickLink": "メール内のリンクをクリックしてログインしてください。",
       "checkSpam": "見当たりませんか？迷惑メールフォルダを確認してください。",
-      "simulateMagicLink": "マジックリンクのクリックをシミュレート",
       "forTesting": "テスト用:",
       "dataProtectionTitle": "Enclaveがあなたのデータを守る仕組み",
       "noPasswordTitle": "保存されるパスワードなし",
@@ -695,12 +694,9 @@
     "title": "管理者セットアップ",
     "subtitle": "Nostr IDで接続してこのインスタンスを管理",
     "connectNostr": "Nostrで接続",
-    "orForTesting": "またはテスト用",
-    "continueMock": "モックIDで続行",
     "connecting": "拡張機能に接続中...",
     "noExtension": "Nostr拡張機能が見つかりません",
     "installExtension": "続行するにはNIP-07互換の拡張機能をインストールしてください",
-    "useMock": "モックを使用",
     "welcomeAdmin": "ようこそ、管理者！",
     "connectedAs": "接続中",
     "redirecting": "ダッシュボードにリダイレクト中...",
@@ -897,7 +893,7 @@
       "gmailHint": "アプリパスワードを使用してください — 通常のGmailパスワードではありません。まず2FAを有効にし、Googleアカウントのセキュリティ設定でアプリパスワードを生成してください。",
       "goToPage": "ページへ移動",
       "mailgunHint": "ドメイン設定ページからMailgunのSMTP認証情報を使用してください。ホストは通常smtp.mailgun.orgです。",
-      "mockSmtp": "MOCK_SMTP — 有効にすると、メールは送信されずにコンソールにログ出力されます。開発時に便利です。",
+      "mockEmail": "MOCK_EMAIL — 有効にすると、メールは送信されずにコンソールにログ出力されます。開発時に便利です。",
       "overviewDesc": "送信メール（招待、通知、パスワードリセット）を有効にするためにSMTP設定を構成してください。すべてのプロバイダーは標準のSMTPフィールドを使用します。",
       "overviewTitle": "メール（SMTP）の概要",
       "postmarkHint": "PostmarkサーバーのAPIトークンをSMTPパスワードとして使用してください。SMTPユーザー名は常に同じトークンです。",
@@ -999,9 +995,7 @@
       "overviewDesc": "セキュリティ設定は、認証、セッション処理、開発用のショートカットを制御します。デフォルトはローカル開発用に構成されています。",
       "overviewNote": "本番環境では、シミュレーションフラグがオフであり、FRONTEND_URLが実際のドメインと一致していることを確認してください。",
       "overviewTitle": "セキュリティの概要",
-      "overviewWhen": "公開サーバーにデプロイする前にこれらの設定を確認してください。",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — 管理者認証をバイパスします。すべてのリクエストが管理者ユーザーからのものとして扱われます。",
-      "simUserDesc": "SIMULATE_USER_AUTH — ユーザー認証をバイパスします。すべてのリクエストがログイン済みユーザーからのものとして扱われます。"
+      "overviewWhen": "公開サーバーにデプロイする前にこれらの設定を確認してください。"
     },
     "sslHelp": {
       "ariaLabel": "SSLとHTTPS設定のヘルプ",
@@ -1318,7 +1312,7 @@
       "description": "メールの送信元アドレス",
       "hint": "送信メールの「送信元」アドレス（例：noreply@yourdomain.com）"
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "テストモード",
       "description": "メール送信のモック",
       "hint": "「true」の場合、メールは送信されずログに記録されます。開発時に便利です。"
@@ -1418,16 +1412,6 @@
       "description": "ヘルスモニタリングエンドポイントURL",
       "hint": "外部モニター用のヘルスチェックURL。デフォルト: http://localhost:8000/health。",
       "label": "監視URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "管理者認証用のモックNostr接続ボタンを表示（テストのみ）",
-      "hint": "開発/テスト用に有効にします。管理者ログイン時に「モック接続」ボタンを表示し、Nostr拡張機能の要件をバイパスします。本番環境では無効にする必要があります。",
-      "label": "管理者認証をシミュレート"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "マジックリンクトークンなしでユーザー検証を許可する（テストのみ）",
-      "hint": "開発/テスト用に有効にします。ユーザーがマジックリンクをクリックせずにメール検証を完了できるようにします。本番環境では無効にする必要があります。",
-      "label": "ユーザー認証をシミュレート"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNSインクルードディレクティブ",

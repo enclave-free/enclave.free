@@ -622,13 +622,13 @@ export const DEPLOYMENT_CONFIG_KEY_LIST = [
   // Embedding
   'EMBEDDING_MODEL',
   // Email
-  'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'MOCK_SMTP',
+  'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'MOCK_EMAIL',
   // Storage
   'SQLITE_PATH', 'UPLOADS_DIR', 'QDRANT_HOST', 'QDRANT_PORT',
   // Search
   'SEARXNG_URL',
   // Security
-  'FRONTEND_URL', 'SIMULATE_USER_AUTH', 'SIMULATE_ADMIN_AUTH',
+  'FRONTEND_URL',
   'RATE_LIMIT_CHAT_PER_MINUTE', 'RATE_LIMIT_QUERY_PER_MINUTE', 'RATE_LIMIT_UPLOAD_PER_MINUTE',
   'RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE', 'RATE_LIMIT_CONFIG_EXPORT_PER_HOUR',
   // Domain & URLs
@@ -707,10 +707,10 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
       description: t('deploymentConfigItems.SMTP_FROM.description', 'From address for emails'),
       hint: t('deploymentConfigItems.SMTP_FROM.hint', 'The "from" address for outgoing emails (e.g., noreply@yourdomain.com).'),
     },
-    MOCK_SMTP: {
-      label: t('deploymentConfigItems.MOCK_SMTP.label', 'Test Mode'),
-      description: t('deploymentConfigItems.MOCK_SMTP.description', 'Mock email sending'),
-      hint: t('deploymentConfigItems.MOCK_SMTP.hint', 'When "true", emails are logged instead of sent. Useful for development.'),
+    MOCK_EMAIL: {
+      label: t('deploymentConfigItems.MOCK_EMAIL.label', 'Test Mode'),
+      description: t('deploymentConfigItems.MOCK_EMAIL.description', 'Mock email sending'),
+      hint: t('deploymentConfigItems.MOCK_EMAIL.hint', 'When "true", emails are logged instead of sent. Useful for development.'),
     },
     SQLITE_PATH: {
       label: t('deploymentConfigItems.SQLITE_PATH.label', 'Database File'),
@@ -741,16 +741,6 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
       label: t('deploymentConfigItems.FRONTEND_URL.label', 'App URL'),
       description: t('deploymentConfigItems.FRONTEND_URL.description', 'Public URL for the application'),
       hint: t('deploymentConfigItems.FRONTEND_URL.hint', 'The public URL where users access the app. Used for generating magic links.'),
-    },
-    SIMULATE_USER_AUTH: {
-      label: t('deploymentConfigItems.SIMULATE_USER_AUTH.label', 'Simulate User Auth'),
-      description: t('deploymentConfigItems.SIMULATE_USER_AUTH.description', 'Allow user verification without magic link token (testing only)'),
-      hint: t('deploymentConfigItems.SIMULATE_USER_AUTH.hint', 'Enable for development/testing. Allows users to complete email verification without clicking the magic link. Should be disabled in production.'),
-    },
-    SIMULATE_ADMIN_AUTH: {
-      label: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.label', 'Simulate Admin Auth'),
-      description: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.description', 'Show mock Nostr connection button for admin auth (testing only)'),
-      hint: t('deploymentConfigItems.SIMULATE_ADMIN_AUTH.hint', 'Enable for development/testing. Shows a "Mock Connection" button on admin login that bypasses Nostr extension requirement. Should be disabled in production.'),
     },
     RATE_LIMIT_CHAT_PER_MINUTE: {
       label: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.label', 'Chat Rate Limit'),

@@ -81,6 +81,12 @@ class ModelProviderCompatibilityCleanupTest(unittest.TestCase):
 
         self.assertEqual(str(ctx.exception), 'Unsupported Model Provider "maple"; only "sage" is supported')
 
+    def test_model_provider_compatibility_aliases_are_not_exported(self) -> None:
+        import llm
+
+        self.assertFalse(hasattr(llm, "ModelProvider"))
+        self.assertFalse(hasattr(llm, "ModelProviderResponse"))
+
 
 if __name__ == "__main__":
     unittest.main()

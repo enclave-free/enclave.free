@@ -55,7 +55,6 @@
       "sentMagicLink": "Vi skickade en magisk länk till",
       "clickLink": "Klicka på länken i e-postmeddelandet för att logga in.",
       "checkSpam": "Ser du den inte? Kolla din skräppost.",
-      "simulateMagicLink": "Simulera klick på magisk länk",
       "forTesting": "För teständamål:",
       "dataProtectionTitle": "Hur Enclave skyddar dina data",
       "noPasswordTitle": "Inga lagrade lösenord",
@@ -695,12 +694,9 @@
     "title": "Admininställning",
     "subtitle": "Anslut med din Nostr-identitet för att hantera denna instans",
     "connectNostr": "Anslut med Nostr",
-    "orForTesting": "eller för testning",
-    "continueMock": "Fortsätt med testidentitet",
     "connecting": "Ansluter till tillägg...",
     "noExtension": "Inget Nostr-tillägg hittades",
     "installExtension": "Installera ett NIP-07-kompatibelt tillägg för att fortsätta",
-    "useMock": "Använd testläge",
     "welcomeAdmin": "Välkommen, Admin!",
     "connectedAs": "Ansluten som",
     "redirecting": "Omdirigerar till instrumentpanelen...",
@@ -897,7 +893,7 @@
       "gmailHint": "Använd ett applösenord — inte ditt vanliga Gmail-lösenord. Aktivera 2FA först och generera sedan ett applösenord i ditt Google-kontos säkerhetsinställningar.",
       "goToPage": "Gå till sida",
       "mailgunHint": "Använd dina Mailgun SMTP-uppgifter från sidan för domäninställningar. Värden är vanligtvis smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — när aktiverad loggas e-post till konsolen istället för att skickas. Användbart för utveckling.",
+      "mockEmail": "MOCK_EMAIL — när aktiverad loggas e-post till konsolen istället för att skickas. Användbart för utveckling.",
       "overviewDesc": "Konfigurera SMTP-inställningar för att aktivera utgående e-post (inbjudningar, aviseringar, lösenordsåterställningar). Alla leverantörer använder standard SMTP-fält.",
       "overviewTitle": "Översikt av e-post (SMTP)",
       "postmarkHint": "Använd din Postmark Server API-token som SMTP-lösenord. SMTP-användarnamnet är alltid samma token.",
@@ -999,9 +995,7 @@
       "overviewDesc": "Säkerhetsinställningar styr autentisering, sessionshantering och utvecklingsgenvägar. Standardvärden är konfigurerade för lokal utveckling.",
       "overviewNote": "I produktion, se till att simuleringsflaggor är avstängda och att FRONTEND_URL matchar din riktiga domän.",
       "overviewTitle": "Översikt av säkerhet",
-      "overviewWhen": "Granska dessa inställningar innan du driftsätter på en publikt tillgänglig server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — kringgår administratörsautentisering. Alla förfrågningar behandlas som om de kommer från en administratörsanvändare.",
-      "simUserDesc": "SIMULATE_USER_AUTH — kringgår användarautentisering. Alla förfrågningar behandlas som om de kommer från en inloggad användare."
+      "overviewWhen": "Granska dessa inställningar innan du driftsätter på en publikt tillgänglig server."
     },
     "sslHelp": {
       "ariaLabel": "Hjälp för SSL- och HTTPS-konfiguration",
@@ -1318,7 +1312,7 @@
       "description": "Från-adress för e-post",
       "hint": "\"Från\"-adressen för utgående e-post (t.ex. noreply@dindomän.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testläge",
       "description": "Simulerad e-postutskick",
       "hint": "När \"true\", loggas e-post istället för att skickas. Användbart för utveckling."
@@ -1418,16 +1412,6 @@
       "description": "URL för övervakning av hälsokontrollslutpunkt",
       "hint": "URL för hälsokontroll för externa övervakare. Standard: http://localhost:8000/health.",
       "label": "Övervaknings-URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Visa knapp för låtsas-Nostr-anslutning för adminautentisering (endast testning)",
-      "hint": "Aktivera för utveckling/testning. Visar en \"Låtsasanslutning\"-knapp vid admininloggning som kringgår kravet på Nostr-tillägget. Ska inaktiveras i produktion.",
-      "label": "Simulera administratörsautentisering"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Tillåt användarverifiering utan magisk länk-token (endast testning)",
-      "hint": "Aktivera för utveckling/testning. Tillåter användare att slutföra e-postverifiering utan att klicka på den magiska länken. Ska inaktiveras i produktion.",
-      "label": "Simulera användarautentisering"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS-include-direktiv",

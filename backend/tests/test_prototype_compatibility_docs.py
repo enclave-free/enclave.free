@@ -111,6 +111,26 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("legacy Python Model Provider client config", deployment)
         self.assertNotIn("remaining legacy client paths", deployment)
 
+    def test_mock_email_docs_and_locales_do_not_teach_mock_smtp_alias(self) -> None:
+        checked_paths = [
+            REPO_ROOT / "docs/email-auth.md",
+            REPO_ROOT / "docs/authentication.md",
+            REPO_ROOT / "docs/sqlite-admin-system.md",
+            REPO_ROOT / "frontend/src/pages/AdminDeploymentConfig.tsx",
+            REPO_ROOT / "frontend/src/types/config.ts",
+        ]
+        checked_paths.extend(sorted((REPO_ROOT / "frontend/src/i18n/locales").glob("*.json")))
+
+        violations = []
+        for path in checked_paths:
+            if path.name.startswith("._"):
+                continue
+            text = path.read_text(encoding="utf-8")
+            if "MOCK_SMTP" in text or "mockSmtp" in text:
+                violations.append(str(path.relative_to(REPO_ROOT)))
+
+        self.assertEqual(violations, [])
+
     def test_sqlite_admin_docs_route_chat_db_tool_through_sage(self) -> None:
         sqlite_admin = (REPO_ROOT / "docs/sqlite-admin-system.md").read_text(encoding="utf-8")
 

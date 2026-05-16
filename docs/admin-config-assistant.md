@@ -216,8 +216,8 @@ Note: Instance settings are updated via the single endpoint `PUT /admin/settings
 Before allowlist validation, the frontend normalizes common LLM output drift:
 
 - Coalesces `PUT /admin/settings/{key}` with body `{ "value": ... }` into a single `PUT /admin/settings` patch object.
-- Normalizes `POST /admin/user-types` bodies (supports `order` alias -> `display_order`).
-- Normalizes `POST /admin/user-fields` bodies (supports aliases like `name`/`label`, `type`, `order`, `includeInChat`, `userTypeId`).
+- Normalizes `POST /admin/user-types` bodies using canonical keys only (`name`, `description`, `icon`, `display_order`).
+- Normalizes `POST /admin/user-fields` bodies using canonical keys only (`field_name`, `field_type`, `display_order`, `include_in_chat`, `user_type_id`, and related backend fields).
 - For `POST /admin/user-fields`, `options` must be a native JSON array (`["A","B"]`), not a JSON-encoded string (`"[\"A\",\"B\"]"`).
 - Parses boolean-like values (`true/false`, `1/0`, `yes/no`) and integer-like values where supported.
 

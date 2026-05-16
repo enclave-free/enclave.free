@@ -55,7 +55,6 @@
       "sentMagicLink": "Enviamos um link mágico para",
       "clickLink": "Clique no link no e-mail para entrar.",
       "checkSpam": "Não encontrou? Verifique sua pasta de spam.",
-      "simulateMagicLink": "Simular clique no link mágico",
       "forTesting": "Para fins de teste:",
       "dataProtectionTitle": "Como o Enclave protege seus dados",
       "noPasswordTitle": "Sem senhas armazenadas",
@@ -696,12 +695,9 @@
     "title": "Configuração de administrador",
     "subtitle": "Conecte-se com sua identidade Nostr para gerenciar esta instância",
     "connectNostr": "Conectar com Nostr",
-    "orForTesting": "ou para testes",
-    "continueMock": "Continuar com identidade simulada",
     "connecting": "Conectando à extensão...",
     "noExtension": "Nenhuma extensão Nostr encontrada",
     "installExtension": "Instale uma extensão compatível com NIP-07 para continuar",
-    "useMock": "Usar simulação",
     "welcomeAdmin": "Bem-vindo, Administrador!",
     "connectedAs": "Conectado como",
     "redirecting": "Redirecionando para o painel...",
@@ -869,7 +865,7 @@
       "gmailHint": "Use uma Senha de App — não sua senha normal do Gmail. Ative a verificação em duas etapas primeiro, depois gere uma Senha de App nas configurações de segurança da sua Conta Google.",
       "goToPage": "Ir para a página",
       "mailgunHint": "Use suas credenciais SMTP do Mailgun da página de configurações do domínio. O host geralmente é smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — quando ativado, os e-mails são registrados no console em vez de enviados. Útil para desenvolvimento.",
+      "mockEmail": "MOCK_EMAIL — quando ativado, os e-mails são registrados no console em vez de enviados. Útil para desenvolvimento.",
       "overviewDesc": "Configure as definições de SMTP para habilitar e-mail de saída (convites, notificações, redefinições de senha). Todos os provedores usam campos SMTP padrão.",
       "overviewTitle": "Visão Geral de E-mail (SMTP)",
       "postmarkHint": "Use o token de API do seu servidor Postmark como a senha SMTP. O nome de usuário SMTP é sempre o mesmo token.",
@@ -971,9 +967,7 @@
       "overviewDesc": "As configurações de segurança controlam autenticação, gerenciamento de sessões e atalhos de desenvolvimento. Os padrões são configurados para desenvolvimento local.",
       "overviewNote": "Em produção, certifique-se de que as flags de simulação estão desativadas e FRONTEND_URL corresponde ao seu domínio real.",
       "overviewTitle": "Visão Geral de Segurança",
-      "overviewWhen": "Revise essas configurações antes de implantar em um servidor público.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — ignora a autenticação de administrador. Todas as requisições são tratadas como vindas de um usuário administrador.",
-      "simUserDesc": "SIMULATE_USER_AUTH — ignora a autenticação de usuário. Todas as requisições são tratadas como vindas de um usuário autenticado."
+      "overviewWhen": "Revise essas configurações antes de implantar em um servidor público."
     },
     "sslHelp": {
       "ariaLabel": "Ajuda de configuração de SSL e HTTPS",
@@ -1319,7 +1313,7 @@
       "description": "Endereço de envio para e-mails",
       "hint": "O endereço \"de\" para e-mails enviados (ex: noreply@seudominio.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Modo de teste",
       "description": "Envio de e-mail simulado",
       "hint": "Quando \"true\", e-mails são registrados ao invés de enviados. Útil para desenvolvimento."
@@ -1419,16 +1413,6 @@
       "description": "URL do endpoint de monitoramento de saúde",
       "hint": "URL de verificação de saúde para monitores externos. Padrão: http://localhost:8000/health.",
       "label": "URL de Monitoramento"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Mostrar botão de conexão Nostr simulado para autenticação de admin (somente para teste)",
-      "hint": "Habilitar para desenvolvimento/teste. Mostra um botão \"Conexão Simulada\" no login de admin que ignora o requisito da extensão Nostr. Deve ser desativado em produção.",
-      "label": "Simular Autenticação de Admin"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Permitir verificação do usuário sem token de link mágico (somente para teste)",
-      "hint": "Habilitar para desenvolvimento/teste. Permite que os usuários completem a verificação de e-mail sem clicar no link mágico. Deve ser desativado em produção.",
-      "label": "Simular Autenticação de Usuário"
     },
     "SPF_INCLUDE": {
       "description": "Diretiva de inclusão SPF DNS",

@@ -534,12 +534,9 @@
     "title": "管理員設定",
     "subtitle": "使用你的 Nostr 身分連接以管理此實例",
     "connectNostr": "使用 Nostr 連接",
-    "orForTesting": "或用於測試",
-    "continueMock": "使用模擬身分繼續",
     "connecting": "正在連接擴充功能...",
     "noExtension": "找不到 Nostr 擴充功能",
     "installExtension": "請安裝 NIP-07 相容的擴充功能以繼續",
-    "useMock": "使用模擬",
     "welcomeAdmin": "歡迎，管理員！",
     "connectedAs": "已連接為",
     "redirecting": "正在前往儀表板...",
@@ -611,7 +608,6 @@
       "sentMagicLink": "我們已將魔法連結寄送至",
       "clickLink": "點擊郵件中的連結即可登入。",
       "checkSpam": "沒有看到？請檢查垃圾郵件資料夾。",
-      "simulateMagicLink": "模擬點擊魔法連結",
       "forTesting": "用於測試：",
       "dataProtectionTitle": "Enclave 如何保護你的資料",
       "noPasswordTitle": "不儲存密碼",
@@ -898,7 +894,7 @@
       "gmailHint": "使用應用程式密碼 — 而非你的一般 Gmail 密碼。請先啟用兩步驟驗證，然後在 Google 帳戶安全設定中產生應用程式密碼。",
       "goToPage": "前往頁面",
       "mailgunHint": "使用你在網域設定頁面中的 Mailgun SMTP 憑證。主機通常為 smtp.mailgun.org。",
-      "mockSmtp": "MOCK_SMTP — 啟用後，電子郵件會記錄到主控台而非實際發送。適用於開發環境。",
+      "mockEmail": "MOCK_EMAIL — 啟用後，電子郵件會記錄到主控台而非實際發送。適用於開發環境。",
       "overviewDesc": "設定 SMTP 以啟用外寄電子郵件（邀請、通知、密碼重設）。所有提供者都使用標準的 SMTP 欄位。",
       "overviewTitle": "電子郵件（SMTP）概覽",
       "postmarkHint": "使用你的 Postmark Server API 權杖作為 SMTP 密碼。SMTP 使用者名稱始終使用相同的權杖。",
@@ -1000,9 +996,7 @@
       "overviewDesc": "安全性設定控制驗證、工作階段處理和開發捷徑。預設值已為本機開發進行設定。",
       "overviewNote": "在正式環境中，請確保模擬旗標已關閉且 FRONTEND_URL 與你的實際網域匹配。",
       "overviewTitle": "安全性概覽",
-      "overviewWhen": "在部署到公開伺服器之前檢視這些設定。",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — 繞過管理員驗證。所有請求都被視為來自管理員使用者。",
-      "simUserDesc": "SIMULATE_USER_AUTH — 繞過使用者驗證。所有請求都被視為來自已登入的使用者。"
+      "overviewWhen": "在部署到公開伺服器之前檢視這些設定。"
     },
     "sslHelp": {
       "ariaLabel": "SSL 與 HTTPS 設定說明",
@@ -1319,7 +1313,7 @@
       "description": "郵件寄件人地址",
       "hint": "發送郵件的「寄件人」地址（例如 noreply@yourdomain.com）。"
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "測試模式",
       "description": "模擬郵件發送",
       "hint": "設為 \"true\" 時，郵件將記錄日誌而非實際發送。適用於開發環境。"
@@ -1419,16 +1413,6 @@
       "description": "健康監控端點 URL",
       "hint": "外部監控的健康檢查 URL。預設：http://localhost:8000/health。",
       "label": "監控 URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "顯示管理員驗證的模擬 Nostr 連線按鈕（僅供測試）",
-      "hint": "啟用以用於開發/測試。在管理員登入時顯示「模擬連線」按鈕，該按鈕繞過 Nostr 擴充功能要求。在生產環境中應禁用。",
-      "label": "模擬管理員驗證"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "允許使用者在沒有魔術連結令牌的情況下進行驗證（僅供測試）",
-      "hint": "啟用以用於開發/測試。允許使用者在不點擊魔術連結的情況下完成電子郵件驗證。在生產環境中應禁用。",
-      "label": "模擬使用者驗證"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS 包含指令",
