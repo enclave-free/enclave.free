@@ -111,11 +111,12 @@ Use this checklist to:
 - [x] User session token is signed and time-limited.
 - [x] Chat/query access requires authenticated and approved users.
 - [x] Add anti-enumeration response behavior for auth endpoints.
-- [ ] Add abuse-resistant rate limiting that works across multiple backend instances for:
+- [x] Add abuse-resistant rate limiting that works across multiple backend instances for:
   - Auth endpoints
   - File upload endpoints
   - Vector search operations
   - Query/chat operations
+  Evidence: `backend/app/rate_limit.py`, `gateway/nginx.conf`, `backend/tests/test_rate_limit.py`, `docs/adr/0018-shared-rate-limiting-uses-self-hosted-valkey.md`
 
 ### 2.2 Data confidentiality and privacy
 
@@ -133,7 +134,8 @@ Use this checklist to:
 ### 2.3 Web application security
 
 - [x] Implement CSRF tokens for state-changing operations.
-- [ ] Sanitize/escape user input to prevent XSS (reflected, stored, DOM-based).
+- [x] Sanitize/escape user input to prevent XSS (reflected, stored, DOM-based).
+  Evidence: `frontend/src/components/chat/ChatMessage.tsx`, `frontend/src/components/chat/ChatMessage.test.tsx`, `docs/security-rendering.md`
 - [x] Implement Content Security Policy (CSP) headers.
 - [x] Add X-Frame-Options and X-Content-Type-Options headers.
 
@@ -221,14 +223,16 @@ Use this checklist to:
 
 ### 5.1 Data classification and input validation
 
-- [ ] Maintain explicit classification for:
+- [x] Maintain explicit classification for:
   - PII fields (email/name/user fields)
   - Uploaded documents
   - Derived chunks/embeddings
   - Secrets and credentials
+  Evidence: `backend/app/data_classification.py`, `backend/tests/test_data_classification_and_input_validation.py`, `docs/data-classification.md`
 - [ ] Verify all database queries use parameterized/prepared statements (no string concatenation).
   - [x] Admin database explorer read-only endpoint enforces the shared SQL table allowlist.
-- [ ] Implement input validation for all user-supplied data (length, type, format).
+- [x] Implement input validation for all user-supplied data (length, type, format).
+  Evidence: `backend/app/models.py`, `backend/tests/test_data_classification_and_input_validation.py`
 
 ### 5.2 At-rest controls
 

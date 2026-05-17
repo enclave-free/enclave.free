@@ -33,3 +33,6 @@ bech32>=1.2.0
 # LLM provider (OpenAI-compatible SDK)
 openai>=1.12.0
 httpx>=0.25.0
+
+# Shared rate limiting store (Valkey speaks the Redis protocol)
+redis>=5.0.0,<6.0.0

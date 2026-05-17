@@ -183,6 +183,19 @@ function isInternalWritingStatus(status: string) {
   return status.trim().toLowerCase().replace(/\.+$/, '') === 'writing answer'
 }
 
+function isSafeMarkdownHref(href?: string) {
+  if (!href) return false
+  const trimmed = href.trim()
+  if (trimmed.startsWith('//')) return false
+  if (trimmed.startsWith('/') || trimmed.startsWith('#')) return true
+  try {
+    const parsed = new URL(trimmed)
+    return ['http:', 'https:', 'mailto:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const { resolvedTheme } = useTheme()
   const { t } = useTranslation()
@@ -302,6 +315,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     return <p className="mb-3 last:mb-0 text-[15px] leading-relaxed">{children}</p>
                   },
                   a({ href, children }) {
+                    if (!isSafeMarkdownHref(href)) {
+                      return <span>{children}</span>
+                    }
                     return (
                       <a
                         href={href}

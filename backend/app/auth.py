@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Enclave Authentication Module
 Handles magic link email authentication with signed tokens.

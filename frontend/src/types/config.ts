@@ -281,6 +281,14 @@ export interface UnsupportedDeploymentSurfaceCategory {
   surfaces: UnsupportedDeploymentSurface[]
 }
 
+export interface DataClassificationItem {
+  key: string
+  label: string
+  classification: string
+  lifecycle_term: string
+  summary: string
+}
+
 export interface LifecycleStatusResponse {
   lifecycle_scope?: LifecycleScope
   lifecycle_readiness?: {
@@ -309,6 +317,15 @@ export interface LifecycleStatusResponse {
       documented_exceptions: number
       missing: number
       guardrail_passed: boolean
+    }
+  }
+  data_classification?: {
+    items: DataClassificationItem[]
+    summary: {
+      total: number
+      sensitive: number
+      governance_evidence: number
+      deployment_surface: number
     }
   }
   deletion_tombstones?: {

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Operator-Controlled Privacy lifecycle status.
 
@@ -24,6 +26,7 @@ from pydantic import BaseModel, Field
 
 import auth
 import content_artifacts
+import data_classification
 import database
 from data_deletion import (
     deletion_target_failed,
@@ -1096,6 +1099,7 @@ def get_lifecycle_status() -> dict:
             "enabled_classes": enabled_classes,
         },
         "retention_scheduler": retention_scheduler,
+        "data_classification": data_classification.get_data_classification_inventory(),
         "audit_coverage": get_audit_coverage_inventory(),
         "deletion_tombstones": database.summarize_deletion_tombstones(),
     }

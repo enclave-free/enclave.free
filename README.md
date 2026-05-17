@@ -13,6 +13,7 @@ On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx o
 - `tinfoil-proxy` is the OpenAI-compatible Tinfoil transport used by Sage's preferred Model Provider path.
 - `postgres` stores Sage Session Memory and `web_sessions`.
 - `qdrant` stays the Enclave document retrieval index.
+- `valkey` coordinates shared rate limiting across runtime instances.
 
 ## Topology
 
@@ -107,6 +108,7 @@ Everything else stays on the internal Docker network:
 - Qdrant: `http://qdrant:6333`
 - Postgres: `postgres://sage:sage@postgres:5432/sage`
 - SearXNG: `http://searxng:8080`
+- Valkey: `redis://valkey:6379/0`
 
 ### First Admin Setup
 

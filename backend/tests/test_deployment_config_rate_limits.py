@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import hashlib
 import os
@@ -30,6 +32,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_protected_inference_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
         self._orig_simulate_user_auth = os.environ.get("SIMULATE_USER_AUTH")
         self._orig_simulate_admin_auth = os.environ.get("SIMULATE_ADMIN_AUTH")
+        self._orig_rate_limit_backend = os.environ.get("RATE_LIMIT_BACKEND")
+        self._orig_rate_limit_valkey_url = os.environ.get("RATE_LIMIT_VALKEY_URL")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["MOCK_EMAIL"] = "false"
@@ -38,6 +42,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         os.environ.pop("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", None)
         os.environ.pop("SIMULATE_USER_AUTH", None)
         os.environ.pop("SIMULATE_ADMIN_AUTH", None)
+        os.environ.pop("RATE_LIMIT_BACKEND", None)
+        os.environ.pop("RATE_LIMIT_VALKEY_URL", None)
 
         import auth
         import database
@@ -70,6 +76,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_inference_bypass)
         self._restore_env("SIMULATE_USER_AUTH", self._orig_simulate_user_auth)
         self._restore_env("SIMULATE_ADMIN_AUTH", self._orig_simulate_admin_auth)
+        self._restore_env("RATE_LIMIT_BACKEND", self._orig_rate_limit_backend)
+        self._restore_env("RATE_LIMIT_VALKEY_URL", self._orig_rate_limit_valkey_url)
         self.tmp.cleanup()
 
     @staticmethod
@@ -103,6 +111,25 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
                 self.assertEqual(response.json()["key"], key)
                 self.assertEqual(response.json()["value"], "42")
 
+    def test_rate_limit_backend_accepts_memory_or_valkey_only(self) -> None:
+        for value in ("memory", "valkey"):
+            with self.subTest(value=value):
+                response = self.client.put(
+                    "/admin/deployment/config/RATE_LIMIT_BACKEND",
+                    json={"value": value},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["value"], value)
+
+        response = self.client.put(
+            "/admin/deployment/config/RATE_LIMIT_BACKEND",
+            json={"value": "postgres"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "RATE_LIMIT_BACKEND must be memory or valkey")
+
     def test_production_validation_rejects_testing_only_flags(self) -> None:
         os.environ["ENCLAVE_ENV"] = "production"
         self.database.update_deployment_config("MOCK_EMAIL", "true", "admin-pubkey")
@@ -113,6 +140,25 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         body = response.json()
         self.assertFalse(body["valid"])
         self.assertIn("MOCK_EMAIL must be disabled in production", body["errors"])
+
+    def test_production_validation_requires_shared_rate_limit_store(self) -> None:
+        os.environ["ENCLAVE_ENV"] = "production"
+        self.database.upsert_deployment_config(
+            "RATE_LIMIT_BACKEND",
+            "memory",
+            is_secret=False,
+            requires_restart=True,
+            category="security",
+            description="Shared rate limit backend: memory or valkey",
+            changed_by="admin-pubkey",
+        )
+
+        response = self.client.post("/admin/deployment/config/validate")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["valid"])
+        self.assertIn("RATE_LIMIT_BACKEND must be valkey in production", body["errors"])
 
     def test_simulated_auth_flags_are_not_exposed_as_config(self) -> None:
         os.environ["SIMULATE_USER_AUTH"] = "true"

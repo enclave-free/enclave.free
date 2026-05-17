@@ -121,6 +121,20 @@ describe('ChatMessage', () => {
     expect(document.body).toHaveTextContent('const answer = 42')
   })
 
+  it('keeps assistant markdown HTML and unsafe links inert', () => {
+    renderMessage([
+      'Hello <img src=x onerror="alert(1)" />',
+      '',
+      '[unsafe link](javascript:alert(1))',
+      '[protocol-relative](//example.com/path)',
+    ].join('\n'))
+
+    expect(document.querySelector('img')).not.toBeInTheDocument()
+    expect(document.body).toHaveTextContent('<img src=x onerror="alert(1)" />')
+    expect(screen.getByText('unsafe link')).not.toHaveAttribute('href')
+    expect(screen.getByText('protocol-relative')).not.toHaveAttribute('href')
+  })
+
   it('copies fenced code content from the accessible copy action', async () => {
     const user = userEvent.setup()
     stubClipboard()

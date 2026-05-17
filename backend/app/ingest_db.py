@@ -11,6 +11,8 @@ TODO (Future CRUD operations):
 - Delete: delete_job(), delete_chunks_for_job(), purge_old_jobs()
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional

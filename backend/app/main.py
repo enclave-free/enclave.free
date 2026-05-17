@@ -68,6 +68,7 @@ from nostr import verify_auth_event, get_pubkey_from_event
 import auth
 import lifecycle
 from rate_limit import RateLimiter
+from rate_limit import rate_limit_backend_status
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
 # Configure logging
@@ -492,7 +493,8 @@ async def root():
 async def health_check():
     """Check health of all services"""
     services = {
-        "qdrant": "unknown"
+        "qdrant": "unknown",
+        "shared_rate_limit_store": "unknown",
     }
 
     # Check Qdrant
@@ -503,7 +505,15 @@ async def health_check():
     except Exception as e:
         services["qdrant"] = f"unhealthy: {str(e)}"
 
-    all_healthy = all(s == "healthy" for s in services.values())
+    rate_limit_status = await rate_limit_backend_status()
+    if rate_limit_status["status"] == "healthy":
+        services["shared_rate_limit_store"] = "healthy"
+    elif rate_limit_status["status"] == "local_only":
+        services["shared_rate_limit_store"] = "unknown"
+    else:
+        services["shared_rate_limit_store"] = f"unhealthy: {rate_limit_status['summary']}"
+
+    all_healthy = all(s in {"healthy", "unknown"} for s in services.values())
 
     return HealthResponse(
         status="healthy" if all_healthy else "degraded",

@@ -18,7 +18,7 @@ import auth
 import database
 from inference_verification import TinfoilVerifier, fingerprint_claims, verify_and_store
 from inference_repair import current_inference_repair_status, mark_startup_verification_unavailable, mark_verification_record
-from rate_limit import RateLimiter
+from rate_limit import RateLimiter, rate_limit_backend_status
 from models import (
     DeploymentConfigItem,
     DeploymentConfigResponse,
@@ -160,6 +160,8 @@ ENV_CONFIG_MAP = {
     "RATE_LIMIT_UPLOAD_PER_MINUTE": {"category": "security", "description": "Document upload requests per minute", "requires_restart": True, "default": "20"},
     "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {"category": "security", "description": "Vector search requests per minute", "requires_restart": True, "default": "30"},
     "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {"category": "security", "description": "Deployment config exports per hour", "requires_restart": True, "default": "5"},
+    "RATE_LIMIT_BACKEND": {"category": "security", "description": "Shared rate limit backend: memory or valkey", "requires_restart": True, "default": "memory"},
+    "RATE_LIMIT_VALKEY_URL": {"category": "security", "description": "Self-hosted Valkey URL for shared rate limits", "requires_restart": True, "default": "redis://valkey:6379/0", "is_secret": True},
     # Retrieval compatibility settings. RAG_* names remain stable public config keys.
     "RAG_TOP_K": {"category": "llm", "description": "Default Retrieval count", "requires_restart": False, "default": "8"},
     "PDF_EXTRACT_MODE": {"category": "llm", "description": "PDF extraction mode (fast/quality)", "requires_restart": False, "default": "fast"},
@@ -623,6 +625,12 @@ async def update_deployment_config_value(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"{key} must be a positive integer") from None
 
+    if key == "RATE_LIMIT_BACKEND":
+        normalized_backend = str(value_to_save or "").strip().lower()
+        if normalized_backend not in {"memory", "valkey"}:
+            raise HTTPException(status_code=400, detail="RATE_LIMIT_BACKEND must be memory or valkey")
+        value_to_save = normalized_backend
+
     # URL validation for URL-type fields
     URL_KEYS = {"INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "CUSTOM_SEARXNG_URL",
                 "WEBHOOK_BASE_URL", "MONITORING_URL"}
@@ -747,6 +755,14 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
         for key in PRODUCTION_UNSAFE_FLAGS:
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
                 errors.append(f"{key} must be disabled in production")
+        rate_limit_backend = (
+            _deployment_config_value(config_dict, "RATE_LIMIT_BACKEND")
+            or os.getenv("RATE_LIMIT_BACKEND", "memory")
+        ).strip().lower()
+        if rate_limit_backend != "valkey":
+            errors.append("RATE_LIMIT_BACKEND must be valkey in production")
+        if not (_deployment_config_value(config_dict, "RATE_LIMIT_VALKEY_URL") or os.getenv("RATE_LIMIT_VALKEY_URL", "")).strip():
+            errors.append("RATE_LIMIT_VALKEY_URL must be configured in production")
 
     if not config_dict.get("SMTP_HOST") and not mock_email_enabled:
         warnings.append("SMTP not configured - email features will not work")
@@ -895,6 +911,18 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             last_checked=datetime.now(timezone.utc).isoformat(),
             error="Not configured",
         ))
+
+    rate_limit_status = await rate_limit_backend_status()
+    if rate_limit_status["status"] in {"healthy", "local_only"}:
+        rate_limit_health = "healthy" if rate_limit_status["status"] == "healthy" else "unknown"
+    else:
+        rate_limit_health = "unhealthy"
+    services.append(ServiceHealthItem(
+        name="Shared Rate Limit Store",
+        status=rate_limit_health,
+        last_checked=datetime.now(timezone.utc).isoformat(),
+        error=None if rate_limit_status["status"] == "healthy" else rate_limit_status["summary"],
+    ))
 
     # Check SMTP (if configured)
     smtp_host = config_dict.get("SMTP_HOST") or os.getenv("SMTP_HOST", "")
