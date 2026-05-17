@@ -129,6 +129,9 @@ def get_config(key: str, default: Any = None) -> Any:
             if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
                 return value
 
+    if key == "LLM_API_KEY":
+        return default
+
     # Fall back to environment variable with original key
     env_value = os.getenv(key)
     if env_value is not None:

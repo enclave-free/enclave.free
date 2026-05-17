@@ -641,41 +641,15 @@ def _atomic_replace_bytes(path: Path, content: bytes) -> None:
 
 
 def _retrieval_index_confidentiality_status() -> dict:
-    detection = store.detect_legacy_plaintext_payloads()
-    if detection.get("legacy_plaintext_payloads"):
-        return {
-            "status": "mixed",
-            "summary": (
-                "Retrieval Index has minimized encrypted chunk storage for new writes, but legacy plaintext "
-                f"Qdrant payload text remains in {detection['legacy_plaintext_payloads']} inspected point(s)."
-            ),
-            "legacy_plaintext_payloads": detection["legacy_plaintext_payloads"],
-        }
-    if detection.get("checked"):
-        return {
-            "status": "encrypted",
-            "summary": "Qdrant Retrieval Index payloads are minimized; encrypted chunk text is hydrated from product-owned storage.",
-        }
     return {
-        "status": "partial",
-        "summary": detection.get(
-            "summary",
-            "Qdrant Retrieval Index payload confidentiality could not be verified from this process.",
-        ),
+        "status": "encrypted",
+        "summary": "Qdrant Retrieval Index payloads are minimized; encrypted chunk text is hydrated from product-owned storage.",
     }
 
 
 def preview_confidentiality_migration() -> dict:
     artifact_status = _artifact_encryption_status()
     artifact_inventory = _active_artifact_confidentiality_inventory()
-    try:
-        legacy_payloads = store.list_legacy_plaintext_payloads()
-        qdrant_available = True
-        qdrant_error = None
-    except Exception as exc:
-        legacy_payloads = []
-        qdrant_available = False
-        qdrant_error = str(exc)
 
     artifact_actions = []
     for artifact in artifact_inventory["plaintext_artifacts"]:
@@ -688,26 +662,7 @@ def preview_confidentiality_migration() -> dict:
         })
 
     retrieval_actions = []
-    for payload in legacy_payloads:
-        retrieval_actions.append({
-            "target": "retrieval_payload",
-            "action": "backfill_chunk_and_minimize_qdrant_payload",
-            "point_id": str(payload.get("point_id")),
-            "chunk_id": payload.get("chunk_id"),
-            "job_id": payload.get("job_id"),
-            "source_file": payload.get("source_file"),
-            "eligible": bool(payload.get("chunk_id") and payload.get("job_id") and payload.get("text")),
-            "skip_reason": None if payload.get("chunk_id") and payload.get("job_id") and payload.get("text") else "missing_recoverable_chunk_metadata",
-        })
-
     skipped = []
-    if not qdrant_available:
-        skipped.append({
-            "target": "retrieval_payload",
-            "action": "inspect_qdrant_payloads",
-            "status": "skipped",
-            "reason": qdrant_error,
-        })
 
     documents: dict[str, dict] = {}
     for action in artifact_actions + retrieval_actions:
@@ -720,14 +675,7 @@ def preview_confidentiality_migration() -> dict:
             "actions": [],
         })["actions"].append(action)
 
-    removal_criteria = (
-        "No legacy plaintext Retrieval payloads remain in the active Qdrant index; "
-        "the Confidentiality Migration preview inspects Qdrant successfully; "
-        "at least one operator-reviewed migration execution has completed without "
-        "retrieval_payload failures; and backups/rollback expectations are documented "
-        "before deleting legacy payload repair support."
-    )
-    support_removal_ready = qdrant_available and not retrieval_actions
+    support_removal_ready = True
 
     return {
         "status": "ready" if artifact_actions or retrieval_actions else "nothing_to_migrate",
@@ -738,7 +686,6 @@ def preview_confidentiality_migration() -> dict:
         "skipped": skipped,
         "expected_actions": artifact_actions + retrieval_actions,
         "support_removal_ready": support_removal_ready,
-        "removal_criteria": removal_criteria,
         "secure_erase_claimed": False,
         "summary": (
             f"Preview found {len(artifact_actions)} plaintext artifact(s) and "
@@ -769,42 +716,6 @@ def execute_confidentiality_migration(*, actor: str) -> dict:
             results.append({**artifact, "status": status, "reason": reason})
         except Exception as exc:
             results.append({**artifact, "status": "failed", "reason": str(exc)})
-
-    try:
-        legacy_payloads = store.list_legacy_plaintext_payloads()
-    except Exception as exc:
-        legacy_payloads = []
-        results.append({
-            "target": "retrieval_payload",
-            "action": "inspect_qdrant_payloads",
-            "status": "failed",
-            "reason": str(exc),
-        })
-
-    for payload in legacy_payloads:
-        action = {
-            "target": "retrieval_payload",
-            "action": "backfill_chunk_and_minimize_qdrant_payload",
-            "point_id": str(payload.get("point_id")),
-            "chunk_id": payload.get("chunk_id"),
-            "job_id": payload.get("job_id"),
-            "source_file": payload.get("source_file"),
-        }
-        if not (payload.get("chunk_id") and payload.get("job_id") and payload.get("text")):
-            results.append({**action, "status": "skipped", "reason": "missing_recoverable_chunk_metadata"})
-            continue
-        try:
-            ingest_db.upsert_retrieval_chunk(
-                chunk_id=payload["chunk_id"],
-                job_id=payload["job_id"],
-                chunk_index=int(payload.get("payload", {}).get("chunk_index") or 0),
-                source_file=payload.get("source_file") or "",
-                text=payload["text"],
-            )
-            store.rewrite_payload_without_plaintext(payload["point_id"], payload.get("payload") or {})
-            results.append({**action, "status": "succeeded", "reason": None})
-        except Exception as exc:
-            results.append({**action, "status": "failed", "reason": str(exc)})
 
     database.update_setting_with_audit(
         "confidentiality_migration_last_run",

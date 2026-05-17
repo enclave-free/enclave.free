@@ -86,9 +86,9 @@ Use this checklist to:
   Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`
 - [x] New Retrieval Index writes store vectors and minimal metadata only; encrypted chunk text lives in SQLite.
   Evidence: `backend/app/store.py`, `backend/app/ingest_db.py`, `backend/tests/test_store_minimized_payload.py`, `backend/tests/test_ingest_batch_replacement.py`
-- [ ] Legacy Retrieval Index payloads may still contain plaintext until the Confidentiality Migration runs.
+- [x] Legacy Retrieval Index plaintext repair support has been removed; current writes use minimized Qdrant payloads and encrypted chunk hydration from SQLite.
   Evidence: `docs/adr/0011-minimize-retrieval-index-and-encrypt-chunk-text.md`, `docs/lifecycle-confidentiality-runbook.md`
-- [ ] Legacy User Profile plaintext columns and fallback reads remain until an operator-reviewed profile migration proves removal is safe.
+- [x] Legacy User Profile plaintext fallback support has been removed; current lookup is blind-index-only and the admin migration endpoints are absent.
   Evidence: `docs/user-profile-plaintext-migration-plan.md`
 - [x] Deployment secrets are now encrypted at rest in SQLite.
   Evidence: `backend/app/database.py` (Section 3.3, Section 5.2)

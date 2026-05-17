@@ -1047,7 +1047,6 @@
       "usersToMigrate": "Users to migrate",
       "warning": "This is an advanced operation. Incorrect migration can lock you out of encrypted data. Proceed only if you understand the implications."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
       "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
       "apiKeyLabel": "Tinfoil API Key",

@@ -541,9 +541,8 @@ export function AdminDeploymentConfig() {
       .flat()
       .find((c) => c.key === editingKey)
 
-    // Don't save empty secret values - this prevents wiping existing credentials
-    // Exception: LLM_API_KEY can be cleared so runtime falls back to .env
-    if (item?.is_secret && editValue === '' && item.key !== 'LLM_API_KEY') {
+    // Don't save empty secret values - this prevents wiping existing credentials.
+    if (item?.is_secret && editValue === '') {
       setEditingKey(null)
       setEditValue('')
       return
@@ -1350,9 +1349,7 @@ export function AdminDeploymentConfig() {
               placeholder={
                 item.is_secret
                   ? (
-                    item.key === 'LLM_API_KEY'
-                      ? t('adminDeployment.leaveEmptyForLlmApiKey', 'Leave empty to clear override and use .env fallback')
-                      : t('adminDeployment.leaveEmptyForSecret', 'Leave empty to keep current value')
+                    t('adminDeployment.leaveEmptyForSecret', 'Leave empty to keep current value')
                   )
                   : (item.value || '')
               }
@@ -2797,7 +2794,7 @@ export function AdminDeploymentConfig() {
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">{t('adminDeployment.llmHelp.apiKeyLabel', 'Tinfoil API Key')}</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for the Tinfoil proxy. Set LLM_API_KEY or leave it empty to fall back to TINFOIL_API_KEY from .env.')}
+                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for Python-side Tinfoil diagnostics. Set LLM_API_KEY in Deployment Settings.')}
                         </p>
                       </div>
                     </div>

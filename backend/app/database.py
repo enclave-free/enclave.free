@@ -137,13 +137,6 @@ def _get_deployment_secret_key() -> bytes:
     return _deployment_secret_key
 
 
-def _get_legacy_deployment_secret_key() -> bytes:
-    from auth import SECRET_KEY
-    return hashlib.sha256(
-        f"{'san' + 'ctum'}-deployment-config:{SECRET_KEY}".encode("utf-8")
-    ).digest()
-
-
 def _get_audit_hmac_key() -> bytes:
     """Load and cache the secret key used for audit-chain HMACs."""
     global _audit_hmac_key
@@ -184,14 +177,8 @@ def _encrypt_deployment_secret_value(value: str) -> str:
 
 def _decrypt_deployment_secret_value(value: str) -> str:
     """Decrypt deployment secret value (returns input unchanged if plaintext)."""
-    plaintext, _used_legacy_key = _decrypt_deployment_secret_value_with_key_status(value)
-    return plaintext
-
-
-def _decrypt_deployment_secret_value_with_key_status(value: str) -> tuple[str, bool]:
-    """Decrypt deployment secret value and report whether legacy key material was required."""
     if not _is_deployment_secret_encrypted(value):
-        return value, False
+        return value
 
     encoded = value[len(DEPLOYMENT_SECRET_PREFIX):]
     parts = encoded.split(":", 2)
@@ -202,18 +189,9 @@ def _decrypt_deployment_secret_value_with_key_status(value: str) -> tuple[str, b
     tag = b64decode(parts[1].encode("ascii"))
     ciphertext = b64decode(parts[2].encode("ascii"))
 
-    keys = (
-        (_get_deployment_secret_key(), False),
-        (_get_legacy_deployment_secret_key(), True),
-    )
-    for key, used_legacy_key in keys:
-        try:
-            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-            return plaintext.decode("utf-8"), used_legacy_key
-        except ValueError:
-            continue
-    raise ValueError("Invalid deployment secret authentication tag")
+    cipher = AES.new(_get_deployment_secret_key(), AES.MODE_GCM, nonce=nonce)
+    plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    return plaintext.decode("utf-8")
 
 
 def init_schema():
@@ -306,7 +284,7 @@ def init_schema():
     # - encrypted_email/encrypted_name: NIP-04 ciphertext
     # - ephemeral_pubkey_email/name: pubkey for decryption
     # - email_blind_index: HMAC hash for email lookups
-    # Original email/name columns kept for migration (will be removed later)
+    # email/name are deprecated compatibility columns; current writes keep them NULL.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -329,7 +307,7 @@ def init_schema():
     # Note: values are encrypted using NIP-04
     # - encrypted_value: NIP-04 ciphertext
     # - ephemeral_pubkey: pubkey for decryption
-    # Original value column kept for migration (will be removed later)
+    # value is used only for operator-selected plaintext fields.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_field_values (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -929,10 +907,8 @@ def _migrate_encrypt_deployment_config_secrets() -> None:
         raw_value = row["value"]
         try:
             if _is_deployment_secret_encrypted(raw_value):
-                plaintext_value, used_legacy_key = _decrypt_deployment_secret_value_with_key_status(raw_value)
-                if not used_legacy_key:
-                    continue
-                encrypted_value = _encrypt_deployment_secret_value(plaintext_value)
+                _decrypt_deployment_secret_value(raw_value)
+                continue
             else:
                 encrypted_value = _encrypt_deployment_secret_value(raw_value)
         except Exception as exc:
@@ -2007,7 +1983,6 @@ def get_user(user_id: int) -> dict | None:
     """Get user by id with all field values.
 
     Returns encrypted fields with their ephemeral pubkeys for frontend decryption.
-    If data is not encrypted (legacy or no admin), returns plaintext in email/name fields.
     """
     with get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -2018,7 +1993,6 @@ def get_user(user_id: int) -> dict | None:
         user = dict(user_row)
 
         # Structure encrypted data for frontend decryption
-        # If encrypted_email exists, frontend will decrypt; otherwise use plaintext
         if user.get("encrypted_email"):
             user["email_encrypted"] = {
                 "ciphertext": user["encrypted_email"],
@@ -2083,7 +2057,7 @@ def get_user_by_pubkey(pubkey: str) -> dict | None:
 def get_user_by_email(email: str) -> dict | None:
     """Get user by email.
 
-    Uses blind index for encrypted emails, falls back to plaintext for legacy data.
+    Uses blind index for encrypted emails.
     """
     from encryption import compute_blind_index
 
@@ -2100,16 +2074,6 @@ def get_user_by_email(email: str) -> dict | None:
         cursor.execute(
             "SELECT id FROM users WHERE email_blind_index = ? ORDER BY id DESC LIMIT 1",
             (blind_index,)
-        )
-        row = cursor.fetchone()
-        if row:
-            return get_user(row["id"])
-
-        # Fall back to plaintext email (legacy/unencrypted data)
-        # Use normalized email for consistent matching
-        cursor.execute(
-            "SELECT id FROM users WHERE LOWER(email) = ? ORDER BY id DESC LIMIT 1",
-            (normalized_email,)
         )
         row = cursor.fetchone()
         if row:
@@ -2555,147 +2519,6 @@ def delete_user_lifecycle(user_id: int) -> dict:
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
     return bool(delete_user_lifecycle(user_id)["user_deleted"])
-
-
-# --- Migration: Encrypt Existing Plaintext Data ---
-
-def migrate_encrypt_existing_data():
-    """
-    Encrypt existing plaintext data that was stored before an admin was configured.
-
-    This should be called after the first admin is added to encrypt any
-    pre-existing user data. It encrypts:
-    - users.email → encrypted_email
-    - users.name → encrypted_name
-    - user_field_values.value → encrypted_value
-
-    This is idempotent - it only encrypts data that hasn't been encrypted yet.
-
-    Note: This function creates its own database connection to be thread-safe
-    when called via asyncio.to_thread(). Do not use the global connection here.
-    """
-    from encryption import encrypt_for_admin, compute_blind_index, get_admin_pubkey
-
-    admin_pubkey = get_admin_pubkey()
-    if not admin_pubkey:
-        logger.warning("migrate_encrypt_existing_data: No admin pubkey found, skipping")
-        return
-
-    logger.info("Starting encryption migration for existing plaintext data...")
-
-    # Create a dedicated connection for thread-safety (this runs via asyncio.to_thread)
-    conn = sqlite3.connect(SQLITE_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    migrated_users = 0
-    migrated_fields = 0
-
-    try:
-        # Migrate users table
-        cursor.execute("""
-            SELECT id, email, name FROM users
-            WHERE (email IS NOT NULL AND encrypted_email IS NULL)
-               OR (name IS NOT NULL AND encrypted_name IS NULL)
-        """)
-        users_to_migrate = cursor.fetchall()
-
-        for row in users_to_migrate:
-            user_id = row[0]
-            email = row[1]
-            name = row[2]
-
-            updates = []
-            values = []
-
-            # Encrypt email if not already encrypted (strip whitespace first)
-            # Handle non-string values by serializing to JSON
-            email_str = email if isinstance(email, str) else json.dumps(email, separators=(",", ":"), ensure_ascii=False) if email is not None else None
-            trimmed_email = email_str.strip() if email_str else None
-            if email_str is not None:
-                # Always clear plaintext; only encrypt if non-whitespace
-                if trimmed_email:
-                    encrypted_email, ephemeral_pubkey_email = encrypt_for_admin(trimmed_email)
-                    if encrypted_email:
-                        updates.append("encrypted_email = ?")
-                        values.append(encrypted_email)
-                        updates.append("ephemeral_pubkey_email = ?")
-                        values.append(ephemeral_pubkey_email)
-                        updates.append("email_blind_index = ?")
-                        values.append(compute_blind_index(trimmed_email.lower()))
-                updates.append("email = NULL")  # Clear plaintext (even if whitespace-only)
-
-            # Encrypt name if not already encrypted (strip whitespace first)
-            name_str = name if isinstance(name, str) else json.dumps(name, separators=(",", ":"), ensure_ascii=False) if name is not None else None
-            trimmed_name = name_str.strip() if name_str else None
-            if name_str is not None:
-                # Always clear plaintext; only encrypt if non-whitespace
-                if trimmed_name:
-                    encrypted_name, ephemeral_pubkey_name = encrypt_for_admin(trimmed_name)
-                    if encrypted_name:
-                        updates.append("encrypted_name = ?")
-                        values.append(encrypted_name)
-                        updates.append("ephemeral_pubkey_name = ?")
-                        values.append(ephemeral_pubkey_name)
-                updates.append("name = NULL")  # Clear plaintext (even if whitespace-only)
-
-            if updates:
-                values.append(user_id)
-                cursor.execute(
-                    f"UPDATE users SET {', '.join(updates)} WHERE id = ?",
-                    values
-                )
-                migrated_users += 1
-
-        # Migrate user_field_values table
-        cursor.execute("""
-            SELECT id, value FROM user_field_values
-            WHERE value IS NOT NULL AND encrypted_value IS NULL
-        """)
-        fields_to_migrate = cursor.fetchall()
-
-        for row in fields_to_migrate:
-            field_value_id = row[0]
-            value = row[1]
-
-            # Handle non-string values by serializing to JSON, then strip whitespace
-            value_str = value if isinstance(value, str) else json.dumps(value, separators=(",", ":"), ensure_ascii=False) if value is not None else None
-            trimmed_value = value_str.strip() if value_str else None
-            if value_str is not None:
-                # Always clear plaintext; only encrypt if non-whitespace
-                if trimmed_value:
-                    encrypted_value, ephemeral_pubkey = encrypt_for_admin(trimmed_value)
-                    if encrypted_value:
-                        cursor.execute("""
-                            UPDATE user_field_values
-                            SET encrypted_value = ?, ephemeral_pubkey = ?, value = NULL
-                            WHERE id = ?
-                        """, (encrypted_value, ephemeral_pubkey, field_value_id))
-                        migrated_fields += 1
-                    else:
-                        # Encryption failed but still clear plaintext
-                        cursor.execute(
-                            "UPDATE user_field_values SET value = NULL WHERE id = ?",
-                            (field_value_id,)
-                        )
-                else:
-                    # Whitespace-only value: just clear plaintext, no encryption
-                    cursor.execute(
-                        "UPDATE user_field_values SET value = NULL WHERE id = ?",
-                        (field_value_id,)
-                    )
-
-        conn.commit()
-        logger.info(f"Encryption migration complete: {migrated_users} users, {migrated_fields} field values encrypted")
-
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Encryption migration failed, rolled back: {e}")
-        raise
-
-    finally:
-        cursor.close()
-        conn.close()
 
 
 # --- Agent Settings Operations ---

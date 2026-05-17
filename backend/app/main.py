@@ -965,22 +965,6 @@ async def get_current_user(
     if not data:
         return SessionUserResponse(authenticated=False)
 
-    # Simulated auth mode support (dev-only token)
-    if data.get("dev_mode"):
-        return SessionUserResponse(
-            authenticated=True,
-            user=AuthUserResponse(
-                id=-1,
-                email="dev@localhost",
-                name="Dev User",
-                user_type_id=None,
-                approved=True,
-                created_at=None,
-                needs_onboarding=False,
-                needs_user_type=False,
-            ),
-        )
-
     # Get user
     user = database.get_user(data["user_id"])
     if not user:
@@ -1332,18 +1316,8 @@ async def admin_auth(
 
     if is_new:
         # First admin creation - use our single admin constraint
-        try:
-            database.add_admin(pubkey)
-            admin = database.get_admin_by_pubkey(pubkey)
-            
-            # Migrate any existing plaintext data to encrypted format
-            # This happens when users signed up before an admin was configured
-            # Run in a thread to avoid blocking the event loop
-            await asyncio.to_thread(database.migrate_encrypt_existing_data)
-            
-        except ValueError as e:
-            # This should not happen due to our check above, but safety first
-            raise HTTPException(status_code=403, detail=str(e)) from e
+        database.add_admin(pubkey)
+        admin = database.get_admin_by_pubkey(pubkey)
     else:
         admin = existing
 
@@ -2022,10 +1996,6 @@ async def get_my_onboarding_status(
     if requester.get("type") == "admin":
         raise HTTPException(status_code=403, detail="Admins do not have user onboarding status")
 
-    # Dev-mode sessions are not linked to persisted users.
-    if requester.get("dev_mode"):
-        return OnboardingStatusResponse(user_id=-1)
-
     requester_id = requester.get("id")
     if requester_id is None:
         raise HTTPException(status_code=401, detail="Invalid user session")
@@ -2091,13 +2061,13 @@ async def create_user(
         if requester_id is None:
             raise HTTPException(status_code=401, detail="Invalid user session")
 
-        session_user = database.get_user(requester_id) if requester_id != -1 else None
+        session_user = database.get_user(requester_id)
         if existing_user:
             if existing_user["id"] != requester_id:
                 raise HTTPException(status_code=403, detail="Forbidden: cannot modify another user")
         elif session_user:
             existing_user = session_user
-        elif not requester.get("dev_mode"):
+        else:
             raise HTTPException(status_code=401, detail="User session is not linked to an account")
 
     # Resolve effective user_type_id (use existing if not provided)

@@ -77,7 +77,7 @@ def run_startup_inference_verification() -> dict:
     Admin repair surfaces remain available if startup verification cannot pass.
     """
     configured = _configured_model_provider()
-    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    api_key = database.get_deployment_config_value("LLM_API_KEY")
     if not api_key:
         logger.warning("Startup Verifiable Inference skipped: LLM_API_KEY not configured")
         return mark_startup_verification_unavailable(
@@ -239,6 +239,8 @@ def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Option
     value = config_dict.get(key)
     if value not in (None, ""):
         return value
+    if key == "LLM_API_KEY":
+        return None
     return os.getenv(key)
 
 
@@ -252,16 +254,8 @@ def _sync_env_to_db() -> None:
             continue
 
         existing = database.get_deployment_config(key)
-        # Keep LLM API keys env-driven unless explicitly overridden in admin UI.
-        # This preserves expected `.env` behavior while still exposing the key in admin config.
-        preserve_env_fallback = key == "LLM_API_KEY"
-
         # Try to get value from env.
-        value = None
-
-        if not preserve_env_fallback:
-            # 1. Try the original key
-            value = os.getenv(key)
+        value = None if key == "LLM_API_KEY" else os.getenv(key)
 
         if key == "LLM_PROVIDER":
             value = (value or meta.get("default", "sage") or "sage").strip().lower()
@@ -276,8 +270,7 @@ def _sync_env_to_db() -> None:
             # Backfill empty values with defaults/env values
             existing_value = existing.get("value")
             should_backfill_value = (
-                not preserve_env_fallback
-                and (existing_value is None or existing_value == "")
+                (existing_value is None or existing_value == "")
                 and value not in (None, "")
             )
             # Keep metadata in sync for known one-off category corrections.
@@ -414,7 +407,7 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
     Requires admin authentication.
     """
     configured = _configured_model_provider()
-    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    api_key = database.get_deployment_config_value("LLM_API_KEY")
     if not api_key:
         raise HTTPException(status_code=400, detail="LLM_API_KEY not configured")
     changed_by = admin.get("pubkey", "admin")
@@ -574,16 +567,11 @@ async def update_deployment_config_value(
     value_to_save = update.value
 
     # For secret keys, preserve existing value if new value is empty/whitespace.
-    # Exception: LLM_API_KEY allows clearing so runtime can fall back to .env.
     if meta.get("is_secret") and (not value_to_save or not value_to_save.strip()):
-        if key == "LLM_API_KEY":
-            value_to_save = ""
-            logger.info("Clearing LLM_API_KEY override (empty value submitted); runtime will use env fallback")
-        else:
-            existing_value = database.get_deployment_config_value(key)
-            if existing_value:
-                value_to_save = existing_value
-                logger.debug(f"Preserving existing secret value for {key} (empty value submitted)")
+        existing_value = database.get_deployment_config_value(key)
+        if existing_value:
+            value_to_save = existing_value
+            logger.debug(f"Preserving existing secret value for {key} (empty value submitted)")
 
     # Validate specific keys (only if we have a real value to validate)
     if key in ("SMTP_PORT", "QDRANT_PORT") and value_to_save:

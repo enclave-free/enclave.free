@@ -49,7 +49,6 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
             '"llmHelp"',
             '"llm"',
             '"shareSecretsHint"',
-            '"leaveEmptyForLlmApiKey"',
             '"LLM_PROVIDER"',
             '"LLM_MODEL"',
             '"LLM_API_URL"',
@@ -189,33 +188,32 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("Safe documentation and terminology cleanup", runbook)
         self.assertIn("Data-affecting cleanup remains a separate migration slice", runbook)
         self.assertIn("removing legacy plaintext user/profile storage assumptions", runbook)
-        self.assertIn("removing legacy Qdrant plaintext payload handling", runbook)
+        self.assertNotIn("removing legacy Qdrant plaintext payload handling require", runbook)
         self.assertNotIn("Migration may land later", runbook)
 
-    def test_qdrant_plaintext_repair_docs_name_removal_readiness_criteria(self) -> None:
+    def test_qdrant_plaintext_repair_docs_name_removed_support(self) -> None:
         runbook = (REPO_ROOT / "docs/lifecycle-confidentiality-runbook.md").read_text(encoding="utf-8")
 
+        self.assertIn("Legacy Retrieval payload repair support has been removed", runbook)
         self.assertIn("support_removal_ready: true", runbook)
-        self.assertIn("active Qdrant index has no legacy plaintext Retrieval payloads", runbook)
-        self.assertIn("preview can inspect Qdrant successfully", runbook)
-        self.assertIn("operator-reviewed execution completed without `retrieval_payload` failures", runbook)
-        self.assertIn("backup/rollback expectations are documented", runbook)
+        self.assertIn("preview no longer depends on Qdrant repair actions", runbook)
+        self.assertNotIn("operator-reviewed execution completed without `retrieval_payload` failures", runbook)
 
-    def test_user_profile_plaintext_migration_plan_exists_before_removal(self) -> None:
-        plan = (REPO_ROOT / "docs/user-profile-plaintext-migration-plan.md").read_text(encoding="utf-8")
+    def test_user_profile_plaintext_removal_record_names_removed_support(self) -> None:
+        record = (REPO_ROOT / "docs/user-profile-plaintext-migration-plan.md").read_text(encoding="utf-8")
         docs_index = (REPO_ROOT / "docs/README.md").read_text(encoding="utf-8")
         checklist = (REPO_ROOT / "docs/security-data-protection-checklist.md").read_text(encoding="utf-8")
 
-        self.assertIn("users.email", plan)
-        self.assertIn("users.name", plan)
-        self.assertIn("user_field_values.value", plan)
-        self.assertIn("get_user_by_email", plan)
-        self.assertIn("migrate_encrypt_existing_data", plan)
-        self.assertIn("backup and rollback", plan)
-        self.assertIn("Do not remove plaintext-era columns or fallback reads", plan)
-        self.assertIn("public/admin interface tests", plan)
+        self.assertIn("Plaintext-era User Profile compatibility has been removed", record)
+        self.assertIn("does not fall back to `LOWER(email)`", record)
+        self.assertIn("/admin/profile-plaintext-migration/inventory` is absent", record)
+        self.assertIn("/admin/profile-plaintext-migration/migrate` is absent", record)
+        self.assertIn("migrate_encrypt_existing_data` is absent", record)
+        self.assertIn("First-admin setup no longer preflights or migrates", record)
+        self.assertNotIn("Run `POST /admin/profile-plaintext-migration/migrate`", record)
+        self.assertNotIn("keep the fallback reads", record)
         self.assertIn("user-profile-plaintext-migration-plan.md", docs_index)
-        self.assertIn("operator-reviewed profile migration proves removal is safe", checklist)
+        self.assertIn("Legacy User Profile plaintext fallback support has been removed", checklist)
 
 
 if __name__ == "__main__":

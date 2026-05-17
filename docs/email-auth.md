@@ -50,6 +50,9 @@ URL: http://localhost:5173/verify?token=eyJhbGc...
 ============================================================
 ```
 
+Mock email mode only changes delivery. Users still authenticate through the
+normal signed magic-link verification flow; there is no mock User token.
+
 ## Test Email Endpoint
 
 Admins can send a test email to verify SMTP settings:

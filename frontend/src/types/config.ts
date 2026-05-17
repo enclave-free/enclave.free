@@ -665,7 +665,7 @@ export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConf
     LLM_API_KEY: {
       label: t('deploymentConfigItems.LLM_API_KEY.label', 'API Key'),
       description: t('deploymentConfigItems.LLM_API_KEY.description', 'Tinfoil API key (secret)'),
-      hint: t('deploymentConfigItems.LLM_API_KEY.hint', 'Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.'),
+      hint: t('deploymentConfigItems.LLM_API_KEY.hint', 'Leave empty to keep the current Deployment Settings secret.'),
     },
     RAG_TOP_K: {
       label: t('deploymentConfigItems.RAG_TOP_K.label', 'Context Chunks'),

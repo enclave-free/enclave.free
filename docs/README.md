@@ -27,7 +27,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [admin-key-recovery-runbook.md](admin-key-recovery-runbook.md): admin key recovery procedures.
 - [lifecycle-confidentiality-runbook.md](lifecycle-confidentiality-runbook.md): Active Storage Lifecycle confidentiality regression and scheduled retention operations.
 - [sqlite-encryption.md](sqlite-encryption.md): SQLite encryption model and migration notes.
-- [user-profile-plaintext-migration-plan.md](user-profile-plaintext-migration-plan.md): operator plan for retiring legacy plaintext User Profile storage support.
+- [user-profile-plaintext-migration-plan.md](user-profile-plaintext-migration-plan.md): removal record for legacy plaintext User Profile fallback support.
 - [upstream-sync.md](upstream-sync.md): notes for syncing from upstream `enclave.free`.
 
 ## Additional Product Docs

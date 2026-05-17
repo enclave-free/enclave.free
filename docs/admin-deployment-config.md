@@ -54,7 +54,7 @@ These deployment keys keep existing environment names and UI labels stable while
 | `LLM_PROVIDER` | Python-side Model Provider labeling and validation |
 | `LLM_API_URL` | Python health checks against the configured Model Provider endpoint |
 | `LLM_MODEL` | Python-side model metadata and diagnostics |
-| `LLM_API_KEY` | Python-side Model Provider auth unless left empty for env fallback |
+| `LLM_API_KEY` | Python-side Model Provider auth from Deployment Settings |
 
 What actually drives Sage:
 
@@ -111,7 +111,7 @@ Sage depends on Enclave Python for document retrieval, so mismatches here can br
 
 `CONTENT_ENCRYPTION_KEY` enables backend-readable encryption for new Uploaded Document artifacts and Retrieval chunk text in active storage. `DOCUMENT_ARTIFACT_ENCRYPTION` defaults to `required`; set it to `disabled` only when the operator explicitly chooses plaintext Uploaded Document artifact storage. Retrieval chunk text still requires the Content Encryption Key even when uploaded artifacts are plaintext by operator choice.
 
-New Retrieval Index writes store vectors and minimal metadata in Qdrant, while encrypted chunk text lives in SQLite. This is active storage confidentiality for product-owned artifacts and retrieval content, not Secure Erase. Legacy Retrieval Index payloads may still contain plaintext until the Confidentiality Migration runs.
+New Retrieval Index writes store vectors and minimal metadata in Qdrant, while encrypted chunk text lives in SQLite. This is active storage confidentiality for product-owned artifacts and retrieval content, not Secure Erase. Legacy Retrieval Index plaintext repair support has been removed, so active retrieval now depends on minimized Qdrant payloads and chunk hydration from product-owned storage.
 
 ## Data Lifecycle Status
 

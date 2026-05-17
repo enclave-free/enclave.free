@@ -41,6 +41,7 @@ class InferenceVerificationApiTest(unittest.TestCase):
         self.database.upsert_deployment_config("LLM_PROVIDER", "sage", category="llm")
         self.database.upsert_deployment_config("LLM_API_URL", "https://inference.tinfoil.sh/v1", category="llm")
         self.database.upsert_deployment_config("LLM_MODEL", "kimi-k2-6", category="llm")
+        self.database.update_deployment_config("LLM_API_KEY", "test-key", changed_by="admin-pubkey")
         self.inference_repair.reset_inference_repair_status()
 
         app = FastAPI()

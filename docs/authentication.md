@@ -407,6 +407,8 @@ URL: http://localhost:5173/verify?token=eyJlbWFpbCI6...
 ```
 
 Copy the URL from the backend logs to test the verification flow.
+`MOCK_EMAIL=true` only changes email delivery; it does not create a fake User
+session or bypass the normal signed magic-link verification flow.
 
 ### Production Mode (SMTP)
 
@@ -492,6 +494,8 @@ The codebase includes mock email mode for local email testing.
 ### Mock Email Mode
 
 With `MOCK_EMAIL=true`, magic links are logged locally instead of sent via SMTP. With `MOCK_EMAIL=false`, the backend sends magic links through the configured SMTP provider.
+Mock email mode still requires the normal magic-link verification flow and a
+real User session. It is not a simulated-auth or fake-user mode.
 
 ### Configuration
 

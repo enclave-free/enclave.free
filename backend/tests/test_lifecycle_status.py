@@ -114,16 +114,7 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(inference_records["audit"]["status"], "partial")
 
     def test_lifecycle_status_reports_active_storage_scope_and_confidentiality_posture(self) -> None:
-        original_detector = self.lifecycle.store.detect_legacy_plaintext_payloads
-        self.lifecycle.store.detect_legacy_plaintext_payloads = lambda: {
-            "checked": False,
-            "legacy_plaintext_payloads": None,
-            "summary": "Qdrant payload confidentiality could not be inspected from this process.",
-        }
-        try:
-            response = self.client.get("/admin/lifecycle/status")
-        finally:
-            self.lifecycle.store.detect_legacy_plaintext_payloads = original_detector
+        response = self.client.get("/admin/lifecycle/status")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -156,9 +147,10 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(artifacts["status"], "not_configured")
         self.assertIn("Content Encryption Key", artifacts["summary"])
         retrieval = classes_by_key["retrieval_index"]["confidentiality"]
-        self.assertEqual(retrieval["status"], "partial")
+        self.assertEqual(retrieval["status"], "encrypted")
         self.assertIn("Qdrant", retrieval["summary"])
-        self.assertIn("Confidentiality Migration", retrieval["summary"])
+        self.assertIn("minimized", retrieval["summary"])
+        self.assertNotIn("Confidentiality Migration", retrieval["summary"])
         self.assertNotIn("migration lands", retrieval["summary"])
 
     def test_lifecycle_status_reports_mixed_when_required_artifacts_include_legacy_plaintext(self) -> None:
@@ -191,18 +183,9 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(artifacts["status"], "mixed")
         self.assertNotIn("Secure Erase", artifacts["summary"])
 
-    def test_lifecycle_status_reports_mixed_when_qdrant_payload_text_remains(self) -> None:
+    def test_lifecycle_status_reports_current_retrieval_posture_when_qdrant_payload_text_remains(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
-        original_detector = self.lifecycle.store.detect_legacy_plaintext_payloads
-        self.lifecycle.store.detect_legacy_plaintext_payloads = lambda: {
-            "checked": True,
-            "legacy_plaintext_payloads": 2,
-            "summary": "Found 2 Qdrant points with legacy plaintext payload text.",
-        }
-        try:
-            response = self.client.get("/admin/lifecycle/status")
-        finally:
-            self.lifecycle.store.detect_legacy_plaintext_payloads = original_detector
+        response = self.client.get("/admin/lifecycle/status")
 
         self.assertEqual(response.status_code, 200)
         classes_by_key = {
@@ -210,11 +193,12 @@ class LifecycleStatusTest(unittest.TestCase):
             for data_class in response.json()["data_classes"]
         }
         retrieval = classes_by_key["retrieval_index"]["confidentiality"]
-        self.assertEqual(retrieval["status"], "mixed")
-        self.assertIn("legacy plaintext", retrieval["summary"])
+        self.assertEqual(retrieval["status"], "encrypted")
+        self.assertIn("minimized", retrieval["summary"])
+        self.assertNotIn("legacy plaintext", retrieval["summary"])
         self.assertNotIn("Secure Erase", retrieval["summary"])
 
-    def test_confidentiality_migration_previews_plaintext_artifacts_and_legacy_payloads(self) -> None:
+    def test_confidentiality_migration_preview_ignores_legacy_qdrant_payloads(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
         artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
         artifact_path.parent.mkdir(parents=True, exist_ok=True)
@@ -224,32 +208,18 @@ class LifecycleStatusTest(unittest.TestCase):
 
         ingest_db.create_job("legacy-job", "Legacy.md", str(artifact_path), "default")
         ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
-        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
-        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: [{
-            "point_id": "point-1",
-            "chunk_id": "chunk-1",
-            "job_id": "legacy-job",
-            "source_file": "Legacy.md",
-            "text": "legacy retrieval text",
-            "payload": {"type": "chunk", "chunk_id": "chunk-1", "job_id": "legacy-job", "text": "legacy retrieval text"},
-        }]
-        try:
-            response = self.client.get("/admin/lifecycle/confidentiality-migration/preview")
-        finally:
-            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+        response = self.client.get("/admin/lifecycle/confidentiality-migration/preview")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["status"], "ready")
         self.assertEqual(len(body["artifacts"]), 1)
-        self.assertEqual(len(body["retrieval_payloads"]), 1)
-        self.assertFalse(body["support_removal_ready"])
-        self.assertIn("removal_criteria", body)
-        self.assertIn("No legacy plaintext Retrieval payloads remain", body["removal_criteria"])
+        self.assertEqual(body["retrieval_payloads"], [])
+        self.assertTrue(body["support_removal_ready"])
         self.assertFalse(body["secure_erase_claimed"])
         self.assertNotIn("Secure Erase", body["summary"].replace("No Secure Erase claim is made.", ""))
 
-    def test_confidentiality_migration_executes_artifact_and_retrieval_repairs(self) -> None:
+    def test_confidentiality_migration_execute_ignores_legacy_qdrant_payloads(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
         artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
         artifact_path.parent.mkdir(parents=True, exist_ok=True)
@@ -260,31 +230,13 @@ class LifecycleStatusTest(unittest.TestCase):
 
         ingest_db.create_job("legacy-job", "Legacy.md", str(artifact_path), "default")
         ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
-        legacy_payloads = [{
-            "point_id": "point-1",
-            "chunk_id": "chunk-1",
-            "job_id": "legacy-job",
-            "source_file": "Legacy.md",
-            "text": "legacy retrieval text",
-            "payload": {"type": "chunk", "chunk_id": "chunk-1", "job_id": "legacy-job", "text": "legacy retrieval text"},
-        }]
-        rewritten = []
-        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
-        original_rewriter = self.lifecycle.store.rewrite_payload_without_plaintext
-        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: legacy_payloads
-        self.lifecycle.store.rewrite_payload_without_plaintext = lambda point_id, payload: rewritten.append((point_id, payload))
-        try:
-            response = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
-        finally:
-            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
-            self.lifecycle.store.rewrite_payload_without_plaintext = original_rewriter
+        response = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["status"], "completed")
         self.assertTrue(content_artifacts.is_encrypted_artifact(artifact_path.read_bytes()))
-        self.assertEqual(ingest_db.get_retrieval_chunk("chunk-1")["text"], "legacy retrieval text")
-        self.assertEqual(rewritten[0][0], "point-1")
+        self.assertIsNone(ingest_db.get_retrieval_chunk("chunk-1"))
         self.assertFalse(body["secure_erase_claimed"])
 
     def test_confidentiality_migration_reports_partial_failure_without_secure_erase_claim(self) -> None:
@@ -297,12 +249,7 @@ class LifecycleStatusTest(unittest.TestCase):
 
         ingest_db.create_job("legacy-job", "Legacy.md", str(artifact_path), "default")
         ingest_db.update_job_status("legacy-job", "completed", total_chunks=1, processed_chunks=1)
-        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
-        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: []
-        try:
-            response = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
-        finally:
-            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+        response = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
@@ -313,14 +260,9 @@ class LifecycleStatusTest(unittest.TestCase):
 
     def test_confidentiality_migration_is_idempotent_when_no_legacy_storage_remains(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
-        original_lister = self.lifecycle.store.list_legacy_plaintext_payloads
-        self.lifecycle.store.list_legacy_plaintext_payloads = lambda: []
-        try:
-            preview = self.client.get("/admin/lifecycle/confidentiality-migration/preview")
-            first = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
-            second = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
-        finally:
-            self.lifecycle.store.list_legacy_plaintext_payloads = original_lister
+        preview = self.client.get("/admin/lifecycle/confidentiality-migration/preview")
+        first = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
+        second = self.client.post("/admin/lifecycle/confidentiality-migration/execute")
 
         self.assertEqual(preview.status_code, 200)
         self.assertTrue(preview.json()["support_removal_ready"])

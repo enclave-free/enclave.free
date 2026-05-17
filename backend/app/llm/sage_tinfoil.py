@@ -8,7 +8,6 @@ metadata and diagnostics.
 """
 
 import logging
-import os
 import threading
 from typing import Optional
 
@@ -29,19 +28,14 @@ class SageTinfoilProvider(LLMProvider):
         self._lock = threading.RLock()
         self.provider_name = provider_name
 
-        try:
-            from config_loader import get_config
+        from config_loader import get_config
 
-            self.base_url = (
-                get_config("LLM_API_URL")
-                or "http://tinfoil-proxy:8089/v1"
-            )
-            self.api_key = get_config("LLM_API_KEY") or ""
-            self.default_model = get_config("LLM_MODEL") or "kimi-k2-6"
-        except ImportError:
-            self.base_url = os.getenv("LLM_API_URL") or "http://tinfoil-proxy:8089/v1"
-            self.api_key = os.getenv("LLM_API_KEY", "")
-            self.default_model = os.getenv("LLM_MODEL", "kimi-k2-6")
+        self.base_url = (
+            get_config("LLM_API_URL")
+            or "http://tinfoil-proxy:8089/v1"
+        )
+        self.api_key = get_config("LLM_API_KEY") or ""
+        self.default_model = get_config("LLM_MODEL") or "kimi-k2-6"
 
         self._init_client()
 

@@ -405,22 +405,15 @@ def verify_session_token(token: str) -> Optional[dict]:
     Verify a session token.
     Returns {"user_id": ..., "email": ...} if valid, None otherwise.
     """
-    # Dev mode: accept mock token for frontend testing
-    if token == "dev-mode-mock-token":
-        if MOCK_EMAIL and not is_production_mode():
-            logger.debug("Accepting dev-mode-mock-token (MOCK_EMAIL=true, non-production)")
-            # Return a placeholder that get_current_user will handle
-            return {"user_id": -1, "email": "dev-mode", "dev_mode": True}
-
-        logger.warning("Rejected dev-mode-mock-token (disabled in production or when MOCK_EMAIL=false)")
-        return None
-
     try:
         data = _session_serializer.loads(
             token,
             salt="session",
             max_age=SESSION_MAX_AGE
         )
+        if data.get("dev_mode"):
+            logger.warning("Rejected deprecated dev-mode session payload")
+            return None
         return data
     except SignatureExpired:
         logger.debug("Session token expired")
@@ -674,17 +667,6 @@ async def get_current_user(
     if not data:
         raise HTTPException(status_code=401, detail="Invalid or expired session token")
 
-    # Dev mode: return a mock approved user for testing
-    if data.get("dev_mode"):
-        logger.debug("Returning dev mode mock user")
-        return {
-            "id": -1,
-            "email": "dev@localhost",
-            "name": "Dev User",
-            "approved": True,
-            "dev_mode": True
-        }
-
     user = database.get_user(data["user_id"])
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -730,18 +712,6 @@ async def require_admin_or_approved_user(
     # Try user token
     user_data = verify_session_token(user_token) if user_token else None
     if user_data:
-        # Dev mode: return mock user
-        if user_data.get("dev_mode"):
-            logger.debug("Returning dev mode mock user for admin_or_approved")
-            return {
-                "id": -1,
-                "email": "dev@localhost",
-                "name": "Dev User",
-                "approved": True,
-                "type": "user",
-                "dev_mode": True
-            }
-
         user = database.get_user(user_data["user_id"])
         if user:
             if not user.get("approved"):
@@ -781,18 +751,6 @@ async def require_admin_or_user(
     # Try user token (approval not required)
     user_data = verify_session_token(user_token) if user_token else None
     if user_data:
-        # Dev mode: return mock user
-        if user_data.get("dev_mode"):
-            logger.debug("Returning dev mode mock user for admin_or_user")
-            return {
-                "id": -1,
-                "email": "dev@localhost",
-                "name": "Dev User",
-                "approved": True,
-                "type": "user",
-                "dev_mode": True
-            }
-
         user = database.get_user(user_data["user_id"])
         if user:
             user["type"] = "user"
