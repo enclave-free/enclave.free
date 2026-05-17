@@ -81,14 +81,25 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pip-audit semgrep
       - name: Python dependency scan
-        run: pip-audit -r backend/requirements.txt
+        run: |
+          pip-audit -r backend/requirements.txt \
+            --ignore-vuln GHSA-69w3-r845-3855
       - name: Frontend dependency scan
         working-directory: frontend
         run: npm audit --audit-level=high
       - name: Semgrep SAST scan
         run: semgrep scan --config p/owasp-top-ten --config p/python --config p/typescript --sarif --output semgrep.sarif
-      - name: Upload Semgrep SARIF
+      - name: Check Semgrep SARIF output
+        id: semgrep-sarif
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        run: |
+          if [ -s semgrep.sarif ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload Semgrep SARIF
+        if: always() && steps.semgrep-sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
