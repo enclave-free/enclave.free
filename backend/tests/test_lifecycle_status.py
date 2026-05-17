@@ -644,6 +644,8 @@ class LifecycleStatusTest(unittest.TestCase):
         initial = self.client.get("/admin/lifecycle/status").json()["lifecycle_readiness"]
         self.assertEqual(initial["status"], "needs_review")
         self.assertFalse(initial["reviewed"])
+        self.assertEqual(initial["conversation_blocking_policy"]["user_conversations"], "not_blocked")
+        self.assertEqual(initial["conversation_blocking_policy"]["admin_conversations"], "available_for_repair")
 
         review = self.client.post("/admin/lifecycle/readiness/review")
         self.assertEqual(review.status_code, 200)
@@ -665,6 +667,9 @@ class LifecycleStatusTest(unittest.TestCase):
         stale = self.client.get("/admin/lifecycle/status").json()["lifecycle_readiness"]
         self.assertEqual(stale["status"], "stale")
         self.assertEqual(stale["stale_reason"], "retention_policy_changed")
+        self.assertEqual(stale["conversation_blocking_policy"]["user_conversations"], "not_blocked")
+        self.assertEqual(stale["conversation_blocking_policy"]["admin_conversations"], "available_for_repair")
+        self.assertEqual(stale["conversation_blocking_policy"]["protected_inference_gate"], "independent")
 
         audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
         keys = [entry["config_key"] for entry in audit_entries]

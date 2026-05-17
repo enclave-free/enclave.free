@@ -326,6 +326,19 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         }
         self.assertNotIn("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", exposed_keys)
 
+    def test_full_sensitive_audit_log_detail_retention_is_not_exposed_as_config(self) -> None:
+        response = self.client.get("/admin/deployment/config")
+
+        self.assertEqual(response.status_code, 200)
+        exposed_keys = {
+            item["key"]
+            for section in response.json().values()
+            if isinstance(section, list)
+            for item in section
+        }
+        self.assertNotIn("AUDIT_LOG_RETAIN_FULL_DETAIL", exposed_keys)
+        self.assertNotIn("AUDIT_LOG_DISABLE_DETAIL_COMPACTION", exposed_keys)
+
     def test_llm_provider_rejects_maple_compatibility_label(self) -> None:
         response = self.client.put(
             "/admin/deployment/config/LLM_PROVIDER",

@@ -299,6 +299,12 @@ export interface LifecycleStatusResponse {
     stale_reason?: string | null
     summary: string
     acknowledged_unsupported_surface_categories?: string[]
+    conversation_blocking_policy?: {
+      user_conversations: 'not_blocked' | string
+      admin_conversations: 'available_for_repair' | string
+      protected_inference_gate: 'independent' | string
+      summary: string
+    }
   }
   content_encryption?: ContentEncryptionStatus
   artifact_encryption?: ArtifactEncryptionStatus

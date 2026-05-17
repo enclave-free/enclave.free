@@ -443,6 +443,18 @@ HISTORICAL_SESSION_LOG_RETENTION = {
 }
 
 
+LIFECYCLE_READINESS_CONVERSATION_BLOCKING_POLICY = {
+    "user_conversations": "not_blocked",
+    "admin_conversations": "available_for_repair",
+    "protected_inference_gate": "independent",
+    "summary": (
+        "Lifecycle Readiness warnings are Admin review signals in v1; they do not block ordinary "
+        "User Conversations or Admin Conversations used for lifecycle repair. Verifiable Inference "
+        "gates remain independent."
+    ),
+}
+
+
 class RetentionRunRequest(BaseModel):
     stale_conversation_days: int = Field(default=30, ge=0)
     document_artifact_days: int = Field(default=0, ge=0)
@@ -1082,6 +1094,7 @@ def _lifecycle_readiness() -> dict:
             "reviewed_by": None,
             "stale_reason": None,
             "acknowledged_unsupported_surface_categories": _unsupported_surface_categories(),
+            "conversation_blocking_policy": deepcopy(LIFECYCLE_READINESS_CONVERSATION_BLOCKING_POLICY),
             "summary": "Lifecycle Readiness requires Admin review before the Instance is treated as reviewed.",
         }
     reviewed_version = stored.get("posture_version")
@@ -1099,6 +1112,7 @@ def _lifecycle_readiness() -> dict:
             "acknowledged_unsupported_surface_categories",
             _unsupported_surface_categories(),
         ),
+        "conversation_blocking_policy": deepcopy(LIFECYCLE_READINESS_CONVERSATION_BLOCKING_POLICY),
         "summary": (
             "Lifecycle Readiness is stale and needs Admin review."
             if is_stale
