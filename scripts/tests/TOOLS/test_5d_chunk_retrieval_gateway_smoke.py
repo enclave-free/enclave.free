@@ -194,7 +194,7 @@ def expect(label: str, condition: bool, detail: str = "") -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Test 5D: chunk Retrieval through public /query")
-    parser.add_argument("--api-base", default="http://localhost:8000")
+    parser.add_argument("--api-base", default="http://127.0.0.1:8000")
     parser.add_argument("--token", help="Optional approved user bearer token")
     parser.add_argument("--timeout", type=float, default=180.0)
     args = parser.parse_args()

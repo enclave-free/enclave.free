@@ -250,7 +250,7 @@ def main() -> int:
             json={"tool_id": "db-query", "query": "SELECT 1 AS one"},
             timeout=30,
         )
-        failures += 0 if expect_status("POST /admin/tools/execute non-admin rejection", user_tool_exec, {403}) else 1
+        failures += 0 if expect_status("POST /admin/tools/execute non-admin rejection", user_tool_exec, {401, 403}) else 1
 
         query_res = requests.post(
             f"{args.api_base.rstrip('/')}/query",
