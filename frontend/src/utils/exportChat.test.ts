@@ -125,6 +125,19 @@ describe('generateExport', () => {
     expect(exported).toContain('Found 3 relevant results.')
   })
 
+  it('normalizes instance name metadata to one safe line', () => {
+    const exported = generateExport({
+      messages: [],
+      format: 'md',
+      translations,
+      instanceName: '  Enclave\nInjected\r\u0000Name  ',
+    })
+
+    expect(exported).toContain('Source: Enclave Injected Name Conversation Export')
+    expect(exported).toContain('Exported from Enclave Injected Name')
+    expect(exported).not.toContain('Source: Enclave\nInjected')
+  })
+
   it('exports only compact badges for minimal Conversation Trace metadata', () => {
     const messages: TestMessage[] = [
       {

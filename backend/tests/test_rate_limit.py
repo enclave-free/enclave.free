@@ -53,7 +53,7 @@ class RateLimitTest(unittest.TestCase):
             os.environ[name] = value
 
     @staticmethod
-    def _request(host: str = "127.0.0.1"):
+    def _request(host: str = "127.0.0.1") -> SimpleNamespace:
         return SimpleNamespace(
             client=SimpleNamespace(host=host),
             headers={},
@@ -71,6 +71,27 @@ class RateLimitTest(unittest.TestCase):
         with self.assertRaises(HTTPException) as raised:
             asyncio.run(limiter(request))
         self.assertEqual(raised.exception.status_code, 429)
+
+    def test_window_seconds_must_be_positive(self) -> None:
+        with self.assertRaisesRegex(ValueError, "window_seconds must be a positive number"):
+            self.rate_limit.RateLimiter(limit=2, window_seconds=0)
+
+    def test_retry_message_uses_full_window_seconds(self) -> None:
+        limiter = self.rate_limit.RateLimiter(limit=1, window_seconds=90000)
+
+        with self.assertRaises(HTTPException) as raised:
+            limiter._raise_rate_limited()
+
+        self.assertIn("90000 seconds", raised.exception.detail)
+
+    def test_memory_backend_uses_resolved_limit_argument(self) -> None:
+        os.environ["RATE_LIMIT_BACKEND"] = "memory"
+        limiter = self.rate_limit.RateLimiter(limit=lambda: 0, window_seconds=60)
+        request = self._request()
+
+        asyncio.run(limiter._check_memory(request, limit=1))
+
+        self.assertEqual(len(limiter.requests["127.0.0.1"]), 1)
 
     def test_valkey_backend_uses_shared_counter(self) -> None:
         os.environ["RATE_LIMIT_BACKEND"] = "valkey"
@@ -110,6 +131,20 @@ class RateLimitTest(unittest.TestCase):
 
         self.assertEqual(status["backend"], "valkey")
         self.assertEqual(status["status"], "healthy")
+
+    def test_backend_status_hides_valkey_exception_detail(self) -> None:
+        class BrokenValkey:
+            async def ping(self) -> bool:
+                raise RuntimeError("secret connection detail")
+
+        os.environ["RATE_LIMIT_BACKEND"] = "valkey"
+        self.rate_limit._VALKEY_CLIENT = BrokenValkey()
+
+        status = asyncio.run(self.rate_limit.rate_limit_backend_status())
+
+        self.assertEqual(status["status"], "unhealthy")
+        self.assertEqual(status["summary"], "error checking valkey backend health")
+        self.assertNotIn("secret", status["summary"])
 
 
 if __name__ == "__main__":

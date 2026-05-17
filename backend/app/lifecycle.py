@@ -40,6 +40,8 @@ import store
 
 
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
+
+_CONFIDENTIALITY_MIGRATION_STATUS_CACHE: dict | None = None
 logger = logging.getLogger("enclave.lifecycle")
 _warned_missing_internal_agent_token = False
 _sage_client: httpx.AsyncClient | None = None
@@ -790,9 +792,31 @@ def _retrieval_index_confidentiality_status() -> dict:
     }
 
 
+def preview_confidentiality_migration_status() -> dict:
+    """Return the last computed migration status without running inventory work."""
+    if _CONFIDENTIALITY_MIGRATION_STATUS_CACHE is not None:
+        return deepcopy(_CONFIDENTIALITY_MIGRATION_STATUS_CACHE)
+    return {
+        "status": "unknown",
+        "summary": "Confidentiality Migration status has not been computed yet.",
+    }
+
+
+def _remember_confidentiality_migration_status(preview: dict) -> None:
+    global _CONFIDENTIALITY_MIGRATION_STATUS_CACHE
+    _CONFIDENTIALITY_MIGRATION_STATUS_CACHE = {
+        "status": preview.get("status", "unknown"),
+        "summary": preview.get(
+            "summary",
+            "Confidentiality Migration rewrites or verifies eligible legacy plaintext active content.",
+        ),
+    }
+
+
 def _active_content_encryption_evidence() -> dict:
     artifact_status = _artifact_encryption_status()
     retrieval_status = _retrieval_index_confidentiality_status()
+    migration_status = preview_confidentiality_migration_status()
     return {
         "artifact_encryption_posture": {
             "status": artifact_status["status"],
@@ -810,9 +834,9 @@ def _active_content_encryption_evidence() -> dict:
             ),
         },
         "confidentiality_migration": {
-            "status": preview_confidentiality_migration()["status"],
+            "status": migration_status["status"],
             "summary": (
-                "Confidentiality Migration rewrites or verifies eligible legacy plaintext active content; "
+                f"{migration_status['summary']} "
                 "it does not claim Secure Erase across Deployment Surfaces."
             ),
         },
@@ -853,7 +877,7 @@ def preview_confidentiality_migration() -> dict:
 
     support_removal_ready = True
 
-    return {
+    preview = {
         "status": "ready" if artifact_actions or retrieval_actions else "nothing_to_migrate",
         "artifact_encryption": artifact_status,
         "affected_documents": list(documents.values()),
@@ -868,6 +892,8 @@ def preview_confidentiality_migration() -> dict:
             f"{len(retrieval_actions)} legacy Retrieval payload(s). No Secure Erase claim is made."
         ),
     }
+    _remember_confidentiality_migration_status(preview)
+    return preview
 
 
 def execute_confidentiality_migration(*, actor: str) -> dict:
@@ -2084,7 +2110,7 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
 
 
 @router.get("/status", response_model=dict)
-async def get_admin_lifecycle_status(response: Response, _admin: dict = Depends(auth.require_admin)):
+async def get_admin_lifecycle_status(response: Response, _admin: dict = Depends(auth.require_admin)) -> dict:
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return get_lifecycle_status()

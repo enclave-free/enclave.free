@@ -30,6 +30,11 @@ function toConversationExportMessages(messages: Message[]): ConversationExportMe
   return messages.map(({ role, content, timestamp, trace }) => ({ role, content, timestamp, trace }))
 }
 
+function sanitizeInstanceName(instanceName: string): string {
+  const sanitized = instanceName.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim()
+  return (sanitized || 'Enclave').slice(0, 120)
+}
+
 function formatTraceMarkdown(trace?: ConversationTrace | null): string {
   if (!trace || trace.visibility === 'off') return ''
   const lines: string[] = ['**Conversation Trace**']
@@ -70,15 +75,16 @@ function formatTraceText(trace?: ConversationTrace | null): string {
 
 export function generateExport({ messages, format, title, translations, instanceName = 'Enclave' }: ExportOptions): string {
   const timestamp = new Date().toLocaleString()
+  const safeInstanceName = sanitizeInstanceName(instanceName)
   const exportTitle = title || translations.defaultTitle
-  const footerText = translations.footer.replace('{{instanceName}}', instanceName)
+  const footerText = translations.footer.replace('{{instanceName}}', safeInstanceName)
   const exportedOnText = translations.exportedOn.replace('{{timestamp}}', timestamp)
   const conversationMessages = toConversationExportMessages(messages)
 
   if (format === 'md') {
     let content = `# ${exportTitle}\n\n`
     content += `*${exportedOnText}*\n\n---\n\n`
-    content += `Source: ${instanceName} Conversation Export\n\n`
+    content += `Source: ${safeInstanceName} Conversation Export\n\n`
 
     conversationMessages.forEach((message) => {
       const role = message.role === 'user' ? `**${translations.roleUser}**` : `**${translations.roleAssistant}**`
@@ -107,7 +113,7 @@ export function generateExport({ messages, format, title, translations, instance
   let content = `${exportTitle}\n`
   content += `${'='.repeat(exportTitle.length)}\n\n`
   content += `${exportedOnText}\n\n`
-  content += `Source: ${instanceName} Conversation Export\n\n`
+  content += `Source: ${safeInstanceName} Conversation Export\n\n`
   content += `${'─'.repeat(40)}\n\n`
 
   conversationMessages.forEach((message) => {

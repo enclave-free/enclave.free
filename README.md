@@ -57,7 +57,7 @@ cp .env.example .env
 
 Compose is split into infrastructure and app layers:
 
-- `docker-compose.infra.yml`: `postgres`, `tinfoil-proxy`, `qdrant`, `searxng`
+- `docker-compose.infra.yml`: `postgres`, `tinfoil-proxy`, `qdrant`, `valkey`, `searxng`
 - `docker-compose.app.yml`: `core-backend`, `sage`, `backend` gateway, `frontend`
 
 ```bash

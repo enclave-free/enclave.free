@@ -23,7 +23,7 @@ SUPPORTED_USER_FIELD_TYPES = {
 
 def _validate_email_shape(value: str) -> str:
     normalized = value.strip()
-    if len(normalized) > 254 or "@" not in normalized:
+    if len(normalized) > 254 or normalized.count("@") != 1:
         raise ValueError("email must be a valid email address")
     local, _, domain = normalized.partition("@")
     if not local or not domain or "." not in domain or any(char.isspace() for char in normalized):

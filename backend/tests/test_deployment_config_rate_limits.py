@@ -252,6 +252,14 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertIn("BACKEND_RELOAD must be disabled in production", body["errors"])
         self.assertIn("Published service host 0.0.0.0 requires an explicit production exposure review", body["warnings"])
 
+        os.environ["PUBLISHED_SERVICE_HOST"] = "::"
+        response = self.client.post("/admin/deployment/config/validate")
+
+        self.assertIn(
+            "Published service host :: requires an explicit production exposure review",
+            response.json()["warnings"],
+        )
+
     def test_operational_readiness_exposes_monitoring_and_recovery_drills(self) -> None:
         response = self.client.get("/admin/deployment/operational-readiness")
 

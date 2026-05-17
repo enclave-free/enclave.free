@@ -5,14 +5,14 @@ Data Lifecycle Status. These are domain categories, not table names.
 
 | Classification item | Domain term | Classification |
 | --- | --- | --- |
-| PII Fields | User Profiles | sensitive Instance data |
-| Uploaded Documents | Document Library | sensitive Instance content |
-| Derived Chunks and Embeddings | Retrieval Index | derived Instance content |
-| Secrets and Credentials | Deployment Settings | Deployment secret |
-| Audit Log Evidence | Audit Log | governance evidence |
-| Inference Verification Records | Inference Verification Record | governance evidence |
-| User Memory | User Memory | Sage context |
-| Session Memory | Sage Session Memory | Conversation state |
+| PII Fields | User Profiles | Sensitive Instance Data |
+| Uploaded Documents | Document Library | Sensitive Instance Content |
+| Derived Chunks and Embeddings | Retrieval Index | Derived Instance Content |
+| Secrets and Credentials | Deployment Settings | Deployment Secret |
+| Audit Log Evidence | Audit Log | Governance Evidence |
+| Inference Verification Records | Inference Verification Record | Governance Evidence |
+| User Memory | User Memory | Sage Context |
+| Session Memory | Sage Session Memory | Conversation State |
 | Copied Exports | Copied Export | Deployment Surface |
 
 Classification does not itself create a deletion guarantee. Active product

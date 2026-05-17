@@ -507,13 +507,17 @@ async def health_check():
     except Exception as e:
         services["qdrant"] = f"unhealthy: {str(e)}"
 
-    rate_limit_status = await rate_limit_backend_status()
-    if rate_limit_status["status"] == "healthy":
-        services["shared_rate_limit_store"] = "healthy"
-    elif rate_limit_status["status"] == "local_only":
-        services["shared_rate_limit_store"] = "unknown"
-    else:
-        services["shared_rate_limit_store"] = f"unhealthy: {rate_limit_status['summary']}"
+    try:
+        rate_limit_status = await rate_limit_backend_status()
+        if rate_limit_status["status"] == "healthy":
+            services["shared_rate_limit_store"] = "healthy"
+        elif rate_limit_status["status"] == "local_only":
+            services["shared_rate_limit_store"] = "unknown"
+        else:
+            services["shared_rate_limit_store"] = f"unhealthy: {rate_limit_status['summary']}"
+    except Exception:
+        logger.exception("Shared rate limit store health probe failed")
+        services["shared_rate_limit_store"] = "unhealthy: error checking shared rate limit store"
 
     all_healthy = all(s in {"healthy", "unknown"} for s in services.values())
 

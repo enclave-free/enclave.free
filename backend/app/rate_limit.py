@@ -74,10 +74,11 @@ async def rate_limit_backend_status() -> dict:
             "summary": "Self-hosted Valkey is coordinating rate limits across runtime instances.",
         }
     except Exception as exc:
+        logger.exception("Valkey backend health check failed")
         return {
             "backend": "valkey",
             "status": "unhealthy",
-            "summary": str(exc),
+            "summary": "error checking valkey backend health",
         }
 
 
@@ -99,6 +100,8 @@ class RateLimiter:
         window_seconds: int,
         key_func: Optional[Callable[[Request], str]] = None
     ):
+        if window_seconds <= 0:
+            raise ValueError("window_seconds must be a positive number")
         self._limit = limit
         self.window = timedelta(seconds=window_seconds)
         self.window_seconds = window_seconds
@@ -137,7 +140,7 @@ class RateLimiter:
     def _raise_rate_limited(self) -> None:
         raise HTTPException(
             status_code=429,
-            detail=f"Rate limit exceeded. Try again in {self.window.seconds} seconds."
+            detail=f"Rate limit exceeded. Try again in {self.window_seconds} seconds."
         )
 
     async def _check_valkey(self, request: Request, limit: int) -> None:
@@ -167,7 +170,6 @@ class RateLimiter:
         key = self.key_func(request)
         now = datetime.utcnow()
         cutoff = now - self.window
-        limit = self._current_limit()
 
         # Filter to recent requests only
         self.requests[key] = [t for t in self.requests[key] if t > cutoff]

@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Final, Mapping, Optional
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -316,7 +316,7 @@ def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Option
     return os.getenv(key)
 
 
-def _parsed_url(value: Optional[str]):
+def _parsed_url(value: Optional[str]) -> Optional[ParseResult]:
     raw = str(value or "").strip()
     if not raw:
         return None
@@ -873,8 +873,11 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
             errors.append("SESSION_COOKIE_SECURE must not be disabled in production")
         if _truthy_config_value(os.getenv("BACKEND_RELOAD")):
             errors.append("BACKEND_RELOAD must be disabled in production")
-        if os.getenv("PUBLISHED_SERVICE_HOST", "").strip() in {"0.0.0.0", "::"}:
-            warnings.append("Published service host 0.0.0.0 requires an explicit production exposure review")
+        published_service_host = os.getenv("PUBLISHED_SERVICE_HOST", "").strip()
+        if published_service_host in {"0.0.0.0", "::"}:
+            warnings.append(
+                f"Published service host {published_service_host} requires an explicit production exposure review"
+            )
         rate_limit_backend = (
             _deployment_config_value(config_dict, "RATE_LIMIT_BACKEND")
             or os.getenv("RATE_LIMIT_BACKEND", "memory")

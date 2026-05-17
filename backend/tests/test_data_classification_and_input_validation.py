@@ -35,6 +35,7 @@ class DataClassificationAndInputValidationTest(unittest.TestCase):
 
         invalid_payloads = [
             (MagicLinkRequest, {"email": "not-an-email", "name": "Ada"}),
+            (MagicLinkRequest, {"email": "person@@example.com", "name": "Ada"}),
             (MagicLinkRequest, {"email": "person@example.com", "name": "x" * 201}),
             (UserTypeCreate, {"name": ""}),
             (UserTypeCreate, {"name": "x" * 121}),

@@ -325,7 +325,10 @@ def main():
         for key, data in SESSIONS.items():
             print(f"  {key}: {data['name']}")
         return
-    
+
+    if not BENCHMARK_AUTH_TOKEN:
+        raise RuntimeError("BENCHMARK_AUTH_TOKEN must be set to a real signed user session token")
+
     if args:
         session_keys = []
         for arg in args:
