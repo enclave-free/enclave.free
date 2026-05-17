@@ -49,19 +49,32 @@ def run_backend_python(script: str, timeout: int = 120) -> dict[str, Any]:
         raise RuntimeError(f"core-backend python did not return JSON: {result.stdout[:400]}") from exc
 
 
-def mint_admin_token() -> str:
+def seed_user_token() -> dict[str, Any]:
     script = """
 import json
-import auth, database
-admin = database.list_admins()[0]
-token = auth.create_admin_session_token(admin["id"], admin["pubkey"], int(admin.get("session_nonce", 0) or 0))
-print(json.dumps({"token": token}))
+import time
+
+import auth
+import database
+
+database.init_schema()
+suffix = str(int(time.time() * 1000))
+email = "gateway-smoke-" + suffix + "@example.test"
+user_type_id = database.create_user_type("Gateway Smoke Users " + suffix, description="Temporary smoke-test users")
+with database.get_write_cursor() as cursor:
+    cursor.execute(
+        "INSERT INTO users (email, name, user_type_id, approved, created_at) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)",
+        (email, "Gateway Smoke User", user_type_id),
+    )
+    user_id = cursor.lastrowid
+token = auth.create_session_token(user_id, email)
+print(json.dumps({"token": token, "user_id": user_id, "user_type_id": user_type_id}))
 """
-    payload = run_backend_python(script, timeout=30)
+    payload = run_backend_python(script, timeout=60)
     token = str(payload.get("token") or "")
     if not token:
-        raise RuntimeError("failed to mint admin token")
-    return token
+        raise RuntimeError("failed to mint user token")
+    return payload
 
 
 def seed_chunk() -> dict[str, Any]:
@@ -144,12 +157,18 @@ import store
 
 job_id = {json.dumps(seed.get("job_id"))}
 point_id = {json.dumps(seed.get("point_id"))}
+user_id = {json.dumps(seed.get("user_id"))}
+user_type_id = {json.dumps(seed.get("user_type_id"))}
 database.init_schema()
 ingest_db.init_ingest_schema()
 with database.get_write_cursor() as cursor:
     cursor.execute("DELETE FROM document_defaults WHERE job_id = ?", (job_id,))
     cursor.execute("DELETE FROM retrieval_chunks WHERE job_id = ?", (job_id,))
     cursor.execute("DELETE FROM ingest_jobs WHERE job_id = ?", (job_id,))
+    if user_id is not None:
+        cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    if user_type_id is not None:
+        cursor.execute("DELETE FROM user_types WHERE id = ?", (user_type_id,))
 try:
     store.get_qdrant_client().delete(
         collection_name=store.COLLECTION_NAME,
@@ -176,7 +195,7 @@ def expect(label: str, condition: bool, detail: str = "") -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Test 5D: chunk Retrieval through public /query")
     parser.add_argument("--api-base", default="http://localhost:8000")
-    parser.add_argument("--token", help="Optional admin bearer token")
+    parser.add_argument("--token", help="Optional approved user bearer token")
     parser.add_argument("--timeout", type=float, default=180.0)
     args = parser.parse_args()
 
@@ -186,8 +205,13 @@ def main() -> int:
 
     seed: dict[str, Any] | None = None
     try:
-        token = args.token or mint_admin_token()
+        seeded_user = {} if args.token else seed_user_token()
+        token = args.token or seeded_user["token"]
         seed = seed_chunk()
+        seed.update({
+            "user_id": seeded_user.get("user_id"),
+            "user_type_id": seeded_user.get("user_type_id"),
+        })
         response = requests.post(
             f"{args.api_base.rstrip('/')}/query",
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},

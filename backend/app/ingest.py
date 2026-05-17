@@ -735,6 +735,14 @@ async def queue_document_ingestion(
         "error": None,
     }
     _sync_job_to_db(job_id)
+    if replacement_for_job_id is None:
+        database.upsert_document_defaults(
+            job_id=job_id,
+            is_available=True,
+            is_default_active=True,
+            display_order=0,
+            changed_by=changed_by,
+        )
 
     schedule_document_processing(job_id, file_path, sample_percent)
     _audit_document_action(

@@ -349,6 +349,19 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertIn("Duplicate document name in this batch", reasons)
         self.assertTrue(any("Unsupported file type" in reason for reason in reasons))
 
+        accepted_job_ids = [item["job_id"] for item in body["accepted"]]
+        jobs = self.client.get("/ingest/jobs").json()["jobs"]
+        jobs_by_id = {job["job_id"]: job for job in jobs}
+        self.assertEqual([jobs_by_id[job_id]["status"] for job_id in accepted_job_ids], ["pending", "pending"])
+
+        for job_id in accepted_job_ids:
+            self.complete_job(job_id)
+
+        defaults = self.client.get("/ingest/admin/documents/defaults").json()["documents"]
+        defaults_by_id = {doc["job_id"]: doc for doc in defaults}
+        self.assertTrue(all(defaults_by_id[job_id]["is_available"] for job_id in accepted_job_ids))
+        self.assertTrue(all(defaults_by_id[job_id]["is_default_active"] for job_id in accepted_job_ids))
+
     def test_batch_upload_preserves_safe_relative_paths_and_rejects_traversal(self) -> None:
         response = self.client.post(
             "/ingest/upload/batch",
