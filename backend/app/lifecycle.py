@@ -761,6 +761,39 @@ def _retrieval_index_confidentiality_status() -> dict:
     }
 
 
+def _active_content_encryption_evidence() -> dict:
+    artifact_status = _artifact_encryption_status()
+    retrieval_status = _retrieval_index_confidentiality_status()
+    return {
+        "artifact_encryption_posture": {
+            "status": artifact_status["status"],
+            "summary": (
+                "Artifact Encryption Posture: "
+                f"{artifact_status['summary']} This covers uploaded Document artifacts in active storage, "
+                "not backups, snapshots, logs, or Secure Erase."
+            ),
+        },
+        "retrieval_content_posture": {
+            "status": retrieval_status["status"],
+            "summary": (
+                "Retrieval Content Posture: "
+                f"{retrieval_status['summary']} Qdrant should not contain plaintext chunk text for current writes."
+            ),
+        },
+        "confidentiality_migration": {
+            "status": preview_confidentiality_migration()["status"],
+            "summary": (
+                "Confidentiality Migration rewrites or verifies eligible legacy plaintext active content; "
+                "it does not claim Secure Erase across Deployment Surfaces."
+            ),
+        },
+        "secure_erase": {
+            "claimed": False,
+            "summary": "No Secure Erase claim is made for active content encryption or migration evidence.",
+        },
+    }
+
+
 def preview_confidentiality_migration() -> dict:
     artifact_status = _artifact_encryption_status()
     artifact_inventory = _active_artifact_confidentiality_inventory()
@@ -1091,6 +1124,7 @@ def get_lifecycle_status() -> dict:
         "data_classes": _data_classes_with_retention_policies(),
         "content_encryption": content_artifacts.content_encryption_status(),
         "artifact_encryption": _artifact_encryption_status(),
+        "active_content_encryption": _active_content_encryption_evidence(),
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "unsupported_deployment_surface_categories": _unsupported_deployment_surface_categories(),

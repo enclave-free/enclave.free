@@ -264,6 +264,21 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertNotIn("legacy plaintext", retrieval["summary"])
         self.assertNotIn("Secure Erase", retrieval["summary"])
 
+    def test_lifecycle_status_exposes_active_content_encryption_evidence_terms(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        active_content = body["active_content_encryption"]
+        self.assertEqual(active_content["artifact_encryption_posture"]["status"], "encrypted")
+        self.assertIn("Artifact Encryption Posture", active_content["artifact_encryption_posture"]["summary"])
+        self.assertEqual(active_content["retrieval_content_posture"]["status"], "encrypted")
+        self.assertIn("Retrieval Content Posture", active_content["retrieval_content_posture"]["summary"])
+        self.assertIn("Confidentiality Migration", active_content["confidentiality_migration"]["summary"])
+        self.assertFalse(active_content["secure_erase"]["claimed"])
+
     def test_confidentiality_migration_preview_ignores_legacy_qdrant_payloads(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
         artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"

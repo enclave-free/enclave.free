@@ -160,6 +160,46 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertFalse(body["valid"])
         self.assertIn("RATE_LIMIT_BACKEND must be valkey in production", body["errors"])
 
+    def test_production_validation_reports_network_and_tls_misconfiguration(self) -> None:
+        os.environ["ENCLAVE_ENV"] = "production"
+        for key, value, category in (
+            ("RATE_LIMIT_BACKEND", "valkey", "security"),
+            ("RATE_LIMIT_VALKEY_URL", "redis://valkey:6379/0", "security"),
+            ("INSTANCE_URL", "http://example.com", "domains"),
+            ("API_BASE_URL", "http://api.example.com", "domains"),
+            ("ADMIN_BASE_URL", "http://admin.example.com", "domains"),
+            ("FRONTEND_URL", "http://example.com", "security"),
+            ("FORCE_HTTPS", "false", "ssl"),
+            ("HSTS_MAX_AGE", "0", "ssl"),
+            ("TRUSTED_PROXIES", "", "ssl"),
+            ("LLM_API_URL", "http://models.example.com/v1", "llm"),
+            ("EMBEDDING_API_URL", "http://tinfoil-proxy:8089/v1", "embedding"),
+        ):
+            self.database.upsert_deployment_config(
+                key,
+                value,
+                is_secret=False,
+                requires_restart=True,
+                category=category,
+                description=key,
+                changed_by="admin-pubkey",
+            )
+
+        response = self.client.post("/admin/deployment/config/validate")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["valid"])
+        self.assertIn("INSTANCE_URL must use HTTPS in production", body["errors"])
+        self.assertIn("API_BASE_URL must use HTTPS in production", body["errors"])
+        self.assertIn("ADMIN_BASE_URL must use HTTPS in production", body["errors"])
+        self.assertIn("FRONTEND_URL must use HTTPS in production", body["errors"])
+        self.assertIn("FORCE_HTTPS must be enabled in production", body["errors"])
+        self.assertIn("HSTS_MAX_AGE must be at least 31536000 in production", body["errors"])
+        self.assertIn("TRUSTED_PROXIES should name the TLS-terminating reverse proxy in production", body["warnings"])
+        self.assertIn("LLM_API_URL must use HTTPS for external provider endpoints in production", body["errors"])
+        self.assertNotIn("EMBEDDING_API_URL must use HTTPS for internal Compose endpoint tinfoil-proxy", body["errors"])
+
     def test_simulated_auth_flags_are_not_exposed_as_config(self) -> None:
         os.environ["SIMULATE_USER_AUTH"] = "true"
         os.environ["SIMULATE_ADMIN_AUTH"] = "true"

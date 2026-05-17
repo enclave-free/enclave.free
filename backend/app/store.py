@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Enclave Store Module
 Handles storing document chunks and embeddings to Qdrant.

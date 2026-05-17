@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Enclave Agent Settings router.
 Handles prompt templates, Model Provider parameters, and session defaults.

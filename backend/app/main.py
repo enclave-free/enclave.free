@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Enclave Backend - FastAPI Application
 RAG system with Qdrant vector search.
@@ -35,7 +37,7 @@ from data_deletion import (
     deletion_target_succeeded,
     summarize_deletion_results,
 )
-from sql_safety import validate_sql_allowed_tables
+from sql_safety import ALLOWED_TABLES, validate_sql_allowed_tables
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
     AdminAuthRequest, AdminAuthResponse,
@@ -2316,13 +2318,6 @@ async def delete_user(
 # =============================================================================
 # Database Explorer Endpoints (Admin)
 # =============================================================================
-
-# Allowed tables for read access (whitelist for security)
-ALLOWED_TABLES = {
-    'admins', 'instance_settings', 'user_types',
-    'user_field_definitions', 'users', 'user_field_values'
-}
-
 
 def get_table_columns(table_name: str) -> list[ColumnInfo]:
     """Get column info for a table using PRAGMA table_info"""

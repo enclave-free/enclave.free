@@ -9,6 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Final, Mapping, Optional
+from urllib.parse import urlparse
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -244,6 +245,33 @@ def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Option
     if key == "LLM_API_KEY":
         return None
     return os.getenv(key)
+
+
+def _parsed_url(value: Optional[str]):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    parsed = urlparse(raw)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    return parsed
+
+
+def _is_local_or_internal_url(value: Optional[str]) -> bool:
+    parsed = _parsed_url(value)
+    if parsed is None:
+        return False
+    host = (parsed.hostname or "").lower()
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return True
+    if "." not in host:
+        return True
+    return host.endswith(".local") or host.endswith(".internal")
+
+
+def _url_scheme(value: Optional[str]) -> str:
+    parsed = _parsed_url(value)
+    return parsed.scheme.lower() if parsed else ""
 
 
 def _sync_env_to_db() -> None:
@@ -751,6 +779,11 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
     if mock_email_enabled:
         warnings.append("MOCK_EMAIL is enabled - emails will not be sent")
 
+    # Check for SSL configuration consistency
+    ssl_cert = config_dict.get("SSL_CERT_PATH", "")
+    ssl_key = config_dict.get("SSL_KEY_PATH", "")
+    force_https = _truthy_config_value(_deployment_config_value(config_dict, "FORCE_HTTPS"))
+
     if auth.is_production_mode():
         for key in PRODUCTION_UNSAFE_FLAGS:
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
@@ -763,17 +796,29 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
             errors.append("RATE_LIMIT_BACKEND must be valkey in production")
         if not (_deployment_config_value(config_dict, "RATE_LIMIT_VALKEY_URL") or os.getenv("RATE_LIMIT_VALKEY_URL", "")).strip():
             errors.append("RATE_LIMIT_VALKEY_URL must be configured in production")
+        for key in ("INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "FRONTEND_URL"):
+            url = _deployment_config_value(config_dict, key)
+            if url and not _is_local_or_internal_url(url) and _url_scheme(url) != "https":
+                errors.append(f"{key} must use HTTPS in production")
+        if not force_https:
+            errors.append("FORCE_HTTPS must be enabled in production")
+        try:
+            if int(_deployment_config_value(config_dict, "HSTS_MAX_AGE") or "0") < 31536000:
+                errors.append("HSTS_MAX_AGE must be at least 31536000 in production")
+        except ValueError:
+            errors.append("HSTS_MAX_AGE must be a non-negative integer")
+        if not (_deployment_config_value(config_dict, "TRUSTED_PROXIES") or "").strip():
+            warnings.append("TRUSTED_PROXIES should name the TLS-terminating reverse proxy in production")
+        for key in ("LLM_API_URL", "EMBEDDING_API_URL"):
+            url = _deployment_config_value(config_dict, key)
+            if url and not _is_local_or_internal_url(url) and _url_scheme(url) != "https":
+                errors.append(f"{key} must use HTTPS for external provider endpoints in production")
 
     if not config_dict.get("SMTP_HOST") and not mock_email_enabled:
         warnings.append("SMTP not configured - email features will not work")
 
     if not config_dict.get("SEARXNG_URL"):
         warnings.append("SEARXNG_URL not configured - web search will not work")
-
-    # Check for SSL configuration consistency
-    ssl_cert = config_dict.get("SSL_CERT_PATH", "")
-    ssl_key = config_dict.get("SSL_KEY_PATH", "")
-    force_https = config_dict.get("FORCE_HTTPS", "").lower() in ("true", "1", "yes", "on")
 
     if force_https and (not ssl_cert or not ssl_key):
         warnings.append("FORCE_HTTPS is enabled but SSL certificate paths are not configured")

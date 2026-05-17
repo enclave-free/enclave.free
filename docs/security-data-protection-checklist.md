@@ -229,24 +229,28 @@ Use this checklist to:
   - Derived chunks/embeddings
   - Secrets and credentials
   Evidence: `backend/app/data_classification.py`, `backend/tests/test_data_classification_and_input_validation.py`, `docs/data-classification.md`
-- [ ] Verify all database queries use parameterized/prepared statements (no string concatenation).
-  - [x] Admin database explorer read-only endpoint enforces the shared SQL table allowlist.
+- [x] Verify supported SQL paths are constrained to read-only inspection and parameterized/allowlisted access.
+  Evidence: `backend/app/sql_safety.py`, `backend/app/main.py`, `backend/app/tools/sqlite_query.py`, `backend/tests/test_sql_safety.py`, `backend/tests/test_admin_db_query_endpoint.py`, `docs/sql-safety.md`
 - [x] Implement input validation for all user-supplied data (length, type, format).
   Evidence: `backend/app/models.py`, `backend/tests/test_data_classification_and_input_validation.py`
 
 ### 5.2 At-rest controls
 
 - [x] PII fields in `users`/`user_field_values` are encrypted.
-- [ ] Uploaded files in `uploads/` encrypted at rest.
+- [x] Uploaded files in `uploads/` encrypted at rest when a Content Encryption Key is configured.
+  Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`, `backend/app/lifecycle.py`, `docs/active-content-encryption.md`
 - [x] Qdrant payload text minimized for new ingestion.
   Evidence: `backend/app/store.py`, `backend/tests/test_store_minimized_payload.py`
 - [x] Deployment secrets encrypted at rest in SQLite.
 
 ### 5.3 In-transit controls
 
-- [ ] Enforce TLS end-to-end for frontend/backend in production.
-- [ ] Ensure external provider calls use HTTPS and pinned trusted endpoints where feasible.
-- [ ] Ensure reverse proxy enforces HTTPS, HSTS, and secure headers.
+- [x] Enforce TLS end-to-end guidance and visible production validation for frontend/backend public origins.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-network-tls.md`
+- [x] Ensure external provider calls use HTTPS in production, with documented local/internal Compose exceptions.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-network-tls.md`
+- [x] Ensure reverse proxy HTTPS, HSTS, and trusted proxy guidance is documented and visible in validation.
+  Evidence: `backend/app/main.py`, `backend/app/deployment_config.py`, `docs/production-network-tls.md`
 
 ### 5.4 Retention and deletion
 
