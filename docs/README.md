@@ -25,6 +25,7 @@ Start with the current-state docs below. They are the files that describe the ac
 
 - [admin-config-assistant.md](admin-config-assistant.md): admin config assistant bubble and change-apply flow.
 - [admin-key-recovery-runbook.md](admin-key-recovery-runbook.md): admin key recovery procedures.
+- [browser-storage-posture.md](browser-storage-posture.md): browser storage allowlist, logout clearing, and cache-minimizing response guidance.
 - [lifecycle-confidentiality-runbook.md](lifecycle-confidentiality-runbook.md): Active Storage Lifecycle confidentiality regression and scheduled retention operations.
 - [operational-monitoring-and-recovery.md](operational-monitoring-and-recovery.md): alerting, restore drills, incident response, and drill evidence.
 - [sqlite-encryption.md](sqlite-encryption.md): SQLite encryption model and migration notes.

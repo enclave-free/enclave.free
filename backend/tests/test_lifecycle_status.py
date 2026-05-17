@@ -205,6 +205,8 @@ class LifecycleStatusTest(unittest.TestCase):
         response = self.client.get("/admin/lifecycle/status")
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response.headers["cache-control"])
+        self.assertEqual(response.headers["pragma"], "no-cache")
         classes_by_key = {
             data_class["key"]: data_class
             for data_class in response.json()["data_classes"]

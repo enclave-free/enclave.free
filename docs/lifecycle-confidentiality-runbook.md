@@ -47,6 +47,10 @@ The backend reads `RETENTION_AUTOMATION_TOKEN` from environment configuration. G
 
 Every manual or machine-triggered Retention Execution should leave metadata-only Retention Run Records and tamper-evident Audit Log evidence. Retention Run Records store actor, trigger, policy snapshot, timestamps, aggregate status, counts, sanitized per-class results, tombstone references, and Audit Log linkage; they must not preserve Conversation Content, raw User Memory, uploaded Document content, or raw provider attestation material.
 
+The policy snapshot must remain self-explanatory after settings change. It records enabled classes, retention windows, scheduled flags, trigger, retry limit, evaluated timestamp, and policy hash where available. It must not include sensitive target payloads.
+
+Retention Execution evaluates enabled Lifecycle Data Classes independently. A class-level failure should report `partial_failure` when other classes still produce reviewable results. Run-level failure is reserved for authentication, policy loading, Retention Run Record creation, or Audit Log evidence failures. Scheduled retention failures must leave repairable evidence without hidden automatic retry loops; operators should repair the underlying cause and trigger the next run explicitly through deployment automation or Admin review.
+
 Data Lifecycle Status reports Retention Scheduler Observation from Retention Run Records and the current Scheduled Retention Policy. Expected observation states are disabled, never observed, healthy, stale, or failing. Treat `never_observed`, `stale`, and `failing` as operator follow-up signals: confirm the external scheduler is installed, confirm it sends `X-Retention-Automation-Token`, inspect `/admin/lifecycle/retention-runs`, and verify the linked Audit Log evidence.
 
 See `docs/adr/0015-external-retention-scheduler-with-product-owned-run-records.md` for the decision to keep scheduling deployment-owned while making run evidence product-owned.

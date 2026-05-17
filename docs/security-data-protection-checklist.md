@@ -126,6 +126,8 @@ Use this checklist to:
 - [x] Prevent session data leakage across users (session ownership checks).
 - [x] Move user auth tokens from `localStorage` to secure, httpOnly cookies.
 - [x] Stop passing user session tokens in query strings.
+- [x] Minimize deliberate browser-side storage and clear known local product markers on logout.
+  Evidence: `frontend/src/utils/browserStoragePosture.ts`, `frontend/src/utils/browserStoragePosture.test.ts`, `backend/tests/test_browser_storage_posture_docs.py`, `docs/browser-storage-posture.md`
 - [x] Encrypt new uploaded document artifacts at rest by default when `CONTENT_ENCRYPTION_KEY` is configured.
   Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`
 - [x] Remove plaintext chunk text from new Retrieval Index payloads.

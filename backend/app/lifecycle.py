@@ -19,7 +19,7 @@ import tempfile
 import secrets
 import stat
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi import Header, HTTPException
 import httpx
 from pydantic import BaseModel, Field
@@ -2084,7 +2084,9 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
 
 
 @router.get("/status", response_model=dict)
-async def get_admin_lifecycle_status(_admin: dict = Depends(auth.require_admin)):
+async def get_admin_lifecycle_status(response: Response, _admin: dict = Depends(auth.require_admin)):
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
     return get_lifecycle_status()
 
 
