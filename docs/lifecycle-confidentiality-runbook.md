@@ -18,9 +18,17 @@ The unsupported Deployment Surfaces remain outside these guarantees: runtime log
 
 Scheduled Retention Execution in this milestone targets only the supported classes exposed in Data Lifecycle Status: stale Sage Session Memory, eligible User Memory, uploaded Document artifacts that are failed, superseded, abandoned, or orphaned, and compactable non-lifecycle Audit Log detail. It does not replace subject-request deletion workflows.
 
-The following active-storage records are not scheduled for deletion in this milestone: active User Profiles, current Document Library records, current Retrieval Index entries, and Inference Verification Records. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists, because they are governance evidence for model-provider posture rather than ordinary content.
+New Instances start with conservative scheduled retention defaults for expirable active-storage classes. Lifecycle Readiness is separate from those defaults: an Admin must review the current posture, and later lifecycle-relevant changes such as retention-policy updates or unsupported Deployment Surface category acknowledgements make the review stale. Stale Lifecycle Readiness is an Admin warning in v1 and does not block ordinary User Conversations.
 
-See `docs/adr/0006-retention-and-deletion-are-operator-controlled-but-incomplete.md` for the overall lifecycle boundary and `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md` for why governance evidence is preserved while old sensitive detail may be compacted.
+The following active-storage records are not scheduled for deletion in this milestone: active User Profiles, current Document Library records, current Retrieval Index entries, Inference Verification Records, and Retention Run Records. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists, because they are governance evidence for model-provider posture rather than ordinary content. Retention Run Records are also retained indefinitely in v1 as metadata-only lifecycle evidence; they do not share ordinary Conversation retention policy, and future deletion or compaction requires a separate evidence-retention policy.
+
+Unsupported Deployment Surfaces are acknowledged by stable risk category: runtime logs, database internals, backups/snapshots, browser-held copies, copied exports, and provider traces. These acknowledgements record operator review only; they do not promote those surfaces into Lifecycle Data Classes or make product deletion controls apply to them.
+
+Copied Exports and browser-held copies leave active product storage. Exported files should carry copied-export warnings, and browser local/session storage should be minimized and cleared on logout where it contains product auth/profile markers. Operators remain responsible for device, browser, and export handling policy outside the product.
+
+Audit Log detail compaction is irreversible in active product storage: old sensitive old/new values are replaced while rows, actor/action metadata, timestamps, status, lifecycle evidence, and hash-chain verifiability remain reviewable. There is no v1 setting to retain full sensitive Audit Log detail indefinitely.
+
+See `docs/adr/0006-retention-and-deletion-are-operator-controlled-but-incomplete.md` for the overall lifecycle boundary, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md` for why governance evidence is preserved while old sensitive detail may be compacted, and `CONTEXT.md` for domain terms such as Active Storage Lifecycle, Deployment Surface, Copied Export, Lifecycle Readiness, and Retention Run Record.
 
 ## Scheduled Retention Automation
 
@@ -113,6 +121,8 @@ Open the Admin Deployment Config lifecycle view and confirm:
 
 - Lifecycle scope says active product storage.
 - Unsupported Deployment Surfaces are visible and can be acknowledged.
+- Unsupported Deployment Surface categories include runtime logs, database internals, backups/snapshots, browser-held copies, copied exports, and provider traces with practical operator guidance.
+- Lifecycle Readiness shows reviewed, needs-review, or stale posture and does not claim to block User Conversations.
 - Secure Erase is marked unsupported.
 - Content Encryption Key and Artifact Encryption Posture are shown.
 - Uploaded Document Artifacts and Retrieval Index report encrypted, mixed, plaintext by operator choice, or not configured honestly.

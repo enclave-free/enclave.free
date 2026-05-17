@@ -71,10 +71,12 @@ Recommended:
 
 - Uploaded files in `uploads/` are runtime artifacts; treat them as sensitive.
 - Review the Active Storage Lifecycle in Data Lifecycle Status and `docs/lifecycle-confidentiality-runbook.md`.
+- Review Lifecycle Readiness after setup and after lifecycle-relevant changes. Stale readiness is an Admin warning in v1 and does not block ordinary User Conversations.
 - Use an external Retention Scheduler for scheduled execution; the product records Retention Run Records and Retention Scheduler Observation but does not embed its own cron.
 - Scheduled retention can clean stale Sage Session Memory, eligible User Memory, failed/superseded/abandoned/orphaned uploaded Document artifacts, and compactable Audit Log detail.
-- The milestone does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, or Inference Verification Records for deletion. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
-- Keep unsupported Deployment Surfaces visible in operator documentation: logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces remain outside product lifecycle control.
+- The milestone does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, Inference Verification Records, or Retention Run Records for deletion. Inference Verification Records and Retention Run Records do not share ordinary Conversation retention policy; future deletion or compaction requires a separate evidence-retention policy.
+- Keep unsupported Deployment Surfaces visible in operator documentation: logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces remain outside product lifecycle control. Acknowledging a Deployment Surface category records operator review only and does not make product deletion controls apply to that category.
+- Treat Copied Exports and browser-held copies as operator/device controlled records after creation. Audit Log detail compaction is irreversible in active product storage while preserving hash-chain verifiability and governance facts.
 - Python in-memory runtime state can still exist outside the public Sage query path, such as rate-limit buckets and in-progress ingest chunks.
 
 ## Operational References

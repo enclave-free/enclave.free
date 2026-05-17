@@ -8,6 +8,7 @@ interface ExportTranslations {
   roleAssistant: string
   footer: string
   exportedOn: string
+  copiedExportNotice: string
 }
 
 interface ExportOptions {
@@ -96,7 +97,8 @@ export function generateExport({ messages, format, title, translations, instance
       content += `---\n\n`
     })
 
-    content += `\n*${footerText}*`
+    content += `\n> ${translations.copiedExportNotice}\n\n`
+    content += `*${footerText}*`
     return content
   }
 
@@ -118,7 +120,8 @@ export function generateExport({ messages, format, title, translations, instance
     content += `${'─'.repeat(40)}\n\n`
   })
 
-  content += `\n${footerText}`
+  content += `\n${translations.copiedExportNotice}\n\n`
+  content += `${footerText}`
   return content
 }
 

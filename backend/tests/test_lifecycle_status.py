@@ -113,6 +113,55 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertIn("indefinitely", inference_records["retention"]["summary"])
         self.assertEqual(inference_records["audit"]["status"], "partial")
 
+    def test_new_instance_reports_conservative_scheduled_retention_defaults(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        classes_by_key = {
+            data_class["key"]: data_class
+            for data_class in body["data_classes"]
+        }
+
+        expected_defaults = {
+            "sage_session_memory": 90,
+            "user_memory": 180,
+            "uploaded_document_artifacts": 30,
+            "audit_log": 180,
+        }
+        for key, expected_days in expected_defaults.items():
+            policy = classes_by_key[key]["retention_policy"]
+            self.assertTrue(policy["enabled"], key)
+            self.assertTrue(policy["scheduled_enforcement_enabled"], key)
+            self.assertEqual(policy["retention_window_days"], expected_days, key)
+
+        self.assertEqual(
+            body["scheduled_retention"]["enabled_classes"],
+            sorted(expected_defaults),
+        )
+        self.assertEqual(
+            body["retention_scheduler"]["observation"]["status"],
+            "never_observed",
+        )
+
+    def test_lifecycle_status_exposes_conversation_retention_semantics(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        session_memory = next(
+            data_class
+            for data_class in response.json()["data_classes"]
+            if data_class["key"] == "sage_session_memory"
+        )
+
+        semantics = session_memory["retention_semantics"]
+        self.assertEqual(semantics["lifecycle_unit"], "conversation")
+        self.assertEqual(semantics["policy_scope"], "instance")
+        self.assertEqual(semantics["activity_basis"], "human_or_sage_turn")
+        self.assertFalse(semantics["view_refreshes_activity"])
+        self.assertEqual(semantics["ordinary_history_after_retention"], "removed")
+        self.assertEqual(semantics["lifecycle_evidence_visibility"], "admin_metadata_only")
+
     def test_lifecycle_status_reports_active_storage_scope_and_confidentiality_posture(self) -> None:
         response = self.client.get("/admin/lifecycle/status")
 
@@ -126,7 +175,6 @@ class LifecycleStatusTest(unittest.TestCase):
         scheduler = body["retention_scheduler"]
         self.assertEqual(scheduler["status"], "external_or_manual")
         self.assertIn("Scheduled Retention Policy", scheduler["summary"])
-        self.assertIn("Retention Scheduler", scheduler["summary"])
 
         classes_by_key = {
             data_class["key"]: data_class
@@ -152,6 +200,24 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertIn("minimized", retrieval["summary"])
         self.assertNotIn("Confidentiality Migration", retrieval["summary"])
         self.assertNotIn("migration lands", retrieval["summary"])
+
+    def test_lifecycle_status_exposes_evidence_retention_boundaries(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        classes_by_key = {
+            data_class["key"]: data_class
+            for data_class in response.json()["data_classes"]
+        }
+        inference_records = classes_by_key["inference_verification_records"]
+        self.assertEqual(inference_records["retention"]["status"], "indefinite")
+        self.assertIn("separate evidence-retention policy", inference_records["retention"]["summary"])
+        self.assertEqual(inference_records["evidence_retention"]["ordinary_conversation_policy_applies"], False)
+
+        run_records = classes_by_key["retention_run_records"]
+        self.assertEqual(run_records["retention"]["status"], "indefinite")
+        self.assertIn("metadata-only lifecycle evidence", run_records["retention"]["summary"])
+        self.assertEqual(run_records["evidence_retention"]["ordinary_conversation_policy_applies"], False)
 
     def test_lifecycle_status_reports_mixed_when_required_artifacts_include_legacy_plaintext(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
@@ -282,7 +348,11 @@ class LifecycleStatusTest(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "skipped")
+        self.assertEqual(response.json()["status"], "succeeded")
+        self.assertEqual(
+            response.json()["enabled_classes"],
+            ["audit_log", "sage_session_memory", "uploaded_document_artifacts", "user_memory"],
+        )
         audit_entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
         self.assertEqual(audit_entries[0]["changed_by"], "machine:scheduled-retention")
 
@@ -302,7 +372,7 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(missing.status_code, 401)
         self.assertEqual(wrong.status_code, 401)
 
-    def test_lifecycle_status_includes_disabled_default_retention_policy_for_enforced_classes(self) -> None:
+    def test_lifecycle_status_includes_conservative_default_retention_policy_for_enforced_classes(self) -> None:
         response = self.client.get("/admin/lifecycle/status")
 
         self.assertEqual(response.status_code, 200)
@@ -318,9 +388,9 @@ class LifecycleStatusTest(unittest.TestCase):
             if data_class["key"] in enforceable:
                 policy = data_class["retention_policy"]
                 self.assertEqual(policy["lifecycle_data_class"], data_class["key"])
-                self.assertFalse(policy["enabled"])
+                self.assertTrue(policy["enabled"])
                 self.assertGreater(policy["retention_window_days"], 0)
-                self.assertFalse(policy["scheduled_enforcement_enabled"])
+                self.assertTrue(policy["scheduled_enforcement_enabled"])
             else:
                 self.assertNotIn("retention_policy", data_class)
 
@@ -347,7 +417,7 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertTrue(policy["enabled"])
         self.assertEqual(policy["retention_window_days"], 45)
         self.assertTrue(policy["scheduled_enforcement_enabled"])
-        self.assertFalse(classes_by_key["user_memory"]["retention_policy"]["enabled"])
+        self.assertTrue(classes_by_key["user_memory"]["retention_policy"]["enabled"])
 
         audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
         self.assertEqual(audit_entries[0]["config_key"], "lifecycle_retention_policies")
@@ -483,6 +553,77 @@ class LifecycleStatusTest(unittest.TestCase):
         audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
         self.assertEqual(audit_entries[0]["config_key"], "lifecycle_unsupported_surface_acknowledgements")
         self.assertEqual(audit_entries[0]["changed_by"], "admin-pubkey")
+
+    def test_admin_can_acknowledge_unsupported_deployment_surface_category(self) -> None:
+        review = self.client.post("/admin/lifecycle/readiness/review")
+        self.assertEqual(review.status_code, 200)
+
+        acknowledgement = self.client.post(
+            "/admin/lifecycle/unsupported-deployment-surface-categories/browser_held_copies/acknowledgement",
+            json={"acknowledged": True},
+        )
+
+        self.assertEqual(acknowledgement.status_code, 200)
+        categories = {
+            category["category"]: category
+            for category in acknowledgement.json()["unsupported_deployment_surface_categories"]
+        }
+        browser_copies = categories["browser_held_copies"]
+        self.assertTrue(browser_copies["acknowledged"])
+        self.assertEqual(browser_copies["acknowledged_by"], "admin-pubkey")
+        self.assertIn("Clear browser storage", browser_copies["guidance"])
+        self.assertEqual(browser_copies["surfaces"][0]["key"], "browser_storage")
+        stored_acknowledgements = json.loads(self.database.get_setting("lifecycle_unsupported_surface_category_acknowledgements"))
+        stored_posture_version = stored_acknowledgements["browser_held_copies"]["posture_version"]
+        self.assertEqual(stored_posture_version, self.lifecycle._readiness_version())
+        stored_acknowledgements["browser_held_copies"]["acknowledged_by"] = "different-admin"
+        stored_acknowledgements["browser_held_copies"]["acknowledged_at"] = "2026-05-17T00:00:00"
+        stored_acknowledgements["browser_held_copies"]["posture_version"] = "previous-version"
+        self.database.update_setting(
+            "lifecycle_unsupported_surface_category_acknowledgements",
+            json.dumps(stored_acknowledgements),
+        )
+        self.assertEqual(stored_posture_version, self.lifecycle._readiness_version())
+
+        status = self.client.get("/admin/lifecycle/status").json()
+        readiness = status["lifecycle_readiness"]
+        self.assertEqual(readiness["status"], "stale")
+        self.assertEqual(readiness["stale_reason"], "unsupported_surface_category_acknowledgement_changed")
+
+        audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
+        keys = [entry["config_key"] for entry in audit_entries]
+        self.assertIn("lifecycle_unsupported_surface_category_acknowledgements", keys)
+
+    def test_admin_can_review_lifecycle_readiness_and_lifecycle_changes_make_it_stale(self) -> None:
+        initial = self.client.get("/admin/lifecycle/status").json()["lifecycle_readiness"]
+        self.assertEqual(initial["status"], "needs_review")
+        self.assertFalse(initial["reviewed"])
+
+        review = self.client.post("/admin/lifecycle/readiness/review")
+        self.assertEqual(review.status_code, 200)
+        reviewed = review.json()["lifecycle_readiness"]
+        self.assertEqual(reviewed["status"], "reviewed")
+        self.assertEqual(reviewed["reviewed_by"], "admin-pubkey")
+        self.assertIn("browser_held_copies", reviewed["acknowledged_unsupported_surface_categories"])
+
+        update = self.client.put(
+            "/admin/lifecycle/retention-policies/sage_session_memory",
+            json={
+                "enabled": True,
+                "retention_window_days": 45,
+                "scheduled_enforcement_enabled": True,
+            },
+        )
+        self.assertEqual(update.status_code, 200)
+
+        stale = self.client.get("/admin/lifecycle/status").json()["lifecycle_readiness"]
+        self.assertEqual(stale["status"], "stale")
+        self.assertEqual(stale["stale_reason"], "retention_policy_changed")
+
+        audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
+        keys = [entry["config_key"] for entry in audit_entries]
+        self.assertIn("lifecycle_readiness", keys)
+        self.assertIn("lifecycle_readiness_staleness", keys)
 
     def test_lifecycle_status_summarizes_deletion_tombstones(self) -> None:
         self.database.create_deletion_tombstone(

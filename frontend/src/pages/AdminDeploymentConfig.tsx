@@ -104,6 +104,7 @@ export function AdminDeploymentConfig() {
     status: lifecycleStatus,
     loading: lifecycleLoading,
     acknowledgeUnsupportedSurface,
+    acknowledgeUnsupportedSurfaceCategory,
     updateRetentionPolicy,
     updateArtifactEncryptionPosture,
     previewRetention,
@@ -141,6 +142,7 @@ export function AdminDeploymentConfig() {
   const [retryingTombstoneId, setRetryingTombstoneId] = useState<number | null>(null)
   const [tombstoneRetryError, setTombstoneRetryError] = useState<string | null>(null)
   const [acknowledgingSurfaceKey, setAcknowledgingSurfaceKey] = useState<string | null>(null)
+  const [acknowledgingSurfaceCategory, setAcknowledgingSurfaceCategory] = useState<string | null>(null)
   const [unsupportedSurfaceError, setUnsupportedSurfaceError] = useState<string | null>(null)
   const [retentionPolicyDrafts, setRetentionPolicyDrafts] = useState<Record<string, {
     enabled: boolean
@@ -445,6 +447,18 @@ export function AdminDeploymentConfig() {
       setUnsupportedSurfaceError(err instanceof Error ? err.message : 'errors.failedToAcknowledgeUnsupportedSurface')
     } finally {
       setAcknowledgingSurfaceKey(null)
+    }
+  }
+
+  const handleAcknowledgeUnsupportedSurfaceCategory = async (category: string, acknowledged: boolean) => {
+    try {
+      setAcknowledgingSurfaceCategory(category)
+      setUnsupportedSurfaceError(null)
+      await acknowledgeUnsupportedSurfaceCategory(category, acknowledged)
+    } catch (err) {
+      setUnsupportedSurfaceError(err instanceof Error ? err.message : 'errors.failedToAcknowledgeUnsupportedSurfaceCategory')
+    } finally {
+      setAcknowledgingSurfaceCategory(null)
     }
   }
 
@@ -1823,6 +1837,31 @@ export function AdminDeploymentConfig() {
               </p>
             </div>
           )}
+          {lifecycleStatus?.lifecycle_readiness && (
+            <div role="status" className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <p className="text-xs font-medium text-text">
+                {t('adminDeployment.lifecycle.readinessStatus', 'Lifecycle Readiness: {{status}}', {
+                  status: formatLifecycleStatus(lifecycleStatus.lifecycle_readiness.status),
+                })}
+              </p>
+              <p className="mt-1 text-xs text-text-secondary">
+                {lifecycleStatus.lifecycle_readiness.summary}
+              </p>
+              <p className="mt-1 text-xs text-text-muted">
+                {t(
+                  'adminDeployment.lifecycle.readinessNonBlocking',
+                  'User Conversations are not blocked by Lifecycle Readiness warnings in v1.'
+                )}
+              </p>
+              {lifecycleStatus.lifecycle_readiness.stale_reason && (
+                <p className="mt-1 text-xs text-text-muted">
+                  {t('adminDeployment.lifecycle.readinessStaleReason', 'Reason: {{reason}}', {
+                    reason: formatLifecycleStatus(lifecycleStatus.lifecycle_readiness.stale_reason),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
           {(lifecycleStatus?.content_encryption || lifecycleStatus?.artifact_encryption || lifecycleStatus?.retention_scheduler) && (
             <div className="mb-4 grid gap-3 md:grid-cols-3">
               {lifecycleStatus?.content_encryption && (
@@ -2087,7 +2126,8 @@ export function AdminDeploymentConfig() {
             </p>
           )}
 
-          {Array.isArray(lifecycleStatus?.unsupported_deployment_surfaces) && lifecycleStatus.unsupported_deployment_surfaces.length > 0 && (
+          {((Array.isArray(lifecycleStatus?.unsupported_deployment_surfaces) && lifecycleStatus.unsupported_deployment_surfaces.length > 0) ||
+            (Array.isArray(lifecycleStatus?.unsupported_deployment_surface_categories) && lifecycleStatus.unsupported_deployment_surface_categories.length > 0)) && (
             <div className="mt-5 border-t border-border pt-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
@@ -2104,8 +2144,46 @@ export function AdminDeploymentConfig() {
                   {t('adminDeployment.lifecycle.unsupportedSurfaceAckFailed', 'Unable to update acknowledgement.')}
                 </p>
               )}
-              <div className="grid gap-3 md:grid-cols-2">
-                {lifecycleStatus.unsupported_deployment_surfaces.map((surface) => (
+              {Array.isArray(lifecycleStatus?.unsupported_deployment_surface_categories) && lifecycleStatus.unsupported_deployment_surface_categories.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {lifecycleStatus.unsupported_deployment_surface_categories.map((category) => (
+                    <div key={category.category} className="bg-surface border border-border rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h5 className="text-sm font-medium text-text">{category.label}</h5>
+                          <p className="text-xs text-text-secondary mt-1">{category.guidance}</p>
+                          <p className="text-xs text-text-muted mt-1">
+                            {category.surfaces.map((surface) => surface.label).join(', ')}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-[10px] uppercase tracking-wide bg-surface-overlay text-text-secondary px-2 py-1 rounded">
+                          {formatLifecycleStatus(category.status)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAcknowledgeUnsupportedSurfaceCategory(category.category, !category.acknowledged)}
+                        disabled={acknowledgingSurfaceCategory === category.category}
+                        aria-pressed={category.acknowledged}
+                        className="mt-3 inline-flex items-center justify-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {acknowledgingSurfaceCategory === category.category ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : category.acknowledged ? (
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5" />
+                        )}
+                        {category.acknowledged
+                          ? t('adminDeployment.lifecycle.acknowledgedSurface', 'Acknowledged')
+                          : t('adminDeployment.lifecycle.acknowledgeSurface', 'Acknowledge')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {(lifecycleStatus.unsupported_deployment_surfaces ?? []).map((surface) => (
                   <div key={surface.key} className="bg-surface border border-border rounded-lg p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -2135,8 +2213,9 @@ export function AdminDeploymentConfig() {
                         : t('adminDeployment.lifecycle.acknowledgeSurface', 'Acknowledge')}
                     </button>
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </Card>

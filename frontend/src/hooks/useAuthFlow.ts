@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { STORAGE_KEYS } from '../types/onboarding'
 import { isAdminAuthenticated } from '../utils/adminApi'
+import { clearLogoutBrowserStorage } from '../utils/browserStoragePosture'
 
 export interface AuthFlowState {
   isAdmin: boolean
@@ -71,7 +72,5 @@ export function clearUserAuth(): void {
  * Clear all authentication state (both user and admin).
  */
 export function clearAllAuth(): void {
-  clearUserAuth()
-  localStorage.removeItem(STORAGE_KEYS.ADMIN_PUBKEY)
-  localStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION_TOKEN)
+  clearLogoutBrowserStorage('all')
 }

@@ -126,7 +126,11 @@ This split is important because a class can have deletion, retention, audit, and
 
 Scheduled retention is deployment-owned in this milestone. Use an external Retention Scheduler to call the automation endpoint, then verify Retention Scheduler Observation in this panel. Observation is derived from metadata-only Retention Run Records and can report disabled, never observed, healthy, stale, or failing. See `docs/adr/0015-external-retention-scheduler-with-product-owned-run-records.md` and `docs/lifecycle-confidentiality-runbook.md`.
 
-The Active Storage Lifecycle does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, or Inference Verification Records for deletion in this milestone. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
+Lifecycle Readiness records Admin review of the current lifecycle posture. Conservative retention defaults may already be active, but readiness can be needs-review or stale after lifecycle-relevant changes. Stale readiness is an Admin warning in v1 and does not block ordinary User Conversations.
+
+The Active Storage Lifecycle does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, Inference Verification Records, or Retention Run Records for deletion in this milestone. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists. Retention Run Records remain metadata-only lifecycle evidence until a separate evidence-retention policy exists.
+
+Unsupported Deployment Surfaces are grouped by category: runtime logs, database internals, backups/snapshots, browser-held copies, copied exports, and provider traces. Category acknowledgement records operator review and guidance, but does not promote those surfaces into Lifecycle Data Classes. Copied Exports and browser-held copies remain outside Active Storage Lifecycle after creation. Audit Log detail compaction replaces old sensitive detail irreversibly while preserving governance facts and hash-chain verification.
 
 ## Common Operator Workflow
 

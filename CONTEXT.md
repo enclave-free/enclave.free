@@ -36,6 +36,10 @@ _Avoid_: compliance status, deployment guarantee
 A technical runtime or infrastructure surface in a **Deployment** that may contain traces of **Instance** activity but is not currently controlled as a **Lifecycle Data Class**.
 _Avoid_: lifecycle data class, product record
 
+**Copied Export**:
+An operator- or user-created copy of **Instance** data that leaves active product storage.
+_Avoid_: product record, lifecycle-controlled data
+
 **Data Retention**:
 The **Operator** controlled rules for how long **Instance** data is kept before deletion or review.
 _Avoid_: cleanup, storage duration
@@ -351,10 +355,21 @@ _Avoid_: full snapshot, config dump
 - A **Lifecycle Data Class** has its own lifecycle support status
 - **Lifecycle Support Status** is scoped to the stated **Lifecycle Data Class** and supported **Storage Targets**
 - A **Deployment Surface** may contain traces of **Instance** activity without being a supported **Lifecycle Data Class**
+- A **Copied Export** becomes a **Deployment Surface** after creation and is outside **Active Storage Lifecycle**
+- Export actions for sensitive **Instance** data should create **Audit Log** evidence even though the exported copy is not lifecycle-controlled by the product
+- Browser local storage, session storage, and cache are **Deployment Surfaces**, but the product should actively minimize deliberate browser-side storage of **Conversation Content** and other sensitive **Instance** data
 - **Data Retention** is part of **Operator-Controlled Privacy**
 - **Retention Execution** applies **Data Retention** rules
 - **Retention Execution** may be operator-invoked before it is scheduled automatically
 - A **Scheduled Retention Policy** identifies which **Lifecycle Data Classes** scheduled **Retention Execution** should include
+- **Scheduled Retention Policy** should be configurable per supported **Lifecycle Data Class**
+- An **Admin** may disable scheduled retention for a supported **Lifecycle Data Class** in the first version
+- Disabled scheduled retention must be visible in lifecycle status and audited when changed
+- New **Instances** should start with conservative scheduled retention defaults for expirable active-storage classes while governance evidence remains retained until separately configured
+- **Lifecycle Readiness** requires explicit **Admin** review of current lifecycle posture even when conservative defaults are already active
+- **Lifecycle Readiness** may become stale after lifecycle-relevant changes and should be restored by **Admin** review
+- Stale **Lifecycle Readiness** should warn **Admins** without blocking normal **User Conversations** in the first version
+- **Admin Conversations** may help repair stale **Lifecycle Readiness** while still obeying **Change Confirmation**, **Audit Log**, and **Verifiable Inference** gates
 - A **Retention Scheduler** triggers scheduled **Retention Execution** automatically
 - The first **Scheduled Retention Policy** support may exist before the product includes its own **Retention Scheduler**
 - An externally configured **Retention Scheduler** is acceptable for the first production-ready **Active Storage Lifecycle** milestone if missing or stale scheduler execution is visible to the **Operator**
@@ -365,10 +380,18 @@ _Avoid_: full snapshot, config dump
 - Scheduled **Uploaded Document Artifacts** retention cleans failed, superseded, orphaned, or abandoned artifacts rather than current successful **Document Library** records
 - Scheduled **Sage Session Memory** retention uses **Conversation** last activity rather than creation time when deciding staleness
 - Scheduled **Audit Log** retention compacts sensitive detail while preserving lifecycle and governance evidence; it does not delete whole **Audit Log** rows in the first scheduled enforcement slice
+- **Audit Log** detail compaction should be irreversible in active product storage
+- The first **Audit Log** retention policy should not include an **Admin** setting to retain full sensitive audit detail indefinitely
+- Full sensitive **Audit Log** detail that an **Operator** preserves outside compaction becomes a **Copied Export** or **Deployment Surface**, not active product lifecycle evidence
 - **Retention Execution** reports results per **Lifecycle Data Class**
 - **Retention Execution** evidence should preserve metadata-only run status, counts, per-class outcomes, retry references, and sanitized failure categories without preserving deleted content
 - A **Retention Run Record** is the operational source for lifecycle status and scheduler observation, while the **Audit Log** is the tamper-evident governance trail for the same run
 - Manual and machine-triggered **Retention Execution** should create the same kind of **Retention Run Record** with different actor and trigger metadata
+- **Retention Run Records** should be retained indefinitely in the first version as metadata-only lifecycle evidence
+- Future compaction or deletion of **Retention Run Records** should use a separate evidence-retention policy
+- A **Retention Run Record** should store a self-explanatory metadata-only policy snapshot, not only a hash or reference to the current policy
+- **Retention Execution** should evaluate enabled **Lifecycle Data Classes** independently and may partially succeed
+- A **Retention Execution** run should fail completely only when trustworthy lifecycle evidence cannot be created or the run cannot authenticate or read policy
 - Scheduled **User Memory** retention should remove stale expirable or superseded **User Memory**, not active Admin-confirmed **User Memory** merely because it is old
 - Destructive **Retention Execution** requires explicit **Admin** confirmation and should make eligibility or result counts visible
 - Human-triggered **Retention Execution** should require fresh preview or current eligibility counts, while machine-triggered scheduled **Retention Execution** runs from the policy snapshot and is reviewed afterward
@@ -466,6 +489,8 @@ _Avoid_: full snapshot, config dump
 - Historical **Inference Verification Records** should expose full provider attestation material to **Admins**
 - Normal chat surfaces should not expose detailed **Inference Verification Records** in the first version, except for a blocked-state message when **Conversation** traffic fails closed
 - **Inference Verification Records** should be retained indefinitely by default as operator-visible security evidence
+- **Inference Verification Records** should not share ordinary **Conversation** retention policy
+- Future deletion or compaction of **Inference Verification Records** should use a separate evidence-retention policy
 - Near-term lifecycle support for **Inference Verification Records** should include inventory and status before configurable retention or deletion controls
 - Full provider attestation material in **Inference Verification Records** should be encrypted at rest
 - Normalized **Inference Verification Record** metadata may remain queryable for status, history, lifecycle inventory, and audit correlation
@@ -553,6 +578,9 @@ _Avoid_: full snapshot, config dump
 - The primary lifecycle unit for **Session Memory** is a **Conversation**
 - **Data Retention** eligibility for **Conversations** should be based on last **Conversation** activity rather than creation time
 - **Conversation** activity for **Data Retention** means human and Sage assistant turns, not lifecycle retries, audit writes, retention scans, or tombstone updates
+- Opening or viewing a **Conversation** is not **Conversation** activity for **Data Retention**
+- The first **Conversation** retention policy should be **Instance** level rather than **User Type** specific
+- **Admin Conversations** and **User Conversations** should share the same **Conversation Content** and **Session Memory** retention window in the first version
 - **Retention Execution** should re-check **Conversation** eligibility before deletion and skip candidates that became active
 - **User** deletion may remove active **User Profile** and access state while leaving retryable **Deletion Tombstones** for incomplete **Session Memory Deletion** targets
 - **Session Memory Deletion** is a coordinated workflow with explicit **Lifecycle Deletion Results**, not a distributed transaction
@@ -573,6 +601,7 @@ _Avoid_: full snapshot, config dump
 - **Session Memory Deletion** should use a formal internal lifecycle contract between the **Enclave Control Plane** and **Sage**, not overload public query-session deletion semantics
 - The first **Session Memory** lifecycle implementation should update security posture, session behavior, and internal contract docs alongside code
 - User-initiated, **Admin**-initiated, and **Retention Execution** paths should share the same underlying **Session Memory Deletion** workflow with role-specific visibility
+- **Users** should see the immediate result of their own **Session Memory Deletion** request, while retained lifecycle evidence and retryable **Deletion Tombstones** remain **Admin** visible in the first version
 - User-initiated **Session Memory Deletion** should create a privacy-preserving lifecycle **Audit Log** event without **Conversation Content**
 - Operator-invoked **Session Memory Deletion** should create an **Audit Log** event even when it fails or deletes nothing
 - A **Conversation** may have **Session Memory**

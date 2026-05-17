@@ -269,14 +269,36 @@ export interface UnsupportedDeploymentSurface {
   acknowledged: boolean
 }
 
+export interface UnsupportedDeploymentSurfaceCategory {
+  category: string
+  label: string
+  status: 'unsupported'
+  guidance: string
+  acknowledged: boolean
+  acknowledged_by?: string | null
+  acknowledged_at?: string | null
+  posture_version?: string | null
+  surfaces: UnsupportedDeploymentSurface[]
+}
+
 export interface LifecycleStatusResponse {
   lifecycle_scope?: LifecycleScope
+  lifecycle_readiness?: {
+    status: 'needs_review' | 'reviewed' | 'stale' | string
+    reviewed: boolean
+    reviewed_at?: string | null
+    reviewed_by?: string | null
+    stale_reason?: string | null
+    summary: string
+    acknowledged_unsupported_surface_categories?: string[]
+  }
   content_encryption?: ContentEncryptionStatus
   artifact_encryption?: ArtifactEncryptionStatus
   retention_scheduler?: RetentionSchedulerStatus
   data_classes: LifecycleDataClass[]
   secure_erase?: LifecyclePosture
   unsupported_deployment_surfaces?: UnsupportedDeploymentSurface[]
+  unsupported_deployment_surface_categories?: UnsupportedDeploymentSurfaceCategory[]
   scheduled_retention?: {
     enabled_classes: string[]
   }

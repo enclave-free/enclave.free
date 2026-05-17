@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import sys
 import tempfile
@@ -94,6 +95,19 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
         self.assertTrue(body["success"])
         self.assertEqual(body["columns"], ["id", "email"])
         self.assertEqual(body["rows"], [])
+
+    def test_database_export_creates_copied_export_audit_evidence(self) -> None:
+        response = self.client.get("/admin/database/export")
+
+        self.assertEqual(response.status_code, 200)
+        entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
+        self.assertTrue(entries)
+        self.assertEqual(entries[0]["config_key"], "copied_export:sqlite_database")
+        self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
+        event = json.loads(entries[0]["new_value"])
+        self.assertEqual(event["workflow"], "copied_export")
+        self.assertEqual(event["target"], "sqlite_database")
+        self.assertEqual(event["lifecycle_posture"], "outside_active_storage_lifecycle")
 
 
 if __name__ == "__main__":
