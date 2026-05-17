@@ -1,5 +1,5 @@
 """
-Enclave Agent Settings compatibility router.
+Enclave Agent Settings router.
 Handles prompt templates, Model Provider parameters, and session defaults.
 """
 

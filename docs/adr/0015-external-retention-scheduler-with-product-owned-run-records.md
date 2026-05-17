@@ -1,0 +1,3 @@
+# External Retention Scheduler With Product-Owned Run Records
+
+The first production-ready Active Storage Lifecycle milestone keeps the Retention Scheduler deployment-owned instead of embedding an internal cron loop in the product runtime. Scheduled Retention Execution may be triggered by external cron or Deployment Automation, but each manual or machine-triggered run must create a metadata-only Retention Run Record for lifecycle status and scheduler observation, plus tamper-evident Audit Log evidence for governance. This favors simple deployment composition while preventing false confidence: missing, stale, or failing scheduler execution must be visible to the Operator.

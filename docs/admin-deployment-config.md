@@ -22,7 +22,7 @@ It remains the canonical place for:
 - SMTP and email settings
 - frontend/domain/CORS settings exposed through Python
 - deployment health checks
-- Model Provider metadata used by Python-side health reporting and remaining legacy paths
+- Model Provider metadata used by Python-side health reporting and deployment diagnostics
 
 It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to Sage and is stored in Sage Postgres.
 
@@ -38,7 +38,7 @@ It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to
 
 Important consequence: changing admin deployment config does not automatically rewrite the Sage container environment.
 
-## Model Provider Compatibility Settings On This Prototype
+## Model Provider Deployment Settings On This Prototype
 
 Recommended current values in admin deployment config:
 
@@ -47,14 +47,14 @@ Recommended current values in admin deployment config:
 - `LLM_MODEL=kimi-k2-6`
 - `LLM_API_KEY=<tinfoil key or matching override>`
 
-These compatibility keys keep existing environment names and UI labels stable. What they affect today:
+These deployment keys keep existing environment names and UI labels stable while Sage runtime configuration remains env-driven. What they affect today:
 
 | Key | Primary effect |
 | --- | --- |
-| `LLM_PROVIDER` | Python-side Model Provider labeling and compatibility logic |
-| `LLM_API_URL` | Python health checks and legacy Python Model Provider client config |
-| `LLM_MODEL` | Python-side model metadata / remaining legacy client paths |
-| `LLM_API_KEY` | Python-side Model Provider auth unless left empty for env fallback |
+| `LLM_PROVIDER` | Python-side Model Provider labeling and validation |
+| `LLM_API_URL` | Python health checks against the configured Model Provider endpoint |
+| `LLM_MODEL` | Python-side model metadata and diagnostics |
+| `LLM_API_KEY` | Python-side Model Provider auth from Deployment Settings |
 
 What actually drives Sage:
 
@@ -111,7 +111,7 @@ Sage depends on Enclave Python for document retrieval, so mismatches here can br
 
 `CONTENT_ENCRYPTION_KEY` enables backend-readable encryption for new Uploaded Document artifacts and Retrieval chunk text in active storage. `DOCUMENT_ARTIFACT_ENCRYPTION` defaults to `required`; set it to `disabled` only when the operator explicitly chooses plaintext Uploaded Document artifact storage. Retrieval chunk text still requires the Content Encryption Key even when uploaded artifacts are plaintext by operator choice.
 
-New Retrieval Index writes store vectors and minimal metadata in Qdrant, while encrypted chunk text lives in SQLite. This is active storage confidentiality for product-owned artifacts and retrieval content, not Secure Erase. Legacy Retrieval Index payloads may still contain plaintext until the Confidentiality Migration runs.
+New Retrieval Index writes store vectors and minimal metadata in Qdrant, while encrypted chunk text lives in SQLite. This is active storage confidentiality for product-owned artifacts and retrieval content, not Secure Erase. Legacy Retrieval Index plaintext repair support has been removed, so active retrieval now depends on minimized Qdrant payloads and chunk hydration from product-owned storage.
 
 ## Data Lifecycle Status
 
@@ -123,6 +123,10 @@ The Data Lifecycle Status panel is the current operator-visible inventory for th
 - Content Encryption Key status from Artifact Encryption Posture
 
 This split is important because a class can have deletion, retention, audit, and confidentiality states that move independently.
+
+Scheduled retention is deployment-owned in this milestone. Use an external Retention Scheduler to call the automation endpoint, then verify Retention Scheduler Observation in this panel. Observation is derived from metadata-only Retention Run Records and can report disabled, never observed, healthy, stale, or failing. See `docs/adr/0015-external-retention-scheduler-with-product-owned-run-records.md` and `docs/lifecycle-confidentiality-runbook.md`.
+
+The Active Storage Lifecycle does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, or Inference Verification Records for deletion in this milestone. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
 
 ## Common Operator Workflow
 

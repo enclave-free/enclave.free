@@ -52,6 +52,14 @@ _Avoid_: retention scheduler, cron job
 The technical automation that invokes scheduled **Retention Execution** without a human pressing a product control.
 _Avoid_: scheduled retention policy, retention setting
 
+**Retention Scheduler Observation**:
+Operator-visible evidence that scheduled **Retention Execution** has run recently and what lifecycle result it produced.
+_Avoid_: cron health, scheduler guarantee
+
+**Retention Run Record**:
+A metadata-only product record of one **Retention Execution** run used for lifecycle status, scheduler observation, and repair workflows.
+_Avoid_: audit log entry, deleted data archive
+
 **Data Deletion**:
 The **Operator** controlled action or workflow that removes **Instance** data from active storage according to **Data Retention** rules or a specific deletion request.
 _Avoid_: cleanup, hide, archive
@@ -99,6 +107,10 @@ _Avoid_: instance, tenant
 **Deployment Automation**:
 A deployment-owned machine actor that invokes approved operational workflows for an **Instance**.
 _Avoid_: admin user, service account, bot admin
+
+**Prototype Compatibility Debt**:
+Transitional code, configuration aliases, documentation, or UI copy that preserves obsolete prototype behavior after the current **Sage** and **Enclave Control Plane** boundary has become the source of truth.
+_Avoid_: data migration, confidentiality migration, rollback plan
 
 **Instance Initiation**:
 The first-time setup act where the first **Admin** authenticates and makes an **Instance** ready for configuration and user onboarding.
@@ -244,6 +256,10 @@ _Avoid_: user fields, profile fields
 Sage-owned durable context about a specific **User** that supports subtle personalization across **Conversations**.
 _Avoid_: user profile, session memory, profile fields, user-facing memory manager
 
+**User Memory Retention Class**:
+The lifecycle category that determines whether a **User Memory** item is durable, expirable, or eligible because it has been superseded.
+_Avoid_: memory type, importance score
+
 **Session Memory**:
 The conversation-specific information **Sage** retains to support an ongoing agent interaction.
 _Avoid_: user profile, chat history
@@ -341,8 +357,21 @@ _Avoid_: full snapshot, config dump
 - A **Scheduled Retention Policy** identifies which **Lifecycle Data Classes** scheduled **Retention Execution** should include
 - A **Retention Scheduler** triggers scheduled **Retention Execution** automatically
 - The first **Scheduled Retention Policy** support may exist before the product includes its own **Retention Scheduler**
+- An externally configured **Retention Scheduler** is acceptable for the first production-ready **Active Storage Lifecycle** milestone if missing or stale scheduler execution is visible to the **Operator**
+- A **Retention Scheduler Observation** can be healthy even when no data was eligible for deletion if the run created lifecycle and **Audit Log** evidence
+- The first scheduled enforcement slice of **Active Storage Lifecycle** covers **Sage Session Memory**, **Uploaded Document Artifacts**, **User Memory**, and sensitive **Audit Log** detail
+- The first scheduled enforcement slice of **Active Storage Lifecycle** does not schedule deletion of active **User Profiles**, current **Document Library** records, current **Retrieval Index** entries, or **Inference Verification Records**
+- **Inference Verification Records** remain indefinitely retained until a separate evidence-retention policy exists
+- Scheduled **Uploaded Document Artifacts** retention cleans failed, superseded, orphaned, or abandoned artifacts rather than current successful **Document Library** records
+- Scheduled **Sage Session Memory** retention uses **Conversation** last activity rather than creation time when deciding staleness
+- Scheduled **Audit Log** retention compacts sensitive detail while preserving lifecycle and governance evidence; it does not delete whole **Audit Log** rows in the first scheduled enforcement slice
 - **Retention Execution** reports results per **Lifecycle Data Class**
+- **Retention Execution** evidence should preserve metadata-only run status, counts, per-class outcomes, retry references, and sanitized failure categories without preserving deleted content
+- A **Retention Run Record** is the operational source for lifecycle status and scheduler observation, while the **Audit Log** is the tamper-evident governance trail for the same run
+- Manual and machine-triggered **Retention Execution** should create the same kind of **Retention Run Record** with different actor and trigger metadata
+- Scheduled **User Memory** retention should remove stale expirable or superseded **User Memory**, not active Admin-confirmed **User Memory** merely because it is old
 - Destructive **Retention Execution** requires explicit **Admin** confirmation and should make eligibility or result counts visible
+- Human-triggered **Retention Execution** should require fresh preview or current eligibility counts, while machine-triggered scheduled **Retention Execution** runs from the policy snapshot and is reviewed afterward
 - A dry-run or preview for broad **Retention Execution** is desired but not required for the first slice
 - Operator-invoked **Retention Execution** should create an **Audit Log** event even when no data changes
 - **Data Deletion** executes **Data Retention** decisions or specific deletion requests
@@ -364,6 +393,9 @@ _Avoid_: full snapshot, config dump
 - A **Deployment** usually runs one **Instance** in the prototype
 - **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
 - **Deployment Automation** may invoke scheduled operational workflows without representing a human **Admin** action
+- **Prototype Compatibility Debt** can be removed when it preserves obsolete prototype behavior rather than an active product or migration boundary
+- **Prototype Compatibility Debt** excludes **Confidentiality Migration** safeguards until legacy plaintext active content storage has been resolved
+- Plaintext fallback for existing active content is a **Confidentiality Migration** concern, not **Prototype Compatibility Debt**, until the relevant storage state has been verified and migrated
 - A **Deployment** includes a **Gateway**
 - The **Gateway** routes requests to **Sage** or the **Enclave Control Plane**
 - The **Gateway** does not own product correctness
@@ -382,12 +414,21 @@ _Avoid_: full snapshot, config dump
 - A **User** belongs to at most one **User Type**
 - **Sage** is the **Agent Runtime** inside the **Enclave Free Prototype**
 - The **Enclave Control Plane** provides operator-owned facts and actions to **Sage**
+- Sage-owned public **Agent Runtime** routes should not keep duplicate Python behavior or Python tombstones as rollback paths
+- Obsolete Python public **Agent Runtime** routes should be absent after the Sage hard cut rather than failing through compatibility tombstones
+- Unused internal Sage-to-Python compatibility endpoints are **Prototype Compatibility Debt**
+- Sage should depend only on the active private **Enclave Control Plane** contract, and obsolete internal endpoints should fail clearly rather than preserve old ownership boundaries
 - **Instance Settings** belong to the **Instance**
 - **Deployment Settings** belong to the **Deployment**
 - **Agent Settings** belong to **Sage**
 - **Model Provider** is an **Agent Setting**
 - A **Model Provider** must satisfy the **Model Provider Requirement**
 - **Tinfoil** is the current preferred **Model Provider**
+- Maple-era provider labels, aliases, and UI copy are **Prototype Compatibility Debt** in the **Enclave Free Prototype**
+- The **Enclave Free Prototype** should fail clearly rather than silently honoring Maple-era **Model Provider** aliases
+- Generic deployment-facing `LLM_*` settings may remain while they describe Python-side **Deployment Settings**, diagnostics, and verification metadata
+- Generic deployment-facing `LLM_*` settings should not be described as live Sage **Agent Settings** until runtime configuration is unified
+- Admin-facing copy should not teach obsolete **Model Provider** labels or imply that Python deployment config live-edits Sage runtime environment
 - **Encrypted Inference** protects conversation content from surrounding infrastructure
 - **Verifiable Inference** lets the **Operator** verify meaningful execution claims
 - An **Inference Verification Record** captures the outcome of checking a **Model Provider** against expected **Verifiable Inference** claims
@@ -443,6 +484,7 @@ _Avoid_: full snapshot, config dump
 - Only current completed **Documents** are visible to **Users** for **Document Access** and **Retrieval**
 - **Document Access** determines which **Documents** are available before **Retrieval** or **Required Context** is applied
 - **Retrieval** is an **Agent Runtime** capability over the **Document Library**, even when the current implementation asks the **Enclave Control Plane** to execute the search
+- Public **Conversation** session discovery and storage belong to **Sage**, not the **Enclave Control Plane**
 - **Required Context** is selected outside the agent's discretion and passed to **Sage** for use in the conversation
 - A **User Type** has zero or more **Onboarding Questions**
 - A user belongs to at most one **User Type**
@@ -501,6 +543,9 @@ _Avoid_: full snapshot, config dump
 - **User Memory** for a **Subject User** may be loaded into an **Admin Conversation** when clearly labeled
 - **User Profile** and **User Memory** may both inform a **Conversation** but should be labeled separately
 - Ambient **User Memory** capture should be controlled by a simple **Instance Setting**
+- Ambient **User Memory** should default to an expirable **User Memory Retention Class**
+- Admin-authored **User Memory** should default to a durable **User Memory Retention Class**
+- Superseded **User Memory** is eligible for scheduled retention after its retention window
 - **Session Memory** belongs to the **Agent Runtime**
 - **Session Memory Deletion** must remove the **Session Memory** associated with a **Conversation**
 - **Session Memory Deletion** is logical active-storage deletion in the first version, not **Secure Erase**

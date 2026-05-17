@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import json
 import os
@@ -40,14 +42,12 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         import auth
         import deployment_config
         import lifecycle
-        import query
         import main
 
         self.database = importlib.reload(database)
         self.auth = importlib.reload(auth)
         self.deployment_config = importlib.reload(deployment_config)
         self.lifecycle = importlib.reload(lifecycle)
-        self.query = importlib.reload(query)
         self.main = importlib.reload(main)
         self.database.init_schema()
 
@@ -60,12 +60,6 @@ class UserDeletionLifecycleTest(unittest.TestCase):
             source_conversation_id="query-session-1",
             author_actor="sage",
         )
-        self.query._sessions["query-session-1"] = {
-            "id": "query-session-1",
-            "owner_type": "user",
-            "owner_id": str(self.user_id),
-            "messages": [],
-        }
 
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
             "type": "admin",
@@ -96,7 +90,6 @@ class UserDeletionLifecycleTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.main.app.dependency_overrides.clear()
-        self.query._sessions.clear()
         if self.database._connection is not None:
             self.database._connection.close()
             self.database._connection = None
@@ -124,7 +117,7 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         return response.json()["entries"]
 
-    def test_user_deletion_removes_profile_memory_and_conversations(self) -> None:
+    def test_user_deletion_removes_profile_and_memory_without_python_conversation_store(self) -> None:
         response = self.client.delete(f"/users/{self.user_id}")
 
         self.assertEqual(response.status_code, 200)
@@ -134,13 +127,16 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         actions = {result["action"]: result for result in body["deletion"]["results"]}
         self.assertEqual(actions["delete_user_memory"]["status"], "succeeded")
         self.assertEqual(actions["delete_user_memory"]["count"], 1)
-        self.assertEqual(actions["delete_conversations"]["status"], "succeeded")
+        self.assertEqual(actions["delete_conversations"]["status"], "skipped")
+        self.assertEqual(
+            actions["delete_conversations"]["detail"],
+            "Conversation session discovery is owned by Sage.",
+        )
         self.assertEqual(actions["delete_user_profile"]["status"], "succeeded")
         self.assertEqual(actions["delete_user_approval"]["status"], "succeeded")
 
         self.assertIsNone(self.database.get_user(self.user_id))
         self.assertIsNone(self.database.get_user_memory(self.memory_id))
-        self.assertNotIn("query-session-1", self.query._sessions)
         users = self.client.get("/admin/users").json()["users"]
         self.assertNotIn(self.user_id, {user["id"] for user in users})
 
@@ -151,7 +147,8 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
         self.assertEqual(event["workflow"], "delete_user")
         self.assertEqual(event["status"], "succeeded")
-        self.assertEqual(event["counts"]["succeeded"], 5)
+        self.assertEqual(event["counts"]["succeeded"], 3)
+        self.assertEqual(event["counts"]["skipped"], 1)
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=data_deletion")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
@@ -178,87 +175,12 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(idempotent_event["workflow"], "delete_user")
         self.assertEqual(idempotent_event["counts"]["skipped"], 4)
 
-    def test_repeat_deletion_reports_late_conversation_cleanup(self) -> None:
-        first = self.client.delete(f"/users/{self.user_id}")
-        self.assertEqual(first.status_code, 200)
-        self.query._sessions["late-session"] = {
-            "id": "late-session",
-            "owner_type": "user",
-            "owner_id": str(self.user_id),
-            "messages": [],
-        }
-
-        second = self.client.delete(f"/users/{self.user_id}")
-
-        self.assertEqual(second.status_code, 200)
-        actions = {result["action"]: result for result in second.json()["deletion"]["results"]}
-        self.assertEqual(actions["delete_conversations"]["status"], "succeeded")
-        self.assertEqual(actions["delete_conversations"]["count"], 1)
-        self.assertNotIn("late-session", self.query._sessions)
-
-    def test_user_deletion_creates_metadata_only_tombstone_when_session_memory_deletion_fails(self) -> None:
-        self.query._sessions["query-session-1"]["agent_runtime"] = "sage"
-        self.query._sessions["query-session-1"]["messages"] = [
-            {
-                "role": "user",
-                "content": "Deleted user conversation content must not survive in lifecycle evidence.",
-            }
-        ]
-
-        async def fail_sage_session_memory_delete(_payload: dict) -> dict:
-            return {
-                "status": "failed",
-                "retryable": True,
-                "counts": {"succeeded": 0, "skipped": 0, "failed": 1},
-                "results": [
-                    {
-                        "target_kind": "session_memory",
-                        "target_id": "query-session-1",
-                        "action": "delete_session_memory",
-                        "status": "failed",
-                        "retryable": True,
-                        "detail": "postgres://sage:secret@postgres:5432/sage connection refused",
-                    }
-                ],
-            }
-
-        self.lifecycle.post_sage_session_memory_delete = fail_sage_session_memory_delete
-
-        response = self.client.delete(f"/users/{self.user_id}")
-
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertTrue(body["success"])
-        self.assertEqual(body["deletion"]["status"], "partial_failure")
-        self.assertIsNone(self.database.get_user(self.user_id))
-        self.assertNotIn("query-session-1", self.query._sessions)
-
-        tombstones = self.client.get("/admin/lifecycle/deletion-tombstones")
-        self.assertEqual(tombstones.status_code, 200)
-        tombstone = tombstones.json()["tombstones"][0]
-        self.assertEqual(tombstone["conversation_id"], "query-session-1")
-        self.assertEqual(tombstone["source"], "user_deletion")
-        self.assertEqual(tombstone["former_subject_ref"], f"deleted_user:{self.user_id}")
-        serialized = json.dumps(tombstone)
-        self.assertIn("target_unavailable", serialized)
-        self.assertNotIn("postgres://", serialized)
-        self.assertNotIn("secret", serialized)
-        self.assertNotIn("Deleted user conversation content", serialized)
-
-    def test_admin_subject_binding_cleanup_is_not_reported_as_conversation_deletion(self) -> None:
-        self.query._sessions.clear()
-        self.main.admin_conversation_states["admin-session"] = {
-            "subject_user_id": self.user_id,
-            "pending_user_memory_change": {"action": "create"},
-        }
-
+    def test_user_deletion_reports_sage_owned_conversation_discovery(self) -> None:
         response = self.client.delete(f"/users/{self.user_id}")
 
         self.assertEqual(response.status_code, 200)
         actions = {result["action"]: result for result in response.json()["deletion"]["results"]}
         self.assertEqual(actions["delete_conversations"]["status"], "skipped")
-        self.assertNotIn("subject_user_id", self.main.admin_conversation_states["admin-session"])
-        self.assertNotIn("pending_user_memory_change", self.main.admin_conversation_states["admin-session"])
 
     def test_user_deletion_requires_authentication(self) -> None:
         self.main.app.dependency_overrides.clear()

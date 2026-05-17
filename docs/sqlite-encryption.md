@@ -56,7 +56,7 @@ Encrypted fields:
 - `encrypted_name` (TEXT)
 - `ephemeral_pubkey_name` (TEXT)
 
-Legacy columns (kept for migration only, now forced to NULL):
+Deprecated compatibility columns (current writes keep them NULL):
 - `email` (TEXT)
 - `name` (TEXT)
 
@@ -66,7 +66,7 @@ Encrypted fields:
 - `encrypted_value` (TEXT)
 - `ephemeral_pubkey` (TEXT)
 
-Legacy column (kept for migration only, now forced to NULL):
+Operator plaintext column:
 - `value` (TEXT)
 
 ### Blind Index (Email)
@@ -96,7 +96,7 @@ Note: This uses simple SHA-256 concatenation rather than a formal KDF (HKDF). Fo
 **Key rotation**: If `SECRET_KEY` changes, all `email_blind_index` values become invalid. To rotate:
 1. Export all user emails (requires admin decryption)
 2. Update `SECRET_KEY`
-3. Re-compute blind indexes for all users via `migrate_encrypt_existing_data()`
+3. Re-compute blind indexes from the decrypted email export with a dedicated rotation tool.
 
 ## Write Path (Encryption)
 
@@ -142,11 +142,10 @@ DB Explorer:
 
 Admin Chat (db-query tool):
 - Default tool path returns encrypted values (ciphertext + ephemeral keys).
-- If the admin has NIP-07, the frontend can decrypt results client-side and send a decrypted tool context to `/llm/chat`.
-- This keeps private keys in the browser while allowing the LLM to use plaintext for that request.
-- The `/query` (RAG) endpoint does not execute tools; db-query runs via `/llm/chat`.
-- If decryption fails (missing key or no NIP-07), the frontend falls back to the encrypted tool path.
-- Raw tool results for this flow are fetched via `/admin/tools/execute` (admin-only).
+- The admin chat tool flow goes through Gateway to Sage; Python remains the internal safe DB executor for read-only Enclave Control Plane SQL.
+- The frontend does not pre-run `db-query` or call `/admin/tools/execute`; it sends `db-query` as a normal Sage-owned tool ID.
+- Retrieval-first turns do not run `db-query`; it is an admin assistant-style Sage tool.
+- Sage authorizes the admin tool request and delegates safe read-only SQL execution to Python.
 
 ## Pre-Admin Onboarding Gate
 
@@ -166,16 +165,14 @@ All dynamic fields are serialized before encryption:
 
 Unsupported types are rejected.
 
-## Migration for Legacy Data
+## Removed Legacy Plaintext Migration
 
-`database.migrate_encrypt_existing_data()` is available for older deployments where plaintext was stored. It:
-- Encrypts any non-null `email`, `name`, `value` where encrypted columns are empty.
-- Clears plaintext columns after encryption.
-- Populates `email_blind_index`.
+The legacy User Profile plaintext migration helper has been removed. Current behavior is:
 
-Important:
-- If duplicate emails exist, the UNIQUE blind index will fail.
-- Run after cleaning duplicates or merge conflicts manually.
+- `get_user_by_email` resolves only through `email_blind_index`.
+- First-admin setup does not migrate plaintext-era profile rows.
+- `/admin/profile-plaintext-migration/inventory` and `/admin/profile-plaintext-migration/migrate` are absent.
+- Operator-selected plaintext dynamic fields where `encryption_enabled = 0` remain a current product path, not a legacy migration path.
 
 ## Security Notes and Limitations
 
@@ -278,7 +275,7 @@ Important:
 2. Export all user data (requires admin decryption of emails)
 3. Update `SECRET_KEY` in environment
 4. Restart backend
-5. Run `migrate_encrypt_existing_data()` to recompute blind indexes
+5. Recompute blind indexes from the decrypted email export with a dedicated rotation tool
 6. Users will need to re-authenticate (sessions invalidated)
 
 ### Single-Admin Constraint

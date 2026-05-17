@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Callable
 
 from inference_verification import fingerprint_claims
@@ -33,11 +32,9 @@ class ProtectedInferenceGate:
         *,
         current_status: Callable[[], dict],
         audit_block: Callable[..., None],
-        bypass_enabled: Callable[[], bool] | None = None,
     ) -> None:
         self.current_status = current_status
         self.audit_block = audit_block
-        self.bypass_enabled = bypass_enabled or (lambda: False)
 
     def require_current(self, *, context: str) -> dict:
         if not inference_requires_verification(context):
@@ -47,9 +44,6 @@ class ProtectedInferenceGate:
         record = status.get("record")
         if status.get("status") == "current" and record:
             return record
-
-        if self.bypass_enabled():
-            return {"id": None, "bypass": True, "privacy_posture": "weakened"}
 
         status_value = str(status.get("status") or "missing")
         self.audit_block(context=context, status=status_value)
@@ -73,12 +67,6 @@ def inference_verification_reference(record: dict | None) -> dict | None:
     }
 
 
-def development_bypass_enabled() -> bool:
-    import database
-
-    return _truthy(database.get_deployment_config_value("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS") or os.getenv("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS"))
-
-
 def require_current_inference_verification(
     *,
     context: str,
@@ -91,7 +79,6 @@ def require_current_inference_verification(
             expected_claims_fingerprint=expected_claims_fingerprint,
         ),
         audit_block=audit_blocked_protected_inference,
-        bypass_enabled=development_bypass_enabled,
     )
     return gate.require_current(context=context)
 
@@ -110,6 +97,3 @@ def audit_blocked_protected_inference(*, context: str, status: str) -> None:
         changed_by="system:protected-inference-gate",
     )
 
-
-def _truthy(value: str | None) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}

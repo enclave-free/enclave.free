@@ -541,9 +541,8 @@ export function AdminDeploymentConfig() {
       .flat()
       .find((c) => c.key === editingKey)
 
-    // Don't save empty secret values - this prevents wiping existing credentials
-    // Exception: LLM_API_KEY can be cleared so runtime falls back to .env
-    if (item?.is_secret && editValue === '' && item.key !== 'LLM_API_KEY') {
+    // Don't save empty secret values - this prevents wiping existing credentials.
+    if (item?.is_secret && editValue === '') {
       setEditingKey(null)
       setEditValue('')
       return
@@ -1350,9 +1349,7 @@ export function AdminDeploymentConfig() {
               placeholder={
                 item.is_secret
                   ? (
-                    item.key === 'LLM_API_KEY'
-                      ? t('adminDeployment.leaveEmptyForLlmApiKey', 'Leave empty to clear override and use .env fallback')
-                      : t('adminDeployment.leaveEmptyForSecret', 'Leave empty to keep current value')
+                    t('adminDeployment.leaveEmptyForSecret', 'Leave empty to keep current value')
                   )
                   : (item.value || '')
               }
@@ -1876,6 +1873,48 @@ export function AdminDeploymentConfig() {
                     })}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">{lifecycleStatus.retention_scheduler.summary}</p>
+                  {lifecycleStatus.retention_scheduler.observation && (() => {
+                    const observation = lifecycleStatus.retention_scheduler.observation
+                    const enabledClasses = Array.isArray(observation.enabled_classes)
+                      ? observation.enabled_classes
+                      : []
+                    const observationStatus = typeof observation.status === 'string'
+                      ? formatLifecycleStatus(observation.status)
+                      : t('common.unknown', 'Unknown')
+                    const lastRunStatus = typeof observation.last_run?.status === 'string'
+                      ? formatLifecycleStatus(observation.last_run.status)
+                      : t('common.unknown', 'Unknown')
+                    return (
+                      <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                        <p className="font-medium text-text">
+                          {t('adminDeployment.lifecycle.schedulerObservation', 'Observation: {{status}}', {
+                            status: observationStatus,
+                          })}
+                        </p>
+                        <p>{observation.summary}</p>
+                        <p>
+                          {t('adminDeployment.lifecycle.schedulerEnabledClasses', 'Scheduler enabled classes: {{classes}}', {
+                            classes: enabledClasses.length > 0 ? enabledClasses.join(', ') : t('common.none', 'None'),
+                          })}
+                        </p>
+                        {observation.last_run && (
+                          <>
+                            <p>
+                              {t('adminDeployment.lifecycle.schedulerLastRunStatus', 'Last run status: {{status}}', {
+                                status: lastRunStatus,
+                              })}
+                            </p>
+                            <p>
+                              {t('adminDeployment.lifecycle.schedulerLastRun', 'Last run: {{trigger}} by {{actor}}', {
+                                trigger: observation.last_run.trigger,
+                                actor: observation.last_run.actor,
+                              })}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
             </div>
@@ -1917,15 +1956,20 @@ export function AdminDeploymentConfig() {
               })}
             </p>
           )}
-          {lifecycleStatus?.scheduled_retention && (
+          {lifecycleStatus?.scheduled_retention && (() => {
+            const enabledClasses = Array.isArray(lifecycleStatus.scheduled_retention.enabled_classes)
+              ? lifecycleStatus.scheduled_retention.enabled_classes
+              : []
+            return (
             <p className="mb-3 text-xs text-text-secondary">
               {t('adminDeployment.lifecycle.scheduledRetentionStatus', 'Scheduled classes: {{classes}}', {
-                classes: lifecycleStatus.scheduled_retention.enabled_classes.length > 0
-                  ? lifecycleStatus.scheduled_retention.enabled_classes.join(', ')
-                  : 'none',
+                classes: enabledClasses.length > 0
+                  ? enabledClasses.join(', ')
+                  : t('common.none', 'None'),
               })}
             </p>
-          )}
+            )
+          })()}
           {lifecycleStatus?.audit_coverage?.summary && (
             <p className="mb-3 text-xs text-text-secondary">
               {t('adminDeployment.lifecycle.auditCoverageStatus', 'Audit coverage: {{audited}} audited, {{exceptions}} exceptions, {{missing}} missing.', {
@@ -2599,9 +2643,9 @@ export function AdminDeploymentConfig() {
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-mono text-text">MOCK_SMTP</p>
+                        <p className="text-sm font-mono text-text">MOCK_EMAIL</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.emailHelp.mockSmtp', 'Enable for development. Emails are logged to console instead of being sent.')}
+                          {t('adminDeployment.emailHelp.mockEmail', 'Enable for development. Emails are logged to console instead of being sent.')}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
@@ -2732,13 +2776,13 @@ export function AdminDeploymentConfig() {
                 {LLM_HELP_PAGES[llmHelpPage].content === 'overview' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side compatibility shims. The web app keeps the same user-facing API surface while the Gateway routes AI requests to Sage.')}
+                      {t('adminDeployment.llmHelp.overviewDesc', 'This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata. The web app keeps the same user-facing API surface while the Gateway routes AI requests to Sage.')}
                     </p>
                     <div className="space-y-2">
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">LLM_PROVIDER</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.providerField', 'Set this to "sage". Legacy "maple" remains only for compatibility with older config paths.')}
+                          {t('adminDeployment.llmHelp.providerField', 'Set this to "sage". This Python-side deployment setting supports diagnostics and verification metadata while Sage runtime configuration remains environment-driven.')}
                         </p>
                       </div>
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
@@ -2750,7 +2794,7 @@ export function AdminDeploymentConfig() {
                       <div className="bg-surface-overlay border border-border rounded-lg p-3">
                         <p className="text-sm font-medium text-text">{t('adminDeployment.llmHelp.apiKeyLabel', 'Tinfoil API Key')}</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for the Tinfoil proxy. Set LLM_API_KEY or leave it empty to fall back to TINFOIL_API_KEY from .env.')}
+                          {t('adminDeployment.llmHelp.apiKeyField', 'Authentication credential for Python-side Tinfoil diagnostics. Set LLM_API_KEY in Deployment Settings.')}
                         </p>
                       </div>
                     </div>
@@ -3418,7 +3462,7 @@ export function AdminDeploymentConfig() {
                       {t('adminDeployment.securityHelp.overviewDesc', 'These settings affect authentication behavior and the URLs used in magic-link emails. Defaults are safe for local development.')}
                     </p>
                     <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                      <p className="text-xs text-text-muted mb-1">{t('adminDeployment.securityHelp.overviewNote', 'For production, keep simulation flags disabled and set a correct FRONTEND_URL.')}</p>
+                      <p className="text-xs text-text-muted mb-1">{t('adminDeployment.securityHelp.overviewNote', 'For production, set a correct FRONTEND_URL and keep auth flows tied to real email and Nostr verification.')}</p>
                       <p className="text-xs text-text-muted mt-2">
                         {t('adminDeployment.securityHelp.overviewWhen', 'Change these when moving from local testing to a public deployment.')}
                       </p>
@@ -3427,25 +3471,16 @@ export function AdminDeploymentConfig() {
                 ) : SECURITY_HELP_PAGES[securityHelpPage].content === 'dev' ? (
                   <div className="space-y-3">
                     <p className="text-sm text-text-muted mb-4">
-                      {t('adminDeployment.securityHelp.devDesc', 'These flags are for testing only and should be off in production.')}
+                      {t('adminDeployment.securityHelp.devDesc', 'Prototype simulated auth flags have been removed from the supported deployment surface.')}
                     </p>
-                    <div className="space-y-2">
-                      <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-medium text-text">SIMULATE_USER_AUTH</p>
-                        <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.securityHelp.simUserDesc', 'Bypasses magic-link verification for user logins.')}
-                        </p>
-                      </div>
-                      <div className="bg-surface-overlay border border-border rounded-lg p-3">
-                        <p className="text-sm font-medium text-text">SIMULATE_ADMIN_AUTH</p>
-                        <p className="text-xs text-text-muted mt-1">
-                          {t('adminDeployment.securityHelp.simAdminDesc', 'Shows a mock Nostr auth option in the admin flow.')}
-                        </p>
-                      </div>
+                    <div className="bg-surface-overlay border border-border rounded-lg p-3">
+                      <p className="text-xs text-text-muted">
+                        {t('adminDeployment.securityHelp.devNote', 'Use MOCK_EMAIL for local email testing; user and admin sessions still require the normal verification flow.')}
+                      </p>
                     </div>
                     <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 mt-4">
                       <p className="text-xs text-warning">
-                        {t('adminDeployment.securityHelp.devWarning', 'Never enable these flags in production environments.')}
+                        {t('adminDeployment.securityHelp.devWarning', 'Do not reintroduce auth bypass flags in production or local deployment settings.')}
                       </p>
                     </div>
                   </div>

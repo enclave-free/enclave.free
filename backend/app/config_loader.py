@@ -24,22 +24,8 @@ _cache_time: float = 0
 _cache_lock = threading.Lock()
 CACHE_TTL = 60  # seconds
 
-# Key translation map for legacy Maple-backed Model Provider config.
-# The prototype prefers generic LLM_* keys but still honors old aliases.
-KEY_TRANSLATION = {
-    "LLM_API_URL": "MAPLE_BASE_URL",
-    "LLM_MODEL": "MAPLE_MODEL",
-    "LLM_API_KEY": "MAPLE_API_KEY",
-}
-
-# Email config translation
-EMAIL_KEY_TRANSLATION = {
-    "MOCK_SMTP": "MOCK_EMAIL",
-}
-
-
 def _get_provider() -> str:
-    """Get current Model Provider compatibility label from config or env."""
+    """Get the configured Model Provider label from config or env."""
     # Use cache to avoid repeated DB queries
     _refresh_cache_if_needed()
     configured = None
@@ -50,9 +36,8 @@ def _get_provider() -> str:
                 configured = str(value).strip().lower()
     if not configured:
         configured = os.getenv("LLM_PROVIDER", "sage").strip().lower()
-    if configured not in {"", "sage", "maple"}:
-        logger.warning("Unsupported LLM_PROVIDER=%r detected; using sage", configured)
-        return "sage"
+    if configured not in {"", "sage"}:
+        raise ValueError(f'Unsupported LLM_PROVIDER "{configured}"; only "sage" is supported')
     return configured or "sage"
 
 
@@ -124,8 +109,7 @@ def get_config(key: str, default: Any = None) -> Any:
     Get configuration value with database-first approach.
 
     1. Check database via cache
-    2. Translate key based on provider if needed
-    3. Fall back to environment variable
+    2. Fall back to environment variable
 
     Args:
         key: The configuration key to retrieve
@@ -145,31 +129,8 @@ def get_config(key: str, default: Any = None) -> Any:
             if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
                 return value
 
-    # Try key translation for legacy Maple-specific aliases.
-    if key in KEY_TRANSLATION:
-        translated_key = KEY_TRANSLATION[key]
-        # Check cache for translated key (thread-safe read)
-        with _cache_lock:
-            if translated_key in _config_cache:
-                value = _config_cache[translated_key]
-                if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
-                    return value
-        # Fall back to env var with translated key
-        env_value = os.getenv(translated_key)
-        if env_value is not None:
-            return env_value
-
-    # Try email key translation
-    if key in EMAIL_KEY_TRANSLATION:
-        translated_key = EMAIL_KEY_TRANSLATION[key]
-        with _cache_lock:
-            if translated_key in _config_cache:
-                value = _config_cache[translated_key]
-                if value is not None and not (isinstance(value, str) and value.strip() == "") and value != MASKED_VALUE_PLACEHOLDER:
-                    return value
-        env_value = os.getenv(translated_key)
-        if env_value is not None:
-            return env_value
+    if key == "LLM_API_KEY":
+        return default
 
     # Fall back to environment variable with original key
     env_value = os.getenv(key)
@@ -223,7 +184,7 @@ def get_smtp_config() -> dict:
     Get SMTP configuration with lazy loading.
     Returns config dict with all SMTP settings.
     """
-    mock_mode = get_config("MOCK_EMAIL", get_config("MOCK_SMTP", "false"))
+    mock_mode = get_config("MOCK_EMAIL", "false")
 
     return {
         "host": _normalize_nonsecret_str(get_config("SMTP_HOST", "")),

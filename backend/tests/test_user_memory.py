@@ -71,6 +71,118 @@ class UserMemoryPersistenceTest(unittest.TestCase):
         self.assertIsNotNone(memories[0]["created_at"])
         self.assertIsNotNone(memories[0]["updated_at"])
 
+    def test_user_memory_retention_class_follows_source_and_supersession(self) -> None:
+        ambient_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Prefers compact ambient summaries.",
+            source_kind="ambient",
+            author_actor="sage:ambient_capture",
+        )
+        admin_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Prefers durable admin-confirmed summaries.",
+            source_kind="admin-confirmed",
+            author_actor="admin",
+        )
+        duplicate_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Prefers compact ambient summaries.",
+            source_kind="admin-confirmed",
+            author_actor="admin",
+        )
+        self.assertEqual(duplicate_id, ambient_id)
+        self.assertEqual(self.database.get_user_memory(duplicate_id)["retention_class"], "durable")
+        replacement_id = self.database.supersede_user_memory(
+            ambient_id,
+            content="Prefers updated compact summaries.",
+            source_kind="admin-confirmed",
+            author_actor="admin",
+        )
+        normalized_id = self.database.create_user_memory(
+            subject_user_id=self.user_id,
+            kind="preference",
+            content="Runtime creation cannot create active superseded memory.",
+            source_kind="ambient",
+            author_actor="sage:ambient_capture",
+            retention_class="superseded",
+        )
+
+        self.assertEqual(self.database.get_user_memory(ambient_id)["retention_class"], "superseded")
+        self.assertEqual(self.database.get_user_memory(admin_id)["retention_class"], "durable")
+        self.assertEqual(self.database.get_user_memory(replacement_id)["retention_class"], "durable")
+        self.assertEqual(self.database.get_user_memory(replacement_id)["supersedes_id"], ambient_id)
+        self.assertEqual(self.database.get_user_memory(normalized_id)["status"], "active")
+        self.assertEqual(self.database.get_user_memory(normalized_id)["retention_class"], "expirable")
+
+    def test_existing_user_memory_migrates_to_conservative_retention_classes(self) -> None:
+        with self.database.get_cursor() as cursor:
+            cursor.execute("DROP TABLE user_memories")
+            cursor.execute("""
+                CREATE TABLE user_memories (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    subject_user_id INTEGER NOT NULL,
+                    kind TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    normalized_kind TEXT NOT NULL,
+                    normalized_content TEXT NOT NULL,
+                    importance INTEGER NOT NULL DEFAULT 5,
+                    confidence REAL NOT NULL DEFAULT 1.0,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    source_kind TEXT NOT NULL,
+                    source_conversation_id TEXT,
+                    author_actor TEXT NOT NULL,
+                    supersedes_id INTEGER,
+                    superseded_by_id INTEGER,
+                    deleted_at TIMESTAMP,
+                    deleted_by_actor TEXT,
+                    deletion_reason TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute(
+                """
+                INSERT INTO user_memories (
+                    subject_user_id, kind, content, normalized_kind, normalized_content,
+                    status, source_kind, author_actor
+                ) VALUES (?, 'preference', 'Keep admin memory.', 'preference', 'keep admin memory.',
+                    'active', 'admin-confirmed', 'admin')
+                """,
+                (self.user_id,),
+            )
+            active_id = int(cursor.lastrowid)
+            cursor.execute(
+                """
+                INSERT INTO user_memories (
+                    subject_user_id, kind, content, normalized_kind, normalized_content,
+                    status, source_kind, author_actor
+                ) VALUES (?, 'preference', 'Ambient memory.', 'preference', 'ambient memory.',
+                    'active', 'ambient', 'sage:ambient_capture')
+                """,
+                (self.user_id,),
+            )
+            ambient_id = int(cursor.lastrowid)
+            cursor.execute(
+                """
+                INSERT INTO user_memories (
+                    subject_user_id, kind, content, normalized_kind, normalized_content,
+                    status, source_kind, author_actor
+                ) VALUES (?, 'preference', 'Old memory.', 'preference', 'old memory.',
+                    'superseded', 'conversation', 'sage')
+                """,
+                (self.user_id,),
+            )
+            superseded_id = int(cursor.lastrowid)
+
+        self.database.init_schema()
+
+        self.assertEqual(self.database.get_user_memory(active_id)["retention_class"], "durable")
+        self.assertEqual(self.database.get_user_memory(ambient_id)["retention_class"], "expirable")
+        self.assertEqual(self.database.get_user_memory(superseded_id)["retention_class"], "superseded")
+
     def test_user_memory_rejects_non_string_kind_and_content(self) -> None:
         with self.assertRaises(ValueError):
             self.database.create_user_memory(

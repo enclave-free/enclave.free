@@ -277,9 +277,8 @@ def find_test_user(db_path: str, test_email: str) -> int | None:
     Find a test user by email blind index or most recent user.
 
     First attempts to find the user by blind index lookup using the provided
-    test_email. If that fails, falls back to plaintext email lookup (for legacy
-    data). If both fail, returns the most recent user. Returns None if no user
-    is found.
+    test_email. If lookup fails, returns the most recent user. Returns None if
+    no user is found.
 
     Args:
         db_path: Path to SQLite database file
@@ -307,15 +306,6 @@ def find_test_user(db_path: str, test_email: str) -> int | None:
         if output:
             return int(output)
 
-    # Fall back to plaintext email lookup (for legacy/unencrypted data)
-    escaped_email = normalized_email.replace("'", "''")
-    output = run_docker_sql(
-        f"SELECT id FROM users WHERE LOWER(email) = '{escaped_email}' LIMIT 1",
-        db_path
-    )
-    if output:
-        return int(output)
-
     # Final fallback: most recent user
     output = run_docker_sql("SELECT id FROM users ORDER BY id DESC LIMIT 1", db_path)
     return int(output) if output else None
@@ -339,7 +329,10 @@ def main():
     # Auto-detect user ID if not provided
     user_id = args.user_id
     if not user_id:
-        user_id = find_test_user(args.db_path, config["test_user"]["email"])
+        user_id = find_test_user(
+            args.db_path,
+            config["test_user"]["email"],
+        )
         if user_id:
             print(f"User ID: {user_id} (auto-detected)")
         else:

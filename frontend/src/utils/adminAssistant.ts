@@ -73,7 +73,7 @@ function _readTraceVisibility(value: unknown): string | undefined {
 }
 
 /**
- * Normalize common-but-unsupported request shapes into supported ones.
+ * Normalize supported request shapes into the exact backend schemas.
  *
  * Today the backend supports updating instance settings via:
  *   PUT /admin/settings  with a JSON body like { "instance_name": "...", ... }
@@ -113,7 +113,7 @@ function normalizeAdminAssistantChangeSet(changeSet: AdminAssistantChangeSet): A
       continue
     }
 
-    // Normalize common LLM payload formats to match backend schemas.
+    // Normalize canonical LLM payload formats to match backend schemas.
     if (req.method === 'POST' && _isPlainObject(req.body)) {
       // /admin/user-types expects: { name, description?, icon?, display_order? }
       if (req.method === 'POST' && req.path === '/admin/user-types') {
@@ -121,7 +121,7 @@ function normalizeAdminAssistantChangeSet(changeSet: AdminAssistantChangeSet): A
         const name = _readNonEmptyString(b.name)
         const description = _readString(b.description)
         const icon = _readString(b.icon)
-        const displayOrder = _readInt(b.display_order ?? b.order)
+        const displayOrder = _readInt(b.display_order)
         const normalizedBody: Record<string, unknown> = {}
         if (name !== undefined) normalizedBody.name = name
         if (description !== undefined) normalizedBody.description = description
@@ -134,22 +134,13 @@ function normalizeAdminAssistantChangeSet(changeSet: AdminAssistantChangeSet): A
       // /admin/user-fields expects: { field_name, field_type, required?, display_order?, user_type_id?, placeholder?, options?, encryption_enabled?, include_in_chat? }
       if (req.method === 'POST' && req.path === '/admin/user-fields') {
         const b = req.body
-        const fieldName =
-          _readNonEmptyString(b.field_name) ??
-          _readNonEmptyString(b.name) ??
-          _readNonEmptyString(b.label) ??
-          undefined
-
-        const fieldType =
-          _readNonEmptyString(b.field_type) ??
-          _readNonEmptyString(b.type) ??
-          undefined
-
-        const displayOrder = _readInt(b.display_order ?? b.order)
+        const fieldName = _readNonEmptyString(b.field_name)
+        const fieldType = _readNonEmptyString(b.field_type)
+        const displayOrder = _readInt(b.display_order)
         const required = _readBoolean(b.required)
-        const encryptionEnabled = _readBoolean(b.encryption_enabled ?? b.encryptionEnabled)
-        const includeInChat = _readBoolean(b.include_in_chat ?? b.includeInChat)
-        const userTypeId = _readUserTypeId(b.user_type_id ?? b.userTypeId)
+        const encryptionEnabled = _readBoolean(b.encryption_enabled)
+        const includeInChat = _readBoolean(b.include_in_chat)
+        const userTypeId = _readUserTypeId(b.user_type_id)
         const placeholder = _readString(b.placeholder)
 
         const normalizedBody: Record<string, unknown> = {}
@@ -280,12 +271,6 @@ export function extractAdminAssistantChangeSetStrict(text: string): ExtractChang
   if (!validation.ok) return { ok: false, error: validation.error || 'Invalid change set' }
 
   return { ok: true, changeSet }
-}
-
-// Back-compat helper (non-strict API): returns the one extracted changeset or null.
-export function extractAdminAssistantChangeSet(text: string): AdminAssistantChangeSet | null {
-  const res = extractAdminAssistantChangeSetStrict(text)
-  return res.ok ? res.changeSet : null
 }
 
 export function validateAdminAssistantChangeSet(

@@ -137,13 +137,6 @@ def _get_deployment_secret_key() -> bytes:
     return _deployment_secret_key
 
 
-def _get_legacy_deployment_secret_key() -> bytes:
-    from auth import SECRET_KEY
-    return hashlib.sha256(
-        f"{'san' + 'ctum'}-deployment-config:{SECRET_KEY}".encode("utf-8")
-    ).digest()
-
-
 def _get_audit_hmac_key() -> bytes:
     """Load and cache the secret key used for audit-chain HMACs."""
     global _audit_hmac_key
@@ -196,14 +189,9 @@ def _decrypt_deployment_secret_value(value: str) -> str:
     tag = b64decode(parts[1].encode("ascii"))
     ciphertext = b64decode(parts[2].encode("ascii"))
 
-    for key in (_get_deployment_secret_key(), _get_legacy_deployment_secret_key()):
-        try:
-            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-            return plaintext.decode("utf-8")
-        except ValueError:
-            continue
-    raise ValueError("Invalid deployment secret authentication tag")
+    cipher = AES.new(_get_deployment_secret_key(), AES.MODE_GCM, nonce=nonce)
+    plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    return plaintext.decode("utf-8")
 
 
 def init_schema():
@@ -296,7 +284,7 @@ def init_schema():
     # - encrypted_email/encrypted_name: NIP-04 ciphertext
     # - ephemeral_pubkey_email/name: pubkey for decryption
     # - email_blind_index: HMAC hash for email lookups
-    # Original email/name columns kept for migration (will be removed later)
+    # email/name are deprecated compatibility columns; current writes keep them NULL.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -319,7 +307,7 @@ def init_schema():
     # Note: values are encrypted using NIP-04
     # - encrypted_value: NIP-04 ciphertext
     # - ephemeral_pubkey: pubkey for decryption
-    # Original value column kept for migration (will be removed later)
+    # value is used only for operator-selected plaintext fields.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_field_values (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -340,7 +328,7 @@ def init_schema():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_field_definitions_type ON user_field_definitions(user_type_id)")
     # Note: idx_user_field_definitions_encryption created in _migrate_add_encryption_enabled_column()
 
-    # Agent Settings table - keeps the compatibility table name ai_config.
+    # Agent Settings table. The ai_config name is shared with Sage's current schema.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -442,6 +430,32 @@ def init_schema():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS retention_run_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trigger TEXT NOT NULL CHECK(trigger IN ('manual', 'machine')),
+            actor TEXT NOT NULL,
+            status TEXT NOT NULL,
+            policy_snapshot JSON NOT NULL,
+            counts JSON NOT NULL,
+            results JSON NOT NULL,
+            tombstone_refs JSON NOT NULL,
+            audit_log_id INTEGER,
+            audit_entry_hash TEXT,
+            started_at TIMESTAMP NOT NULL,
+            finished_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_retention_run_records_created
+        ON retention_run_records(created_at DESC, id DESC)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_retention_run_records_trigger_created
+        ON retention_run_records(trigger, created_at DESC, id DESC)
+    """)
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_deletion_tombstones_status
         ON deletion_tombstones(status, updated_at DESC)
@@ -462,7 +476,7 @@ def init_schema():
         WHERE status = 'incomplete'
     """)
 
-    # Agent Settings user-type overrides - keeps the compatibility table name.
+    # Agent Settings user-type overrides. The table name is shared with Sage's current schema.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ai_config_user_type_overrides (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -508,6 +522,8 @@ def init_schema():
             importance INTEGER NOT NULL DEFAULT 5,
             confidence REAL NOT NULL DEFAULT 1.0,
             status TEXT NOT NULL DEFAULT 'active',
+            retention_class TEXT NOT NULL DEFAULT 'durable'
+                CHECK (retention_class IN ('durable', 'expirable', 'superseded')),
             source_kind TEXT NOT NULL,
             source_conversation_id TEXT,
             author_actor TEXT NOT NULL,
@@ -547,6 +563,7 @@ def init_schema():
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
+    _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -833,6 +850,43 @@ def _migrate_deletion_tombstones_status_check() -> None:
     cursor.close()
 
 
+def _migrate_add_user_memory_retention_class() -> None:
+    """Add conservative retention class metadata to existing User Memory records."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(user_memories)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "retention_class" not in columns:
+        cursor.execute(
+            """
+            ALTER TABLE user_memories
+            ADD COLUMN retention_class TEXT NOT NULL DEFAULT 'durable'
+            CHECK (retention_class IN ('durable', 'expirable', 'superseded'))
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE user_memories
+            SET retention_class = 'superseded'
+            WHERE status = 'superseded'
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE user_memories
+            SET retention_class = 'expirable'
+            WHERE source_kind = 'ambient'
+              AND status != 'superseded'
+              AND retention_class = 'durable'
+            """
+        )
+        conn.commit()
+        logger.info("Migration: Added 'retention_class' column to user_memories table")
+
+    cursor.close()
+
+
 def _migrate_encrypt_deployment_config_secrets() -> None:
     """Encrypt existing plaintext deployment_config secrets in place."""
     conn = get_connection()
@@ -851,11 +905,12 @@ def _migrate_encrypt_deployment_config_secrets() -> None:
     failed = 0
     for row in rows:
         raw_value = row["value"]
-        if _is_deployment_secret_encrypted(raw_value):
-            continue
-
         try:
-            encrypted_value = _encrypt_deployment_secret_value(raw_value)
+            if _is_deployment_secret_encrypted(raw_value):
+                _decrypt_deployment_secret_value(raw_value)
+                continue
+            else:
+                encrypted_value = _encrypt_deployment_secret_value(raw_value)
         except Exception as exc:
             failed += 1
             logger.error(
@@ -919,7 +974,7 @@ def _insert_config_audit_log(
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
-) -> None:
+) -> dict:
     """
     Insert tamper-evident audit event with hash-chain linkage.
 
@@ -946,6 +1001,7 @@ def _insert_config_audit_log(
         """,
         (table_name, config_key, old_value, new_value, changed_by, changed_at, prev_hash, entry_hash),
     )
+    return {"id": int(cursor.lastrowid), "entry_hash": entry_hash}
 
 
 def log_config_audit_event(
@@ -954,7 +1010,7 @@ def log_config_audit_event(
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
-) -> None:
+) -> dict:
     """
     Public helper for writing tamper-evident config audit events.
 
@@ -963,7 +1019,106 @@ def log_config_audit_event(
     from forking the hash chain.
     """
     with get_write_cursor() as cursor:
-        _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+        return _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+
+
+def create_retention_run_record(
+    *,
+    trigger: str,
+    actor: str,
+    status: str,
+    policy_snapshot: dict,
+    counts: dict,
+    results: list[dict],
+    tombstone_refs: list[dict],
+    audit_log_id: int | None,
+    audit_entry_hash: str | None,
+    started_at: str,
+    finished_at: str,
+) -> dict:
+    if trigger not in {"manual", "machine"}:
+        raise ValueError("Unsupported Retention Run trigger")
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO retention_run_records (
+                trigger,
+                actor,
+                status,
+                policy_snapshot,
+                counts,
+                results,
+                tombstone_refs,
+                audit_log_id,
+                audit_entry_hash,
+                started_at,
+                finished_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trigger,
+                actor,
+                status,
+                _json_dumps_for_lifecycle(policy_snapshot),
+                _json_dumps_for_lifecycle(counts),
+                _json_dumps_for_lifecycle(results),
+                _json_dumps_for_lifecycle(tombstone_refs),
+                audit_log_id,
+                audit_entry_hash,
+                started_at,
+                finished_at,
+            ),
+        )
+        record_id = int(cursor.lastrowid)
+    record = get_retention_run_record(record_id)
+    if record is None:
+        raise RuntimeError("Created Retention Run Record could not be loaded")
+    return record
+
+
+def _retention_run_record_from_row(row: sqlite3.Row) -> dict:
+    record = dict(row)
+    for key in ("policy_snapshot", "counts", "results", "tombstone_refs"):
+        try:
+            record[key] = json.loads(record[key])
+        except (TypeError, json.JSONDecodeError):
+            record[key] = {} if key in {"policy_snapshot", "counts"} else []
+    return record
+
+
+def get_retention_run_record(record_id: int) -> dict | None:
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM retention_run_records WHERE id = ?", (record_id,))
+        row = cursor.fetchone()
+        return _retention_run_record_from_row(row) if row else None
+
+
+def list_retention_run_records(limit: int = 100, trigger: str | None = None) -> list[dict]:
+    bounded_limit = max(1, min(int(limit), 500))
+    with get_cursor() as cursor:
+        if trigger is not None:
+            cursor.execute(
+                """
+                SELECT *
+                FROM retention_run_records
+                WHERE trigger = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (trigger, bounded_limit),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT *
+                FROM retention_run_records
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (bounded_limit,),
+            )
+        return [_retention_run_record_from_row(row) for row in cursor.fetchall()]
 
 
 def create_deletion_tombstone(
@@ -1828,7 +1983,6 @@ def get_user(user_id: int) -> dict | None:
     """Get user by id with all field values.
 
     Returns encrypted fields with their ephemeral pubkeys for frontend decryption.
-    If data is not encrypted (legacy or no admin), returns plaintext in email/name fields.
     """
     with get_cursor() as cursor:
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -1839,7 +1993,6 @@ def get_user(user_id: int) -> dict | None:
         user = dict(user_row)
 
         # Structure encrypted data for frontend decryption
-        # If encrypted_email exists, frontend will decrypt; otherwise use plaintext
         if user.get("encrypted_email"):
             user["email_encrypted"] = {
                 "ciphertext": user["encrypted_email"],
@@ -1904,7 +2057,7 @@ def get_user_by_pubkey(pubkey: str) -> dict | None:
 def get_user_by_email(email: str) -> dict | None:
     """Get user by email.
 
-    Uses blind index for encrypted emails, falls back to plaintext for legacy data.
+    Uses blind index for encrypted emails.
     """
     from encryption import compute_blind_index
 
@@ -1921,16 +2074,6 @@ def get_user_by_email(email: str) -> dict | None:
         cursor.execute(
             "SELECT id FROM users WHERE email_blind_index = ? ORDER BY id DESC LIMIT 1",
             (blind_index,)
-        )
-        row = cursor.fetchone()
-        if row:
-            return get_user(row["id"])
-
-        # Fall back to plaintext email (legacy/unencrypted data)
-        # Use normalized email for consistent matching
-        cursor.execute(
-            "SELECT id FROM users WHERE LOWER(email) = ? ORDER BY id DESC LIMIT 1",
-            (normalized_email,)
         )
         row = cursor.fetchone()
         if row:
@@ -2071,6 +2214,12 @@ def _require_non_empty_user_memory_text(value: str, field_name: str) -> str:
     return value.strip()
 
 
+def _user_memory_retention_class_for_source(source_kind: str) -> str:
+    if source_kind.strip().lower() == "ambient":
+        return "expirable"
+    return "durable"
+
+
 def _user_memory_row_to_dict(row: sqlite3.Row) -> dict:
     memory = dict(row)
     memory["confidence"] = float(memory["confidence"])
@@ -2087,6 +2236,7 @@ def create_user_memory(
     source_kind: str,
     source_conversation_id: str | None = None,
     author_actor: str,
+    retention_class: str | None = None,
 ) -> int:
     """Create active Sage-owned User Memory, skipping obvious active duplicates."""
     kind = _require_non_empty_user_memory_text(kind, "kind")
@@ -2096,10 +2246,19 @@ def create_user_memory(
     source_kind = _require_non_empty_user_memory_text(source_kind, "source_kind")
     author_actor = _require_non_empty_user_memory_text(author_actor, "author_actor")
     normalized_importance, normalized_confidence = _validate_user_memory_scores(importance, confidence)
+    normalized_retention_class = (
+        retention_class.strip().lower()
+        if isinstance(retention_class, str) and retention_class.strip()
+        else _user_memory_retention_class_for_source(source_kind)
+    )
+    if normalized_retention_class not in {"durable", "expirable", "superseded"}:
+        raise ValueError("User Memory retention_class must be durable, expirable, or superseded")
+    if normalized_retention_class == "superseded":
+        normalized_retention_class = _user_memory_retention_class_for_source(source_kind)
 
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT id
+            SELECT id, retention_class
             FROM user_memories
             WHERE subject_user_id = ?
               AND normalized_kind = ?
@@ -2109,6 +2268,16 @@ def create_user_memory(
         """, (subject_user_id, normalized_kind, normalized_content))
         existing = cursor.fetchone()
         if existing:
+            if normalized_retention_class == "durable" and existing["retention_class"] != "durable":
+                cursor.execute(
+                    """
+                    UPDATE user_memories
+                    SET retention_class = 'durable',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (existing["id"],),
+                )
             return int(existing["id"])
 
         cursor.execute("""
@@ -2121,10 +2290,11 @@ def create_user_memory(
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
         """, (
             subject_user_id,
             kind.strip(),
@@ -2133,6 +2303,7 @@ def create_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
+            normalized_retention_class,
             source_kind,
             source_conversation_id,
             author_actor,
@@ -2168,6 +2339,7 @@ def list_active_user_memories(subject_user_id: int, limit: int = 20) -> list[dic
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor,
@@ -2199,6 +2371,7 @@ def get_user_memory(memory_id: int) -> dict | None:
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor,
@@ -2271,6 +2444,7 @@ def supersede_user_memory(
         cursor.execute("""
             UPDATE user_memories
             SET status = 'superseded',
+                retention_class = 'superseded',
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
               AND status = 'active'
@@ -2288,11 +2462,12 @@ def supersede_user_memory(
                 importance,
                 confidence,
                 status,
+                retention_class,
                 source_kind,
                 source_conversation_id,
                 author_actor,
                 supersedes_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)
         """, (
             old_memory["subject_user_id"],
             old_memory["kind"],
@@ -2301,6 +2476,7 @@ def supersede_user_memory(
             normalized_content,
             normalized_importance,
             normalized_confidence,
+            _user_memory_retention_class_for_source(source_kind),
             source_kind,
             source_conversation_id,
             author_actor,
@@ -2343,147 +2519,6 @@ def delete_user_lifecycle(user_id: int) -> dict:
 def delete_user(user_id: int) -> bool:
     """Delete a user and all their field values. Returns True if deleted."""
     return bool(delete_user_lifecycle(user_id)["user_deleted"])
-
-
-# --- Migration: Encrypt Existing Plaintext Data ---
-
-def migrate_encrypt_existing_data():
-    """
-    Encrypt existing plaintext data that was stored before an admin was configured.
-
-    This should be called after the first admin is added to encrypt any
-    pre-existing user data. It encrypts:
-    - users.email → encrypted_email
-    - users.name → encrypted_name
-    - user_field_values.value → encrypted_value
-
-    This is idempotent - it only encrypts data that hasn't been encrypted yet.
-
-    Note: This function creates its own database connection to be thread-safe
-    when called via asyncio.to_thread(). Do not use the global connection here.
-    """
-    from encryption import encrypt_for_admin, compute_blind_index, get_admin_pubkey
-
-    admin_pubkey = get_admin_pubkey()
-    if not admin_pubkey:
-        logger.warning("migrate_encrypt_existing_data: No admin pubkey found, skipping")
-        return
-
-    logger.info("Starting encryption migration for existing plaintext data...")
-
-    # Create a dedicated connection for thread-safety (this runs via asyncio.to_thread)
-    conn = sqlite3.connect(SQLITE_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    migrated_users = 0
-    migrated_fields = 0
-
-    try:
-        # Migrate users table
-        cursor.execute("""
-            SELECT id, email, name FROM users
-            WHERE (email IS NOT NULL AND encrypted_email IS NULL)
-               OR (name IS NOT NULL AND encrypted_name IS NULL)
-        """)
-        users_to_migrate = cursor.fetchall()
-
-        for row in users_to_migrate:
-            user_id = row[0]
-            email = row[1]
-            name = row[2]
-
-            updates = []
-            values = []
-
-            # Encrypt email if not already encrypted (strip whitespace first)
-            # Handle non-string values by serializing to JSON
-            email_str = email if isinstance(email, str) else json.dumps(email, separators=(",", ":"), ensure_ascii=False) if email is not None else None
-            trimmed_email = email_str.strip() if email_str else None
-            if email_str is not None:
-                # Always clear plaintext; only encrypt if non-whitespace
-                if trimmed_email:
-                    encrypted_email, ephemeral_pubkey_email = encrypt_for_admin(trimmed_email)
-                    if encrypted_email:
-                        updates.append("encrypted_email = ?")
-                        values.append(encrypted_email)
-                        updates.append("ephemeral_pubkey_email = ?")
-                        values.append(ephemeral_pubkey_email)
-                        updates.append("email_blind_index = ?")
-                        values.append(compute_blind_index(trimmed_email.lower()))
-                updates.append("email = NULL")  # Clear plaintext (even if whitespace-only)
-
-            # Encrypt name if not already encrypted (strip whitespace first)
-            name_str = name if isinstance(name, str) else json.dumps(name, separators=(",", ":"), ensure_ascii=False) if name is not None else None
-            trimmed_name = name_str.strip() if name_str else None
-            if name_str is not None:
-                # Always clear plaintext; only encrypt if non-whitespace
-                if trimmed_name:
-                    encrypted_name, ephemeral_pubkey_name = encrypt_for_admin(trimmed_name)
-                    if encrypted_name:
-                        updates.append("encrypted_name = ?")
-                        values.append(encrypted_name)
-                        updates.append("ephemeral_pubkey_name = ?")
-                        values.append(ephemeral_pubkey_name)
-                updates.append("name = NULL")  # Clear plaintext (even if whitespace-only)
-
-            if updates:
-                values.append(user_id)
-                cursor.execute(
-                    f"UPDATE users SET {', '.join(updates)} WHERE id = ?",
-                    values
-                )
-                migrated_users += 1
-
-        # Migrate user_field_values table
-        cursor.execute("""
-            SELECT id, value FROM user_field_values
-            WHERE value IS NOT NULL AND encrypted_value IS NULL
-        """)
-        fields_to_migrate = cursor.fetchall()
-
-        for row in fields_to_migrate:
-            field_value_id = row[0]
-            value = row[1]
-
-            # Handle non-string values by serializing to JSON, then strip whitespace
-            value_str = value if isinstance(value, str) else json.dumps(value, separators=(",", ":"), ensure_ascii=False) if value is not None else None
-            trimmed_value = value_str.strip() if value_str else None
-            if value_str is not None:
-                # Always clear plaintext; only encrypt if non-whitespace
-                if trimmed_value:
-                    encrypted_value, ephemeral_pubkey = encrypt_for_admin(trimmed_value)
-                    if encrypted_value:
-                        cursor.execute("""
-                            UPDATE user_field_values
-                            SET encrypted_value = ?, ephemeral_pubkey = ?, value = NULL
-                            WHERE id = ?
-                        """, (encrypted_value, ephemeral_pubkey, field_value_id))
-                        migrated_fields += 1
-                    else:
-                        # Encryption failed but still clear plaintext
-                        cursor.execute(
-                            "UPDATE user_field_values SET value = NULL WHERE id = ?",
-                            (field_value_id,)
-                        )
-                else:
-                    # Whitespace-only value: just clear plaintext, no encryption
-                    cursor.execute(
-                        "UPDATE user_field_values SET value = NULL WHERE id = ?",
-                        (field_value_id,)
-                    )
-
-        conn.commit()
-        logger.info(f"Encryption migration complete: {migrated_users} users, {migrated_fields} field values encrypted")
-
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Encryption migration failed, rolled back: {e}")
-        raise
-
-    finally:
-        cursor.close()
-        conn.close()
 
 
 # --- Agent Settings Operations ---

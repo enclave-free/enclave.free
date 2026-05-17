@@ -42,14 +42,14 @@ Defense-in-depth:
 - Full chat admin mode: `frontend/src/pages/ChatPage.tsx`
 - Shares the same chat send runtime as `ChatPage`:
   - `frontend/src/utils/llmChat.ts` (`sendLlmChatWithUnifiedTools`)
-- Transport: uses `POST /llm/chat` with:
+- Transport: sends the normal public `POST /llm/chat` request to the Gateway-facing API base. Gateway routes this request to Sage; Python does not expose public `/llm/chat` or `/session-defaults` handlers in the hard-cut prototype.
   - `tools` (same admin-visible tool IDs as full chat: `web-search`, `db-query`, `admin-config`)
   - `admin-config` admin-only Sage runtime tool (enables scoped config context + change-set workflow)
-  - `tool_context` only for trusted client-executed context, such as decrypted DB rows
-  - `client_executed_tools` (explicitly communicates any tools already run client-side)
+  - `tool_context` only for trusted precomputed context supplied by the client
+  - no `client_executed_tools`; selected tools still run in Sage when trusted context is present
 
 Tool defaults:
-- Reads `/session-defaults` and applies `web_search_enabled` default on load (same default source as full chat).
+- Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
 - In current frontend behavior, admin `/chat` uses this assistant pipeline (runtime tools + changeset review/apply) and does not use document-scope Retrieval mode.
 
 Sidebar behavior:
@@ -216,8 +216,8 @@ Note: Instance settings are updated via the single endpoint `PUT /admin/settings
 Before allowlist validation, the frontend normalizes common LLM output drift:
 
 - Coalesces `PUT /admin/settings/{key}` with body `{ "value": ... }` into a single `PUT /admin/settings` patch object.
-- Normalizes `POST /admin/user-types` bodies (supports `order` alias -> `display_order`).
-- Normalizes `POST /admin/user-fields` bodies (supports aliases like `name`/`label`, `type`, `order`, `includeInChat`, `userTypeId`).
+- Normalizes `POST /admin/user-types` bodies using canonical keys only (`name`, `description`, `icon`, `display_order`).
+- Normalizes `POST /admin/user-fields` bodies using canonical keys only (`field_name`, `field_type`, `display_order`, `include_in_chat`, `user_type_id`, and related backend fields).
 - For `POST /admin/user-fields`, `options` must be a native JSON array (`["A","B"]`), not a JSON-encoded string (`"[\"A\",\"B\"]"`).
 - Parses boolean-like values (`true/false`, `1/0`, `yes/no`) and integer-like values where supported.
 

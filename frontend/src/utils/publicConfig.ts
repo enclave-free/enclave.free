@@ -2,22 +2,16 @@
  * Public Configuration Utility
  *
  * Fetches runtime configuration settings from the backend.
- * These settings control simulation/development features and are
- * configurable via the admin panel without rebuilding the frontend.
+ * This endpoint is intentionally minimal; prototype auth simulation flags are
+ * not part of the public runtime config surface.
  */
 
 import { API_BASE } from '../types/onboarding'
 
-export interface PublicConfig {
-  simulateUserAuth: boolean
-  simulateAdminAuth: boolean
-}
+export type PublicConfig = Record<string, never>
 
 // Default values (used if fetch fails or during initial load)
-const DEFAULT_CONFIG: PublicConfig = {
-  simulateUserAuth: false,
-  simulateAdminAuth: false,
-}
+const DEFAULT_CONFIG: PublicConfig = {}
 
 // Cache the config to avoid repeated fetches
 let cachedConfig: PublicConfig | null = null
@@ -55,12 +49,7 @@ export async function fetchPublicConfig(): Promise<PublicConfig> {
         return DEFAULT_CONFIG
       }
 
-      const data = await response.json()
-
-      const result: PublicConfig = {
-        simulateUserAuth: Boolean(data.simulate_user_auth),
-        simulateAdminAuth: Boolean(data.simulate_admin_auth),
-      }
+      const result: PublicConfig = {}
 
       // Only update cache if generation hasn't changed (no cache clear during fetch)
       if (currentGeneration === fetchGeneration) {

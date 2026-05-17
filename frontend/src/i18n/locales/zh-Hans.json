@@ -330,7 +330,6 @@
       "compact": "紧凑",
       "expand": "展开",
       "shareSecretsTitle": "共享机密环境变量",
-      "shareSecretsHint": "默认关闭。首先启用配置工具。启用后，秘密部署配置值将在客户端显示并发送到Maple。",
       "sensitive": "敏感",
       "emptyPrompt": "你可以询问任何管理员配置问题。如果希望助手提出并应用更改，请要求其包含 JSON 变更集。",
       "pendingChanges": "待处理更改",
@@ -536,12 +535,9 @@
     "title": "管理员设置",
     "subtitle": "使用你的 Nostr 身份连接以管理此实例",
     "connectNostr": "使用 Nostr 连接",
-    "orForTesting": "或用于测试",
-    "continueMock": "使用模拟身份继续",
     "connecting": "正在连接扩展...",
     "noExtension": "未找到 Nostr 扩展",
     "installExtension": "请安装 NIP-07 兼容扩展以继续",
-    "useMock": "使用模拟",
     "welcomeAdmin": "欢迎，管理员！",
     "connectedAs": "已连接为",
     "redirecting": "正在跳转到仪表板...",
@@ -613,7 +609,6 @@
       "sentMagicLink": "我们已将魔法链接发送至",
       "clickLink": "点击邮件中的链接即可登录。",
       "checkSpam": "没有看到？请检查垃圾邮件文件夹。",
-      "simulateMagicLink": "模拟点击魔法链接",
       "forTesting": "用于测试：",
       "dataProtectionTitle": "Enclave 如何保护你的数据",
       "noPasswordTitle": "不存储密码",
@@ -717,14 +712,6 @@
       "roleAssistant": "助手",
       "footer": "从{{instanceName}}导出",
       "exportedOn": "导出时间：{{timestamp}}"
-    },
-    "database": {
-      "executedSql": "已执行 SQL：{{sql}}",
-      "noResults": "查询未返回结果。",
-      "resultsCount": "数据库查询结果（{{count}} 行）：",
-      "resultsCount_one": "数据库查询结果（{{count}} 行）：",
-      "resultsCount_other": "数据库查询结果（{{count}} 行）：",
-      "resultsTruncated": "（结果已截断至 100 行）"
     }
   },
   "errors": {
@@ -908,7 +895,7 @@
       "gmailHint": "使用应用专用密码——不是你的常规 Gmail 密码。先启用两步验证，然后在你的 Google 账户安全设置中生成应用专用密码。",
       "goToPage": "前往页面",
       "mailgunHint": "使用域名设置页面中的 Mailgun SMTP 凭据。主机通常是 smtp.mailgun.org。",
-      "mockSmtp": "MOCK_SMTP——启用后，电子邮件会记录到控制台而不是实际发送。适用于开发环境。",
+      "mockEmail": "MOCK_EMAIL——启用后，电子邮件会记录到控制台而不是实际发送。适用于开发环境。",
       "overviewDesc": "配置 SMTP 设置以启用出站电子邮件（邀请、通知、密码重置）。所有提供商使用标准 SMTP 字段。",
       "overviewTitle": "电子邮件 (SMTP) 概述",
       "postmarkHint": "使用你的 Postmark Server API 令牌作为 SMTP 密码。SMTP 用户名始终是相同的令牌。",
@@ -980,20 +967,6 @@
       "usersToMigrate": "待迁移用户",
       "warning": "这是一个高级操作。错误的迁移可能导致你无法访问加密数据。仅在你理解其后果时才继续。"
     },
-    "leaveEmptyForLlmApiKey": "留空以清除覆盖并使用 .env MAPLE_API_KEY 备用。",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — 您的 Maple API 密钥。映射到 MAPLE_API_KEY。",
-      "apiKeyLabel": "Maple API 密钥",
-      "ariaLabel": "Maple LLM 配置帮助",
-      "exampleConfig": "示例配置",
-      "goToPage": "前往页面",
-      "mapleExtra": "将 LLM_API_KEY 设置为您的 {{mapleSignupUrl}} 的 Maple 密钥。LLM_* 密钥映射到 MAPLE_* 别名。",
-      "mapleHint": "Maple 是 Enclave 的标准 LLM 后端。",
-      "modelField": "LLM_MODEL — Maple 模型标识符（例如：kimi-k2.5）。",
-      "overviewDesc": "Enclave 使用 Maple 作为其标准 LLM 服务。Maple 在底层提供 OpenAI 兼容的 API。",
-      "overviewTitle": "Maple LLM 概述",
-      "providerField": "LLM_PROVIDER — 为兼容性固定为 \"maple\"。"
-    },
     "revealFailed": "显示值失败。请检查你的 Nostr 扩展连接。",
     "searchHelp": {
       "ariaLabel": "网络搜索配置帮助",
@@ -1023,9 +996,7 @@
       "overviewDesc": "安全设置控制认证、会话处理和开发快捷方式。默认值配置为本地开发使用。",
       "overviewNote": "在生产环境中，确保模拟标志已关闭，且 FRONTEND_URL 与你的真实域名匹配。",
       "overviewTitle": "安全概述",
-      "overviewWhen": "在部署到面向公众的服务器之前，请检查这些设置。",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH——绕过管理员认证。所有请求都被视为来自管理员用户。",
-      "simUserDesc": "SIMULATE_USER_AUTH——绕过用户认证。所有请求都被视为来自已登录用户。"
+      "overviewWhen": "在部署到面向公众的服务器之前，请检查这些设置。"
     },
     "sslHelp": {
       "ariaLabel": "SSL 和 HTTPS 配置帮助",
@@ -1200,11 +1171,6 @@
     "uploadingStatus": "正在上传到服务器..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "配置 Maple 推理",
-      "hint": "Enclave 仅支持 Maple 进行 LLM 推理。在此处配置 Maple 模型/API 设置。更改需要重启。"
-    },
     "embedding": {
       "label": "文本处理",
       "description": "配置文档分析方式",
@@ -1303,21 +1269,6 @@
     "sampleQuestion": "关于这个话题我应该了解什么？"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "AI 服务",
-      "description": "LLM 提供商（仅限 Maple）",
-      "hint": "Maple 是唯一支持的值。此密钥保留用于兼容性。"
-    },
-    "LLM_MODEL": {
-      "label": "模型名称",
-      "description": "模型名称/标识符",
-      "hint": "要使用的 Maple 模型标识符（例如：“kimi-k2.5”）。"
-    },
-    "LLM_API_URL": {
-      "label": "API 端点",
-      "description": "API 请求的基础 URL",
-      "hint": "Maple API 基础 URL。默认：http://maple-proxy:8080/v1。"
-    },
     "RAG_TOP_K": {
       "label": "上下文块数",
       "description": "检索的块数量",
@@ -1358,7 +1309,7 @@
       "description": "邮件发件人地址",
       "hint": "发送邮件的「发件人」地址（例如 noreply@yourdomain.com）。"
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "测试模式",
       "description": "模拟邮件发送",
       "hint": "设为 \"true\" 时，邮件将记录日志而非实际发送。适用于开发环境。"
@@ -1392,11 +1343,6 @@
       "label": "应用 URL",
       "description": "应用程序的公开 URL",
       "hint": "用户访问应用的公开 URL。用于生成魔法链接。"
-    },
-    "LLM_API_KEY": {
-      "label": "API 密钥",
-      "description": "Maple API 密钥（秘密）",
-      "hint": "映射到 MAPLE_API_KEY。留空以清除覆盖并使用 .env 备用。"
     },
     "ADMIN_BASE_URL": {
       "description": "管理面板子域名 URL（可选）",
@@ -1462,16 +1408,6 @@
       "description": "健康监控端点 URL",
       "hint": "外部监控的健康检查 URL。默认值：http://localhost:8000/health。",
       "label": "监控 URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "显示管理员认证的模拟 Nostr 连接按钮（仅限测试）",
-      "hint": "启用后用于开发/测试。在管理员登录时显示“模拟连接”按钮，绕过 Nostr 扩展要求。在生产环境中应禁用。",
-      "label": "模拟管理员认证"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "允许用户无需魔术链接令牌即可验证（仅限测试）",
-      "hint": "启用后用于开发/测试。允许用户无需点击魔术链接即可完成电子邮件验证。在生产环境中应禁用。",
-      "label": "模拟用户认证"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS include 指令",
@@ -1778,7 +1714,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "测试魔术链接和 Nostr 认证流程。",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "通过向受速率限制的端点发送快速请求来测试速率限制。",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "测试基于用户类型的动态字段的用户创建流程。",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "测试与 Maple LLM 服务的连接。",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "完整的 RAG 管道：嵌入 → 搜索 → 检索 → 生成。",
       "this_is_where_the_magic_happens_e98c18": "— 这就是奇迹发生的地方：",
       "toggle_theme_9b0eaf": "切换主题",

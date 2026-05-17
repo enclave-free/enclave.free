@@ -14,9 +14,9 @@ import logging
 import math
 import random
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, TypedDict
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks, Depends, Request
 from pydantic import BaseModel
@@ -59,6 +59,7 @@ UPLOAD_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_UPLOAD_PER_MINUTE", "20
 MAX_BATCH_FILES = int(os.getenv("MAX_BATCH_FILES", "100"))
 MAX_BATCH_BYTES = int(os.getenv("MAX_BATCH_BYTES", str(250 * 1024 * 1024)))
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".txt", ".md"}
+ABANDONED_INGESTION_TIMEOUT_MINUTES = int(os.getenv("ABANDONED_INGESTION_TIMEOUT_MINUTES", "60"))
 
 # Valid ontology IDs for document extraction
 VALID_ONTOLOGIES = {"general", "bitcoin"}
@@ -164,14 +165,57 @@ def _clear_job_chunks(job_id: str) -> None:
         CHUNKS.pop(cid, None)
 
 
-def _document_artifact_cleanup_reason(job: dict) -> str | None:
+class IngestionJob(TypedDict, total=False):
+    id: str
+    job_id: str
+    status: str
+    filename: str
+    file_path: str
+    total_chunks: int
+    processed_chunks: int
+    failed_chunks: int
+    error: str | None
+    updated_at: str
+    replaced_by_job_id: str | None
+    is_current: int | bool
+    sample_percent: float
+    metadata: dict[str, Any]
+
+
+def _document_artifact_cleanup_reason(job: IngestionJob) -> str | None:
     """Return why a job is eligible for lifecycle artifact cleanup."""
     status = job.get("status")
+    job_id = str(job.get("job_id") or job.get("id") or "")
+    active_task = TASKS.get(job_id)
+    if active_task is not None and not active_task.done():
+        return None
     if status == "failed":
         return "failed_ingestion"
+    if status in {"pending", "processing"} and _is_abandoned_ingestion_job(job):
+        return "abandoned_ingestion"
     if job.get("replaced_by_job_id") and not bool(job.get("is_current", 1)):
         return "superseded_document"
     return None
+
+
+def _is_abandoned_ingestion_job(job: IngestionJob) -> bool:
+    job_id = str(job.get("job_id") or job.get("id") or "")
+    active_task = TASKS.get(job_id)
+    if active_task is not None and not active_task.done():
+        return False
+    updated_at = job.get("updated_at")
+    if not updated_at:
+        return False
+    try:
+        updated = datetime.fromisoformat(str(updated_at).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=timezone.utc)
+    else:
+        updated = updated.astimezone(timezone.utc)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=ABANDONED_INGESTION_TIMEOUT_MINUTES)
+    return updated <= cutoff
 
 
 def _audit_document_action(
@@ -465,24 +509,10 @@ def schedule_document_processing(job_id: str, file_path: Path, sample_percent: f
     task.add_done_callback(_finish_task)
 
 
-@router.on_event("startup")
-async def load_jobs_and_resume():
-    """Load jobs from SQLite on startup, migrate JSON if needed, and resume incomplete jobs."""
+async def load_jobs_and_resume() -> None:
+    """Load jobs from SQLite on startup and resume incomplete jobs."""
     global JOBS
-    
-    # One-time migration: import from legacy JSON file if exists and DB is empty
-    json_file = Path(os.getenv("LOGS_DIR", "/logs")) / "jobs_state.json"
-    if json_file.exists():
-        existing_jobs = ingest_db.list_jobs(limit=1)
-        if len(existing_jobs) == 0:
-            logger.info("SQLite empty, migrating from legacy JSON file...")
-            try:
-                legacy_jobs = json.loads(json_file.read_text(encoding="utf-8"))
-                migrated = ingest_db.migrate_from_json(legacy_jobs)
-                logger.info(f"Migrated {migrated} jobs from JSON to SQLite")
-            except Exception as e:
-                logger.error(f"Failed to migrate from JSON: {e}")
-    
+
     # Load from SQLite
     JOBS = _load_jobs_from_db()
     logger.info(f"Loaded {len(JOBS)} jobs from SQLite")

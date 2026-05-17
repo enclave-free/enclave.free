@@ -277,8 +277,8 @@ python test_4a_unified_chat_tools_parity.py --api-base http://localhost:8000 --a
 
 ✅ **PASS** when:
 - Full-chat payload shape and admin-bubble payload shape return identical `tools_used` sets for the same selected tools.
-- `tool_context` + `client_executed_tools: []` still allows server-side tool execution.
-- `tool_context` + `client_executed_tools: ["db-query"]` reports `db-query` without missing companion tools (for example `web-search`).
+- `tool_context` without `client_executed_tools` still allows Sage-owned tool execution.
+- Prototype clients do not send `client_executed_tools: ["db-query"]`; `db-query` runs as a normal Sage-owned tool.
 
 ---
 

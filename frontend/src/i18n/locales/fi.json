@@ -55,7 +55,6 @@
       "sentMagicLink": "Lähetimme taikalinkin osoitteeseen",
       "clickLink": "Klikkaa sähköpostissa olevaa linkkiä kirjautuaksesi.",
       "checkSpam": "Etkö näe sitä? Tarkista roskapostikansio.",
-      "simulateMagicLink": "Simuloi taikalinkin klikkausta",
       "forTesting": "Testaustarkoituksiin:",
       "dataProtectionTitle": "Miten Enclave suojaa tietojasi",
       "noPasswordTitle": "Ei tallennettuja salasanoja",
@@ -159,13 +158,6 @@
       "roleAssistant": "Avustaja",
       "footer": "Viety kohteesta {{instanceName}}",
       "exportedOn": "Viety {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Suoritettu SQL: {{sql}}",
-      "noResults": "Kysely ei palauttanut tuloksia.",
-      "resultsCount_one": "Tietokantakyselyn tulos ({{count}} rivi):",
-      "resultsCount_other": "Tietokantakyselyn tulokset ({{count}} riviä):",
-      "resultsTruncated": "(Tulokset katkaistu 100 riviin)"
     }
   },
   "common": {
@@ -497,7 +489,6 @@
       "compact": "Kompakti",
       "expand": "Laajenna",
       "shareSecretsTitle": "Jaa salaiset ympäristömuuttujat",
-      "shareSecretsHint": "Oletusarvoisesti poissa käytöstä. Ota Config-työkalu käyttöön ensin. Kun käytössä, salaiset käyttöönottokokoonpanon arvot näytetään asiakaspuolella ja lähetetään Maplelle.",
       "sensitive": "Arkaluonteinen",
       "emptyPrompt": "Kysy mistä tahansa ylläpidon asetuksesta. Jos haluat avustajan ehdottavan ja toteuttavan muutoksia, pyydä sitä lisäämään JSON-muotoinen change set.",
       "pendingChanges": "Odottavat muutokset",
@@ -703,19 +694,16 @@
     "title": "Ylläpidon asetukset",
     "subtitle": "Yhdistä Nostr-identiteettisi hallitaksesi tätä instanssia",
     "connectNostr": "Yhdistä Nostrilla",
-    "orForTesting": "tai testausta varten",
-    "continueMock": "Jatka testihenkilöllisyydellä",
     "connecting": "Yhdistetään laajennukseen...",
     "noExtension": "Nostr-laajennusta ei löytynyt",
     "installExtension": "Asenna NIP-07-yhteensopiva laajennus jatkaaksesi",
-    "useMock": "Käytä testausidentiteettiä",
     "welcomeAdmin": "Tervetuloa, ylläpitäjä!",
     "connectedAs": "Yhdistetty nimellä",
     "redirecting": "Ohjataan kojelaudalle...",
     "connectionFailed": "Yhteys epäonnistui",
     "securityJourneyTitle": "Nopea turvallisuuspolku",
     "securityJourneyIntro": "Nostr-yhteyden jälkeen seuraa tätä yksinkertaista asetuspolkua:",
-    "securityJourneyStep1": "Turvaa pääsy: aseta julkiset URL-osoitteet, poista simulointiliput käytöstä kehitysympäristön ulkopuolella ja valitse käyttäjien hyväksymissäännöt.",
+    "securityJourneyStep1": "Turvaa pääsy: aseta julkiset URL-osoitteet, noudata todellisen todennuksen käyttöönoton vaiheita ja valitse käyttäjien hyväksymissäännöt.",
     "securityJourneyStep2": "Aseta datarajat: kerää vain tarvittavat kentät, pidä arkaluontoiset kentät salattuina ja rajoita keskustelukontekstin kenttiä.",
     "securityJourneyStep3": "Vahvista ja seuraa: suorita asetusten vahvistus, tarkista palveluiden tila ja tarkastele tallennettuja tietoja säännöllisesti.",
     "securityJourneyNote": "Tämä antaa sinulle vahvan perustan tuotantokäyttöön.",
@@ -778,7 +766,7 @@
     "securityBreadcrumbTitle": "Suojaa instanssisi 3 vaiheessa",
     "securityStep1Label": "Vaihe 1",
     "securityStep1Title": "Turvaa pääsy",
-    "securityStep1Body": "Aseta julkiset URL-osoitteet, poista simulointiliput käytöstä kehitysympäristön ulkopuolella ja valitse tarvitsevatko käyttäjät hyväksynnän.",
+    "securityStep1Body": "Aseta julkiset URL-osoitteet, noudata todellisen todennuksen käyttöönoton vaiheita ja valitse tarvitsevatko käyttäjät hyväksynnän.",
     "securityStep1Primary": "Avaa käyttöönottoasetukset",
     "securityStep1Secondary": "Avaa käyttäjäasetukset",
     "securityStep2Label": "Vaihe 2",
@@ -905,7 +893,7 @@
       "gmailHint": "Käytä sovellussalasanaa — älä tavallista Gmail-salasanaasi. Ota ensin käyttöön kaksivaiheinen todennus ja luo sitten sovellussalasana Google-tilisi turvallisuusasetuksissa.",
       "goToPage": "Siirry sivulle",
       "mailgunHint": "Käytä Mailgun SMTP -tunnuksiasi verkkotunnusasetukset-sivulta. Isäntä on yleensä smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — kun käytössä, sähköpostit kirjataan konsoliin lähettämisen sijaan. Hyödyllinen kehityksessä.",
+      "mockEmail": "MOCK_EMAIL — kun käytössä, sähköpostit kirjataan konsoliin lähettämisen sijaan. Hyödyllinen kehityksessä.",
       "overviewDesc": "Määritä SMTP-asetukset lähtevän sähköpostin käyttöön ottamiseksi (kutsut, ilmoitukset, salasanojen nollaus). Kaikki palveluntarjoajat käyttävät vakio-SMTP-kenttiä.",
       "overviewTitle": "Sähköpostin (SMTP) yleiskatsaus",
       "postmarkHint": "Käytä Postmark Server API -tunnustasi SMTP-salasanana. SMTP-käyttäjänimi on aina sama tunnus.",
@@ -977,20 +965,6 @@
       "usersToMigrate": "Siirrettäviä käyttäjiä",
       "warning": "Tämä on edistynyt toiminto. Virheellinen siirto voi estää pääsyn salattuihin tietoihin. Jatka vain, jos ymmärrät seuraukset."
     },
-    "leaveEmptyForLlmApiKey": "Jätä tyhjäksi tyhjentääksesi ohituksen ja käyttääksesi .env MAPLE_API_KEY -varatoimintoa.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY – Maple-sovellusliittymäavaimesi. Vastaa MAPLE_API_KEY:tä.",
-      "apiKeyLabel": "Maple-sovellusliittymäavain",
-      "ariaLabel": "Maple LLM -kokoonpanoapu",
-      "exampleConfig": "Esimerkkikonfiguraatio",
-      "goToPage": "Siirry sivulle",
-      "mapleExtra": "Aseta LLM_API_KEY Maple-avaimeksesi osoitteesta {{mapleSignupUrl}}. LLM_*-avaimet vastaavat MAPLE_*-aliaksia.",
-      "mapleHint": "Maple on Enclavein standardi LLM-taustaohjelma.",
-      "modelField": "LLM_MODEL – Maple-mallitunniste (esimerkiksi: kimi-k2.5).",
-      "overviewDesc": "Enclave käyttää Maplea standardina LLM-palvelunaan. Maple tarjoaa OpenAI-yhteensopivan sovellusliittymän taustalla.",
-      "overviewTitle": "Maple LLM yleiskatsaus",
-      "providerField": "LLM_PROVIDER – asetettu arvoon \"maple\" yhteensopivuuden vuoksi."
-    },
     "revealFailed": "Arvon paljastaminen epäonnistui. Tarkista Nostr-laajennuksesi yhteys.",
     "searchHelp": {
       "ariaLabel": "Verkkohaun konfiguraation ohje",
@@ -1009,20 +983,18 @@
     },
     "securityHelp": {
       "ariaLabel": "Turvallisuusasetusten ohje",
-      "devDesc": "Nämä liput ohittavat todellisen todennuksen ja antavat sinun käyttää sovellusta ilman Nostr-avainta. Ne on tarkoitettu vain paikalliseen kehitykseen ja testaukseen.",
-      "devTitle": "Kehitysliput",
-      "devWarning": "Älä koskaan ota simulointilippuja käyttöön tuotannossa. Ne poistavat kaikki todennustarkistukset ja paljastavat ylläpitäjäpäätepisteet kenelle tahansa.",
+      "devDesc": "Paikalliset testausasetukset voivat muuttaa kehitysympäristön sähköpostien lähetystapaa, mutta käyttöoikeus on aina suojattava todellisella todennuksella.",
+      "devTitle": "Kehityksen sähköpostiasetukset",
+      "devWarning": "Paikalliset testauksen sähköpostiasetukset muuttavat vain sähköpostien lähetystapaa kehityksessä, eikä niitä saa käyttää tuotannossa; ne eivät ohita todennusta.",
       "frontendDesc": "FRONTEND_URL kertoo taustajärjestelmälle, missä käyttöliittymä sijaitsee. Käytetään CORS-asetuksiin, uudelleenohjauksiin ja evästeiden rajaamiseen.",
       "frontendNote": "Tämän on täsmättävä tarkasti — mukaan lukien skeema (http/https) ja portti. Epäyhteensopivuudet aiheuttavat CORS-virheitä.",
       "frontendTitle": "Käyttöliittymä ja istunnot",
       "frontendWhen": "Aseta tämä, kun otat käyttöön mukautetun verkkotunnuksen tai muutat käyttöliittymän porttia.",
       "goToPage": "Siirry sivulle",
       "overviewDesc": "Turvallisuusasetukset ohjaavat todennusta, istunnonhallintaa ja kehitysoikoteitä. Oletusarvot on määritetty paikallista kehitystä varten.",
-      "overviewNote": "Varmista tuotannossa, että simulointiliput ovat pois käytöstä ja FRONTEND_URL vastaa todellista verkkotunnustasi.",
+      "overviewNote": "Varmista tuotannossa, että todellisen todennuksen käyttöönoton vaiheet on suoritettu ja FRONTEND_URL vastaa todellista verkkotunnustasi.",
       "overviewTitle": "Turvallisuuden yleiskatsaus",
-      "overviewWhen": "Tarkista nämä asetukset ennen julkiselle palvelimelle käyttöönottoa.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — ohittaa ylläpitäjän todennuksen. Kaikkia pyyntöjä käsitellään ylläpitäjäkäyttäjän lähettäminä.",
-      "simUserDesc": "SIMULATE_USER_AUTH — ohittaa käyttäjän todennuksen. Kaikkia pyyntöjä käsitellään kirjautuneen käyttäjän lähettäminä."
+      "overviewWhen": "Tarkista nämä asetukset ennen julkiselle palvelimelle käyttöönottoa."
     },
     "sslHelp": {
       "ariaLabel": "SSL- ja HTTPS-konfiguraation ohje",
@@ -1197,11 +1169,6 @@
     "uploadingStatus": "Ladataan palvelimelle..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Määritä Maple-päätelmät",
-      "hint": "Enclave on vain Maple-pohjainen LLM-päätelmien osalta. Määritä Maple-malli/sovellusliittymäasetukset täällä. Muutokset vaativat uudelleenkäynnistyksen."
-    },
     "embedding": {
       "label": "Tekstinkäsittely",
       "description": "Määritä dokumenttien analysointi",
@@ -1300,21 +1267,6 @@
     "sampleQuestion": "Mitä minun pitäisi tietää tästä aiheesta?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "AI-palvelu",
-      "description": "LLM-palveluntarjoaja (vain Maple)",
-      "hint": "Maple on ainoa tuettu arvo. Tämä avain säilytetään yhteensopivuuden vuoksi."
-    },
-    "LLM_MODEL": {
-      "label": "Mallin nimi",
-      "description": "Mallin nimi/tunniste",
-      "hint": "Käytettävä Maple-mallitunniste (esim. \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "API-päätepiste",
-      "description": "API-pyyntöjen perus-URL",
-      "hint": "Maplen sovellusliittymän perus-URL. Oletus: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Kontekstipalat",
       "description": "Haettavien palojen määrä",
@@ -1355,7 +1307,7 @@
       "description": "Sähköpostien lähettäjäosoite",
       "hint": "\"Lähettäjä\"-osoite lähteville sähköposteille (esim. noreply@sinundomainisi.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testitila",
       "description": "Simuloitu sähköpostin lähetys",
       "hint": "Kun \"true\", sähköpostit kirjataan lähettämisen sijaan. Hyödyllinen kehityksessä."
@@ -1389,11 +1341,6 @@
       "label": "Sovelluksen URL",
       "description": "Sovelluksen julkinen URL",
       "hint": "Julkinen URL, josta käyttäjät pääsevät sovellukseen. Käytetään taikalinkkien luomiseen."
-    },
-    "LLM_API_KEY": {
-      "label": "API-avain",
-      "description": "Maple-sovellusliittymäavain (salainen)",
-      "hint": "Vastaa MAPLE_API_KEY:tä. Jätä tyhjäksi tyhjentääksesi ohituksen ja käyttääksesi .env-varatoimintoa."
     },
     "ADMIN_BASE_URL": {
       "description": "Ylläpitäjän paneelin aliverkkotunnuksen URL (valinnainen)",
@@ -1459,16 +1406,6 @@
       "description": "Terveystarkkailun päätepisteen URL",
       "hint": "Terveystarkistus-URL ulkoisille tarkkailijoille. Oletus: http://localhost:8000/health.",
       "label": "Tarkkailun URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Näytä Mock-yhteyspainike ylläpitäjän todennukseen (vain testaus)",
-      "hint": "Ota käyttöön kehitystä/testausta varten. Näyttää \"Mock Connection\" -painikkeen ylläpitäjän kirjautumisessa, joka ohittaa Nostr-laajennusvaatimuksen. Pitäisi olla poissa käytöstä tuotannossa.",
-      "label": "Simuloi ylläpitäjän todennusta"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Salli käyttäjän varmennus ilman taikalinkkitunnusta (vain testaus)",
-      "hint": "Ota käyttöön kehitystä/testausta varten. Sallii käyttäjien suorittaa sähköpostivarmennetun linkin kautta varmennuksen napsauttamatta taikalinkkiä. Pitäisi olla poissa käytöstä tuotannossa.",
-      "label": "Simuloi käyttäjän todennusta"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS sisällytä -direktiivi",
@@ -1775,7 +1712,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Testaa maagisen linkin ja Nostr-todennusvirrat.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Testaa nopeusrajoitusta lähettämällä nopeita pyyntöjä nopeusrajoitettuihin päätepisteisiin.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Testaa käyttäjän luontityönkulku dynaamisilla kentillä käyttäjätyypin perusteella.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testaa yhteyttä Maple LLM -palveluun.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Koko RAG-putki: upota → hae → nouda → generoi.",
       "this_is_where_the_magic_happens_e98c18": "– Tässä taika tapahtuu:",
       "toggle_theme_9b0eaf": "Vaihda teemaa",

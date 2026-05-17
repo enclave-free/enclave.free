@@ -384,7 +384,6 @@ export function AdminConfigAssistant({
         await sendLlmChatStreamWithUnifiedTools({
           content,
           tools: selectedTools,
-          t,
           baseToolContext,
           sessionId: conversationSessionId,
           conversationHistory: messages.map(({ role, content }) => ({ role, content })),
@@ -448,7 +447,6 @@ export function AdminConfigAssistant({
         const res = await sendLlmChatWithUnifiedTools({
           content,
           tools: selectedTools,
-          t,
           baseToolContext,
           sessionId: conversationSessionId,
           conversationHistory: messages.map(({ role, content }) => ({ role, content })),

@@ -55,7 +55,6 @@
       "sentMagicLink": "Poslali jsme magický odkaz na",
       "clickLink": "Klikněte na odkaz v e-mailu a přihlaste se.",
       "checkSpam": "Nevidíte ho? Zkontrolujte složku spam.",
-      "simulateMagicLink": "Simulovat kliknutí na magický odkaz",
       "forTesting": "Pro testovací účely:",
       "dataProtectionTitle": "Jak Enclave chrání vaše data",
       "noPasswordTitle": "Žádná uložená hesla",
@@ -159,15 +158,6 @@
       "roleAssistant": "Asistent",
       "footer": "Exportováno z {{instanceName}}",
       "exportedOn": "Exportováno {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Provedený SQL: {{sql}}",
-      "noResults": "Dotaz nevrátil žádné výsledky.",
-      "resultsCount": "Výsledky databázového dotazu ({{count}} řádků):",
-      "resultsTruncated": "(Výsledky zkráceny na 100 řádků)",
-      "resultsCount_one": "Výsledek databázového dotazu ({{count}} řádek):",
-      "resultsCount_few": "Výsledky databázového dotazu ({{count}} řádky):",
-      "resultsCount_other": "Výsledky databázového dotazu ({{count}} řádků):"
     }
   },
   "common": {
@@ -505,7 +495,6 @@
       "compact": "Kompaktní",
       "expand": "Rozšířit",
       "shareSecretsTitle": "Sdílet tajné proměnné prostředí",
-      "shareSecretsHint": "Ve výchozím nastavení vypnuto. Nejprve povolte nástroj Konfigurace. Když je povoleno, hodnoty tajné konfigurace nasazení se odhalí na straně klienta a odešlou do Maple.",
       "sensitive": "Citlivé",
       "emptyPrompt": "Ptejte se na libovolnou administrátorskou konfiguraci. Pokud chcete, aby asistent navrhl a provedl změny, požádejte ho o JSON change set.",
       "pendingChanges": "Čekající změny",
@@ -711,12 +700,9 @@
     "title": "Nastavení správce",
     "subtitle": "Připojte se svou Nostr identitou pro správu této instance",
     "connectNostr": "Připojit s Nostr",
-    "orForTesting": "nebo pro testování",
-    "continueMock": "Pokračovat s testovací identitou",
     "connecting": "Připojování k rozšíření...",
     "noExtension": "Nebylo nalezeno rozšíření Nostr",
     "installExtension": "Pro pokračování nainstalujte rozšíření kompatibilní s NIP-07",
-    "useMock": "Použít testovací",
     "welcomeAdmin": "Vítejte, administrátore!",
     "connectedAs": "Připojeno jako",
     "redirecting": "Přesměrování na panel...",
@@ -913,7 +899,7 @@
       "gmailHint": "Použijte heslo aplikace — ne běžné heslo Gmailu. Nejprve zapněte 2FA, poté vygenerujte heslo aplikace v nastavení zabezpečení účtu Google.",
       "goToPage": "Přejít na stránku",
       "mailgunHint": "Použijte své SMTP přihlašovací údaje Mailgun ze stránky nastavení domény. Hostitel je obvykle smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — pokud je povoleno, e-maily se zaznamenávají do konzole místo odesílání. Užitečné pro vývoj.",
+      "mockEmail": "MOCK_EMAIL — pokud je povoleno, e-maily se zaznamenávají do konzole místo odesílání. Užitečné pro vývoj.",
       "overviewDesc": "Nakonfigurujte nastavení SMTP pro povolení odchozích e-mailů (pozvánky, oznámení, resetování hesel). Všichni poskytovatelé používají standardní SMTP pole.",
       "overviewTitle": "Přehled e-mailu (SMTP)",
       "postmarkHint": "Použijte svůj token API serveru Postmark jako SMTP heslo. SMTP uživatelské jméno je vždy stejný token.",
@@ -985,20 +971,6 @@
       "usersToMigrate": "Uživatelé k migraci",
       "warning": "Toto je pokročilá operace. Nesprávná migrace vás může uzamknout ze šifrovaných dat. Pokračujte pouze pokud rozumíte důsledkům."
     },
-    "leaveEmptyForLlmApiKey": "Ponechte prázdné pro zrušení přepsání a použití záložního klíče .env MAPLE_API_KEY.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY – váš klíč API Maple. Mapuje se na MAPLE_API_KEY.",
-      "apiKeyLabel": "Klíč API Maple",
-      "ariaLabel": "Nápověda pro konfiguraci Maple LLM",
-      "exampleConfig": "Příklad konfigurace",
-      "goToPage": "Přejít na stránku",
-      "mapleExtra": "Nastavte LLM_API_KEY na váš klíč Maple z {{mapleSignupUrl}}. Klíče LLM_* se mapují na aliasy MAPLE_*.",
-      "mapleHint": "Maple je standardní backend LLM pro Enclave.",
-      "modelField": "LLM_MODEL – identifikátor modelu Maple (například: kimi-k2.5).",
-      "overviewDesc": "Enclave používá Maple jako svou standardní službu LLM. Maple poskytuje pod kapotou API kompatibilní s OpenAI.",
-      "overviewTitle": "Přehled Maple LLM",
-      "providerField": "LLM_PROVIDER – pevně nastaveno na \"maple\" pro kompatibilitu."
-    },
     "revealFailed": "Nepodařilo se odhalit hodnotu. Zkontrolujte připojení rozšíření Nostr.",
     "searchHelp": {
       "ariaLabel": "Nápověda ke konfiguraci webového vyhledávání",
@@ -1028,9 +1000,7 @@
       "overviewDesc": "Nastavení zabezpečení řídí autentizaci, správu relací a vývojové zkratky. Výchozí nastavení jsou nakonfigurována pro lokální vývoj.",
       "overviewNote": "V produkci se ujistěte, že simulační příznaky jsou vypnuté a FRONTEND_URL odpovídá vaší skutečné doméně.",
       "overviewTitle": "Přehled zabezpečení",
-      "overviewWhen": "Zkontrolujte tato nastavení před nasazením na veřejně přístupný server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — obchází autentizaci správce. Všechny požadavky jsou zpracovány, jako by přicházely od správce.",
-      "simUserDesc": "SIMULATE_USER_AUTH — obchází autentizaci uživatele. Všechny požadavky jsou zpracovány, jako by přicházely od přihlášeného uživatele."
+      "overviewWhen": "Zkontrolujte tato nastavení před nasazením na veřejně přístupný server."
     },
     "sslHelp": {
       "ariaLabel": "Nápověda ke konfiguraci SSL a HTTPS",
@@ -1205,11 +1175,6 @@
     "uploadingStatus": "Nahrávání na server..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Konfigurace odvozování Maple",
-      "hint": "Enclave je pouze Maple pro odvozování LLM. Zde nakonfigurujte model Maple/nastavení API. Změny vyžadují restart."
-    },
     "embedding": {
       "label": "Zpracování textu",
       "description": "Nakonfigurujte, jak jsou dokumenty analyzovány",
@@ -1308,21 +1273,6 @@
     "sampleQuestion": "Co bych měl vědět o tomto tématu?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "AI služba",
-      "description": "Poskytovatel LLM (pouze Maple)",
-      "hint": "Maple je jediná podporovaná hodnota. Tento klíč zůstává pro kompatibilitu."
-    },
-    "LLM_MODEL": {
-      "label": "Název modelu",
-      "description": "Název/identifikátor modelu",
-      "hint": "Identifikátor modelu Maple, který se má použít (např. \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "API koncový bod",
-      "description": "Základní URL pro API požadavky",
-      "hint": "Základní URL API Maple. Výchozí: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Kontextové části",
       "description": "Počet částí k načtení",
@@ -1363,7 +1313,7 @@
       "description": "Adresa odesílatele pro e-maily",
       "hint": "Adresa \"od\" pro odchozí e-maily (např. noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testovací režim",
       "description": "Simulace odesílání e-mailů",
       "hint": "Když je \"true\", e-maily se zaznamenávají místo odesílání. Užitečné pro vývoj."
@@ -1397,11 +1347,6 @@
       "label": "URL aplikace",
       "description": "Veřejná URL aplikace",
       "hint": "Veřejná URL, kde uživatelé přistupují k aplikaci. Používá se pro generování magických odkazů."
-    },
-    "LLM_API_KEY": {
-      "label": "API klíč",
-      "description": "Klíč API Maple (tajný)",
-      "hint": "Mapuje se na MAPLE_API_KEY. Ponechte prázdné pro zrušení přepsání a použití záložního klíče .env."
     },
     "ADMIN_BASE_URL": {
       "description": "URL subdomény panelu administrace (volitelné)",
@@ -1467,16 +1412,6 @@
       "description": "URL koncového bodu monitorování stavu",
       "hint": "URL pro kontrolu stavu pro externí monitory. Výchozí: http://localhost:8000/health.",
       "label": "URL monitorování"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Zobrazit tlačítko pro simulované připojení Nostr pro administrátorskou autentizaci (pouze pro testování)",
-      "hint": "Povolte pro vývoj/testování. Zobrazí tlačítko \"Simulované připojení\" na přihlašovací stránce administrátora, které obchází požadavek na rozšíření Nostr. Mělo by být zakázáno v produkci.",
-      "label": "Simulovat administrátorskou autentizaci"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Povolit ověření uživatele bez tokenu magic link (pouze pro testování)",
-      "hint": "Povolte pro vývoj/testování. Umožňuje uživatelům dokončit ověření e-mailu bez kliknutí na magic link. Mělo by být zakázáno v produkci.",
-      "label": "Simulovat uživatelskou autentizaci"
     },
     "SPF_INCLUDE": {
       "description": "Direktiva pro zahrnutí SPF DNS",
@@ -1783,7 +1718,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Testujte toky kouzelného odkazu a autentizace Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Testujte omezování rychlosti odesíláním rychlých požadavků na koncové body s omezenou rychlostí.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Testujte tok vytváření uživatelů s dynamickými poli na základě typu uživatele.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testuje konektivitu ke službě Maple LLM.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Kompletní RAG pipeline: vložení → vyhledávání → načtení → generování.",
       "this_is_where_the_magic_happens_e98c18": "— Zde se děje kouzlo:",
       "toggle_theme_9b0eaf": "Přepnout motiv",

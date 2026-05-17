@@ -179,6 +179,10 @@ function ConversationTracePanel({ trace }: { trace: ConversationTrace }) {
   )
 }
 
+function isInternalWritingStatus(status: string) {
+  return status.trim().toLowerCase().replace(/\.+$/, '') === 'writing answer'
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const { resolvedTheme } = useTheme()
   const { t } = useTranslation()
@@ -186,6 +190,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const [copiedMessage, setCopiedMessage] = useState(false)
   const isUser = message.role === 'user'
   const label = isUser ? config.userLabel : config.assistantName
+  const visibleTraceStatus = message.traceStatus && !isInternalWritingStatus(message.traceStatus)
+    ? message.traceStatus
+    : null
+
+  if (!isUser && !message.content.trim() && !visibleTraceStatus && !message.trace) {
+    return null
+  }
 
   const handleCopyMessage = async () => {
     await navigator.clipboard.writeText(message.content)
@@ -386,9 +397,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 >
                   {message.content}
                 </ReactMarkdown>
-                {message.traceStatus && (
+                {visibleTraceStatus && (
                   <div className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
-                    {message.traceStatus}
+                    {visibleTraceStatus}
                   </div>
                 )}
                 {message.trace && <ConversationTracePanel trace={message.trace} />}

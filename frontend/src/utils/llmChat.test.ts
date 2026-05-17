@@ -1,16 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools, sendQueryStream } from './llmChat'
-import { adminFetch, isAdminAuthenticated } from './adminApi'
-import { decryptField, hasNip04Support } from './encryption'
+import { adminFetch } from './adminApi'
 
 vi.mock('./adminApi', () => ({
   adminFetch: vi.fn(),
-  isAdminAuthenticated: vi.fn(() => false),
-}))
-
-vi.mock('./encryption', () => ({
-  decryptField: vi.fn(),
-  hasNip04Support: vi.fn(() => false),
 }))
 
 describe('sendLlmChatWithUnifiedTools', () => {
@@ -22,7 +15,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatWithUnifiedTools({
       content: 'What was the secret word?',
       tools: [],
-      t: (key) => key,
       sessionId: 'session-123',
     })
 
@@ -43,7 +35,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatWithUnifiedTools({
       content: 'Start fresh',
       tools: [],
-      t: (key) => key,
     })
 
     expect(fetch).toHaveBeenCalledWith('/api/llm/chat', expect.objectContaining({
@@ -59,13 +50,27 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatWithUnifiedTools({
       content: 'Check my deployment config',
       tools: ['admin-config'],
-      t: (key) => key,
     })
 
     const [, options] = vi.mocked(fetch).mock.calls[0]
     expect(JSON.parse(String(options?.body))).toEqual({
       message: 'Check my deployment config',
       tools: ['admin-config'],
+    })
+  })
+
+  it('sends trusted context without the removed client-executed tools contract', async () => {
+    await sendLlmChatWithUnifiedTools({
+      content: 'Use this context',
+      tools: ['db-query'],
+      baseToolContext: 'Trusted context prepared outside tool execution',
+    })
+
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'Use this context',
+      tools: ['db-query'],
+      tool_context: 'Trusted context prepared outside tool execution',
     })
   })
 
@@ -89,7 +94,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatStreamWithUnifiedTools({
       content: 'Hello',
       tools: [],
-      t: (key) => key,
       onEvent: (event, data) => events.push({ event, data }),
     })
 
@@ -124,7 +128,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatStreamWithUnifiedTools({
       content: 'Check my deployment config',
       tools: ['admin-config'],
-      t: (key) => key,
       onEvent: vi.fn(),
     })
 
@@ -150,7 +153,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatStreamWithUnifiedTools({
       content: 'your suggestions above',
       tools: ['admin-config'],
-      t: (key) => key,
       conversationHistory: [
         { role: 'user', content: 'Change more of the copy.' },
         { role: 'assistant', content: 'I recommend updating Instance Name, Assistant Name, and Reachout Title.' },
@@ -169,10 +171,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
     })
   })
 
-  it('streams database questions with decrypted client-executed context when admin keys are available', async () => {
-    vi.mocked(isAdminAuthenticated).mockReturnValue(true)
-    vi.mocked(hasNip04Support).mockReturnValue(true)
-    vi.mocked(decryptField).mockResolvedValue('decrypted secret')
+  it('streams database questions as Sage-owned tool turns without client-executing /admin/tools/execute', async () => {
     vi.mocked(adminFetch).mockResolvedValue(Response.json({
       success: true,
       data: {
@@ -196,20 +195,14 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatStreamWithUnifiedTools({
       content: 'What is in settings?',
       tools: ['db-query'],
-      t: (key, options) => {
-        if (key === 'chat.database.executedSql') return `SQL: ${options?.sql}`
-        if (key === 'chat.database.resultsCount') return `Rows: ${options?.count}`
-        return key
-      },
       onEvent: vi.fn(),
     })
 
     const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(adminFetch).not.toHaveBeenCalled()
     expect(JSON.parse(String(options?.body))).toEqual({
       message: 'What is in settings?',
       tools: ['db-query'],
-      tool_context: 'SQL: SELECT encrypted_value, ephemeral_pubkey FROM settings\n\nRows: 1\n\nvalue\n-----\ndecrypted secret',
-      client_executed_tools: ['db-query'],
     })
   })
 
@@ -231,7 +224,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
     await sendLlmChatStreamWithUnifiedTools({
       content: 'Hello',
       tools: [],
-      t: (key) => key,
       onEvent: (event, data) => events.push({ event, data }),
     })
 

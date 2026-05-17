@@ -217,7 +217,26 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Tenant Rights Guide')).toBeInTheDocument()
   })
 
-  it('renders compact live trace status while a streamed assistant turn is in progress', () => {
+  it('does not render the internal writing trace as assistant content', () => {
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-1',
+              role: 'assistant',
+              content: '',
+              traceStatus: 'Writing answer...',
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    )
+
+    expect(screen.queryByText('Writing answer...')).not.toBeInTheDocument()
+  })
+
+  it('renders meaningful live trace status while a streamed assistant turn is in progress', () => {
     render(
       <ThemeProvider>
         <InstanceConfigProvider>
@@ -226,13 +245,13 @@ describe('ChatMessage', () => {
               id: 'message-1',
               role: 'assistant',
               content: 'Partial answer',
-              traceStatus: 'Writing answer...',
+              traceStatus: 'Searching documents...',
             }}
           />
         </InstanceConfigProvider>
       </ThemeProvider>
     )
 
-    expect(screen.getByText('Writing answer...')).toBeInTheDocument()
+    expect(screen.getByText('Searching documents...')).toBeInTheDocument()
   })
 })

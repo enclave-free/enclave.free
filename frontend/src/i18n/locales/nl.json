@@ -410,7 +410,6 @@
       "compact": "Beknopt",
       "expand": "Uitbreiden",
       "shareSecretsTitle": "Geheime omgevingsvariabelen delen",
-      "shareSecretsHint": "Standaard uitgeschakeld. Schakel eerst de Config-tool in. Indien ingeschakeld, worden geheime implementatieconfiguratiewaarden aan de clientzijde onthuld en naar Maple verzonden.",
       "sensitive": "Gevoelig",
       "emptyPrompt": "Stel vragen over elke beheerconfiguratie. Wil je dat de assistent wijzigingen voorstelt en toepast, vraag dan om een JSON change set op te nemen.",
       "pendingChanges": "Openstaande wijzigingen",
@@ -534,12 +533,9 @@
     "title": "Beheerderconfiguratie",
     "subtitle": "Verbind met je Nostr-identiteit om deze instantie te beheren",
     "connectNostr": "Verbinden met Nostr",
-    "orForTesting": "of voor testen",
-    "continueMock": "Doorgaan met mock-identiteit",
     "connecting": "Verbinden met extensie...",
     "noExtension": "Geen Nostr-extensie gevonden",
     "installExtension": "Installeer een NIP-07 compatibele extensie om door te gaan",
-    "useMock": "Mock gebruiken",
     "welcomeAdmin": "Welkom, Beheerder!",
     "connectedAs": "Verbonden als",
     "redirecting": "Doorsturen naar dashboard...",
@@ -611,7 +607,6 @@
       "sentMagicLink": "We hebben een magic link gestuurd naar",
       "clickLink": "Klik op de link in de e-mail om in te loggen.",
       "checkSpam": "Niet te zien? Controleer je spammap.",
-      "simulateMagicLink": "Klikken op magic link simuleren",
       "forTesting": "Voor testdoeleinden:",
       "dataProtectionTitle": "Hoe Enclave je gegevens beschermt",
       "noPasswordTitle": "Geen opgeslagen wachtwoorden",
@@ -715,13 +710,6 @@
       "roleAssistant": "Assistent",
       "footer": "Geëxporteerd van {{instanceName}}",
       "exportedOn": "Geëxporteerd op {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Uitgevoerde SQL: {{sql}}",
-      "noResults": "Query leverde geen resultaten op.",
-      "resultsCount_one": "Databasequery resultaat ({{count}} rij):",
-      "resultsCount_other": "Databasequery resultaten ({{count}} rijen):",
-      "resultsTruncated": "(Resultaten afgekapt tot 100 rijen)"
     }
   },
   "errors": {
@@ -942,7 +930,7 @@
       "gmailHint": "Gebruik een app-wachtwoord — niet je gewone Gmail-wachtwoord. Schakel eerst 2FA in en genereer vervolgens een app-wachtwoord in de beveiligingsinstellingen van je Google-account.",
       "goToPage": "Ga naar pagina",
       "mailgunHint": "Gebruik je Mailgun SMTP-inloggegevens van de domeininstellingenpagina. De host is doorgaans smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — wanneer ingeschakeld worden e-mails gelogd naar de console in plaats van verzonden. Handig voor ontwikkeling.",
+      "mockEmail": "MOCK_EMAIL — wanneer ingeschakeld worden e-mails gelogd naar de console in plaats van verzonden. Handig voor ontwikkeling.",
       "overviewDesc": "Configureer SMTP-instellingen om uitgaande e-mail in te schakelen (uitnodigingen, meldingen, wachtwoord-resets). Alle providers gebruiken standaard SMTP-velden.",
       "overviewTitle": "Overzicht e-mail (SMTP)",
       "postmarkHint": "Gebruik je Postmark Server API-token als SMTP-wachtwoord. De SMTP-gebruikersnaam is altijd hetzelfde token.",
@@ -1014,20 +1002,6 @@
       "usersToMigrate": "Te migreren gebruikers",
       "warning": "Dit is een geavanceerde bewerking. Onjuiste migratie kan je buitensluiten van versleutelde gegevens. Ga alleen verder als je de gevolgen begrijpt."
     },
-    "leaveEmptyForLlmApiKey": "Laat leeg om de overschrijving te wissen en de .env MAPLE_API_KEY-terugval te gebruiken.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — uw Maple API-sleutel. Komt overeen met MAPLE_API_KEY.",
-      "apiKeyLabel": "Maple API-sleutel",
-      "ariaLabel": "Maple LLM-configuratiehulp",
-      "exampleConfig": "Voorbeeldconfiguratie",
-      "goToPage": "Ga naar pagina",
-      "mapleExtra": "Stel LLM_API_KEY in op uw Maple-sleutel van {{mapleSignupUrl}}. LLM_*-sleutels komen overeen met MAPLE_*-aliassen.",
-      "mapleHint": "Maple is de standaard LLM-backend voor Enclave.",
-      "modelField": "LLM_MODEL — Maple-modelidentificatie (bijvoorbeeld: kimi-k2.5).",
-      "overviewDesc": "Enclave gebruikt Maple als zijn standaard LLM-service. Maple biedt onder de motorkap een OpenAI-compatibele API.",
-      "overviewTitle": "Maple LLM Overzicht",
-      "providerField": "LLM_PROVIDER — vastgezet op \"maple\" voor compatibiliteit."
-    },
     "revealFailed": "Kan de waarde niet onthullen. Controleer je Nostr-extensieverbinding.",
     "searchHelp": {
       "ariaLabel": "Hulp bij webzoekconfiguratie",
@@ -1057,9 +1031,7 @@
       "overviewDesc": "Beveiligingsinstellingen bepalen authenticatie, sessiebeheer en ontwikkelingssnelkoppelingen. Standaardwaarden zijn geconfigureerd voor lokale ontwikkeling.",
       "overviewNote": "In productie, zorg ervoor dat simulatievlaggen uit staan en FRONTEND_URL overeenkomt met je werkelijke domein.",
       "overviewTitle": "Overzicht beveiliging",
-      "overviewWhen": "Controleer deze instellingen voordat je deployt naar een publiek toegankelijke server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — omzeilt beheerdersauthenticatie. Alle verzoeken worden behandeld alsof ze van een beheerder komen.",
-      "simUserDesc": "SIMULATE_USER_AUTH — omzeilt gebruikersauthenticatie. Alle verzoeken worden behandeld alsof ze van een ingelogde gebruiker komen."
+      "overviewWhen": "Controleer deze instellingen voordat je deployt naar een publiek toegankelijke server."
     },
     "sslHelp": {
       "ariaLabel": "Hulp bij SSL- en HTTPS-configuratie",
@@ -1197,11 +1169,6 @@
     }
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Configureer Maple-inferentie",
-      "hint": "Enclave gebruikt momenteel alleen Maple voor LLM-inferentie. Configureer hier de Maple-model-/API-instellingen. Wijzigingen vereisen een herstart."
-    },
     "embedding": {
       "label": "Tekstverwerking",
       "description": "Configureer hoe documenten worden geanalyseerd",
@@ -1289,21 +1256,6 @@
     }
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "AI-service",
-      "description": "LLM-provider (alleen Maple)",
-      "hint": "Maple is de enige ondersteunde waarde. Deze sleutel blijft behouden voor compatibiliteit."
-    },
-    "LLM_MODEL": {
-      "label": "Modelnaam",
-      "description": "Modelnaam/identificatie",
-      "hint": "De te gebruiken Maple-modelidentificatie (bijv. \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "API-eindpunt",
-      "description": "Basis-URL voor API-verzoeken",
-      "hint": "Maple API-basis-URL. Standaard: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Contextfragmenten",
       "description": "Aantal fragmenten om op te halen",
@@ -1344,7 +1296,7 @@
       "description": "Van-adres voor e-mails",
       "hint": "Het \"van\"-adres voor uitgaande e-mails (bijv. noreply@uwdomein.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testmodus",
       "description": "Gesimuleerde e-mailverzending",
       "hint": "Wanneer \"true\", worden e-mails gelogd in plaats van verzonden. Handig voor ontwikkeling."
@@ -1378,16 +1330,6 @@
       "label": "App-URL",
       "description": "Openbare URL van de applicatie",
       "hint": "De openbare URL waar gebruikers toegang hebben tot de app. Wordt gebruikt voor het genereren van magische links."
-    },
-    "SIMULATE_USER_AUTH": {
-      "label": "Gebruikersauth simuleren",
-      "description": "Gebruikersverificatie zonder magic-link-token toestaan (alleen testen)",
-      "hint": "Schakel in voor ontwikkeling/testen. Hiermee kunnen gebruikers e-mailverificatie voltooien zonder op de magic link te klikken. Moet uitgeschakeld zijn in productie."
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "label": "Beheerderauth simuleren",
-      "description": "Mock Nostr-verbindingsknop tonen voor beheerderauth (alleen testen)",
-      "hint": "Schakel in voor ontwikkeling/testen. Toont een \"Mock-verbinding\"-knop bij het inloggen als beheerder die de Nostr-extensie-eis omzeilt. Moet uitgeschakeld zijn in productie."
     },
     "BASE_DOMAIN": {
       "label": "Hoofddomein",
@@ -1478,11 +1420,6 @@
       "label": "Monitoring-URL",
       "description": "URL voor gezondheidsmonitoring",
       "hint": "Gezondheidscontrole-URL voor externe monitors. Standaard: http://localhost:8000/health."
-    },
-    "LLM_API_KEY": {
-      "label": "API-sleutel",
-      "description": "Maple API-sleutel (geheim)",
-      "hint": "Komt overeen met MAPLE_API_KEY. Laat leeg om de overschrijving te wissen en de .env-terugval te gebruiken."
     }
   },
   "colors": {
@@ -1775,7 +1712,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Test magic link en Nostr authenticatiestromen.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Test rate limiting door snelle verzoeken te sturen naar rate-limited endpoints.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Test de gebruikersaanmaakstroom met dynamische velden op basis van gebruikerstype.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Test de connectiviteit met de Maple LLM-service.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "De complete RAG-pijplijn: embed → zoeken → ophalen → genereren.",
       "this_is_where_the_magic_happens_e98c18": "— Dit is waar de magie gebeurt:",
       "toggle_theme_9b0eaf": "Thema wisselen",

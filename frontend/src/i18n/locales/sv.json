@@ -55,7 +55,6 @@
       "sentMagicLink": "Vi skickade en magisk länk till",
       "clickLink": "Klicka på länken i e-postmeddelandet för att logga in.",
       "checkSpam": "Ser du den inte? Kolla din skräppost.",
-      "simulateMagicLink": "Simulera klick på magisk länk",
       "forTesting": "För teständamål:",
       "dataProtectionTitle": "Hur Enclave skyddar dina data",
       "noPasswordTitle": "Inga lagrade lösenord",
@@ -159,13 +158,6 @@
       "roleAssistant": "Assistent",
       "footer": "Exporterad från {{instanceName}}",
       "exportedOn": "Exporterad {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Utförd SQL: {{sql}}",
-      "noResults": "Frågan returnerade inga resultat.",
-      "resultsCount_one": "Databasfrågans resultat ({{count}} rad):",
-      "resultsCount_other": "Databasfrågans resultat ({{count}} rader):",
-      "resultsTruncated": "(Resultaten trunkerade till 100 rader)"
     }
   },
   "common": {
@@ -497,7 +489,6 @@
       "compact": "Kompakt",
       "expand": "Expandera",
       "shareSecretsTitle": "Dela hemliga miljövariabler",
-      "shareSecretsHint": "Avstängd som standard. Aktivera konfigurationsverktyget först. När den är aktiverad, visas hemliga distributionskonfigurationsvärden på klientsidan och skickas till Maple.",
       "sensitive": "Känsligt",
       "emptyPrompt": "Ställ frågor om valfri admin-konfiguration. Om du vill att assistenten ska föreslå och tillämpa ändringar, be den inkludera ett JSON change set.",
       "pendingChanges": "Väntande ändringar",
@@ -703,12 +694,9 @@
     "title": "Admininställning",
     "subtitle": "Anslut med din Nostr-identitet för att hantera denna instans",
     "connectNostr": "Anslut med Nostr",
-    "orForTesting": "eller för testning",
-    "continueMock": "Fortsätt med testidentitet",
     "connecting": "Ansluter till tillägg...",
     "noExtension": "Inget Nostr-tillägg hittades",
     "installExtension": "Installera ett NIP-07-kompatibelt tillägg för att fortsätta",
-    "useMock": "Använd testläge",
     "welcomeAdmin": "Välkommen, Admin!",
     "connectedAs": "Ansluten som",
     "redirecting": "Omdirigerar till instrumentpanelen...",
@@ -905,7 +893,7 @@
       "gmailHint": "Använd ett applösenord — inte ditt vanliga Gmail-lösenord. Aktivera 2FA först och generera sedan ett applösenord i ditt Google-kontos säkerhetsinställningar.",
       "goToPage": "Gå till sida",
       "mailgunHint": "Använd dina Mailgun SMTP-uppgifter från sidan för domäninställningar. Värden är vanligtvis smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — när aktiverad loggas e-post till konsolen istället för att skickas. Användbart för utveckling.",
+      "mockEmail": "MOCK_EMAIL — när aktiverad loggas e-post till konsolen istället för att skickas. Användbart för utveckling.",
       "overviewDesc": "Konfigurera SMTP-inställningar för att aktivera utgående e-post (inbjudningar, aviseringar, lösenordsåterställningar). Alla leverantörer använder standard SMTP-fält.",
       "overviewTitle": "Översikt av e-post (SMTP)",
       "postmarkHint": "Använd din Postmark Server API-token som SMTP-lösenord. SMTP-användarnamnet är alltid samma token.",
@@ -977,20 +965,6 @@
       "usersToMigrate": "Användare att migrera",
       "warning": "Detta är en avancerad operation. Felaktig migrering kan låsa dig ute från krypterad data. Fortsätt bara om du förstår konsekvenserna."
     },
-    "leaveEmptyForLlmApiKey": "Lämna tomt för att rensa åsidosättning och använda .env MAPLE_API_KEY reservlösning.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — din Maple API-nyckel. Mappar till MAPLE_API_KEY.",
-      "apiKeyLabel": "Maple API-nyckel",
-      "ariaLabel": "Maple LLM-konfigurationshjälp",
-      "exampleConfig": "Exempelkonfiguration",
-      "goToPage": "Gå till sida",
-      "mapleExtra": "Ställ in LLM_API_KEY till din Maple-nyckel från {{mapleSignupUrl}}. LLM_* nycklar mappas till MAPLE_* alias.",
-      "mapleHint": "Maple är den enda stödda LLM-backenden för Enclave.",
-      "modelField": "LLM_MODEL — Maple-modellidentifierare (till exempel: kimi-k2.5).",
-      "overviewDesc": "Enclave använder Maple som sin enda stödda LLM-tjänst. Maple tillhandahåller ett OpenAI-kompatibelt API under huven.",
-      "overviewTitle": "Maple LLM Översikt",
-      "providerField": "LLM_PROVIDER — fastställd till \"maple\" för kompatibilitet."
-    },
     "revealFailed": "Kunde inte visa värdet. Kontrollera anslutningen till ditt Nostr-tillägg.",
     "searchHelp": {
       "ariaLabel": "Hjälp för webbsökningskonfiguration",
@@ -1020,9 +994,7 @@
       "overviewDesc": "Säkerhetsinställningar styr autentisering, sessionshantering och utvecklingsgenvägar. Standardvärden är konfigurerade för lokal utveckling.",
       "overviewNote": "I produktion, se till att simuleringsflaggor är avstängda och att FRONTEND_URL matchar din riktiga domän.",
       "overviewTitle": "Översikt av säkerhet",
-      "overviewWhen": "Granska dessa inställningar innan du driftsätter på en publikt tillgänglig server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — kringgår administratörsautentisering. Alla förfrågningar behandlas som om de kommer från en administratörsanvändare.",
-      "simUserDesc": "SIMULATE_USER_AUTH — kringgår användarautentisering. Alla förfrågningar behandlas som om de kommer från en inloggad användare."
+      "overviewWhen": "Granska dessa inställningar innan du driftsätter på en publikt tillgänglig server."
     },
     "sslHelp": {
       "ariaLabel": "Hjälp för SSL- och HTTPS-konfiguration",
@@ -1197,11 +1169,6 @@
     "uploadingStatus": "Laddar upp till server..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Konfigurera Maple-inferens",
-      "hint": "Enclave är endast Maple för LLM-inferens. Konfigurera Maple-modell/API-inställningar här. Ändringar kräver en omstart."
-    },
     "embedding": {
       "label": "Textbearbetning",
       "description": "Konfigurera hur dokument analyseras",
@@ -1300,21 +1267,6 @@
     "sampleQuestion": "Vad bör jag veta om detta ämne?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "AI-tjänst",
-      "description": "LLM-leverantör (endast Maple)",
-      "hint": "Maple är det enda värdet som stöds. Denna nyckel finns kvar för kompatibilitet."
-    },
-    "LLM_MODEL": {
-      "label": "Modellnamn",
-      "description": "Modellnamn/identifierare",
-      "hint": "Maple-modellidentifieraren som ska användas (t.ex. \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "API-slutpunkt",
-      "description": "Bas-URL för API-förfrågningar",
-      "hint": "Maple API bas-URL. Standard: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Kontextfragment",
       "description": "Antal fragment att hämta",
@@ -1355,7 +1307,7 @@
       "description": "Från-adress för e-post",
       "hint": "\"Från\"-adressen för utgående e-post (t.ex. noreply@dindomän.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Testläge",
       "description": "Simulerad e-postutskick",
       "hint": "När \"true\", loggas e-post istället för att skickas. Användbart för utveckling."
@@ -1389,11 +1341,6 @@
       "label": "App-URL",
       "description": "Offentlig URL för applikationen",
       "hint": "Den offentliga URL där användare kommer åt appen. Används för att generera magiska länkar."
-    },
-    "LLM_API_KEY": {
-      "label": "API-nyckel",
-      "description": "Maple API-nyckel (hemlig)",
-      "hint": "Mappar till MAPLE_API_KEY. Lämna tomt för att rensa åsidosättning och använda .env reservlösning."
     },
     "ADMIN_BASE_URL": {
       "description": "URL för administratörspanelens subdomän (valfritt)",
@@ -1459,16 +1406,6 @@
       "description": "URL för övervakning av hälsokontrollslutpunkt",
       "hint": "URL för hälsokontroll för externa övervakare. Standard: http://localhost:8000/health.",
       "label": "Övervaknings-URL"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Visa knapp för låtsas-Nostr-anslutning för adminautentisering (endast testning)",
-      "hint": "Aktivera för utveckling/testning. Visar en \"Låtsasanslutning\"-knapp vid admininloggning som kringgår kravet på Nostr-tillägget. Ska inaktiveras i produktion.",
-      "label": "Simulera administratörsautentisering"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Tillåt användarverifiering utan magisk länk-token (endast testning)",
-      "hint": "Aktivera för utveckling/testning. Tillåter användare att slutföra e-postverifiering utan att klicka på den magiska länken. Ska inaktiveras i produktion.",
-      "label": "Simulera användarautentisering"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS-include-direktiv",
@@ -1775,7 +1712,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Testa magic link och Nostr-autentiseringsflöden.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Testa hastighetsbegränsning genom att skicka snabba förfrågningar till hastighetsbegränsade slutpunkter.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Testa användarskaparflödet med dynamiska fält baserat på användartyp.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testar anslutning till Maple LLM-tjänsten.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Den kompletta RAG-pipelinen: bädda in → sök → hämta → generera.",
       "this_is_where_the_magic_happens_e98c18": "— Det är här magin händer:",
       "toggle_theme_9b0eaf": "Växla tema",

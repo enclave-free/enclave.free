@@ -328,7 +328,6 @@
       "compact": "Ringkas",
       "expand": "Perluas",
       "shareSecretsTitle": "Bagikan variabel environment rahasia",
-      "shareSecretsHint": "Nonaktif secara default. Aktifkan alat Konfigurasi terlebih dahulu. Saat diaktifkan, nilai konfigurasi deployment rahasia akan terungkap di sisi klien dan dikirim ke Maple.",
       "sensitive": "Sensitif",
       "emptyPrompt": "Ajukan pertanyaan tentang konfigurasi admin apa pun. Jika Anda ingin asisten mengusulkan dan menerapkan perubahan, minta agar menyertakan JSON change set.",
       "pendingChanges": "Perubahan tertunda",
@@ -534,12 +533,9 @@
     "title": "Pengaturan Admin",
     "subtitle": "Hubungkan dengan identitas Nostr Anda untuk mengelola instance ini",
     "connectNostr": "Hubungkan dengan Nostr",
-    "orForTesting": "atau untuk pengujian",
-    "continueMock": "Lanjutkan dengan identitas tiruan",
     "connecting": "Menghubungkan ke ekstensi...",
     "noExtension": "Ekstensi Nostr tidak ditemukan",
     "installExtension": "Instal ekstensi yang kompatibel dengan NIP-07 untuk melanjutkan",
-    "useMock": "Gunakan tiruan",
     "welcomeAdmin": "Selamat datang, Admin!",
     "connectedAs": "Terhubung sebagai",
     "redirecting": "Mengalihkan ke dashboard...",
@@ -611,7 +607,6 @@
       "sentMagicLink": "Kami mengirimkan tautan ajaib ke",
       "clickLink": "Klik tautan di email untuk masuk.",
       "checkSpam": "Tidak terlihat? Periksa folder spam Anda.",
-      "simulateMagicLink": "Simulasikan klik tautan ajaib",
       "forTesting": "Untuk tujuan pengujian:",
       "dataProtectionTitle": "Bagaimana Enclave melindungi data Anda",
       "noPasswordTitle": "Tanpa kata sandi tersimpan",
@@ -715,13 +710,6 @@
       "roleAssistant": "Asisten",
       "footer": "Diekspor dari {{instanceName}}",
       "exportedOn": "Diekspor pada {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "SQL yang dijalankan: {{sql}}",
-      "noResults": "Query tidak mengembalikan hasil.",
-      "resultsCount_one": "Hasil query database ({{count}} baris):",
-      "resultsCount_other": "Hasil query database ({{count}} baris):",
-      "resultsTruncated": "(Hasil dipotong menjadi 100 baris)"
     }
   },
   "errors": {
@@ -905,7 +893,7 @@
       "gmailHint": "Gunakan Kata Sandi Aplikasi — bukan kata sandi Gmail biasa Anda. Aktifkan 2FA terlebih dahulu, lalu buat Kata Sandi Aplikasi di pengaturan keamanan Akun Google Anda.",
       "goToPage": "Buka halaman",
       "mailgunHint": "Gunakan kredensial SMTP Mailgun Anda dari halaman pengaturan domain. Host biasanya smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — saat diaktifkan, email dicatat ke konsol alih-alih dikirim. Berguna untuk pengembangan.",
+      "mockEmail": "MOCK_EMAIL — saat diaktifkan, email dicatat ke konsol alih-alih dikirim. Berguna untuk pengembangan.",
       "overviewDesc": "Konfigurasi pengaturan SMTP untuk mengaktifkan email keluar (undangan, notifikasi, reset kata sandi). Semua penyedia menggunakan field SMTP standar.",
       "overviewTitle": "Gambaran Umum Email (SMTP)",
       "postmarkHint": "Gunakan token API Server Postmark Anda sebagai kata sandi SMTP. Nama pengguna SMTP selalu token yang sama.",
@@ -977,20 +965,6 @@
       "usersToMigrate": "Pengguna yang akan dimigrasikan",
       "warning": "Ini adalah operasi lanjutan. Migrasi yang salah dapat mengunci Anda dari data terenkripsi. Lanjutkan hanya jika Anda memahami konsekuensinya."
     },
-    "leaveEmptyForLlmApiKey": "Biarkan kosong untuk menghapus override dan menggunakan fallback MAPLE_API_KEY dari .env.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — kunci API Maple Anda. Berpeta ke MAPLE_API_KEY.",
-      "apiKeyLabel": "Kunci API Maple",
-      "ariaLabel": "Bantuan konfigurasi LLM Maple",
-      "exampleConfig": "Contoh konfigurasi",
-      "goToPage": "Buka halaman",
-      "mapleExtra": "Setel LLM_API_KEY ke kunci Maple Anda dari {{mapleSignupUrl}}. Kunci LLM_* berpeta ke alias MAPLE_*.",
-      "mapleHint": "Maple adalah backend LLM standar untuk Enclave.",
-      "modelField": "LLM_MODEL — pengidentifikasi model Maple (misalnya: kimi-k2.5).",
-      "overviewDesc": "Enclave menggunakan Maple sebagai layanan LLM standarnya. Maple menyediakan API yang kompatibel dengan OpenAI di balik layar.",
-      "overviewTitle": "Ikhtisar LLM Maple",
-      "providerField": "LLM_PROVIDER — tetap \"maple\" untuk kompatibilitas."
-    },
     "revealFailed": "Gagal menampilkan nilai. Periksa koneksi ekstensi Nostr Anda.",
     "searchHelp": {
       "ariaLabel": "Bantuan konfigurasi pencarian web",
@@ -1020,9 +994,7 @@
       "overviewDesc": "Pengaturan keamanan mengontrol autentikasi, penanganan sesi, dan pintasan pengembangan. Default dikonfigurasi untuk pengembangan lokal.",
       "overviewNote": "Di produksi, pastikan flag simulasi dinonaktifkan dan FRONTEND_URL sesuai dengan domain nyata Anda.",
       "overviewTitle": "Gambaran Umum Keamanan",
-      "overviewWhen": "Tinjau pengaturan ini sebelum men-deploy ke server yang menghadap publik.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — melewati autentikasi admin. Semua permintaan diperlakukan seolah-olah berasal dari pengguna admin.",
-      "simUserDesc": "SIMULATE_USER_AUTH — melewati autentikasi pengguna. Semua permintaan diperlakukan seolah-olah berasal dari pengguna yang sudah masuk."
+      "overviewWhen": "Tinjau pengaturan ini sebelum men-deploy ke server yang menghadap publik."
     },
     "sslHelp": {
       "ariaLabel": "Bantuan konfigurasi SSL dan HTTPS",
@@ -1197,11 +1169,6 @@
     "uploadingStatus": "Mengunggah ke server..."
   },
   "configCategories": {
-    "llm": {
-      "label": "AI Maple",
-      "description": "Konfigurasi inferensi Maple",
-      "hint": "Enclave hanya menggunakan Maple untuk inferensi LLM. Konfigurasi pengaturan model/API Maple di sini. Perubahan memerlukan restart."
-    },
     "embedding": {
       "label": "Pemrosesan Teks",
       "description": "Konfigurasi cara dokumen dianalisis",
@@ -1300,21 +1267,6 @@
     "sampleQuestion": "Apa yang harus saya ketahui tentang topik ini?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Layanan AI",
-      "description": "Penyedia LLM (hanya Maple)",
-      "hint": "Maple adalah satu-satunya nilai yang didukung. Kunci ini tetap ada untuk kompatibilitas."
-    },
-    "LLM_MODEL": {
-      "label": "Nama Model",
-      "description": "Nama/pengenal model",
-      "hint": "Pengidentifikasi model Maple yang akan digunakan (misalnya, \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "Endpoint API",
-      "description": "URL dasar untuk permintaan API",
-      "hint": "URL dasar API Maple. Default: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Potongan Konteks",
       "description": "Jumlah potongan yang diambil",
@@ -1355,7 +1307,7 @@
       "description": "Alamat pengirim untuk email",
       "hint": "Alamat \"from\" untuk email keluar (misalnya noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Mode Uji",
       "description": "Simulasi pengiriman email",
       "hint": "Ketika \"true\", email dicatat alih-alih dikirim. Berguna untuk pengembangan."
@@ -1389,11 +1341,6 @@
       "label": "URL Aplikasi",
       "description": "URL publik untuk aplikasi",
       "hint": "URL publik tempat pengguna mengakses aplikasi. Digunakan untuk menghasilkan tautan ajaib."
-    },
-    "LLM_API_KEY": {
-      "label": "Kunci API",
-      "description": "Kunci API Maple (rahasia)",
-      "hint": "Berpeta ke MAPLE_API_KEY. Biarkan kosong untuk menghapus override dan menggunakan fallback .env."
     },
     "ADMIN_BASE_URL": {
       "description": "URL subdomain panel admin (opsional)",
@@ -1459,16 +1406,6 @@
       "description": "URL titik akhir pemantauan kesehatan",
       "hint": "URL pemeriksaan kesehatan untuk monitor eksternal. Default: http://localhost:8000/health.",
       "label": "URL Pemantauan"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Tampilkan tombol koneksi Nostr tiruan untuk otentikasi admin (hanya pengujian)",
-      "hint": "Aktifkan untuk pengembangan/pengujian. Menampilkan tombol \"Koneksi Tiruan\" pada login admin yang melewati persyaratan ekstensi Nostr. Harus dinonaktifkan di produksi.",
-      "label": "Simulasikan Otentikasi Admin"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Izinkan verifikasi pengguna tanpa token tautan ajaib (hanya pengujian)",
-      "hint": "Aktifkan untuk pengembangan/pengujian. Mengizinkan pengguna untuk menyelesaikan verifikasi email tanpa mengklik tautan ajaib. Harus dinonaktifkan di produksi.",
-      "label": "Simulasikan Otentikasi Pengguna"
     },
     "SPF_INCLUDE": {
       "description": "Direktif include DNS SPF",
@@ -1775,7 +1712,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Uji tautan ajaib dan alur otentikasi Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Uji pembatasan kecepatan dengan mengirimkan permintaan cepat ke endpoint yang dibatasi kecepatan.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Uji alur pembuatan pengguna dengan bidang dinamis berdasarkan jenis pengguna.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Menguji konektivitas ke layanan LLM Maple.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Pipa RAG lengkap: semat → cari → ambil → hasilkan.",
       "this_is_where_the_magic_happens_e98c18": "— Di sinilah keajaiban terjadi:",
       "toggle_theme_9b0eaf": "Ganti tema",

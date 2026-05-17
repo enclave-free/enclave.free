@@ -55,7 +55,6 @@
       "sentMagicLink": "Chúng tôi đã gửi liên kết ma thuật tới",
       "clickLink": "Nhấn vào liên kết trong email để đăng nhập.",
       "checkSpam": "Không thấy? Hãy kiểm tra thư mục spam.",
-      "simulateMagicLink": "Mô phỏng nhấn vào liên kết ma thuật",
       "forTesting": "Cho mục đích thử nghiệm:",
       "dataProtectionTitle": "Enclave bảo vệ dữ liệu của bạn như thế nào",
       "noPasswordTitle": "Không lưu trữ mật khẩu",
@@ -159,13 +158,6 @@
       "roleAssistant": "Trợ lý",
       "footer": "Xuất từ {{instanceName}}",
       "exportedOn": "Xuất lúc {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Đã thực thi SQL: {{sql}}",
-      "noResults": "Truy vấn không trả về kết quả.",
-      "resultsCount_one": "Kết quả truy vấn cơ sở dữ liệu ({{count}} dòng):",
-      "resultsCount_other": "Kết quả truy vấn cơ sở dữ liệu ({{count}} dòng):",
-      "resultsTruncated": "(Kết quả đã bị cắt ngắn còn 100 dòng)"
     }
   },
   "common": {
@@ -499,7 +491,6 @@
       "compact": "Gọn",
       "expand": "Mở rộng",
       "shareSecretsTitle": "Chia sẻ biến môi trường bí mật",
-      "shareSecretsHint": "Mặc định tắt. Kích hoạt công cụ Cấu hình trước. Khi được bật, các giá trị cấu hình triển khai bí mật sẽ được tiết lộ ở phía máy khách và gửi đến Maple.",
       "sensitive": "Nhạy cảm",
       "emptyPrompt": "Hỏi về bất kỳ cấu hình quản trị nào. Nếu muốn trợ lý đề xuất và áp dụng thay đổi, hãy yêu cầu nó kèm JSON change set.",
       "pendingChanges": "Thay đổi đang chờ",
@@ -705,12 +696,9 @@
     "title": "Thiết lập quản trị",
     "subtitle": "Kết nối với danh tính Nostr của bạn để quản lý phiên bản này",
     "connectNostr": "Kết nối với Nostr",
-    "orForTesting": "hoặc để thử nghiệm",
-    "continueMock": "Tiếp tục với danh tính giả",
     "connecting": "Đang kết nối với tiện ích...",
     "noExtension": "Không tìm thấy tiện ích Nostr",
     "installExtension": "Cài đặt tiện ích tương thích NIP-07 để tiếp tục",
-    "useMock": "Sử dụng danh tính giả",
     "welcomeAdmin": "Chào mừng, Quản trị viên!",
     "connectedAs": "Đã kết nối với tư cách",
     "redirecting": "Đang chuyển hướng đến bảng điều khiển...",
@@ -907,7 +895,7 @@
       "gmailHint": "Sử dụng Mật khẩu ứng dụng — không phải mật khẩu Gmail thông thường. Bật xác thực 2 bước trước, sau đó tạo Mật khẩu ứng dụng trong cài đặt bảo mật Tài khoản Google.",
       "goToPage": "Đi đến trang",
       "mailgunHint": "Sử dụng thông tin SMTP của Mailgun từ trang cài đặt tên miền. Máy chủ thường là smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — khi bật, email được ghi log vào console thay vì gửi đi. Hữu ích cho phát triển.",
+      "mockEmail": "MOCK_EMAIL — khi bật, email được ghi log vào console thay vì gửi đi. Hữu ích cho phát triển.",
       "overviewDesc": "Cấu hình cài đặt SMTP để bật email gửi đi (lời mời, thông báo, đặt lại mật khẩu). Tất cả nhà cung cấp sử dụng các trường SMTP tiêu chuẩn.",
       "overviewTitle": "Tổng quan Email (SMTP)",
       "postmarkHint": "Sử dụng token API Server của Postmark làm mật khẩu SMTP. Tên người dùng SMTP luôn là cùng một token.",
@@ -979,20 +967,6 @@
       "usersToMigrate": "Người dùng cần di chuyển",
       "warning": "Đây là thao tác nâng cao. Di chuyển không chính xác có thể khóa bạn khỏi dữ liệu đã mã hóa. Chỉ tiếp tục nếu bạn hiểu hệ quả."
     },
-    "leaveEmptyForLlmApiKey": "Để trống để xóa ghi đè và sử dụng MAPLE_API_KEY dự phòng trong .env.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — khóa API Maple của bạn. Ánh xạ tới MAPLE_API_KEY.",
-      "apiKeyLabel": "Khóa API Maple",
-      "ariaLabel": "Trợ giúp cấu hình Maple LLM",
-      "exampleConfig": "Cấu hình mẫu",
-      "goToPage": "Đi đến trang",
-      "mapleExtra": "Đặt LLM_API_KEY thành khóa Maple của bạn từ {{mapleSignupUrl}}. Các khóa LLM_* ánh xạ tới các bí danh MAPLE_*.",
-      "mapleHint": "Maple là backend LLM tiêu chuẩn cho Enclave.",
-      "modelField": "LLM_MODEL — mã định danh mô hình Maple (ví dụ: kimi-k2.5).",
-      "overviewDesc": "Enclave sử dụng Maple làm dịch vụ LLM tiêu chuẩn. Maple cung cấp API tương thích OpenAI bên dưới.",
-      "overviewTitle": "Tổng quan về Maple LLM",
-      "providerField": "LLM_PROVIDER — cố định thành \"maple\" để tương thích."
-    },
     "revealFailed": "Không thể hiển thị giá trị. Kiểm tra kết nối tiện ích mở rộng Nostr.",
     "searchHelp": {
       "ariaLabel": "Trợ giúp cấu hình tìm kiếm web",
@@ -1022,9 +996,7 @@
       "overviewDesc": "Cài đặt bảo mật kiểm soát xác thực, quản lý phiên và lối tắt phát triển. Mặc định được cấu hình cho phát triển cục bộ.",
       "overviewNote": "Trong môi trường sản xuất, đảm bảo cờ mô phỏng đã tắt và FRONTEND_URL khớp với tên miền thực.",
       "overviewTitle": "Tổng quan bảo mật",
-      "overviewWhen": "Xem xét các cài đặt này trước khi triển khai lên máy chủ công cộng.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — bỏ qua xác thực quản trị. Tất cả yêu cầu được coi là đến từ người dùng quản trị.",
-      "simUserDesc": "SIMULATE_USER_AUTH — bỏ qua xác thực người dùng. Tất cả yêu cầu được coi là đến từ người dùng đã đăng nhập."
+      "overviewWhen": "Xem xét các cài đặt này trước khi triển khai lên máy chủ công cộng."
     },
     "sslHelp": {
       "ariaLabel": "Trợ giúp cấu hình SSL và HTTPS",
@@ -1199,11 +1171,6 @@
     "uploadingStatus": "Đang tải lên máy chủ..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Cấu hình suy luận Maple",
-      "hint": "Enclave chỉ sử dụng Maple để suy luận LLM. Cấu hình mô hình Maple/cài đặt API tại đây. Các thay đổi yêu cầu khởi động lại."
-    },
     "embedding": {
       "label": "Xử lý văn bản",
       "description": "Cấu hình cách tài liệu được phân tích",
@@ -1302,21 +1269,6 @@
     "sampleQuestion": "Tôi nên biết gì về chủ đề này?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Dịch vụ AI",
-      "description": "Nhà cung cấp LLM (chỉ Maple)",
-      "hint": "Maple là giá trị duy nhất được hỗ trợ. Khóa này vẫn còn để tương thích."
-    },
-    "LLM_MODEL": {
-      "label": "Tên mô hình",
-      "description": "Tên/mã định danh mô hình",
-      "hint": "Mã định danh mô hình Maple để sử dụng (ví dụ: \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "Điểm cuối API",
-      "description": "URL cơ sở cho yêu cầu API",
-      "hint": "URL cơ sở API Maple. Mặc định: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Khối ngữ cảnh",
       "description": "Số lượng khối cần truy xuất",
@@ -1357,7 +1309,7 @@
       "description": "Địa chỉ gửi cho email",
       "hint": "Địa chỉ \"from\" cho email gửi đi (ví dụ: noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Chế độ thử nghiệm",
       "description": "Giả lập gửi email",
       "hint": "Khi \"true\", email được ghi log thay vì gửi. Hữu ích cho phát triển."
@@ -1391,11 +1343,6 @@
       "label": "URL ứng dụng",
       "description": "URL công khai cho ứng dụng",
       "hint": "URL công khai nơi người dùng truy cập ứng dụng. Dùng để tạo liên kết ma thuật."
-    },
-    "LLM_API_KEY": {
-      "label": "Khóa API",
-      "description": "Khóa API Maple (bí mật)",
-      "hint": "Ánh xạ tới MAPLE_API_KEY. Để trống để xóa ghi đè và sử dụng dự phòng .env."
     },
     "ADMIN_BASE_URL": {
       "description": "URL tên miền phụ bảng điều khiển quản trị (tùy chọn)",
@@ -1461,16 +1408,6 @@
       "description": "URL điểm cuối giám sát sức khỏe",
       "hint": "URL kiểm tra sức khỏe cho các công cụ giám sát bên ngoài. Mặc định: http://localhost:8000/health.",
       "label": "URL giám sát"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Hiển thị nút kết nối Nostr giả cho xác thực quản trị (chỉ thử nghiệm)",
-      "hint": "Bật cho phát triển/thử nghiệm. Hiển thị nút \"Kết nối giả\" trên đăng nhập quản trị để bỏ qua yêu cầu tiện ích mở rộng Nostr. Nên tắt trong môi trường sản xuất.",
-      "label": "Mô phỏng xác thực quản trị"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Cho phép xác minh người dùng mà không cần mã thông báo liên kết ma thuật (chỉ thử nghiệm)",
-      "hint": "Bật cho phát triển/thử nghiệm. Cho phép người dùng hoàn tất xác minh email mà không cần nhấp vào liên kết ma thuật. Nên tắt trong môi trường sản xuất.",
-      "label": "Mô phỏng xác thực người dùng"
     },
     "SPF_INCLUDE": {
       "description": "Chỉ thị SPF DNS include",
@@ -1777,7 +1714,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Kiểm tra liên kết thần kỳ và luồng xác thực Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Kiểm tra giới hạn tỷ lệ bằng cách gửi các yêu cầu nhanh đến các điểm cuối bị giới hạn tỷ lệ.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Kiểm tra quy trình tạo người dùng với các trường động dựa trên loại người dùng.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Kiểm tra kết nối với dịch vụ Maple LLM.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Quy trình RAG hoàn chỉnh: nhúng → tìm kiếm → truy xuất → tạo.",
       "this_is_where_the_magic_happens_e98c18": "— Đây là nơi phép thuật xảy ra:",
       "toggle_theme_9b0eaf": "Chuyển đổi giao diện",

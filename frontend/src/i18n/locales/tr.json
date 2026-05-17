@@ -55,7 +55,6 @@
       "sentMagicLink": "Şu adrese sihirli bağlantı gönderdik",
       "clickLink": "Giriş yapmak için e-postadaki bağlantıya tıklayın.",
       "checkSpam": "Görmüyor musunuz? Spam klasörünü kontrol edin.",
-      "simulateMagicLink": "Sihirli bağlantı tıklamasını simüle et",
       "forTesting": "Test amaçları için:",
       "dataProtectionTitle": "Enclave verilerinizi nasıl korur",
       "noPasswordTitle": "Saklanan parola yok",
@@ -159,13 +158,6 @@
       "roleAssistant": "Asistan",
       "footer": "{{instanceName}} üzerinden dışa aktarıldı",
       "exportedOn": "{{timestamp}} tarihinde dışa aktarıldı"
-    },
-    "database": {
-      "executedSql": "Yürütülen SQL: {{sql}}",
-      "noResults": "Sorgu sonuç döndürmedi.",
-      "resultsCount_one": "Veritabanı sorgu sonucu ({{count}} satır):",
-      "resultsCount_other": "Veritabanı sorgu sonuçları ({{count}} satır):",
-      "resultsTruncated": "(Sonuçlar 100 satıra kısaltıldı)"
     }
   },
   "common": {
@@ -497,7 +489,6 @@
       "compact": "Kompakt",
       "expand": "Genişlet",
       "shareSecretsTitle": "Gizli ortam değişkenlerini paylaş",
-      "shareSecretsHint": "Varsayılan olarak kapalıdır. Önce Yapılandırma aracını etkinleştirin. Etkinleştirildiğinde, gizli dağıtım yapılandırma değerleri istemci tarafında gösterilir ve Maple'a gönderilir.",
       "sensitive": "Hassas",
       "emptyPrompt": "Herhangi bir yönetici yapılandırması hakkında soru sorun. Asistanın değişiklik önermesini ve uygulamasını istiyorsanız, JSON change set eklemesini isteyin.",
       "pendingChanges": "Bekleyen değişiklikler",
@@ -703,12 +694,9 @@
     "title": "Yönetici Kurulumu",
     "subtitle": "Bu örneği yönetmek için Nostr kimliğinizle bağlanın",
     "connectNostr": "Nostr ile Bağlan",
-    "orForTesting": "veya test için",
-    "continueMock": "Sahte kimlikle devam et",
     "connecting": "Uzantıya bağlanılıyor...",
     "noExtension": "Nostr uzantısı bulunamadı",
     "installExtension": "Devam etmek için NIP-07 uyumlu bir uzantı yükleyin",
-    "useMock": "Sahte kullan",
     "welcomeAdmin": "Hoş geldiniz, Yönetici!",
     "connectedAs": "Bağlandı:",
     "redirecting": "Panele yönlendiriliyor...",
@@ -905,7 +893,7 @@
       "gmailHint": "Bir Uygulama Parolası kullanın — normal Gmail parolanızı değil. Önce 2FA'yı etkinleştirin, ardından Google Hesabı güvenlik ayarlarınızda bir Uygulama Parolası oluşturun.",
       "goToPage": "Sayfaya git",
       "mailgunHint": "Alan adı ayarları sayfasındaki Mailgun SMTP kimlik bilgilerinizi kullanın. Ana bilgisayar genellikle smtp.mailgun.org'dur.",
-      "mockSmtp": "MOCK_SMTP — etkinleştirildiğinde, e-postalar gönderilmek yerine konsola kaydedilir. Geliştirme için kullanışlıdır.",
+      "mockEmail": "MOCK_EMAIL — etkinleştirildiğinde, e-postalar gönderilmek yerine konsola kaydedilir. Geliştirme için kullanışlıdır.",
       "overviewDesc": "Giden e-postayı (davetler, bildirimler, parola sıfırlama) etkinleştirmek için SMTP ayarlarını yapılandırın. Tüm sağlayıcılar standart SMTP alanlarını kullanır.",
       "overviewTitle": "E-posta (SMTP) Genel Bakış",
       "postmarkHint": "Postmark Sunucu API tokenınızı SMTP parolası olarak kullanın. SMTP kullanıcı adı her zaman aynı tokendir.",
@@ -977,20 +965,6 @@
       "usersToMigrate": "Taşınacak kullanıcılar",
       "warning": "Bu gelişmiş bir işlemdir. Yanlış taşıma, şifrelenmiş verilere erişiminizi kaybetmenize neden olabilir. Yalnızca sonuçlarını anlıyorsanız devam edin."
     },
-    "leaveEmptyForLlmApiKey": "Geçersiz kılmayı temizlemek ve .env MAPLE_API_KEY yedeklemesini kullanmak için boş bırakın.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — Maple API anahtarınız. MAPLE_API_KEY ile eşleşir.",
-      "apiKeyLabel": "Maple API Anahtarı",
-      "ariaLabel": "Maple LLM yapılandırma yardımı",
-      "exampleConfig": "Örnek yapılandırma",
-      "goToPage": "Sayfaya git",
-      "mapleExtra": "LLM_API_KEY'i {{mapleSignupUrl}} adresindeki Maple anahtarınıza ayarlayın. LLM_* anahtarları MAPLE_* takma adlarına eşleşir.",
-      "mapleHint": "Maple, Enclave için standart LLM arka ucudur.",
-      "modelField": "LLM_MODEL — Maple model tanımlayıcısı (örneğin: kimi-k2.5).",
-      "overviewDesc": "Enclave, standart LLM hizmeti olarak Maple'ı kullanır. Maple, kaputun altında OpenAI uyumlu bir API sağlar.",
-      "overviewTitle": "Maple LLM Genel Bakış",
-      "providerField": "LLM_PROVIDER — uyumluluk için \"maple\" olarak sabitlenmiştir."
-    },
     "revealFailed": "Değer gösterilemedi. Nostr uzantısı bağlantınızı kontrol edin.",
     "searchHelp": {
       "ariaLabel": "Web arama yapılandırma yardımı",
@@ -1020,9 +994,7 @@
       "overviewDesc": "Güvenlik ayarları kimlik doğrulamayı, oturum yönetimini ve geliştirme kısayollarını kontrol eder. Varsayılanlar yerel geliştirme için yapılandırılmıştır.",
       "overviewNote": "Üretimde, simülasyon bayraklarının kapalı olduğundan ve FRONTEND_URL'nin gerçek alan adınızla eşleştiğinden emin olun.",
       "overviewTitle": "Güvenlik Genel Bakış",
-      "overviewWhen": "Halka açık bir sunucuya dağıtmadan önce bu ayarları gözden geçirin.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — yönetici kimlik doğrulamasını atlar. Tüm istekler bir yönetici kullanıcıdan geliyormuş gibi işlenir.",
-      "simUserDesc": "SIMULATE_USER_AUTH — kullanıcı kimlik doğrulamasını atlar. Tüm istekler giriş yapmış bir kullanıcıdan geliyormuş gibi işlenir."
+      "overviewWhen": "Halka açık bir sunucuya dağıtmadan önce bu ayarları gözden geçirin."
     },
     "sslHelp": {
       "ariaLabel": "SSL ve HTTPS yapılandırma yardımı",
@@ -1197,11 +1169,6 @@
     "uploadingStatus": "Sunucuya yükleniyor..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Maple çıkarımını yapılandırın",
-      "hint": "Enclave, LLM çıkarımı için yalnızca Maple'ı kullanır. Maple modeli/API ayarlarını buradan yapılandırın. Değişiklikler yeniden başlatma gerektirir."
-    },
     "embedding": {
       "label": "Metin İşleme",
       "description": "Belgelerin nasıl analiz edileceğini yapılandırın",
@@ -1300,21 +1267,6 @@
     "sampleQuestion": "Bu konu hakkında ne bilmeliyim?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Yapay Zeka Servisi",
-      "description": "LLM sağlayıcısı (yalnızca Maple)",
-      "hint": "Maple tek desteklenen değerdir. Bu anahtar uyumluluk için kalır."
-    },
-    "LLM_MODEL": {
-      "label": "Model Adı",
-      "description": "Model adı/tanımlayıcısı",
-      "hint": "Kullanılacak Maple model tanımlayıcısı (örn. \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "API Uç Noktası",
-      "description": "API istekleri için temel URL",
-      "hint": "Maple API temel URL'si. Varsayılan: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Bağlam Parçaları",
       "description": "Alınacak parça sayısı",
@@ -1355,7 +1307,7 @@
       "description": "E-postalar için gönderen adresi",
       "hint": "Giden e-postalar için \"kimden\" adresi (ör. noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Test Modu",
       "description": "E-posta gönderimini simüle et",
       "hint": "\"true\" olduğunda, e-postalar gönderilmek yerine günlüğe kaydedilir. Geliştirme için kullanışlıdır."
@@ -1389,11 +1341,6 @@
       "label": "Uygulama URL",
       "description": "Uygulama için genel URL",
       "hint": "Kullanıcıların uygulamaya eriştiği genel URL. Sihirli bağlantılar oluşturmak için kullanılır."
-    },
-    "LLM_API_KEY": {
-      "label": "API Anahtarı",
-      "description": "Maple API anahtarı (gizli)",
-      "hint": "MAPLE_API_KEY ile eşleşir. Geçersiz kılmayı temizlemek ve .env yedeklemesini kullanmak için boş bırakın."
     },
     "ADMIN_BASE_URL": {
       "description": "Yönetici paneli alt alan adı URL'si (isteğe bağlı)",
@@ -1459,16 +1406,6 @@
       "description": "Sağlık izleme uç noktası URL'si",
       "hint": "Harici izleyiciler için sağlık kontrolü URL'si. Varsayılan: http://localhost:8000/health.",
       "label": "İzleme URL'si"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Yönetici kimlik doğrulaması için sahte Nostr bağlantı düğmesini göster (yalnızca test)",
-      "hint": "Geliştirme/test için etkinleştirin. Yönetici girişinde Nostr uzantısı gereksinimini atlayan bir \"Sahte Bağlantı\" düğmesi gösterir. Üretimde devre dışı bırakılmalıdır.",
-      "label": "Yönetici Kimlik Doğrulamasını Simüle Et"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Sihirli bağlantı belirteci olmadan kullanıcı doğrulamasına izin ver (yalnızca test)",
-      "hint": "Geliştirme/test için etkinleştirin. Kullanıcıların sihirli bağlantıya tıklamadan e-posta doğrulamayı tamamlamasına olanak tanır. Üretimde devre dışı bırakılmalıdır.",
-      "label": "Kullanıcı Kimlik Doğrulamasını Simüle Et"
     },
     "SPF_INCLUDE": {
       "description": "SPF DNS include yönergesi",
@@ -1775,7 +1712,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Sihirli bağlantı ve Nostr kimlik doğrulama akışlarını test edin.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Oran sınırlı uç noktalara hızlı istekler göndererek oran sınırlamasını test edin.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Kullanıcı türüne göre dinamik alanlarla kullanıcı oluşturma akışını test edin.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Maple LLM hizmetine bağlantıyı test eder.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "Tam RAG boru hattı: göm → ara → al → oluştur.",
       "this_is_where_the_magic_happens_e98c18": "— Sihrin gerçekleştiği yer burası:",
       "toggle_theme_9b0eaf": "Temayı değiştir",

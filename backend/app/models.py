@@ -423,7 +423,7 @@ class RowMutationResponse(BaseModel):
     error: Optional[str] = None
 
 
-# --- Agent Settings Compatibility Models ---
+# --- Agent Settings Models ---
 
 class AIConfigItem(BaseModel):
     """Single Agent Settings item"""
@@ -672,10 +672,5 @@ class ReachoutResponse(BaseModel):
 # --- Public Configuration Models ---
 
 class PublicConfigResponse(BaseModel):
-    """Response model for public (unauthenticated) configuration settings.
-
-    These settings control simulation/development features and are safe
-    to expose without authentication.
-    """
-    simulate_user_auth: bool = False
-    simulate_admin_auth: bool = False
+    """Response model for public unauthenticated configuration settings."""
+    pass

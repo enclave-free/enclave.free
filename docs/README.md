@@ -27,6 +27,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [admin-key-recovery-runbook.md](admin-key-recovery-runbook.md): admin key recovery procedures.
 - [lifecycle-confidentiality-runbook.md](lifecycle-confidentiality-runbook.md): Active Storage Lifecycle confidentiality regression and scheduled retention operations.
 - [sqlite-encryption.md](sqlite-encryption.md): SQLite encryption model and migration notes.
+- [user-profile-plaintext-migration-plan.md](user-profile-plaintext-migration-plan.md): removal record for legacy plaintext User Profile fallback support.
 - [upstream-sync.md](upstream-sync.md): notes for syncing from upstream `enclave.free`.
 
 ## Additional Product Docs
@@ -35,4 +36,4 @@ Start with the current-state docs below. They are the files that describe the ac
 - [user-reachout.md](user-reachout.md): authenticated user email reachout flow.
 - [data-protection-notice-template.md](data-protection-notice-template.md): adaptable user-facing privacy notice template.
 
-Some older docs still use legacy `Enclave` naming because that is how parts of the product and database were originally labeled. Use the docs in the `Start Here` section as the current architecture source of truth.
+Some older docs may describe historical behavior from before the Sage hard-cut. The Sage hard-cut docs in `Start Here` are authoritative for current Agent Runtime route ownership, Gateway behavior, and the active Sage-to-Python contract.

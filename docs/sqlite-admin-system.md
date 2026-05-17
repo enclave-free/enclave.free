@@ -350,8 +350,8 @@ List keys changed since service start that require restart.
 Recent config changes (default 50, up to 1000).
 
 **Common keys (LLM/embedding):** `LLM_PROVIDER`, `LLM_API_URL`, `LLM_MODEL`, `EMBEDDING_MODEL`, `RAG_TOP_K`, `PDF_EXTRACT_MODE`  
-**Common keys (email):** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_TIMEOUT`, `MOCK_SMTP` (deployment UI alias for `MOCK_EMAIL`; `MOCK_EMAIL` takes precedence if both are set), `SMTP_LAST_TEST_SUCCESS`, `SMTP_LAST_TEST_AT`  
-**Common keys (storage/search/security):** `SQLITE_PATH`, `UPLOADS_DIR`, `QDRANT_HOST`, `QDRANT_PORT`, `SEARXNG_URL`, `FRONTEND_URL`, `SIMULATE_USER_AUTH`, `SIMULATE_ADMIN_AUTH`  
+**Common keys (email):** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_TIMEOUT`, `MOCK_EMAIL`, `SMTP_LAST_TEST_SUCCESS`, `SMTP_LAST_TEST_AT`  
+**Common keys (storage/search/security):** `SQLITE_PATH`, `UPLOADS_DIR`, `QDRANT_HOST`, `QDRANT_PORT`, `SEARXNG_URL`, `FRONTEND_URL`  
 **Common keys (domains):** `BASE_DOMAIN`, `INSTANCE_URL`, `API_BASE_URL`, `ADMIN_BASE_URL`, `EMAIL_DOMAIN`, `DKIM_SELECTOR`, `SPF_INCLUDE`, `DMARC_POLICY`, `CORS_ORIGINS`, `CDN_DOMAINS`, `CUSTOM_SEARXNG_URL`, `WEBHOOK_BASE_URL`  
 **Common keys (SSL):** `TRUSTED_PROXIES`, `SSL_CERT_PATH`, `SSL_KEY_PATH`, `FORCE_HTTPS`, `HSTS_MAX_AGE`, `MONITORING_URL`
 
@@ -611,7 +611,7 @@ curl -X POST http://localhost:8000/admin/db/query \
   -d '{"sql": "SELECT * FROM users WHERE user_type_id = 1"}'
 ```
 
-**Encryption note:** This endpoint returns encrypted columns (`encrypted_*`) and their matching `ephemeral_pubkey_*` values. Decryption happens client-side in admin UIs via NIP-07. For the admin chat tool (`db-query`), see `docs/tools.md` for the `/admin/tools/execute` + `/llm/chat` flow using `tool_context` and `client_executed_tools`.
+**Encryption note:** This endpoint returns encrypted columns (`encrypted_*`) and their matching `ephemeral_pubkey_*` values. Decryption happens client-side in admin UIs via NIP-07. For the Sage-owned admin chat tool (`db-query`), see `docs/tools.md`; Sage authorizes the tool turn and delegates safe SQL execution to Python.
 
 #### CRUD Endpoints
 - `POST /admin/db/tables/{table_name}/rows` - Insert row

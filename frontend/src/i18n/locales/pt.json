@@ -55,7 +55,6 @@
       "sentMagicLink": "Enviamos um link mágico para",
       "clickLink": "Clique no link no e-mail para entrar.",
       "checkSpam": "Não encontrou? Verifique sua pasta de spam.",
-      "simulateMagicLink": "Simular clique no link mágico",
       "forTesting": "Para fins de teste:",
       "dataProtectionTitle": "Como o Enclave protege seus dados",
       "noPasswordTitle": "Sem senhas armazenadas",
@@ -159,14 +158,6 @@
       "roleAssistant": "Assistente",
       "footer": "Exportado de {{instanceName}}",
       "exportedOn": "Exportado em {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "SQL executado: {{sql}}",
-      "noResults": "A consulta não retornou resultados.",
-      "resultsCount": "Resultados da consulta ao banco de dados ({{count}} linhas):",
-      "resultsTruncated": "(Resultados truncados para 100 linhas)",
-      "resultsCount_one": "Resultado da consulta ao banco de dados ({{count}} linha):",
-      "resultsCount_other": "Resultados da consulta ao banco de dados ({{count}} linhas):"
     }
   },
   "common": {
@@ -499,7 +490,6 @@
       "compact": "Compacto",
       "expand": "Expandir",
       "shareSecretsTitle": "Compartilhar variáveis de ambiente secretas",
-      "shareSecretsHint": "Desativado por padrão. Habilite a ferramenta de Configuração primeiro. Quando ativado, os valores de configuração secreta de implantação são revelados no lado do cliente e enviados para Maple.",
       "sensitive": "Sensível",
       "emptyPrompt": "Faça perguntas sobre qualquer configuração de admin. Se quiser que o assistente proponha e aplique mudanças, peça para incluir um conjunto de mudanças em JSON.",
       "pendingChanges": "Mudanças pendentes",
@@ -705,12 +695,9 @@
     "title": "Configuração de administrador",
     "subtitle": "Conecte-se com sua identidade Nostr para gerenciar esta instância",
     "connectNostr": "Conectar com Nostr",
-    "orForTesting": "ou para testes",
-    "continueMock": "Continuar com identidade simulada",
     "connecting": "Conectando à extensão...",
     "noExtension": "Nenhuma extensão Nostr encontrada",
     "installExtension": "Instale uma extensão compatível com NIP-07 para continuar",
-    "useMock": "Usar simulação",
     "welcomeAdmin": "Bem-vindo, Administrador!",
     "connectedAs": "Conectado como",
     "redirecting": "Redirecionando para o painel...",
@@ -878,7 +865,7 @@
       "gmailHint": "Use uma Senha de App — não sua senha normal do Gmail. Ative a verificação em duas etapas primeiro, depois gere uma Senha de App nas configurações de segurança da sua Conta Google.",
       "goToPage": "Ir para a página",
       "mailgunHint": "Use suas credenciais SMTP do Mailgun da página de configurações do domínio. O host geralmente é smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — quando ativado, os e-mails são registrados no console em vez de enviados. Útil para desenvolvimento.",
+      "mockEmail": "MOCK_EMAIL — quando ativado, os e-mails são registrados no console em vez de enviados. Útil para desenvolvimento.",
       "overviewDesc": "Configure as definições de SMTP para habilitar e-mail de saída (convites, notificações, redefinições de senha). Todos os provedores usam campos SMTP padrão.",
       "overviewTitle": "Visão Geral de E-mail (SMTP)",
       "postmarkHint": "Use o token de API do seu servidor Postmark como a senha SMTP. O nome de usuário SMTP é sempre o mesmo token.",
@@ -950,20 +937,6 @@
       "usersToMigrate": "Usuários a migrar",
       "warning": "Esta é uma operação avançada. Uma migração incorreta pode bloqueá-lo dos dados criptografados. Prossiga apenas se entender as implicações."
     },
-    "leaveEmptyForLlmApiKey": "Deixe em branco para limpar a substituição e usar o fallback de MAPLE_API_KEY do .env.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — sua chave de API Maple. Mapeia para MAPLE_API_KEY.",
-      "apiKeyLabel": "Chave de API Maple",
-      "ariaLabel": "Ajuda de configuração do LLM Maple",
-      "exampleConfig": "Exemplo de configuração",
-      "goToPage": "Ir para a página",
-      "mapleExtra": "Defina LLM_API_KEY para sua chave Maple de {{mapleSignupUrl}}. As chaves LLM_* mapeiam para os apelidos MAPLE_*.",
-      "mapleHint": "Maple é o backend LLM padrão para Enclave.",
-      "modelField": "LLM_MODEL — identificador do modelo Maple (por exemplo: kimi-k2.5).",
-      "overviewDesc": "Enclave usa Maple como seu serviço LLM padrão. Maple fornece uma API compatível com OpenAI por baixo dos panos.",
-      "overviewTitle": "Visão Geral do LLM Maple",
-      "providerField": "LLM_PROVIDER — fixado em \"maple\" para compatibilidade."
-    },
     "revealFailed": "Falha ao revelar o valor. Verifique a conexão da sua extensão Nostr.",
     "searchHelp": {
       "ariaLabel": "Ajuda de configuração de busca web",
@@ -993,9 +966,7 @@
       "overviewDesc": "As configurações de segurança controlam autenticação, gerenciamento de sessões e atalhos de desenvolvimento. Os padrões são configurados para desenvolvimento local.",
       "overviewNote": "Em produção, certifique-se de que as flags de simulação estão desativadas e FRONTEND_URL corresponde ao seu domínio real.",
       "overviewTitle": "Visão Geral de Segurança",
-      "overviewWhen": "Revise essas configurações antes de implantar em um servidor público.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — ignora a autenticação de administrador. Todas as requisições são tratadas como vindas de um usuário administrador.",
-      "simUserDesc": "SIMULATE_USER_AUTH — ignora a autenticação de usuário. Todas as requisições são tratadas como vindas de um usuário autenticado."
+      "overviewWhen": "Revise essas configurações antes de implantar em um servidor público."
     },
     "sslHelp": {
       "ariaLabel": "Ajuda de configuração de SSL e HTTPS",
@@ -1199,11 +1170,6 @@
     "uploadingStatus": "Carregando para o servidor..."
   },
   "configCategories": {
-    "llm": {
-      "label": "Maple AI",
-      "description": "Configurar inferência Maple",
-      "hint": "Enclave é somente Maple para inferência LLM. Configure as configurações de modelo/API Maple aqui. As alterações exigem uma reinicialização."
-    },
     "embedding": {
       "label": "Processamento de Texto",
       "description": "Configure como os documentos são analisados",
@@ -1302,21 +1268,6 @@
     "sampleQuestion": "O que devo saber sobre este tópico?"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "Serviço de IA",
-      "description": "Provedor LLM (somente Maple)",
-      "hint": "Maple é o único valor suportado. Esta chave permanece para compatibilidade."
-    },
-    "LLM_MODEL": {
-      "label": "Nome do modelo",
-      "description": "Nome/identificador do modelo",
-      "hint": "O identificador do modelo Maple a ser usado (por exemplo, \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "Endpoint da API",
-      "description": "URL base para requisições de API",
-      "hint": "URL base da API Maple. Padrão: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "Fragmentos de contexto",
       "description": "Número de fragmentos a recuperar",
@@ -1357,7 +1308,7 @@
       "description": "Endereço de envio para e-mails",
       "hint": "O endereço \"de\" para e-mails enviados (ex: noreply@seudominio.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Modo de teste",
       "description": "Envio de e-mail simulado",
       "hint": "Quando \"true\", e-mails são registrados ao invés de enviados. Útil para desenvolvimento."
@@ -1391,11 +1342,6 @@
       "label": "URL do aplicativo",
       "description": "URL pública do aplicativo",
       "hint": "A URL pública onde os usuários acessam o aplicativo. Usado para gerar links mágicos."
-    },
-    "LLM_API_KEY": {
-      "label": "Chave API",
-      "description": "Chave da API Maple (secreta)",
-      "hint": "Mapeia para MAPLE_API_KEY. Deixe vazio para limpar a substituição e usar o fallback do .env."
     },
     "ADMIN_BASE_URL": {
       "description": "URL do subdomínio do painel de administração (opcional)",
@@ -1461,16 +1407,6 @@
       "description": "URL do endpoint de monitoramento de saúde",
       "hint": "URL de verificação de saúde para monitores externos. Padrão: http://localhost:8000/health.",
       "label": "URL de Monitoramento"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "Mostrar botão de conexão Nostr simulado para autenticação de admin (somente para teste)",
-      "hint": "Habilitar para desenvolvimento/teste. Mostra um botão \"Conexão Simulada\" no login de admin que ignora o requisito da extensão Nostr. Deve ser desativado em produção.",
-      "label": "Simular Autenticação de Admin"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "Permitir verificação do usuário sem token de link mágico (somente para teste)",
-      "hint": "Habilitar para desenvolvimento/teste. Permite que os usuários completem a verificação de e-mail sem clicar no link mágico. Deve ser desativado em produção.",
-      "label": "Simular Autenticação de Usuário"
     },
     "SPF_INCLUDE": {
       "description": "Diretiva de inclusão SPF DNS",
@@ -1777,7 +1713,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "Teste os fluxos de autenticação de link mágico e Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "Teste a limitação de taxa enviando requisições rápidas para endpoints com limite de taxa.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "Teste o fluxo de criação de usuário com campos dinâmicos baseados no tipo de usuário.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testa a conectividade com o serviço LLM Maple.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "O pipeline RAG completo: embed → search → retrieve → generate.",
       "this_is_where_the_magic_happens_e98c18": "— É aqui que a mágica acontece:",
       "toggle_theme_9b0eaf": "Alternar tema",

@@ -40,22 +40,20 @@ class ProtectedInferenceGateTest(unittest.TestCase):
                 self.assertEqual(events[0]["context"], "conversation")
                 self.assertEqual(events[0]["status"], status)
 
-    def test_development_bypass_allows_without_record_and_reports_weakened_posture(self) -> None:
-        from protected_inference import ProtectedInferenceGate
+    def test_bypass_callback_does_not_override_missing_verification(self) -> None:
+        from protected_inference import ProtectedInferenceBlocked, ProtectedInferenceGate
 
         events: list[dict] = []
         gate = ProtectedInferenceGate(
             current_status=lambda: {"status": "missing", "record": None},
             audit_block=lambda **kwargs: events.append(kwargs),
-            bypass_enabled=lambda: True,
         )
 
-        result = gate.require_current(context="conversation")
+        with self.assertRaises(ProtectedInferenceBlocked):
+            gate.require_current(context="conversation")
 
-        self.assertEqual(result["id"], None)
-        self.assertTrue(result["bypass"])
-        self.assertEqual(result["privacy_posture"], "weakened")
-        self.assertEqual(events, [])
+        self.assertEqual(events[0]["context"], "conversation")
+        self.assertEqual(events[0]["status"], "missing")
 
     def test_diagnostics_do_not_require_gate(self) -> None:
         from protected_inference import inference_requires_verification

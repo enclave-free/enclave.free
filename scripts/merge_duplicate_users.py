@@ -2,6 +2,7 @@
 import argparse
 import os
 import sqlite3
+import sys
 from typing import Iterable
 
 
@@ -45,34 +46,10 @@ def fetch_duplicate_blind_indexes(cur: sqlite3.Cursor) -> list[str]:
     return [row["email_blind_index"] for row in cur.fetchall()]
 
 
-def fetch_duplicate_plain_emails(cur: sqlite3.Cursor) -> list[str]:
-    cur.execute(
-        """
-        SELECT LOWER(TRIM(email)) AS email_norm, COUNT(*) AS count
-        FROM users
-        WHERE email_blind_index IS NULL
-          AND email IS NOT NULL
-          AND TRIM(email) != ''
-        GROUP BY LOWER(TRIM(email))
-        HAVING COUNT(*) > 1
-        ORDER BY COUNT(*) DESC
-        """
-    )
-    return [row["email_norm"] for row in cur.fetchall()]
-
-
 def fetch_users_by_blind_index(cur: sqlite3.Cursor, blind_index: str) -> list[sqlite3.Row]:
     cur.execute(
         "SELECT * FROM users WHERE email_blind_index = ? ORDER BY id",
         (blind_index,)
-    )
-    return cur.fetchall()
-
-
-def fetch_users_by_plain_email(cur: sqlite3.Cursor, email_norm: str) -> list[sqlite3.Row]:
-    cur.execute(
-        "SELECT * FROM users WHERE LOWER(TRIM(email)) = ? AND email_blind_index IS NULL ORDER BY id",
-        (email_norm,)
     )
     return cur.fetchall()
 
@@ -125,21 +102,10 @@ def merge_user_rows(cur: sqlite3.Cursor, keep: sqlite3.Row, dup: sqlite3.Row, ap
         if is_missing(keep["email_blind_index"]) and not is_missing(dup["email_blind_index"]):
             updates["email_blind_index"] = dup["email_blind_index"]
 
-    if (
-        is_missing(keep["email_blind_index"])
-        and is_missing(keep["encrypted_email"])
-        and is_missing(keep["email"])
-        and not is_missing(dup["email"])
-    ):
-        updates["email"] = dup["email"]
-
     if is_missing(keep["encrypted_name"]) and not is_missing(dup["encrypted_name"]):
         updates["encrypted_name"] = dup["encrypted_name"]
         if not is_missing(dup["ephemeral_pubkey_name"]):
             updates["ephemeral_pubkey_name"] = dup["ephemeral_pubkey_name"]
-
-    if is_missing(keep["encrypted_name"]) and is_missing(keep["name"]) and not is_missing(dup["name"]):
-        updates["name"] = dup["name"]
 
     moved_fields = move_user_fields(cur, keep_id, dup_id, apply)
 
@@ -202,8 +168,6 @@ def main() -> int:
     summary = []
     try:
         blind_groups = fetch_duplicate_blind_indexes(cur)
-        plain_groups = fetch_duplicate_plain_emails(cur)
-
         groups_processed = 0
 
         def process_group(users: list[sqlite3.Row], label: str):
@@ -236,10 +200,6 @@ def main() -> int:
         for blind_index in blind_groups:
             users = fetch_users_by_blind_index(cur, blind_index)
             process_group(users, f"blind:{blind_index[:12]}...")
-
-        for email_norm in plain_groups:
-            users = fetch_users_by_plain_email(cur, email_norm)
-            process_group(users, f"email:{mask_email(email_norm)}")
 
         if args.apply:
             conn.commit()

@@ -55,7 +55,6 @@
       "sentMagicLink": "أرسلنا رابطًا سحريًا إلى",
       "clickLink": "انقر على الرابط في البريد الإلكتروني لتسجيل الدخول.",
       "checkSpam": "لا تراه؟ تحقق من مجلد الرسائل غير المرغوب فيها.",
-      "simulateMagicLink": "محاكاة النقر على الرابط السحري",
       "forTesting": "لأغراض الاختبار:",
       "dataProtectionTitle": "كيف يحمي Enclave بياناتك",
       "noPasswordTitle": "لا كلمات مرور مخزنة",
@@ -159,13 +158,6 @@
       "roleAssistant": "المساعد",
       "footer": "تم التصدير من {{instanceName}}",
       "exportedOn": "تم التصدير في {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "SQL المنفذ: {{sql}}",
-      "noResults": "لم يُرجع الاستعلام أي نتائج.",
-      "resultsCount_one": "نتيجة استعلام قاعدة البيانات ({{count}} صف):",
-      "resultsCount_other": "نتائج استعلام قاعدة البيانات ({{count}} صفوف):",
-      "resultsTruncated": "(تم اقتطاع النتائج إلى 100 صف)"
     }
   },
   "common": {
@@ -497,7 +489,6 @@
       "compact": "مضغوط",
       "expand": "توسيع",
       "shareSecretsTitle": "مشاركة متغيرات البيئة السرّية",
-      "shareSecretsHint": "معطل افتراضياً. قم بتمكين أداة التكوين أولاً. عند التمكين، يتم الكشف عن قيم تكوين النشر السرية من جانب العميل وإرسالها إلى Maple.",
       "sensitive": "حساس",
       "emptyPrompt": "اطرح أسئلة حول أي إعداد إداري. إذا أردت من المساعد اقتراح التغييرات وتطبيقها، اطلب منه تضمين مجموعة تغييرات JSON.",
       "pendingChanges": "تغييرات معلّقة",
@@ -703,12 +694,9 @@
     "title": "إعداد المسؤول",
     "subtitle": "اتصل بهوية Nostr الخاصة بك لإدارة هذا المثيل",
     "connectNostr": "الاتصال بـ Nostr",
-    "orForTesting": "أو للاختبار",
-    "continueMock": "المتابعة بهوية وهمية",
     "connecting": "جارٍ الاتصال بالإضافة...",
     "noExtension": "لم يتم العثور على إضافة Nostr",
     "installExtension": "قم بتثبيت إضافة متوافقة مع NIP-07 للمتابعة",
-    "useMock": "استخدام وهمي",
     "welcomeAdmin": "مرحبًا، أيها المسؤول!",
     "connectedAs": "متصل باسم",
     "redirecting": "جارٍ التحويل إلى لوحة التحكم...",
@@ -905,7 +893,7 @@
       "gmailHint": "استخدم كلمة مرور التطبيق — وليس كلمة مرور Gmail العادية. فعّل المصادقة الثنائية أولاً، ثم أنشئ كلمة مرور تطبيق في إعدادات أمان حساب Google.",
       "goToPage": "الذهاب إلى الصفحة",
       "mailgunHint": "استخدم بيانات اعتماد SMTP الخاصة بـ Mailgun من صفحة إعدادات النطاق. المضيف عادةً هو smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — عند التفعيل، يتم تسجيل رسائل البريد الإلكتروني في وحدة التحكم بدلاً من إرسالها. مفيد للتطوير.",
+      "mockEmail": "MOCK_EMAIL — عند التفعيل، يتم تسجيل رسائل البريد الإلكتروني في وحدة التحكم بدلاً من إرسالها. مفيد للتطوير.",
       "overviewDesc": "قم بتكوين إعدادات SMTP لتفعيل البريد الإلكتروني الصادر (الدعوات والإشعارات وإعادة تعيين كلمات المرور). جميع المزودين يستخدمون حقول SMTP القياسية.",
       "overviewTitle": "نظرة عامة على البريد الإلكتروني (SMTP)",
       "postmarkHint": "استخدم رمز API لخادم Postmark ككلمة مرور SMTP. اسم مستخدم SMTP هو دائمًا نفس الرمز.",
@@ -977,20 +965,6 @@
       "usersToMigrate": "المستخدمون المراد ترحيلهم",
       "warning": "هذه عملية متقدمة. الترحيل غير الصحيح قد يحرمك من الوصول إلى البيانات المشفرة. تابع فقط إذا كنت تفهم الآثار المترتبة."
     },
-    "leaveEmptyForLlmApiKey": "اتركه فارغًا لمسح التجاوز واستخدام خيار MAPLE_API_KEY الاحتياطي في .env.",
-    "llmHelp": {
-      "apiKeyField": "LLM_API_KEY — مفتاح API الخاص بك لـ Maple. يتوافق مع MAPLE_API_KEY.",
-      "apiKeyLabel": "مفتاح API لـ Maple",
-      "ariaLabel": "مساعدة في تكوين LLM لـ Maple",
-      "exampleConfig": "مثال على التكوين",
-      "goToPage": "الذهاب إلى الصفحة",
-      "mapleExtra": "عيّن LLM_API_KEY على مفتاح Maple الخاص بك من {{mapleSignupUrl}}. تتوافق مفاتيح LLM_* مع الأسماء المستعارة MAPLE_*.",
-      "mapleHint": "Maple هو الخلفية القياسية لنموذج LLM لـ Enclave.",
-      "modelField": "LLM_MODEL — معرف نموذج Maple (على سبيل المثال: kimi-k2.5).",
-      "overviewDesc": "يستخدم Enclave Maple كخدمة LLM القياسية الخاصة به. يوفر Maple واجهة برمجة تطبيقات متوافقة مع OpenAI.",
-      "overviewTitle": "نظرة عامة على LLM من Maple",
-      "providerField": "LLM_PROVIDER — ثابت على \"maple\" للتوافق."
-    },
     "revealFailed": "فشل في كشف القيمة. تحقق من اتصال إضافة Nostr الخاصة بك.",
     "searchHelp": {
       "ariaLabel": "مساعدة تكوين البحث في الويب",
@@ -1020,9 +994,7 @@
       "overviewDesc": "تتحكم إعدادات الأمان في المصادقة وإدارة الجلسات واختصارات التطوير. الإعدادات الافتراضية مُعدة للتطوير المحلي.",
       "overviewNote": "في الإنتاج، تأكد من أن أعلام المحاكاة معطلة وأن FRONTEND_URL يتطابق مع نطاقك الحقيقي.",
       "overviewTitle": "نظرة عامة على الأمان",
-      "overviewWhen": "راجع هذه الإعدادات قبل النشر على خادم عام.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — يتجاوز مصادقة المسؤول. تُعامل جميع الطلبات كأنها قادمة من مستخدم مسؤول.",
-      "simUserDesc": "SIMULATE_USER_AUTH — يتجاوز مصادقة المستخدم. تُعامل جميع الطلبات كأنها قادمة من مستخدم مسجّل الدخول."
+      "overviewWhen": "راجع هذه الإعدادات قبل النشر على خادم عام."
     },
     "sslHelp": {
       "ariaLabel": "مساعدة تكوين SSL و HTTPS",
@@ -1197,11 +1169,6 @@
     "uploadingStatus": "جارٍ الرفع إلى الخادم..."
   },
   "configCategories": {
-    "llm": {
-      "label": "ذكاء اصطناعي من Maple",
-      "description": "تكوين استدلال Maple",
-      "hint": "Enclave هو Maple فقط لاستدلال LLM. قم بتكوين إعدادات نموذج/API لـ Maple هنا. تتطلب التغييرات إعادة التشغيل."
-    },
     "embedding": {
       "label": "معالجة النصوص",
       "description": "تكوين كيفية تحليل المستندات",
@@ -1300,21 +1267,6 @@
     "sampleQuestion": "ماذا يجب أن أعرف عن هذا الموضوع؟"
   },
   "deploymentConfigItems": {
-    "LLM_PROVIDER": {
-      "label": "خدمة الذكاء الاصطناعي",
-      "description": "مزود LLM (Maple فقط)",
-      "hint": "Maple هي القيمة المدعومة الوحيدة. يظل هذا المفتاح للتوافق."
-    },
-    "LLM_MODEL": {
-      "label": "اسم النموذج",
-      "description": "اسم/معرف النموذج",
-      "hint": "معرف نموذج Maple المراد استخدامه (مثل: \"kimi-k2.5\")."
-    },
-    "LLM_API_URL": {
-      "label": "نقطة نهاية API",
-      "description": "عنوان URL الأساسي لطلبات API",
-      "hint": "عنوان URL الأساسي لـ Maple API. الافتراضي: http://maple-proxy:8080/v1."
-    },
     "RAG_TOP_K": {
       "label": "أجزاء السياق",
       "description": "عدد الأجزاء المراد استرجاعها",
@@ -1355,7 +1307,7 @@
       "description": "عنوان الإرسال للبريد الإلكتروني",
       "hint": "عنوان \"من\" للرسائل الصادرة (مثال: noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "وضع الاختبار",
       "description": "محاكاة إرسال البريد الإلكتروني",
       "hint": "عند \"true\"، يتم تسجيل الرسائل بدلاً من إرسالها. مفيد للتطوير."
@@ -1389,11 +1341,6 @@
       "label": "عنوان التطبيق",
       "description": "عنوان URL العام للتطبيق",
       "hint": "عنوان URL العام حيث يصل المستخدمون إلى التطبيق. يُستخدم لإنشاء روابط سحرية."
-    },
-    "LLM_API_KEY": {
-      "label": "مفتاح API",
-      "description": "مفتاح Maple API (سري)",
-      "hint": "يتوافق مع MAPLE_API_KEY. اتركه فارغًا لمسح التجاوز واستخدام خيار .env الاحتياطي."
     },
     "ADMIN_BASE_URL": {
       "description": "عنوان URL للنطاق الفرعي للوحة الإدارة (اختياري)",
@@ -1459,16 +1406,6 @@
       "description": "عنوان URL لنقطة نهاية مراقبة الصحة",
       "hint": "عنوان URL للتحقق من الصحة لأجهزة المراقبة الخارجية. الافتراضي: http://localhost:8000/health.",
       "label": "عنوان URL للمراقبة"
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "description": "إظهار زر اتصال Nostr الوهمي لمصادقة المسؤول (للاختبار فقط)",
-      "hint": "قم بالتمكين للتطوير/الاختبار. يعرض زر \"اتصال وهمي\" عند تسجيل دخول المسؤول يتجاوز متطلب ملحق Nostr. يجب تعطيله في الإنتاج.",
-      "label": "محاكاة مصادقة المسؤول"
-    },
-    "SIMULATE_USER_AUTH": {
-      "description": "السماح بالتحقق من المستخدم بدون رمز الرابط السحري (للاختبار فقط)",
-      "hint": "قم بالتمكين للتطوير/الاختبار. يسمح للمستخدمين بإكمال التحقق من البريد الإلكتروني دون النقر على الرابط السحري. يجب تعطيله في الإنتاج.",
-      "label": "محاكاة مصادقة المستخدم"
     },
     "SPF_INCLUDE": {
       "description": "تضمين توجيه SPF DNS",
@@ -1775,7 +1712,6 @@
       "test_magic_link_and_nostr_authentication_flows_40c5c7": "اختبار الرابط السحري وتدفقات مصادقة Nostr.",
       "test_rate_limiting_by_sending_rapid_requests_to_2ede24": "اختبار تحديد المعدل عن طريق إرسال طلبات سريعة إلى نقاط النهاية ذات المعدل المحدود.",
       "test_the_user_creation_flow_with_dynamic_fields_b0142a": "اختبار تدفق إنشاء المستخدمين مع حقول ديناميكية بناءً على نوع المستخدم.",
-      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "يختبر الاتصال بخدمة Maple LLM.",
       "the_complete_rag_pipeline_embed_search_retrieve_generate_d5ac42": "مسار RAG الكامل: تضمين ← بحث ← استرجاع ← توليد.",
       "this_is_where_the_magic_happens_e98c18": "— هذا هو المكان الذي يحدث فيه السحر:",
       "toggle_theme_9b0eaf": "تبديل السمة",

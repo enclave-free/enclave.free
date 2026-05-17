@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import hashlib
 import importlib
 import json
 import os
@@ -7,6 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from Crypto.Cipher import AES
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -23,10 +26,12 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.uploads_dir = Path(self.tmp.name) / "uploads"
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self._orig_logs_dir = os.environ.get("LOGS_DIR")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_content_encryption_key = os.environ.get("CONTENT_ENCRYPTION_KEY")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["UPLOADS_DIR"] = str(self.uploads_dir)
+        os.environ["LOGS_DIR"] = str(Path(self.tmp.name) / "logs")
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
 
@@ -76,6 +81,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
             self.database._connection = None
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        self._restore_env("LOGS_DIR", self._orig_logs_dir)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("CONTENT_ENCRYPTION_KEY", self._orig_content_encryption_key)
         self.tmp.cleanup()
@@ -118,6 +124,23 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertTrue(artifact_path.exists())
         self.assertNotEqual(artifact_path.read_bytes(), b"operator knowledge")
         self.assertTrue(artifact_path.read_bytes().startswith(b"enclave-artifact::v1::"))
+
+    def test_legacy_artifact_ciphertext_is_not_supported(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+        import content_artifacts
+
+        nonce = b"1" * 12
+        legacy_key = hashlib.sha256(b"test-content-key").digest()
+        cipher = AES.new(legacy_key, AES.MODE_GCM, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(b"operator knowledge")
+        legacy_artifact = (
+            b"sanctum-artifact::v1::"
+            + base64.b64encode(nonce + tag + ciphertext)
+        )
+
+        self.assertTrue(content_artifacts.is_encrypted_artifact(legacy_artifact))
+        with self.assertRaisesRegex(ValueError, "Legacy encrypted document artifact format"):
+            content_artifacts.decrypt_bytes(legacy_artifact)
 
     def test_upload_allows_plaintext_artifact_when_operator_disables_encryption(self) -> None:
         self.database.update_setting_with_audit(
@@ -207,6 +230,29 @@ class IngestBatchReplacementTest(unittest.TestCase):
         self.assertEqual(upload.status_code, 503)
         self.assertIn("Content Encryption Key", upload.json()["detail"])
         self.assertEqual(self.ingest.JOBS, {})
+
+    def test_startup_ignores_legacy_json_job_state(self) -> None:
+        logs_dir = Path(os.environ["LOGS_DIR"])
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        (logs_dir / "jobs_state.json").write_text(
+            json.dumps({
+                "legacy-job": {
+                    "filename": "Legacy.md",
+                    "file_path": "/uploads/Legacy.md",
+                    "ontology_id": "general",
+                    "status": "completed",
+                    "total_chunks": 1,
+                    "processed_chunks": 1,
+                }
+            }),
+            encoding="utf-8",
+        )
+        self.ingest.JOBS = {}
+
+        asyncio.run(self.ingest.load_jobs_and_resume())
+
+        self.assertEqual(self.ingest.JOBS, {})
+        self.assertEqual(self.ingest_db.list_jobs(), [])
 
     def complete_job(self, job_id: str) -> None:
         """Mark a job completed for state-machine tests; does not exercise process_document."""

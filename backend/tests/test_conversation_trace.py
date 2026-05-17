@@ -6,6 +6,7 @@ import types
 import unittest
 from pathlib import Path
 from typing import Any
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -53,16 +54,21 @@ class ConversationTraceTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
-        self._orig_protected_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
+        self._orig_llm_provider = os.environ.get("LLM_PROVIDER")
+        self._orig_llm_api_url = os.environ.get("LLM_API_URL")
+        self._orig_llm_model = os.environ.get("LLM_MODEL")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
-        os.environ["PROTECTED_INFERENCE_DEVELOPMENT_BYPASS"] = "true"
+        os.environ["LLM_PROVIDER"] = "sage"
+        os.environ["LLM_API_URL"] = ""
+        os.environ["LLM_MODEL"] = ""
 
         import database
         import auth
         import ai_config
         import deployment_config
+        import protected_inference
         import query
         import main
 
@@ -70,14 +76,11 @@ class ConversationTraceTest(unittest.TestCase):
         self.auth = importlib.reload(auth)
         self.ai_config = importlib.reload(ai_config)
         self.deployment_config = importlib.reload(deployment_config)
+        self.protected_inference = importlib.reload(protected_inference)
         self.query = importlib.reload(query)
         self.main = importlib.reload(main)
         self.database.init_schema()
-        self.database.update_deployment_config(
-            "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS",
-            "true",
-            changed_by="test",
-        )
+        self._create_current_inference_verification_record()
 
         self.provider = FakeProvider()
         self.main.get_sage_provider = lambda: self.provider
@@ -91,7 +94,9 @@ class ConversationTraceTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
-        self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_bypass)
+        self._restore_env("LLM_PROVIDER", self._orig_llm_provider)
+        self._restore_env("LLM_API_URL", self._orig_llm_api_url)
+        self._restore_env("LLM_MODEL", self._orig_llm_model)
         if self._orig_sentence_transformers is None:
             sys.modules.pop("sentence_transformers", None)
         else:
@@ -105,6 +110,21 @@ class ConversationTraceTest(unittest.TestCase):
         else:
             os.environ[name] = value
 
+    def _create_current_inference_verification_record(self) -> None:
+        now = datetime.now(timezone.utc)
+        self.database.create_inference_verification_record(
+            provider_identity="sage",
+            provider_endpoint="",
+            model_identifier="",
+            status="success",
+            trigger="test",
+            expected_claims_fingerprint=self.protected_inference.DEFAULT_EXPECTED_CLAIMS_FINGERPRINT,
+            actual_claims_fingerprint=self.protected_inference.DEFAULT_EXPECTED_CLAIMS_FINGERPRINT,
+            verifier_version="test",
+            checked_at=now,
+            expires_at=now + timedelta(hours=1),
+        )
+
     def authenticate_as_user(self) -> None:
         self.user_id = self.database.create_user(pubkey="a" * 64)
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
@@ -112,19 +132,9 @@ class ConversationTraceTest(unittest.TestCase):
             "pubkey": "a" * 64,
             "id": self.user_id,
         }
-        self.main.app.dependency_overrides[self.query.auth.require_admin_or_approved_user] = lambda: {
-            "type": "user",
-            "pubkey": "a" * 64,
-            "id": self.user_id,
-        }
 
     def authenticate_as_admin(self) -> None:
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
-            "type": "admin",
-            "id": 1,
-            "pubkey": "admin-pubkey",
-        }
-        self.main.app.dependency_overrides[self.query.auth.require_admin_or_approved_user] = lambda: {
             "type": "admin",
             "id": 1,
             "pubkey": "admin-pubkey",
@@ -144,22 +154,6 @@ class ConversationTraceTest(unittest.TestCase):
             "id": 1,
             "pubkey": "admin-pubkey",
         }
-
-    def test_chat_response_includes_backend_message_id_and_minimal_user_trace(self) -> None:
-        self.authenticate_as_user()
-
-        response = self.client.post(
-            "/llm/chat",
-            json={"message": "Can you help?", "tools": []},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertTrue(body["message_id"].startswith("msg_"))
-        self.assertEqual(body["trace"]["visibility"], "minimal")
-        self.assertEqual(body["trace"]["reasoning"]["summary"], "Sage answered from the conversation context and configured instructions.")
-        self.assertEqual(body["trace"]["tools"], [])
-        self.assertEqual(body["trace"]["retrieval"], [])
 
     def test_trace_visibility_policy_is_seeded_as_agent_settings(self) -> None:
         self.authenticate_as_admin()
@@ -198,24 +192,6 @@ class ConversationTraceTest(unittest.TestCase):
             and entry["new_value"] == "summary"
             for entry in entries
         ))
-
-    def test_trace_policy_off_omits_trace_from_future_chat_turns(self) -> None:
-        self.authenticate_as_user()
-        self.assertTrue(
-            self.database.update_ai_config(
-                "user_trace_visibility",
-                "off",
-                changed_by="admin-pubkey",
-            )
-        )
-
-        response = self.client.post(
-            "/llm/chat",
-            json={"message": "Can you help?", "tools": []},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["trace"])
 
     def test_db_query_trace_redacts_raw_sql_literals_and_results(self) -> None:
         from conversation_trace import build_conversation_trace
@@ -340,113 +316,3 @@ class ConversationTraceTest(unittest.TestCase):
         serialized = str(entries)
         self.assertIn("trace_suppressed", serialized)
         self.assertNotIn("super-secret-value", serialized)
-
-    def test_retrieval_session_history_persists_assistant_trace(self) -> None:
-        self.authenticate_as_user()
-        self.stub_retrieval_query()
-        session_id = "trace-session"
-
-        query_response = self.client.post(
-            "/query",
-            json={"question": "What does the policy say?", "session_id": session_id},
-        )
-        response = self.client.get(f"/query/session/{session_id}")
-
-        self.assertEqual(query_response.status_code, 200)
-        self.assertEqual(response.status_code, 200)
-        messages = response.json()["messages"]
-        self.assertEqual(messages[-1]["id"], query_response.json()["message_id"])
-        self.assertEqual(messages[-1]["trace"], query_response.json()["trace"])
-
-    def test_deleted_retrieval_session_no_longer_exposes_persisted_trace(self) -> None:
-        import query
-
-        self.authenticate_as_user()
-        self.stub_retrieval_query()
-        session_id = "delete-trace-session"
-
-        create_response = self.client.post(
-            "/query",
-            json={"question": "What does the policy say?", "session_id": session_id},
-        )
-
-        delete_response = self.client.delete(f"/query/session/{session_id}")
-        get_response = self.client.get(f"/query/session/{session_id}")
-
-        self.assertEqual(create_response.status_code, 200)
-        self.assertEqual(delete_response.status_code, 200)
-        self.assertEqual(get_response.status_code, 404)
-        self.assertNotIn(session_id, query._sessions)
-
-    def test_streaming_chat_emits_message_delta_trace_and_done_events(self) -> None:
-        self.authenticate_as_user()
-
-        with self.client.stream(
-            "POST",
-            "/llm/chat/stream",
-            json={"message": "Can you help?", "tools": []},
-        ) as response:
-            self.assertEqual(response.status_code, 200)
-            body = "".join(response.iter_text())
-
-        self.assertIn("event: assistant_message_started", body)
-        self.assertIn("event: trace_status", body)
-        self.assertIn("event: answer_delta", body)
-        self.assertIn("event: trace_final", body)
-        self.assertIn("event: done", body)
-        self.assertIn('"message_id":"msg_', body)
-        self.assertIn('"visibility":"minimal"', body)
-
-    def test_streaming_query_emits_message_delta_trace_and_done_events(self) -> None:
-        self.authenticate_as_user()
-        self.stub_retrieval_query()
-
-        with self.client.stream(
-            "POST",
-            "/query/stream",
-            json={"question": "What does the policy say?", "session_id": "query-stream-session"},
-        ) as response:
-            self.assertEqual(response.status_code, 200)
-            body = "".join(response.iter_text())
-
-        self.assertIn("event: assistant_message_started", body)
-        self.assertIn("event: trace_status", body)
-        self.assertIn("event: answer_delta", body)
-        self.assertIn("event: trace_final", body)
-        self.assertIn("event: done", body)
-        self.assertIn('"message_id":"msg_', body)
-        self.assertIn('"visibility":"minimal"', body)
-
-    def stub_retrieval_query(self) -> None:
-        import query
-
-        class FakeSearchResponse:
-            def raise_for_status(self) -> None:
-                pass
-
-            def json(self) -> dict:
-                return {
-                    "result": [
-                        {
-                            "score": 0.82,
-                            "payload": {
-                                "type": "chunk",
-                                "chunk_id": "chunk-1",
-                                "job_id": "job-1",
-                                "source_file": "Policy.pdf",
-                                "text": "Policy context",
-                            },
-                        }
-                    ]
-                }
-
-        query.embed_texts = lambda _texts: [[0.1, 0.2, 0.3]]
-        query.httpx.post = lambda *_args, **_kwargs: FakeSearchResponse()
-        query._call_llm_contextual = lambda *_args, **_kwargs: (
-            "The policy says yes.",
-            [],
-            "=== PROMPT ===\nredacted",
-            "housing advocate",
-            None,
-        )
-        query._extract_facts_from_conversation = lambda _session: {}

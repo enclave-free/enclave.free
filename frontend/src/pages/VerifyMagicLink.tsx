@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { Button } from '../components/ui'
 import { STORAGE_KEYS, API_BASE, saveSelectedUserTypeId } from '../types/onboarding'
-import { fetchPublicConfig } from '../utils/publicConfig'
 
 type VerifyState = 'verifying' | 'success' | 'error'
 
@@ -23,7 +22,6 @@ export function VerifyMagicLink() {
   useEffect(() => {
     const token = searchParams.get('token')
 
-    // Fallback onboarding inference (used in simulate mode or if backend doesn't send flags)
     async function inferOnboardingNeeds() {
       try {
         const [typesRes, fieldsRes] = await Promise.all([
@@ -68,60 +66,7 @@ export function VerifyMagicLink() {
         return
       }
 
-      // Fetch simulation setting from backend
-      let simulateUserAuth = false
-      try {
-        const config = await fetchPublicConfig()
-        simulateUserAuth = config?.simulateUserAuth ?? false
-      } catch {
-        // Default to false if config fetch fails
-      }
-
       if (!token) {
-        // No token - only allow in simulate mode for testing
-        if (simulateUserAuth) {
-          const storedEmail = localStorage.getItem(STORAGE_KEYS.PENDING_EMAIL)
-          if (storedEmail) {
-            setEmail(storedEmail)
-            setName(localStorage.getItem(STORAGE_KEYS.PENDING_NAME))
-            const storedName = localStorage.getItem(STORAGE_KEYS.PENDING_NAME) || ''
-            const devSessionResponse = await fetch(`${API_BASE}/auth/dev-session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                email: storedEmail,
-                name: storedName,
-              }),
-            })
-
-            if (!devSessionResponse.ok) {
-              setState('error')
-              return
-            }
-
-            const devSessionData = await devSessionResponse.json()
-            if (!devSessionData.user) {
-              console.error('Dev session response missing user object')
-              setState('error')
-              return
-            }
-            localStorage.setItem(STORAGE_KEYS.USER_EMAIL, devSessionData.user.email)
-            if (devSessionData.user.name) {
-              localStorage.setItem(STORAGE_KEYS.USER_NAME, devSessionData.user.name)
-            }
-            const approved = devSessionData.user.approved !== false
-            localStorage.setItem(STORAGE_KEYS.USER_APPROVED, String(approved))
-            setIsApproved(approved)
-            await inferOnboardingNeeds()
-            localStorage.removeItem(STORAGE_KEYS.PENDING_EMAIL)
-            localStorage.removeItem(STORAGE_KEYS.PENDING_NAME)
-            hasVerified.current = true
-            setState('success')
-            return
-          }
-        }
-        // No token and not in simulate mode (or no pending email) = error
         setState('error')
         return
       }

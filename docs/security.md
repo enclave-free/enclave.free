@@ -32,12 +32,10 @@ For a more exhaustive engineering checklist, see `docs/security-data-protection-
 - Protect admin private keys.
   - Read `docs/admin-key-recovery-runbook.md`.
 
-### 2. Disable Dev/Simulation Paths
+### 2. Disable Dev Paths
 
 - Ensure these are false in production:
   - `MOCK_EMAIL=false`
-  - `SIMULATE_USER_AUTH=false`
-  - `SIMULATE_ADMIN_AUTH=false`
 
 ### 3. Enforce TLS End-to-End
 
@@ -72,12 +70,12 @@ Recommended:
 ### 7. Review Data Flows and Retention
 
 - Uploaded files in `uploads/` are runtime artifacts; treat them as sensitive.
-- Define retention and deletion policies for:
-  - Uploaded documents and derived chunks
-  - Logs
-  - Sage `/query` public session records and Session Memory rows
-    - **Note:** supported active Conversation deletion now coordinates public query-session removal with Sage Session Memory Deletion. Scheduled retention for every historical Session Memory/log surface remains future work.
-  - Python in-memory runtime state that still exists outside the public Sage query path, such as rate-limit buckets and in-progress ingest chunks.
+- Review the Active Storage Lifecycle in Data Lifecycle Status and `docs/lifecycle-confidentiality-runbook.md`.
+- Use an external Retention Scheduler for scheduled execution; the product records Retention Run Records and Retention Scheduler Observation but does not embed its own cron.
+- Scheduled retention can clean stale Sage Session Memory, eligible User Memory, failed/superseded/abandoned/orphaned uploaded Document artifacts, and compactable Audit Log detail.
+- The milestone does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, or Inference Verification Records for deletion. Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
+- Keep unsupported Deployment Surfaces visible in operator documentation: logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces remain outside product lifecycle control.
+- Python in-memory runtime state can still exist outside the public Sage query path, such as rate-limit buckets and in-progress ingest chunks.
 
 ## Operational References
 

@@ -334,17 +334,13 @@ export function ChatPage() {
   }, [pendingDefaultDocs, documents])
 
   const handleToolToggle = useCallback((toolId: string) => {
-    if (toolId === 'db-query' && !selectedTools.includes('db-query') && selectedDocuments.length > 0) {
-      // db-query runs against /llm/chat only; clear RAG document selection
-      setSelectedDocuments([])
-    }
     if (toolId === CONFIG_TOOL_ID && selectedTools.includes(CONFIG_TOOL_ID)) {
       setAdminApplyState({ state: 'idle' })
     }
     setSelectedTools((prev) =>
       prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
     )
-  }, [selectedDocuments.length, selectedTools])
+  }, [selectedTools])
 
   const handleDocumentToggle = useCallback((docId: string) => {
     setSelectedDocuments((prev) =>
@@ -378,8 +374,7 @@ export function ChatPage() {
     try {
       const hasConfigTool = isAdmin && selectedTools.includes(CONFIG_TOOL_ID)
       const backendTools = selectedTools
-      const wantsDbQuery = selectedTools.includes('db-query')
-      const useRag = !isAdmin && selectedDocuments.length > 0 && !wantsDbQuery
+      const useRag = !isAdmin && selectedDocuments.length > 0
 
       let response: Response
       if (useRag) {
@@ -476,7 +471,6 @@ export function ChatPage() {
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: backendTools,
-            t,
             sessionId: conversationSessionId,
             conversationHistory: messages.map(({ role, content }) => ({ role, content })),
             onEvent: (event, payload) => {
@@ -544,7 +538,6 @@ export function ChatPage() {
         response = await sendLlmChatWithUnifiedTools({
           content,
           tools: backendTools,
-          t,
           sessionId: conversationSessionId,
           conversationHistory: messages.map(({ role, content }) => ({ role, content })),
         })
@@ -826,7 +819,6 @@ IMPORTANT: Return a CONDENSED response:
       const searchRes = await sendLlmChatWithUnifiedTools({
         content: searchPrompt,
         tools: ['web-search'],
-        t,
         sessionId,
       })
       
@@ -920,9 +912,8 @@ IMPORTANT: Return a CONDENSED response:
 
   const header = <AppHeader rightActions={rightActions} />
 
-  // Admin chat intentionally excludes DocumentScope: admin workflows use CONFIG_TOOL_ID
-  // and /admin configuration paths, and RAG is intentionally disabled for admins
-  // (see useRag = !isAdmin && selectedDocuments.length > 0 && !wantsDbQuery).
+  // Admin chat intentionally excludes DocumentScope. Admin tools are Sage-owned
+  // assistant tools, while document-grounded retrieval remains a user chat mode.
   const inputToolbar = isAdmin
     ? <ToolSelector tools={availableTools} selectedTools={selectedTools} onToggle={handleToolToggle} />
     : (

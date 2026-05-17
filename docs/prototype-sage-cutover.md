@@ -41,7 +41,7 @@ Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these
 
 Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /llm/chat/stream`, `POST /query`, `GET /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
 
-`POST /llm/chat/stream` is the assistant-style streaming route described by [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md). It keeps `/llm/chat` available as the non-streaming compatibility path, emits assistant message, live trace-status, answer-delta, final sanitized trace, completion, and safe error events, and uses a two-phase turn: explicitly selected tools/context first, then final answer streaming from the configured Model Provider. Retrieval-first `/query/stream` is deliberately outside this first streaming slice.
+`POST /llm/chat/stream` is the assistant-style streaming route described by [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md). It keeps `/llm/chat` available as the non-streaming companion path, emits assistant message, live trace-status, answer-delta, final sanitized trace, completion, and safe error events, and uses a two-phase turn: explicitly selected tools/context first, then final answer streaming from the configured Model Provider. Retrieval-first `/query/stream` is deliberately outside this first streaming slice.
 
 ## Sage To Python Private Control-Plane Contract
 
@@ -82,13 +82,26 @@ If this prototype gets productized, the biggest architecture decision is no long
 ## Current Temporary Pieces
 
 - deployment/runtime config is still split across Python Deployment Settings, Sage env, and Gateway config
-- legacy Python `/llm/chat` and `/query` code still exists in-repo even though the gateway bypasses it
+- Python no longer exposes public Agent Runtime handlers; the supported path is Gateway to Sage
 - supported active Conversation deletion now removes the public `/query` session record and associated Sage Session Memory, but scheduled retention for all historical Session Memory/log surfaces is still future work
-- compatibility internal endpoints such as `/internal/agent/auth-context` and `/internal/agent/ai-config/effective` still exist in Python even though Sage no longer needs them on this branch
+- Obsolete internal compatibility endpoints are absent from Python; Sage should use only the active private control-plane contract listed above
 
 ## Branch Note
 
 The pinned Sage runtime lives in `runtime/sage`.
+
+### Runtime/Sage Audit
+
+- Submodule provenance: `runtime/sage` is pinned to commit `658516722c56f7a6451e454c26f234f11e829515` from `https://github.com/enclave-free/sage.git`.
+- Upstream stability: Sage is an internal Enclave runtime, so reviewer validation should use repository activity rather than package releases: inspect recent commits, open issues/PRs, and maintainer activity before advancing the submodule pointer.
+- Integration evidence: this prototype exercises the submodule through the Docker Compose `sage` service and the documented Sage contract checks, including `cargo check -p sage-core` from `runtime/sage` and the `backend/tests/test_5b_sage_route_smoke.py` smoke coverage listed in `docs/integration-tests.md`.
+- Security/stability checks: verify the Sage license and dependency tree at the pinned commit, review toolchain requirements from the submodule manifests, run dependency audit tooling appropriate for the Rust workspace, and regenerate an SBOM/checksum before merging a pointer update.
+- Reproducible verification:
+  1. `git submodule update --init runtime/sage`
+  2. `cd runtime/sage && git rev-parse HEAD` should print `658516722c56f7a6451e454c26f234f11e829515`.
+  3. `cargo check -p sage-core`
+  4. From the prototype root, run the Sage route smoke tests documented in `docs/integration-tests.md`.
+  5. Regenerate the SBOM or checksum artifact used by the release process and attach it with the CI job names/artifacts that exercised `runtime/sage`.
 
 For the current branch-specific direction, pair this file with:
 

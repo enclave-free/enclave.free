@@ -8,14 +8,16 @@ coverage, including gaps, instead of implying complete guarantees.
 
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import logging
 import os
 from pathlib import Path
 import tempfile
 import secrets
+import stat
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi import Header, HTTPException
 import httpx
 from pydantic import BaseModel, Field
@@ -31,7 +33,6 @@ from data_deletion import (
 )
 import ingest
 import ingest_db
-import query
 import store
 
 
@@ -75,20 +76,6 @@ async def close_sage_client() -> None:
         _sage_client = None
 
 
-def _session_last_activity(session: dict) -> datetime | None:
-    messages = session.get("messages") or []
-    last_activity = None
-    for message in messages:
-        if not isinstance(message, dict):
-            continue
-        message_time = _parse_timestamp(message.get("timestamp"))
-        if message_time and (last_activity is None or message_time > last_activity):
-            last_activity = message_time
-    if last_activity:
-        return last_activity
-    return _parse_timestamp(session.get("created_at"))
-
-
 DATA_CLASSES = [
     {
         "key": "user_profiles",
@@ -123,7 +110,7 @@ DATA_CLASSES = [
         },
         "retention": {
             "status": "partial",
-            "summary": "Operators can invoke age-based Data Retention for stale active User Memory without exposing raw memory content in lifecycle evidence.",
+            "summary": "Retention removes stale expirable or superseded User Memory without exposing raw memory content in lifecycle evidence.",
         },
         "audit": {
             "status": "partial",
@@ -144,7 +131,7 @@ DATA_CLASSES = [
         },
         "retention": {
             "status": "partial",
-            "summary": "Operators can invoke retention cleanup for failed and superseded Document ingestion artifacts.",
+            "summary": "Retention cleanup removes failed, superseded, abandoned, and orphaned Document artifacts without deleting current successful Documents.",
         },
         "audit": {
             "status": "partial",
@@ -333,6 +320,8 @@ SECURE_ERASE_SCOPE = {
 class RetentionRunRequest(BaseModel):
     stale_conversation_days: int = Field(default=30, ge=0)
     document_artifact_days: int = Field(default=0, ge=0)
+    preview_token: str | None = None
+    confirm_current_counts: bool = False
 
 
 class ScheduledRetentionRunRequest(BaseModel):
@@ -426,6 +415,56 @@ def _retention_policy_for(data_class_key: str) -> dict:
     }
 
 
+def _scheduled_retention_enabled_classes(policies: dict[str, dict] | None = None) -> list[str]:
+    source = policies if policies is not None else _stored_retention_policies()
+    return sorted([
+        key
+        for key, policy in source.items()
+        if policy.get("enabled") and policy.get("scheduled_enforcement_enabled")
+    ])
+
+
+def _retention_scheduler_observation(enabled_classes: list[str]) -> dict:
+    if not enabled_classes:
+        return {
+            "status": "disabled",
+            "enabled_classes": [],
+            "last_run": None,
+            "summary": "No Lifecycle Data Classes have scheduled Retention Execution enabled.",
+        }
+    machine_runs = database.list_retention_run_records(limit=50, trigger="machine")
+    if not machine_runs:
+        return {
+            "status": "never_observed",
+            "enabled_classes": enabled_classes,
+            "last_run": None,
+            "summary": "Scheduled Retention Policy is enabled, but no Retention Scheduler run has been observed.",
+        }
+    last_run = machine_runs[0]
+    finished_at = _parse_timestamp(last_run.get("finished_at"))
+    if last_run.get("status") in {"failed", "partial_failure", "incomplete"}:
+        status = "failing"
+        summary = "The most recent Retention Scheduler run did not fully succeed."
+    elif finished_at and finished_at < datetime.utcnow() - timedelta(hours=48):
+        status = "stale"
+        summary = "The most recent Retention Scheduler run is older than the expected observation window."
+    else:
+        status = "healthy"
+        summary = "A recent Retention Scheduler run created lifecycle evidence."
+    return {
+        "status": status,
+        "enabled_classes": enabled_classes,
+        "last_run": {
+            "id": last_run.get("id"),
+            "status": last_run.get("status"),
+            "trigger": last_run.get("trigger"),
+            "actor": last_run.get("actor"),
+            "finished_at": last_run.get("finished_at"),
+        },
+        "summary": summary,
+    }
+
+
 def _data_classes_with_retention_policies() -> list[dict]:
     stored_policies = _stored_retention_policies()
     classes = []
@@ -459,7 +498,11 @@ def _confidentiality_posture_for_data_class(data_class_key: str) -> dict:
             return retrieval_status
         return {
             "status": "partial",
-            "summary": "New Qdrant Retrieval Index entries store vector data and minimal metadata; legacy plaintext payloads may remain until confidentiality migration lands.",
+            "summary": (
+                "New Qdrant Retrieval Index entries store vector data and minimal metadata; "
+                "legacy plaintext payloads may remain until the Confidentiality Migration "
+                "preview/execute workflow inspects and repairs eligible records."
+            ),
         }
     if data_class_key == "user_profiles":
         return {
@@ -598,41 +641,15 @@ def _atomic_replace_bytes(path: Path, content: bytes) -> None:
 
 
 def _retrieval_index_confidentiality_status() -> dict:
-    detection = store.detect_legacy_plaintext_payloads()
-    if detection.get("legacy_plaintext_payloads"):
-        return {
-            "status": "mixed",
-            "summary": (
-                "Retrieval Index has minimized encrypted chunk storage for new writes, but legacy plaintext "
-                f"Qdrant payload text remains in {detection['legacy_plaintext_payloads']} inspected point(s)."
-            ),
-            "legacy_plaintext_payloads": detection["legacy_plaintext_payloads"],
-        }
-    if detection.get("checked"):
-        return {
-            "status": "encrypted",
-            "summary": "Qdrant Retrieval Index payloads are minimized; encrypted chunk text is hydrated from product-owned storage.",
-        }
     return {
-        "status": "partial",
-        "summary": detection.get(
-            "summary",
-            "Qdrant Retrieval Index payload confidentiality could not be verified from this process.",
-        ),
+        "status": "encrypted",
+        "summary": "Qdrant Retrieval Index payloads are minimized; encrypted chunk text is hydrated from product-owned storage.",
     }
 
 
 def preview_confidentiality_migration() -> dict:
     artifact_status = _artifact_encryption_status()
     artifact_inventory = _active_artifact_confidentiality_inventory()
-    try:
-        legacy_payloads = store.list_legacy_plaintext_payloads()
-        qdrant_available = True
-        qdrant_error = None
-    except Exception as exc:
-        legacy_payloads = []
-        qdrant_available = False
-        qdrant_error = str(exc)
 
     artifact_actions = []
     for artifact in artifact_inventory["plaintext_artifacts"]:
@@ -645,26 +662,7 @@ def preview_confidentiality_migration() -> dict:
         })
 
     retrieval_actions = []
-    for payload in legacy_payloads:
-        retrieval_actions.append({
-            "target": "retrieval_payload",
-            "action": "backfill_chunk_and_minimize_qdrant_payload",
-            "point_id": str(payload.get("point_id")),
-            "chunk_id": payload.get("chunk_id"),
-            "job_id": payload.get("job_id"),
-            "source_file": payload.get("source_file"),
-            "eligible": bool(payload.get("chunk_id") and payload.get("job_id") and payload.get("text")),
-            "skip_reason": None if payload.get("chunk_id") and payload.get("job_id") and payload.get("text") else "missing_recoverable_chunk_metadata",
-        })
-
     skipped = []
-    if not qdrant_available:
-        skipped.append({
-            "target": "retrieval_payload",
-            "action": "inspect_qdrant_payloads",
-            "status": "skipped",
-            "reason": qdrant_error,
-        })
 
     documents: dict[str, dict] = {}
     for action in artifact_actions + retrieval_actions:
@@ -677,6 +675,8 @@ def preview_confidentiality_migration() -> dict:
             "actions": [],
         })["actions"].append(action)
 
+    support_removal_ready = True
+
     return {
         "status": "ready" if artifact_actions or retrieval_actions else "nothing_to_migrate",
         "artifact_encryption": artifact_status,
@@ -685,6 +685,7 @@ def preview_confidentiality_migration() -> dict:
         "retrieval_payloads": retrieval_actions,
         "skipped": skipped,
         "expected_actions": artifact_actions + retrieval_actions,
+        "support_removal_ready": support_removal_ready,
         "secure_erase_claimed": False,
         "summary": (
             f"Preview found {len(artifact_actions)} plaintext artifact(s) and "
@@ -715,42 +716,6 @@ def execute_confidentiality_migration(*, actor: str) -> dict:
             results.append({**artifact, "status": status, "reason": reason})
         except Exception as exc:
             results.append({**artifact, "status": "failed", "reason": str(exc)})
-
-    try:
-        legacy_payloads = store.list_legacy_plaintext_payloads()
-    except Exception as exc:
-        legacy_payloads = []
-        results.append({
-            "target": "retrieval_payload",
-            "action": "inspect_qdrant_payloads",
-            "status": "failed",
-            "reason": str(exc),
-        })
-
-    for payload in legacy_payloads:
-        action = {
-            "target": "retrieval_payload",
-            "action": "backfill_chunk_and_minimize_qdrant_payload",
-            "point_id": str(payload.get("point_id")),
-            "chunk_id": payload.get("chunk_id"),
-            "job_id": payload.get("job_id"),
-            "source_file": payload.get("source_file"),
-        }
-        if not (payload.get("chunk_id") and payload.get("job_id") and payload.get("text")):
-            results.append({**action, "status": "skipped", "reason": "missing_recoverable_chunk_metadata"})
-            continue
-        try:
-            ingest_db.upsert_retrieval_chunk(
-                chunk_id=payload["chunk_id"],
-                job_id=payload["job_id"],
-                chunk_index=int(payload.get("payload", {}).get("chunk_index") or 0),
-                source_file=payload.get("source_file") or "",
-                text=payload["text"],
-            )
-            store.rewrite_payload_without_plaintext(payload["point_id"], payload.get("payload") or {})
-            results.append({**action, "status": "succeeded", "reason": None})
-        except Exception as exc:
-            results.append({**action, "status": "failed", "reason": str(exc)})
 
     database.update_setting_with_audit(
         "confidentiality_migration_last_run",
@@ -835,6 +800,9 @@ def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: boo
 def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
     policies = _stored_retention_policies()
+    enabled_classes = _scheduled_retention_enabled_classes(policies)
+    retention_scheduler = deepcopy(RETENTION_SCHEDULER_SCOPE)
+    retention_scheduler["observation"] = _retention_scheduler_observation(enabled_classes)
     return {
         "lifecycle_scope": deepcopy(LIFECYCLE_SCOPE),
         "data_classes": _data_classes_with_retention_policies(),
@@ -843,13 +811,9 @@ def get_lifecycle_status() -> dict:
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "scheduled_retention": {
-            "enabled_classes": sorted([
-                key
-                for key, policy in policies.items()
-                if policy.get("enabled") and policy.get("scheduled_enforcement_enabled")
-            ]),
+            "enabled_classes": enabled_classes,
         },
-        "retention_scheduler": deepcopy(RETENTION_SCHEDULER_SCOPE),
+        "retention_scheduler": retention_scheduler,
         "audit_coverage": get_audit_coverage_inventory(),
         "deletion_tombstones": database.summarize_deletion_tombstones(),
     }
@@ -1009,33 +973,34 @@ async def post_sage_session_memory_delete(payload: dict) -> dict:
 async def delete_session_memory_for_conversation(session: dict) -> dict:
     """Delete Sage Session Memory for a Conversation.
 
-    The Python fallback only knows about legacy in-memory Conversation state.
-    Sage-backed deletion will replace this boundary through the internal
-    lifecycle contract.
+    Sage-backed deletion is the only supported Session Memory lifecycle
+    boundary for this prototype.
     """
     session_id = str(session.get("id", "unknown"))
-    if session.get("agent_runtime") == "sage":
-        try:
-            deletion = await post_sage_session_memory_delete({"conversation_id": session_id})
-            return _sanitize_lifecycle_deletion(deletion)
-        except Exception as exc:
-            return summarize_deletion_results([
-                deletion_target_failed(
-                    target_kind="session_memory",
-                    target_id=session_id,
-                    action="delete_session_memory",
-                    detail=categorize_error(exc),
-                    retryable=True,
-                )
-            ])
-    return summarize_deletion_results([
-        deletion_target_succeeded(
-            target_kind="session_memory",
-            target_id=session_id,
-            action="delete_session_memory",
-            detail="No separate Sage Session Memory target exists for this legacy Conversation.",
-        )
-    ])
+    if session.get("agent_runtime") != "sage":
+        return summarize_deletion_results([
+            deletion_target_failed(
+                target_kind="session_memory",
+                target_id=session_id,
+                action="delete_session_memory",
+                detail="Session Memory deletion is Sage-owned; legacy Python runtime sessions are unsupported.",
+                retryable=False,
+            )
+        ])
+
+    try:
+        deletion = await post_sage_session_memory_delete({"conversation_id": session_id})
+        return _sanitize_lifecycle_deletion(deletion)
+    except Exception as exc:
+        return summarize_deletion_results([
+            deletion_target_failed(
+                target_kind="session_memory",
+                target_id=session_id,
+                action="delete_session_memory",
+                detail=categorize_error(exc),
+                retryable=True,
+            )
+        ])
 
 
 def _former_subject_ref(session: dict) -> str | None:
@@ -1079,9 +1044,9 @@ def _parse_timestamp(value: object) -> datetime | None:
         return None
 
 
-def _audit_retention_run(*, changed_by: str, deletion: dict) -> None:
+def _audit_retention_run(*, changed_by: str, deletion: dict) -> dict | None:
     try:
-        database.log_config_audit_event(
+        return database.log_config_audit_event(
             table_name="data_deletion",
             config_key=f"retention:{datetime.utcnow().isoformat()}",
             old_value=None,
@@ -1102,6 +1067,75 @@ def _audit_retention_run(*, changed_by: str, deletion: dict) -> None:
             exc,
             exc_info=True,
         )
+    return None
+
+
+def _retention_counts_by_class(results: list[dict]) -> dict:
+    by_class: dict[str, dict[str, int]] = {}
+    target_class_map = {
+        "conversation": "sage_session_memory",
+        "session_memory": "sage_session_memory",
+        "user_memory": "user_memory",
+        "audit_log": "audit_log",
+        "document_artifact": "uploaded_document_artifacts",
+        "document_metadata": "uploaded_document_artifacts",
+        "retrieval_index": "uploaded_document_artifacts",
+        "runtime_document_state": "uploaded_document_artifacts",
+        "lifecycle_data_class": "lifecycle_data_class",
+        "retention": "retention",
+        "deletion_tombstone": "deletion_tombstone",
+    }
+    for result in results:
+        if result.get("target_kind") == "lifecycle_data_class":
+            class_key = str(result.get("target_id") or "lifecycle_data_class")
+        else:
+            class_key = target_class_map.get(
+                str(result.get("target_kind", "")),
+                str(result.get("target_kind") or "unknown"),
+            )
+        status = str(result.get("status") or "unknown")
+        if class_key not in by_class:
+            by_class[class_key] = {"succeeded": 0, "skipped": 0, "failed": 0}
+        if status not in by_class[class_key]:
+            by_class[class_key][status] = 0
+        by_class[class_key][status] += 1
+    return {"by_class": by_class}
+
+
+def _retention_tombstone_refs(results: list[dict], retry_results: list[dict] | None = None) -> list[dict]:
+    refs = []
+    for result in retry_results or []:
+        tombstone_id = result.get("tombstone_id")
+        if tombstone_id is not None:
+            refs.append({"tombstone_id": tombstone_id, "status": result.get("status")})
+    return refs
+
+
+def _create_retention_run_record(
+    *,
+    trigger: str,
+    actor: str,
+    policy_snapshot: dict,
+    deletion: dict,
+    retry_results: list[dict] | None,
+    audit_event: dict | None,
+    started_at: datetime,
+    finished_at: datetime,
+) -> dict:
+    results = list(deletion.get("results") or [])
+    return database.create_retention_run_record(
+        trigger=trigger,
+        actor=actor,
+        status=str(deletion.get("status") or "unknown"),
+        policy_snapshot=policy_snapshot,
+        counts=_retention_counts_by_class(results),
+        results=results,
+        tombstone_refs=_retention_tombstone_refs(results, retry_results),
+        audit_log_id=audit_event.get("id") if audit_event else None,
+        audit_entry_hash=audit_event.get("entry_hash") if audit_event else None,
+        started_at=started_at.isoformat(),
+        finished_at=finished_at.isoformat(),
+    )
 
 
 def _audit_deletion_tombstone_retry(*, changed_by: str, tombstone: dict, deletion: dict) -> None:
@@ -1179,7 +1213,11 @@ def _stale_user_memory_ids(cutoff: datetime) -> list[int]:
             """
             SELECT id
             FROM user_memories
-            WHERE status = 'active'
+            WHERE (
+                (status = 'active' AND retention_class = 'expirable')
+                OR status = 'superseded'
+                OR retention_class = 'superseded'
+            )
               AND datetime(updated_at) <= datetime(?)
             ORDER BY updated_at ASC, id ASC
             LIMIT 1000
@@ -1189,6 +1227,83 @@ def _stale_user_memory_ids(cutoff: datetime) -> list[int]:
         return [int(row["id"]) for row in cursor.fetchall()]
 
 
+def _document_artifact_candidates(cutoff: datetime) -> list[dict]:
+    candidates: list[dict] = []
+    known_artifact_paths: set[str] = set()
+    job_limit = 1000
+    job_offset = 0
+    while True:
+        jobs = ingest_db.list_jobs(limit=job_limit, offset=job_offset)
+        if not jobs:
+            break
+        for job in jobs:
+            file_path = job.get("file_path")
+            if file_path:
+                try:
+                    known_artifact_paths.add(str(Path(file_path).resolve()))
+                except OSError:
+                    known_artifact_paths.add(file_path)
+
+            reason = ingest._document_artifact_cleanup_reason(job)
+            if not reason:
+                continue
+            updated_at = _parse_timestamp(job.get("updated_at"))
+            if updated_at and updated_at <= cutoff:
+                candidates.append({
+                    "job_id": job["job_id"],
+                    "filename": job.get("filename", "unknown"),
+                    "reason": reason,
+                    "job": job,
+                })
+        if len(jobs) < job_limit:
+            break
+        job_offset += job_limit
+
+    candidates.extend(_orphaned_uploaded_document_artifacts(cutoff, known_artifact_paths))
+    return candidates
+
+
+def _orphaned_uploaded_document_artifacts(cutoff: datetime, known_artifact_paths: set[str]) -> list[dict]:
+    uploads_root = ingest.UPLOADS_DIR
+    try:
+        resolved_root = uploads_root.resolve()
+    except OSError:
+        return []
+    if not resolved_root.exists():
+        return []
+
+    candidates: list[dict] = []
+    for path in sorted(resolved_root.iterdir()):
+        if path.is_symlink():
+            continue
+        if not path.is_file():
+            continue
+        try:
+            resolved_path = path.resolve()
+            file_stat = resolved_path.stat()
+        except OSError:
+            continue
+        if str(resolved_path) in known_artifact_paths:
+            continue
+        if stat.S_ISREG(file_stat.st_mode) is False:
+            continue
+        modified_at = datetime.fromtimestamp(file_stat.st_mtime, timezone.utc).replace(tzinfo=None)
+        if modified_at > cutoff:
+            continue
+        candidates.append({
+            "job_id": f"orphaned-upload:{path.name}",
+            "filename": path.name,
+            "reason": "orphaned_uploaded_artifact",
+            "job": {
+                "job_id": f"orphaned-upload:{path.name}",
+                "filename": path.name,
+                "file_path": str(resolved_path),
+                "status": "orphaned",
+            },
+        })
+    return candidates
+
+
 def preview_retention(request: RetentionRunRequest) -> dict:
     now = datetime.utcnow()
     stored_policies = _stored_retention_policies()
@@ -1196,50 +1311,26 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
     user_memory_policy = _retention_policy_for("user_memory")
     audit_log_policy = _retention_policy_for("audit_log")
-    conversation_days = _retention_policy_days("sage_session_memory", request.stale_conversation_days)
     document_days = _retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
     user_memory_days = _retention_policy_days("user_memory", 30)
     audit_log_days = _retention_policy_days("audit_log", 30)
-    conversation_cutoff = now - timedelta(days=conversation_days)
     document_cutoff = now - timedelta(days=document_days)
     user_memory_cutoff = now - timedelta(days=user_memory_days)
     audit_log_cutoff = now - timedelta(days=audit_log_days)
 
     stale_conversations = []
     skipped_conversations = []
-    if session_memory_policy["enabled"]:
-        with query._sessions_lock:
-            for session_id, session in list(query._sessions.items()):
-                with query._session_lock(session):
-                    last_activity = _session_last_activity(session)
-                if last_activity and last_activity <= conversation_cutoff:
-                    if database.has_incomplete_deletion_tombstone_for_conversation(session_id):
-                        skipped_conversations.append(session_id)
-                    else:
-                        stale_conversations.append(session_id)
 
     document_artifacts = []
     if document_artifact_policy["enabled"]:
-        job_limit = 1000
-        job_offset = 0
-        while True:
-            jobs = ingest_db.list_jobs(limit=job_limit, offset=job_offset)
-            if not jobs:
-                break
-            for job in jobs:
-                reason = ingest._document_artifact_cleanup_reason(job)
-                if not reason:
-                    continue
-                updated_at = _parse_timestamp(job.get("updated_at"))
-                if updated_at and updated_at <= document_cutoff:
-                    document_artifacts.append({
-                        "job_id": job["job_id"],
-                        "filename": job.get("filename", "unknown"),
-                        "reason": reason,
-                    })
-            if len(jobs) < job_limit:
-                break
-            job_offset += job_limit
+        document_artifacts = [
+            {
+                "job_id": candidate["job_id"],
+                "filename": candidate["filename"],
+                "reason": candidate["reason"],
+            }
+            for candidate in _document_artifact_candidates(document_cutoff)
+        ]
 
     user_memories = []
     if user_memory_policy["enabled"]:
@@ -1261,7 +1352,7 @@ def preview_retention(request: RetentionRunRequest) -> dict:
     if "audit_log" in stored_policies and not audit_log_policy["enabled"]:
         skipped_classes.append("audit_log")
 
-    return {
+    preview = {
         "status": "preview",
         "destructive": False,
         "eligible": {
@@ -1280,18 +1371,55 @@ def preview_retention(request: RetentionRunRequest) -> dict:
         "skipped_conversations": skipped_conversations,
         "skipped_classes": skipped_classes,
     }
+    preview["preview_token"] = _retention_preview_token(request, preview)
+    return preview
 
 
-async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
-    now = datetime.utcnow()
+def _retention_preview_token(request: RetentionRunRequest, preview: dict) -> str:
+    token_payload = {
+        "request": {
+            "stale_conversation_days": request.stale_conversation_days,
+            "document_artifact_days": request.document_artifact_days,
+        },
+        "eligible": preview["eligible"],
+        "counts": preview["counts"],
+        "skipped_conversations": preview["skipped_conversations"],
+        "skipped_classes": preview["skipped_classes"],
+        "retention_policies": _stored_retention_policies(),
+    }
+    serialized = json.dumps(token_payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+async def run_retention(
+    request: RetentionRunRequest,
+    admin: dict,
+    *,
+    create_run_record: bool = True,
+    trigger: str = "manual",
+    require_preview_confirmation: bool = True,
+) -> dict:
+    started_at = datetime.utcnow()
+    if require_preview_confirmation and not request.confirm_current_counts:
+        current_preview = preview_retention(request)
+        if request.preview_token != current_preview["preview_token"]:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": (
+                        "Manual Retention Execution requires a fresh preview token "
+                        "or explicit current-count confirmation."
+                    ),
+                    "current_preview": current_preview,
+                },
+            )
+
+    now = started_at
     stored_policies = _stored_retention_policies()
     session_memory_policy = _retention_policy_for("sage_session_memory")
     document_artifact_policy = _retention_policy_for("uploaded_document_artifacts")
     user_memory_policy = _retention_policy_for("user_memory")
     audit_log_policy = _retention_policy_for("audit_log")
-    conversation_cutoff = now - timedelta(
-        days=_retention_policy_days("sage_session_memory", request.stale_conversation_days)
-    )
     document_cutoff = now - timedelta(
         days=_retention_policy_days("uploaded_document_artifacts", request.document_artifact_days)
     )
@@ -1306,29 +1434,13 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
         "audit_log_entries": 0,
     }
 
-    stale_sessions = []
     if session_memory_policy["enabled"]:
-        with query._sessions_lock:
-            stale_session_ids = []
-            for session_id, session in list(query._sessions.items()):
-                with query._session_lock(session):
-                    last_activity = _session_last_activity(session)
-                if last_activity and last_activity <= conversation_cutoff:
-                    stale_session_ids.append(session_id)
-
-            for session_id in stale_session_ids:
-                if database.has_incomplete_deletion_tombstone_for_conversation(session_id):
-                    retained["skipped_conversations"].append(session_id)
-                    results.append(deletion_target_skipped(
-                        target_kind="conversation",
-                        target_id=session_id,
-                        action="retention_skip_tombstoned_conversation",
-                        detail="Skipped Conversation because an incomplete Deletion Tombstone already tracks its lifecycle deletion.",
-                    ))
-                    continue
-                session = query._sessions.pop(session_id, None)
-                if session is not None:
-                    stale_sessions.append((session_id, session))
+        results.append(deletion_target_skipped(
+            target_kind="lifecycle_data_class",
+            target_id="sage_session_memory",
+            action="retention_skip_sage_owned_discovery",
+            detail="Skipped Sage Session Memory retention because Conversation session discovery is owned by Sage.",
+        ))
     elif "sage_session_memory" in stored_policies:
         results.append(deletion_target_skipped(
             target_kind="lifecycle_data_class",
@@ -1337,72 +1449,15 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
             detail="Skipped Sage Session Memory retention because its Data Retention policy is disabled.",
         ))
 
-    for session_id, session in stale_sessions:
-        with query._session_lock(session):
-            last_activity = _session_last_activity(session)
-            became_active = bool(last_activity and last_activity > conversation_cutoff)
-        if became_active:
-            with query._sessions_lock:
-                query._sessions[session_id] = session
-            retained["skipped_conversations"].append(session_id)
-            results.append(deletion_target_skipped(
-                target_kind="conversation",
-                target_id=session_id,
-                action="retention_skip_active_conversation",
-                detail="Skipped Conversation because it became active before retention deletion.",
-            ))
-            continue
-
-        retained["stale_conversations"].append(session_id)
-        session_memory_deletion = await delete_session_memory_for_conversation(session)
-        if session_memory_deletion["status"] != "succeeded":
-            create_session_memory_tombstone(
-                session=session,
-                source="retention_execution",
-                workflow="run_retention",
-                deletion=session_memory_deletion,
-            )
-        results.extend(session_memory_deletion["results"])
-        results.append(deletion_target_succeeded(
-            target_kind="conversation",
-            target_id=session_id,
-            action="retention_delete_stale_conversation",
-            detail="Deleted stale active Conversation state.",
-        ))
-
     if document_artifact_policy["enabled"]:
-        job_limit = 1000
-        job_offset = 0
-        jobs_to_check = []
-        while True:
-            jobs = ingest_db.list_jobs(limit=job_limit, offset=job_offset)
-            if not jobs:
-                break
-            jobs_to_check.extend(jobs)
-            if len(jobs) < job_limit:
-                break
-            job_offset += job_limit
-
-        for job in jobs_to_check:
-            reason = ingest._document_artifact_cleanup_reason(job)
-            if not reason:
-                continue
-            updated_at = _parse_timestamp(job.get("updated_at"))
-            if updated_at is None:
-                logger.warning(
-                    "Skipping retention cleanup for document job with missing or invalid updated_at",
-                    extra={"job_id": job.get("job_id"), "updated_at": job.get("updated_at")},
-                )
-                continue
-            if updated_at > document_cutoff:
-                continue
-
-            job_id = job["job_id"]
+        for candidate in _document_artifact_candidates(document_cutoff):
+            job = candidate["job"]
+            job_id = candidate["job_id"]
             deletion_response = await ingest._delete_document_job_artifacts(job_id, job)
             retained["document_artifacts"].append({
                 "job_id": job_id,
-                "filename": job.get("filename", "unknown"),
-                "reason": reason,
+                "filename": candidate["filename"],
+                "reason": candidate["reason"],
                 "deletion": deletion_response["deletion"],
             })
             results.extend(deletion_response["deletion"]["results"])
@@ -1473,18 +1528,35 @@ async def run_retention(request: RetentionRunRequest, admin: dict) -> dict:
         ))
 
     deletion = summarize_deletion_results(results)
-    _audit_retention_run(
+    audit_event = _audit_retention_run(
         changed_by=admin.get("pubkey", "unknown"),
         deletion=deletion,
     )
-    return {
+    response = {
         "status": deletion["status"],
         "retained": retained,
         "deletion": deletion,
+        "audit_event": audit_event,
     }
+    if create_run_record:
+        actor = admin.get("pubkey") or admin.get("actor") or "unknown"
+        response["run_record"] = _create_retention_run_record(
+            trigger=trigger,
+            actor=actor,
+            policy_snapshot={"retention_policies": stored_policies},
+            deletion=deletion,
+            retry_results=[],
+            audit_event=audit_event,
+            started_at=started_at,
+            finished_at=datetime.utcnow(),
+        )
+    return response
 
 
 async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: dict) -> dict:
+    started_at = datetime.utcnow()
+    trigger = "machine" if admin.get("type") == "machine" else "manual"
+    actor = admin.get("pubkey") or admin.get("actor") or "unknown"
     scheduled_policies = {
         key: policy
         for key, policy in _stored_retention_policies().items()
@@ -1500,11 +1572,23 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
                 detail="No Lifecycle Data Classes have scheduled Retention Execution enabled.",
             )
         ])
-        _audit_retention_run(changed_by=admin.get("pubkey", "unknown"), deletion=deletion)
+        audit_event = _audit_retention_run(changed_by=actor, deletion=deletion)
+        run_record = _create_retention_run_record(
+            trigger=trigger,
+            actor=actor,
+            policy_snapshot={"scheduled_policies": scheduled_policies},
+            deletion=deletion,
+            retry_results=[],
+            audit_event=audit_event,
+            started_at=started_at,
+            finished_at=datetime.utcnow(),
+        )
         return {
             "status": "skipped",
             "enabled_classes": [],
+            "deletion": deletion,
             "retry_results": [],
+            "run_record": run_record,
             "retention": {"status": deletion["status"], "deletion": deletion, "retained": {}},
         }
 
@@ -1514,6 +1598,9 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
             document_artifact_days=_retention_policy_days("uploaded_document_artifacts", 0),
         ),
         admin,
+        create_run_record=False,
+        trigger=trigger,
+        require_preview_confirmation=False,
     )
 
     retry_results = []
@@ -1556,10 +1643,28 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
     ):
         final_status = "incomplete"
 
+    run_deletion = retention["deletion"]
+    if final_status != retention["status"]:
+        run_deletion = {
+            **run_deletion,
+            "status": final_status,
+        }
+    run_record = _create_retention_run_record(
+        trigger=trigger,
+        actor=actor,
+        policy_snapshot={"scheduled_policies": scheduled_policies},
+        deletion=run_deletion,
+        retry_results=retry_results,
+        audit_event=retention.get("audit_event"),
+        started_at=started_at,
+        finished_at=datetime.utcnow(),
+    )
     return {
         "status": final_status,
         "enabled_classes": enabled_classes,
+        "deletion": run_deletion,
         "retry_results": retry_results,
+        "run_record": run_record,
         "retention": retention,
     }
 
@@ -1650,6 +1755,25 @@ async def list_admin_deletion_tombstones(
     if status is not None and status not in {"incomplete", "completed"}:
         raise HTTPException(status_code=400, detail="Unsupported deletion tombstone status")
     return {"tombstones": database.list_deletion_tombstones(status=status)}
+
+
+@router.get("/retention-runs", response_model=dict)
+async def list_admin_retention_runs(
+    limit: int = Query(default=100, ge=1, le=500),
+    _admin: dict = Depends(auth.require_admin),
+):
+    return {"runs": database.list_retention_run_records(limit=limit)}
+
+
+@router.get("/retention-runs/{run_id}", response_model=dict)
+async def get_admin_retention_run(
+    run_id: int,
+    _admin: dict = Depends(auth.require_admin),
+):
+    run = database.get_retention_run_record(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Retention Run Record not found")
+    return {"run": run}
 
 
 @router.post("/deletion-tombstones/{tombstone_id}/retry", response_model=dict)

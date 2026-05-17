@@ -219,6 +219,22 @@ describe('AdminDeploymentConfig', () => {
           retention_scheduler: {
             status: 'external_or_manual',
             summary: 'Scheduled Retention Policy marks classes for retention; this prototype does not include its own Retention Scheduler.',
+            observation: {
+              status: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled ? 'healthy' : 'disabled',
+              enabled_classes: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled ? ['sage_session_memory'] : [],
+              last_run: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled
+                ? {
+                    id: 7,
+                    status: 'succeeded',
+                    trigger: 'machine',
+                    actor: 'machine:scheduled-retention',
+                    finished_at: '2026-05-16T12:00:00Z',
+                  }
+                : null,
+              summary: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled
+                ? 'A recent Retention Scheduler run created lifecycle evidence.'
+                : 'No Lifecycle Data Classes have scheduled Retention Execution enabled.',
+            },
           },
           data_classes: [
             {
@@ -522,6 +538,8 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Content Encryption Key: Configured')).toBeInTheDocument()
     expect(screen.getByText('Artifact Encryption Posture: Encrypted')).toBeInTheDocument()
     expect(screen.getByText('Retention Scheduler: External or manual')).toBeInTheDocument()
+    expect(screen.getByText('Observation: Disabled')).toBeInTheDocument()
+    expect(screen.getByText('Scheduler enabled classes: none')).toBeInTheDocument()
     expect(screen.getByText('Confidentiality: Partial')).toBeInTheDocument()
     expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
     expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
@@ -629,6 +647,8 @@ describe('AdminDeploymentConfig', () => {
         }),
       )
     })
+    expect(await within(lifecycleStatus).findByText('Scheduler enabled classes: sage_session_memory')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Last run status: Succeeded')).toBeInTheDocument()
   })
 
   it('lets admins preview retention, run scheduled retention, and see audit coverage', async () => {

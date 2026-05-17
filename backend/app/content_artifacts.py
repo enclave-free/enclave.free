@@ -1,6 +1,7 @@
 """Backend-readable content artifact encryption for active storage."""
 
 import base64
+import binascii
 import hashlib
 import hmac
 import os
@@ -15,19 +16,30 @@ import database
 
 
 ARTIFACT_PREFIX = b"enclave-artifact::v1::"
-LEGACY_ARTIFACT_PREFIX = b"san" b"ctum-artifact::v1::"
+OLD_ARTIFACT_PREFIX = b"sanctum-artifact::v1::"
 ARTIFACT_ENCRYPTION_KEY = "DOCUMENT_ARTIFACT_ENCRYPTION"
 CONTENT_ENCRYPTION_KEY = "CONTENT_ENCRYPTION_KEY"
 ARTIFACT_KEY_INFO = b"enclave/artifact/v1"
-LEGACY_ARTIFACT_KEY_INFO = b"san" b"ctum/artifact/v1"
+
+
+def _artifact_encryption_setting_value() -> str | None:
+    value = (
+        database.get_deployment_config_value(ARTIFACT_ENCRYPTION_KEY)
+        or database.get_setting(ARTIFACT_ENCRYPTION_KEY)
+        or os.getenv(ARTIFACT_ENCRYPTION_KEY)
+    )
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized or None
+
+
+def _artifact_encryption_is_implicit_auto() -> bool:
+    return _artifact_encryption_setting_value() in {None, "opportunistic", "auto", "enabled_if_configured"}
 
 
 def artifact_encryption_posture() -> str:
-    value = str(
-        database.get_deployment_config_value(ARTIFACT_ENCRYPTION_KEY)
-        or database.get_setting(ARTIFACT_ENCRYPTION_KEY)
-        or os.getenv(ARTIFACT_ENCRYPTION_KEY, "auto")
-    ).strip().lower()
+    value = _artifact_encryption_setting_value() or "auto"
     if value in {"disabled", "required"}:
         return value
     if value in {"opportunistic", "auto", "enabled_if_configured"}:
@@ -69,6 +81,12 @@ def content_encryption_status() -> dict:
 def artifact_encryption_status() -> dict:
     posture = artifact_encryption_posture()
     if posture == "disabled":
+        if _artifact_encryption_is_implicit_auto() and not content_encryption_key_configured():
+            return {
+                "posture": "disabled",
+                "status": "not_configured",
+                "summary": "Artifact encryption is not configured because no Content Encryption Key is configured.",
+            }
         return {
             "posture": "disabled",
             "status": "plaintext_by_operator_choice",
@@ -106,20 +124,6 @@ def _derive_artifact_key(key: str, info: bytes) -> bytes:
     ).digest()
 
 
-def _legacy_key_bytes() -> bytes:
-    key = _content_encryption_key_value()
-    if not key:
-        raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
-    return hashlib.sha256(key.encode("utf-8")).digest()
-
-
-def _legacy_hkdf_key_bytes() -> bytes:
-    key = _content_encryption_key_value()
-    if not key:
-        raise RuntimeError("Content Encryption Key is required for encrypted artifact storage.")
-    return _derive_artifact_key(key, LEGACY_ARTIFACT_KEY_INFO)
-
-
 def encrypt_bytes(plaintext: bytes) -> bytes:
     nonce = os.urandom(12)
     cipher = AES.new(_key_bytes(), AES.MODE_GCM, nonce=nonce)
@@ -129,7 +133,17 @@ def encrypt_bytes(plaintext: bytes) -> bytes:
 
 
 def is_encrypted_artifact(content: bytes) -> bool:
-    return content.startswith(ARTIFACT_PREFIX) or content.startswith(LEGACY_ARTIFACT_PREFIX)
+    return content.startswith((ARTIFACT_PREFIX, OLD_ARTIFACT_PREFIX))
+
+
+def _is_legacy_encrypted_artifact(content: bytes) -> bool:
+    if not content.startswith(OLD_ARTIFACT_PREFIX):
+        return False
+    try:
+        raw = base64.b64decode(content[len(OLD_ARTIFACT_PREFIX):], validate=True)
+    except (binascii.Error, ValueError):
+        return False
+    return len(raw) > 28
 
 
 def decrypt_bytes(content: bytes) -> bytes:
@@ -139,20 +153,24 @@ def decrypt_bytes(content: bytes) -> bytes:
     Callers that need to know whether plaintext was verified should check
     is_encrypted_artifact before treating the output as authenticated plaintext.
     """
+    if content.startswith(OLD_ARTIFACT_PREFIX):
+        detail = (
+            "valid legacy nonce/tag/ciphertext envelope"
+            if _is_legacy_encrypted_artifact(content)
+            else "malformed legacy envelope"
+        )
+        raise ValueError(
+            "Legacy encrypted document artifact format sanctum-artifact::v1 is not supported by "
+            f"the active reader ({detail}). Run the confidentiality migration to rewrite this artifact."
+        )
     if not is_encrypted_artifact(content):
         return content
-    prefix = ARTIFACT_PREFIX if content.startswith(ARTIFACT_PREFIX) else LEGACY_ARTIFACT_PREFIX
-    raw = base64.b64decode(content[len(prefix):])
+    raw = base64.b64decode(content[len(ARTIFACT_PREFIX):])
     nonce = raw[:12]
     tag = raw[12:28]
     ciphertext = raw[28:]
-    for key in (_key_bytes(), _legacy_hkdf_key_bytes(), _legacy_key_bytes()):
-        try:
-            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-            return cipher.decrypt_and_verify(ciphertext, tag)
-        except ValueError:
-            continue
-    raise ValueError("Encrypted artifact authentication failed")
+    cipher = AES.new(_key_bytes(), AES.MODE_GCM, nonce=nonce)
+    return cipher.decrypt_and_verify(ciphertext, tag)
 
 
 def encode_for_storage(content: bytes) -> bytes:

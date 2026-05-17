@@ -28,11 +28,10 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "tinfoil").lower()
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL") or os.getenv("LLM_API_URL", "http://tinfoil-proxy:8089/v1")
-EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("TINFOIL_API_KEY")
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY") or os.getenv("TINFOIL_API_KEY")
 
 # Collection name for knowledge base
 COLLECTION_NAME = "enclave_knowledge"
-_LEGACY_PLAINTEXT_KEYS = {"text", "fact_text"}
 
 # Lazy-loaded resources
 _qdrant_client = None
@@ -46,98 +45,6 @@ def get_qdrant_client():
     if _qdrant_client is None:
         _qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
     return _qdrant_client
-
-
-def detect_legacy_plaintext_payloads(limit: int = 500) -> dict[str, Any]:
-    """Best-effort scan for legacy Qdrant payloads that still contain raw text."""
-    legacy_count = 0
-    affected = []
-    try:
-        client = get_qdrant_client()
-        next_offset = None
-        while True:
-            points, next_offset = client.scroll(
-                collection_name=COLLECTION_NAME,
-                limit=limit,
-                with_payload=True,
-                with_vectors=False,
-                offset=next_offset,
-            )
-            for point in points:
-                payload = getattr(point, "payload", None) or {}
-                if any(payload.get(key) for key in _LEGACY_PLAINTEXT_KEYS):
-                    legacy_count += 1
-                    affected.append({
-                        "point_id": str(getattr(point, "id", "")),
-                        "chunk_id": payload.get("chunk_id"),
-                        "job_id": payload.get("job_id"),
-                        "source_file": payload.get("source_file"),
-                    })
-            if next_offset is None:
-                break
-    except Exception as exc:
-        logger.warning("Could not inspect Qdrant payload confidentiality: %s", exc)
-        return {
-            "checked": False,
-            "legacy_plaintext_payloads": None,
-            "summary": "Qdrant payload confidentiality could not be inspected from this process.",
-        }
-
-    return {
-        "checked": True,
-        "legacy_plaintext_payloads": legacy_count,
-        "affected": affected,
-        "summary": (
-            f"Found {legacy_count} Qdrant points with legacy plaintext payload text."
-            if legacy_count
-            else "No legacy plaintext Qdrant payload text was detected in the inspected active index."
-        ),
-    }
-
-
-def list_legacy_plaintext_payloads(limit: int = 500) -> list[dict[str, Any]]:
-    """Return legacy Qdrant payloads with recoverable text for confidentiality migration."""
-    client = get_qdrant_client()
-    legacy_points = []
-    next_offset = None
-    while True:
-        points, next_offset = client.scroll(
-            collection_name=COLLECTION_NAME,
-            limit=limit,
-            with_payload=True,
-            with_vectors=False,
-            offset=next_offset,
-        )
-        for point in points:
-            payload = getattr(point, "payload", None) or {}
-            text = payload.get("text") or payload.get("fact_text")
-            if not text:
-                continue
-            legacy_points.append({
-                "point_id": getattr(point, "id", None),
-                "chunk_id": payload.get("chunk_id"),
-                "job_id": payload.get("job_id"),
-                "source_file": payload.get("source_file"),
-                "text": text,
-                "payload": payload,
-            })
-        if next_offset is None:
-            break
-    return legacy_points
-
-
-def rewrite_payload_without_plaintext(point_id: Any, payload: dict[str, Any]) -> None:
-    """Overwrite a Qdrant payload while preserving retrieval metadata and removing raw text."""
-    minimized_payload = {
-        key: value
-        for key, value in payload.items()
-        if key not in _LEGACY_PLAINTEXT_KEYS
-    }
-    get_qdrant_client().overwrite_payload(
-        collection_name=COLLECTION_NAME,
-        points=[point_id],
-        payload=minimized_payload,
-    )
 
 
 def get_embedding_model():
@@ -158,7 +65,7 @@ def get_embedding_client():
     if _embedding_client is None:
         if not EMBEDDING_API_KEY:
             raise RuntimeError(
-                "EMBEDDING_API_KEY, LLM_API_KEY, or TINFOIL_API_KEY is required for Tinfoil embeddings"
+                "EMBEDDING_API_KEY or TINFOIL_API_KEY is required for Tinfoil embeddings"
             )
         from openai import OpenAI
 

@@ -572,19 +572,16 @@
     "title": "Admin Setup",
     "subtitle": "Connect with your Nostr identity to manage this instance",
     "connectNostr": "Connect with Nostr",
-    "orForTesting": "or for testing",
-    "continueMock": "Continue with mock identity",
     "connecting": "Connecting to extension...",
     "noExtension": "No Nostr extension found",
     "installExtension": "Install a NIP-07 compatible extension to continue",
-    "useMock": "Use mock",
     "welcomeAdmin": "Welcome, Admin!",
     "connectedAs": "Connected as",
     "redirecting": "Redirecting to dashboard...",
     "connectionFailed": "Connection failed",
     "securityJourneyTitle": "Security quick path",
     "securityJourneyIntro": "After connecting with Nostr, follow this simple setup path:",
-    "securityJourneyStep1": "Secure access: set public URLs, disable simulation flags outside development, and choose user approval rules.",
+    "securityJourneyStep1": "Secure access: set public URLs, configure real authentication, and choose user approval rules.",
     "securityJourneyStep2": "Set data boundaries: collect only needed fields, keep sensitive fields encrypted, and limit chat context fields.",
     "securityJourneyStep3": "Validate and monitor: run config validation, check service health, and review stored data regularly.",
     "securityJourneyNote": "This gives you a strong baseline for production.",
@@ -649,7 +646,6 @@
       "sentMagicLink": "We sent a magic link to",
       "clickLink": "Click the link in the email to sign in.",
       "checkSpam": "Don't see it? Check your spam folder.",
-      "simulateMagicLink": "Simulate clicking magic link",
       "forTesting": "For testing purposes:",
       "dataProtectionTitle": "How Enclave protects your data",
       "noPasswordTitle": "No stored passwords",
@@ -757,13 +753,6 @@
       "roleAssistant": "Assistant",
       "footer": "Exported from {{instanceName}}",
       "exportedOn": "Exported on {{timestamp}}"
-    },
-    "database": {
-      "executedSql": "Executed SQL: {{sql}}",
-      "noResults": "Query returned no results.",
-      "resultsCount_one": "Database query result ({{count}} row):",
-      "resultsCount_other": "Database query results ({{count}} rows):",
-      "resultsTruncated": "(Results truncated to 100 rows)"
     }
   },
   "errors": {
@@ -808,7 +797,7 @@
     "securityBreadcrumbTitle": "Protect your instance in 3 steps",
     "securityStep1Label": "Step 1",
     "securityStep1Title": "Secure access",
-    "securityStep1Body": "Set public URLs, disable simulation flags outside development, and choose whether users require approval.",
+    "securityStep1Body": "Set public URLs, configure real authentication, and choose whether users require approval.",
     "securityStep1Primary": "Open Deployment settings",
     "securityStep1Secondary": "Open User settings",
     "securityStep2Label": "Step 2",
@@ -986,7 +975,7 @@
       "gmailHint": "Use an App Password — not your regular Gmail password. Enable 2FA first, then generate an App Password in your Google Account security settings.",
       "goToPage": "Go to page",
       "mailgunHint": "Use your Mailgun SMTP credentials from the domain settings page. The host is typically smtp.mailgun.org.",
-      "mockSmtp": "MOCK_SMTP — when enabled, emails are logged to the console instead of being sent. Useful for development.",
+      "mockEmail": "MOCK_EMAIL — when enabled, emails are logged to the console instead of being sent. Useful for development.",
       "overviewDesc": "Configure SMTP settings to enable outbound email (invitations, notifications, password resets). All providers use standard SMTP fields.",
       "overviewTitle": "Email (SMTP) Overview",
       "postmarkHint": "Use your Postmark Server API token as the SMTP password. The SMTP username is always the same token.",
@@ -1058,17 +1047,16 @@
       "usersToMigrate": "Users to migrate",
       "warning": "This is an advanced operation. Incorrect migration can lock you out of encrypted data. Proceed only if you understand the implications."
     },
-    "leaveEmptyForLlmApiKey": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback.",
     "llmHelp": {
       "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
       "apiKeyLabel": "Tinfoil API Key",
       "ariaLabel": "Sage runtime configuration help",
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side compatibility shims.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys only support Python compatibility paths.",
+      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
       "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side compatibility shims.",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
       "overviewTitle": "Sage Runtime Overview",
       "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
@@ -1092,18 +1080,16 @@
       "ariaLabel": "Security configuration help",
       "devDesc": "These flags bypass real authentication and let you access the app without a Nostr key. They exist only for local development and testing.",
       "devTitle": "Development Flags",
-      "devWarning": "Never enable simulation flags in production. They disable all authentication checks and expose admin endpoints to anyone.",
+      "devWarning": "Local testing email settings only change how emails are sent for development and must not be used in production; they do not bypass authentication.",
       "frontendDesc": "FRONTEND_URL tells the backend where the frontend is hosted, used for CORS, redirects, and cookie scoping.",
       "frontendNote": "This must match exactly — including scheme (http/https) and port. Mismatches cause CORS errors.",
       "frontendTitle": "Frontend & Sessions",
       "frontendWhen": "Set this when deploying behind a custom domain or changing the frontend port.",
       "goToPage": "Go to page",
       "overviewDesc": "Security settings control authentication, session handling, and development shortcuts. Defaults are configured for local development.",
-      "overviewNote": "In production, make sure simulation flags are off and FRONTEND_URL matches your real domain.",
+      "overviewNote": "In production, make sure FRONTEND_URL matches your real domain and auth uses real verification.",
       "overviewTitle": "Security Overview",
-      "overviewWhen": "Review these settings before deploying to a public-facing server.",
-      "simAdminDesc": "SIMULATE_ADMIN_AUTH — bypasses admin authentication. All requests are treated as coming from an admin user.",
-      "simUserDesc": "SIMULATE_USER_AUTH — bypasses user authentication. All requests are treated as coming from a logged-in user."
+      "overviewWhen": "Review these settings before deploying to a public-facing server."
     },
     "send": "Send",
     "sendTestEmail": "Send Test Email",
@@ -1335,8 +1321,8 @@
   "deploymentConfigItems": {
     "LLM_PROVIDER": {
       "label": "Model Provider",
-      "description": "Model Provider compatibility label",
-      "hint": "Use \"sage\" for this prototype. Legacy \"maple\" remains only for compatibility."
+      "description": "Python-side Model Provider label",
+      "hint": "Use \"sage\" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata."
     },
     "LLM_MODEL": {
       "label": "Model Name",
@@ -1388,7 +1374,7 @@
       "description": "From address for emails",
       "hint": "The \"from\" address for outgoing emails (e.g., noreply@yourdomain.com)."
     },
-    "MOCK_SMTP": {
+    "MOCK_EMAIL": {
       "label": "Test Mode",
       "description": "Mock email sending",
       "hint": "When \"true\", emails are logged instead of sent. Useful for development."
@@ -1422,16 +1408,6 @@
       "label": "App URL",
       "description": "Public URL for the application",
       "hint": "The public URL where users access the app. Used for generating magic links."
-    },
-    "SIMULATE_USER_AUTH": {
-      "label": "Simulate User Auth",
-      "description": "Allow user verification without magic link token (testing only)",
-      "hint": "Enable for development/testing. Allows users to complete email verification without clicking the magic link. Should be disabled in production."
-    },
-    "SIMULATE_ADMIN_AUTH": {
-      "label": "Simulate Admin Auth",
-      "description": "Show mock Nostr connection button for admin auth (testing only)",
-      "hint": "Enable for development/testing. Shows a \"Mock Connection\" button on admin login that bypasses Nostr extension requirement. Should be disabled in production."
     },
     "BASE_DOMAIN": {
       "label": "Root Domain",

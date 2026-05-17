@@ -77,7 +77,7 @@ def run_startup_inference_verification() -> dict:
     Admin repair surfaces remain available if startup verification cannot pass.
     """
     configured = _configured_model_provider()
-    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    api_key = database.get_deployment_config_value("LLM_API_KEY")
     if not api_key:
         logger.warning("Startup Verifiable Inference skipped: LLM_API_KEY not configured")
         return mark_startup_verification_unavailable(
@@ -122,12 +122,12 @@ def _configured_model_provider() -> dict:
 # Environment variable to config key mapping
 # These are the keys we allow managing through the UI
 ENV_CONFIG_MAP = {
-    # Model Provider compatibility settings.
-    # LLM_* names are public/deployment compatibility keys, not Sage Agent Settings.
-    "LLM_PROVIDER": {"category": "llm", "description": "Model Provider label for Python compatibility paths", "requires_restart": True, "default": "sage"},
-    "LLM_MODEL": {"category": "llm", "description": "Model identifier for Python compatibility paths", "requires_restart": False},
-    "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python compatibility paths", "requires_restart": True},
-    "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python compatibility paths", "requires_restart": False, "is_secret": True},
+    # Python-side Model Provider deployment metadata.
+    # LLM_* names are not live Sage Agent Settings.
+    "LLM_PROVIDER": {"category": "llm", "description": "Model Provider label for Python diagnostics and verification metadata", "requires_restart": True, "default": "sage"},
+    "LLM_MODEL": {"category": "llm", "description": "Model identifier for Python diagnostics and verification metadata", "requires_restart": False},
+    "LLM_API_URL": {"category": "llm", "description": "Model Provider API base URL for Python diagnostics and verification metadata", "requires_restart": True},
+    "LLM_API_KEY": {"category": "llm", "description": "Model Provider API key for Python diagnostics and verification metadata", "requires_restart": False, "is_secret": True},
     # Embedding Settings
     "EMBEDDING_PROVIDER": {"category": "embedding", "description": "Embedding provider: tinfoil or local", "requires_restart": True, "default": "tinfoil"},
     "EMBEDDING_MODEL": {"category": "embedding", "description": "Embedding model identifier", "requires_restart": True, "default": "nomic-embed-text"},
@@ -139,7 +139,7 @@ ENV_CONFIG_MAP = {
     "SMTP_USER": {"category": "email", "description": "SMTP username", "requires_restart": False, "is_secret": True},
     "SMTP_PASS": {"category": "email", "description": "SMTP password", "requires_restart": False, "is_secret": True},
     "SMTP_FROM": {"category": "email", "description": "From email address", "requires_restart": False},
-    "MOCK_SMTP": {"category": "email", "description": "Enable mock email mode", "requires_restart": False},
+    "MOCK_EMAIL": {"category": "email", "description": "Enable mock email mode", "requires_restart": False},
     # SMTP test status keys (internal, set by test-email endpoint)
     "SMTP_LAST_TEST_SUCCESS": {"category": "email", "description": "Whether last SMTP test was successful", "requires_restart": False},
     "SMTP_LAST_TEST_AT": {"category": "email", "description": "Timestamp of last SMTP test", "requires_restart": False},
@@ -155,9 +155,6 @@ ENV_CONFIG_MAP = {
     "SEARXNG_URL": {"category": "search", "description": "SearXNG instance URL", "requires_restart": False, "default": "http://searxng:8080"},
     # Security Settings
     "FRONTEND_URL": {"category": "security", "description": "Frontend application URL", "requires_restart": False, "default": "http://localhost:5173"},
-    "SIMULATE_USER_AUTH": {"category": "security", "description": "Allow user verification without magic link token (testing only)", "requires_restart": False, "default": "false"},
-    "SIMULATE_ADMIN_AUTH": {"category": "security", "description": "Show mock Nostr connection button for admin auth (testing only)", "requires_restart": False, "default": "false"},
-    "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS": {"category": "security", "description": "Development-only bypass for Verifiable Inference enforcement; weakens privacy posture", "requires_restart": False, "default": "false"},
     "RATE_LIMIT_CHAT_PER_MINUTE": {"category": "security", "description": "Chat requests per minute", "requires_restart": True, "default": "120"},
     "RATE_LIMIT_QUERY_PER_MINUTE": {"category": "security", "description": "Retrieval query requests per minute", "requires_restart": True, "default": "90"},
     "RATE_LIMIT_UPLOAD_PER_MINUTE": {"category": "security", "description": "Document upload requests per minute", "requires_restart": True, "default": "20"},
@@ -218,9 +215,6 @@ RATE_LIMIT_KEYS: Final[set[str]] = {
 
 PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
     "MOCK_EMAIL",
-    "MOCK_SMTP",
-    "SIMULATE_USER_AUTH",
-    "SIMULATE_ADMIN_AUTH",
 )
 
 
@@ -245,6 +239,8 @@ def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Option
     value = config_dict.get(key)
     if value not in (None, ""):
         return value
+    if key == "LLM_API_KEY":
+        return None
     return os.getenv(key)
 
 
@@ -252,40 +248,18 @@ def _sync_env_to_db() -> None:
     """
     Sync current environment variables to the database.
     Only syncs keys that are in ENV_CONFIG_MAP and don't already exist in DB.
-    Uses legacy Maple key translation for compatibility where present.
     """
-    # Import key translation from config_loader
-    from config_loader import KEY_TRANSLATION, EMAIL_KEY_TRANSLATION
-
     for key, meta in ENV_CONFIG_MAP.items():
         if key in FORBIDDEN_KEYS:
             continue
 
         existing = database.get_deployment_config(key)
-        # Keep LLM API keys env-driven unless explicitly overridden in admin UI.
-        # This preserves expected `.env` behavior while still exposing the key in admin config.
-        preserve_env_fallback = key == "LLM_API_KEY"
-
-        # Try to get value from env, with legacy Maple key translation
-        value = None
-
-        if not preserve_env_fallback:
-            # 1. Try the original key
-            value = os.getenv(key)
-
-            # 2. If not found, try legacy Maple-translated key
-            if value is None and key in KEY_TRANSLATION:
-                translated_key = KEY_TRANSLATION[key]
-                value = os.getenv(translated_key)
-
-            # 3. If not found, try email key translation
-            if value is None and key in EMAIL_KEY_TRANSLATION:
-                translated_key = EMAIL_KEY_TRANSLATION[key]
-                value = os.getenv(translated_key)
+        # Try to get value from env.
+        value = None if key == "LLM_API_KEY" else os.getenv(key)
 
         if key == "LLM_PROVIDER":
             value = (value or meta.get("default", "sage") or "sage").strip().lower()
-            if value not in {"sage", "maple"}:
+            if value not in {"sage"}:
                 value = "sage"
 
         # 4. Fall back to default from config map
@@ -296,8 +270,7 @@ def _sync_env_to_db() -> None:
             # Backfill empty values with defaults/env values
             existing_value = existing.get("value")
             should_backfill_value = (
-                not preserve_env_fallback
-                and (existing_value is None or existing_value == "")
+                (existing_value is None or existing_value == "")
                 and value not in (None, "")
             )
             # Keep metadata in sync for known one-off category corrections.
@@ -306,7 +279,7 @@ def _sync_env_to_db() -> None:
             )
             should_force_supported_provider = (
                 key == "LLM_PROVIDER"
-                and str(existing_value or "").strip().lower() not in {"sage", "maple"}
+                and str(existing_value or "").strip().lower() not in {"sage"}
             )
 
             if should_backfill_value or should_sync_metadata or should_force_supported_provider:
@@ -357,6 +330,8 @@ async def get_deployment_config(admin: dict = Depends(auth.require_admin)):
 
     response = DeploymentConfigResponse()
     for config in all_config:
+        if config["key"] not in ENV_CONFIG_MAP:
+            continue
         item = _config_to_item(config)
         category = config["category"]
 
@@ -432,7 +407,7 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
     Requires admin authentication.
     """
     configured = _configured_model_provider()
-    api_key = database.get_deployment_config_value("LLM_API_KEY") or os.getenv("LLM_API_KEY")
+    api_key = database.get_deployment_config_value("LLM_API_KEY")
     if not api_key:
         raise HTTPException(status_code=400, detail="LLM_API_KEY not configured")
     changed_by = admin.get("pubkey", "admin")
@@ -535,6 +510,8 @@ async def get_deployment_config_by_key(key: str, admin: dict = Depends(auth.requ
     """
     if key in FORBIDDEN_KEYS:
         raise HTTPException(status_code=403, detail="Access to this key is forbidden")
+    if key not in ENV_CONFIG_MAP:
+        raise HTTPException(status_code=404, detail=f"Config key not found: {key}")
 
     config = database.get_deployment_config(key)
     if not config:
@@ -590,16 +567,11 @@ async def update_deployment_config_value(
     value_to_save = update.value
 
     # For secret keys, preserve existing value if new value is empty/whitespace.
-    # Exception: LLM_API_KEY allows clearing so runtime can fall back to .env.
     if meta.get("is_secret") and (not value_to_save or not value_to_save.strip()):
-        if key == "LLM_API_KEY":
-            value_to_save = ""
-            logger.info("Clearing LLM_API_KEY override (empty value submitted); runtime will use env fallback")
-        else:
-            existing_value = database.get_deployment_config_value(key)
-            if existing_value:
-                value_to_save = existing_value
-                logger.debug(f"Preserving existing secret value for {key} (empty value submitted)")
+        existing_value = database.get_deployment_config_value(key)
+        if existing_value:
+            value_to_save = existing_value
+            logger.debug(f"Preserving existing secret value for {key} (empty value submitted)")
 
     # Validate specific keys (only if we have a real value to validate)
     if key in ("SMTP_PORT", "QDRANT_PORT") and value_to_save:
@@ -684,8 +656,8 @@ async def update_deployment_config_value(
 
     if key == "LLM_PROVIDER":
         normalized = str(value_to_save or "").strip().lower()
-        if normalized not in ("", "sage", "maple"):
-            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage" or legacy "maple"')
+        if normalized not in ("", "sage"):
+            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage"')
         value_to_save = normalized or "sage"
 
     # Get admin pubkey for audit log
@@ -767,15 +739,16 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
                 errors.append(f"{port_key} must be a number")
 
     # Warnings for common issues
-    if config_dict.get("MOCK_SMTP", "").lower() == "true":
-        warnings.append("MOCK_SMTP is enabled - emails will not be sent")
+    mock_email_enabled = _truthy_config_value(_deployment_config_value(config_dict, "MOCK_EMAIL"))
+    if mock_email_enabled:
+        warnings.append("MOCK_EMAIL is enabled - emails will not be sent")
 
     if auth.is_production_mode():
         for key in PRODUCTION_UNSAFE_FLAGS:
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
                 errors.append(f"{key} must be disabled in production")
 
-    if not config_dict.get("SMTP_HOST") and config_dict.get("MOCK_SMTP", "").lower() != "true":
+    if not config_dict.get("SMTP_HOST") and not mock_email_enabled:
         warnings.append("SMTP not configured - email features will not work")
 
     if not config_dict.get("SEARXNG_URL"):
@@ -925,7 +898,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
 
     # Check SMTP (if configured)
     smtp_host = config_dict.get("SMTP_HOST") or os.getenv("SMTP_HOST", "")
-    mock_smtp = (config_dict.get("MOCK_SMTP") or os.getenv("MOCK_SMTP", "")).lower() == "true"
+    mock_smtp = (config_dict.get("MOCK_EMAIL") or os.getenv("MOCK_EMAIL", "")).lower() == "true"
 
     if mock_smtp:
         services.append(ServiceHealthItem(
