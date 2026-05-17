@@ -4,7 +4,7 @@
  * Auth uses secure session cookies.
  */
 
-import { API_BASE } from '../types/onboarding'
+import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
 import { clearLogoutBrowserStorage } from './browserStoragePosture'
 
 export type AdminSessionValidationState = 'authenticated' | 'unauthenticated' | 'unavailable'

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   BROWSER_STORAGE_ALLOWLIST,
   browserStoragePosture,
@@ -20,6 +20,11 @@ describe('browserStoragePosture', () => {
       setItem: vi.fn((key: string, value: string) => session.set(key, value)),
       removeItem: vi.fn((key: string) => session.delete(key)),
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('documents browser storage as a deployment surface without allowing conversation content keys', () => {

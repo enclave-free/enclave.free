@@ -673,7 +673,9 @@ describe('AdminDeploymentConfig', () => {
     expect(within(lifecycleStatus).getByText('Database Internals')).toBeInTheDocument()
     expect(within(lifecycleStatus).getByText('Docker Logs')).toBeInTheDocument()
 
-    await user.click(within(lifecycleStatus).getAllByRole('button', { name: 'Acknowledge' })[0])
+    const runtimeLogsCard = within(lifecycleStatus).getByText('Runtime Logs').closest('div.bg-surface')
+    expect(runtimeLogsCard).not.toBeNull()
+    await user.click(within(runtimeLogsCard as HTMLElement).getByRole('button', { name: 'Acknowledge' }))
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(

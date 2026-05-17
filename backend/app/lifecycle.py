@@ -961,8 +961,8 @@ def _set_unsupported_surface_category_acknowledgement(category: str, acknowledge
             "acknowledged": True,
             "acknowledged_by": changed_by,
             "acknowledged_at": datetime.utcnow().isoformat(),
-            "posture_version": _readiness_version(),
         }
+        acknowledgements[category]["posture_version"] = _readiness_version(acknowledgements)
     else:
         acknowledgements.pop(category, None)
     database.update_setting_with_audit(
@@ -974,11 +974,20 @@ def _set_unsupported_surface_category_acknowledgement(category: str, acknowledge
     return _unsupported_deployment_surface_categories()
 
 
-def _readiness_version() -> str:
+def _canonical_surface_category_acknowledgements(acknowledgements: dict | None = None) -> dict:
+    raw_acknowledgements = acknowledgements if acknowledgements is not None else _unsupported_surface_category_acknowledgements()
+    return {
+        category: {"acknowledged": bool(value.get("acknowledged"))}
+        for category, value in raw_acknowledgements.items()
+        if category in UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES and isinstance(value, dict)
+    }
+
+
+def _readiness_version(acknowledgements: dict | None = None) -> str:
     posture = {
         "retention_policies": _stored_retention_policies(),
         "acknowledged_unsupported_surfaces": sorted(_acknowledged_unsupported_surface_keys()),
-        "acknowledged_unsupported_surface_categories": _unsupported_surface_category_acknowledgements(),
+        "acknowledged_unsupported_surface_categories": _canonical_surface_category_acknowledgements(acknowledgements),
         "artifact_encryption": _artifact_encryption_status().get("status"),
     }
     return hashlib.sha256(json.dumps(posture, sort_keys=True).encode("utf-8")).hexdigest()

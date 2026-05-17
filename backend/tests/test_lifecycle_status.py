@@ -573,6 +573,17 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(browser_copies["acknowledged_by"], "admin-pubkey")
         self.assertIn("Clear browser storage", browser_copies["guidance"])
         self.assertEqual(browser_copies["surfaces"][0]["key"], "browser_storage")
+        stored_acknowledgements = json.loads(self.database.get_setting("lifecycle_unsupported_surface_category_acknowledgements"))
+        stored_posture_version = stored_acknowledgements["browser_held_copies"]["posture_version"]
+        self.assertEqual(stored_posture_version, self.lifecycle._readiness_version())
+        stored_acknowledgements["browser_held_copies"]["acknowledged_by"] = "different-admin"
+        stored_acknowledgements["browser_held_copies"]["acknowledged_at"] = "2026-05-17T00:00:00"
+        stored_acknowledgements["browser_held_copies"]["posture_version"] = "previous-version"
+        self.database.update_setting(
+            "lifecycle_unsupported_surface_category_acknowledgements",
+            json.dumps(stored_acknowledgements),
+        )
+        self.assertEqual(stored_posture_version, self.lifecycle._readiness_version())
 
         status = self.client.get("/admin/lifecycle/status").json()
         readiness = status["lifecycle_readiness"]

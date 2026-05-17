@@ -2126,7 +2126,8 @@ export function AdminDeploymentConfig() {
             </p>
           )}
 
-          {Array.isArray(lifecycleStatus?.unsupported_deployment_surfaces) && lifecycleStatus.unsupported_deployment_surfaces.length > 0 && (
+          {((Array.isArray(lifecycleStatus?.unsupported_deployment_surfaces) && lifecycleStatus.unsupported_deployment_surfaces.length > 0) ||
+            (Array.isArray(lifecycleStatus?.unsupported_deployment_surface_categories) && lifecycleStatus.unsupported_deployment_surface_categories.length > 0)) && (
             <div className="mt-5 border-t border-border pt-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
@@ -2182,7 +2183,7 @@ export function AdminDeploymentConfig() {
                 </div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {lifecycleStatus.unsupported_deployment_surfaces.map((surface) => (
+                  {(lifecycleStatus.unsupported_deployment_surfaces ?? []).map((surface) => (
                   <div key={surface.key} className="bg-surface border border-border rounded-lg p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

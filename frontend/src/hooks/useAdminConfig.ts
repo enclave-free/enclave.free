@@ -487,7 +487,7 @@ export function useLifecycleStatus() {
   }, [fetchStatus])
 
   const acknowledgeUnsupportedSurfaceCategory = useCallback(async (category: string, acknowledged: boolean) => {
-    const response = await adminFetch(`/admin/lifecycle/unsupported-deployment-surface-categories/${category}/acknowledgement`, {
+    const response = await adminFetch(`/admin/lifecycle/unsupported-deployment-surface-categories/${encodeURIComponent(category)}/acknowledgement`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ acknowledged }),

@@ -101,6 +101,7 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
+        self.assertTrue(entries)
         self.assertEqual(entries[0]["config_key"], "copied_export:sqlite_database")
         self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
         event = json.loads(entries[0]["new_value"])
