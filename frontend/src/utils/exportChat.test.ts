@@ -64,6 +64,7 @@ describe('generateExport', () => {
     expect(exported).not.toContain('Prefers concise answers.')
     expect(exported).not.toContain('Prefers high detail answers.')
     expect(exported).not.toContain('importance')
+    expect(exported).toContain('Source: Enclave Conversation Export')
     expect(exported).toContain('outside Active Storage Lifecycle')
 
     const exportedTxt = generateExport({
@@ -80,6 +81,7 @@ describe('generateExport', () => {
     expect(exportedTxt).not.toContain('Prefers concise answers.')
     expect(exportedTxt).not.toContain('Prefers high detail answers.')
     expect(exportedTxt).not.toContain('importance')
+    expect(exportedTxt).toContain('Source: Enclave Conversation Export')
     expect(exportedTxt).toContain('outside Active Storage Lifecycle')
   })
 
@@ -121,6 +123,32 @@ describe('generateExport', () => {
     expect(exported).toContain('Sage used Web search before answering.')
     expect(exported).toContain('Web search')
     expect(exported).toContain('Found 3 relevant results.')
+  })
+
+  it('normalizes instance name metadata to one safe line', () => {
+    const exported = generateExport({
+      messages: [],
+      format: 'md',
+      translations,
+      instanceName: '  Enclave\nInjected\r\u0000Name  ',
+    })
+
+    expect(exported).toContain('Source: Enclave Injected Name Conversation Export')
+    expect(exported).toContain('Exported from Enclave Injected Name')
+    expect(exported).not.toContain('Source: Enclave\nInjected')
+  })
+
+  it('escapes markdown metacharacters in markdown instance name metadata', () => {
+    const exported = generateExport({
+      messages: [],
+      format: 'md',
+      translations,
+      instanceName: '[Enclave](https://example.com)',
+    })
+
+    expect(exported).toContain('Source: \\[Enclave\\]\\(https://example\\.com\\) Conversation Export')
+    expect(exported).toContain('Exported from \\[Enclave\\]\\(https://example\\.com\\)')
+    expect(exported).not.toContain('Source: [Enclave](https://example.com)')
   })
 
   it('exports only compact badges for minimal Conversation Trace metadata', () => {

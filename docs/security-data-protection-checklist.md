@@ -111,11 +111,12 @@ Use this checklist to:
 - [x] User session token is signed and time-limited.
 - [x] Chat/query access requires authenticated and approved users.
 - [x] Add anti-enumeration response behavior for auth endpoints.
-- [ ] Add abuse-resistant rate limiting that works across multiple backend instances for:
+- [x] Add abuse-resistant rate limiting that works across multiple backend instances for:
   - Auth endpoints
   - File upload endpoints
   - Vector search operations
   - Query/chat operations
+  Evidence: `backend/app/rate_limit.py`, `gateway/nginx.conf`, `backend/tests/test_rate_limit.py`, `docs/adr/0018-shared-rate-limiting-uses-self-hosted-valkey.md`
 
 ### 2.2 Data confidentiality and privacy
 
@@ -125,6 +126,8 @@ Use this checklist to:
 - [x] Prevent session data leakage across users (session ownership checks).
 - [x] Move user auth tokens from `localStorage` to secure, httpOnly cookies.
 - [x] Stop passing user session tokens in query strings.
+- [x] Minimize deliberate browser-side storage and clear known local product markers on logout.
+  Evidence: `frontend/src/utils/browserStoragePosture.ts`, `frontend/src/utils/browserStoragePosture.test.ts`, `backend/tests/test_browser_storage_posture_docs.py`, `docs/browser-storage-posture.md`
 - [x] Encrypt new uploaded document artifacts at rest by default when `CONTENT_ENCRYPTION_KEY` is configured.
   Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`
 - [x] Remove plaintext chunk text from new Retrieval Index payloads.
@@ -133,7 +136,8 @@ Use this checklist to:
 ### 2.3 Web application security
 
 - [x] Implement CSRF tokens for state-changing operations.
-- [ ] Sanitize/escape user input to prevent XSS (reflected, stored, DOM-based).
+- [x] Sanitize/escape user input to prevent XSS (reflected, stored, DOM-based).
+  Evidence: `frontend/src/components/chat/ChatMessage.tsx`, `frontend/src/components/chat/ChatMessage.test.tsx`, `docs/security-rendering.md`
 - [x] Implement Content Security Policy (CSP) headers.
 - [x] Add X-Frame-Options and X-Content-Type-Options headers.
 
@@ -221,28 +225,34 @@ Use this checklist to:
 
 ### 5.1 Data classification and input validation
 
-- [ ] Maintain explicit classification for:
+- [x] Maintain explicit classification for:
   - PII fields (email/name/user fields)
   - Uploaded documents
   - Derived chunks/embeddings
   - Secrets and credentials
-- [ ] Verify all database queries use parameterized/prepared statements (no string concatenation).
-  - [x] Admin database explorer read-only endpoint enforces the shared SQL table allowlist.
-- [ ] Implement input validation for all user-supplied data (length, type, format).
+  Evidence: `backend/app/data_classification.py`, `backend/tests/test_data_classification_and_input_validation.py`, `docs/data-classification.md`
+- [x] Verify supported SQL paths are constrained to read-only inspection and parameterized/allowlisted access.
+  Evidence: `backend/app/sql_safety.py`, `backend/app/main.py`, `backend/app/tools/sqlite_query.py`, `backend/tests/test_sql_safety.py`, `backend/tests/test_admin_db_query_endpoint.py`, `docs/sql-safety.md`
+- [x] Implement input validation for all user-supplied data (length, type, format).
+  Evidence: `backend/app/models.py`, `backend/tests/test_data_classification_and_input_validation.py`
 
 ### 5.2 At-rest controls
 
 - [x] PII fields in `users`/`user_field_values` are encrypted.
-- [ ] Uploaded files in `uploads/` encrypted at rest.
+- [x] Uploaded files in `uploads/` encrypted at rest when a Content Encryption Key is configured.
+  Evidence: `backend/app/content_artifacts.py`, `backend/app/ingest.py`, `backend/tests/test_ingest_batch_replacement.py`, `backend/app/lifecycle.py`, `docs/active-content-encryption.md`
 - [x] Qdrant payload text minimized for new ingestion.
   Evidence: `backend/app/store.py`, `backend/tests/test_store_minimized_payload.py`
 - [x] Deployment secrets encrypted at rest in SQLite.
 
 ### 5.3 In-transit controls
 
-- [ ] Enforce TLS end-to-end for frontend/backend in production.
-- [ ] Ensure external provider calls use HTTPS and pinned trusted endpoints where feasible.
-- [ ] Ensure reverse proxy enforces HTTPS, HSTS, and secure headers.
+- [x] Enforce TLS end-to-end guidance and visible production validation for frontend/backend public origins.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-network-tls.md`
+- [x] Ensure external provider calls use HTTPS in production, with documented local/internal Compose exceptions.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-network-tls.md`
+- [x] Ensure reverse proxy HTTPS, HSTS, and trusted proxy guidance is documented and visible in validation.
+  Evidence: `backend/app/main.py`, `backend/app/deployment_config.py`, `docs/production-network-tls.md`
 
 ### 5.4 Retention and deletion
 
@@ -264,44 +274,59 @@ Use this checklist to:
   Evidence: `backend/app/lifecycle.py::audit_lifecycle_deletion`, `backend/tests/test_retention_execution.py::test_user_conversation_delete_uses_shared_session_memory_lifecycle`, `backend/tests/test_retention_execution.py::test_admin_can_retry_incomplete_session_memory_tombstone`, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md`
 - [x] Re-check Conversation retention eligibility immediately before deletion and report skipped active candidates.
   Evidence: `backend/app/lifecycle.py::run_retention`, `backend/tests/test_retention_execution.py::test_retention_rechecks_conversation_activity_before_deleting_candidate`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
+- [x] Make Conversation retention semantics explicit for opening, viewing, inspecting, exporting, lifecycle scanning, ordinary history visibility, metadata-only lifecycle evidence, and Admin-visible tombstones.
+  Evidence: `docs/sessions.md`, `backend/tests/test_conversation_retention_docs.py`, `backend/tests/test_lifecycle_status.py::test_lifecycle_status_exposes_conversation_retention_semantics`, `frontend/src/utils/exportChat.test.ts`
+- [x] Seed conservative Scheduled Retention Policy defaults for supported expirable Lifecycle Data Classes and audit retention policy changes.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_lifecycle_status.py::test_lifecycle_status_includes_conservative_default_retention_policy_for_enforced_classes`, `backend/tests/test_lifecycle_status.py::test_admin_can_update_retention_policy_for_lifecycle_data_class`
 - [x] Document implemented Active Storage Lifecycle guarantees and remaining limitations across security docs, session docs, runbooks, ADR-0006, ADR-0007, ADR-0015, and ADR-0016.
 - [x] State that active User Profiles, current Document Library records, current Retrieval Index entries, Inference Verification Records, and Retention Run Records are not scheduled for deletion in this milestone.
 - [x] State that Inference Verification Records and Retention Run Records remain indefinitely retained until a separate evidence-retention policy exists.
 - [x] Add Lifecycle Readiness review/staleness behavior and unsupported Deployment Surface category acknowledgement guidance.
-  Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `backend/tests/test_lifecycle_status.py::test_admin_can_acknowledge_unsupported_deployment_surface_category`, `frontend/src/pages/AdminDeploymentConfig.test.tsx::shows unsupported deployment surface categories and lets admins acknowledge one`, `docs/lifecycle-confidentiality-runbook.md`
+  Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `backend/tests/test_lifecycle_status.py::test_admin_can_review_lifecycle_readiness_and_lifecycle_changes_make_it_stale`, `backend/tests/test_lifecycle_status.py::test_admin_can_acknowledge_unsupported_deployment_surface_category`, `frontend/src/pages/AdminDeploymentConfig.test.tsx::shows unsupported deployment surface categories and lets admins acknowledge one`, `docs/lifecycle-confidentiality-runbook.md`
 - [x] Document Copied Exports, browser-held copies, and irreversible Audit Log detail compaction boundaries.
-  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py::test_audit_log_retention_compacts_sensitive_detail_without_full_deletion`, `frontend/src/utils/exportChat.ts`, `docs/lifecycle-confidentiality-runbook.md`
-- [ ] Define external retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
-- [ ] Add secure erase process where applicable.
-- [ ] Define complete historical log/session retention and deletion policy.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_admin_db_query_endpoint.py::test_database_export_creates_copied_export_audit_evidence`, `backend/tests/test_retention_execution.py::test_audit_log_retention_compacts_sensitive_detail_without_full_deletion`, `backend/tests/test_deployment_config_rate_limits.py::test_full_sensitive_audit_log_detail_retention_is_not_exposed_as_config`, `frontend/src/utils/exportChat.ts`, `frontend/src/utils/exportChat.test.ts`, `docs/lifecycle-confidentiality-runbook.md`
+- [x] Define external retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_lifecycle_status.py`, `docs/deployment-surface-retention.md`
+- [x] Keep Secure Erase out of product claims unless a concrete Deployment process exists.
+  Evidence: `backend/app/lifecycle.py`, `docs/deployment-surface-retention.md`, `docs/active-content-encryption.md`
+- [x] Define complete historical log/session retention separately from active Session Memory deletion.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_lifecycle_status.py`, `docs/deployment-surface-retention.md`
 
 ---
 
 ## 6. Configuration and Environment Hardening Checklist
 
-- [ ] Set production env indicator (`ENCLAVE_ENV=production` or equivalent).
+- [x] Set production env indicator (`ENCLAVE_ENV=production` or equivalent).
+  Evidence: `backend/app/auth.py`, `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-configuration-guardrails.md`
 - [x] Ensure `MOCK_EMAIL=false` in production.
 - [x] Auth simulation flags are not part of the supported deployment surface.
-- [ ] Set strong, stable `SECRET_KEY` via secret manager.
-- [ ] Restrict backend and infra ports to private networks/VPN where possible.
-- [ ] Remove dev-only reload mode in production runtime.
+- [x] Set strong, stable `SECRET_KEY` via secret manager.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-configuration-guardrails.md`
+- [x] Restrict backend and infra ports to private networks/VPN where possible.
+  Evidence: `docker-compose.app.yml`, `docker-compose.infra.yml`, `backend/app/deployment_config.py`, `docs/production-configuration-guardrails.md`
+- [x] Remove dev-only reload mode in production runtime.
+  Evidence: `docker-compose.app.yml`, `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`
 - [ ] Use non-root containers and hardened container runtime settings.
 
 ---
 
 ## 7. Monitoring, Testing, and Verification Checklist
 
-- [ ] Add automated security tests for auth on all endpoints.
+- [x] Add automated security tests for auth on all endpoints.
+  Evidence: `.github/workflows/security-regression.yml`
 - [x] Add regression tests specifically for:
   - ingest endpoint authorization
   - vector-search authorization/scope
   - public query-session record ownership
-- [ ] Add SAST/dependency scanning in CI.
-- [ ] Add runtime alerting for:
+- [x] Add SAST/dependency scanning in CI.
+  Evidence: `.github/workflows/security-regression.yml`, `backend/tests/test_security_ci_workflow.py`
+- [x] Add runtime alerting for:
   - repeated auth failures
   - unusual admin actions
   - destructive endpoint usage
-- [ ] Add periodic backup + restore test for SQLite and config.
+  Evidence: `GET /admin/deployment/operational-readiness`, `docs/operational-monitoring-and-recovery.md`, `backend/tests/test_deployment_config_rate_limits.py::test_operational_readiness_exposes_monitoring_and_recovery_drills`
+- [x] Add periodic backup + restore test for SQLite and config.
+  Evidence: `GET /admin/deployment/operational-readiness`, `docs/operational-monitoring-and-recovery.md`, `backend/tests/test_operational_readiness_docs.py`
 
 ### 7.1 Minimum manual verification commands (interim evidence until Section 4.1 automated tests are implemented)
 
@@ -350,9 +375,12 @@ Mark release as security-ready only when all are true:
 - [x] All critical production blockers in Section 4 are complete.
 - [x] Token handling is migrated away from `localStorage`.
 - [x] CORS and network exposure are least-privilege.
-- [ ] Simulation and mock auth modes are verified off in production.
-- [ ] Security regression tests pass in CI.
-- [ ] Incident response and key recovery runbooks are documented and tested.
+- [x] Simulation and mock auth modes are verified off in production.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`
+- [x] Security regression tests pass in CI.
+  Evidence: `.github/workflows/security-regression.yml`, `backend/tests/test_security_ci_workflow.py`
+- [x] Incident response and key recovery runbooks are documented and tested.
+  Evidence: `docs/operational-monitoring-and-recovery.md`, `docs/admin-key-recovery-runbook.md`, `backend/tests/test_operational_readiness_docs.py`
 
 ---
 

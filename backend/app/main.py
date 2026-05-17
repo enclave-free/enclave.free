@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Enclave Backend - FastAPI Application
 RAG system with Qdrant vector search.
@@ -35,7 +37,7 @@ from data_deletion import (
     deletion_target_succeeded,
     summarize_deletion_results,
 )
-from sql_safety import validate_sql_allowed_tables
+from sql_safety import ALLOWED_TABLES, validate_sql_allowed_tables
 from models import (
     AdminAuth, AdminResponse, AdminListResponse,
     AdminAuthRequest, AdminAuthResponse,
@@ -68,6 +70,7 @@ from nostr import verify_auth_event, get_pubkey_from_event
 import auth
 import lifecycle
 from rate_limit import RateLimiter
+from rate_limit import rate_limit_backend_status
 from rate_limit_key import rate_limit_key as _stable_rate_limit_key
 
 # Configure logging
@@ -492,7 +495,8 @@ async def root():
 async def health_check():
     """Check health of all services"""
     services = {
-        "qdrant": "unknown"
+        "qdrant": "unknown",
+        "shared_rate_limit_store": "unknown",
     }
 
     # Check Qdrant
@@ -503,7 +507,19 @@ async def health_check():
     except Exception as e:
         services["qdrant"] = f"unhealthy: {str(e)}"
 
-    all_healthy = all(s == "healthy" for s in services.values())
+    try:
+        rate_limit_status = await rate_limit_backend_status()
+        if rate_limit_status["status"] == "healthy":
+            services["shared_rate_limit_store"] = "healthy"
+        elif rate_limit_status["status"] == "local_only":
+            services["shared_rate_limit_store"] = "unknown"
+        else:
+            services["shared_rate_limit_store"] = f"unhealthy: {rate_limit_status['summary']}"
+    except Exception:
+        logger.exception("Shared rate limit store health probe failed")
+        services["shared_rate_limit_store"] = "unhealthy: error checking shared rate limit store"
+
+    all_healthy = all(s in {"healthy", "unknown"} for s in services.values())
 
     return HealthResponse(
         status="healthy" if all_healthy else "degraded",
@@ -2306,13 +2322,6 @@ async def delete_user(
 # =============================================================================
 # Database Explorer Endpoints (Admin)
 # =============================================================================
-
-# Allowed tables for read access (whitelist for security)
-ALLOWED_TABLES = {
-    'admins', 'instance_settings', 'user_types',
-    'user_field_definitions', 'users', 'user_field_values'
-}
-
 
 def get_table_columns(table_name: str) -> list[ColumnInfo]:
     """Get column info for a table using PRAGMA table_info"""

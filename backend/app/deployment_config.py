@@ -8,7 +8,8 @@ import time
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Final, Mapping, Optional
+from typing import Any, Dict, Final, Mapping, Optional
+from urllib.parse import ParseResult, urlparse
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -18,7 +19,7 @@ import auth
 import database
 from inference_verification import TinfoilVerifier, fingerprint_claims, verify_and_store
 from inference_repair import current_inference_repair_status, mark_startup_verification_unavailable, mark_verification_record
-from rate_limit import RateLimiter
+from rate_limit import RateLimiter, rate_limit_backend_status
 from models import (
     DeploymentConfigItem,
     DeploymentConfigResponse,
@@ -160,6 +161,8 @@ ENV_CONFIG_MAP = {
     "RATE_LIMIT_UPLOAD_PER_MINUTE": {"category": "security", "description": "Document upload requests per minute", "requires_restart": True, "default": "20"},
     "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {"category": "security", "description": "Vector search requests per minute", "requires_restart": True, "default": "30"},
     "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {"category": "security", "description": "Deployment config exports per hour", "requires_restart": True, "default": "5"},
+    "RATE_LIMIT_BACKEND": {"category": "security", "description": "Shared rate limit backend: memory or valkey", "requires_restart": True, "default": "memory"},
+    "RATE_LIMIT_VALKEY_URL": {"category": "security", "description": "Self-hosted Valkey URL for shared rate limits", "requires_restart": True, "default": "redis://valkey:6379/0", "is_secret": True},
     # Retrieval compatibility settings. RAG_* names remain stable public config keys.
     "RAG_TOP_K": {"category": "llm", "description": "Default Retrieval count", "requires_restart": False, "default": "8"},
     "PDF_EXTRACT_MODE": {"category": "llm", "description": "PDF extraction mode (fast/quality)", "requires_restart": False, "default": "fast"},
@@ -217,6 +220,75 @@ PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
     "MOCK_EMAIL",
 )
 
+PRODUCTION_UNSAFE_ENV_FLAGS: Final[tuple[str, ...]] = (
+    "SIMULATE_USER_AUTH",
+    "SIMULATE_ADMIN_AUTH",
+    "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS",
+)
+
+WEAK_SECRET_KEY_VALUES: Final[set[str]] = {
+    "",
+    "change-me",
+    "changeme",
+    "secret",
+    "test-secret",
+    "replace-this-with-a-long-random-secret",
+    "your-secret-key-here",
+}
+
+OPERATIONAL_READINESS = {
+    "runtime_alerting": [
+        {
+            "category": "repeated_auth_failures",
+            "owner": "operator",
+            "evidence_source": "Audit Log, gateway access logs, and auth failure logs",
+            "verification": "Configure alert rules for repeated magic-link, session, or admin authentication failures and record an alert drill.",
+        },
+        {
+            "category": "unusual_admin_actions",
+            "owner": "operator",
+            "evidence_source": "Audit Log records for admin configuration, lifecycle, export, and database-inspection actions",
+            "verification": "Configure alert rules for unusual admin action volume, off-hours changes, or high-risk settings changes and record an alert drill.",
+        },
+        {
+            "category": "destructive_endpoint_usage",
+            "owner": "operator",
+            "evidence_source": "Audit Log records, gateway logs, and application logs for deletion, compaction, migration, and purge endpoints",
+            "verification": "Configure alert rules for destructive endpoint calls and record an alert drill before production use.",
+        },
+    ],
+    "backup_restore_verification": {
+        "cadence": "quarterly and before production upgrades or storage migrations",
+        "targets": [
+            {
+                "target": "sqlite_database",
+                "verification": "Restore the SQLite database into an isolated environment and verify schema migrations and admin login.",
+            },
+            {
+                "target": "deployment_config",
+                "verification": "Restore deployment configuration and secret references without exposing secret values in drill evidence.",
+            },
+            {
+                "target": "uploads_directory",
+                "verification": "Restore uploaded artifacts and verify document listing, download, and lifecycle deletion behavior.",
+            },
+            {
+                "target": "retrieval_index",
+                "verification": "Restore or rebuild the retrieval index and confirm query hydration resolves chunk text from product storage.",
+            },
+        ],
+        "evidence": "Record restore drill date, operator, environment, targets covered, result, and follow-up actions in the security checklist or operations log.",
+    },
+    "incident_response": {
+        "runbooks": {
+            "incident_response": "docs/operational-monitoring-and-recovery.md",
+            "key_recovery": "docs/admin-key-recovery-runbook.md",
+        },
+        "verification": "Run tabletop drills for auth abuse, destructive action review, backup restore, and admin key recovery.",
+    },
+    "drill_evidence": "Update docs/security-data-protection-checklist.md with the latest alert and restore drill evidence.",
+}
+
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
     """Convert database row to DeploymentConfigItem"""
@@ -242,6 +314,40 @@ def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Option
     if key == "LLM_API_KEY":
         return None
     return os.getenv(key)
+
+
+def _parsed_url(value: Optional[str]) -> Optional[ParseResult]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    parsed = urlparse(raw)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    return parsed
+
+
+def _is_local_or_internal_url(value: Optional[str]) -> bool:
+    parsed = _parsed_url(value)
+    if parsed is None:
+        return False
+    host = (parsed.hostname or "").lower()
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return True
+    if "." not in host:
+        return True
+    return host.endswith(".local") or host.endswith(".internal")
+
+
+def _url_scheme(value: Optional[str]) -> str:
+    parsed = _parsed_url(value)
+    return parsed.scheme.lower() if parsed else ""
+
+
+def _secret_key_is_strong(secret_key: Optional[str]) -> bool:
+    value = str(secret_key or "").strip()
+    if value.lower() in WEAK_SECRET_KEY_VALUES:
+        return False
+    return len(value) >= 32
 
 
 def _sync_env_to_db() -> None:
@@ -623,6 +729,12 @@ async def update_deployment_config_value(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"{key} must be a positive integer") from None
 
+    if key == "RATE_LIMIT_BACKEND":
+        normalized_backend = str(value_to_save or "").strip().lower()
+        if normalized_backend not in {"memory", "valkey"}:
+            raise HTTPException(status_code=400, detail="RATE_LIMIT_BACKEND must be memory or valkey")
+        value_to_save = normalized_backend
+
     # URL validation for URL-type fields
     URL_KEYS = {"INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "CUSTOM_SEARXNG_URL",
                 "WEBHOOK_BASE_URL", "MONITORING_URL"}
@@ -743,21 +855,60 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
     if mock_email_enabled:
         warnings.append("MOCK_EMAIL is enabled - emails will not be sent")
 
+    # Check for SSL configuration consistency
+    ssl_cert = config_dict.get("SSL_CERT_PATH", "")
+    ssl_key = config_dict.get("SSL_KEY_PATH", "")
+    force_https = _truthy_config_value(_deployment_config_value(config_dict, "FORCE_HTTPS"))
+
     if auth.is_production_mode():
         for key in PRODUCTION_UNSAFE_FLAGS:
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
                 errors.append(f"{key} must be disabled in production")
+        for key in PRODUCTION_UNSAFE_ENV_FLAGS:
+            if _truthy_config_value(os.getenv(key)):
+                errors.append(f"{key} must be disabled in production")
+        if not _secret_key_is_strong(os.getenv("SECRET_KEY")):
+            errors.append("SECRET_KEY must be strong, stable, and managed outside the image in production")
+        if os.getenv("SESSION_COOKIE_SECURE", "").strip().lower() in {"false", "0", "no", "off"}:
+            errors.append("SESSION_COOKIE_SECURE must not be disabled in production")
+        if _truthy_config_value(os.getenv("BACKEND_RELOAD")):
+            errors.append("BACKEND_RELOAD must be disabled in production")
+        published_service_host = os.getenv("PUBLISHED_SERVICE_HOST", "").strip()
+        if published_service_host in {"0.0.0.0", "::"}:
+            warnings.append(
+                f"Published service host {published_service_host} requires an explicit production exposure review"
+            )
+        rate_limit_backend = (
+            _deployment_config_value(config_dict, "RATE_LIMIT_BACKEND")
+            or os.getenv("RATE_LIMIT_BACKEND", "memory")
+        ).strip().lower()
+        if rate_limit_backend != "valkey":
+            errors.append("RATE_LIMIT_BACKEND must be valkey in production")
+        if not (_deployment_config_value(config_dict, "RATE_LIMIT_VALKEY_URL") or os.getenv("RATE_LIMIT_VALKEY_URL", "")).strip():
+            errors.append("RATE_LIMIT_VALKEY_URL must be configured in production")
+        for key in ("INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "FRONTEND_URL"):
+            url = _deployment_config_value(config_dict, key)
+            if url and not _is_local_or_internal_url(url) and _url_scheme(url) != "https":
+                errors.append(f"{key} must use HTTPS in production")
+        if not force_https:
+            errors.append("FORCE_HTTPS must be enabled in production")
+        try:
+            if int(_deployment_config_value(config_dict, "HSTS_MAX_AGE") or "0") < 31536000:
+                errors.append("HSTS_MAX_AGE must be at least 31536000 in production")
+        except ValueError:
+            errors.append("HSTS_MAX_AGE must be a non-negative integer")
+        if not (_deployment_config_value(config_dict, "TRUSTED_PROXIES") or "").strip():
+            warnings.append("TRUSTED_PROXIES should name the TLS-terminating reverse proxy in production")
+        for key in ("LLM_API_URL", "EMBEDDING_API_URL"):
+            url = _deployment_config_value(config_dict, key)
+            if url and not _is_local_or_internal_url(url) and _url_scheme(url) != "https":
+                errors.append(f"{key} must use HTTPS for external provider endpoints in production")
 
     if not config_dict.get("SMTP_HOST") and not mock_email_enabled:
         warnings.append("SMTP not configured - email features will not work")
 
     if not config_dict.get("SEARXNG_URL"):
         warnings.append("SEARXNG_URL not configured - web search will not work")
-
-    # Check for SSL configuration consistency
-    ssl_cert = config_dict.get("SSL_CERT_PATH", "")
-    ssl_key = config_dict.get("SSL_KEY_PATH", "")
-    force_https = config_dict.get("FORCE_HTTPS", "").lower() in ("true", "1", "yes", "on")
 
     if force_https and (not ssl_cert or not ssl_key):
         warnings.append("FORCE_HTTPS is enabled but SSL certificate paths are not configured")
@@ -782,6 +933,15 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
         errors=errors,
         warnings=warnings
     )
+
+
+@router.get("/operational-readiness")
+async def get_operational_readiness(admin: dict = Depends(auth.require_admin)) -> Dict[str, Any]:
+    """
+    Expose operator-owned monitoring, restore, and incident drill expectations.
+    Requires admin authentication.
+    """
+    return OPERATIONAL_READINESS
 
 
 @router.get("/health", response_model=ServiceHealthResponse)
@@ -895,6 +1055,18 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             last_checked=datetime.now(timezone.utc).isoformat(),
             error="Not configured",
         ))
+
+    rate_limit_status = await rate_limit_backend_status()
+    if rate_limit_status["status"] in {"healthy", "local_only"}:
+        rate_limit_health = "healthy" if rate_limit_status["status"] == "healthy" else "unknown"
+    else:
+        rate_limit_health = "unhealthy"
+    services.append(ServiceHealthItem(
+        name="Shared Rate Limit Store",
+        status=rate_limit_health,
+        last_checked=datetime.now(timezone.utc).isoformat(),
+        error=None if rate_limit_status["status"] == "healthy" else rate_limit_status["summary"],
+    ))
 
     # Check SMTP (if configured)
     smtp_host = config_dict.get("SMTP_HOST") or os.getenv("SMTP_HOST", "")

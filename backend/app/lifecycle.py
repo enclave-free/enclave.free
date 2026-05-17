@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Operator-Controlled Privacy lifecycle status.
 
@@ -17,13 +19,14 @@ import tempfile
 import secrets
 import stat
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi import Header, HTTPException
 import httpx
 from pydantic import BaseModel, Field
 
 import auth
 import content_artifacts
+import data_classification
 import database
 from data_deletion import (
     deletion_target_failed,
@@ -37,6 +40,8 @@ import store
 
 
 router = APIRouter(prefix="/admin/lifecycle", tags=["lifecycle"])
+
+_CONFIDENTIALITY_MIGRATION_STATUS_CACHE: dict | None = None
 logger = logging.getLogger("enclave.lifecycle")
 _warned_missing_internal_agent_token = False
 _sage_client: httpx.AsyncClient | None = None
@@ -357,26 +362,32 @@ UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES = {
     "runtime_logs": {
         "label": "Runtime Logs",
         "guidance": "Configure deployment log retention, redaction, and access controls outside the product.",
+        "operator_retention_policy": "Set runtime log retention, redaction, access controls, and disposal in the container host, platform, or log sink.",
     },
     "database_internals": {
         "label": "Database Internals",
         "guidance": "Manage WAL, replication, and database maintenance artifacts through database operator policy.",
+        "operator_retention_policy": "Manage SQLite/Postgres WAL, replication, vacuum/checkpoint behavior, and database maintenance artifacts through database operations policy.",
     },
     "backups_snapshots": {
         "label": "Backups and Snapshots",
         "guidance": "Apply backup expiry, encryption, and restore-test policy at the host or platform layer.",
+        "operator_retention_policy": "Define backup and snapshot encryption, expiry, restore testing, and disposal outside the product lifecycle controls.",
     },
     "browser_held_copies": {
         "label": "Browser-Held Copies",
         "guidance": "Clear browser storage and cache through browser or device management; product lifecycle controls cannot recall client-side copies.",
+        "operator_retention_policy": "Use browser/device management for cache, downloads, local storage, and profile data created on operator or user devices.",
     },
     "copied_exports": {
         "label": "Copied Exports",
         "guidance": "Treat downloaded exports as operator-controlled records with separate storage, sharing, and disposal policy.",
+        "operator_retention_policy": "Classify downloaded exports as operator-held records with separate storage, sharing, retention, and disposal rules.",
     },
     "provider_traces": {
         "label": "Provider Traces",
         "guidance": "Review provider retention contracts and disable provider-side logging where the deployment requires it.",
+        "operator_retention_policy": "Review LLM, email, search, hosting, and infrastructure provider contracts; disable provider-side logging where required.",
     },
 }
 
@@ -419,6 +430,29 @@ SECURE_ERASE_SCOPE = {
         "Secure Erase is out of scope for v1; lifecycle controls apply to stated "
         "active-storage targets and exclude unsupported Deployment Surfaces such as logs, "
         "WAL, backups, snapshots, and provider traces."
+    ),
+}
+
+
+HISTORICAL_SESSION_LOG_RETENTION = {
+    "status": "operator_responsibility",
+    "summary": (
+        "Historical log/session retention is separate from active Session Memory deletion. "
+        "Product lifecycle controls can delete supported active Session Memory, while runtime logs, "
+        "provider traces, backups, snapshots, and historical platform records remain Deployment Surface responsibilities."
+    ),
+    "secure_erase_claimed": False,
+}
+
+
+LIFECYCLE_READINESS_CONVERSATION_BLOCKING_POLICY = {
+    "user_conversations": "not_blocked",
+    "admin_conversations": "available_for_repair",
+    "protected_inference_gate": "independent",
+    "summary": (
+        "Lifecycle Readiness warnings are Admin review signals in v1; they do not block ordinary "
+        "User Conversations or Admin Conversations used for lifecycle repair. Verifiable Inference "
+        "gates remain independent."
     ),
 }
 
@@ -758,6 +792,60 @@ def _retrieval_index_confidentiality_status() -> dict:
     }
 
 
+def preview_confidentiality_migration_status() -> dict:
+    """Return the last computed migration status without running inventory work."""
+    if _CONFIDENTIALITY_MIGRATION_STATUS_CACHE is not None:
+        return deepcopy(_CONFIDENTIALITY_MIGRATION_STATUS_CACHE)
+    return {
+        "status": "unknown",
+        "summary": "Confidentiality Migration status has not been computed yet.",
+    }
+
+
+def _remember_confidentiality_migration_status(preview: dict) -> None:
+    global _CONFIDENTIALITY_MIGRATION_STATUS_CACHE
+    _CONFIDENTIALITY_MIGRATION_STATUS_CACHE = {
+        "status": preview.get("status", "unknown"),
+        "summary": preview.get(
+            "summary",
+            "Confidentiality Migration rewrites or verifies eligible legacy plaintext active content.",
+        ),
+    }
+
+
+def _active_content_encryption_evidence(artifact_status: dict) -> dict:
+    retrieval_status = _retrieval_index_confidentiality_status()
+    migration_status = preview_confidentiality_migration_status()
+    return {
+        "artifact_encryption_posture": {
+            "status": artifact_status["status"],
+            "summary": (
+                "Artifact Encryption Posture: "
+                f"{artifact_status['summary']} This covers uploaded Document artifacts in active storage, "
+                "not backups, snapshots, logs, or Secure Erase."
+            ),
+        },
+        "retrieval_content_posture": {
+            "status": retrieval_status["status"],
+            "summary": (
+                "Retrieval Content Posture: "
+                f"{retrieval_status['summary']} Qdrant should not contain plaintext chunk text for current writes."
+            ),
+        },
+        "confidentiality_migration": {
+            "status": migration_status["status"],
+            "summary": (
+                f"{migration_status['summary']} "
+                "it does not claim Secure Erase across Deployment Surfaces."
+            ),
+        },
+        "secure_erase": {
+            "claimed": False,
+            "summary": "No Secure Erase claim is made for active content encryption or migration evidence.",
+        },
+    }
+
+
 def preview_confidentiality_migration() -> dict:
     artifact_status = _artifact_encryption_status()
     artifact_inventory = _active_artifact_confidentiality_inventory()
@@ -788,7 +876,7 @@ def preview_confidentiality_migration() -> dict:
 
     support_removal_ready = True
 
-    return {
+    preview = {
         "status": "ready" if artifact_actions or retrieval_actions else "nothing_to_migrate",
         "artifact_encryption": artifact_status,
         "affected_documents": list(documents.values()),
@@ -803,6 +891,8 @@ def preview_confidentiality_migration() -> dict:
             f"{len(retrieval_actions)} legacy Retrieval payload(s). No Secure Erase claim is made."
         ),
     }
+    _remember_confidentiality_migration_status(preview)
+    return preview
 
 
 def execute_confidentiality_migration(*, actor: str) -> dict:
@@ -921,6 +1011,15 @@ def _unsupported_deployment_surface_categories() -> list[dict]:
             "label": metadata["label"],
             "status": "unsupported",
             "guidance": metadata["guidance"],
+            "operator_retention_policy": {
+                "owner": "operator",
+                "summary": metadata["operator_retention_policy"],
+                "acknowledgement_effect": (
+                    "records_operator_review_not_lifecycle_data_class; product Data Deletion and Retention controls "
+                    "do not apply to this Deployment Surface category"
+                ),
+                "secure_erase_boundary": "Secure Erase is not claimed for unsupported Deployment Surfaces.",
+            },
             "acknowledged": bool(acknowledgement.get("acknowledged")),
             "acknowledged_by": acknowledgement.get("acknowledged_by"),
             "acknowledged_at": acknowledgement.get("acknowledged_at"),
@@ -1020,6 +1119,7 @@ def _lifecycle_readiness() -> dict:
             "reviewed_by": None,
             "stale_reason": None,
             "acknowledged_unsupported_surface_categories": _unsupported_surface_categories(),
+            "conversation_blocking_policy": deepcopy(LIFECYCLE_READINESS_CONVERSATION_BLOCKING_POLICY),
             "summary": "Lifecycle Readiness requires Admin review before the Instance is treated as reviewed.",
         }
     reviewed_version = stored.get("posture_version")
@@ -1037,6 +1137,7 @@ def _lifecycle_readiness() -> dict:
             "acknowledged_unsupported_surface_categories",
             _unsupported_surface_categories(),
         ),
+        "conversation_blocking_policy": deepcopy(LIFECYCLE_READINESS_CONVERSATION_BLOCKING_POLICY),
         "summary": (
             "Lifecycle Readiness is stale and needs Admin review."
             if is_stale
@@ -1081,21 +1182,25 @@ def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
     policies = _stored_retention_policies()
     enabled_classes = _scheduled_retention_enabled_classes(policies)
+    artifact_encryption = _artifact_encryption_status()
     retention_scheduler = deepcopy(RETENTION_SCHEDULER_SCOPE)
     retention_scheduler["observation"] = _retention_scheduler_observation(enabled_classes)
     return {
         "lifecycle_scope": deepcopy(LIFECYCLE_SCOPE),
         "data_classes": _data_classes_with_retention_policies(),
         "content_encryption": content_artifacts.content_encryption_status(),
-        "artifact_encryption": _artifact_encryption_status(),
+        "artifact_encryption": artifact_encryption,
+        "active_content_encryption": _active_content_encryption_evidence(artifact_encryption),
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "unsupported_deployment_surface_categories": _unsupported_deployment_surface_categories(),
+        "historical_session_log_retention": deepcopy(HISTORICAL_SESSION_LOG_RETENTION),
         "lifecycle_readiness": _lifecycle_readiness(),
         "scheduled_retention": {
             "enabled_classes": enabled_classes,
         },
         "retention_scheduler": retention_scheduler,
+        "data_classification": data_classification.get_data_classification_inventory(),
         "audit_coverage": get_audit_coverage_inventory(),
         "deletion_tombstones": database.summarize_deletion_tombstones(),
     }
@@ -2005,7 +2110,9 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
 
 
 @router.get("/status", response_model=dict)
-async def get_admin_lifecycle_status(_admin: dict = Depends(auth.require_admin)):
+async def get_admin_lifecycle_status(response: Response, _admin: dict = Depends(auth.require_admin)) -> dict:
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
     return get_lifecycle_status()
 
 

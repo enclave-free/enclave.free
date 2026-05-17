@@ -281,6 +281,14 @@ export interface UnsupportedDeploymentSurfaceCategory {
   surfaces: UnsupportedDeploymentSurface[]
 }
 
+export interface DataClassificationItem {
+  key: string
+  label: string
+  classification: string
+  lifecycle_term: string
+  summary: string
+}
+
 export interface LifecycleStatusResponse {
   lifecycle_scope?: LifecycleScope
   lifecycle_readiness?: {
@@ -291,6 +299,12 @@ export interface LifecycleStatusResponse {
     stale_reason?: string | null
     summary: string
     acknowledged_unsupported_surface_categories?: string[]
+    conversation_blocking_policy?: {
+      user_conversations: 'not_blocked' | string
+      admin_conversations: 'available_for_repair' | string
+      protected_inference_gate: 'independent' | string
+      summary: string
+    }
   }
   content_encryption?: ContentEncryptionStatus
   artifact_encryption?: ArtifactEncryptionStatus
@@ -309,6 +323,15 @@ export interface LifecycleStatusResponse {
       documented_exceptions: number
       missing: number
       guardrail_passed: boolean
+    }
+  }
+  data_classification?: {
+    items: DataClassificationItem[]
+    summary: {
+      total: number
+      sensitive: number
+      governance_evidence: number
+      deployment_surface: number
     }
   }
   deletion_tombstones?: {

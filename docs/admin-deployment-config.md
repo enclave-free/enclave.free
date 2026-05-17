@@ -76,6 +76,7 @@ Those are currently supplied to the `sage` container through compose or environm
 - Agent Runtime health via `SAGE_WEB_URL/health`
 - Tinfoil proxy health via `LLM_API_URL/models`
 - SearXNG health
+- Shared Rate Limit Store health when Valkey-backed rate limiting is configured
 - SMTP health
 
 This makes the page useful for the prototype even though config ownership is split.

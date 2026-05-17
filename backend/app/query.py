@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Private Retrieval helpers for the Sage-to-Python Control Plane contract.
 

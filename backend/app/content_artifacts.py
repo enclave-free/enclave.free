@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Backend-readable content artifact encryption for active storage."""
 
 import base64

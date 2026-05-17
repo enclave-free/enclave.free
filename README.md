@@ -13,6 +13,7 @@ On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx o
 - `tinfoil-proxy` is the OpenAI-compatible Tinfoil transport used by Sage's preferred Model Provider path.
 - `postgres` stores Sage Session Memory and `web_sessions`.
 - `qdrant` stays the Enclave document retrieval index.
+- `valkey` coordinates shared rate limiting across runtime instances.
 
 ## Topology
 
@@ -56,7 +57,7 @@ cp .env.example .env
 
 Compose is split into infrastructure and app layers:
 
-- `docker-compose.infra.yml`: `postgres`, `tinfoil-proxy`, `qdrant`, `searxng`
+- `docker-compose.infra.yml`: `postgres`, `tinfoil-proxy`, `qdrant`, `valkey`, `searxng`
 - `docker-compose.app.yml`: `core-backend`, `sage`, `backend` gateway, `frontend`
 
 ```bash
@@ -69,7 +70,7 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build 
 
 First startup will:
 
-1. pull Postgres, Tinfoil, Qdrant, and SearXNG images
+1. pull Postgres, Tinfoil, Qdrant, Valkey, and SearXNG images
 2. build the FastAPI backend, Sage runtime, gateway, and frontend
 3. download the embedding model cache
 4. initialize SQLite and Sage Postgres state
@@ -107,6 +108,7 @@ Everything else stays on the internal Docker network:
 - Qdrant: `http://qdrant:6333`
 - Postgres: `postgres://sage:sage@postgres:5432/sage`
 - SearXNG: `http://searxng:8080`
+- Valkey: `redis://valkey:6379/0`
 
 ### First Admin Setup
 

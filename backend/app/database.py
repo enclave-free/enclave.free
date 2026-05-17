@@ -3,6 +3,8 @@ Enclave Database Module
 Handles SQLite connection and schema for user/admin management.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import sqlite3

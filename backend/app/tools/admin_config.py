@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Admin configuration context tool."""
 
 import json

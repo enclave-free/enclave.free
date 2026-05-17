@@ -71,6 +71,19 @@ services:
     networks:
       - enclave-net
 
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: enclave-valkey
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - enclave-net
+
 volumes:
   qdrant_data:
   sage_postgres_data:

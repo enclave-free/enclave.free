@@ -205,6 +205,8 @@ class LifecycleStatusTest(unittest.TestCase):
         response = self.client.get("/admin/lifecycle/status")
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response.headers["cache-control"])
+        self.assertEqual(response.headers["pragma"], "no-cache")
         classes_by_key = {
             data_class["key"]: data_class
             for data_class in response.json()["data_classes"]
@@ -218,6 +220,37 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertEqual(run_records["retention"]["status"], "indefinite")
         self.assertIn("metadata-only lifecycle evidence", run_records["retention"]["summary"])
         self.assertEqual(run_records["evidence_retention"]["ordinary_conversation_policy_applies"], False)
+
+    def test_lifecycle_status_exposes_deployment_surface_retention_boundaries(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        categories = {
+            category["category"]: category
+            for category in body["unsupported_deployment_surface_categories"]
+        }
+        expected_categories = {
+            "runtime_logs",
+            "database_internals",
+            "backups_snapshots",
+            "browser_held_copies",
+            "copied_exports",
+            "provider_traces",
+        }
+
+        self.assertEqual(expected_categories, set(categories))
+        for key in expected_categories:
+            with self.subTest(key=key):
+                policy = categories[key]["operator_retention_policy"]
+                self.assertEqual(policy["owner"], "operator")
+                self.assertIn("not_lifecycle_data_class", policy["acknowledgement_effect"])
+                self.assertIn("Secure Erase", policy["secure_erase_boundary"])
+
+        historical = body["historical_session_log_retention"]
+        self.assertEqual(historical["status"], "operator_responsibility")
+        self.assertIn("active Session Memory deletion", historical["summary"])
+        self.assertFalse(historical["secure_erase_claimed"])
 
     def test_lifecycle_status_reports_mixed_when_required_artifacts_include_legacy_plaintext(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
@@ -263,6 +296,21 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertIn("minimized", retrieval["summary"])
         self.assertNotIn("legacy plaintext", retrieval["summary"])
         self.assertNotIn("Secure Erase", retrieval["summary"])
+
+    def test_lifecycle_status_exposes_active_content_encryption_evidence_terms(self) -> None:
+        os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
+
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        active_content = body["active_content_encryption"]
+        self.assertEqual(active_content["artifact_encryption_posture"]["status"], "encrypted")
+        self.assertIn("Artifact Encryption Posture", active_content["artifact_encryption_posture"]["summary"])
+        self.assertEqual(active_content["retrieval_content_posture"]["status"], "encrypted")
+        self.assertIn("Retrieval Content Posture", active_content["retrieval_content_posture"]["summary"])
+        self.assertIn("Confidentiality Migration", active_content["confidentiality_migration"]["summary"])
+        self.assertFalse(active_content["secure_erase"]["claimed"])
 
     def test_confidentiality_migration_preview_ignores_legacy_qdrant_payloads(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
@@ -598,6 +646,8 @@ class LifecycleStatusTest(unittest.TestCase):
         initial = self.client.get("/admin/lifecycle/status").json()["lifecycle_readiness"]
         self.assertEqual(initial["status"], "needs_review")
         self.assertFalse(initial["reviewed"])
+        self.assertEqual(initial["conversation_blocking_policy"]["user_conversations"], "not_blocked")
+        self.assertEqual(initial["conversation_blocking_policy"]["admin_conversations"], "available_for_repair")
 
         review = self.client.post("/admin/lifecycle/readiness/review")
         self.assertEqual(review.status_code, 200)
@@ -619,6 +669,9 @@ class LifecycleStatusTest(unittest.TestCase):
         stale = self.client.get("/admin/lifecycle/status").json()["lifecycle_readiness"]
         self.assertEqual(stale["status"], "stale")
         self.assertEqual(stale["stale_reason"], "retention_policy_changed")
+        self.assertEqual(stale["conversation_blocking_policy"]["user_conversations"], "not_blocked")
+        self.assertEqual(stale["conversation_blocking_policy"]["admin_conversations"], "available_for_repair")
+        self.assertEqual(stale["conversation_blocking_policy"]["protected_inference_gate"], "independent")
 
         audit_entries = self.database.get_config_audit_log(limit=10, table_name="instance_settings")
         keys = [entry["config_key"] for entry in audit_entries]

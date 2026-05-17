@@ -117,8 +117,18 @@ export function formatCellValue(value: unknown): string {
 export function isJsonValue(value: unknown): boolean {
   if (typeof value !== 'string') return false
   const trimmed = value.trim()
-  return (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-         (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  const looksLikeJson =
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+
+  if (!looksLikeJson) return false
+
+  try {
+    JSON.parse(trimmed)
+    return true
+  } catch {
+    return false
+  }
 }
 
 // Helper to truncate long values for table display

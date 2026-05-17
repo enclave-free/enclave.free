@@ -112,6 +112,10 @@ _Avoid_: instance, tenant
 A deployment-owned machine actor that invokes approved operational workflows for an **Instance**.
 _Avoid_: admin user, service account, bot admin
 
+**Shared Rate Limit Store**:
+A self-hosted **Deployment** component that coordinates abuse-prevention counters across runtime instances.
+_Avoid_: product database, external rate-limit service, audit log
+
 **Prototype Compatibility Debt**:
 Transitional code, configuration aliases, documentation, or UI copy that preserves obsolete prototype behavior after the current **Sage** and **Enclave Control Plane** boundary has become the source of truth.
 _Avoid_: data migration, confidentiality migration, rollback plan
@@ -416,6 +420,7 @@ _Avoid_: full snapshot, config dump
 - A **Deployment** usually runs one **Instance** in the prototype
 - **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
 - **Deployment Automation** may invoke scheduled operational workflows without representing a human **Admin** action
+- A **Shared Rate Limit Store** belongs to the **Deployment**, not to the **Document Library**, **Audit Log**, or **Active Storage Lifecycle**
 - **Prototype Compatibility Debt** can be removed when it preserves obsolete prototype behavior rather than an active product or migration boundary
 - **Prototype Compatibility Debt** excludes **Confidentiality Migration** safeguards until legacy plaintext active content storage has been resolved
 - Plaintext fallback for existing active content is a **Confidentiality Migration** concern, not **Prototype Compatibility Debt**, until the relevant storage state has been verified and migrated

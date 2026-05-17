@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Enclave Ingest Router
 Handles document upload, chunking, and storage to Qdrant.

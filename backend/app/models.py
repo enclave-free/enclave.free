@@ -3,9 +3,51 @@ Enclave Pydantic Models
 Request and response models for user/admin management.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
+
+
+SUPPORTED_USER_FIELD_TYPES = {
+    "text",
+    "textarea",
+    "number",
+    "boolean",
+    "email",
+    "url",
+    "select",
+    "multi_select",
+    "date",
+}
+
+
+def _validate_email_shape(value: str) -> str:
+    normalized = value.strip()
+    if len(normalized) > 254 or normalized.count("@") != 1:
+        raise ValueError("email must be a valid email address")
+    local, _, domain = normalized.partition("@")
+    if not local or not domain or "." not in domain or any(char.isspace() for char in normalized):
+        raise ValueError("email must be a valid email address")
+    return normalized
+
+
+def normalize_user_field_type(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in SUPPORTED_USER_FIELD_TYPES:
+        raise ValueError("field_type is not supported")
+    return normalized
+
+
+def normalize_user_field_options(value: Optional[list[str]]) -> Optional[list[str]]:
+    if value is None:
+        return value
+    normalized = []
+    for option in value:
+        clean = str(option).strip()
+        if not clean or len(clean) > 200:
+            raise ValueError("options must be non-empty strings no longer than 200 characters")
+        normalized.append(clean)
+    return normalized
 
 
 # --- Admin Models ---
@@ -99,9 +141,9 @@ class InstanceStatusResponse(BaseModel):
 
 class UserTypeCreate(BaseModel):
     """Request model for creating a user type"""
-    name: str
-    description: Optional[str] = None
-    icon: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    icon: Optional[str] = Field(default=None, max_length=80)
     display_order: int = 0
 
 
@@ -132,28 +174,50 @@ class UserTypeListResponse(BaseModel):
 
 class FieldDefinitionCreate(BaseModel):
     """Request model for creating a user field definition"""
-    field_name: str
-    field_type: str  # 'text', 'number', 'boolean', 'email', 'url', 'select', etc.
+    field_name: str = Field(..., min_length=1, max_length=120)
+    field_type: str = Field(..., min_length=1, max_length=40)  # 'text', 'number', 'boolean', 'email', 'url', 'select', etc.
     required: bool = False
     display_order: int = 0
     user_type_id: Optional[int] = None  # None = global field (shown for all types)
-    placeholder: Optional[str] = None  # Placeholder text for input
-    options: Optional[list[str]] = None  # Options for select fields
+    placeholder: Optional[str] = Field(default=None, max_length=240)  # Placeholder text for input
+    options: Optional[list[str]] = Field(default=None, max_length=100)  # Options for select fields
     encryption_enabled: bool = True  # Secure default: encrypt field values
     include_in_chat: bool = False  # Include field value in AI chat context (only for unencrypted fields)
+
+    @field_validator("field_type")
+    @classmethod
+    def validate_field_type(cls, value: str) -> str:
+        return normalize_user_field_type(value)
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        return normalize_user_field_options(value)
 
 
 class FieldDefinitionUpdate(BaseModel):
     """Request model for updating a field definition"""
-    field_name: Optional[str] = None
-    field_type: Optional[str] = None
+    field_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    field_type: Optional[str] = Field(default=None, min_length=1, max_length=40)
     required: Optional[bool] = None
     display_order: Optional[int] = None
     user_type_id: Optional[int] = None
-    placeholder: Optional[str] = None
-    options: Optional[list[str]] = None
+    placeholder: Optional[str] = Field(default=None, max_length=240)
+    options: Optional[list[str]] = Field(default=None, max_length=100)
     encryption_enabled: Optional[bool] = None  # Toggle encryption for field
     include_in_chat: Optional[bool] = None  # Toggle AI chat context inclusion
+
+    @field_validator("field_type")
+    @classmethod
+    def validate_field_type(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        return normalize_user_field_type(value)
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        return normalize_user_field_options(value)
 
 
 class FieldDefinitionResponse(BaseModel):
@@ -245,8 +309,13 @@ class UserListResponse(BaseModel):
 
 class MagicLinkRequest(BaseModel):
     """Request model for sending a magic link"""
-    email: str
-    name: str = ""
+    email: str = Field(..., min_length=3, max_length=254)
+    name: str = Field(default="", max_length=200)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return _validate_email_shape(value)
 
 
 class MagicLinkResponse(BaseModel):
@@ -397,7 +466,7 @@ class TableDataResponse(BaseModel):
 
 class DBQueryRequest(BaseModel):
     """Request model for SQL query execution"""
-    sql: str
+    sql: str = Field(..., min_length=1, max_length=10000)
 
 
 class DBQueryResponse(BaseModel):

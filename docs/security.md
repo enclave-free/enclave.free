@@ -29,6 +29,7 @@ For a more exhaustive engineering checklist, see `docs/security-data-protection-
 
 - Set a strong, stable `SECRET_KEY` via a secret manager.
   - Rotating `SECRET_KEY` invalidates existing sessions.
+- Set `ENCLAVE_ENV=production` for production-like deployments so validation applies production guardrails.
 - Protect admin private keys.
   - Read `docs/admin-key-recovery-runbook.md`.
 
@@ -36,6 +37,10 @@ For a more exhaustive engineering checklist, see `docs/security-data-protection-
 
 - Ensure these are false in production:
   - `MOCK_EMAIL=false`
+  - `SIMULATE_USER_AUTH=false`
+  - `SIMULATE_ADMIN_AUTH=false`
+  - `PROTECTED_INFERENCE_DEVELOPMENT_BYPASS=false`
+- Ensure `BACKEND_RELOAD=false` in production.
 
 ### 3. Enforce TLS End-to-End
 
@@ -76,6 +81,7 @@ Recommended:
 - Scheduled retention can clean stale Sage Session Memory, eligible User Memory, failed/superseded/abandoned/orphaned uploaded Document artifacts, and compactable Audit Log detail.
 - The milestone does not schedule active User Profiles, current Document Library records, current Retrieval Index entries, Inference Verification Records, or Retention Run Records for deletion. Inference Verification Records and Retention Run Records do not share ordinary Conversation retention policy; future deletion or compaction requires a separate evidence-retention policy.
 - Keep unsupported Deployment Surfaces visible in operator documentation: logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces remain outside product lifecycle control. Acknowledging a Deployment Surface category records operator review only and does not make product deletion controls apply to that category.
+- Define operator-owned retention for unsupported Deployment Surfaces separately from Active Storage Lifecycle; see `docs/deployment-surface-retention.md`.
 - Treat Copied Exports and browser-held copies as operator/device controlled records after creation. Audit Log detail compaction is irreversible in active product storage while preserving hash-chain verifiability and governance facts.
 - Python in-memory runtime state can still exist outside the public Sage query path, such as rate-limit buckets and in-progress ingest chunks.
 
@@ -84,3 +90,6 @@ Recommended:
 - `docs/security-data-protection-checklist.md` - status and remediation tracker.
 - `docs/admin-deployment-config.md` - deployment-time security settings and validation.
 - `docs/sessions.md` - cookie/bearer auth sessions and CSRF model.
+- `docs/production-configuration-guardrails.md` - production validation and deployment guardrails.
+- `docs/deployment-surface-retention.md` - operator-owned Deployment Surface retention boundaries.
+- `docs/operational-monitoring-and-recovery.md` - runtime alerting, restore drills, incident response, and drill evidence.
