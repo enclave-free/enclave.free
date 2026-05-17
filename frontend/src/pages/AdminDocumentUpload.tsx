@@ -935,7 +935,6 @@ export function AdminDocumentUpload() {
             <ArrowLeft className="w-4 h-4" />
             {t('upload.backToSetup')}
           </Link>
-          {/* TODO: Support multiple file upload with queue management */}
         </div>
 
         {/* Pipeline Help Modal */}

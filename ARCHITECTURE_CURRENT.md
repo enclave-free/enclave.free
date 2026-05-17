@@ -28,6 +28,16 @@ frontend
 
 The public origin stays the same. The browser still talks to `:8000`. The difference is that nginx no longer compensates for auth or browser semantics on Sage-owned routes.
 
+## Current Retrieval Posture
+
+The current Document Library Retrieval architecture is intentionally a half-RAG, half-agent path: chunk Retrieval for Sage context, not graph-first RAG.
+
+The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration. New Document writes chunk and embedding records into the Retrieval Index with minimized Qdrant payloads, while chunk text is hydrated from product-owned storage after access filtering.
+
+Sage owns Conversation behavior and consumes retrieved chunks as Agent Runtime context. In `/query`, Sage asks the Enclave Control Plane for available/default Documents and initial retrieved context, then may use `knowledge_search` for additional Document Library Retrieval during the turn.
+
+Graph-first RAG remains deferred. Neo4j, Graphiti, ontology extraction, entity normalization, and graph export are future architecture options, not the current completeness bar for this prototype.
+
 ## Public Route Ownership
 
 Routes forwarded to Sage by `gateway/nginx.conf`:

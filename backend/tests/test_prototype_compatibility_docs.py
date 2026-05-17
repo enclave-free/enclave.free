@@ -25,6 +25,20 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("legacy Python router still exists", architecture)
         self.assertNotIn("legacy AI route implementations", architecture)
 
+    def test_current_architecture_names_chunk_retrieval_for_sage_context(self) -> None:
+        architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
+        planned = (REPO_ROOT / "ARCHITECTURE_PLANNED.md").read_text(encoding="utf-8")
+        integration_tests = (REPO_ROOT / "docs/integration-tests.md").read_text(encoding="utf-8")
+
+        self.assertIn("chunk Retrieval for Sage context", architecture)
+        self.assertIn("The current Document Library Retrieval architecture is intentionally a half-RAG, half-agent path", architecture)
+        self.assertIn("The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration", architecture)
+        self.assertIn("Sage owns Conversation behavior and consumes retrieved chunks as Agent Runtime context", architecture)
+        self.assertIn("Graph-first RAG remains deferred", architecture)
+        self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
+        self.assertIn("2B", integration_tests)
+        self.assertIn("Chunk Retrieval evaluation", integration_tests)
+
     def test_streaming_docs_do_not_call_llm_chat_a_compatibility_path(self) -> None:
         root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         cutover = (REPO_ROOT / "docs/prototype-sage-cutover.md").read_text(encoding="utf-8")

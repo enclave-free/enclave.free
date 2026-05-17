@@ -50,7 +50,9 @@ def _process_search_results(search_results: list) -> tuple[list, set, list]:
             "type": payload.get("type", "unknown"),
             "text": "",
             "chunk_id": payload.get("chunk_id", ""),
+            "job_id": payload.get("job_id", ""),
             "source_file": payload.get("source_file", ""),
+            "content_ref": payload.get("content_ref", ""),
             "hydrated": False,
             "hydration_status": "not_applicable",
         }

@@ -276,4 +276,33 @@ describe('sendLlmChatWithUnifiedTools', () => {
       { event: 'done', data: { message_id: 'rag_1', session_id: 's1', search_term: 'housing advocate', inference_verification: { record_id: 42 } } },
     ])
   })
+
+  it('sends selected documents as Required Context for query stream turns', async () => {
+    const encoder = new TextEncoder()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: done\ndata: {"message_id":"rag_1"}\n\n'))
+          controller.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } }
+    )))
+
+    await sendQueryStream({
+      question: 'Answer from the selected policy',
+      tools: [],
+      jobIds: ['selected-policy', 'selected-handbook'],
+      topK: 4,
+      onEvent: vi.fn(),
+    })
+
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body))).toEqual({
+      question: 'Answer from the selected policy',
+      top_k: 4,
+      tools: [],
+      job_ids: ['selected-policy', 'selected-handbook'],
+    })
+  })
 })

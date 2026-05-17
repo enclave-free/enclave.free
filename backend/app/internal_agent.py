@@ -95,7 +95,10 @@ def _require_internal_token(x_internal_agent_token: Optional[str] = Header(None)
 
 def _build_accessible_job_ids(user: InternalActorContext, requested_job_ids: Optional[list[str]]) -> list[str]:
     if user.type == "admin":
-        return list(requested_job_ids or [])
+        available_job_ids = set(database.get_available_documents())
+        if requested_job_ids:
+            return [job_id for job_id in requested_job_ids if job_id in available_job_ids]
+        return list(available_job_ids)
 
     if user.user_type_id is None:
         return []
@@ -104,6 +107,15 @@ def _build_accessible_job_ids(user: InternalActorContext, requested_job_ids: Opt
     if requested_job_ids:
         return [job_id for job_id in requested_job_ids if job_id in available_job_ids]
     return list(available_job_ids)
+
+
+def _filter_results_to_accessible_jobs(search_results: list[dict], accessible_job_ids: list[str]) -> list[dict]:
+    allowed = set(accessible_job_ids)
+    return [
+        result
+        for result in search_results
+        if result.get("payload", {}).get("job_id") in allowed
+    ]
 
 
 def _execute_safe_select(sql: str) -> dict:
@@ -231,18 +243,12 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
     search_filter = None
     accessible_job_ids = _build_accessible_job_ids(payload.user, payload.job_ids)
 
-    if payload.user.type == "admin":
-        if accessible_job_ids:
-            search_filter = {
-                "should": [{"key": "job_id", "match": {"value": job_id}} for job_id in accessible_job_ids]
-            }
+    if not accessible_job_ids:
+        search_filter = {"must": [{"key": "job_id", "match": {"value": "__impossible__"}}]}
     else:
-        if not accessible_job_ids:
-            search_filter = {"must": [{"key": "job_id", "match": {"value": "__impossible__"}}]}
-        else:
-            search_filter = {
-                "should": [{"key": "job_id", "match": {"value": job_id}} for job_id in accessible_job_ids]
-            }
+        search_filter = {
+            "should": [{"key": "job_id", "match": {"value": job_id}} for job_id in accessible_job_ids]
+        }
 
     qdrant_url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/collections/{COLLECTION_NAME}/points/search"
     search_payload = {
@@ -256,6 +262,7 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
     response = httpx.post(qdrant_url, json=search_payload, timeout=30.0)
     response.raise_for_status()
     search_results = response.json().get("result", [])
+    search_results = _filter_results_to_accessible_jobs(search_results, accessible_job_ids)
     sources, _, chunk_texts = _process_search_results(search_results)
     context = _build_context(chunk_texts, sources)
     return InternalDocumentSearchResponse(

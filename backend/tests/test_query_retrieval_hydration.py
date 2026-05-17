@@ -139,9 +139,311 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         body = response.json()
         self.assertIn("Encrypted retrieval context reaches the model.", body["context"])
         self.assertEqual(body["sources"][0]["chunk_id"], "chunk-1")
+        self.assertEqual(body["sources"][0]["job_id"], "job-1")
         self.assertEqual(body["sources"][0]["source_file"], "Handbook.md")
+        self.assertEqual(body["sources"][0]["content_ref"], "retrieval_chunks:chunk-1")
         self.assertTrue(body["sources"][0]["hydrated"])
+        self.assertEqual(body["sources"][0]["hydration_status"], "hydrated")
         self.assertEqual(body["sources"][0]["text"], "Encrypted retrieval context reaches the model.")
+
+    def test_retrieval_evaluation_returns_expected_hydrated_sources(self) -> None:
+        self.create_completed_document("safety-handbook", filename="Safety Handbook.md")
+        self.create_completed_document("benefits-guide", filename="Benefits Guide.md")
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="safety-handbook_chunk_0000",
+            job_id="safety-handbook",
+            chunk_index=0,
+            source_file="Safety Handbook.md",
+            text="Evacuation drills happen every Wednesday at 10 AM.",
+        )
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="benefits-guide_chunk_0000",
+            job_id="benefits-guide",
+            chunk_index=0,
+            source_file="Benefits Guide.md",
+            text="Dental benefits include two preventive visits each year.",
+        )
+        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
+            {
+                "score": 0.91,
+                "payload": {
+                    "type": "chunk",
+                    "chunk_id": "safety-handbook_chunk_0000",
+                    "job_id": "safety-handbook",
+                    "source_file": "Safety Handbook.md",
+                },
+            },
+            {
+                "score": 0.74,
+                "payload": {
+                    "type": "chunk",
+                    "chunk_id": "benefits-guide_chunk_0000",
+                    "job_id": "benefits-guide",
+                    "source_file": "Benefits Guide.md",
+                },
+            },
+        ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "When are evacuation drills and what dental visits are covered?",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                    "top_k": 2,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["top_k"], 2)
+        self.assertEqual(
+            [source["chunk_id"] for source in body["sources"]],
+            ["safety-handbook_chunk_0000", "benefits-guide_chunk_0000"],
+        )
+        self.assertIn("Evacuation drills happen every Wednesday at 10 AM.", body["context"])
+        self.assertIn("Dental benefits include two preventive visits each year.", body["context"])
+        self.assertTrue(all(source["hydrated"] for source in body["sources"]))
+
+    def test_user_retrieval_does_not_serve_inaccessible_document_returned_by_vector_backend(self) -> None:
+        self.create_completed_document("allowed-job", filename="Allowed.md")
+        self.create_completed_document("blocked-job", filename="Blocked.md")
+        user_type_id = self.database.create_user_type("Allowed Users")
+        self.database.upsert_document_defaults_override("blocked-job", user_type_id, is_available=False)
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="allowed-job_chunk_0000",
+            job_id="allowed-job",
+            chunk_index=0,
+            source_file="Allowed.md",
+            text="Allowed context may be served to this user.",
+        )
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="blocked-job_chunk_0000",
+            job_id="blocked-job",
+            chunk_index=0,
+            source_file="Blocked.md",
+            text="Blocked context must not be served to this user.",
+        )
+        captured_payloads = []
+
+        def fake_post(_url, json, **_kwargs):
+            captured_payloads.append(json)
+            return FakeQdrantResponse([
+                {
+                    "score": 0.95,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "blocked-job_chunk_0000",
+                        "job_id": "blocked-job",
+                        "source_file": "Blocked.md",
+                    },
+                },
+                {
+                    "score": 0.86,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "allowed-job_chunk_0000",
+                        "job_id": "allowed-job",
+                        "source_file": "Allowed.md",
+                    },
+                },
+            ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "What context can I see?",
+                    "user": {
+                        "id": 2,
+                        "type": "user",
+                        "approved": True,
+                        "user_type_id": user_type_id,
+                    },
+                    "top_k": 2,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("Allowed context may be served", body["context"])
+        self.assertNotIn("Blocked context must not be served", body["context"])
+        self.assertEqual([source["chunk_id"] for source in body["sources"]], ["allowed-job_chunk_0000"])
+        self.assertEqual(
+            captured_payloads[0]["filter"],
+            {"should": [{"key": "job_id", "match": {"value": "allowed-job"}}]},
+        )
+
+    def test_required_context_job_ids_limit_admin_retrieval_context(self) -> None:
+        self.create_completed_document("required-context", filename="Required Context.md")
+        self.create_completed_document("unselected-context", filename="Unselected Context.md")
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="required-context_chunk_0000",
+            job_id="required-context",
+            chunk_index=0,
+            source_file="Required Context.md",
+            text="Required Context reaches Sage even when other documents also match.",
+        )
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="unselected-context_chunk_0000",
+            job_id="unselected-context",
+            chunk_index=0,
+            source_file="Unselected Context.md",
+            text="Unselected context must not be included when Required Context is set.",
+        )
+        captured_payloads = []
+
+        def fake_post(_url, json, **_kwargs):
+            captured_payloads.append(json)
+            return FakeQdrantResponse([
+                {
+                    "score": 0.99,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "unselected-context_chunk_0000",
+                        "job_id": "unselected-context",
+                        "source_file": "Unselected Context.md",
+                    },
+                },
+                {
+                    "score": 0.72,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "required-context_chunk_0000",
+                        "job_id": "required-context",
+                        "source_file": "Required Context.md",
+                    },
+                },
+            ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "Use the selected document",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                    "job_ids": ["required-context"],
+                    "top_k": 2,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual([source["chunk_id"] for source in body["sources"]], ["required-context_chunk_0000"])
+        self.assertIn("Required Context reaches Sage", body["context"])
+        self.assertNotIn("Unselected context must not be included", body["context"])
+        self.assertEqual(
+            captured_payloads[0]["filter"],
+            {"should": [{"key": "job_id", "match": {"value": "required-context"}}]},
+        )
+
+    def test_admin_retrieval_ignores_superseded_document_chunks_after_replacement(self) -> None:
+        self.create_completed_document("old-policy", filename="Policy.md")
+        self.create_completed_document("new-policy", filename="Policy.md")
+        with self.database.get_write_cursor() as cursor:
+            cursor.execute("UPDATE ingest_jobs SET is_current = 0 WHERE job_id = ?", ("old-policy",))
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="old-policy_chunk_0000",
+            job_id="old-policy",
+            chunk_index=0,
+            source_file="Policy.md",
+            text="The superseded policy says the old rule still applies.",
+        )
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="new-policy_chunk_0000",
+            job_id="new-policy",
+            chunk_index=0,
+            source_file="Policy.md",
+            text="The replacement policy says the new rule applies.",
+        )
+        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
+            {
+                "score": 0.99,
+                "payload": {
+                    "type": "chunk",
+                    "chunk_id": "old-policy_chunk_0000",
+                    "job_id": "old-policy",
+                    "source_file": "Policy.md",
+                },
+            },
+            {
+                "score": 0.88,
+                "payload": {
+                    "type": "chunk",
+                    "chunk_id": "new-policy_chunk_0000",
+                    "job_id": "new-policy",
+                    "source_file": "Policy.md",
+                },
+            },
+        ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "Which policy applies?",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                    "top_k": 2,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual([source["chunk_id"] for source in body["sources"]], ["new-policy_chunk_0000"])
+        self.assertIn("replacement policy says the new rule applies", body["context"])
+        self.assertNotIn("superseded policy says the old rule", body["context"])
+
+    def test_deleted_document_chunks_do_not_reenter_retrieval_context(self) -> None:
+        self.create_completed_document("deleted-guide", filename="Deleted Guide.md")
+        with self.database.get_write_cursor() as cursor:
+            cursor.execute("UPDATE ingest_jobs SET is_current = 0 WHERE job_id = ?", ("deleted-guide",))
+            cursor.execute("DELETE FROM document_defaults WHERE job_id = ?", ("deleted-guide",))
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="deleted-guide_chunk_0000",
+            job_id="deleted-guide",
+            chunk_index=0,
+            source_file="Deleted Guide.md",
+            text="Deleted guide text must not be hydrated into context.",
+        )
+        captured_payloads = []
+
+        def fake_post(_url, json, **_kwargs):
+            captured_payloads.append(json)
+            return FakeQdrantResponse([
+                {
+                    "score": 0.93,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "deleted-guide_chunk_0000",
+                        "job_id": "deleted-guide",
+                        "source_file": "Deleted Guide.md",
+                    },
+                },
+            ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "Can deleted material come back?",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                    "job_ids": ["deleted-guide"],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["sources"], [])
+        self.assertEqual(body["context"], "")
+        self.assertEqual(
+            captured_payloads[0]["filter"],
+            {"must": [{"key": "job_id", "match": {"value": "__impossible__"}}]},
+        )
 
     def test_query_skips_hydration_when_chunk_row_belongs_to_different_document(self) -> None:
         self.create_completed_document("allowed-job")
