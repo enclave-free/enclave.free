@@ -92,3 +92,4 @@ Recommended:
 - `docs/sessions.md` - cookie/bearer auth sessions and CSRF model.
 - `docs/production-configuration-guardrails.md` - production validation and deployment guardrails.
 - `docs/deployment-surface-retention.md` - operator-owned Deployment Surface retention boundaries.
+- `docs/operational-monitoring-and-recovery.md` - runtime alerting, restore drills, incident response, and drill evidence.

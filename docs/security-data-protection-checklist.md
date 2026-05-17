@@ -314,11 +314,13 @@ Use this checklist to:
   - public query-session record ownership
 - [x] Add SAST/dependency scanning in CI.
   Evidence: `.github/workflows/security-regression.yml`, `backend/tests/test_security_ci_workflow.py`
-- [ ] Add runtime alerting for:
+- [x] Add runtime alerting for:
   - repeated auth failures
   - unusual admin actions
   - destructive endpoint usage
-- [ ] Add periodic backup + restore test for SQLite and config.
+  Evidence: `GET /admin/deployment/operational-readiness`, `docs/operational-monitoring-and-recovery.md`, `backend/tests/test_deployment_config_rate_limits.py::test_operational_readiness_exposes_monitoring_and_recovery_drills`
+- [x] Add periodic backup + restore test for SQLite and config.
+  Evidence: `GET /admin/deployment/operational-readiness`, `docs/operational-monitoring-and-recovery.md`, `backend/tests/test_operational_readiness_docs.py`
 
 ### 7.1 Minimum manual verification commands (interim evidence until Section 4.1 automated tests are implemented)
 
@@ -371,7 +373,8 @@ Mark release as security-ready only when all are true:
   Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`
 - [x] Security regression tests pass in CI.
   Evidence: `.github/workflows/security-regression.yml`, `backend/tests/test_security_ci_workflow.py`
-- [ ] Incident response and key recovery runbooks are documented and tested.
+- [x] Incident response and key recovery runbooks are documented and tested.
+  Evidence: `docs/operational-monitoring-and-recovery.md`, `docs/admin-key-recovery-runbook.md`, `backend/tests/test_operational_readiness_docs.py`
 
 ---
 

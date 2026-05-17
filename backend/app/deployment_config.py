@@ -236,6 +236,59 @@ WEAK_SECRET_KEY_VALUES: Final[set[str]] = {
     "your-secret-key-here",
 }
 
+OPERATIONAL_READINESS = {
+    "runtime_alerting": [
+        {
+            "category": "repeated_auth_failures",
+            "owner": "operator",
+            "evidence_source": "Audit Log, gateway access logs, and auth failure logs",
+            "verification": "Configure alert rules for repeated magic-link, session, or admin authentication failures and record an alert drill.",
+        },
+        {
+            "category": "unusual_admin_actions",
+            "owner": "operator",
+            "evidence_source": "Audit Log records for admin configuration, lifecycle, export, and database-inspection actions",
+            "verification": "Configure alert rules for unusual admin action volume, off-hours changes, or high-risk settings changes and record an alert drill.",
+        },
+        {
+            "category": "destructive_endpoint_usage",
+            "owner": "operator",
+            "evidence_source": "Audit Log records, gateway logs, and application logs for deletion, compaction, migration, and purge endpoints",
+            "verification": "Configure alert rules for destructive endpoint calls and record an alert drill before production use.",
+        },
+    ],
+    "backup_restore_verification": {
+        "cadence": "quarterly and before production upgrades or storage migrations",
+        "targets": [
+            {
+                "target": "sqlite_database",
+                "verification": "Restore the SQLite database into an isolated environment and verify schema migrations and admin login.",
+            },
+            {
+                "target": "deployment_config",
+                "verification": "Restore deployment configuration and secret references without exposing secret values in drill evidence.",
+            },
+            {
+                "target": "uploads_directory",
+                "verification": "Restore uploaded artifacts and verify document listing, download, and lifecycle deletion behavior.",
+            },
+            {
+                "target": "retrieval_index",
+                "verification": "Restore or rebuild the retrieval index and confirm query hydration resolves chunk text from product storage.",
+            },
+        ],
+        "evidence": "Record restore drill date, operator, environment, targets covered, result, and follow-up actions in the security checklist or operations log.",
+    },
+    "incident_response": {
+        "runbooks": {
+            "incident_response": "docs/operational-monitoring-and-recovery.md",
+            "key_recovery": "docs/admin-key-recovery-runbook.md",
+        },
+        "verification": "Run tabletop drills for auth abuse, destructive action review, backup restore, and admin key recovery.",
+    },
+    "drill_evidence": "Update docs/security-data-protection-checklist.md with the latest alert and restore drill evidence.",
+}
+
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
     """Convert database row to DeploymentConfigItem"""
@@ -877,6 +930,15 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
         errors=errors,
         warnings=warnings
     )
+
+
+@router.get("/operational-readiness")
+async def get_operational_readiness(admin: dict = Depends(auth.require_admin)):
+    """
+    Expose operator-owned monitoring, restore, and incident drill expectations.
+    Requires admin authentication.
+    """
+    return OPERATIONAL_READINESS
 
 
 @router.get("/health", response_model=ServiceHealthResponse)

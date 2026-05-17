@@ -252,6 +252,33 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertIn("BACKEND_RELOAD must be disabled in production", body["errors"])
         self.assertIn("Published service host 0.0.0.0 requires an explicit production exposure review", body["warnings"])
 
+    def test_operational_readiness_exposes_monitoring_and_recovery_drills(self) -> None:
+        response = self.client.get("/admin/deployment/operational-readiness")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        monitoring = {item["category"]: item for item in body["runtime_alerting"]}
+        self.assertEqual(
+            set(monitoring),
+            {"repeated_auth_failures", "unusual_admin_actions", "destructive_endpoint_usage"},
+        )
+        for item in monitoring.values():
+            self.assertEqual(item["owner"], "operator")
+            self.assertIn("audit", item["evidence_source"].lower())
+            self.assertIn("alert", item["verification"])
+
+        backup_targets = {item["target"]: item for item in body["backup_restore_verification"]["targets"]}
+        self.assertIn("sqlite_database", backup_targets)
+        self.assertIn("deployment_config", backup_targets)
+        self.assertIn("uploads_directory", backup_targets)
+        self.assertIn("retrieval_index", backup_targets)
+        self.assertIn("restore drill", body["backup_restore_verification"]["evidence"])
+
+        self.assertIn("incident_response", body)
+        self.assertIn("key_recovery", body["incident_response"]["runbooks"])
+        self.assertIn("docs/admin-key-recovery-runbook.md", body["incident_response"]["runbooks"]["key_recovery"])
+        self.assertIn("checklist", body["drill_evidence"])
+
     def test_simulated_auth_flags_are_not_exposed_as_config(self) -> None:
         os.environ["SIMULATE_USER_AUTH"] = "true"
         os.environ["SIMULATE_ADMIN_AUTH"] = "true"
