@@ -532,7 +532,10 @@ def delete_retrieval_chunks_for_job(job_id: str) -> int:
 
 def purge_old_jobs(days: int = 30) -> int:
     """Delete ingest jobs older than the cutoff. Returns count deleted."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(0, int(days)))).strftime("%Y-%m-%d %H:%M:%S")
+    days = int(days)
+    if days < 0:
+        raise ValueError("days must be greater than or equal to 0")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
     with get_cursor() as cursor:
         cursor.execute("DELETE FROM ingest_jobs WHERE created_at < ?", (cutoff,))
         deleted = cursor.rowcount

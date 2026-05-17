@@ -8,7 +8,7 @@ import time
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Final, Mapping, Optional
+from typing import Any, Dict, Final, Mapping, Optional
 from urllib.parse import ParseResult, urlparse
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
@@ -936,7 +936,7 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
 
 
 @router.get("/operational-readiness")
-async def get_operational_readiness(admin: dict = Depends(auth.require_admin)):
+async def get_operational_readiness(admin: dict = Depends(auth.require_admin)) -> Dict[str, Any]:
     """
     Expose operator-owned monitoring, restore, and incident drill expectations.
     Requires admin authentication.

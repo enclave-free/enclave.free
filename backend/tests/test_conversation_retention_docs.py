@@ -2,7 +2,7 @@ from pathlib import Path
 import unittest
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT: Path = Path(__file__).resolve().parents[2]
 
 
 class ConversationRetentionDocsTest(unittest.TestCase):

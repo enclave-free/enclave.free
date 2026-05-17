@@ -266,7 +266,7 @@ def main() -> int:
 
     user_lookup_failed = False
     try:
-        user = first_row(run_sqlite_json("SELECT id, user_type_id, dev_mode FROM users ORDER BY id ASC LIMIT 1", db_path))
+        user = first_row(run_sqlite_json("SELECT id, approved, user_type_id, dev_mode FROM users ORDER BY id ASC LIMIT 1", db_path))
     except RuntimeError as exc:
         print(f"[SKIP] user row unavailable: {exc}")
         user = None
@@ -299,7 +299,7 @@ def main() -> int:
                 "user": {
                     "id": user["id"],
                     "type": "user",
-                    "approved": True,
+                    "approved": bool(user["approved"]),
                     "user_type_id": user.get("user_type_id"),
                     "dev_mode": bool(user.get("dev_mode", False)),
                 },

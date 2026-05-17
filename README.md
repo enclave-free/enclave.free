@@ -70,7 +70,7 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build 
 
 First startup will:
 
-1. pull Postgres, Tinfoil, Qdrant, and SearXNG images
+1. pull Postgres, Tinfoil, Qdrant, Valkey, and SearXNG images
 2. build the FastAPI backend, Sage runtime, gateway, and frontend
 3. download the embedding model cache
 4. initialize SQLite and Sage Postgres state

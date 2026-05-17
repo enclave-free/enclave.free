@@ -813,8 +813,7 @@ def _remember_confidentiality_migration_status(preview: dict) -> None:
     }
 
 
-def _active_content_encryption_evidence() -> dict:
-    artifact_status = _artifact_encryption_status()
+def _active_content_encryption_evidence(artifact_status: dict) -> dict:
     retrieval_status = _retrieval_index_confidentiality_status()
     migration_status = preview_confidentiality_migration_status()
     return {
@@ -1183,14 +1182,15 @@ def get_lifecycle_status() -> dict:
     """Return the current Instance data lifecycle posture."""
     policies = _stored_retention_policies()
     enabled_classes = _scheduled_retention_enabled_classes(policies)
+    artifact_encryption = _artifact_encryption_status()
     retention_scheduler = deepcopy(RETENTION_SCHEDULER_SCOPE)
     retention_scheduler["observation"] = _retention_scheduler_observation(enabled_classes)
     return {
         "lifecycle_scope": deepcopy(LIFECYCLE_SCOPE),
         "data_classes": _data_classes_with_retention_policies(),
         "content_encryption": content_artifacts.content_encryption_status(),
-        "artifact_encryption": _artifact_encryption_status(),
-        "active_content_encryption": _active_content_encryption_evidence(),
+        "artifact_encryption": artifact_encryption,
+        "active_content_encryption": _active_content_encryption_evidence(artifact_encryption),
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "unsupported_deployment_surface_categories": _unsupported_deployment_surface_categories(),

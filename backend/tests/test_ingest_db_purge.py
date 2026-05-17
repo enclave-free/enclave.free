@@ -67,6 +67,10 @@ class IngestDbPurgeTest(unittest.TestCase):
         self.assertIsNone(self.ingest_db.get_job(old_job))
         self.assertIsNotNone(self.ingest_db.get_job(recent_job))
 
+    def test_purge_old_jobs_rejects_negative_days(self) -> None:
+        with self.assertRaises(ValueError):
+            self.ingest_db.purge_old_jobs(days=-1)
+
 
 if __name__ == "__main__":
     unittest.main()

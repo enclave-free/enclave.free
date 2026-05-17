@@ -35,6 +35,10 @@ function sanitizeInstanceName(instanceName: string): string {
   return (sanitized || 'Enclave').slice(0, 120)
 }
 
+function escapeMarkdown(value: string): string {
+  return value.replace(/([\\`*_{}\[\]()#+\-.!|>])/g, '\\$1')
+}
+
 function formatTraceMarkdown(trace?: ConversationTrace | null): string {
   if (!trace || trace.visibility === 'off') return ''
   const lines: string[] = ['**Conversation Trace**']
@@ -76,15 +80,16 @@ function formatTraceText(trace?: ConversationTrace | null): string {
 export function generateExport({ messages, format, title, translations, instanceName = 'Enclave' }: ExportOptions): string {
   const timestamp = new Date().toLocaleString()
   const safeInstanceName = sanitizeInstanceName(instanceName)
+  const markdownInstanceName = escapeMarkdown(safeInstanceName)
   const exportTitle = title || translations.defaultTitle
-  const footerText = translations.footer.replace('{{instanceName}}', safeInstanceName)
+  const footerText = translations.footer.replace('{{instanceName}}', format === 'md' ? markdownInstanceName : safeInstanceName)
   const exportedOnText = translations.exportedOn.replace('{{timestamp}}', timestamp)
   const conversationMessages = toConversationExportMessages(messages)
 
   if (format === 'md') {
     let content = `# ${exportTitle}\n\n`
     content += `*${exportedOnText}*\n\n---\n\n`
-    content += `Source: ${safeInstanceName} Conversation Export\n\n`
+    content += `Source: ${markdownInstanceName} Conversation Export\n\n`
 
     conversationMessages.forEach((message) => {
       const role = message.role === 'user' ? `**${translations.roleUser}**` : `**${translations.roleAssistant}**`

@@ -138,6 +138,19 @@ describe('generateExport', () => {
     expect(exported).not.toContain('Source: Enclave\nInjected')
   })
 
+  it('escapes markdown metacharacters in markdown instance name metadata', () => {
+    const exported = generateExport({
+      messages: [],
+      format: 'md',
+      translations,
+      instanceName: '[Enclave](https://example.com)',
+    })
+
+    expect(exported).toContain('Source: \\[Enclave\\]\\(https://example\\.com\\) Conversation Export')
+    expect(exported).toContain('Exported from \\[Enclave\\]\\(https://example\\.com\\)')
+    expect(exported).not.toContain('Source: [Enclave](https://example.com)')
+  })
+
   it('exports only compact badges for minimal Conversation Trace metadata', () => {
     const messages: TestMessage[] = [
       {
