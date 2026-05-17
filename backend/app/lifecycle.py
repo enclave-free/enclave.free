@@ -206,6 +206,18 @@ DATA_CLASSES = [
             "Session Memory belongs to the Agent Runtime.",
             "Session Memory Deletion is distinct from deleting a public session record.",
         ],
+        "retention_semantics": {
+            "lifecycle_unit": "conversation",
+            "policy_scope": "instance",
+            "activity_basis": "human_or_sage_turn",
+            "view_refreshes_activity": False,
+            "ordinary_history_after_retention": "removed",
+            "lifecycle_evidence_visibility": "admin_metadata_only",
+            "summary": (
+                "Conversation retention uses Instance-level policy and last human or Sage assistant "
+                "turn activity; opening or viewing a Conversation does not refresh eligibility."
+            ),
+        },
     },
     {
         "key": "inference_verification_records",
@@ -218,7 +230,7 @@ DATA_CLASSES = [
         },
         "retention": {
             "status": "indefinite",
-            "summary": "Inference Verification Records are retained indefinitely by default until configurable retention and deletion controls are implemented.",
+            "summary": "Inference Verification Records are retained indefinitely by default until a separate evidence-retention policy implements deletion or compaction.",
         },
         "audit": {
             "status": "partial",
@@ -228,6 +240,36 @@ DATA_CLASSES = [
             "Full provider attestation material remains in the Inference Verification Record, not in the Audit Log.",
             "These records support operator repair and historical evidence for protected Model Provider calls.",
         ],
+        "evidence_retention": {
+            "ordinary_conversation_policy_applies": False,
+            "summary": "Inference Verification Records are governance evidence and do not share ordinary Conversation retention policy.",
+        },
+    },
+    {
+        "key": "retention_run_records",
+        "label": "Retention Run Records",
+        "owner": "Enclave Control Plane",
+        "storage_targets": ["SQLite"],
+        "deletion": {
+            "status": "not_started",
+            "summary": "Deletion controls for Retention Run Records are not implemented in v1.",
+        },
+        "retention": {
+            "status": "indefinite",
+            "summary": "Retention Run Records are retained indefinitely as metadata-only lifecycle evidence in v1 until a separate evidence-retention policy implements deletion or compaction.",
+        },
+        "audit": {
+            "status": "partial",
+            "summary": "Retention Execution creates run records and Audit Log evidence for reviewable lifecycle history.",
+        },
+        "notes": [
+            "Retention Run Records store metadata-only policy snapshots and outcomes, not Conversation Content or User Memory text.",
+            "These records are evidence for lifecycle execution and do not share ordinary Conversation retention policy.",
+        ],
+        "evidence_retention": {
+            "ordinary_conversation_policy_applies": False,
+            "summary": "Retention Run Records remain metadata-only lifecycle evidence until a separate evidence-retention policy exists.",
+        },
     },
     {
         "key": "audit_log",
@@ -267,36 +309,76 @@ UNSUPPORTED_DEPLOYMENT_SURFACES = [
         "summary": "Gateway and reverse-proxy logs are operational records outside application retention/deletion workflows.",
     },
     {
-        "key": "host_backups",
-        "label": "Host Backups",
-        "category": "host_storage",
-        "summary": "Host-level backups must be governed by operator backup policy outside the product.",
-    },
-    {
-        "key": "host_snapshots",
-        "label": "Host Snapshots",
-        "category": "host_storage",
-        "summary": "Filesystem, VM, and volume snapshots are outside active-storage lifecycle control.",
-    },
-    {
         "key": "sqlite_wal",
         "label": "SQLite WAL",
-        "category": "database_wal",
+        "category": "database_internals",
         "summary": "SQLite write-ahead-log files are database runtime artifacts, not product lifecycle records.",
     },
     {
         "key": "postgres_wal",
         "label": "Postgres WAL",
-        "category": "database_wal",
+        "category": "database_internals",
         "summary": "Postgres write-ahead-log files are database runtime artifacts managed by the database operator.",
+    },
+    {
+        "key": "host_backups",
+        "label": "Host Backups",
+        "category": "backups_snapshots",
+        "summary": "Host-level backups must be governed by operator backup policy outside the product.",
+    },
+    {
+        "key": "host_snapshots",
+        "label": "Host Snapshots",
+        "category": "backups_snapshots",
+        "summary": "Filesystem, VM, and volume snapshots are outside active-storage lifecycle control.",
+    },
+    {
+        "key": "browser_storage",
+        "label": "Browser Storage and Cache",
+        "category": "browser_held_copies",
+        "summary": "Browser local storage, session storage, downloads, and cache are client-side Deployment Surfaces outside product lifecycle controls.",
+    },
+    {
+        "key": "copied_exports",
+        "label": "Copied Exports",
+        "category": "copied_exports",
+        "summary": "Downloaded or copied exports become operator-held artifacts outside Active Storage Lifecycle after creation.",
     },
     {
         "key": "provider_traces",
         "label": "Provider-Side Traces",
-        "category": "provider_records",
+        "category": "provider_traces",
         "summary": "LLM, email, search, or infrastructure provider traces are governed by those providers and deployment contracts.",
     },
 ]
+
+
+UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES = {
+    "runtime_logs": {
+        "label": "Runtime Logs",
+        "guidance": "Configure deployment log retention, redaction, and access controls outside the product.",
+    },
+    "database_internals": {
+        "label": "Database Internals",
+        "guidance": "Manage WAL, replication, and database maintenance artifacts through database operator policy.",
+    },
+    "backups_snapshots": {
+        "label": "Backups and Snapshots",
+        "guidance": "Apply backup expiry, encryption, and restore-test policy at the host or platform layer.",
+    },
+    "browser_held_copies": {
+        "label": "Browser-Held Copies",
+        "guidance": "Clear browser storage and cache through browser or device management; product lifecycle controls cannot recall client-side copies.",
+    },
+    "copied_exports": {
+        "label": "Copied Exports",
+        "guidance": "Treat downloaded exports as operator-controlled records with separate storage, sharing, and disposal policy.",
+    },
+    "provider_traces": {
+        "label": "Provider Traces",
+        "guidance": "Review provider retention contracts and disable provider-side logging where the deployment requires it.",
+    },
+}
 
 
 ENFORCED_RETENTION_DATA_CLASS_KEYS = {
@@ -304,6 +386,30 @@ ENFORCED_RETENTION_DATA_CLASS_KEYS = {
     "uploaded_document_artifacts",
     "user_memory",
     "audit_log",
+}
+
+
+DEFAULT_RETENTION_POLICY_OVERRIDES = {
+    "sage_session_memory": {
+        "enabled": True,
+        "retention_window_days": 90,
+        "scheduled_enforcement_enabled": True,
+    },
+    "uploaded_document_artifacts": {
+        "enabled": True,
+        "retention_window_days": 30,
+        "scheduled_enforcement_enabled": True,
+    },
+    "user_memory": {
+        "enabled": True,
+        "retention_window_days": 180,
+        "scheduled_enforcement_enabled": True,
+    },
+    "audit_log": {
+        "enabled": True,
+        "retention_window_days": 180,
+        "scheduled_enforcement_enabled": True,
+    },
 }
 
 
@@ -371,25 +477,30 @@ def _data_class_keys() -> set[str]:
 
 
 def _default_retention_policy(data_class_key: str) -> dict:
-    return {
+    policy = {
         "lifecycle_data_class": data_class_key,
         "enabled": False,
         "retention_window_days": 30,
         "scheduled_enforcement_enabled": False,
     }
+    policy.update(DEFAULT_RETENTION_POLICY_OVERRIDES.get(data_class_key, {}))
+    return policy
 
 
 def _stored_retention_policies() -> dict[str, dict]:
+    policies = {
+        key: _default_retention_policy(key)
+        for key in _data_class_keys()
+    }
     raw_value = database.get_setting("lifecycle_retention_policies")
     if not raw_value:
-        return {}
+        return policies
     try:
         parsed = json.loads(raw_value)
     except json.JSONDecodeError:
-        return {}
+        return policies
     if not isinstance(parsed, dict):
-        return {}
-    policies = {}
+        return policies
     valid_keys = _data_class_keys()
     for key, value in parsed.items():
         if key not in valid_keys or not isinstance(value, dict):
@@ -747,6 +858,7 @@ def _update_retention_policy(data_class_key: str, request: RetentionPolicyUpdate
         json.dumps(policies, sort_keys=True),
         changed_by=changed_by,
     )
+    _mark_lifecycle_readiness_stale("retention_policy_changed", changed_by=changed_by)
     return _retention_policy_for(data_class_key)
 
 
@@ -768,6 +880,24 @@ def _acknowledged_unsupported_surface_keys() -> set[str]:
     }
 
 
+def _unsupported_surface_category_acknowledgements() -> dict[str, dict]:
+    raw_value = database.get_setting("lifecycle_unsupported_surface_category_acknowledgements")
+    if not raw_value:
+        return {}
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    valid_categories = set(UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES)
+    return {
+        category: value
+        for category, value in parsed.items()
+        if category in valid_categories and isinstance(value, dict)
+    }
+
+
 def _unsupported_deployment_surfaces() -> list[dict]:
     acknowledged_keys = _acknowledged_unsupported_surface_keys()
     surfaces = []
@@ -778,6 +908,30 @@ def _unsupported_deployment_surfaces() -> list[dict]:
             "acknowledged": surface["key"] in acknowledged_keys,
         })
     return surfaces
+
+
+def _unsupported_deployment_surface_categories() -> list[dict]:
+    category_acknowledgements = _unsupported_surface_category_acknowledgements()
+    surfaces = _unsupported_deployment_surfaces()
+    grouped = []
+    for category, metadata in UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES.items():
+        acknowledgement = category_acknowledgements.get(category, {})
+        grouped.append({
+            "category": category,
+            "label": metadata["label"],
+            "status": "unsupported",
+            "guidance": metadata["guidance"],
+            "acknowledged": bool(acknowledgement.get("acknowledged")),
+            "acknowledged_by": acknowledgement.get("acknowledged_by"),
+            "acknowledged_at": acknowledgement.get("acknowledged_at"),
+            "posture_version": acknowledgement.get("posture_version"),
+            "surfaces": [
+                surface
+                for surface in surfaces
+                if surface.get("category") == category
+            ],
+        })
+    return grouped
 
 
 def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: bool, *, changed_by: str) -> list[dict]:
@@ -794,7 +948,124 @@ def _set_unsupported_surface_acknowledgement(surface_key: str, acknowledged: boo
         json.dumps(sorted(acknowledged_keys)),
         changed_by=changed_by,
     )
+    _mark_lifecycle_readiness_stale("unsupported_surface_acknowledgement_changed", changed_by=changed_by)
     return _unsupported_deployment_surfaces()
+
+
+def _set_unsupported_surface_category_acknowledgement(category: str, acknowledged: bool, *, changed_by: str) -> list[dict]:
+    if category not in UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES:
+        raise HTTPException(status_code=404, detail="Unsupported deployment surface category not found")
+    acknowledgements = _unsupported_surface_category_acknowledgements()
+    if acknowledged:
+        acknowledgements[category] = {
+            "acknowledged": True,
+            "acknowledged_by": changed_by,
+            "acknowledged_at": datetime.utcnow().isoformat(),
+            "posture_version": _readiness_version(),
+        }
+    else:
+        acknowledgements.pop(category, None)
+    database.update_setting_with_audit(
+        "lifecycle_unsupported_surface_category_acknowledgements",
+        json.dumps(acknowledgements, sort_keys=True),
+        changed_by=changed_by,
+    )
+    _mark_lifecycle_readiness_stale("unsupported_surface_category_acknowledgement_changed", changed_by=changed_by)
+    return _unsupported_deployment_surface_categories()
+
+
+def _readiness_version() -> str:
+    posture = {
+        "retention_policies": _stored_retention_policies(),
+        "acknowledged_unsupported_surfaces": sorted(_acknowledged_unsupported_surface_keys()),
+        "acknowledged_unsupported_surface_categories": _unsupported_surface_category_acknowledgements(),
+        "artifact_encryption": _artifact_encryption_status().get("status"),
+    }
+    return hashlib.sha256(json.dumps(posture, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _unsupported_surface_categories() -> list[str]:
+    return sorted(UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES)
+
+
+def _stored_lifecycle_readiness() -> dict | None:
+    raw_value = database.get_setting("lifecycle_readiness")
+    if not raw_value:
+        return None
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _lifecycle_readiness() -> dict:
+    stored = _stored_lifecycle_readiness()
+    current_version = _readiness_version()
+    if not stored:
+        return {
+            "status": "needs_review",
+            "reviewed": False,
+            "posture_version": current_version,
+            "reviewed_at": None,
+            "reviewed_by": None,
+            "stale_reason": None,
+            "acknowledged_unsupported_surface_categories": _unsupported_surface_categories(),
+            "summary": "Lifecycle Readiness requires Admin review before the Instance is treated as reviewed.",
+        }
+    reviewed_version = stored.get("posture_version")
+    stale_reason = stored.get("stale_reason")
+    is_stale = bool(stale_reason) or reviewed_version != current_version
+    return {
+        "status": "stale" if is_stale else "reviewed",
+        "reviewed": not is_stale,
+        "posture_version": current_version,
+        "reviewed_posture_version": reviewed_version,
+        "reviewed_at": stored.get("reviewed_at"),
+        "reviewed_by": stored.get("reviewed_by"),
+        "stale_reason": stale_reason or ("posture_changed" if is_stale else None),
+        "acknowledged_unsupported_surface_categories": stored.get(
+            "acknowledged_unsupported_surface_categories",
+            _unsupported_surface_categories(),
+        ),
+        "summary": (
+            "Lifecycle Readiness is stale and needs Admin review."
+            if is_stale
+            else "Lifecycle Readiness has been reviewed for the current posture."
+        ),
+    }
+
+
+def _review_lifecycle_readiness(*, changed_by: str) -> dict:
+    reviewed = {
+        "reviewed_at": datetime.utcnow().isoformat(),
+        "reviewed_by": changed_by,
+        "posture_version": _readiness_version(),
+        "stale_reason": None,
+        "acknowledged_unsupported_surface_categories": _unsupported_surface_categories(),
+    }
+    database.update_setting_with_audit(
+        "lifecycle_readiness",
+        json.dumps(reviewed, sort_keys=True),
+        changed_by=changed_by,
+    )
+    return _lifecycle_readiness()
+
+
+def _mark_lifecycle_readiness_stale(reason: str, *, changed_by: str) -> None:
+    stored = _stored_lifecycle_readiness()
+    if not stored:
+        return
+    stored["stale_reason"] = reason
+    database.update_setting(
+        "lifecycle_readiness",
+        json.dumps(stored, sort_keys=True),
+    )
+    database.update_setting_with_audit(
+        "lifecycle_readiness_staleness",
+        json.dumps(stored, sort_keys=True),
+        changed_by=changed_by,
+    )
 
 
 def get_lifecycle_status() -> dict:
@@ -810,6 +1081,8 @@ def get_lifecycle_status() -> dict:
         "artifact_encryption": _artifact_encryption_status(),
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
+        "unsupported_deployment_surface_categories": _unsupported_deployment_surface_categories(),
+        "lifecycle_readiness": _lifecycle_readiness(),
         "scheduled_retention": {
             "enabled_classes": enabled_classes,
         },
@@ -1109,6 +1382,44 @@ def _retention_tombstone_refs(results: list[dict], retry_results: list[dict] | N
         if tombstone_id is not None:
             refs.append({"tombstone_id": tombstone_id, "status": result.get("status")})
     return refs
+
+
+def _retention_policy_snapshot(
+    *,
+    policies: dict[str, dict],
+    trigger: str,
+    retry_limit: int | None,
+    evaluated_at: datetime,
+) -> dict:
+    safe_policies = {
+        key: {
+            "lifecycle_data_class": policy.get("lifecycle_data_class", key),
+            "enabled": bool(policy.get("enabled")),
+            "retention_window_days": int(policy.get("retention_window_days", 0)),
+            "scheduled_enforcement_enabled": bool(policy.get("scheduled_enforcement_enabled")),
+        }
+        for key, policy in sorted(policies.items())
+    }
+    snapshot = {
+        "trigger": trigger,
+        "retry_limit": retry_limit,
+        "evaluated_at": evaluated_at.isoformat(),
+        "enabled_classes": sorted([
+            key
+            for key, policy in safe_policies.items()
+            if policy.get("enabled")
+        ]),
+        "scheduled_enabled_classes": sorted([
+            key
+            for key, policy in safe_policies.items()
+            if policy.get("enabled") and policy.get("scheduled_enforcement_enabled")
+        ]),
+        "policies": safe_policies,
+    }
+    snapshot["policy_hash"] = hashlib.sha256(
+        json.dumps(snapshot["policies"], sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    return snapshot
 
 
 def _create_retention_run_record(
@@ -1543,7 +1854,12 @@ async def run_retention(
         response["run_record"] = _create_retention_run_record(
             trigger=trigger,
             actor=actor,
-            policy_snapshot={"retention_policies": stored_policies},
+            policy_snapshot=_retention_policy_snapshot(
+                policies=stored_policies,
+                trigger=trigger,
+                retry_limit=None,
+                evaluated_at=started_at,
+            ),
             deletion=deletion,
             retry_results=[],
             audit_event=audit_event,
@@ -1576,7 +1892,12 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
         run_record = _create_retention_run_record(
             trigger=trigger,
             actor=actor,
-            policy_snapshot={"scheduled_policies": scheduled_policies},
+            policy_snapshot=_retention_policy_snapshot(
+                policies=scheduled_policies,
+                trigger=trigger,
+                retry_limit=request.retry_limit,
+                evaluated_at=started_at,
+            ),
             deletion=deletion,
             retry_results=[],
             audit_event=audit_event,
@@ -1652,7 +1973,12 @@ async def run_scheduled_retention(request: ScheduledRetentionRunRequest, admin: 
     run_record = _create_retention_run_record(
         trigger=trigger,
         actor=actor,
-        policy_snapshot={"scheduled_policies": scheduled_policies},
+        policy_snapshot=_retention_policy_snapshot(
+            policies=scheduled_policies,
+            trigger=trigger,
+            retry_limit=request.retry_limit,
+            evaluated_at=started_at,
+        ),
         deletion=run_deletion,
         retry_results=retry_results,
         audit_event=retention.get("audit_event"),
@@ -1679,6 +2005,15 @@ async def get_admin_audit_coverage(_admin: dict = Depends(auth.require_admin)):
     return get_audit_coverage_inventory()
 
 
+@router.post("/readiness/review", response_model=dict)
+async def review_admin_lifecycle_readiness(admin: dict = Depends(auth.require_admin)):
+    return {
+        "lifecycle_readiness": _review_lifecycle_readiness(
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+    }
+
+
 @router.post("/unsupported-deployment-surfaces/{surface_key}/acknowledgement", response_model=dict)
 async def update_admin_unsupported_deployment_surface_acknowledgement(
     surface_key: str,
@@ -1688,6 +2023,21 @@ async def update_admin_unsupported_deployment_surface_acknowledgement(
     return {
         "unsupported_deployment_surfaces": _set_unsupported_surface_acknowledgement(
             surface_key,
+            request.acknowledged,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+    }
+
+
+@router.post("/unsupported-deployment-surface-categories/{category}/acknowledgement", response_model=dict)
+async def update_admin_unsupported_deployment_surface_category_acknowledgement(
+    category: str,
+    request: UnsupportedSurfaceAcknowledgementRequest,
+    admin: dict = Depends(auth.require_admin),
+):
+    return {
+        "unsupported_deployment_surface_categories": _set_unsupported_surface_category_acknowledgement(
+            category,
             request.acknowledged,
             changed_by=admin.get("pubkey", "unknown"),
         )

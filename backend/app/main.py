@@ -2670,6 +2670,18 @@ async def export_database(background_tasks: BackgroundTasks, _admin: Dict = Depe
             
             # Schedule cleanup after response is sent using BackgroundTasks
             background_tasks.add_task(cleanup_temp_file)
+            database.log_config_audit_event(
+                table_name="data_deletion",
+                config_key="copied_export:sqlite_database",
+                old_value=None,
+                new_value=json.dumps({
+                    "workflow": "copied_export",
+                    "target": "sqlite_database",
+                    "lifecycle_posture": "outside_active_storage_lifecycle",
+                    "filename": filename,
+                }, sort_keys=True),
+                changed_by=_admin.get("pubkey", "unknown"),
+            )
             
             return FileResponse(
                 path=temp_path,

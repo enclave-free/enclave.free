@@ -39,6 +39,10 @@ export function ExportButton({ messages, disabled, iconOnly = false }: ExportBut
         roleAssistant: t('chat.export.roleAssistant'),
         footer: t('chat.export.footer'),
         exportedOn: t('chat.export.exportedOn'),
+        copiedExportNotice: t(
+          'chat.export.copiedExportNotice',
+          'This export leaves active product storage and is outside Active Storage Lifecycle after download.'
+        ),
       },
       instanceName: config.name,
     })

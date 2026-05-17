@@ -486,6 +486,18 @@ export function useLifecycleStatus() {
     await fetchStatus()
   }, [fetchStatus])
 
+  const acknowledgeUnsupportedSurfaceCategory = useCallback(async (category: string, acknowledged: boolean) => {
+    const response = await adminFetch(`/admin/lifecycle/unsupported-deployment-surface-categories/${category}/acknowledgement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acknowledged }),
+    })
+    if (!response.ok) {
+      throw new Error('errors.failedToAcknowledgeUnsupportedSurfaceCategory')
+    }
+    await fetchStatus()
+  }, [fetchStatus])
+
   const updateRetentionPolicy = useCallback(async (
     key: string,
     policy: Pick<RetentionPolicy, 'enabled' | 'retention_window_days' | 'scheduled_enforcement_enabled'>,
@@ -554,6 +566,7 @@ export function useLifecycleStatus() {
     error,
     refresh: fetchStatus,
     acknowledgeUnsupportedSurface,
+    acknowledgeUnsupportedSurfaceCategory,
     updateRetentionPolicy,
     updateArtifactEncryptionPosture,
     previewRetention,

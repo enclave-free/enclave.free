@@ -352,6 +352,14 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertEqual(run["status"], "succeeded")
         self.assertEqual(run["trigger"], "manual")
         self.assertEqual(run["actor"], "admin-pubkey")
+        snapshot = run["policy_snapshot"]
+        self.assertEqual(snapshot["trigger"], "manual")
+        self.assertEqual(snapshot["retry_limit"], 0)
+        self.assertIn("evaluated_at", snapshot)
+        self.assertIn("policy_hash", snapshot)
+        self.assertIn("user_memory", snapshot["enabled_classes"])
+        self.assertEqual(snapshot["policies"]["user_memory"]["retention_window_days"], 7)
+        self.assertTrue(snapshot["policies"]["user_memory"]["scheduled_enforcement_enabled"])
         self.assertIn("user_memory", run["counts"]["by_class"])
         self.assertEqual(run["counts"]["by_class"]["user_memory"]["succeeded"], 1)
         self.assertNotIn("Run record must not expose this memory", json.dumps(run))
@@ -391,11 +399,29 @@ class RetentionExecutionTest(unittest.TestCase):
         self.database.update_setting(
             "lifecycle_retention_policies",
             json.dumps({
+                "sage_session_memory": {
+                    "lifecycle_data_class": "sage_session_memory",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
+                "uploaded_document_artifacts": {
+                    "lifecycle_data_class": "uploaded_document_artifacts",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
+                },
                 "user_memory": {
                     "lifecycle_data_class": "user_memory",
                     "enabled": True,
                     "retention_window_days": 7,
                     "scheduled_enforcement_enabled": True,
+                },
+                "audit_log": {
+                    "lifecycle_data_class": "audit_log",
+                    "enabled": False,
+                    "retention_window_days": 7,
+                    "scheduled_enforcement_enabled": False,
                 },
             }, sort_keys=True),
         )
@@ -635,9 +661,23 @@ class RetentionExecutionTest(unittest.TestCase):
 
         lifecycle_entries = self.audit_entries("data_deletion")
         self.assertIn("retention_delete_user_memory", json.dumps(lifecycle_entries))
+        self.assertIn("audit_log_retention", json.dumps(lifecycle_entries))
         verify = self.client.get("/admin/deployment/audit-log/verify")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
+
+        second_response = self.client.post(
+            "/admin/lifecycle/retention/run",
+            json={"stale_conversation_days": 7, "document_artifact_days": 7, "confirm_current_counts": True},
+        )
+        self.assertEqual(second_response.status_code, 200)
+        second_actions = {result["action"]: result for result in second_response.json()["deletion"]["results"]}
+        self.assertEqual(second_actions["retention_compact_audit_log"]["target_id"], "0")
+        second_deployment_entries = self.audit_entries("deployment_config")
+        self.assertIn("redacted_by_audit_log_retention", second_deployment_entries[0]["old_value"])
+        self.assertNotIn("old-secret-value", json.dumps(second_deployment_entries))
+        second_verify = self.client.get("/admin/deployment/audit-log/verify")
+        self.assertTrue(second_verify.json()["valid"])
 
         full_delete = self.client.delete("/admin/deployment/audit-log")
         self.assertEqual(full_delete.status_code, 405)
@@ -740,12 +780,7 @@ class RetentionExecutionTest(unittest.TestCase):
         self.assertEqual(actions["user_memory"]["action"], "retention_skip_disabled_policy")
         self.assertEqual(self.database.get_user_memory(memory_id)["status"], "active")
 
-    def test_scheduled_retention_requires_opt_in_and_retries_incomplete_tombstones(self) -> None:
-        skipped = self.client.post("/admin/lifecycle/retention/scheduled/run", json={"retry_limit": 3})
-        self.assertEqual(skipped.status_code, 200)
-        self.assertEqual(skipped.json()["status"], "skipped")
-        self.assertEqual(skipped.json()["enabled_classes"], [])
-
+    def test_scheduled_retention_retries_incomplete_tombstones_for_enabled_classes(self) -> None:
         self.database.update_setting(
             "lifecycle_retention_policies",
             json.dumps({

@@ -265,9 +265,13 @@ Use this checklist to:
 - [x] Re-check Conversation retention eligibility immediately before deletion and report skipped active candidates.
   Evidence: `backend/app/lifecycle.py::run_retention`, `backend/tests/test_retention_execution.py::test_retention_rechecks_conversation_activity_before_deleting_candidate`, `docs/adr/0010-session-memory-deletion-uses-retryable-tombstones.md`
 - [x] Document implemented Active Storage Lifecycle guarantees and remaining limitations across security docs, session docs, runbooks, ADR-0006, ADR-0007, ADR-0015, and ADR-0016.
-- [x] State that active User Profiles, current Document Library records, current Retrieval Index entries, and Inference Verification Records are not scheduled for deletion in this milestone.
-- [x] State that Inference Verification Records remain indefinitely retained until a separate evidence-retention policy exists.
-- [ ] Define retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
+- [x] State that active User Profiles, current Document Library records, current Retrieval Index entries, Inference Verification Records, and Retention Run Records are not scheduled for deletion in this milestone.
+- [x] State that Inference Verification Records and Retention Run Records remain indefinitely retained until a separate evidence-retention policy exists.
+- [x] Add Lifecycle Readiness review/staleness behavior and unsupported Deployment Surface category acknowledgement guidance.
+  Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `backend/tests/test_lifecycle_status.py::test_admin_can_acknowledge_unsupported_deployment_surface_category`, `frontend/src/pages/AdminDeploymentConfig.test.tsx::shows unsupported deployment surface categories and lets admins acknowledge one`, `docs/lifecycle-confidentiality-runbook.md`
+- [x] Document Copied Exports, browser-held copies, and irreversible Audit Log detail compaction boundaries.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py::test_audit_log_retention_compacts_sensitive_detail_without_full_deletion`, `frontend/src/utils/exportChat.ts`, `docs/lifecycle-confidentiality-runbook.md`
+- [ ] Define external retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
 - [ ] Add secure erase process where applicable.
 - [ ] Define complete historical log/session retention and deletion policy.
 

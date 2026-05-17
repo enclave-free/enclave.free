@@ -58,6 +58,7 @@ describe('AdminDeploymentConfig', () => {
   let tombstoneFetchShouldFail = false
   let tombstonesFixture: unknown[] | null
   let acknowledgedSurfaceKeys: string[]
+  let acknowledgedSurfaceCategories: string[]
   let artifactEncryptionPosture: 'required' | 'disabled'
   let verificationStatus = 'current'
   let verificationRecordDetailRequested = false
@@ -73,6 +74,7 @@ describe('AdminDeploymentConfig', () => {
     tombstoneFetchShouldFail = false
     tombstonesFixture = null
     acknowledgedSurfaceKeys = []
+    acknowledgedSurfaceCategories = []
     artifactEncryptionPosture = 'required'
     verificationStatus = 'current'
     verificationRecordDetailRequested = false
@@ -220,7 +222,7 @@ describe('AdminDeploymentConfig', () => {
             status: 'external_or_manual',
             summary: 'Scheduled Retention Policy marks classes for retention; this prototype does not include its own Retention Scheduler.',
             observation: {
-              status: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled ? 'healthy' : 'disabled',
+              status: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled ? 'stale' : 'disabled',
               enabled_classes: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled ? ['sage_session_memory'] : [],
               last_run: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled
                 ? {
@@ -232,9 +234,18 @@ describe('AdminDeploymentConfig', () => {
                   }
                 : null,
               summary: sessionMemoryRetentionPolicy.scheduled_enforcement_enabled
-                ? 'A recent Retention Scheduler run created lifecycle evidence.'
+                ? 'The most recent Retention Scheduler run is older than the expected observation window.'
                 : 'No Lifecycle Data Classes have scheduled Retention Execution enabled.',
             },
+          },
+          lifecycle_readiness: {
+            status: 'stale',
+            reviewed: false,
+            reviewed_at: '2026-05-15T12:00:00Z',
+            reviewed_by: 'admin-pubkey',
+            stale_reason: 'retention_policy_changed',
+            summary: 'Lifecycle Readiness is stale and needs Admin review.',
+            acknowledged_unsupported_surface_categories: ['client_storage', 'runtime_logs'],
           },
           data_classes: [
             {
@@ -281,10 +292,52 @@ describe('AdminDeploymentConfig', () => {
             {
               key: 'sqlite_wal',
               label: 'SQLite WAL',
-              category: 'database_wal',
+              category: 'database_internals',
               summary: 'SQLite write-ahead-log files are database runtime artifacts.',
               status: 'unsupported',
               acknowledged: false,
+            },
+          ],
+          unsupported_deployment_surface_categories: [
+            {
+              category: 'runtime_logs',
+              label: 'Runtime Logs',
+              status: 'unsupported',
+              guidance: 'Configure deployment log retention outside the product.',
+              acknowledged: acknowledgedSurfaceCategories.includes('runtime_logs'),
+              acknowledged_by: acknowledgedSurfaceCategories.includes('runtime_logs') ? 'admin-pubkey' : null,
+              acknowledged_at: acknowledgedSurfaceCategories.includes('runtime_logs') ? '2026-05-17T12:00:00Z' : null,
+              posture_version: acknowledgedSurfaceCategories.includes('runtime_logs') ? 'posture-version' : null,
+              surfaces: [
+                {
+                  key: 'docker_logs',
+                  label: 'Docker Logs',
+                  category: 'runtime_logs',
+                  summary: 'Container stdout/stderr logs are managed by the deployment runtime, not product lifecycle controls.',
+                  status: 'unsupported',
+                  acknowledged: acknowledgedSurfaceKeys.includes('docker_logs'),
+                },
+              ],
+            },
+            {
+              category: 'database_internals',
+              label: 'Database Internals',
+              status: 'unsupported',
+              guidance: 'Manage WAL and database maintenance artifacts through database operator policy.',
+              acknowledged: false,
+              acknowledged_by: null,
+              acknowledged_at: null,
+              posture_version: null,
+              surfaces: [
+                {
+                  key: 'sqlite_wal',
+                  label: 'SQLite WAL',
+                  category: 'database_internals',
+                  summary: 'SQLite write-ahead-log files are database runtime artifacts.',
+                  status: 'unsupported',
+                  acknowledged: false,
+                },
+              ],
             },
           ],
           scheduled_retention: {
@@ -338,6 +391,13 @@ describe('AdminDeploymentConfig', () => {
               acknowledged: acknowledgedSurfaceKeys.includes('docker_logs'),
             },
           ],
+        }))
+      }
+      if (endpoint === '/admin/lifecycle/unsupported-deployment-surface-categories/runtime_logs/acknowledgement') {
+        const body = JSON.parse(String(options?.body ?? '{}'))
+        acknowledgedSurfaceCategories = body.acknowledged === true ? ['runtime_logs'] : []
+        return Promise.resolve(Response.json({
+          unsupported_deployment_surface_categories: [],
         }))
       }
       if (endpoint === '/admin/lifecycle/retention-policies/sage_session_memory') {
@@ -457,6 +517,20 @@ describe('AdminDeploymentConfig', () => {
     expect(within(securitySettings).getByText('Chat Rate Limit')).toBeInTheDocument()
   })
 
+  it('shows lifecycle readiness warnings without implying user conversations are blocked', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('Lifecycle Readiness: Stale')).toBeInTheDocument()
+    expect(screen.getByText('Lifecycle Readiness is stale and needs Admin review.')).toBeInTheDocument()
+    expect(screen.getByText('User Conversations are not blocked by Lifecycle Readiness warnings in v1.')).toBeInTheDocument()
+  })
+
   it('shows current Model Provider verification status', async () => {
     render(
       <MemoryRouter initialEntries={['/admin/deployment']}>
@@ -539,7 +613,7 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Artifact Encryption Posture: Encrypted')).toBeInTheDocument()
     expect(screen.getByText('Retention Scheduler: External or manual')).toBeInTheDocument()
     expect(screen.getByText('Observation: Disabled')).toBeInTheDocument()
-    expect(screen.getByText('Scheduler enabled classes: none')).toBeInTheDocument()
+    expect(screen.getByText('Scheduler enabled classes: None')).toBeInTheDocument()
     expect(screen.getByText('Confidentiality: Partial')).toBeInTheDocument()
     expect(screen.getByText('Secure Erase: Unsupported')).toBeInTheDocument()
     expect(screen.getByText(/Secure Erase is out of scope for v1/)).toBeInTheDocument()
@@ -582,7 +656,7 @@ describe('AdminDeploymentConfig', () => {
     expect(await within(lifecycleStatus).findByText('Artifact Encryption Posture: Plaintext by Operator Choice')).toBeInTheDocument()
   })
 
-  it('shows unsupported deployment surfaces and lets admins acknowledge one', async () => {
+  it('shows unsupported deployment surface categories and lets admins acknowledge one', async () => {
     const user = userEvent.setup()
 
     render(
@@ -595,14 +669,15 @@ describe('AdminDeploymentConfig', () => {
 
     const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
     expect(within(lifecycleStatus).getByText('Unsupported Deployment Surfaces')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Runtime Logs')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Database Internals')).toBeInTheDocument()
     expect(within(lifecycleStatus).getByText('Docker Logs')).toBeInTheDocument()
-    expect(within(lifecycleStatus).getByText('SQLite WAL')).toBeInTheDocument()
 
     await user.click(within(lifecycleStatus).getAllByRole('button', { name: 'Acknowledge' })[0])
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(
-        '/admin/lifecycle/unsupported-deployment-surfaces/docker_logs/acknowledgement',
+        '/admin/lifecycle/unsupported-deployment-surface-categories/runtime_logs/acknowledgement',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ acknowledged: true }),
@@ -664,7 +739,7 @@ describe('AdminDeploymentConfig', () => {
 
     const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
     expect(within(lifecycleStatus).getByText('Audit coverage: 6 audited, 2 exceptions, 0 missing.')).toBeInTheDocument()
-    expect(within(lifecycleStatus).getByText('Scheduled classes: none')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Scheduled classes: None')).toBeInTheDocument()
 
     await user.click(within(lifecycleStatus).getByRole('button', { name: 'Preview Retention' }))
     expect(await within(lifecycleStatus).findByText('Preview: 1 conversations, 2 document artifacts, 0 skipped classes.')).toBeInTheDocument()

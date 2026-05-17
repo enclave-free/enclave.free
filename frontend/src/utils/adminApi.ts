@@ -4,7 +4,8 @@
  * Auth uses secure session cookies.
  */
 
-import { STORAGE_KEYS, API_BASE } from '../types/onboarding'
+import { API_BASE } from '../types/onboarding'
+import { clearLogoutBrowserStorage } from './browserStoragePosture'
 
 export type AdminSessionValidationState = 'authenticated' | 'unauthenticated' | 'unavailable'
 
@@ -54,8 +55,7 @@ export function isAdminAuthenticated(): boolean {
  * Clear admin authentication state.
  */
 export function clearAdminAuth(): void {
-  localStorage.removeItem(STORAGE_KEYS.ADMIN_PUBKEY)
-  localStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION_TOKEN)
+  clearLogoutBrowserStorage('admin')
 }
 
 /**
