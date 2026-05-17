@@ -279,32 +279,41 @@ Use this checklist to:
   Evidence: `backend/app/lifecycle.py`, `frontend/src/pages/AdminDeploymentConfig.tsx`, `backend/tests/test_lifecycle_status.py::test_admin_can_acknowledge_unsupported_deployment_surface_category`, `frontend/src/pages/AdminDeploymentConfig.test.tsx::shows unsupported deployment surface categories and lets admins acknowledge one`, `docs/lifecycle-confidentiality-runbook.md`
 - [x] Document Copied Exports, browser-held copies, and irreversible Audit Log detail compaction boundaries.
   Evidence: `backend/app/lifecycle.py`, `backend/tests/test_retention_execution.py::test_audit_log_retention_compacts_sensitive_detail_without_full_deletion`, `frontend/src/utils/exportChat.ts`, `docs/lifecycle-confidentiality-runbook.md`
-- [ ] Define external retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
-- [ ] Add secure erase process where applicable.
-- [ ] Define complete historical log/session retention and deletion policy.
+- [x] Define external retention policies for unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_lifecycle_status.py`, `docs/deployment-surface-retention.md`
+- [x] Keep Secure Erase out of product claims unless a concrete Deployment process exists.
+  Evidence: `backend/app/lifecycle.py`, `docs/deployment-surface-retention.md`, `docs/active-content-encryption.md`
+- [x] Define complete historical log/session retention separately from active Session Memory deletion.
+  Evidence: `backend/app/lifecycle.py`, `backend/tests/test_lifecycle_status.py`, `docs/deployment-surface-retention.md`
 
 ---
 
 ## 6. Configuration and Environment Hardening Checklist
 
-- [ ] Set production env indicator (`ENCLAVE_ENV=production` or equivalent).
+- [x] Set production env indicator (`ENCLAVE_ENV=production` or equivalent).
+  Evidence: `backend/app/auth.py`, `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-configuration-guardrails.md`
 - [x] Ensure `MOCK_EMAIL=false` in production.
 - [x] Auth simulation flags are not part of the supported deployment surface.
-- [ ] Set strong, stable `SECRET_KEY` via secret manager.
-- [ ] Restrict backend and infra ports to private networks/VPN where possible.
-- [ ] Remove dev-only reload mode in production runtime.
+- [x] Set strong, stable `SECRET_KEY` via secret manager.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`, `docs/production-configuration-guardrails.md`
+- [x] Restrict backend and infra ports to private networks/VPN where possible.
+  Evidence: `docker-compose.app.yml`, `docker-compose.infra.yml`, `backend/app/deployment_config.py`, `docs/production-configuration-guardrails.md`
+- [x] Remove dev-only reload mode in production runtime.
+  Evidence: `docker-compose.app.yml`, `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`
 - [ ] Use non-root containers and hardened container runtime settings.
 
 ---
 
 ## 7. Monitoring, Testing, and Verification Checklist
 
-- [ ] Add automated security tests for auth on all endpoints.
+- [x] Add automated security tests for auth on all endpoints.
+  Evidence: `.github/workflows/security-regression.yml`
 - [x] Add regression tests specifically for:
   - ingest endpoint authorization
   - vector-search authorization/scope
   - public query-session record ownership
-- [ ] Add SAST/dependency scanning in CI.
+- [x] Add SAST/dependency scanning in CI.
+  Evidence: `.github/workflows/security-regression.yml`, `backend/tests/test_security_ci_workflow.py`
 - [ ] Add runtime alerting for:
   - repeated auth failures
   - unusual admin actions
@@ -358,8 +367,10 @@ Mark release as security-ready only when all are true:
 - [x] All critical production blockers in Section 4 are complete.
 - [x] Token handling is migrated away from `localStorage`.
 - [x] CORS and network exposure are least-privilege.
-- [ ] Simulation and mock auth modes are verified off in production.
-- [ ] Security regression tests pass in CI.
+- [x] Simulation and mock auth modes are verified off in production.
+  Evidence: `backend/app/deployment_config.py`, `backend/tests/test_deployment_config_rate_limits.py`
+- [x] Security regression tests pass in CI.
+  Evidence: `.github/workflows/security-regression.yml`, `backend/tests/test_security_ci_workflow.py`
 - [ ] Incident response and key recovery runbooks are documented and tested.
 
 ---

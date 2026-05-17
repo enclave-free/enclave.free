@@ -220,6 +220,22 @@ PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
     "MOCK_EMAIL",
 )
 
+PRODUCTION_UNSAFE_ENV_FLAGS: Final[tuple[str, ...]] = (
+    "SIMULATE_USER_AUTH",
+    "SIMULATE_ADMIN_AUTH",
+    "PROTECTED_INFERENCE_DEVELOPMENT_BYPASS",
+)
+
+WEAK_SECRET_KEY_VALUES: Final[set[str]] = {
+    "",
+    "change-me",
+    "changeme",
+    "secret",
+    "test-secret",
+    "replace-this-with-a-long-random-secret",
+    "your-secret-key-here",
+}
+
 
 def _config_to_item(config: dict) -> DeploymentConfigItem:
     """Convert database row to DeploymentConfigItem"""
@@ -272,6 +288,13 @@ def _is_local_or_internal_url(value: Optional[str]) -> bool:
 def _url_scheme(value: Optional[str]) -> str:
     parsed = _parsed_url(value)
     return parsed.scheme.lower() if parsed else ""
+
+
+def _secret_key_is_strong(secret_key: Optional[str]) -> bool:
+    value = str(secret_key or "").strip()
+    if value.lower() in WEAK_SECRET_KEY_VALUES:
+        return False
+    return len(value) >= 32
 
 
 def _sync_env_to_db() -> None:
@@ -788,6 +811,17 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
         for key in PRODUCTION_UNSAFE_FLAGS:
             if _truthy_config_value(_deployment_config_value(config_dict, key)):
                 errors.append(f"{key} must be disabled in production")
+        for key in PRODUCTION_UNSAFE_ENV_FLAGS:
+            if _truthy_config_value(os.getenv(key)):
+                errors.append(f"{key} must be disabled in production")
+        if not _secret_key_is_strong(os.getenv("SECRET_KEY")):
+            errors.append("SECRET_KEY must be strong, stable, and managed outside the image in production")
+        if os.getenv("SESSION_COOKIE_SECURE", "").strip().lower() in {"false", "0", "no", "off"}:
+            errors.append("SESSION_COOKIE_SECURE must not be disabled in production")
+        if _truthy_config_value(os.getenv("BACKEND_RELOAD")):
+            errors.append("BACKEND_RELOAD must be disabled in production")
+        if os.getenv("PUBLISHED_SERVICE_HOST", "").strip() in {"0.0.0.0", "::"}:
+            warnings.append("Published service host 0.0.0.0 requires an explicit production exposure review")
         rate_limit_backend = (
             _deployment_config_value(config_dict, "RATE_LIMIT_BACKEND")
             or os.getenv("RATE_LIMIT_BACKEND", "memory")

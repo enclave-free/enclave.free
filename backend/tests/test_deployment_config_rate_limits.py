@@ -34,6 +34,9 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_simulate_admin_auth = os.environ.get("SIMULATE_ADMIN_AUTH")
         self._orig_rate_limit_backend = os.environ.get("RATE_LIMIT_BACKEND")
         self._orig_rate_limit_valkey_url = os.environ.get("RATE_LIMIT_VALKEY_URL")
+        self._orig_session_cookie_secure = os.environ.get("SESSION_COOKIE_SECURE")
+        self._orig_backend_reload = os.environ.get("BACKEND_RELOAD")
+        self._orig_published_service_host = os.environ.get("PUBLISHED_SERVICE_HOST")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["MOCK_EMAIL"] = "false"
@@ -44,6 +47,9 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         os.environ.pop("SIMULATE_ADMIN_AUTH", None)
         os.environ.pop("RATE_LIMIT_BACKEND", None)
         os.environ.pop("RATE_LIMIT_VALKEY_URL", None)
+        os.environ.pop("SESSION_COOKIE_SECURE", None)
+        os.environ.pop("BACKEND_RELOAD", None)
+        os.environ.pop("PUBLISHED_SERVICE_HOST", None)
 
         import auth
         import database
@@ -78,6 +84,9 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("SIMULATE_ADMIN_AUTH", self._orig_simulate_admin_auth)
         self._restore_env("RATE_LIMIT_BACKEND", self._orig_rate_limit_backend)
         self._restore_env("RATE_LIMIT_VALKEY_URL", self._orig_rate_limit_valkey_url)
+        self._restore_env("SESSION_COOKIE_SECURE", self._orig_session_cookie_secure)
+        self._restore_env("BACKEND_RELOAD", self._orig_backend_reload)
+        self._restore_env("PUBLISHED_SERVICE_HOST", self._orig_published_service_host)
         self.tmp.cleanup()
 
     @staticmethod
@@ -199,6 +208,49 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertIn("TRUSTED_PROXIES should name the TLS-terminating reverse proxy in production", body["warnings"])
         self.assertIn("LLM_API_URL must use HTTPS for external provider endpoints in production", body["errors"])
         self.assertNotIn("EMBEDDING_API_URL must use HTTPS for internal Compose endpoint tinfoil-proxy", body["errors"])
+
+    def test_production_validation_rejects_weak_secrets_and_dev_runtime_modes(self) -> None:
+        os.environ["ENCLAVE_ENV"] = "production"
+        os.environ["SECRET_KEY"] = "replace-this-with-a-long-random-secret"
+        os.environ["SIMULATE_USER_AUTH"] = "true"
+        os.environ["SIMULATE_ADMIN_AUTH"] = "true"
+        os.environ["PROTECTED_INFERENCE_DEVELOPMENT_BYPASS"] = "true"
+        os.environ["SESSION_COOKIE_SECURE"] = "false"
+        os.environ["BACKEND_RELOAD"] = "true"
+        os.environ["PUBLISHED_SERVICE_HOST"] = "0.0.0.0"
+        for key, value, category in (
+            ("RATE_LIMIT_BACKEND", "valkey", "security"),
+            ("RATE_LIMIT_VALKEY_URL", "redis://valkey:6379/0", "security"),
+            ("INSTANCE_URL", "https://example.com", "domains"),
+            ("API_BASE_URL", "https://api.example.com", "domains"),
+            ("ADMIN_BASE_URL", "https://admin.example.com", "domains"),
+            ("FRONTEND_URL", "https://example.com", "security"),
+            ("FORCE_HTTPS", "true", "ssl"),
+            ("HSTS_MAX_AGE", "31536000", "ssl"),
+            ("LLM_API_URL", "https://models.example.com/v1", "llm"),
+        ):
+            self.database.upsert_deployment_config(
+                key,
+                value,
+                is_secret=False,
+                requires_restart=True,
+                category=category,
+                description=key,
+                changed_by="admin-pubkey",
+            )
+
+        response = self.client.post("/admin/deployment/config/validate")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["valid"])
+        self.assertIn("SECRET_KEY must be strong, stable, and managed outside the image in production", body["errors"])
+        self.assertIn("SIMULATE_USER_AUTH must be disabled in production", body["errors"])
+        self.assertIn("SIMULATE_ADMIN_AUTH must be disabled in production", body["errors"])
+        self.assertIn("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS must be disabled in production", body["errors"])
+        self.assertIn("SESSION_COOKIE_SECURE must not be disabled in production", body["errors"])
+        self.assertIn("BACKEND_RELOAD must be disabled in production", body["errors"])
+        self.assertIn("Published service host 0.0.0.0 requires an explicit production exposure review", body["warnings"])
 
     def test_simulated_auth_flags_are_not_exposed_as_config(self) -> None:
         os.environ["SIMULATE_USER_AUTH"] = "true"

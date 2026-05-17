@@ -360,26 +360,32 @@ UNSUPPORTED_DEPLOYMENT_SURFACE_CATEGORIES = {
     "runtime_logs": {
         "label": "Runtime Logs",
         "guidance": "Configure deployment log retention, redaction, and access controls outside the product.",
+        "operator_retention_policy": "Set runtime log retention, redaction, access controls, and disposal in the container host, platform, or log sink.",
     },
     "database_internals": {
         "label": "Database Internals",
         "guidance": "Manage WAL, replication, and database maintenance artifacts through database operator policy.",
+        "operator_retention_policy": "Manage SQLite/Postgres WAL, replication, vacuum/checkpoint behavior, and database maintenance artifacts through database operations policy.",
     },
     "backups_snapshots": {
         "label": "Backups and Snapshots",
         "guidance": "Apply backup expiry, encryption, and restore-test policy at the host or platform layer.",
+        "operator_retention_policy": "Define backup and snapshot encryption, expiry, restore testing, and disposal outside the product lifecycle controls.",
     },
     "browser_held_copies": {
         "label": "Browser-Held Copies",
         "guidance": "Clear browser storage and cache through browser or device management; product lifecycle controls cannot recall client-side copies.",
+        "operator_retention_policy": "Use browser/device management for cache, downloads, local storage, and profile data created on operator or user devices.",
     },
     "copied_exports": {
         "label": "Copied Exports",
         "guidance": "Treat downloaded exports as operator-controlled records with separate storage, sharing, and disposal policy.",
+        "operator_retention_policy": "Classify downloaded exports as operator-held records with separate storage, sharing, retention, and disposal rules.",
     },
     "provider_traces": {
         "label": "Provider Traces",
         "guidance": "Review provider retention contracts and disable provider-side logging where the deployment requires it.",
+        "operator_retention_policy": "Review LLM, email, search, hosting, and infrastructure provider contracts; disable provider-side logging where required.",
     },
 }
 
@@ -423,6 +429,17 @@ SECURE_ERASE_SCOPE = {
         "active-storage targets and exclude unsupported Deployment Surfaces such as logs, "
         "WAL, backups, snapshots, and provider traces."
     ),
+}
+
+
+HISTORICAL_SESSION_LOG_RETENTION = {
+    "status": "operator_responsibility",
+    "summary": (
+        "Historical log/session retention is separate from active Session Memory deletion. "
+        "Product lifecycle controls can delete supported active Session Memory, while runtime logs, "
+        "provider traces, backups, snapshots, and historical platform records remain Deployment Surface responsibilities."
+    ),
+    "secure_erase_claimed": False,
 }
 
 
@@ -957,6 +974,15 @@ def _unsupported_deployment_surface_categories() -> list[dict]:
             "label": metadata["label"],
             "status": "unsupported",
             "guidance": metadata["guidance"],
+            "operator_retention_policy": {
+                "owner": "operator",
+                "summary": metadata["operator_retention_policy"],
+                "acknowledgement_effect": (
+                    "records_operator_review_not_lifecycle_data_class; product Data Deletion and Retention controls "
+                    "do not apply to this Deployment Surface category"
+                ),
+                "secure_erase_boundary": "Secure Erase is not claimed for unsupported Deployment Surfaces.",
+            },
             "acknowledged": bool(acknowledgement.get("acknowledged")),
             "acknowledged_by": acknowledgement.get("acknowledged_by"),
             "acknowledged_at": acknowledgement.get("acknowledged_at"),
@@ -1128,6 +1154,7 @@ def get_lifecycle_status() -> dict:
         "secure_erase": deepcopy(SECURE_ERASE_SCOPE),
         "unsupported_deployment_surfaces": _unsupported_deployment_surfaces(),
         "unsupported_deployment_surface_categories": _unsupported_deployment_surface_categories(),
+        "historical_session_log_retention": deepcopy(HISTORICAL_SESSION_LOG_RETENTION),
         "lifecycle_readiness": _lifecycle_readiness(),
         "scheduled_retention": {
             "enabled_classes": enabled_classes,

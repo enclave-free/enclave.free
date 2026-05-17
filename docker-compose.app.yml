@@ -9,6 +9,7 @@ services:
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - ENCLAVE_ENV=${ENCLAVE_ENV:-development}
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-tinfoil}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
       - EMBEDDING_API_URL=${EMBEDDING_API_URL:-http://tinfoil-proxy:8089/v1}
@@ -77,6 +78,7 @@ services:
       - sage_workspace:/workspace
     environment:
       - DATABASE_URL=postgres://sage:sage@postgres:5432/sage
+      - ENCLAVE_ENV=${ENCLAVE_ENV:-development}
       - TINFOIL_API_URL=http://tinfoil-proxy:8089/v1
       - TINFOIL_API_KEY=${TINFOIL_API_KEY}
       - TINFOIL_MODEL=${TINFOIL_MODEL:-kimi-k2-6}

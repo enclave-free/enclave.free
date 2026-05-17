@@ -219,6 +219,37 @@ class LifecycleStatusTest(unittest.TestCase):
         self.assertIn("metadata-only lifecycle evidence", run_records["retention"]["summary"])
         self.assertEqual(run_records["evidence_retention"]["ordinary_conversation_policy_applies"], False)
 
+    def test_lifecycle_status_exposes_deployment_surface_retention_boundaries(self) -> None:
+        response = self.client.get("/admin/lifecycle/status")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        categories = {
+            category["category"]: category
+            for category in body["unsupported_deployment_surface_categories"]
+        }
+        expected_categories = {
+            "runtime_logs",
+            "database_internals",
+            "backups_snapshots",
+            "browser_held_copies",
+            "copied_exports",
+            "provider_traces",
+        }
+
+        self.assertEqual(expected_categories, set(categories))
+        for key in expected_categories:
+            with self.subTest(key=key):
+                policy = categories[key]["operator_retention_policy"]
+                self.assertEqual(policy["owner"], "operator")
+                self.assertIn("not_lifecycle_data_class", policy["acknowledgement_effect"])
+                self.assertIn("Secure Erase", policy["secure_erase_boundary"])
+
+        historical = body["historical_session_log_retention"]
+        self.assertEqual(historical["status"], "operator_responsibility")
+        self.assertIn("active Session Memory deletion", historical["summary"])
+        self.assertFalse(historical["secure_erase_claimed"])
+
     def test_lifecycle_status_reports_mixed_when_required_artifacts_include_legacy_plaintext(self) -> None:
         os.environ["CONTENT_ENCRYPTION_KEY"] = "test-content-key"
         artifact_path = Path(os.environ["UPLOADS_DIR"]) / "Legacy.md"
