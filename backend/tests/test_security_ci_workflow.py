@@ -22,6 +22,7 @@ class SecurityCiWorkflowTest(unittest.TestCase):
             "backend.tests.test_operational_readiness_docs",
             "backend.tests.test_browser_storage_posture_docs",
             "backend.tests.test_retention_run_policy_docs",
+            "backend.tests.test_conversation_retention_docs",
             "src/components/chat/ChatMessage.test.tsx",
             "src/pages/AdminDeploymentConfig.test.tsx",
             "src/pages/UserAuth.test.tsx",

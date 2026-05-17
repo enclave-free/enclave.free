@@ -78,6 +78,7 @@ export function generateExport({ messages, format, title, translations, instance
   if (format === 'md') {
     let content = `# ${exportTitle}\n\n`
     content += `*${exportedOnText}*\n\n---\n\n`
+    content += `Source: ${instanceName} Conversation Export\n\n`
 
     conversationMessages.forEach((message) => {
       const role = message.role === 'user' ? `**${translations.roleUser}**` : `**${translations.roleAssistant}**`
@@ -106,6 +107,7 @@ export function generateExport({ messages, format, title, translations, instance
   let content = `${exportTitle}\n`
   content += `${'='.repeat(exportTitle.length)}\n\n`
   content += `${exportedOnText}\n\n`
+  content += `Source: ${instanceName} Conversation Export\n\n`
   content += `${'─'.repeat(40)}\n\n`
 
   conversationMessages.forEach((message) => {

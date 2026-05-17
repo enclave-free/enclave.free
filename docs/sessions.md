@@ -97,6 +97,14 @@ Current nuance:
 - scheduled retention depends on an external Retention Scheduler and produces metadata-only Retention Run Records plus Retention Scheduler Observation
 - unsupported Deployment Surfaces such as logs, WAL files, backups, snapshots, browser caches, copied exports, and provider traces remain outside product lifecycle control
 
+### Conversation Retention Semantics
+
+Retention eligibility is based on the last human or Sage assistant turn. Opening, viewing, inspecting, exporting, or lifecycle scanning a Conversation does not refresh retention eligibility.
+
+Admin Conversations and User Conversations use the same Conversation Content and Session Memory retention window. Expired or tombstoned Conversations disappear from ordinary conversation history. Active deletion or retention removes the public query-session record and associated Sage Session Memory.
+
+Lifecycle evidence remains metadata-only and Admin-visible. It must not retain former titles, first-message summaries, prompts, tool outputs, source snippets, or Conversation Content. User-initiated deletion returns immediate user-facing status, while retryable tombstone and evidence details remain Admin-visible in lifecycle surfaces.
+
 ## Debugging
 
 Useful checks:

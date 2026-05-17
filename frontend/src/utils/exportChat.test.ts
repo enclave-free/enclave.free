@@ -64,6 +64,7 @@ describe('generateExport', () => {
     expect(exported).not.toContain('Prefers concise answers.')
     expect(exported).not.toContain('Prefers high detail answers.')
     expect(exported).not.toContain('importance')
+    expect(exported).toContain('Source: Enclave Conversation Export')
     expect(exported).toContain('outside Active Storage Lifecycle')
 
     const exportedTxt = generateExport({
@@ -80,6 +81,7 @@ describe('generateExport', () => {
     expect(exportedTxt).not.toContain('Prefers concise answers.')
     expect(exportedTxt).not.toContain('Prefers high detail answers.')
     expect(exportedTxt).not.toContain('importance')
+    expect(exportedTxt).toContain('Source: Enclave Conversation Export')
     expect(exportedTxt).toContain('outside Active Storage Lifecycle')
   })
 
