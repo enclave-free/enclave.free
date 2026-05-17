@@ -13,6 +13,9 @@ Configuration:
     - enable_web_search: Include web-search tool in queries
     - enable_auto_search_followup: Auto-call LLM search when recommended
     - grading: GPT-4o grading settings
+
+Environment:
+    BENCHMARK_AUTH_TOKEN must be set to a signed user session token for /query and /llm/chat.
 """
 
 import os
@@ -82,7 +85,7 @@ CONFIG = load_config()
 SESSIONS = load_sessions()
 BACKEND_URL = os.getenv("BACKEND_URL", CONFIG.get("backend_url", "http://localhost:8000"))
 BENCHMARK_GRADING_API_KEY = os.getenv("BENCHMARK_GRADING_API_KEY")
-DEV_TOKEN = "dev-mode-mock-token"
+BENCHMARK_AUTH_TOKEN = os.getenv("BENCHMARK_AUTH_TOKEN")
 
 
 # ============================================================================
@@ -143,6 +146,9 @@ def get_metadata() -> dict:
 
 def call_query_endpoint(question: str, session_id: Optional[str] = None) -> dict:
     """Call the /query endpoint."""
+    if not BENCHMARK_AUTH_TOKEN:
+        raise RuntimeError("BENCHMARK_AUTH_TOKEN must be set to a real signed user session token")
+
     tools = ["web-search"] if CONFIG.get("enable_web_search", False) else []
     payload = {"question": question, "top_k": CONFIG.get("top_k", 8), "tools": tools}
     if session_id:
@@ -151,7 +157,7 @@ def call_query_endpoint(question: str, session_id: Optional[str] = None) -> dict
     response = httpx.post(
         f"{BACKEND_URL}/query",
         json=payload,
-        headers={"Authorization": f"Bearer {DEV_TOKEN}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {BENCHMARK_AUTH_TOKEN}", "Content-Type": "application/json"},
         timeout=120.0
     )
     if response.status_code != 200:
@@ -161,6 +167,9 @@ def call_query_endpoint(question: str, session_id: Optional[str] = None) -> dict
 
 def call_auto_search(search_term: str) -> dict:
     """Call /llm/chat with search - mimics frontend auto-search flow."""
+    if not BENCHMARK_AUTH_TOKEN:
+        raise RuntimeError("BENCHMARK_AUTH_TOKEN must be set to a real signed user session token")
+
     search_prompt = f"""Search for: {search_term}
 
 IMPORTANT: Return a CONDENSED response:
@@ -172,7 +181,7 @@ IMPORTANT: Return a CONDENSED response:
     response = httpx.post(
         f"{BACKEND_URL}/llm/chat",
         json={"message": search_prompt, "tools": ["web-search"]},
-        headers={"Authorization": f"Bearer {DEV_TOKEN}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {BENCHMARK_AUTH_TOKEN}", "Content-Type": "application/json"},
         timeout=120.0
     )
     if response.status_code != 200:

@@ -12,7 +12,7 @@ TODO (Future CRUD operations):
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import content_artifacts
@@ -528,6 +528,12 @@ def delete_retrieval_chunks_for_job(job_id: str) -> int:
         return cursor.rowcount
 
 
-# def purge_old_jobs(days: int = 30) -> int:
-#     """Delete jobs older than specified days. Returns count deleted."""
-#     pass
+def purge_old_jobs(days: int = 30) -> int:
+    """Delete ingest jobs older than the cutoff. Returns count deleted."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(0, int(days)))).strftime("%Y-%m-%d %H:%M:%S")
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM ingest_jobs WHERE created_at < ?", (cutoff,))
+        deleted = cursor.rowcount
+        if deleted:
+            logger.info(f"Purged {deleted} ingest jobs older than {days} days")
+        return deleted

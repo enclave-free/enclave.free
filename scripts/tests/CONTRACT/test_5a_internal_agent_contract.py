@@ -266,7 +266,7 @@ def main() -> int:
 
     user_lookup_failed = False
     try:
-        user = first_row(run_sqlite_json("SELECT id FROM users ORDER BY id ASC LIMIT 1", db_path))
+        user = first_row(run_sqlite_json("SELECT id, user_type_id, dev_mode FROM users ORDER BY id ASC LIMIT 1", db_path))
     except RuntimeError as exc:
         print(f"[SKIP] user row unavailable: {exc}")
         user = None
@@ -289,23 +289,32 @@ def main() -> int:
     elif not user_lookup_failed:
         print("[SKIP] no user row available for user/profile schema checks")
 
-    doc_search = post_json(
-        args.api_base,
-        "/internal/agent/document-search",
-        internal_token,
-        {
-            "query": "contract smoke",
-            "user": {"id": -1, "type": "user", "approved": True, "user_type_id": None, "dev_mode": True},
-            "top_k": 1,
-        },
-    )
-    if doc_search.status_code == 200:
-        failures += 0 if expect_keys("document search", doc_search.json(), {"sources", "context", "search_query", "top_k"}) else 1
-    elif 500 <= doc_search.status_code < 600:
-        print(f"[SKIP] document-search schema check skipped due to upstream retrieval dependency: HTTP {doc_search.status_code}")
+    if user:
+        doc_search = post_json(
+            args.api_base,
+            "/internal/agent/document-search",
+            internal_token,
+            {
+                "query": "contract smoke",
+                "user": {
+                    "id": user["id"],
+                    "type": "user",
+                    "approved": True,
+                    "user_type_id": user.get("user_type_id"),
+                    "dev_mode": bool(user.get("dev_mode", False)),
+                },
+                "top_k": 1,
+            },
+        )
+        if doc_search.status_code == 200:
+            failures += 0 if expect_keys("document search", doc_search.json(), {"sources", "context", "search_query", "top_k"}) else 1
+        elif 500 <= doc_search.status_code < 600:
+            print(f"[SKIP] document-search schema check skipped due to upstream retrieval dependency: HTTP {doc_search.status_code}")
+        else:
+            print(f"[FAIL] document-search returned unexpected status {doc_search.status_code}: {doc_search.text[:400]}")
+            failures += 1
     else:
-        print(f"[FAIL] document-search returned unexpected status {doc_search.status_code}: {doc_search.text[:400]}")
-        failures += 1
+        print("[SKIP] document-search schema check skipped because no user row is available")
 
     print("-" * 72)
     if failures:
