@@ -821,18 +821,9 @@ async def update_deployment_config_value(
     return _config_to_item(updated)
 
 
-@router.post("/config/validate", response_model=DeploymentValidationResponse)
-async def validate_config(admin: dict = Depends(auth.require_admin)):
-    """
-    Validate current configuration.
-    Checks for required values and valid formats.
-    Requires admin authentication.
-    """
+def _validate_config_values(config_dict: Mapping[str, str]) -> DeploymentValidationResponse:
     errors = []
     warnings = []
-
-    all_config = database.get_all_deployment_config()
-    config_dict = {c["key"]: c["value"] for c in all_config}
 
     # Check required settings
     required = ["LLM_PROVIDER", "QDRANT_HOST", "QDRANT_PORT"]
@@ -935,6 +926,18 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
     )
 
 
+@router.post("/config/validate", response_model=DeploymentValidationResponse)
+async def validate_config(admin: dict = Depends(auth.require_admin)):
+    """
+    Validate current configuration.
+    Checks for required values and valid formats.
+    Requires admin authentication.
+    """
+    all_config = database.get_all_deployment_config()
+    config_dict = {c["key"]: c["value"] for c in all_config}
+    return _validate_config_values(config_dict)
+
+
 @router.get("/operational-readiness")
 async def get_operational_readiness(admin: dict = Depends(auth.require_admin)) -> Dict[str, Any]:
     """
@@ -942,6 +945,260 @@ async def get_operational_readiness(admin: dict = Depends(auth.require_admin)) -
     Requires admin authentication.
     """
     return OPERATIONAL_READINESS
+
+
+def _readiness_item(
+    *,
+    key: str,
+    label: str,
+    source: str,
+    severity: str,
+    status: str,
+    summary: str,
+    next_action: str,
+    conversation_blocking: bool = False,
+) -> dict:
+    return {
+        "key": key,
+        "label": label,
+        "source": source,
+        "severity": severity,
+        "status": status,
+        "summary": summary,
+        "next_action": next_action,
+        "conversation_blocking": conversation_blocking,
+    }
+
+
+def _deployment_validation_readiness_items() -> list[dict]:
+    all_config = database.get_all_deployment_config()
+    config_dict = {c["key"]: c["value"] for c in all_config}
+    validation = _validate_config_values(config_dict)
+    items: list[dict] = []
+    if validation.errors:
+        items.append(_readiness_item(
+            key="deployment_settings_validation",
+            label="Deployment Settings Validation",
+            source="deployment_validation",
+            severity="blocker",
+            status="invalid",
+            summary="Deployment Settings validation has errors that must be repaired.",
+            next_action="Review Deployment Settings validation errors.",
+        ))
+    elif validation.warnings:
+        items.append(_readiness_item(
+            key="deployment_settings_validation",
+            label="Deployment Settings Validation",
+            source="deployment_validation",
+            severity="warning",
+            status="warnings",
+            summary="Deployment Settings validation has advisory warnings.",
+            next_action="Review Deployment Settings validation warnings.",
+        ))
+    else:
+        items.append(_readiness_item(
+            key="deployment_settings_validation",
+            label="Deployment Settings Validation",
+            source="deployment_validation",
+            severity="ready",
+            status="valid",
+            summary="Deployment Settings validation has no errors or warnings.",
+            next_action="No action required.",
+        ))
+    return items
+
+
+def _inference_readiness_item() -> dict:
+    configured = _configured_model_provider()
+    status = database.get_current_inference_verification_status(
+        **configured,
+        expected_claims_fingerprint=current_expected_claims_fingerprint(),
+    )
+    status_key = status.get("status", "missing")
+    if status_key == "current":
+        return _readiness_item(
+            key="verifiable_inference",
+            label="Verifiable Inference",
+            source="inference_verification",
+            severity="ready",
+            status=status_key,
+            summary="Current Verifiable Inference evidence is available for normal Conversations.",
+            next_action="No action required.",
+        )
+    return _readiness_item(
+        key="verifiable_inference",
+        label="Verifiable Inference",
+        source="inference_verification",
+        severity="blocker",
+        status=status_key,
+        summary="Current Verifiable Inference is required before normal Conversations can run.",
+        next_action="Run Model Provider verification or repair provider configuration.",
+        conversation_blocking=True,
+    )
+
+
+def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
+    readiness = lifecycle_status.get("lifecycle_readiness") or {}
+    status = readiness.get("status", "needs_review")
+    if status == "reviewed":
+        return _readiness_item(
+            key="lifecycle_readiness",
+            label="Lifecycle Readiness",
+            source="lifecycle_readiness",
+            severity="ready",
+            status=status,
+            summary=readiness.get("summary") or "Lifecycle Readiness has been reviewed.",
+            next_action="No action required.",
+        )
+    return _readiness_item(
+        key="lifecycle_readiness",
+        label="Lifecycle Readiness",
+        source="lifecycle_readiness",
+        severity="warning",
+        status=status,
+        summary=readiness.get("summary") or "Lifecycle Readiness needs Admin review.",
+        next_action="Review lifecycle status and unsupported Deployment Surfaces.",
+    )
+
+
+def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
+    categories = lifecycle_status.get("unsupported_deployment_surface_categories") or []
+    unacknowledged_categories = [
+        category.get("label") or category.get("category") or "Unsupported Deployment Surface category"
+        for category in categories
+        if not category.get("acknowledged")
+    ]
+    surfaces = lifecycle_status.get("unsupported_deployment_surfaces") or []
+    unacknowledged_surfaces = [
+        surface.get("label") or surface.get("key") or "Unsupported Deployment Surface"
+        for surface in surfaces
+        if not surface.get("acknowledged")
+    ]
+    unacknowledged = [*unacknowledged_categories, *unacknowledged_surfaces]
+    if not unacknowledged:
+        return _readiness_item(
+            key="deployment_surface_acknowledgements",
+            label="Deployment Surface Acknowledgements",
+            source="deployment_surfaces",
+            severity="ready",
+            status="acknowledged",
+            summary="Unsupported Deployment Surface categories have been acknowledged.",
+            next_action="No action required.",
+        )
+    return _readiness_item(
+        key="deployment_surface_acknowledgements",
+        label="Deployment Surface Acknowledgements",
+        source="deployment_surfaces",
+        severity="warning",
+        status="needs_acknowledgement",
+        summary=f"{len(unacknowledged)} unsupported Deployment Surface entries need acknowledgement.",
+        next_action="Acknowledge unsupported Deployment Surface categories after review.",
+    )
+
+
+def _backup_restore_readiness_item() -> dict:
+    return _readiness_item(
+        key="backup_restore_drill",
+        label="Backup And Restore Drill",
+        source="operational_readiness",
+        severity="warning",
+        status="operator_evidence_required",
+        summary=OPERATIONAL_READINESS["backup_restore_verification"]["evidence"],
+        next_action="Record a restore drill for the Single-Instance Deployment.",
+    )
+
+
+def _restart_readiness_item() -> dict:
+    restart = _restart_required_status()
+    if restart["restart_required"]:
+        changed = ", ".join(item["key"] for item in restart["changed_keys"])
+        return _readiness_item(
+            key="restart_required",
+            label="Restart Required",
+            source="restart_required",
+            severity="warning",
+            status="restart_required",
+            summary=f"Runtime restart is required for changed Deployment Settings: {changed}.",
+            next_action="Restart the affected service after reviewing changes.",
+        )
+    return _readiness_item(
+        key="restart_required",
+        label="Restart Required",
+        source="restart_required",
+        severity="ready",
+        status="current",
+        summary="No restart-required Deployment Settings have changed since service start.",
+        next_action="No action required.",
+    )
+
+
+def _restart_required_status() -> dict:
+    restart_keys = database.get_restart_required_keys()
+    audit_log = database.get_config_audit_log(limit=100, table_name="deployment_config")
+
+    changed_requiring_restart = []
+    for entry in audit_log:
+        if entry["config_key"] in restart_keys:
+            try:
+                changed_at_str = entry["changed_at"]
+                changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
+                if changed_at > SERVICE_START_TIME:
+                    changed_requiring_restart.append({
+                        "key": entry["config_key"],
+                        "changed_at": entry["changed_at"],
+                    })
+            except (ValueError, TypeError, AttributeError):
+                pass
+
+    return {
+        "restart_required": len(changed_requiring_restart) > 0,
+        "changed_keys": changed_requiring_restart[:10],
+    }
+
+
+def deployment_readiness_summary() -> dict:
+    from lifecycle import get_lifecycle_status
+
+    lifecycle_status = get_lifecycle_status()
+    items = [
+        *_deployment_validation_readiness_items(),
+        _inference_readiness_item(),
+        _lifecycle_readiness_item(lifecycle_status),
+        _unsupported_surface_readiness_item(lifecycle_status),
+        _backup_restore_readiness_item(),
+        _restart_readiness_item(),
+        _readiness_item(
+            key="service_health",
+            label="Service Health",
+            source="service_health",
+            severity="warning",
+            status="check_required",
+            summary="Live service health checks should be reviewed before production use.",
+            next_action="Run service health checks from the Admin Deployment surface.",
+        ),
+    ]
+    blockers = sum(1 for item in items if item["severity"] == "blocker")
+    warnings = sum(1 for item in items if item["severity"] == "warning")
+    ready = sum(1 for item in items if item["severity"] == "ready")
+    return {
+        "status": "blocked" if blockers else ("warnings" if warnings else "ready"),
+        "summary": {
+            "blockers": blockers,
+            "warnings": warnings,
+            "ready": ready,
+            "total": len(items),
+        },
+        "items": items,
+    }
+
+
+@router.get("/readiness", response_model=dict)
+async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)):
+    """
+    Summarize Deployment Readiness for a Single-Instance Deployment.
+    Requires admin authentication.
+    """
+    return deployment_readiness_summary()
 
 
 @router.get("/health", response_model=ServiceHealthResponse)
@@ -1108,29 +1365,12 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             error="Not configured",
         ))
 
-    # Check if restart is required
-    restart_keys = database.get_restart_required_keys()
-    audit_log = database.get_config_audit_log(limit=50, table_name="deployment_config")
-
-    # Find keys that were changed since service started
-    changed_requiring_restart = []
-    for entry in audit_log:
-        if entry["config_key"] in restart_keys:
-            try:
-                # Parse the changed_at timestamp and compare to service start time
-                changed_at_str = entry["changed_at"]
-                # Handle both Z suffix and +00:00 suffix for UTC
-                changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
-                if changed_at > SERVICE_START_TIME:
-                    changed_requiring_restart.append(entry["config_key"])
-            except (ValueError, TypeError, AttributeError):
-                # Skip entries with invalid timestamps
-                pass
+    restart = _restart_required_status()
 
     return ServiceHealthResponse(
         services=services,
-        restart_required=len(changed_requiring_restart) > 0,
-        changed_keys_requiring_restart=list(set(changed_requiring_restart)),
+        restart_required=restart["restart_required"],
+        changed_keys_requiring_restart=[item["key"] for item in restart["changed_keys"]],
     )
 
 
@@ -1140,29 +1380,7 @@ async def check_restart_required(admin: dict = Depends(auth.require_admin)):
     Check if service restart is needed after config changes.
     Requires admin authentication.
     """
-    restart_keys = database.get_restart_required_keys()
-    audit_log = database.get_config_audit_log(limit=100, table_name="deployment_config")
-
-    changed_requiring_restart = []
-    for entry in audit_log:
-        if entry["config_key"] in restart_keys:
-            try:
-                # Parse the changed_at timestamp and compare to service start time
-                changed_at_str = entry["changed_at"]
-                changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
-                if changed_at > SERVICE_START_TIME:
-                    changed_requiring_restart.append({
-                        "key": entry["config_key"],
-                        "changed_at": entry["changed_at"],
-                    })
-            except (ValueError, TypeError, AttributeError):
-                # Skip entries with invalid timestamps
-                pass
-
-    return {
-        "restart_required": len(changed_requiring_restart) > 0,
-        "changed_keys": changed_requiring_restart[:10],  # Limit to recent
-    }
+    return _restart_required_status()
 
 
 @router.get("/audit-log", response_model=ConfigAuditLogResponse)

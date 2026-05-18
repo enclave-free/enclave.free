@@ -1432,6 +1432,8 @@ SAFE_PUBLIC_SETTINGS = {
     "surface_style",
     "status_icon_set",
     "typography_preset",
+    "default_language",
+    "default_theme",
 
     # User reachout (public UI controls only)
     "reachout_enabled",

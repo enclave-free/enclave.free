@@ -105,6 +105,8 @@ describe('AdminInstanceConfig', () => {
           surface_style: DEFAULT_INSTANCE_CONFIG.surfaceStyle,
           status_icon_set: DEFAULT_INSTANCE_CONFIG.statusIconSet,
           typography_preset: DEFAULT_INSTANCE_CONFIG.typographyPreset,
+          default_language: DEFAULT_INSTANCE_CONFIG.defaultLanguage,
+          default_theme: DEFAULT_INSTANCE_CONFIG.defaultTheme,
         }),
       }))
     })
@@ -114,6 +116,41 @@ describe('AdminInstanceConfig', () => {
       logoUrl: 'https://example.com/logo.png',
       assistantName: 'Sage',
       userLabel: 'Operator',
+    }))
+  })
+
+  it('lets an admin update Instance default language and theme baseline', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/instance']}>
+        <Routes>
+          <Route path="/admin/instance" element={<AdminInstanceConfig />} />
+          <Route path="/admin/setup" element={<div>Admin Dashboard</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Default language' }), {
+      target: { value: 'es' },
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Default theme' }), {
+      target: { value: 'dark' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Configuration' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"default_language":"es"'),
+      }))
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({
+        body: expect.stringContaining('"default_theme":"dark"'),
+      }))
+    })
+
+    expect(updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+      defaultLanguage: 'es',
+      defaultTheme: 'dark',
     }))
   })
 })

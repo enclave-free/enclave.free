@@ -138,7 +138,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                   }
                 />
                 <SettingsLink
-                  to="/test-dashboard"
+                  to="/diagnostics/test-dashboard"
                   onClick={onClose}
                   label={t('settings.admin.testDashboard')}
                   description={t('settings.admin.testDashboardDesc')}

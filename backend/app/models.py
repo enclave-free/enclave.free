@@ -118,6 +118,8 @@ class InstanceSettings(BaseModel):
     surface_style: Optional[str] = None
     status_icon_set: Optional[str] = None
     typography_preset: Optional[str] = None
+    default_language: Optional[str] = None
+    default_theme: Optional[str] = None
 
     class Config:
         extra = "allow"  # Allow arbitrary additional settings

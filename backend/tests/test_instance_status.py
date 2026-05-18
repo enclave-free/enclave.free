@@ -39,6 +39,7 @@ class InstanceStatusTest(unittest.TestCase):
         self.database.upsert_deployment_config("LLM_PROVIDER", "sage", category="llm")
         self.database.upsert_deployment_config("LLM_API_URL", "https://inference.tinfoil.sh/v1", category="llm")
         self.database.upsert_deployment_config("LLM_MODEL", "kimi-k2-6", category="llm")
+        self.database.upsert_deployment_config("LLM_API_KEY", "test-key", category="llm", is_secret=True)
         self.main.app.dependency_overrides[self.auth.require_admin_or_approved_user] = lambda: {
             "type": "user",
             "id": 1,
@@ -157,6 +158,23 @@ class InstanceStatusTest(unittest.TestCase):
         self.assertEqual(protected["mode"], "normal")
         self.assertTrue(protected["protected_inference_available"])
         self.assertEqual(protected["reason"], "manual_verification_current")
+
+    def test_admin_language_and_theme_defaults_are_public_instance_settings(self) -> None:
+        update = self.client.put("/admin/settings", json={
+            "instance_name": "Operator Desk",
+            "default_language": "es",
+            "default_theme": "dark",
+        })
+
+        public_settings = self.client.get("/settings/public").json()["settings"]
+        status_settings = self.client.get("/instance/status").json()["settings"]
+
+        self.assertEqual(update.status_code, 200)
+        self.assertEqual(public_settings["instance_name"], "Operator Desk")
+        self.assertEqual(public_settings["default_language"], "es")
+        self.assertEqual(public_settings["default_theme"], "dark")
+        self.assertEqual(status_settings["default_language"], "es")
+        self.assertEqual(status_settings["default_theme"], "dark")
 
 
 if __name__ == "__main__":

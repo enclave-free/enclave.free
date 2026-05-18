@@ -108,6 +108,18 @@ _Avoid_: tenant, workspace, deployment
 The technical environment that runs an **Instance**.
 _Avoid_: instance, tenant
 
+**Single-Instance Deployment**:
+A **Deployment** pattern where one **Operator** runs one **Instance** through the supported Compose topology.
+_Avoid_: platform deployment, multi-tenant deployment, arbitrary infrastructure
+
+**Deployment Readiness**:
+An operator-visible status that summarizes whether a **Single-Instance Deployment** has been configured, verified, and reviewed enough for real use.
+_Avoid_: internal checklist, CI status, setup complete
+
+**Deployment Wizard**:
+A guided admin flow that helps an **Operator** reach **Deployment Readiness** without becoming a separate source of configuration authority.
+_Avoid_: separate setup system, hidden provisioning, infrastructure wizard
+
 **Deployment Automation**:
 A deployment-owned machine actor that invokes approved operational workflows for an **Instance**.
 _Avoid_: admin user, service account, bot admin
@@ -418,6 +430,18 @@ _Avoid_: full snapshot, config dump
 - An **Audit Log** supports **Operator-Controlled Privacy** by making important **Instance** changes visible after the fact
 - **Enclave Free Prototype** integrates **Sage** directly into the product runtime
 - A **Deployment** usually runs one **Instance** in the prototype
+- The first productionization target is a **Single-Instance Deployment**, not Kubernetes, managed cloud hosting, multi-instance scaling, or arbitrary infrastructure
+- **Deployment Readiness** is broader than **Lifecycle Readiness**; it includes external integration configuration, runtime validation, recovery posture, and reviewed lifecycle status
+- **Deployment Readiness** should be visible to the **Operator** through the **Instance**, not only maintained as an internal engineering checklist
+- **Deployment Readiness** is advisory in the first version except where a missing or failed prerequisite would violate a privacy-critical runtime gate such as current **Verifiable Inference**
+- Stale **Lifecycle Readiness**, missing recovery drills, or unacknowledged **Deployment Surfaces** should warn **Admins** without blocking normal **User Conversations** in the first **Deployment Readiness** version
+- A **Deployment Wizard** guides first-run **Deployment Readiness** review using the same underlying **Deployment Settings**, **Agent Settings**, lifecycle status, and validation APIs as the ongoing admin surfaces
+- A **Deployment Wizard** must not become a parallel configuration system or hide the setting ownership split between **Deployment Settings**, **Instance Settings**, and **Agent Settings**
+- The first **Deployment Wizard** slice should guide readiness review and point to existing edit surfaces before it becomes a full inline editor
+- The first experience-readiness polish milestone should prioritize **Admin** confidence in initiating, configuring, verifying, and reviewing an **Instance** before broad visual polish of **User Conversations**
+- The first i18n polish milestone should mean extraction, fallback correctness, interpolation safety, layout resilience, and terminology consistency before human-quality translation review across every locale
+- Default language, theme, and branding should first be **Instance Settings** controlled by the **Admin**; per-user preferences are a later user preference model, not a first milestone browser-storage feature
+- Diagnostic dashboards should remain available for development and verification, but they should not be the primary first impression or product path for **Admins** or **Users**
 - **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
 - **Deployment Automation** may invoke scheduled operational workflows without representing a human **Admin** action
 - A **Shared Rate Limit Store** belongs to the **Deployment**, not to the **Document Library**, **Audit Log**, or **Active Storage Lifecycle**
@@ -852,6 +876,9 @@ _Avoid_: full snapshot, config dump
 > **Dev:** "Is the admin assistant a different product from user chat?"
 > **Domain expert:** "No. Both are **Conversations** with **Sage**, but an **Admin Conversation** has authority to help configure or operate the **Instance**."
 
+> **Dev:** "Can we call the deployment ready because the containers started?"
+> **Domain expert:** "No. **Deployment Readiness** means the **Operator** can see that configuration, external integrations, verification, recovery posture, and lifecycle review are ready enough for real use."
+
 ## Flagged ambiguities
 
 - "prototype" can imply a disposable demo; resolved: **Enclave Free Prototype** means the candidate next version of **Enclave Free**.
@@ -887,6 +914,13 @@ _Avoid_: full snapshot, config dump
 - "Tinfoil verifier" overstates provider lock-in; resolved: use a provider-neutral verification interface with a Tinfoil implementation.
 - A **Trusted Execution Environment** should not be confused with the product requirement itself; resolved: **Verifiable Inference** is the property, and a TEE is the preferred mechanism.
 - "configuration" is overloaded; resolved: use **Instance Settings**, **Deployment Settings**, and **Agent Settings** for the three distinct concepts.
+- "productionization" can imply support for any infrastructure; resolved: the first productionization plan targets a **Single-Instance Deployment** through the supported Compose topology.
+- "deployment readiness" should not be reduced to a private engineering checklist or container health; resolved: **Deployment Readiness** is operator-visible and includes **Lifecycle Readiness** plus broader deployment configuration and recovery posture.
+- **Deployment Readiness** warnings should not be confused with privacy-critical runtime gates; resolved: most readiness gaps are advisory in v1, while failed or missing **Verifiable Inference** still blocks normal **Conversations**.
+- "deployment wizard" can imply a second setup system; resolved: **Deployment Wizard** is a guided first-run layer over the same admin configuration and readiness surfaces.
+- "i18n completeness" can imply finished translations in every language; resolved: the first polish milestone targets extraction and fallback correctness before human-quality translation review.
+- "theme/language configurability" can mean Admin-controlled defaults or per-user preferences; resolved: first milestone treats defaults as **Instance Settings**, with per-user preferences deferred.
+- "test dashboard" can blur product experience with diagnostics; resolved: diagnostic dashboards should be demoted from primary product paths.
 - "user-type AI config" is implementation language; resolved: use **Agent Personalization** for operator rules that tailor Sage behavior by User or User Type.
 - "RAG" is overloaded between storage, search, and answer generation; resolved: use **Document Library** for the operator-owned corpus and **Retrieval** for selecting knowledge for the agent.
 - "document defaults" is implementation/UI language; resolved: use **Document Access** for operator rules that determine which **Documents** are available.

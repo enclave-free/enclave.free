@@ -187,6 +187,30 @@ export interface DeploymentValidationResponse {
   warnings: string[]
 }
 
+export type DeploymentReadinessSeverity = 'blocker' | 'warning' | 'ready'
+
+export interface DeploymentReadinessItem {
+  key: string
+  label: string
+  source: string
+  severity: DeploymentReadinessSeverity
+  status: string
+  summary: string
+  next_action: string
+  conversation_blocking: boolean
+}
+
+export interface DeploymentReadinessResponse {
+  status: 'blocked' | 'warnings' | 'ready' | string
+  summary: {
+    blockers: number
+    warnings: number
+    ready: number
+    total: number
+  }
+  items: DeploymentReadinessItem[]
+}
+
 // --- Data Lifecycle Types ---
 
 export type LifecycleStatusValue =

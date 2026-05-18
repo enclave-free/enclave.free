@@ -18,6 +18,7 @@ import type {
   DeploymentConfigResponse,
   DeploymentConfigItem,
   ServiceHealthResponse,
+  DeploymentReadinessResponse,
   DeploymentValidationResponse,
   LifecycleStatusResponse,
   ArtifactEncryptionPosture,
@@ -659,6 +660,40 @@ export function useServiceHealth() {
     loading,
     error,
     refresh: fetchHealth,
+  }
+}
+
+export function useDeploymentReadiness() {
+  const [readiness, setReadiness] = useState<DeploymentReadinessResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchReadiness = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await adminFetch('/admin/deployment/readiness')
+      if (!response.ok) {
+        throw new Error('errors.failedToFetchDeploymentReadiness')
+      }
+      const data: DeploymentReadinessResponse = await response.json()
+      setReadiness(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'errors.failedToFetchDeploymentReadiness')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchReadiness()
+  }, [fetchReadiness])
+
+  return {
+    readiness,
+    loading,
+    error,
+    refresh: fetchReadiness,
   }
 }
 

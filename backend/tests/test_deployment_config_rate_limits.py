@@ -37,8 +37,10 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_session_cookie_secure = os.environ.get("SESSION_COOKIE_SECURE")
         self._orig_backend_reload = os.environ.get("BACKEND_RELOAD")
         self._orig_published_service_host = os.environ.get("PUBLISHED_SERVICE_HOST")
+        self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
+        os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
         os.environ["MOCK_EMAIL"] = "false"
         os.environ.pop("LLM_API_KEY", None)
         os.environ.pop("MOCK_SMTP", None)
@@ -87,6 +89,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("SESSION_COOKIE_SECURE", self._orig_session_cookie_secure)
         self._restore_env("BACKEND_RELOAD", self._orig_backend_reload)
         self._restore_env("PUBLISHED_SERVICE_HOST", self._orig_published_service_host)
+        self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
         self.tmp.cleanup()
 
     @staticmethod
@@ -286,6 +289,76 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertIn("key_recovery", body["incident_response"]["runbooks"])
         self.assertIn("docs/admin-key-recovery-runbook.md", body["incident_response"]["runbooks"]["key_recovery"])
         self.assertIn("checklist", body["drill_evidence"])
+
+    def test_deployment_readiness_distinguishes_privacy_blockers_from_advisory_warnings(self) -> None:
+        response = self.client.get("/admin/deployment/readiness")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "blocked")
+        self.assertGreaterEqual(body["summary"]["blockers"], 1)
+        self.assertGreaterEqual(body["summary"]["warnings"], 1)
+
+        items_by_key = {item["key"]: item for item in body["items"]}
+        self.assertEqual(items_by_key["verifiable_inference"]["severity"], "blocker")
+        self.assertEqual(items_by_key["verifiable_inference"]["source"], "inference_verification")
+        self.assertIn("normal Conversations", items_by_key["verifiable_inference"]["summary"])
+
+        self.assertEqual(items_by_key["lifecycle_readiness"]["severity"], "warning")
+        self.assertEqual(items_by_key["lifecycle_readiness"]["source"], "lifecycle_readiness")
+        self.assertFalse(items_by_key["lifecycle_readiness"]["conversation_blocking"])
+
+        self.assertEqual(items_by_key["backup_restore_drill"]["severity"], "warning")
+        self.assertEqual(items_by_key["backup_restore_drill"]["source"], "operational_readiness")
+        self.assertIn("restore drill", items_by_key["backup_restore_drill"]["summary"])
+
+    def test_deployment_readiness_counts_unacknowledged_unsupported_surfaces(self) -> None:
+        item = self.deployment_config._unsupported_surface_readiness_item({
+            "unsupported_deployment_surface_categories": [
+                {
+                    "category": "runtime",
+                    "label": "Runtime artifacts",
+                    "acknowledged": True,
+                },
+            ],
+            "unsupported_deployment_surfaces": [
+                {
+                    "key": "session_logs",
+                    "label": "Session logs",
+                    "acknowledged": False,
+                },
+            ],
+        })
+
+        self.assertEqual(item["severity"], "warning")
+        self.assertEqual(item["status"], "needs_acknowledgement")
+        self.assertIn("1 unsupported Deployment Surface entries", item["summary"])
+
+    def test_deployment_readiness_reports_current_verifiable_inference_as_ready(self) -> None:
+        from datetime import datetime, timezone
+
+        self.database.upsert_deployment_config("LLM_PROVIDER", "sage", category="llm")
+        self.database.upsert_deployment_config("LLM_API_URL", "https://inference.tinfoil.sh/v1", category="llm")
+        self.database.upsert_deployment_config("LLM_MODEL", "kimi-k2-6", category="llm")
+        self.database.create_inference_verification_record(
+            provider_identity="sage",
+            provider_endpoint="https://inference.tinfoil.sh/v1",
+            model_identifier="kimi-k2-6",
+            status="success",
+            trigger="manual",
+            expected_claims_fingerprint=self.deployment_config.current_expected_claims_fingerprint(),
+            actual_claims_fingerprint="actual",
+            verifier_version="test-verifier/1",
+            attestation_material={"quote": "full"},
+            checked_at=datetime.now(timezone.utc),
+        )
+
+        response = self.client.get("/admin/deployment/readiness")
+
+        self.assertEqual(response.status_code, 200)
+        items_by_key = {item["key"]: item for item in response.json()["items"]}
+        self.assertEqual(items_by_key["verifiable_inference"]["severity"], "ready")
+        self.assertFalse(items_by_key["verifiable_inference"]["conversation_blocking"])
 
     def test_simulated_auth_flags_are_not_exposed_as_config(self) -> None:
         os.environ["SIMULATE_USER_AUTH"] = "true"

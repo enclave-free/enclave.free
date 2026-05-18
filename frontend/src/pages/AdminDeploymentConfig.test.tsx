@@ -62,6 +62,7 @@ describe('AdminDeploymentConfig', () => {
   let artifactEncryptionPosture: 'required' | 'disabled'
   let verificationStatus = 'current'
   let verificationRecordDetailRequested = false
+  let readinessStatus = 'blocked'
   let sessionMemoryRetentionPolicy = {
     enabled: false,
     retention_window_days: 30,
@@ -78,6 +79,7 @@ describe('AdminDeploymentConfig', () => {
     artifactEncryptionPosture = 'required'
     verificationStatus = 'current'
     verificationRecordDetailRequested = false
+    readinessStatus = 'blocked'
     sessionMemoryRetentionPolicy = {
       enabled: false,
       retention_window_days: 30,
@@ -126,6 +128,73 @@ describe('AdminDeploymentConfig', () => {
           services: [],
           restart_required: false,
           changed_keys_requiring_restart: [],
+        }))
+      }
+      if (endpoint === '/admin/deployment/readiness') {
+        return Promise.resolve(Response.json({
+          status: readinessStatus,
+          summary: {
+            blockers: readinessStatus === 'blocked' ? 1 : 0,
+            warnings: 2,
+            ready: readinessStatus === 'blocked' ? 2 : 3,
+            total: 5,
+          },
+          items: [
+            {
+              key: 'verifiable_inference',
+              label: 'Verifiable Inference',
+              source: 'inference_verification',
+              severity: readinessStatus === 'blocked' ? 'blocker' : 'ready',
+              status: readinessStatus === 'blocked' ? 'missing' : 'current',
+              summary: readinessStatus === 'blocked'
+                ? 'Current Verifiable Inference is required before normal Conversations can run.'
+                : 'Current Verifiable Inference evidence is available for normal Conversations.',
+              next_action: readinessStatus === 'blocked'
+                ? 'Run Model Provider verification or repair provider configuration.'
+                : 'No action required.',
+              conversation_blocking: readinessStatus === 'blocked',
+            },
+            {
+              key: 'lifecycle_readiness',
+              label: 'Lifecycle Readiness',
+              source: 'lifecycle_readiness',
+              severity: 'warning',
+              status: 'stale',
+              summary: 'Lifecycle Readiness is stale and needs Admin review.',
+              next_action: 'Review lifecycle status and unsupported Deployment Surfaces.',
+              conversation_blocking: false,
+            },
+            {
+              key: 'deployment_validation',
+              label: 'Deployment Validation',
+              source: 'deployment_validation',
+              severity: 'ready',
+              status: 'valid',
+              summary: 'Deployment Settings are valid.',
+              next_action: 'No action required.',
+              conversation_blocking: false,
+            },
+            {
+              key: 'backup_restore_drill',
+              label: 'Backup And Restore Drill',
+              source: 'operational_readiness',
+              severity: 'warning',
+              status: 'operator_evidence_required',
+              summary: 'Record restore drill evidence in the operator checklist.',
+              next_action: 'Record a restore drill for the Single-Instance Deployment.',
+              conversation_blocking: false,
+            },
+            {
+              key: 'restart_required',
+              label: 'Restart Required',
+              source: 'restart_required',
+              severity: 'ready',
+              status: 'current',
+              summary: 'No restart-required Deployment Settings have changed since service start.',
+              next_action: 'No action required.',
+              conversation_blocking: false,
+            },
+          ],
         }))
       }
       if (endpoint === '/admin/deployment/inference-verification/status') {
@@ -526,9 +595,82 @@ describe('AdminDeploymentConfig', () => {
       </MemoryRouter>
     )
 
-    expect(await screen.findByText('Lifecycle Readiness: Stale')).toBeInTheDocument()
-    expect(screen.getByText('Lifecycle Readiness is stale and needs Admin review.')).toBeInTheDocument()
-    expect(screen.getByText('User Conversations are not blocked by Lifecycle Readiness warnings in v1.')).toBeInTheDocument()
+    const lifecycleStatus = await screen.findByRole('group', { name: 'Data Lifecycle Status' })
+    expect(within(lifecycleStatus).getByText('Lifecycle Readiness: Stale')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('Lifecycle Readiness is stale and needs Admin review.')).toBeInTheDocument()
+    expect(within(lifecycleStatus).getByText('User Conversations are not blocked by Lifecycle Readiness warnings in v1.')).toBeInTheDocument()
+  })
+
+  it('shows Deployment Readiness blockers, warnings, and next actions', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const readiness = await screen.findByRole('group', { name: 'Deployment Readiness' })
+    expect(within(readiness).getByText('Deployment Readiness: Blocked')).toBeInTheDocument()
+    expect(within(readiness).getByText('1 blockers')).toBeInTheDocument()
+    expect(within(readiness).getByText('2 warnings')).toBeInTheDocument()
+    expect(within(readiness).getByText('Verifiable Inference')).toBeInTheDocument()
+    expect(within(readiness).getByText('Current Verifiable Inference is required before normal Conversations can run.')).toBeInTheDocument()
+    expect(within(readiness).getByText('Run Model Provider verification or repair provider configuration.')).toBeInTheDocument()
+    const lifecycleItem = within(readiness).getByText('Lifecycle Readiness').closest('.bg-surface')
+    expect(lifecycleItem).not.toBeNull()
+    expect(within(lifecycleItem as HTMLElement).getByText('Warning')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/deployment/readiness')
+    })
+  })
+
+  it('guides admins through Deployment Wizard readiness review steps', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const readiness = await screen.findByRole('group', { name: 'Deployment Readiness' })
+    await user.click(within(readiness).getByRole('button', { name: 'Open Readiness Review' }))
+
+    const wizard = await screen.findByRole('dialog', { name: 'Deployment Wizard' })
+    expect(within(wizard).getByText('Step 1 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Verifiable Inference')).toBeInTheDocument()
+    expect(within(wizard).getByRole('link', { name: 'Review Inference Verification' })).toHaveAttribute('href', '#inference-verification')
+
+    await user.click(within(wizard).getByRole('button', { name: 'Next' }))
+
+    expect(within(wizard).getByText('Step 2 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Lifecycle Readiness')).toBeInTheDocument()
+    expect(within(wizard).getByRole('link', { name: 'Review Data Lifecycle Status' })).toHaveAttribute('href', '#data-lifecycle-status')
+
+    await user.click(within(wizard).getByRole('button', { name: 'Next' }))
+
+    expect(within(wizard).getByText('Step 3 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Deployment Validation')).toBeInTheDocument()
+    expect(within(wizard).getByRole('link', { name: 'Review Deployment Settings' })).toHaveAttribute('href', '#deployment-settings')
+    expect(document.getElementById('deployment-settings')).not.toBeNull()
+
+    await user.click(within(wizard).getByRole('button', { name: 'Next' }))
+
+    expect(within(wizard).getByText('Step 4 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Backup And Restore Drill')).toBeInTheDocument()
+    expect(within(wizard).getByRole('link', { name: 'Review Operational Readiness' })).toHaveAttribute('href', '#operational-readiness')
+    expect(document.getElementById('operational-readiness')).not.toBeNull()
+
+    await user.click(within(wizard).getByRole('button', { name: 'Next' }))
+
+    expect(within(wizard).getByText('Step 5 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Restart Required')).toBeInTheDocument()
+    expect(within(wizard).getByRole('link', { name: 'Review Restart Required' })).toHaveAttribute('href', '#restart-required')
+    expect(document.getElementById('restart-required')).not.toBeNull()
   })
 
   it('shows current Model Provider verification status', async () => {

@@ -37,6 +37,13 @@
     "refresh": "Refresh",
     "retry": "Retry"
   },
+  "language": {
+    "english": "English",
+    "spanish": "Spanish",
+    "french": "French",
+    "german": "German",
+    "portuguese": "Portuguese"
+  },
   "reachout": {
     "mode": {
       "feedback": {
@@ -210,7 +217,14 @@
       "typographyGrotesk": "Grotesk",
       "typographyGroteskDesc": "Bold, contemporary type with personality.",
       "typographyHumanist": "Humanist",
-      "typographyHumanistDesc": "Warm, readable typography with clarity."
+      "typographyHumanistDesc": "Warm, readable typography with clarity.",
+      "defaultsTitle": "Instance Defaults",
+      "defaultsDesc": "Set the baseline language and theme used before any local browser controls apply.",
+      "defaultLanguageLabel": "Default language",
+      "defaultThemeLabel": "Default theme",
+      "themeSystem": "System",
+      "themeLight": "Light",
+      "themeDark": "Dark"
     },
     "configAssistant": {
       "openAria": "Open admin assistant",
@@ -938,6 +952,34 @@
     "validationNoIssues": "No issues found",
     "validationErrors": "Errors",
     "validationWarnings": "Warnings",
+    "readiness": {
+      "title": "Deployment Readiness",
+      "statusTitle": "Deployment Readiness: {{status}}",
+      "description": "Review the evidence needed before this Single-Instance Deployment is ready for normal operation.",
+      "openWizard": "Open Readiness Review",
+      "blockerCount": "{{count}} blockers",
+      "warningCount": "{{count}} warnings",
+      "readyCount": "{{count}} ready",
+      "empty": "No Deployment Readiness checks are available yet.",
+      "conversationBlocking": "Blocks normal Conversations",
+      "blocker": "Blocker",
+      "warning": "Warning",
+      "ready": "Ready",
+      "reviewInferenceVerification": "Review Inference Verification",
+      "reviewDataLifecycleStatus": "Review Data Lifecycle Status",
+      "reviewDeploymentValidation": "Review Deployment Settings",
+      "reviewRestartRequired": "Review Restart Required",
+      "reviewOperationalReadiness": "Review Operational Readiness",
+      "reviewServiceHealth": "Review Service Health"
+    },
+    "wizard": {
+      "title": "Deployment Wizard",
+      "step": "Step {{current}} of {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Operational Readiness",
+      "description": "Review backup, restore, monitoring, and recovery drills before normal operation."
+    },
     "revalidate": "Revalidate",
     "requiresRestart": "Requires Restart",
     "secret": "Secret",

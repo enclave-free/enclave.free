@@ -48,12 +48,15 @@ describe('TestDashboard', () => {
 
   it('checks health and renders the returned admin status output', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }))
+      }
+      return Promise.resolve(Response.json({
         neo4j: 'ok',
         qdrant: 'ok',
-      })
-    )
+      }))
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     renderDashboard()
@@ -109,10 +112,14 @@ describe('TestDashboard', () => {
 
   it('keeps migrated dashboard selects labelled and wired to their controls', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(null, { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 429 }))
-      .mockResolvedValue(new Response(null, { status: 200 }))
+    let rateLimitCalls = 0
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }))
+      }
+      rateLimitCalls += 1
+      return Promise.resolve(new Response(null, { status: rateLimitCalls === 2 ? 429 : 200 }))
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     renderDashboard()
@@ -131,9 +138,9 @@ describe('TestDashboard', () => {
     await user.click(screen.getByRole('button', { name: 'Send 11 Rapid Requests' }))
 
     await waitFor(() => {
-      expect(screen.getByRole('group', { name: 'Successful requests' })).toHaveTextContent('10')
+    expect(screen.getByRole('group', { name: 'Successful requests' })).toHaveTextContent('10')
     })
     expect(screen.getByRole('group', { name: 'Blocked requests' })).toHaveTextContent('1')
-    expect(fetchMock).toHaveBeenCalledTimes(11)
+    expect(fetchMock.mock.calls.filter(([url]) => !String(url).includes('/settings/public'))).toHaveLength(11)
   })
 })

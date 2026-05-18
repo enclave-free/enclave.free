@@ -58,6 +58,8 @@ export function AdminInstanceConfig() {
   const [previewSurfaceStyle, setPreviewSurfaceStyle] = useState(config.surfaceStyle)
   const [previewStatusIconSet, setPreviewStatusIconSet] = useState(config.statusIconSet)
   const [previewTypographyPreset, setPreviewTypographyPreset] = useState(config.typographyPreset)
+  const [previewDefaultLanguage, setPreviewDefaultLanguage] = useState(config.defaultLanguage)
+  const [previewDefaultTheme, setPreviewDefaultTheme] = useState(config.defaultTheme)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
@@ -90,6 +92,8 @@ export function AdminInstanceConfig() {
       setPreviewSurfaceStyle(config.surfaceStyle)
       setPreviewStatusIconSet(config.statusIconSet)
       setPreviewTypographyPreset(config.typographyPreset)
+      setPreviewDefaultLanguage(config.defaultLanguage)
+      setPreviewDefaultTheme(config.defaultTheme)
     }
   }, [config, isDirty])
 
@@ -175,6 +179,16 @@ export function AdminInstanceConfig() {
     setIsDirty(true)
   }
 
+  const handleDefaultLanguageChange = (value: string) => {
+    setPreviewDefaultLanguage(value)
+    setIsDirty(true)
+  }
+
+  const handleDefaultThemeChange = (value: typeof previewDefaultTheme) => {
+    setPreviewDefaultTheme(value)
+    setIsDirty(true)
+  }
+
   const handleSave = async () => {
     // Save instance config to local context (for immediate UI updates)
     const name = instanceName.trim() || t('admin.setup.defaultName')
@@ -204,6 +218,8 @@ export function AdminInstanceConfig() {
           surface_style: previewSurfaceStyle,
           status_icon_set: previewStatusIconSet,
           typography_preset: previewTypographyPreset,
+          default_language: previewDefaultLanguage,
+          default_theme: previewDefaultTheme,
         }),
       })
 
@@ -227,6 +243,8 @@ export function AdminInstanceConfig() {
           surfaceStyle: previewSurfaceStyle,
           statusIconSet: previewStatusIconSet,
           typographyPreset: previewTypographyPreset,
+          defaultLanguage: previewDefaultLanguage,
+          defaultTheme: previewDefaultTheme,
         })
         setIsDirty(false)
         navigate('/admin/setup')
@@ -354,6 +372,20 @@ export function AdminInstanceConfig() {
       description: t('admin.instanceConfig.typographyHumanistDesc', 'Warm, readable typography with clarity.'),
     },
   ]
+
+  const languageOptions = [
+    { value: 'en', label: t('language.english', 'English') },
+    { value: 'es', label: t('language.spanish', 'Spanish') },
+    { value: 'fr', label: t('language.french', 'French') },
+    { value: 'de', label: t('language.german', 'German') },
+    { value: 'pt', label: t('language.portuguese', 'Portuguese') },
+  ]
+
+  const themeOptions = [
+    { value: 'system', label: t('admin.instanceConfig.themeSystem', 'System') },
+    { value: 'light', label: t('admin.instanceConfig.themeLight', 'Light') },
+    { value: 'dark', label: t('admin.instanceConfig.themeDark', 'Dark') },
+  ] as const
 
   return (
     <OnboardingCard
@@ -619,6 +651,38 @@ export function AdminInstanceConfig() {
                 <p className="text-xs text-text-muted mt-1">{option.description}</p>
               </button>
             ))}
+          </div>
+        </ConfigSection>
+
+        <ConfigSection
+          title={t('admin.instanceConfig.defaultsTitle', 'Instance Defaults')}
+          description={t('admin.instanceConfig.defaultsDesc', 'Set the baseline language and theme used before any local browser controls apply.')}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-2 text-sm font-medium text-text">
+              {t('admin.instanceConfig.defaultLanguageLabel', 'Default language')}
+              <select
+                value={previewDefaultLanguage}
+                onChange={(event) => handleDefaultLanguageChange(event.target.value)}
+                className="input-field rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              >
+                {languageOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-medium text-text">
+              {t('admin.instanceConfig.defaultThemeLabel', 'Default theme')}
+              <select
+                value={previewDefaultTheme}
+                onChange={(event) => handleDefaultThemeChange(event.target.value as typeof previewDefaultTheme)}
+                className="input-field rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              >
+                {themeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
           </div>
         </ConfigSection>
 

@@ -13,6 +13,7 @@ export type ChatBubbleStyle = 'soft' | 'round' | 'square' | 'pill'
 export type SurfaceStyle = 'plain' | 'gradient' | 'noise' | 'grid'
 export type StatusIconSet = 'classic' | 'minimal' | 'playful'
 export type TypographyPreset = 'modern' | 'grotesk' | 'humanist'
+export type DefaultTheme = 'light' | 'dark' | 'system'
 
 export interface InstanceConfig {
   name: string
@@ -34,6 +35,8 @@ export interface InstanceConfig {
   surfaceStyle: SurfaceStyle
   statusIconSet: StatusIconSet
   typographyPreset: TypographyPreset
+  defaultLanguage: string
+  defaultTheme: DefaultTheme
 }
 
 export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
@@ -54,6 +57,8 @@ export const DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
   surfaceStyle: 'plain',
   statusIconSet: 'classic',
   typographyPreset: 'modern',
+  defaultLanguage: 'en',
+  defaultTheme: 'system',
 }
 
 export const HEADER_LAYOUTS: HeaderLayout[] = ['icon_name', 'icon_only', 'name_only']
@@ -61,6 +66,7 @@ export const CHAT_BUBBLE_STYLES: ChatBubbleStyle[] = ['soft', 'round', 'square',
 export const SURFACE_STYLES: SurfaceStyle[] = ['plain', 'gradient', 'noise', 'grid']
 export const STATUS_ICON_SETS: StatusIconSet[] = ['classic', 'minimal', 'playful']
 export const TYPOGRAPHY_PRESETS: TypographyPreset[] = ['modern', 'grotesk', 'humanist']
+export const DEFAULT_THEMES: DefaultTheme[] = ['system', 'light', 'dark']
 
 // Curated icons suitable for branding/logo use (~175 icons)
 // Removed Pentagon, Octagon - they look like circles at 18px
@@ -218,6 +224,8 @@ export function getInstanceConfig(): InstanceConfig {
       surfaceStyle: parsed.surfaceStyle || DEFAULT_INSTANCE_CONFIG.surfaceStyle,
       statusIconSet: parsed.statusIconSet || DEFAULT_INSTANCE_CONFIG.statusIconSet,
       typographyPreset: parsed.typographyPreset || DEFAULT_INSTANCE_CONFIG.typographyPreset,
+      defaultLanguage: typeof parsed.defaultLanguage === 'string' ? parsed.defaultLanguage : DEFAULT_INSTANCE_CONFIG.defaultLanguage,
+      defaultTheme: DEFAULT_THEMES.includes(parsed.defaultTheme) ? parsed.defaultTheme : DEFAULT_INSTANCE_CONFIG.defaultTheme,
     }
   } catch {
     return DEFAULT_INSTANCE_CONFIG
