@@ -61,7 +61,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    void fetchDefaultTheme()
+    if (getStoredTheme() === null) {
+      void fetchDefaultTheme()
+    }
 
     return () => {
       active = false

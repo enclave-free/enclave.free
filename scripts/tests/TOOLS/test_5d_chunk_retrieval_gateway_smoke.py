@@ -204,13 +204,15 @@ def main() -> int:
     print("=" * 72)
 
     seed: dict[str, Any] | None = None
+    seeded_user: dict[str, Any] | None = None
     try:
-        seeded_user = {} if args.token else seed_user_token()
+        if not args.token:
+            seeded_user = seed_user_token()
         token = args.token or seeded_user["token"]
         seed = seed_chunk()
         seed.update({
-            "user_id": seeded_user.get("user_id"),
-            "user_type_id": seeded_user.get("user_type_id"),
+            "user_id": seeded_user.get("user_id") if seeded_user else None,
+            "user_type_id": seeded_user.get("user_type_id") if seeded_user else None,
         })
         response = requests.post(
             f"{args.api_base.rstrip('/')}/query",
@@ -249,6 +251,13 @@ def main() -> int:
     finally:
         if seed:
             cleanup_seed(seed)
+        elif seeded_user:
+            cleanup_seed({
+                "job_id": None,
+                "point_id": None,
+                "user_id": seeded_user.get("user_id"),
+                "user_type_id": seeded_user.get("user_type_id"),
+            })
 
 
 if __name__ == "__main__":

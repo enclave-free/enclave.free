@@ -244,11 +244,16 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
     accessible_job_ids = _build_accessible_job_ids(payload.user, payload.job_ids)
 
     if not accessible_job_ids:
-        search_filter = {"must": [{"key": "job_id", "match": {"value": "__impossible__"}}]}
-    else:
-        search_filter = {
-            "should": [{"key": "job_id", "match": {"value": job_id}} for job_id in accessible_job_ids]
-        }
+        return InternalDocumentSearchResponse(
+            sources=[],
+            context="",
+            search_query=search_query,
+            top_k=payload.top_k,
+        )
+
+    search_filter = {
+        "should": [{"key": "job_id", "match": {"value": job_id}} for job_id in accessible_job_ids]
+    }
 
     qdrant_url = f"http://{QDRANT_HOST}:{QDRANT_PORT}/collections/{COLLECTION_NAME}/points/search"
     search_payload = {

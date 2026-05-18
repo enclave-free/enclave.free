@@ -93,7 +93,8 @@ describe('Instance defaults', () => {
       </ThemeProvider>
     )
 
-    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    await waitFor(() => expect(document.documentElement.classList.contains('dark')).toBe(false))
+    expect(fetch).not.toHaveBeenCalled()
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 })

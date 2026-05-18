@@ -112,18 +112,19 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Handbook.md",
             text="Encrypted retrieval context reaches the model.",
         )
-        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
-            {
-                "score": 0.93,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "chunk-1",
-                    "job_id": "job-1",
-                    "source_file": "Handbook.md",
-                    "content_ref": "retrieval_chunks:chunk-1",
-                },
-            }
-        ])
+        def fake_post(*_args, **_kwargs):
+            return FakeQdrantResponse([
+                {
+                    "score": 0.93,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "chunk-1",
+                        "job_id": "job-1",
+                        "source_file": "Handbook.md",
+                        "content_ref": "retrieval_chunks:chunk-1",
+                    },
+                }
+            ])
 
         with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
             response = self.client.post(
@@ -163,26 +164,27 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Benefits Guide.md",
             text="Dental benefits include two preventive visits each year.",
         )
-        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
-            {
-                "score": 0.91,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "safety-handbook_chunk_0000",
-                    "job_id": "safety-handbook",
-                    "source_file": "Safety Handbook.md",
+        def fake_post(*_args, **_kwargs):
+            return FakeQdrantResponse([
+                {
+                    "score": 0.91,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "safety-handbook_chunk_0000",
+                        "job_id": "safety-handbook",
+                        "source_file": "Safety Handbook.md",
+                    },
                 },
-            },
-            {
-                "score": 0.74,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "benefits-guide_chunk_0000",
-                    "job_id": "benefits-guide",
-                    "source_file": "Benefits Guide.md",
+                {
+                    "score": 0.74,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "benefits-guide_chunk_0000",
+                        "job_id": "benefits-guide",
+                        "source_file": "Benefits Guide.md",
+                    },
                 },
-            },
-        ])
+            ])
 
         with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
             response = self.client.post(
@@ -359,26 +361,27 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Policy.md",
             text="The replacement policy says the new rule applies.",
         )
-        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
-            {
-                "score": 0.99,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "old-policy_chunk_0000",
-                    "job_id": "old-policy",
-                    "source_file": "Policy.md",
+        def fake_post(*_args, **_kwargs):
+            return FakeQdrantResponse([
+                {
+                    "score": 0.99,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "old-policy_chunk_0000",
+                        "job_id": "old-policy",
+                        "source_file": "Policy.md",
+                    },
                 },
-            },
-            {
-                "score": 0.88,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "new-policy_chunk_0000",
-                    "job_id": "new-policy",
-                    "source_file": "Policy.md",
+                {
+                    "score": 0.88,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "new-policy_chunk_0000",
+                        "job_id": "new-policy",
+                        "source_file": "Policy.md",
+                    },
                 },
-            },
-        ])
+            ])
 
         with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
             response = self.client.post(
@@ -409,23 +412,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Deleted Guide.md",
             text="Deleted guide text must not be hydrated into context.",
         )
-        captured_payloads = []
-
-        def fake_post(_url, json, **_kwargs):
-            captured_payloads.append(json)
-            return FakeQdrantResponse([
-                {
-                    "score": 0.93,
-                    "payload": {
-                        "type": "chunk",
-                        "chunk_id": "deleted-guide_chunk_0000",
-                        "job_id": "deleted-guide",
-                        "source_file": "Deleted Guide.md",
-                    },
-                },
-            ])
-
-        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+        with patch.object(self.internal_agent.httpx, "post") as fake_post:
             response = self.client.post(
                 "/internal/agent/document-search",
                 headers=self.internal_headers,
@@ -440,10 +427,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["sources"], [])
         self.assertEqual(body["context"], "")
-        self.assertEqual(
-            captured_payloads[0]["filter"],
-            {"must": [{"key": "job_id", "match": {"value": "__impossible__"}}]},
-        )
+        fake_post.assert_not_called()
 
     def test_query_skips_hydration_when_chunk_row_belongs_to_different_document(self) -> None:
         self.create_completed_document("allowed-job")
@@ -455,17 +439,18 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Blocked.md",
             text="This unauthorized passage must not enter context.",
         )
-        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
-            {
-                "score": 0.71,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "cross-document-chunk",
-                    "job_id": "allowed-job",
-                    "source_file": "Allowed.md",
-                },
-            }
-        ])
+        def fake_post(*_args, **_kwargs):
+            return FakeQdrantResponse([
+                {
+                    "score": 0.71,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "cross-document-chunk",
+                        "job_id": "allowed-job",
+                        "source_file": "Allowed.md",
+                    },
+                }
+            ])
 
         with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
             response = self.client.post(
@@ -484,17 +469,18 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
 
     def test_query_handles_missing_deleted_retrieval_chunk_without_payload_text(self) -> None:
         self.create_completed_document("job-1")
-        fake_post = lambda *_args, **_kwargs: FakeQdrantResponse([
-            {
-                "score": 0.5,
-                "payload": {
-                    "type": "chunk",
-                    "chunk_id": "deleted-chunk",
-                    "job_id": "job-1",
-                    "source_file": "Handbook.md",
-                },
-            }
-        ])
+        def fake_post(*_args, **_kwargs):
+            return FakeQdrantResponse([
+                {
+                    "score": 0.5,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "deleted-chunk",
+                        "job_id": "job-1",
+                        "source_file": "Handbook.md",
+                    },
+                }
+            ])
         with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
             response = self.client.post(
                 "/internal/agent/document-search",

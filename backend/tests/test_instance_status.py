@@ -176,6 +176,21 @@ class InstanceStatusTest(unittest.TestCase):
         self.assertEqual(status_settings["default_language"], "es")
         self.assertEqual(status_settings["default_theme"], "dark")
 
+    def test_admin_language_and_theme_defaults_reject_unknown_values(self) -> None:
+        language_response = self.client.put("/admin/settings", json={
+            "default_language": "klingon",
+            "default_theme": "dark",
+        })
+        theme_response = self.client.put("/admin/settings", json={
+            "default_language": "en",
+            "default_theme": "neon",
+        })
+
+        self.assertEqual(language_response.status_code, 422)
+        self.assertIn("default_language must be one of", language_response.text)
+        self.assertEqual(theme_response.status_code, 422)
+        self.assertIn("default_theme must be one of", theme_response.text)
+
 
 if __name__ == "__main__":
     unittest.main()

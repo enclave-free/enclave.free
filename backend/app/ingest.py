@@ -736,13 +736,26 @@ async def queue_document_ingestion(
     }
     _sync_job_to_db(job_id)
     if replacement_for_job_id is None:
-        database.upsert_document_defaults(
-            job_id=job_id,
-            is_available=True,
-            is_default_active=True,
-            display_order=0,
-            changed_by=changed_by,
-        )
+        try:
+            database.upsert_document_defaults(
+                job_id=job_id,
+                is_available=True,
+                is_default_active=True,
+                display_order=0,
+                changed_by=changed_by,
+            )
+        except Exception as exc:
+            logger.error(
+                "[%s] Failed to initialize document defaults for upload by %s",
+                job_id,
+                changed_by,
+                exc_info=True,
+            )
+            JOBS[job_id]["status"] = "failed"
+            JOBS[job_id]["error"] = str(exc)
+            JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+            _sync_job_to_db(job_id)
+            raise
 
     schedule_document_processing(job_id, file_path, sample_percent)
     _audit_document_action(
