@@ -100,6 +100,30 @@ export function AdminSetup() {
           <p className="text-sm text-text-muted mt-2">{t('adminDashboard.subtitle', 'Manage your Enclave instance configuration')}</p>
         </div>
 
+        <section
+          aria-label={t('adminDashboard.readinessTitle', 'Deployment Readiness')}
+          className="mb-8 rounded-lg border border-accent/20 bg-accent/10 p-4 animate-fade-in-up"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-text">
+                  {t('adminDashboard.readinessTitle', 'Deployment Readiness')}
+                </h2>
+                <p className="mt-1 text-sm text-text-secondary">
+                  {t('adminDashboard.readinessDesc', 'Review readiness before inviting users. Check blockers, warnings, restart-required changes, and recovery posture in one place.')}
+                </p>
+              </div>
+            </div>
+            <Link to="/admin/deployment" className="btn btn-sm btn-primary shrink-0">
+              {t('adminDashboard.readinessPrimary', 'Open Readiness Review')}
+            </Link>
+          </div>
+        </section>
+
         {/* Security section */}
         <div className="mb-8 animate-fade-in-up">
           <div className="flex items-center gap-2 mb-4">
@@ -137,20 +161,20 @@ export function AdminSetup() {
           </div>
         </div>
 
-        {/* Configuration section */}
-        <div className="mb-8">
-          <div className="label mb-3">{t('adminDashboard.configSectionLabel', 'Configuration')}</div>
+        {/* Admin Settings section */}
+        <section aria-label={t('adminDashboard.settingsSectionLabel', 'Admin Settings')} className="mb-8">
+          <div className="label mb-3">{t('adminDashboard.settingsSectionLabel', 'Admin Settings')}</div>
           <div className="grid gap-4 sm:grid-cols-2 stagger-children">
             <DashboardCard
               to="/admin/instance"
               icon={<Paintbrush className="w-5 h-5" />}
-              title={t('adminDashboard.instance', 'Instance Configuration')}
-              description={t('adminDashboard.instanceDesc', 'Branding, chat style, and theme settings')}
+              title={t('adminDashboard.instance', 'Instance Settings')}
+              description={t('adminDashboard.instanceDesc', 'Branding, language, theme, and visual identity')}
             />
             <DashboardCard
               to="/admin/users"
               icon={<Users className="w-5 h-5" />}
-              title={t('adminDashboard.user', 'User Configuration')}
+              title={t('adminDashboard.user', 'User Settings')}
               description={t('adminDashboard.userDesc', 'Define user types and onboarding questions')}
             />
             <DashboardCard
@@ -162,11 +186,11 @@ export function AdminSetup() {
             <DashboardCard
               to="/admin/deployment"
               icon={<Server className="w-5 h-5" />}
-              title={t('adminDashboard.deployment', 'Deployment Configuration')}
-              description={t('adminDashboard.deploymentDesc', 'Manage environment settings and service health')}
+              title={t('adminDashboard.deployment', 'Deployment Settings')}
+              description={t('adminDashboard.deploymentDesc', 'Manage runtime settings, service health, and readiness evidence')}
             />
           </div>
-        </div>
+        </section>
 
         {/* Data & Content section */}
         <div className="mb-8">

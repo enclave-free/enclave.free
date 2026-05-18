@@ -1,0 +1,54 @@
+import { cleanup, render, screen, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AdminSetup } from './AdminSetup'
+import { isAdminAuthenticated } from '../utils/adminApi'
+
+vi.mock('../utils/adminApi', () => ({
+  isAdminAuthenticated: vi.fn(),
+}))
+
+const mockIsAdminAuthenticated = vi.mocked(isAdminAuthenticated)
+
+describe('AdminSetup', () => {
+  beforeEach(() => {
+    mockIsAdminAuthenticated.mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
+
+  it('gives admins a clear first-run path into Deployment Readiness review', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const readiness = screen.getByRole('region', { name: 'Deployment Readiness' })
+    expect(readiness).toHaveTextContent('Review readiness before inviting users')
+    expect(within(readiness).getByRole('link', { name: 'Open Readiness Review' })).toHaveAttribute('href', '/admin/deployment')
+  })
+
+  it('uses domain setting names without blending Deployment Readiness into configuration', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const settings = screen.getByRole('region', { name: 'Admin Settings' })
+    expect(within(settings).getByRole('link', { name: /Instance Settings/ })).toHaveAttribute('href', '/admin/instance')
+    expect(within(settings).getByRole('link', { name: /Agent Settings/ })).toHaveAttribute('href', '/admin/ai')
+    expect(within(settings).getByRole('link', { name: /Deployment Settings/ })).toHaveAttribute('href', '/admin/deployment')
+    expect(screen.getByRole('region', { name: 'Deployment Readiness' })).toBeInTheDocument()
+    expect(screen.queryByText('Instance Configuration')).not.toBeInTheDocument()
+    expect(screen.queryByText('Deployment Configuration')).not.toBeInTheDocument()
+  })
+})
