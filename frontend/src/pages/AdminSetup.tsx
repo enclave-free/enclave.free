@@ -154,8 +154,8 @@ export function AdminSetup() {
               <p className="mb-3 text-sm text-text-secondary">
                 {t('adminDashboard.firstRunStep2Body', 'Check blockers, warnings, restart-required changes, and recovery posture before inviting users.')}
               </p>
-              <Link to="/admin/deployment" className="btn btn-sm btn-secondary">
-                {t('adminDashboard.readinessPrimary', 'Open Readiness Review')}
+              <Link to="/admin/deployment#wizard" className="btn btn-sm btn-secondary">
+                {t('adminDashboard.firstRunStep2Action', 'Open Deployment Wizard')}
               </Link>
             </li>
             <li className="rounded-lg border border-border bg-surface-raised p-4">
@@ -241,6 +241,35 @@ export function AdminSetup() {
               description={t('adminDashboard.deploymentDesc', 'Manage runtime settings, service health, and readiness evidence')}
             />
           </div>
+        </section>
+
+        <section
+          aria-label={t('adminDashboard.iaChecklistTitle', 'Admin IA review checklist')}
+          className="mb-8 rounded-lg border border-border bg-surface-raised/70 p-4"
+        >
+          <div className="label mb-3">{t('adminDashboard.iaChecklistTitle', 'Admin IA review checklist')}</div>
+          <p className="text-sm text-text-secondary">
+            {t('adminDashboard.iaChecklistBody', 'Keep Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness, and diagnostic surfaces distinct during human review.')}
+          </p>
+        </section>
+
+        <section
+          aria-label={t('adminDashboard.humanReviewTitle', 'Human review handoff')}
+          className="mb-8 rounded-lg border border-warning/30 bg-warning/10 p-4"
+        >
+          <div className="label mb-2">{t('adminDashboard.humanReviewTitle', 'Human review handoff')}</div>
+          <p className="text-sm font-medium text-text">
+            {t('adminDashboard.humanReviewStatus', 'Human product/design review still required')}
+          </p>
+          <p className="mt-1 text-sm text-text-secondary">
+            {t('adminDashboard.humanReviewBody', 'Record remaining follow-ups in issue #176 after reviewing hierarchy, naming, visual priority, and the first-run path.')}
+          </p>
+          <a
+            href="https://github.com/enclave-free/enclave.free-prototype/issues/176"
+            className="mt-3 inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
+          >
+            {t('adminDashboard.humanReviewAction', 'Open issue #176')}
+          </a>
         </section>
 
         {/* Data & Content section */}

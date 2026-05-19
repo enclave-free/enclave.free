@@ -68,8 +68,59 @@ describe('AdminSetup', () => {
     expect(steps[0]).toHaveTextContent('Configure the Instance baseline')
     expect(within(steps[0]).getByRole('link', { name: 'Open Instance Settings' })).toHaveAttribute('href', '/admin/instance')
     expect(steps[1]).toHaveTextContent('Review Deployment Readiness')
-    expect(within(steps[1]).getByRole('link', { name: 'Open Readiness Review' })).toHaveAttribute('href', '/admin/deployment')
+    expect(within(steps[1]).getByRole('link', { name: 'Open Deployment Wizard' })).toHaveAttribute('href', '/admin/deployment#wizard')
     expect(steps[2]).toHaveTextContent('Use diagnostics only when investigating')
     expect(within(steps[2]).getByRole('link', { name: 'Open Diagnostics' })).toHaveAttribute('href', '/diagnostics/test-dashboard')
+  })
+
+  it('sends the first-run readiness step directly to the Deployment Wizard review', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const path = screen.getByRole('region', { name: 'Admin first-run path' })
+    const readinessStep = within(path).getByText('Review Deployment Readiness').closest('li')
+
+    expect(readinessStep).not.toBeNull()
+    expect(within(readinessStep as HTMLElement).getByRole('link', { name: 'Open Deployment Wizard' })).toHaveAttribute('href', '/admin/deployment#wizard')
+  })
+
+  it('surfaces the Admin IA review terms that must remain distinct', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const checklist = screen.getByRole('region', { name: 'Admin IA review checklist' })
+
+    expect(checklist).toHaveTextContent('Deployment Settings')
+    expect(checklist).toHaveTextContent('Instance Settings')
+    expect(checklist).toHaveTextContent('Agent Settings')
+    expect(checklist).toHaveTextContent('Lifecycle Readiness')
+    expect(checklist).toHaveTextContent('Deployment Readiness')
+    expect(checklist).toHaveTextContent('diagnostic surfaces')
+  })
+
+  it('keeps the human product review handoff visible with a follow-up issue target', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const handoff = screen.getByRole('region', { name: 'Human review handoff' })
+
+    expect(handoff).toHaveTextContent('Human product/design review still required')
+    expect(handoff).toHaveTextContent('Record remaining follow-ups in issue #176')
+    expect(within(handoff).getByRole('link', { name: 'Open issue #176' })).toHaveAttribute('href', 'https://github.com/enclave-free/enclave.free-prototype/issues/176')
   })
 })
