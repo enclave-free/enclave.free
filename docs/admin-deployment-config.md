@@ -36,7 +36,7 @@ It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to
 | `enclave_web` startup, Postgres memory, AI turn execution | Sage | `sage` container env |
 | Model Provider transport | Tinfoil proxy | `tinfoil-proxy` container |
 
-Important consequence: changing admin deployment config does not automatically rewrite the Sage container environment.
+Important consequence: changing admin deployment config records desired Deployment Settings. It does not mutate live Sage process state until the Operator or Deployment Automation applies generated runtime env and restarts affected services.
 
 ## Model Provider Deployment Settings On This Prototype
 
@@ -66,7 +66,33 @@ What actually drives Sage:
 - `ENCLAVE_BACKEND_URL`
 - `INTERNAL_AGENT_TOKEN`
 
-Those are currently supplied to the `sage` container through compose or environment, not through the admin deployment UI.
+Those are supplied to the `sage` container through Compose environment interpolation. The admin deployment UI can export a Sage runtime env artifact that maps desired Deployment Settings onto the runtime keys Sage actually reads.
+
+## Sage Runtime Env Export
+
+`GET /admin/deployment/runtime-env/sage` exports an audited, secret-bearing dotenv artifact for Sage. The admin UI exposes this as **Export Sage env**. The older `/admin/deployment/config/runtime-env/sage` path remains as a compatibility alias for current tooling.
+
+The first export slice maps:
+
+| Deployment Setting | Sage runtime env |
+| --- | --- |
+| `LLM_API_URL` | `TINFOIL_API_URL` |
+| `LLM_API_KEY` | `TINFOIL_API_KEY` |
+| `LLM_MODEL` | `TINFOIL_MODEL` |
+| `EMBEDDING_MODEL` | `TINFOIL_EMBEDDING_MODEL` |
+| `FRONTEND_URL` | `FRONTEND_URL` |
+| `CORS_ORIGINS` | `CORS_ORIGINS` |
+| `SEARXNG_URL` | `SEARXNG_URL` |
+
+Apply flow:
+
+```bash
+mkdir -p runtime/generated
+# Save the exported Sage env artifact to runtime/generated/sage.env.
+docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
+```
+
+The product records when the Sage runtime env was exported and Deployment Readiness reports whether Deployment Settings changed afterward. Applying and restarting remains a Deployment responsibility, not a live product mutation.
 
 ## Health Checks
 
@@ -135,15 +161,20 @@ Unsupported Deployment Surfaces are grouped by category: runtime logs, database 
 
 ## Common Operator Workflow
 
-1. use the admin deployment UI to inspect health and manage Python-owned settings
-2. keep Sage env and Python deployment config aligned for shared values
-3. restart affected services when changing any setting marked `requires_restart`
-4. if the actual Sage Model Provider path changes, update the `sage` container env as well as the admin config view
+1. use the admin deployment UI to inspect health and manage desired Deployment Settings
+2. export Sage runtime env after changing Model Provider, origin, or search settings that Sage reads
+3. apply the generated runtime env through the Deployment and restart affected services when changing any setting marked `requires_restart`
+4. review Deployment Readiness for stale runtime env, restart-required settings, service health, and lifecycle posture
 
-## Known Temporary State
+## Desired State And Running State
 
-- the deployment UI is not yet a single source of truth for the whole stack
-- Sage runtime config is still partly compose/env-driven
+Deployment Settings express desired operator-controlled runtime configuration. Deployment Readiness reports whether running services match that desired state, including restart-required settings and stale runtime posture.
+
+The first unified Deployment Settings slice covers operator-facing integration and origin settings. Low-level infrastructure wiring remains outside the first unified Deployment Settings slice, including database URLs, internal service tokens, cookie names, gateway route maps, and container host/port topology.
+
+Known temporary state:
+
+- Sage runtime config is still Compose/env-driven at process start
 - Gateway behavior is still file-configured in `gateway/nginx.conf`
 - Agent Settings are no longer part of the Python deployment-config story; they are Sage-owned and Postgres-backed
 

@@ -21,7 +21,7 @@ services:
       - LLM_API_KEY=${TINFOIL_API_KEY:-}
       - LLM_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - SAGE_WEB_URL=http://sage:3000
-      - SEARXNG_URL=http://searxng:8080
+      - SEARXNG_URL=${SEARXNG_URL:-http://searxng:8080}
       - SQLITE_PATH=/data/enclave.db
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       - CONTENT_ENCRYPTION_KEY=${CONTENT_ENCRYPTION_KEY:-}
@@ -77,9 +77,11 @@ services:
     volumes:
       - sage_workspace:/workspace
     environment:
+      # Operator-applied runtime values may be supplied with:
+      # docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
       - DATABASE_URL=postgres://sage:sage@postgres:5432/sage
       - ENCLAVE_ENV=${ENCLAVE_ENV:-development}
-      - TINFOIL_API_URL=http://tinfoil-proxy:8089/v1
+      - TINFOIL_API_URL=${TINFOIL_API_URL:-http://tinfoil-proxy:8089/v1}
       - TINFOIL_API_KEY=${TINFOIL_API_KEY}
       - TINFOIL_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - TINFOIL_EMBEDDING_MODEL=${TINFOIL_EMBEDDING_MODEL:-nomic-embed-text}

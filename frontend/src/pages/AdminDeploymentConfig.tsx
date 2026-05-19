@@ -89,6 +89,7 @@ export function AdminDeploymentConfig() {
     error: configError,
     updateConfig,
     exportEnv,
+    exportSageRuntimeEnv,
     validate,
     revealSecret,
   } = useDeploymentConfig()
@@ -437,6 +438,12 @@ export function AdminDeploymentConfig() {
         label: t('adminDeployment.readiness.reviewRestartRequired', 'Review Restart Required'),
       }
     }
+    if (item.source === 'runtime_env') {
+      return {
+        href: '#deployment-settings',
+        label: t('adminDeployment.readiness.reviewRuntimeEnv', 'Review Runtime Env Export'),
+      }
+    }
     if (item.source === 'operational_readiness') {
       return {
         href: '#operational-readiness',
@@ -698,6 +705,27 @@ export function AdminDeploymentConfig() {
       const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
       setExportError(message)
       console.error('Export failed:', err)
+    }
+  }
+
+  const handleExportSageRuntimeEnv = async () => {
+    setExportError(null)
+    try {
+      const content = await exportSageRuntimeEnv()
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'sage.env'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      refreshReadiness()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
+      setExportError(message)
+      console.error('Sage runtime env export failed:', err)
     }
   }
 
@@ -2597,6 +2625,13 @@ export function AdminDeploymentConfig() {
           >
             <Download className="w-4 h-4" />
             {t('adminDeployment.exportEnv', 'Export .env')}
+          </button>
+          <button
+            onClick={handleExportSageRuntimeEnv}
+            className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-lg px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface"
+          >
+            <Download className="w-4 h-4" />
+            {t('adminDeployment.exportSageRuntimeEnv', 'Export Sage env')}
           </button>
           <button
             onClick={() => setShowAuditLog(!showAuditLog)}

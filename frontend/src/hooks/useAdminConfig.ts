@@ -416,6 +416,14 @@ export function useDeploymentConfig() {
     return response.text()
   }, [])
 
+  const exportSageRuntimeEnv = useCallback(async (): Promise<string> => {
+    const response = await adminFetch('/admin/deployment/runtime-env/sage')
+    if (!response.ok) {
+      throw new Error(`errors.failedToExport`)
+    }
+    return response.text()
+  }, [])
+
   const validate = useCallback(async (): Promise<DeploymentValidationResponse> => {
     const response = await adminFetch('/admin/deployment/config/validate', {
       method: 'POST',
@@ -442,6 +450,7 @@ export function useDeploymentConfig() {
     refresh: fetchConfig,
     updateConfig,
     exportEnv,
+    exportSageRuntimeEnv,
     validate,
     revealSecret,
   }

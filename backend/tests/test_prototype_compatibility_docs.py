@@ -124,6 +124,18 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("legacy Python Model Provider client config", deployment)
         self.assertNotIn("remaining legacy client paths", deployment)
 
+    def test_admin_deployment_docs_describe_deployment_settings_as_desired_state(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        adr = (REPO_ROOT / "docs/adr/0019-deployment-settings-generate-runtime-env.md").read_text(encoding="utf-8")
+
+        self.assertIn("Deployment Settings express desired operator-controlled runtime configuration", deployment)
+        self.assertIn("Deployment Readiness reports whether running services match that desired state", deployment)
+        self.assertIn("Low-level infrastructure wiring remains outside the first unified Deployment Settings slice", deployment)
+        self.assertNotIn("the deployment UI is not yet a single source of truth for the whole stack", deployment)
+        self.assertIn("generates an auditable runtime env artifact from Deployment Settings", adr)
+        self.assertIn("avoids live process mutation", adr)
+        self.assertIn("root `.env` is operator-authored bootstrap material", adr)
+
     def test_agent_settings_surface_is_not_described_as_compatibility_layer(self) -> None:
         checked_paths = [
             REPO_ROOT / "backend/app/ai_config.py",

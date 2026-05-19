@@ -961,6 +961,7 @@
     "validate": "Validate Config",
     "validating": "Validating...",
     "exportEnv": "Export .env",
+    "exportSageRuntimeEnv": "Export Sage env",
     "auditLog": "Recent Changes",
     "configValid": "Configuration Valid",
     "configInvalid": "Configuration Invalid",

@@ -90,6 +90,10 @@ describe('AdminDeploymentConfig', () => {
       removeItem: vi.fn(),
       setItem: vi.fn(),
     })
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:test-sage-env'),
+      revokeObjectURL: vi.fn(),
+    })
 
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/deployment/config') {
@@ -121,6 +125,11 @@ describe('AdminDeploymentConfig', () => {
           domains: [],
           ssl: [],
           general: [],
+        }))
+      }
+      if (endpoint === '/admin/deployment/runtime-env/sage') {
+        return Promise.resolve(new Response('TINFOIL_MODEL=kimi-k2-6\n', {
+          headers: { 'content-type': 'text/plain' },
         }))
       }
       if (endpoint === '/admin/deployment/health') {
@@ -584,6 +593,25 @@ describe('AdminDeploymentConfig', () => {
 
     const securitySettings = screen.getByRole('group', { name: 'Security & URLs Settings' })
     expect(within(securitySettings).getByText('Chat Rate Limit')).toBeInTheDocument()
+  })
+
+  it('lets admins export a Sage runtime env artifact from Deployment Settings', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Chat Rate Limit')
+    await user.click(screen.getByRole('button', { name: 'Export Sage env' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/deployment/runtime-env/sage')
+    })
   })
 
   it('shows lifecycle readiness warnings without implying user conversations are blocked', async () => {

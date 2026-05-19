@@ -53,6 +53,10 @@ config_export_limiter = RateLimiter(
 )
 
 
+async def check_config_export_rate_limit(request: Request) -> None:
+    await config_export_limiter(request)
+
+
 def current_expected_claims() -> dict:
     """Return the configured expected Verifiable Inference claims for v1."""
     return {}
@@ -117,6 +121,99 @@ def _configured_model_provider() -> dict:
         "provider_identity": database.get_deployment_config_value("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage"),
         "provider_endpoint": database.get_deployment_config_value("LLM_API_URL") or os.getenv("LLM_API_URL", ""),
         "model_identifier": database.get_deployment_config_value("LLM_MODEL") or os.getenv("LLM_MODEL", ""),
+    }
+
+
+def _dotenv_quote(value: str) -> str:
+    """Quote values that would be ambiguous in a dotenv file."""
+    if any(char in value for char in (' ', '=', '#', '"', "\\", "\n", "\r", "\t", "$")):
+        escaped = (
+            value
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("$", "\\$")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            .replace("\t", "\\t")
+        )
+        return f'"{escaped}"'
+    return value
+
+
+def _deployment_config_values_for_export(keys: tuple[str, ...]) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for key in keys:
+        meta = ENV_CONFIG_MAP.get(key, {})
+        if meta.get("is_secret"):
+            values[key] = database.get_deployment_config_value(key) or ""
+        else:
+            config = database.get_deployment_config(key)
+            values[key] = (config or {}).get("value") or meta.get("default") or os.getenv(key, "")
+    return values
+
+
+def _sage_runtime_env_text() -> str:
+    values = _deployment_config_values_for_export(SAGE_RUNTIME_ENV_KEYS)
+    lines = [
+        "# Enclave Sage Runtime Env",
+        "# Generated from Deployment Settings.",
+        f"# Generated: {datetime.now(timezone.utc).isoformat()}",
+        "# Apply by saving as runtime/generated/sage.env and restarting the sage service.",
+        "",
+    ]
+    for source_key, runtime_key in SAGE_RUNTIME_ENV_MAP:
+        lines.append(f"{runtime_key}={_dotenv_quote(values.get(source_key, ''))}")
+    return "\n".join(lines)
+
+
+def _latest_audit_marker(*, table_name: str, config_keys: set[str]) -> Optional[tuple[datetime, int]]:
+    if not config_keys:
+        return None
+    placeholders = ", ".join("?" for _ in config_keys)
+    with database.get_cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT id, changed_at
+            FROM config_audit_log
+            WHERE table_name = ? AND config_key IN ({placeholders})
+            ORDER BY changed_at DESC, id DESC
+            LIMIT 1
+            """,
+            (table_name, *sorted(config_keys)),
+        )
+        row = cursor.fetchone()
+    if row is None:
+        return None
+    entry = dict(row)
+    try:
+        changed_at = datetime.fromisoformat(str(entry["changed_at"]).replace("Z", "+00:00"))
+        if changed_at.tzinfo is None:
+            changed_at = changed_at.replace(tzinfo=timezone.utc)
+        return changed_at, int(entry.get("id") or 0)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _sage_runtime_env_status() -> dict:
+    latest_export = _latest_audit_marker(
+        table_name="deployment_config",
+        config_keys={SAGE_RUNTIME_ENV_EXPORT_KEY},
+    )
+    latest_source_change = _latest_audit_marker(
+        table_name="deployment_config",
+        config_keys=set(SAGE_RUNTIME_ENV_KEYS),
+    )
+    if latest_export is None:
+        return {
+            "status": "not_generated",
+            "latest_export_at": None,
+            "latest_source_change_at": latest_source_change[0].isoformat() if latest_source_change else None,
+        }
+    stale = latest_source_change is not None and latest_source_change > latest_export
+    return {
+        "status": "stale" if stale else "current",
+        "latest_export_at": latest_export[0].isoformat(),
+        "latest_source_change_at": latest_source_change[0].isoformat() if latest_source_change else None,
     }
 
 
@@ -215,6 +312,26 @@ RATE_LIMIT_KEYS: Final[set[str]] = {
     "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE",
     "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR",
 }
+
+SAGE_RUNTIME_ENV_EXPORT_KEY: Final[str] = "sage_runtime_env_export"
+SAGE_RUNTIME_ENV_KEYS: Final[tuple[str, ...]] = (
+    "LLM_API_URL",
+    "LLM_API_KEY",
+    "LLM_MODEL",
+    "EMBEDDING_MODEL",
+    "FRONTEND_URL",
+    "CORS_ORIGINS",
+    "SEARXNG_URL",
+)
+SAGE_RUNTIME_ENV_MAP: Final[tuple[tuple[str, str], ...]] = (
+    ("LLM_API_URL", "TINFOIL_API_URL"),
+    ("LLM_API_KEY", "TINFOIL_API_KEY"),
+    ("LLM_MODEL", "TINFOIL_MODEL"),
+    ("EMBEDDING_MODEL", "TINFOIL_EMBEDDING_MODEL"),
+    ("FRONTEND_URL", "FRONTEND_URL"),
+    ("CORS_ORIGINS", "CORS_ORIGINS"),
+    ("SEARXNG_URL", "SEARXNG_URL"),
+)
 
 PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
     "MOCK_EMAIL",
@@ -548,7 +665,7 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
 async def export_env_file(
     request: Request,
     admin: dict = Depends(auth.require_admin),
-    _: None = Depends(config_export_limiter),
+    _: None = Depends(check_config_export_rate_limit),
 ):
     """
     Export current configuration as .env file format.
@@ -583,13 +700,7 @@ async def export_env_file(
             value = database.get_deployment_config_value(config["key"]) or ""
         else:
             value = config["value"] or ""
-        # Quote values with spaces or special chars, escape backslashes, newlines, tabs, and dollar signs
-        if " " in value or "=" in value or "#" in value or '"' in value or "\\" in value or "\n" in value or "\r" in value or "\t" in value or "$" in value:
-            # Escape backslashes first, then quotes, then dollar signs, then control characters
-            value = value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
-            value = f'"{value}"'
-
-        lines.append(f"{config['key']}={value}")
+        lines.append(f"{config['key']}={_dotenv_quote(value)}")
 
     # Explicitly audit high-risk export action.
     # old/new values are intentionally omitted to avoid logging secret material.
@@ -605,6 +716,36 @@ async def export_env_file(
     )
 
     return "\n".join(lines)
+
+
+@router.get("/runtime-env/sage", response_class=PlainTextResponse)
+@router.get("/config/runtime-env/sage", response_class=PlainTextResponse)
+async def export_sage_runtime_env(
+    request: Request,
+    admin: dict = Depends(auth.require_admin),
+    _: None = Depends(check_config_export_rate_limit),
+):
+    """
+    Export the Sage runtime env generated from Deployment Settings.
+    Secret values are included so the artifact must be handled as sensitive deployment material.
+    """
+    logger.warning(
+        "Sage runtime env export requested by admin=%s from ip=%s",
+        admin.get("pubkey", "unknown"),
+        request.client.host if request.client else "unknown",
+    )
+    content = _sage_runtime_env_text()
+    database.log_config_audit_event(
+        table_name="deployment_config",
+        config_key=SAGE_RUNTIME_ENV_EXPORT_KEY,
+        old_value=None,
+        new_value=(
+            f"exported_keys={len(SAGE_RUNTIME_ENV_MAP)};"
+            f"ip={request.client.host if request.client else 'unknown'}"
+        ),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return content
 
 
 @router.get("/config/{key}", response_model=DeploymentConfigItem)
@@ -1132,6 +1273,39 @@ def _restart_readiness_item() -> dict:
     )
 
 
+def _runtime_env_readiness_item() -> dict:
+    status = _sage_runtime_env_status()
+    if status["status"] == "current":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Env",
+            source="runtime_env",
+            severity="ready",
+            status="current",
+            summary="Sage runtime env has been generated from current Deployment Settings.",
+            next_action="No action required unless the generated artifact has not been applied to the Deployment.",
+        )
+    if status["status"] == "stale":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Env",
+            source="runtime_env",
+            severity="warning",
+            status="stale",
+            summary="Deployment Settings changed after the Sage runtime env was generated.",
+            next_action="Export a fresh Sage runtime env and apply it through the Deployment restart path.",
+        )
+    return _readiness_item(
+        key="sage_runtime_env",
+        label="Sage Runtime Env",
+        source="runtime_env",
+        severity="warning",
+        status="not_generated",
+        summary="Sage runtime env has not been generated from Deployment Settings yet.",
+        next_action="Export the Sage runtime env before treating Deployment Settings as applied to Sage.",
+    )
+
+
 def _restart_required_status() -> dict:
     restart_keys = database.get_restart_required_keys()
     audit_log = database.get_config_audit_log(limit=100, table_name="deployment_config")
@@ -1168,6 +1342,7 @@ def deployment_readiness_summary() -> dict:
         _lifecycle_readiness_item(lifecycle_status),
         _unsupported_surface_readiness_item(lifecycle_status),
         _backup_restore_readiness_item(),
+        _runtime_env_readiness_item(),
         _restart_readiness_item(),
         _readiness_item(
             key="service_health",

@@ -189,8 +189,8 @@ Operator-visible product settings inside an **Instance**.
 _Avoid_: deployment config
 
 **Deployment Settings**:
-Technical environment settings for the **Deployment**.
-_Avoid_: instance settings
+Operator-controlled desired technical environment settings for the **Deployment**.
+_Avoid_: instance settings, live process state
 
 **Agent Settings**:
 Settings owned by **Sage** that shape **Conversation** behavior.
@@ -433,6 +433,8 @@ _Avoid_: full snapshot, config dump
 - The first productionization target is a **Single-Instance Deployment**, not Kubernetes, managed cloud hosting, multi-instance scaling, or arbitrary infrastructure
 - **Deployment Readiness** is broader than **Lifecycle Readiness**; it includes external integration configuration, runtime validation, recovery posture, and reviewed lifecycle status
 - **Deployment Readiness** should be visible to the **Operator** through the **Instance**, not only maintained as an internal engineering checklist
+- **Deployment Settings** are the product source of truth for operator-controlled desired runtime configuration, while running services may remain stale until restart or deployment apply
+- The first unified **Deployment Settings** slice covers operator-facing integration and origin settings, not low-level infrastructure wiring such as database URLs, internal service tokens, cookie names, gateway route maps, or container host/port topology
 - **Deployment Readiness** is advisory in the first version except where a missing or failed prerequisite would violate a privacy-critical runtime gate such as current **Verifiable Inference**
 - Stale **Lifecycle Readiness**, missing recovery drills, or unacknowledged **Deployment Surfaces** should warn **Admins** without blocking normal **User Conversations** in the first **Deployment Readiness** version
 - A **Deployment Wizard** guides first-run **Deployment Readiness** review using the same underlying **Deployment Settings**, **Agent Settings**, lifecycle status, and validation APIs as the ongoing admin surfaces
@@ -918,6 +920,7 @@ _Avoid_: full snapshot, config dump
 - "deployment readiness" should not be reduced to a private engineering checklist or container health; resolved: **Deployment Readiness** is operator-visible and includes **Lifecycle Readiness** plus broader deployment configuration and recovery posture.
 - **Deployment Readiness** warnings should not be confused with privacy-critical runtime gates; resolved: most readiness gaps are advisory in v1, while failed or missing **Verifiable Inference** still blocks normal **Conversations**.
 - "deployment wizard" can imply a second setup system; resolved: **Deployment Wizard** is a guided first-run layer over the same admin configuration and readiness surfaces.
+- "deployment config" can imply live process mutation; resolved: **Deployment Settings** express desired operator-controlled runtime configuration, and **Deployment Readiness** should report whether running services match that desired state.
 - "i18n completeness" can imply finished translations in every language; resolved: the first polish milestone targets extraction and fallback correctness before human-quality translation review.
 - "theme/language configurability" can mean Admin-controlled defaults or per-user preferences; resolved: first milestone treats defaults as **Instance Settings**, with per-user preferences deferred.
 - "test dashboard" can blur product experience with diagnostics; resolved: diagnostic dashboards should be demoted from primary product paths.

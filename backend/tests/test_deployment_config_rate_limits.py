@@ -455,6 +455,37 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
 
         self.assertEqual(self.database.get_deployment_config_value("LLM_API_KEY"), "")
 
+    def test_sage_runtime_env_export_maps_desired_deployment_settings_and_audits_export(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "https://tinfoil.example/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi k2"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "https://app.example"),
+            ("CORS_ORIGINS", "https://app.example,https://admin.example"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+
+        response = self.client.get("/admin/deployment/runtime-env/sage")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response.headers["content-type"])
+        body = response.text
+        self.assertIn("# Enclave Sage Runtime Env", body)
+        self.assertIn("TINFOIL_API_URL=https://tinfoil.example/v1", body)
+        self.assertIn("TINFOIL_API_KEY=configured-secret", body)
+        self.assertIn('TINFOIL_MODEL="kimi k2"', body)
+        self.assertIn("TINFOIL_EMBEDDING_MODEL=nomic-embed-text", body)
+        self.assertIn("FRONTEND_URL=https://app.example", body)
+        self.assertIn("CORS_ORIGINS=https://app.example,https://admin.example", body)
+        self.assertIn("SEARXNG_URL=http://searxng:8080", body)
+
+        audit_entry = self.database.get_config_audit_log(limit=1, table_name="deployment_config")[0]
+        self.assertEqual(audit_entry["config_key"], self.deployment_config.SAGE_RUNTIME_ENV_EXPORT_KEY)
+        self.assertNotIn("configured-secret", audit_entry["new_value"])
+        self.assertEqual(audit_entry["changed_by"], "admin-pubkey")
+
     def test_smtp_import_time_constants_are_not_exported(self) -> None:
         for name in (
             "SMTP_HOST",
@@ -521,6 +552,23 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             self.database._decrypt_deployment_secret_value(encrypted),
             "current-secret-value",
         )
+
+    def test_deployment_readiness_reports_stale_sage_runtime_env_after_source_change(self) -> None:
+        item = self.deployment_config._runtime_env_readiness_item()
+        self.assertEqual(item["status"], "not_generated")
+
+        export_response = self.client.get("/admin/deployment/config/runtime-env/sage")
+        self.assertEqual(export_response.status_code, 200)
+
+        item = self.deployment_config._runtime_env_readiness_item()
+        self.assertEqual(item["status"], "current")
+
+        update_response = self.client.put("/admin/deployment/config/LLM_MODEL", json={"value": "new-model"})
+        self.assertEqual(update_response.status_code, 200)
+
+        item = self.deployment_config._runtime_env_readiness_item()
+        self.assertEqual(item["status"], "stale")
+        self.assertEqual(item["severity"], "warning")
 
 
 if __name__ == "__main__":
