@@ -1142,6 +1142,8 @@ def _restart_required_status() -> dict:
             try:
                 changed_at_str = entry["changed_at"]
                 changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
+                if changed_at.tzinfo is None:
+                    changed_at = changed_at.replace(tzinfo=timezone.utc)
                 if changed_at > SERVICE_START_TIME:
                     changed_requiring_restart.append({
                         "key": entry["config_key"],

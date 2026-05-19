@@ -224,7 +224,9 @@ export function getInstanceConfig(): InstanceConfig {
       surfaceStyle: parsed.surfaceStyle || DEFAULT_INSTANCE_CONFIG.surfaceStyle,
       statusIconSet: parsed.statusIconSet || DEFAULT_INSTANCE_CONFIG.statusIconSet,
       typographyPreset: parsed.typographyPreset || DEFAULT_INSTANCE_CONFIG.typographyPreset,
-      defaultLanguage: typeof parsed.defaultLanguage === 'string' ? parsed.defaultLanguage : DEFAULT_INSTANCE_CONFIG.defaultLanguage,
+      defaultLanguage: typeof parsed.defaultLanguage === 'string' && parsed.defaultLanguage.trim()
+        ? parsed.defaultLanguage
+        : DEFAULT_INSTANCE_CONFIG.defaultLanguage,
       defaultTheme: DEFAULT_THEMES.includes(parsed.defaultTheme) ? parsed.defaultTheme : DEFAULT_INSTANCE_CONFIG.defaultTheme,
     }
   } catch {

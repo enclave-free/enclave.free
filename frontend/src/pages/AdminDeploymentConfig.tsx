@@ -408,7 +408,8 @@ export function AdminDeploymentConfig() {
   const readinessToneClass = (severity: string) => {
     if (severity === 'blocker') return 'border-error/20 bg-error/10 text-error'
     if (severity === 'warning') return 'border-warning/20 bg-warning/10 text-warning'
-    return 'border-success/20 bg-success/10 text-success'
+    if (severity === 'ready' || severity === 'success') return 'border-success/20 bg-success/10 text-success'
+    return 'border-border bg-surface-muted text-text-muted'
   }
 
   const readinessReviewTarget = (item: DeploymentReadinessItem) => {
@@ -1819,14 +1820,8 @@ export function AdminDeploymentConfig() {
     const meta = configCategories[category]
     const helpText = meta.hint || meta.description
     const hasModalHelp = category === 'email' || category === 'llm' || category === 'embedding' || category === 'domains' || category === 'storage' || category === 'search' || category === 'security' || category === 'ssl'
-    const anchorId =
-      category === 'llm'
-        ? 'deployment-settings'
-        : undefined
-
     return (
       <Card
-        id={anchorId}
         key={category}
         role="group"
         aria-label={t('adminDeployment.categorySettingsAria', '{{category}} Settings', {
@@ -1959,6 +1954,8 @@ export function AdminDeploymentConfig() {
       footer={footer}
     >
       <div className="space-y-6">
+        <div id="deployment-settings" className="sr-only" aria-hidden="true" />
+
         {/* Error display */}
         {configError && (
           <div className="bg-error/10 border border-error/20 rounded-xl p-4">

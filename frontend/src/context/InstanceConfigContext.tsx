@@ -257,7 +257,9 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
           applyFavicon(newConfig.faviconUrl)
           applyAppleTouchIcon(newConfig.appleTouchIconUrl)
           if (newConfig.defaultLanguage && i18n.language !== newConfig.defaultLanguage) {
-            void i18n.changeLanguage(newConfig.defaultLanguage)
+            i18n.changeLanguage(newConfig.defaultLanguage).catch((error) => {
+              console.error('Failed to apply instance default language:', error)
+            })
           }
         }
       } catch (error) {
