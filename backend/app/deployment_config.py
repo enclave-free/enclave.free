@@ -927,7 +927,7 @@ def _validate_config_values(config_dict: Mapping[str, str]) -> DeploymentValidat
 
 
 @router.post("/config/validate", response_model=DeploymentValidationResponse)
-async def validate_config(admin: dict = Depends(auth.require_admin)):
+async def validate_config(admin: dict = Depends(auth.require_admin)) -> DeploymentValidationResponse:
     """
     Validate current configuration.
     Checks for required values and valid formats.
@@ -1195,7 +1195,7 @@ def deployment_readiness_summary() -> dict:
 
 
 @router.get("/readiness", response_model=dict)
-async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)):
+async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)) -> dict:
     """
     Summarize Deployment Readiness for a Single-Instance Deployment.
     Requires admin authentication.

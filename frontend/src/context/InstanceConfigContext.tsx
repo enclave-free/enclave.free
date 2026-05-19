@@ -151,6 +151,12 @@ function validateDefaultTheme(value: string | undefined): DefaultTheme | undefin
   return DEFAULT_THEMES.includes(value as DefaultTheme) ? (value as DefaultTheme) : undefined
 }
 
+function normalizeDefaultLanguage(value: string | undefined): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed ? trimmed : undefined
+}
+
 export function InstanceConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfigState] = useState<InstanceConfig>(DEFAULT_INSTANCE_CONFIG)
 
@@ -239,9 +245,9 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
               stored.typographyPreset ??
               DEFAULT_INSTANCE_CONFIG.typographyPreset,
             defaultLanguage:
-              typeof settings.default_language === 'string'
-                ? settings.default_language
-                : (stored.defaultLanguage ?? DEFAULT_INSTANCE_CONFIG.defaultLanguage),
+              normalizeDefaultLanguage(settings.default_language) ??
+              stored.defaultLanguage ??
+              DEFAULT_INSTANCE_CONFIG.defaultLanguage,
             defaultTheme:
               validateDefaultTheme(settings.default_theme) ??
               stored.defaultTheme ??

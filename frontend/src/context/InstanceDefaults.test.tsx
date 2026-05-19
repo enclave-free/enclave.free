@@ -58,6 +58,26 @@ describe('Instance defaults', () => {
     expect(changeLanguage).toHaveBeenCalledWith('es')
   })
 
+  it('ignores blank public Instance language defaults', async () => {
+    const changeLanguage = vi.spyOn(i18n, 'changeLanguage')
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(Response.json({
+      settings: {
+        default_language: '   ',
+        default_theme: 'dark',
+      },
+    }))))
+
+    render(
+      <InstanceConfigProvider>
+        <CurrentInstanceDefaults />
+      </InstanceConfigProvider>
+    )
+
+    await waitFor(() => expect(screen.getByText('dark')).toBeInTheDocument())
+    expect(screen.getByText('en')).toBeInTheDocument()
+    expect(changeLanguage).not.toHaveBeenCalledWith('   ')
+  })
+
   it('applies public Instance theme defaults when they load', async () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(Response.json({
       settings: {
