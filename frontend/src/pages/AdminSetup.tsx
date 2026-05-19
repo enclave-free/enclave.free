@@ -124,6 +124,57 @@ export function AdminSetup() {
           </div>
         </section>
 
+        <section
+          aria-label={t('adminDashboard.firstRunPathTitle', 'Admin first-run path')}
+          className="mb-8 animate-fade-in-up"
+        >
+          <div className="label mb-3">{t('adminDashboard.firstRunPathTitle', 'Admin first-run path')}</div>
+          <ol className="grid gap-4 md:grid-cols-3">
+            <li className="rounded-lg border border-border bg-surface-raised p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">1</span>
+                <h3 className="text-sm font-semibold text-text">
+                  {t('adminDashboard.firstRunStep1Title', 'Configure the Instance baseline')}
+                </h3>
+              </div>
+              <p className="mb-3 text-sm text-text-secondary">
+                {t('adminDashboard.firstRunStep1Body', 'Set branding, language, theme, user fields, and Agent Settings before review.')}
+              </p>
+              <Link to="/admin/instance" className="btn btn-sm btn-secondary">
+                {t('adminDashboard.firstRunStep1Action', 'Open Instance Settings')}
+              </Link>
+            </li>
+            <li className="rounded-lg border border-border bg-surface-raised p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">2</span>
+                <h3 className="text-sm font-semibold text-text">
+                  {t('adminDashboard.firstRunStep2Title', 'Review Deployment Readiness')}
+                </h3>
+              </div>
+              <p className="mb-3 text-sm text-text-secondary">
+                {t('adminDashboard.firstRunStep2Body', 'Check blockers, warnings, restart-required changes, and recovery posture before inviting users.')}
+              </p>
+              <Link to="/admin/deployment" className="btn btn-sm btn-secondary">
+                {t('adminDashboard.readinessPrimary', 'Open Readiness Review')}
+              </Link>
+            </li>
+            <li className="rounded-lg border border-border bg-surface-raised p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">3</span>
+                <h3 className="text-sm font-semibold text-text">
+                  {t('adminDashboard.firstRunStep3Title', 'Use diagnostics only when investigating')}
+                </h3>
+              </div>
+              <p className="mb-3 text-sm text-text-secondary">
+                {t('adminDashboard.firstRunStep3Body', 'Keep smoke tests and diagnostics reachable without making them the primary product path.')}
+              </p>
+              <Link to="/diagnostics/test-dashboard" className="btn btn-sm btn-secondary">
+                {t('adminDashboard.firstRunStep3Action', 'Open Diagnostics')}
+              </Link>
+            </li>
+          </ol>
+        </section>
+
         {/* Security section */}
         <div className="mb-8 animate-fade-in-up">
           <div className="flex items-center gap-2 mb-4">

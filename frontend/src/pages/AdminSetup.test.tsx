@@ -51,4 +51,25 @@ describe('AdminSetup', () => {
     expect(screen.queryByText('Instance Configuration')).not.toBeInTheDocument()
     expect(screen.queryByText('Deployment Configuration')).not.toBeInTheDocument()
   })
+
+  it('shows a reviewable Admin first-run path from setup through readiness and diagnostics', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const path = screen.getByRole('region', { name: 'Admin first-run path' })
+    const steps = within(path).getAllByRole('listitem')
+
+    expect(steps).toHaveLength(3)
+    expect(steps[0]).toHaveTextContent('Configure the Instance baseline')
+    expect(within(steps[0]).getByRole('link', { name: 'Open Instance Settings' })).toHaveAttribute('href', '/admin/instance')
+    expect(steps[1]).toHaveTextContent('Review Deployment Readiness')
+    expect(within(steps[1]).getByRole('link', { name: 'Open Readiness Review' })).toHaveAttribute('href', '/admin/deployment')
+    expect(steps[2]).toHaveTextContent('Use diagnostics only when investigating')
+    expect(within(steps[2]).getByRole('link', { name: 'Open Diagnostics' })).toHaveAttribute('href', '/diagnostics/test-dashboard')
+  })
 })
