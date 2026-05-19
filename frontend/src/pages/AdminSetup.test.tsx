@@ -123,4 +123,51 @@ describe('AdminSetup', () => {
     expect(handoff).toHaveTextContent('Record remaining follow-ups in issue #176')
     expect(within(handoff).getByRole('link', { name: 'Open issue #176' })).toHaveAttribute('href', 'https://github.com/enclave-free/enclave.free-prototype/issues/176')
   })
+
+  it('keeps Data & Content focused on document content instead of diagnostics', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const content = screen.getByRole('region', { name: 'Data & Content' })
+
+    expect(within(content).getByRole('link', { name: /Document Upload/ })).toHaveAttribute('href', '/admin/upload')
+    expect(within(content).queryByRole('link', { name: /Database Explorer/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps diagnostic tools reachable in a separate Diagnostics region', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const diagnostics = screen.getByRole('region', { name: 'Diagnostics' })
+
+    expect(within(diagnostics).getByRole('link', { name: /Database Explorer/ })).toHaveAttribute('href', '/admin/database')
+    expect(within(diagnostics).getByRole('link', { name: /Diagnostics Test Dashboard/ })).toHaveAttribute('href', '/diagnostics/test-dashboard')
+  })
+
+  it('lets human reviewers open a follow-up issue from the handoff', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/setup']}>
+        <Routes>
+          <Route path="/admin/setup" element={<AdminSetup />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const handoff = screen.getByRole('region', { name: 'Human review handoff' })
+    const followUp = within(handoff).getByRole('link', { name: 'Create IA follow-up issue' })
+
+    expect(followUp).toHaveAttribute('href', expect.stringContaining('https://github.com/enclave-free/enclave.free-prototype/issues/new'))
+    expect(followUp).toHaveAttribute('href', expect.stringContaining('labels=enhancement'))
+    expect(followUp).toHaveAttribute('href', expect.stringContaining('Admin%20IA%20follow-up'))
+  })
 })

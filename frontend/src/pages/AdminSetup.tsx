@@ -264,16 +264,23 @@ export function AdminSetup() {
           <p className="mt-1 text-sm text-text-secondary">
             {t('adminDashboard.humanReviewBody', 'Record remaining follow-ups in issue #176 after reviewing hierarchy, naming, visual priority, and the first-run path.')}
           </p>
-          <a
-            href="https://github.com/enclave-free/enclave.free-prototype/issues/176"
-            className="mt-3 inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
-          >
-            {t('adminDashboard.humanReviewAction', 'Open issue #176')}
-          </a>
+          <div className="mt-3 flex flex-wrap gap-4">
+            <a
+              href="https://github.com/enclave-free/enclave.free-prototype/issues/176"
+              className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
+            >
+              {t('adminDashboard.humanReviewAction', 'Open issue #176')}
+            </a>
+            <a
+              href="https://github.com/enclave-free/enclave.free-prototype/issues/new?labels=enhancement&title=Admin%20IA%20follow-up&body=Follow-up%20from%20the%20Admin%20setup%20information%20architecture%20review."
+              className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
+            >
+              {t('adminDashboard.humanReviewFollowUpAction', 'Create IA follow-up issue')}
+            </a>
+          </div>
         </section>
 
-        {/* Data & Content section */}
-        <div className="mb-8">
+        <section aria-label={t('adminDashboard.dataSectionLabel', 'Data & Content')} className="mb-8">
           <div className="label mb-3">{t('adminDashboard.dataSectionLabel', 'Data & Content')}</div>
           <div className="grid gap-4 sm:grid-cols-2 stagger-children">
             <DashboardCard
@@ -282,14 +289,26 @@ export function AdminSetup() {
               title={t('adminDashboard.upload', 'Document Upload')}
               description={t('adminDashboard.uploadDesc', 'Add documents to your knowledge base')}
             />
+          </div>
+        </section>
+
+        <section aria-label={t('adminDashboard.diagnosticsSectionLabel', 'Diagnostics')} className="mb-8">
+          <div className="label mb-3">{t('adminDashboard.diagnosticsSectionLabel', 'Diagnostics')}</div>
+          <div className="grid gap-4 sm:grid-cols-2 stagger-children">
             <DashboardCard
               to="/admin/database"
               icon={<Database className="w-5 h-5" />}
               title={t('adminDashboard.database', 'Database Explorer')}
               description={t('adminDashboard.databaseDesc', 'Browse and query the SQLite database')}
             />
+            <DashboardCard
+              to="/diagnostics/test-dashboard"
+              icon={<Server className="w-5 h-5" />}
+              title={t('adminDashboard.testDashboard', 'Diagnostics Test Dashboard')}
+              description={t('adminDashboard.testDashboardDesc', 'Run development smoke checks and inspect diagnostic modules')}
+            />
           </div>
-        </div>
+        </section>
 
         {/* Footer */}
         <div className="text-center mt-6 animate-fade-in">
