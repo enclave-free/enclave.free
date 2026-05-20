@@ -752,6 +752,7 @@ class ServiceHealthResponse(BaseModel):
     services: list[ServiceHealthItem]
     restart_required: bool = False
     changed_keys_requiring_restart: list[str] = []
+    runtime_env: dict = Field(default_factory=dict)
 
 
 class DeploymentValidationResponse(BaseModel):

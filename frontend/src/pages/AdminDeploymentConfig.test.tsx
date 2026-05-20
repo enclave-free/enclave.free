@@ -137,6 +137,17 @@ describe('AdminDeploymentConfig', () => {
           services: [],
           restart_required: false,
           changed_keys_requiring_restart: [],
+          runtime_env: {
+            sage: {
+              desired: { status: 'configured', configured_keys: 7, total_keys: 7 },
+              generated: { status: 'current', latest_export_at: '2026-05-19T12:00:00+00:00' },
+              running: {
+                status: 'not_directly_introspected',
+                summary: 'Sage live runtime env is not directly introspected in this slice; use service health plus generated env freshness.',
+                changed_keys_requiring_restart: [],
+              },
+            },
+          },
         }))
       }
       if (endpoint === '/admin/deployment/readiness') {
@@ -607,11 +618,28 @@ describe('AdminDeploymentConfig', () => {
     )
 
     await screen.findByText('Chat Rate Limit')
-    await user.click(screen.getByRole('button', { name: 'Export Sage env' }))
+    await user.click(screen.getAllByRole('button', { name: 'Export Sage env' })[0])
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/deployment/runtime-env/sage')
     })
+  })
+
+  it('shows desired generated and running runtime config alignment', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Runtime Config Alignment')
+    expect(screen.getByText('Desired')).toBeInTheDocument()
+    expect(screen.getByText('Generated')).toBeInTheDocument()
+    expect(screen.getByText('Running')).toBeInTheDocument()
+    expect(screen.getByText('7 of 7 keys configured')).toBeInTheDocument()
+    expect(screen.getByText('Sage live runtime env is not directly introspected in this slice; use service health plus generated env freshness.')).toBeInTheDocument()
   })
 
   it('shows lifecycle readiness warnings without implying user conversations are blocked', async () => {

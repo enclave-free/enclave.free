@@ -6,6 +6,7 @@ Handles environment settings, service health checks, and .env management.
 import os
 import time
 import json
+import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Final, Mapping, Optional
@@ -166,6 +167,38 @@ def _sage_runtime_env_text() -> str:
     return "\n".join(lines)
 
 
+def _parse_audit_changed_at(value: Any) -> Optional[datetime]:
+    try:
+        changed_at = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if changed_at.tzinfo is None:
+            changed_at = changed_at.replace(tzinfo=timezone.utc)
+        return changed_at
+    except (TypeError, ValueError):
+        return None
+
+
+def _latest_audit_marker_from_entries(
+    entries: list[Mapping[str, Any]],
+    *,
+    config_keys: set[str],
+) -> Optional[tuple[datetime, int]]:
+    latest: Optional[tuple[datetime, int]] = None
+    for entry in entries:
+        if entry.get("config_key") not in config_keys:
+            continue
+        changed_at = _parse_audit_changed_at(entry.get("changed_at"))
+        if changed_at is None:
+            continue
+        marker = (changed_at, int(entry.get("id") or 0))
+        if latest is None or marker > latest:
+            latest = marker
+    return latest
+
+
+def _deployment_config_audit_log() -> list[Mapping[str, Any]]:
+    return database.get_config_audit_log(limit=100, table_name="deployment_config")
+
+
 def _latest_audit_marker(*, table_name: str, config_keys: set[str]) -> Optional[tuple[datetime, int]]:
     if not config_keys:
         return None
@@ -185,24 +218,31 @@ def _latest_audit_marker(*, table_name: str, config_keys: set[str]) -> Optional[
     if row is None:
         return None
     entry = dict(row)
-    try:
-        changed_at = datetime.fromisoformat(str(entry["changed_at"]).replace("Z", "+00:00"))
-        if changed_at.tzinfo is None:
-            changed_at = changed_at.replace(tzinfo=timezone.utc)
-        return changed_at, int(entry.get("id") or 0)
-    except (KeyError, TypeError, ValueError):
+    changed_at = _parse_audit_changed_at(entry.get("changed_at"))
+    if changed_at is None:
         return None
+    return changed_at, int(entry.get("id") or 0)
 
 
-def _sage_runtime_env_status() -> dict:
-    latest_export = _latest_audit_marker(
-        table_name="deployment_config",
-        config_keys={SAGE_RUNTIME_ENV_EXPORT_KEY},
-    )
-    latest_source_change = _latest_audit_marker(
-        table_name="deployment_config",
-        config_keys=set(SAGE_RUNTIME_ENV_KEYS),
-    )
+def _sage_runtime_env_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
+    if audit_log is None:
+        latest_export = _latest_audit_marker(
+            table_name="deployment_config",
+            config_keys={SAGE_RUNTIME_ENV_EXPORT_KEY},
+        )
+        latest_source_change = _latest_audit_marker(
+            table_name="deployment_config",
+            config_keys=set(SAGE_RUNTIME_ENV_KEYS),
+        )
+    else:
+        latest_export = _latest_audit_marker_from_entries(
+            audit_log,
+            config_keys={SAGE_RUNTIME_ENV_EXPORT_KEY},
+        )
+        latest_source_change = _latest_audit_marker_from_entries(
+            audit_log,
+            config_keys=set(SAGE_RUNTIME_ENV_KEYS),
+        )
     if latest_export is None:
         return {
             "status": "not_generated",
@@ -215,6 +255,107 @@ def _sage_runtime_env_status() -> dict:
         "latest_export_at": latest_export[0].isoformat(),
         "latest_source_change_at": latest_source_change[0].isoformat() if latest_source_change else None,
     }
+
+
+def _runtime_env_comparison_status(
+    running_sage_config: Optional[Mapping[str, Any]] = None,
+) -> dict[str, Any]:
+    audit_log = _deployment_config_audit_log()
+    generated = _sage_runtime_env_status(audit_log)
+    restart = _restart_required_status(audit_log)
+    desired = _deployment_config_values_for_export(SAGE_RUNTIME_ENV_KEYS)
+    configured_desired = sum(1 for value in desired.values() if str(value or "").strip())
+    desired_fingerprint = _desired_sage_runtime_fingerprint()
+    running_status = "restart_required" if restart["restart_required"] else "not_directly_introspected"
+    running_fingerprint = None
+    if running_sage_config is not None:
+        running_fingerprint = _running_sage_runtime_fingerprint(running_sage_config)
+        running_status = "matches_desired" if running_fingerprint == desired_fingerprint else "drifted"
+    return {
+        "sage": {
+            "desired": {
+                "status": "configured" if configured_desired else "not_configured",
+                "configured_keys": configured_desired,
+                "total_keys": len(SAGE_RUNTIME_ENV_KEYS),
+                "fingerprint": desired_fingerprint,
+            },
+            "generated": generated,
+            "running": {
+                "status": running_status,
+                "summary": (
+                    "Sage running runtime config matches desired Deployment Settings."
+                    if running_status == "matches_desired"
+                    else "Sage running runtime config differs from desired Deployment Settings."
+                    if running_status == "drifted"
+                    else
+                    "Restart-required Deployment Settings changed since service start."
+                    if restart["restart_required"]
+                    else "Sage live runtime env is not directly introspected in this slice; use service health plus generated env freshness."
+                ),
+                "fingerprint": running_fingerprint,
+                "changed_keys_requiring_restart": [item["key"] for item in restart["changed_keys"]],
+            },
+        }
+    }
+
+
+def _runtime_config_fingerprint(payload: Mapping[str, Any]) -> str:
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _normalize_origin_for_sage(value: str) -> str:
+    parsed = urlparse(value.strip())
+    if not parsed.scheme or not parsed.netloc:
+        return value.strip().rstrip("/")
+    return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+
+def _desired_sage_runtime_fingerprint() -> str:
+    values = _deployment_config_values_for_export(SAGE_RUNTIME_ENV_KEYS)
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in (values.get("CORS_ORIGINS") or "").split(",")
+        if origin.strip()
+    ]
+    frontend_url = values.get("FRONTEND_URL") or ""
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    payload = {
+        "TINFOIL_API_URL": values.get("LLM_API_URL") or "",
+        "TINFOIL_API_KEY": {
+            "configured": bool(values.get("LLM_API_KEY")),
+            "fingerprint": hashlib.sha256((values.get("LLM_API_KEY") or "").encode("utf-8")).hexdigest()
+            if values.get("LLM_API_KEY")
+            else None,
+        },
+        "TINFOIL_MODEL": values.get("LLM_MODEL") or "",
+        "TINFOIL_EMBEDDING_MODEL": values.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
+def _running_sage_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
+    raw_origins = runtime_config.get("CORS_ORIGINS")
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in raw_origins
+        if isinstance(origin, str) and origin.strip()
+    ] if isinstance(raw_origins, list) else []
+    payload = {
+        "TINFOIL_API_URL": runtime_config.get("TINFOIL_API_URL") or "",
+        "TINFOIL_API_KEY": runtime_config.get("TINFOIL_API_KEY") or {"configured": False, "fingerprint": None},
+        "TINFOIL_MODEL": runtime_config.get("TINFOIL_MODEL") or "",
+        "TINFOIL_EMBEDDING_MODEL": runtime_config.get("TINFOIL_EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": runtime_config.get("FRONTEND_URL"),
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": runtime_config.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
 
 
 # Environment variable to config key mapping
@@ -1306,25 +1447,20 @@ def _runtime_env_readiness_item() -> dict:
     )
 
 
-def _restart_required_status() -> dict:
+def _restart_required_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
     restart_keys = database.get_restart_required_keys()
-    audit_log = database.get_config_audit_log(limit=100, table_name="deployment_config")
+    if audit_log is None:
+        audit_log = _deployment_config_audit_log()
 
     changed_requiring_restart = []
     for entry in audit_log:
         if entry["config_key"] in restart_keys:
-            try:
-                changed_at_str = entry["changed_at"]
-                changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
-                if changed_at.tzinfo is None:
-                    changed_at = changed_at.replace(tzinfo=timezone.utc)
-                if changed_at > SERVICE_START_TIME:
-                    changed_requiring_restart.append({
-                        "key": entry["config_key"],
-                        "changed_at": entry["changed_at"],
-                    })
-            except (ValueError, TypeError, AttributeError):
-                pass
+            changed_at = _parse_audit_changed_at(entry.get("changed_at"))
+            if changed_at is not None and changed_at > SERVICE_START_TIME:
+                changed_requiring_restart.append({
+                    "key": entry["config_key"],
+                    "changed_at": entry["changed_at"],
+                })
 
     return {
         "restart_required": len(changed_requiring_restart) > 0,
@@ -1415,11 +1551,28 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
     provider = (config_dict.get("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage")).strip().lower() or "sage"
     runtime_url = (os.getenv("SAGE_WEB_URL", "http://sage:3000")).rstrip("/")
     llm_health_url = runtime_url + "/health"
+    sage_runtime_config: Optional[Mapping[str, Any]] = None
 
     try:
         start = time.time()
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(llm_health_url)
+            if resp.status_code == 200:
+                try:
+                    fingerprint_resp = await client.get(
+                        runtime_url + "/internal/runtime-config/fingerprint",
+                        headers={"X-Internal-Agent-Token": os.getenv("INTERNAL_AGENT_TOKEN", "")},
+                    )
+                    if fingerprint_resp.status_code == 200:
+                        sage_runtime_config = (fingerprint_resp.json() or {}).get("runtime_config") or {}
+                    else:
+                        logger.warning(
+                            "Agent Runtime (%s) fingerprint check returned %s",
+                            provider,
+                            fingerprint_resp.status_code,
+                        )
+                except (httpx.RequestError, ValueError) as e:
+                    logger.warning(f"Agent Runtime ({provider}) fingerprint check failed: {e}")
         response_time = int((time.time() - start) * 1000)
         services.append(ServiceHealthItem(
             name=f"AI Runtime ({provider})",
@@ -1548,6 +1701,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
         services=services,
         restart_required=restart["restart_required"],
         changed_keys_requiring_restart=[item["key"] for item in restart["changed_keys"]],
+        runtime_env=_runtime_env_comparison_status(sage_runtime_config),
     )
 
 

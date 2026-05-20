@@ -570,6 +570,54 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(item["status"], "stale")
         self.assertEqual(item["severity"], "warning")
 
+    def test_service_health_includes_runtime_env_alignment_summary(self) -> None:
+        comparison = self.deployment_config._runtime_env_comparison_status()
+
+        self.assertIn("sage", comparison)
+        self.assertEqual(comparison["sage"]["generated"]["status"], "not_generated")
+        self.assertEqual(comparison["sage"]["desired"]["total_keys"], 7)
+        self.assertEqual(comparison["sage"]["running"]["status"], "not_directly_introspected")
+
+        export_response = self.client.get("/admin/deployment/config/runtime-env/sage")
+        self.assertEqual(export_response.status_code, 200)
+
+        comparison = self.deployment_config._runtime_env_comparison_status()
+        self.assertEqual(comparison["sage"]["generated"]["status"], "current")
+
+    def test_runtime_env_alignment_compares_running_sage_fingerprint_without_secrets(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+
+        running_config = {
+            "TINFOIL_API_URL": "http://tinfoil-proxy:8089/v1",
+            "TINFOIL_API_KEY": {
+                "configured": True,
+                "fingerprint": __import__("hashlib").sha256(b"configured-secret").hexdigest(),
+            },
+            "TINFOIL_MODEL": "kimi-k2-6",
+            "TINFOIL_EMBEDDING_MODEL": "nomic-embed-text",
+            "FRONTEND_URL": "http://localhost:5173",
+            "CORS_ORIGINS": ["http://localhost:5173"],
+            "SEARXNG_URL": "http://searxng:8080",
+        }
+
+        comparison = self.deployment_config._runtime_env_comparison_status(running_config)
+
+        self.assertEqual(comparison["sage"]["running"]["status"], "matches_desired")
+        self.assertNotIn("configured-secret", str(comparison))
+
+        running_config["TINFOIL_MODEL"] = "different-model"
+        comparison = self.deployment_config._runtime_env_comparison_status(running_config)
+        self.assertEqual(comparison["sage"]["running"]["status"], "drifted")
+
 
 if __name__ == "__main__":
     unittest.main()

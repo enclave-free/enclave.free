@@ -179,6 +179,25 @@ export interface ServiceHealthResponse {
   services: ServiceHealthItem[]
   restart_required: boolean
   changed_keys_requiring_restart: string[]
+  runtime_env?: {
+    sage?: {
+      desired?: {
+        status: string
+        configured_keys: number
+        total_keys: number
+      }
+      generated?: {
+        status: string
+        latest_export_at?: string | null
+        latest_source_change_at?: string | null
+      }
+      running?: {
+        status: string
+        summary: string
+        changed_keys_requiring_restart?: string[]
+      }
+    }
+  }
 }
 
 export interface DeploymentValidationResponse {

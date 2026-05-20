@@ -94,6 +94,14 @@ docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-c
 
 The product records when the Sage runtime env was exported and Deployment Readiness reports whether Deployment Settings changed afterward. Applying and restarting remains a Deployment responsibility, not a live product mutation.
 
+The Service Health panel also shows Runtime Config Alignment:
+
+- Desired: whether the Deployment Settings used by the Sage runtime env export are configured.
+- Generated: whether the exported Sage env is missing, current, or stale compared with desired Deployment Settings.
+- Running: whether Sage's safe internal runtime-config fingerprint matches the desired Deployment Settings when the Sage endpoint is reachable. If the fingerprint cannot be read, the panel falls back to restart-required evidence and service health.
+
+Sage exposes `GET /internal/runtime-config/fingerprint` for this comparison. The route requires `X-Internal-Agent-Token` and returns non-secret runtime values plus a fingerprint for secret-bearing values, not raw secret material.
+
 ## Health Checks
 
 `GET /admin/deployment/health` currently reports across the split system:

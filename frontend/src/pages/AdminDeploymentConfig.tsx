@@ -1328,6 +1328,17 @@ export function AdminDeploymentConfig() {
     }
   }
 
+  const runtimeStateClass = (status?: string) => {
+    if (status === 'current' || status === 'configured' || status === 'matches_desired') return 'border-success/20 bg-success/10 text-success'
+    if (status === 'stale' || status === 'restart_required' || status === 'not_generated' || status === 'drifted') return 'border-warning/20 bg-warning/10 text-warning'
+    return 'border-border bg-surface text-text-muted'
+  }
+
+  const formatRuntimeState = (status?: string) => {
+    if (!status) return t('adminDeployment.runtimeEnv.unknown', 'Unknown')
+    return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
   // Check if a config key is a secret (should be masked in audit log)
   const isSecretKey = (configKey: string): boolean => {
     if (!deploymentConfig) return false
@@ -2015,6 +2026,58 @@ export function AdminDeploymentConfig() {
           <p className="text-xs text-text-muted mb-4">
             {t('adminDeployment.serviceHealthHint', 'Green means the service is responding normally. If a service shows red, check its configuration below.')}
           </p>
+
+          {health?.runtime_env?.sage && (
+            <div className="rounded-lg border border-border p-3 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h4 className="text-sm font-medium text-text">
+                    {t('adminDeployment.runtimeEnv.title', 'Runtime Config Alignment')}
+                  </h4>
+                  <p className="text-xs text-text-muted mt-1">
+                    {t('adminDeployment.runtimeEnv.description', 'Compares desired Deployment Settings, generated Sage env, and observable running state.')}
+                  </p>
+                </div>
+                <button
+                  onClick={handleExportSageRuntimeEnv}
+                  className="shrink-0 flex items-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {t('adminDeployment.exportSageRuntimeEnv', 'Export Sage env')}
+                </button>
+              </div>
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.sage.desired?.status)}`}>
+                  <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.desired', 'Desired')}</p>
+                  <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.sage.desired?.status)}</p>
+                  <p className="text-xs mt-1 text-text-muted">
+                    {t('adminDeployment.runtimeEnv.configuredKeys', '{{count}} of {{total}} keys configured', {
+                      count: health.runtime_env.sage.desired?.configured_keys ?? 0,
+                      total: health.runtime_env.sage.desired?.total_keys ?? 0,
+                    })}
+                  </p>
+                </div>
+                <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.sage.generated?.status)}`}>
+                  <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.generated', 'Generated')}</p>
+                  <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.sage.generated?.status)}</p>
+                  <p className="text-xs mt-1 text-text-muted">
+                    {health.runtime_env.sage.generated?.latest_export_at
+                      ? t('adminDeployment.runtimeEnv.exportedAt', 'Exported {{time}}', {
+                          time: formatTimestamp(health.runtime_env.sage.generated.latest_export_at),
+                        })
+                      : t('adminDeployment.runtimeEnv.notExported', 'No Sage env export recorded')}
+                  </p>
+                </div>
+                <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.sage.running?.status)}`}>
+                  <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.running', 'Running')}</p>
+                  <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.sage.running?.status)}</p>
+                  <p className="text-xs mt-1 text-text-muted">
+                    {health.runtime_env.sage.running?.summary || t('adminDeployment.runtimeEnv.runningUnknown', 'Running state is not directly introspected yet.')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div
             id="restart-required"
