@@ -929,6 +929,10 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             ("SEARXNG_URL", "http://searxng:8080"),
         ):
             self.database.update_deployment_config(key, value, "admin-pubkey")
+        os.environ["LLM_API_URL"] = "http://running-core-backend:8080/v1"
+        os.environ["LLM_API_KEY"] = "configured-secret"
+        os.environ["LLM_MODEL"] = "running-model"
+        os.environ["EMBEDDING_MODEL"] = "running-embedding"
 
         misplaced = self.client.get("/admin/deployment/internal/runtime-config/fingerprint")
         self.assertEqual(misplaced.status_code, 404)
