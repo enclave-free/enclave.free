@@ -358,6 +358,22 @@ def _running_sage_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
     return _runtime_config_fingerprint(payload)
 
 
+async def _fetch_sage_running_runtime_config() -> Optional[Mapping[str, Any]]:
+    runtime_url = (os.getenv("SAGE_WEB_URL", "http://sage:3000")).rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            fingerprint_resp = await client.get(
+                runtime_url + "/internal/runtime-config/fingerprint",
+                headers={"X-Internal-Agent-Token": os.getenv("INTERNAL_AGENT_TOKEN", "")},
+            )
+        if fingerprint_resp.status_code == 200:
+            return (fingerprint_resp.json() or {}).get("runtime_config") or {}
+        logger.warning("Agent Runtime fingerprint check returned %s", fingerprint_resp.status_code)
+    except (httpx.RequestError, ValueError) as e:
+        logger.warning(f"Agent Runtime fingerprint check failed: {e}")
+    return None
+
+
 # Environment variable to config key mapping
 # These are the keys we allow managing through the UI
 ENV_CONFIG_MAP = {
@@ -1414,22 +1430,45 @@ def _restart_readiness_item() -> dict:
     )
 
 
-def _runtime_env_readiness_item() -> dict:
-    status = _sage_runtime_env_status()
-    if status["status"] == "current":
+def _runtime_env_readiness_item(running_sage_config: Optional[Mapping[str, Any]] = None) -> dict:
+    comparison = _runtime_env_comparison_status(running_sage_config)
+    sage = comparison["sage"]
+    generated_status = sage["generated"]["status"]
+    running_status = sage["running"]["status"]
+    if generated_status == "current" and running_status == "matches_desired":
         return _readiness_item(
             key="sage_runtime_env",
-            label="Sage Runtime Env",
+            label="Sage Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="matches_desired",
+            summary="Running Sage runtime config matches desired Deployment Settings.",
+            next_action="No action required.",
+        )
+    if generated_status == "current" and running_status == "drifted":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="drifted",
+            summary="Running Sage runtime config differs from desired Deployment Settings.",
+            next_action="Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage.",
+        )
+    if generated_status == "current":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Config",
             source="runtime_env",
             severity="ready",
             status="current",
             summary="Sage runtime env has been generated from current Deployment Settings.",
             next_action="No action required unless the generated artifact has not been applied to the Deployment.",
         )
-    if status["status"] == "stale":
+    if generated_status == "stale":
         return _readiness_item(
             key="sage_runtime_env",
-            label="Sage Runtime Env",
+            label="Sage Runtime Config",
             source="runtime_env",
             severity="warning",
             status="stale",
@@ -1438,7 +1477,7 @@ def _runtime_env_readiness_item() -> dict:
         )
     return _readiness_item(
         key="sage_runtime_env",
-        label="Sage Runtime Env",
+        label="Sage Runtime Config",
         source="runtime_env",
         severity="warning",
         status="not_generated",
@@ -1468,7 +1507,7 @@ def _restart_required_status(audit_log: Optional[list[Mapping[str, Any]]] = None
     }
 
 
-def deployment_readiness_summary() -> dict:
+def deployment_readiness_summary(running_sage_config: Optional[Mapping[str, Any]] = None) -> dict:
     from lifecycle import get_lifecycle_status
 
     lifecycle_status = get_lifecycle_status()
@@ -1478,7 +1517,7 @@ def deployment_readiness_summary() -> dict:
         _lifecycle_readiness_item(lifecycle_status),
         _unsupported_surface_readiness_item(lifecycle_status),
         _backup_restore_readiness_item(),
-        _runtime_env_readiness_item(),
+        _runtime_env_readiness_item(running_sage_config),
         _restart_readiness_item(),
         _readiness_item(
             key="service_health",
@@ -1511,7 +1550,8 @@ async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)) ->
     Summarize Deployment Readiness for a Single-Instance Deployment.
     Requires admin authentication.
     """
-    return deployment_readiness_summary()
+    running_sage_config = await _fetch_sage_running_runtime_config()
+    return deployment_readiness_summary(running_sage_config)
 
 
 @router.get("/health", response_model=ServiceHealthResponse)
@@ -1558,21 +1598,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(llm_health_url)
             if resp.status_code == 200:
-                try:
-                    fingerprint_resp = await client.get(
-                        runtime_url + "/internal/runtime-config/fingerprint",
-                        headers={"X-Internal-Agent-Token": os.getenv("INTERNAL_AGENT_TOKEN", "")},
-                    )
-                    if fingerprint_resp.status_code == 200:
-                        sage_runtime_config = (fingerprint_resp.json() or {}).get("runtime_config") or {}
-                    else:
-                        logger.warning(
-                            "Agent Runtime (%s) fingerprint check returned %s",
-                            provider,
-                            fingerprint_resp.status_code,
-                        )
-                except (httpx.RequestError, ValueError) as e:
-                    logger.warning(f"Agent Runtime ({provider}) fingerprint check failed: {e}")
+                sage_runtime_config = await _fetch_sage_running_runtime_config()
         response_time = int((time.time() - start) * 1000)
         services.append(ServiceHealthItem(
             name=f"AI Runtime ({provider})",

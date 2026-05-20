@@ -570,6 +570,116 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(item["status"], "stale")
         self.assertEqual(item["severity"], "warning")
 
+    def test_deployment_readiness_reports_drifted_running_sage_runtime_config(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+        export_response = self.client.get("/admin/deployment/config/runtime-env/sage")
+        self.assertEqual(export_response.status_code, 200)
+
+        running_config = {
+            "TINFOIL_API_URL": "http://tinfoil-proxy:8089/v1",
+            "TINFOIL_API_KEY": {
+                "configured": True,
+                "fingerprint": hashlib.sha256(b"configured-secret").hexdigest(),
+            },
+            "TINFOIL_MODEL": "different-model",
+            "TINFOIL_EMBEDDING_MODEL": "nomic-embed-text",
+            "FRONTEND_URL": "http://localhost:5173",
+            "CORS_ORIGINS": ["http://localhost:5173"],
+            "SEARXNG_URL": "http://searxng:8080",
+        }
+
+        item = self.deployment_config._runtime_env_readiness_item(running_config)
+
+        self.assertEqual(item["status"], "drifted")
+        self.assertEqual(item["severity"], "warning")
+        self.assertIn("differs from desired Deployment Settings", item["summary"])
+        self.assertIn("Investigate Sage runtime config drift", item["next_action"])
+
+    def test_deployment_readiness_reports_matching_running_sage_runtime_config(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+        export_response = self.client.get("/admin/deployment/config/runtime-env/sage")
+        self.assertEqual(export_response.status_code, 200)
+
+        running_config = {
+            "TINFOIL_API_URL": "http://tinfoil-proxy:8089/v1",
+            "TINFOIL_API_KEY": {
+                "configured": True,
+                "fingerprint": hashlib.sha256(b"configured-secret").hexdigest(),
+            },
+            "TINFOIL_MODEL": "kimi-k2-6",
+            "TINFOIL_EMBEDDING_MODEL": "nomic-embed-text",
+            "FRONTEND_URL": "http://localhost:5173",
+            "CORS_ORIGINS": ["http://localhost:5173"],
+            "SEARXNG_URL": "http://searxng:8080",
+        }
+
+        item = self.deployment_config._runtime_env_readiness_item(running_config)
+
+        self.assertEqual(item["status"], "matches_desired")
+        self.assertEqual(item["severity"], "ready")
+        self.assertIn("matches desired Deployment Settings", item["summary"])
+
+    def test_deployment_readiness_endpoint_reports_sage_runtime_config_drift(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+        export_response = self.client.get("/admin/deployment/config/runtime-env/sage")
+        self.assertEqual(export_response.status_code, 200)
+
+        async def fake_running_config():
+            return {
+                "TINFOIL_API_URL": "http://tinfoil-proxy:8089/v1",
+                "TINFOIL_API_KEY": {
+                    "configured": True,
+                    "fingerprint": hashlib.sha256(b"configured-secret").hexdigest(),
+                },
+                "TINFOIL_MODEL": "different-model",
+                "TINFOIL_EMBEDDING_MODEL": "nomic-embed-text",
+                "FRONTEND_URL": "http://localhost:5173",
+                "CORS_ORIGINS": ["http://localhost:5173"],
+                "SEARXNG_URL": "http://searxng:8080",
+            }
+
+        original_fetch = getattr(self.deployment_config, "_fetch_sage_running_runtime_config", None)
+        self.deployment_config._fetch_sage_running_runtime_config = fake_running_config
+        try:
+            response = self.client.get("/admin/deployment/readiness")
+        finally:
+            if original_fetch is None:
+                delattr(self.deployment_config, "_fetch_sage_running_runtime_config")
+            else:
+                self.deployment_config._fetch_sage_running_runtime_config = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        items_by_key = {item["key"]: item for item in response.json()["items"]}
+        self.assertEqual(items_by_key["sage_runtime_env"]["status"], "drifted")
+        self.assertEqual(items_by_key["sage_runtime_env"]["severity"], "warning")
+
     def test_service_health_includes_runtime_env_alignment_summary(self) -> None:
         comparison = self.deployment_config._runtime_env_comparison_status()
 
