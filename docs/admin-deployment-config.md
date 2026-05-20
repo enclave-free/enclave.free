@@ -36,7 +36,7 @@ It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to
 | `enclave_web` startup, Postgres memory, AI turn execution | Sage | `sage` container env |
 | Model Provider transport | Tinfoil proxy | `tinfoil-proxy` container |
 
-Important consequence: changing admin deployment config records desired Deployment Settings. It does not mutate live Sage process state until the Operator or Deployment Automation applies generated runtime env and restarts affected services.
+Important consequence: changing admin deployment config records desired Deployment Settings. It does not mutate live Sage process state until the Operator applies generated runtime env and restarts affected services.
 
 ## Model Provider Deployment Settings On This Prototype
 
@@ -176,7 +176,7 @@ Post-Apply Evidence Checklist:
 
 1. Confirm generated artifact freshness is current in Deployment Readiness.
 2. Confirm service restart or recreate evidence comes from the Deployment,
-   such as the operator terminal, deployment logs, or external automation logs.
+   such as the operator terminal or deployment logs.
 3. Confirm Service Health is healthy for the affected service.
 4. Confirm the runtime fingerprint reports `matches_desired` where a safe
    fingerprint endpoint exists.

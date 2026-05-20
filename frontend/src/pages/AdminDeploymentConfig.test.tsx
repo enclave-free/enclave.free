@@ -665,7 +665,7 @@ describe('AdminDeploymentConfig', () => {
     expect(await screen.findByText('Sage env exported')).toBeInTheDocument()
     expect(screen.getByText('Treat sage.env as sensitive deployment material.')).toBeInTheDocument()
     expect(screen.getByText('docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage')).toBeInTheDocument()
-    expect(screen.getByText('Exporting the artifact does not change the running Sage process until an Operator or Deployment Automation applies it and restarts Sage.')).toBeInTheDocument()
+    expect(screen.getByText('Exporting the artifact does not change the running Sage process until an Operator applies it and restarts Sage.')).toBeInTheDocument()
   })
 
   it('lets admins export a core-backend runtime env artifact with apply guidance', async () => {
@@ -688,7 +688,7 @@ describe('AdminDeploymentConfig', () => {
     expect(await screen.findByText('Core-backend env exported')).toBeInTheDocument()
     expect(screen.getByText('Treat core-backend.env as sensitive deployment material.')).toBeInTheDocument()
     expect(screen.getByText('docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend')).toBeInTheDocument()
-    expect(screen.getByText('Exporting the artifact does not change the running backend process until an Operator or Deployment Automation applies it and restarts core-backend.')).toBeInTheDocument()
+    expect(screen.getByText('Exporting the artifact does not change the running backend process until an Operator applies it and restarts core-backend.')).toBeInTheDocument()
   })
 
   it('shows desired generated and running runtime config alignment', async () => {

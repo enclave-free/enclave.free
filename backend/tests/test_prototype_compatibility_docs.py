@@ -144,7 +144,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("The product must not apply generated artifacts to live services", normalized)
         self.assertIn("must not require Docker socket or host-control authority", normalized)
         self.assertIn("Product-managed apply/restart is rejected for this prototype", normalized)
-        self.assertIn("external Deployment Automation remains a future option only behind a separate auth, audit, and evidence contract", normalized)
+        self.assertIn("External Deployment Automation is out of scope until a concrete deployment need exists", normalized)
 
     def test_admin_deployment_docs_cover_post_apply_evidence_checklist(self) -> None:
         deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
@@ -153,6 +153,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("Post-Apply Evidence Checklist", normalized)
         self.assertIn("generated artifact freshness is current", normalized)
         self.assertIn("service restart or recreate evidence comes from the Deployment", normalized)
+        self.assertIn("operator terminal or deployment logs", normalized)
         self.assertIn("Service Health is healthy for the affected service", normalized)
         self.assertIn("runtime fingerprint reports `matches_desired` where a safe fingerprint endpoint exists", normalized)
         self.assertIn("the product still did not apply the artifact, rewrite bootstrap env, or restart the service", normalized)

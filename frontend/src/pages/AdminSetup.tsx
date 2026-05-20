@@ -259,23 +259,17 @@ export function AdminSetup() {
         >
           <div className="label mb-2">{t('adminDashboard.humanReviewTitle', 'Human review handoff')}</div>
           <p className="text-sm font-medium text-text">
-            {t('adminDashboard.humanReviewStatus', 'External Deployment Automation contract review required')}
+            {t('adminDashboard.humanReviewStatus', 'White-glove deployment support required')}
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            {t('adminDashboard.humanReviewBody', 'Operator-run runtime env apply is decided; design any future external Deployment Automation contract in issue #190.')}
+            {t('adminDashboard.humanReviewBody', 'Runtime env apply stays explicit: export artifacts, apply them with operator support, restart affected services, and verify readiness evidence.')}
           </p>
           <div className="mt-3 flex flex-wrap gap-4">
             <a
-              href="https://github.com/enclave-free/enclave.free-prototype/issues/190"
+              href="/admin/deployment"
               className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
             >
-              {t('adminDashboard.humanReviewAction', 'Open issue #190')}
-            </a>
-            <a
-              href="https://github.com/enclave-free/enclave.free-prototype/issues/new?labels=enhancement&title=Deployment%20Automation%20contract%20follow-up&body=Follow-up%20from%20issue%20%23190%20external%20Deployment%20Automation%20contract%20review."
-              className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
-            >
-              {t('adminDashboard.humanReviewFollowUpAction', 'Create automation-contract follow-up')}
+              {t('adminDashboard.humanReviewAction', 'Review Deployment Readiness')}
             </a>
           </div>
         </section>

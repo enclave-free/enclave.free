@@ -1,6 +1,6 @@
 # Deployment Settings Generate Runtime Env
 
-Deployment Settings are the product source of truth for operator-controlled desired runtime configuration, but running services may remain stale until the Deployment applies that desired state. The first unification slice generates an auditable runtime env artifact from Deployment Settings for operator-facing integration and origin settings; the Operator or Deployment Automation applies that artifact by restarting affected services. This avoids live process mutation, avoids giving the product host/container restart authority, and keeps root bootstrap environment files separate from product-managed desired configuration.
+Deployment Settings are the product source of truth for operator-controlled desired runtime configuration, but running services may remain stale until the Deployment applies that desired state. The first unification slice generates an auditable runtime env artifact from Deployment Settings for operator-facing integration and origin settings; the Operator applies that artifact during white-glove deployment support by restarting affected services. This avoids live process mutation, avoids giving the product host/container restart authority, and keeps root bootstrap environment files separate from product-managed desired configuration.
 
 Sage may expose an internal runtime-config fingerprint endpoint so the Enclave Control Plane can compare desired Deployment Settings with running Sage configuration without exposing raw secrets.
 
@@ -12,12 +12,9 @@ Docker socket or host-control authority.
 
 The product must not apply generated artifacts to live services.
 
-Product-managed apply/restart is rejected for this prototype. An external
-Deployment Automation remains a future option only behind a separate auth,
-audit, and evidence contract. That future contract must identify the actor,
-record artifact fingerprint evidence, record service restart or recreate
-evidence, and verify post-apply runtime fingerprints where safe fingerprint
-endpoints exist.
+Product-managed apply/restart is rejected for this prototype. External
+Deployment Automation is out of scope until a concrete deployment need exists;
+white-glove operator support is the intended path for early admins.
 
 Considered options:
 

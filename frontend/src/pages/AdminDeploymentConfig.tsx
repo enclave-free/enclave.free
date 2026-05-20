@@ -2176,7 +2176,7 @@ export function AdminDeploymentConfig() {
                     docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend
                   </code>
                   <p className="mt-2 text-xs text-text-secondary">
-                    {t('adminDeployment.runtimeEnv.coreExportDoesNotApply', 'Exporting the artifact does not change the running backend process until an Operator or Deployment Automation applies it and restarts core-backend.')}
+                    {t('adminDeployment.runtimeEnv.coreExportDoesNotApply', 'Exporting the artifact does not change the running backend process until an Operator applies it and restarts core-backend.')}
                   </p>
                 </div>
               )}
@@ -2192,7 +2192,7 @@ export function AdminDeploymentConfig() {
                     docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
                   </code>
                   <p className="mt-2 text-xs text-text-secondary">
-                    {t('adminDeployment.runtimeEnv.exportDoesNotApply', 'Exporting the artifact does not change the running Sage process until an Operator or Deployment Automation applies it and restarts Sage.')}
+                    {t('adminDeployment.runtimeEnv.exportDoesNotApply', 'Exporting the artifact does not change the running Sage process until an Operator applies it and restarts Sage.')}
                   </p>
                 </div>
               )}
