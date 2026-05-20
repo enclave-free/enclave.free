@@ -265,12 +265,12 @@ export function AdminSetup() {
             {t('adminDashboard.humanReviewBody', 'Runtime env apply stays explicit: export artifacts, apply them with operator support, restart affected services, and verify readiness evidence.')}
           </p>
           <div className="mt-3 flex flex-wrap gap-4">
-            <a
-              href="/admin/deployment"
+            <Link
+              to="/admin/deployment"
               className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
             >
               {t('adminDashboard.humanReviewAction', 'Review Deployment Readiness')}
-            </a>
+            </Link>
           </div>
         </section>
 

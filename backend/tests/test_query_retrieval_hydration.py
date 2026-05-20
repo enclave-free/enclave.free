@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from fastapi import FastAPI
@@ -69,7 +70,10 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
 
         self.original_internal_embed_texts = self.internal_agent.embed_texts
 
-        self.internal_agent.embed_texts = lambda _texts: [[0.1, 0.2, 0.3]]
+        def embed_texts(_texts: list[str]) -> list[list[float]]:
+            return [[0.1, 0.2, 0.3]]
+
+        self.internal_agent.embed_texts = embed_texts
 
     def tearDown(self) -> None:
         self.internal_agent.embed_texts = self.original_internal_embed_texts
@@ -112,7 +116,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Handbook.md",
             text="Encrypted retrieval context reaches the model.",
         )
-        def fake_post(*_args, **_kwargs):
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
             return FakeQdrantResponse([
                 {
                     "score": 0.93,
@@ -164,7 +168,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Benefits Guide.md",
             text="Dental benefits include two preventive visits each year.",
         )
-        def fake_post(*_args, **_kwargs):
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
             return FakeQdrantResponse([
                 {
                     "score": 0.91,
@@ -229,7 +233,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         )
         captured_payloads = []
 
-        def fake_post(_url, json, **_kwargs):
+        def fake_post(_url: str, json: dict[str, Any], **_kwargs: Any) -> FakeQdrantResponse:
             captured_payloads.append(json)
             return FakeQdrantResponse([
                 {
@@ -297,7 +301,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         )
         captured_payloads = []
 
-        def fake_post(_url, json, **_kwargs):
+        def fake_post(_url: str, json: dict[str, Any], **_kwargs: Any) -> FakeQdrantResponse:
             captured_payloads.append(json)
             return FakeQdrantResponse([
                 {
@@ -361,7 +365,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Policy.md",
             text="The replacement policy says the new rule applies.",
         )
-        def fake_post(*_args, **_kwargs):
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
             return FakeQdrantResponse([
                 {
                     "score": 0.99,
@@ -413,7 +417,11 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             text="Deleted guide text must not be hydrated into context.",
         )
         embed_calls = []
-        self.internal_agent.embed_texts = lambda texts: embed_calls.append(texts) or [[0.1, 0.2, 0.3]]
+        def embed_texts(texts: list[str]) -> list[list[float]]:
+            embed_calls.append(texts)
+            return [[0.1, 0.2, 0.3]]
+
+        self.internal_agent.embed_texts = embed_texts
         with patch.object(self.internal_agent.httpx, "post") as fake_post:
             response = self.client.post(
                 "/internal/agent/document-search",
@@ -442,7 +450,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Blocked.md",
             text="This unauthorized passage must not enter context.",
         )
-        def fake_post(*_args, **_kwargs):
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
             return FakeQdrantResponse([
                 {
                     "score": 0.71,
@@ -472,7 +480,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
 
     def test_query_handles_missing_deleted_retrieval_chunk_without_payload_text(self) -> None:
         self.create_completed_document("job-1")
-        def fake_post(*_args, **_kwargs):
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
             return FakeQdrantResponse([
                 {
                     "score": 0.5,

@@ -32,7 +32,7 @@ describe('Instance defaults', () => {
   afterEach(async () => {
     cleanup()
     vi.unstubAllGlobals()
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
     document.documentElement.classList.remove('dark')
     await i18n.changeLanguage('en')
   })

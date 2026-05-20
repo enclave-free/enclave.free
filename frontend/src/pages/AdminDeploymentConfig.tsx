@@ -442,6 +442,9 @@ export function AdminDeploymentConfig() {
       }
     }
     if (item.source === 'runtime_env') {
+      if (!health?.runtime_env?.sage) {
+        return null
+      }
       return {
         href: '#runtime-config-alignment',
         label: t('adminDeployment.readiness.reviewRuntimeEnv', 'Review Runtime Env Export'),
@@ -1709,7 +1712,7 @@ export function AdminDeploymentConfig() {
   const renderDeploymentReadinessPanel = () => {
     const summary = deploymentReadiness?.summary
     const items = deploymentReadiness?.items ?? []
-    const status = deploymentReadiness?.status ?? 'loading'
+    const status = deploymentReadiness?.status ?? (readinessLoading ? 'loading' : (readinessError ? 'failed' : 'unknown'))
     const wizardItem = items[Math.min(readinessWizardIndex, Math.max(items.length - 1, 0))]
     const wizardTarget = wizardItem ? readinessReviewTarget(wizardItem) : null
     const isBlocked = status === 'blocked'
@@ -1802,12 +1805,14 @@ export function AdminDeploymentConfig() {
                     {formatReadinessSeverity(item.severity)}
                   </span>
                 </div>
-                <a
-                  href={target.href}
-                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent-hover"
-                >
-                  {target.label}
-                </a>
+                {target && (
+                  <a
+                    href={target.href}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent-hover"
+                  >
+                    {target.label}
+                  </a>
+                )}
                 {item.conversation_blocking && (
                   <p className="mt-2 text-xs font-medium text-error">
                     {t('adminDeployment.readiness.conversationBlocking', 'Blocks normal Conversations')}

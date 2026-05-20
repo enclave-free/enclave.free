@@ -30,6 +30,9 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_mock_email = os.environ.get("MOCK_EMAIL")
         self._orig_mock_smtp = os.environ.get("MOCK_SMTP")
         self._orig_llm_api_key = os.environ.get("LLM_API_KEY")
+        self._orig_llm_api_url = os.environ.get("LLM_API_URL")
+        self._orig_llm_model = os.environ.get("LLM_MODEL")
+        self._orig_embedding_model = os.environ.get("EMBEDDING_MODEL")
         self._orig_protected_inference_bypass = os.environ.get("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS")
         self._orig_simulate_user_auth = os.environ.get("SIMULATE_USER_AUTH")
         self._orig_simulate_admin_auth = os.environ.get("SIMULATE_ADMIN_AUTH")
@@ -45,6 +48,9 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
         os.environ["MOCK_EMAIL"] = "false"
         os.environ.pop("LLM_API_KEY", None)
+        os.environ.pop("LLM_API_URL", None)
+        os.environ.pop("LLM_MODEL", None)
+        os.environ.pop("EMBEDDING_MODEL", None)
         os.environ.pop("MOCK_SMTP", None)
         os.environ.pop("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", None)
         os.environ.pop("SIMULATE_USER_AUTH", None)
@@ -68,6 +74,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
 
         app = FastAPI()
         app.include_router(self.deployment_config.router)
+        app.include_router(self.deployment_config.internal_router)
         app.dependency_overrides[self.auth.require_admin] = lambda: {
             "type": "admin",
             "pubkey": "admin-pubkey",
@@ -84,6 +91,9 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("MOCK_EMAIL", self._orig_mock_email)
         self._restore_env("MOCK_SMTP", self._orig_mock_smtp)
         self._restore_env("LLM_API_KEY", self._orig_llm_api_key)
+        self._restore_env("LLM_API_URL", self._orig_llm_api_url)
+        self._restore_env("LLM_MODEL", self._orig_llm_model)
+        self._restore_env("EMBEDDING_MODEL", self._orig_embedding_model)
         self._restore_env("PROTECTED_INFERENCE_DEVELOPMENT_BYPASS", self._orig_protected_inference_bypass)
         self._restore_env("SIMULATE_USER_AUTH", self._orig_simulate_user_auth)
         self._restore_env("SIMULATE_ADMIN_AUTH", self._orig_simulate_admin_auth)
@@ -781,8 +791,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         items_by_key = {item["key"]: item for item in response.json()["items"]}
         self.assertEqual(items_by_key["sage_runtime_env"]["status"], "drifted")
         self.assertEqual(items_by_key["sage_runtime_env"]["severity"], "warning")
-        self.assertEqual(items_by_key["core_backend_runtime_env"]["status"], "matches_desired")
-        self.assertEqual(items_by_key["core_backend_runtime_env"]["severity"], "ready")
+        self.assertEqual(items_by_key["core_backend_runtime_env"]["status"], "not_generated")
+        self.assertEqual(items_by_key["core_backend_runtime_env"]["severity"], "not_ready")
 
     def test_service_health_includes_runtime_env_alignment_summary(self) -> None:
         comparison = self.deployment_config._runtime_env_comparison_status()
@@ -814,6 +824,10 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
             ("SEARXNG_URL", "http://searxng:8080"),
         ):
             self.database.update_deployment_config(key, value, "admin-pubkey")
+        os.environ["LLM_API_URL"] = "http://running-core-backend:8080/v1"
+        os.environ["LLM_API_KEY"] = "configured-secret"
+        os.environ["LLM_MODEL"] = "running-model"
+        os.environ["EMBEDDING_MODEL"] = "running-embedding"
 
         async def fake_sage_config():
             return None
@@ -827,7 +841,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         core_backend = response.json()["runtime_env"]["core_backend"]
-        self.assertEqual(core_backend["running"]["status"], "matches_desired")
+        self.assertEqual(core_backend["running"]["status"], "drifted")
         self.assertNotIn("configured-secret", json.dumps(core_backend))
 
     def test_runtime_env_alignment_compares_running_sage_fingerprint_without_secrets(self) -> None:
@@ -916,26 +930,29 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         ):
             self.database.update_deployment_config(key, value, "admin-pubkey")
 
-        missing = self.client.get("/admin/deployment/internal/runtime-config/fingerprint")
+        misplaced = self.client.get("/admin/deployment/internal/runtime-config/fingerprint")
+        self.assertEqual(misplaced.status_code, 404)
+
+        missing = self.client.get("/internal/runtime-config/fingerprint")
         self.assertEqual(missing.status_code, 403)
 
         wrong = self.client.get(
-            "/admin/deployment/internal/runtime-config/fingerprint",
+            "/internal/runtime-config/fingerprint",
             headers={"X-Internal-Agent-Token": "wrong-token"},
         )
         self.assertEqual(wrong.status_code, 403)
 
         response = self.client.get(
-            "/admin/deployment/internal/runtime-config/fingerprint",
+            "/internal/runtime-config/fingerprint",
             headers={"X-Internal-Agent-Token": "internal-test-token"},
         )
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["service"], "core-backend")
-        self.assertEqual(payload["runtime_config"]["LLM_API_URL"], "http://tinfoil-proxy:8089/v1")
-        self.assertEqual(payload["runtime_config"]["LLM_MODEL"], "kimi-k2-6")
-        self.assertEqual(payload["runtime_config"]["EMBEDDING_MODEL"], "nomic-embed-text")
+        self.assertEqual(payload["runtime_config"]["LLM_API_URL"], "http://running-core-backend:8080/v1")
+        self.assertEqual(payload["runtime_config"]["LLM_MODEL"], "running-model")
+        self.assertEqual(payload["runtime_config"]["EMBEDDING_MODEL"], "running-embedding")
         self.assertEqual(payload["runtime_config"]["LLM_API_KEY"]["configured"], True)
         self.assertEqual(
             payload["runtime_config"]["LLM_API_KEY"]["fingerprint"],

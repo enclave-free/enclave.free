@@ -40,6 +40,7 @@ logger = logging.getLogger("enclave.deployment_config")
 SERVICE_START_TIME = datetime.now(timezone.utc)
 
 router = APIRouter(prefix="/admin/deployment", tags=["deployment"])
+internal_router = APIRouter(prefix="/internal", tags=["internal"])
 
 # High-risk export endpoint limiter (best-effort in-memory)
 def _parse_rate_limit() -> int:
@@ -497,6 +498,32 @@ def _core_backend_runtime_config_payload() -> dict[str, Any]:
         "FRONTEND_URL": frontend_url or None,
         "CORS_ORIGINS": origins,
         "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+
+
+def fetch_running_core_backend_config() -> dict[str, Any]:
+    raw_origins = os.getenv("CORS_ORIGINS", "")
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in raw_origins.split(",")
+        if origin.strip()
+    ]
+    frontend_url = os.getenv("FRONTEND_URL", "")
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    api_key = os.getenv("LLM_API_KEY", "")
+    return {
+        "LLM_API_URL": os.getenv("LLM_API_URL", ""),
+        "LLM_API_KEY": {
+            "configured": bool(api_key),
+            "fingerprint": hashlib.sha256(api_key.encode("utf-8")).hexdigest() if api_key else None,
+        },
+        "LLM_MODEL": os.getenv("LLM_MODEL", ""),
+        "EMBEDDING_MODEL": os.getenv("EMBEDDING_MODEL", ""),
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": os.getenv("SEARXNG_URL", ""),
     }
 
 
@@ -1103,7 +1130,7 @@ async def export_core_backend_runtime_env(
     return content
 
 
-@router.get("/internal/runtime-config/fingerprint", response_model=dict)
+@internal_router.get("/runtime-config/fingerprint", response_model=dict)
 async def get_core_backend_runtime_config_fingerprint(
     x_internal_agent_token: Optional[str] = Header(default=None),
 ) -> dict:
@@ -1114,7 +1141,7 @@ async def get_core_backend_runtime_config_fingerprint(
     _require_internal_agent_token(x_internal_agent_token)
     return {
         "service": "core-backend",
-        "runtime_config": _core_backend_runtime_config_payload(),
+        "runtime_config": fetch_running_core_backend_config(),
     }
 
 
@@ -1752,7 +1779,7 @@ def _core_backend_runtime_env_readiness_item(
         key="core_backend_runtime_env",
         label="Core Backend Runtime Config",
         source="runtime_env",
-        severity="warning",
+        severity="not_ready",
         status="not_generated",
         summary="Core-backend runtime env has not been generated from Deployment Settings yet.",
         next_action="Export the core-backend runtime env before treating Deployment Settings as applied to core-backend.",
@@ -1830,7 +1857,7 @@ async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)) ->
     running_sage_config = await _fetch_sage_running_runtime_config()
     return deployment_readiness_summary(
         running_sage_config,
-        running_core_backend_config=_core_backend_runtime_config_payload(),
+        running_core_backend_config=fetch_running_core_backend_config(),
     )
 
 
@@ -2009,7 +2036,7 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
         changed_keys_requiring_restart=[item["key"] for item in restart["changed_keys"]],
         runtime_env=_runtime_env_comparison_status(
             sage_runtime_config,
-            running_core_backend_config=_core_backend_runtime_config_payload(),
+            running_core_backend_config=fetch_running_core_backend_config(),
         ),
     )
 

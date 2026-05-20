@@ -90,10 +90,16 @@ describe('AdminDeploymentConfig', () => {
       removeItem: vi.fn(),
       setItem: vi.fn(),
     })
-    vi.stubGlobal('URL', {
+    const nativeUrl = globalThis.URL
+    function MockUrl(input: string | URL, base?: string | URL) {
+      return new nativeUrl(input, base)
+    }
+    Object.setPrototypeOf(MockUrl, nativeUrl)
+    MockUrl.prototype = nativeUrl.prototype
+    vi.stubGlobal('URL', Object.assign(MockUrl, {
       createObjectURL: vi.fn(() => 'blob:test-sage-env'),
       revokeObjectURL: vi.fn(),
-    })
+    }))
 
     mockAdminFetch.mockImplementation((endpoint: string, options?: RequestInit) => {
       if (endpoint === '/admin/deployment/config') {

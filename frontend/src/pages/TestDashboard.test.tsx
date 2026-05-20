@@ -141,6 +141,6 @@ describe('TestDashboard', () => {
     expect(screen.getByRole('group', { name: 'Successful requests' })).toHaveTextContent('10')
     })
     expect(screen.getByRole('group', { name: 'Blocked requests' })).toHaveTextContent('1')
-    expect(fetchMock.mock.calls.filter(([url]) => !String(url).includes('/settings/public'))).toHaveLength(11)
+    expect(fetchMock.mock.calls.filter(([url]) => !url.includes('/settings/public'))).toHaveLength(11)
   })
 })
