@@ -6,11 +6,12 @@ Handles environment settings, service health checks, and .env management.
 import os
 import time
 import json
+import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Final, Mapping, Optional
 from urllib.parse import ParseResult, urlparse
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
 import httpx
@@ -39,6 +40,7 @@ logger = logging.getLogger("enclave.deployment_config")
 SERVICE_START_TIME = datetime.now(timezone.utc)
 
 router = APIRouter(prefix="/admin/deployment", tags=["deployment"])
+internal_router = APIRouter(prefix="/internal", tags=["internal"])
 
 # High-risk export endpoint limiter (best-effort in-memory)
 def _parse_rate_limit() -> int:
@@ -51,6 +53,10 @@ config_export_limiter = RateLimiter(
     limit=_parse_rate_limit(),
     window_seconds=60 * 60,
 )
+
+
+async def check_config_export_rate_limit(request: Request) -> None:
+    await config_export_limiter(request)
 
 
 def current_expected_claims() -> dict:
@@ -118,6 +124,429 @@ def _configured_model_provider() -> dict:
         "provider_endpoint": database.get_deployment_config_value("LLM_API_URL") or os.getenv("LLM_API_URL", ""),
         "model_identifier": database.get_deployment_config_value("LLM_MODEL") or os.getenv("LLM_MODEL", ""),
     }
+
+
+def _dotenv_quote(value: str) -> str:
+    """Quote values that would be ambiguous in a dotenv file."""
+    if any(char in value for char in (' ', '=', '#', '"', "\\", "\n", "\r", "\t", "$")):
+        escaped = (
+            value
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("$", "\\$")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            .replace("\t", "\\t")
+        )
+        return f'"{escaped}"'
+    return value
+
+
+def _deployment_config_values_for_export(keys: tuple[str, ...]) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for key in keys:
+        meta = ENV_CONFIG_MAP.get(key, {})
+        if meta.get("is_secret"):
+            values[key] = database.get_deployment_config_value(key) or ""
+        else:
+            config = database.get_deployment_config(key)
+            values[key] = (config or {}).get("value") or meta.get("default") or os.getenv(key, "")
+    return values
+
+
+def _sage_runtime_env_text() -> str:
+    values = _deployment_config_values_for_export(SAGE_RUNTIME_ENV_KEYS)
+    lines = [
+        "# Enclave Sage Runtime Env",
+        "# Generated from Deployment Settings.",
+        f"# Generated: {datetime.now(timezone.utc).isoformat()}",
+        "# Apply by saving as runtime/generated/sage.env and restarting the sage service.",
+        "",
+    ]
+    for source_key, runtime_key in SAGE_RUNTIME_ENV_MAP:
+        lines.append(f"{runtime_key}={_dotenv_quote(values.get(source_key, ''))}")
+    return "\n".join(lines)
+
+
+def _core_backend_runtime_env_text() -> str:
+    values = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    lines = [
+        "# Enclave Core Backend Runtime Env",
+        "# Generated from Deployment Settings.",
+        f"# Generated: {datetime.now(timezone.utc).isoformat()}",
+        "# Apply by saving as runtime/generated/core-backend.env and restarting the core-backend service.",
+        "",
+    ]
+    for source_key, runtime_key in CORE_BACKEND_RUNTIME_ENV_MAP:
+        lines.append(f"{runtime_key}={_dotenv_quote(values.get(source_key, ''))}")
+    return "\n".join(lines)
+
+
+def _parse_audit_changed_at(value: Any) -> Optional[datetime]:
+    try:
+        changed_at = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if changed_at.tzinfo is None:
+            changed_at = changed_at.replace(tzinfo=timezone.utc)
+        return changed_at
+    except (TypeError, ValueError):
+        return None
+
+
+def _latest_audit_marker_from_entries(
+    entries: list[Mapping[str, Any]],
+    *,
+    config_keys: set[str],
+) -> Optional[tuple[datetime, int]]:
+    latest: Optional[tuple[datetime, int]] = None
+    for entry in entries:
+        if entry.get("config_key") not in config_keys:
+            continue
+        changed_at = _parse_audit_changed_at(entry.get("changed_at"))
+        if changed_at is None:
+            continue
+        marker = (changed_at, int(entry.get("id") or 0))
+        if latest is None or marker > latest:
+            latest = marker
+    return latest
+
+
+def _deployment_config_audit_log() -> list[Mapping[str, Any]]:
+    return database.get_config_audit_log(limit=2000, table_name="deployment_config")
+
+
+def _latest_audit_marker(*, table_name: str, config_keys: set[str]) -> Optional[tuple[datetime, int]]:
+    if not config_keys:
+        return None
+    placeholders = ", ".join("?" for _ in config_keys)
+    with database.get_cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT id, changed_at
+            FROM config_audit_log
+            WHERE table_name = ? AND config_key IN ({placeholders})
+            ORDER BY changed_at DESC, id DESC
+            LIMIT 1
+            """,
+            (table_name, *sorted(config_keys)),
+        )
+        row = cursor.fetchone()
+    if row is None:
+        return None
+    entry = dict(row)
+    changed_at = _parse_audit_changed_at(entry.get("changed_at"))
+    if changed_at is None:
+        return None
+    return changed_at, int(entry.get("id") or 0)
+
+
+def _sage_runtime_env_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
+    return _generated_runtime_env_status(
+        export_key=SAGE_RUNTIME_ENV_EXPORT_KEY,
+        source_keys=SAGE_RUNTIME_ENV_KEYS,
+        audit_log=audit_log,
+    )
+
+
+def _core_backend_runtime_env_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
+    return _generated_runtime_env_status(
+        export_key=CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY,
+        source_keys=CORE_BACKEND_RUNTIME_ENV_KEYS,
+        audit_log=audit_log,
+    )
+
+
+def _generated_runtime_env_status(
+    *,
+    export_key: str,
+    source_keys: tuple[str, ...],
+    audit_log: Optional[list[Mapping[str, Any]]] = None,
+) -> dict[str, Any]:
+    if audit_log is None:
+        latest_export = _latest_audit_marker(
+            table_name="deployment_config",
+            config_keys={export_key},
+        )
+        latest_source_change = _latest_audit_marker(
+            table_name="deployment_config",
+            config_keys=set(source_keys),
+        )
+    else:
+        latest_export = _latest_audit_marker_from_entries(
+            audit_log,
+            config_keys={export_key},
+        )
+        latest_source_change = _latest_audit_marker_from_entries(
+            audit_log,
+            config_keys=set(source_keys),
+        )
+    if latest_export is None:
+        return {
+            "status": "not_generated",
+            "latest_export_at": None,
+            "latest_source_change_at": latest_source_change[0].isoformat() if latest_source_change else None,
+        }
+    stale = latest_source_change is not None and latest_source_change > latest_export
+    return {
+        "status": "stale" if stale else "current",
+        "latest_export_at": latest_export[0].isoformat(),
+        "latest_source_change_at": latest_source_change[0].isoformat() if latest_source_change else None,
+    }
+
+
+def _runtime_env_comparison_status(
+    running_sage_config: Optional[Mapping[str, Any]] = None,
+    running_core_backend_config: Optional[Mapping[str, Any]] = None,
+) -> dict[str, Any]:
+    audit_log = _deployment_config_audit_log()
+    generated = _sage_runtime_env_status(audit_log)
+    restart = _restart_required_status(audit_log)
+    desired = _deployment_config_values_for_export(SAGE_RUNTIME_ENV_KEYS)
+    configured_desired = sum(1 for value in desired.values() if str(value or "").strip())
+    desired_fingerprint = _desired_sage_runtime_fingerprint()
+    running_status = "restart_required" if restart["restart_required"] else "not_directly_introspected"
+    running_fingerprint = None
+    if running_sage_config is not None:
+        running_fingerprint = _running_sage_runtime_fingerprint(running_sage_config)
+        running_status = "matches_desired" if running_fingerprint == desired_fingerprint else "drifted"
+    core_backend_desired = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    configured_core_backend_desired = sum(1 for value in core_backend_desired.values() if str(value or "").strip())
+    core_backend_desired_fingerprint = _desired_core_backend_runtime_fingerprint()
+    core_backend_running_status = "not_directly_introspected"
+    core_backend_running_fingerprint = None
+    if running_core_backend_config is not None:
+        core_backend_running_fingerprint = _running_core_backend_runtime_fingerprint(running_core_backend_config)
+        core_backend_running_status = (
+            "matches_desired"
+            if core_backend_running_fingerprint == core_backend_desired_fingerprint
+            else "drifted"
+        )
+    return {
+        "sage": {
+            "desired": {
+                "status": "configured" if configured_desired else "not_configured",
+                "configured_keys": configured_desired,
+                "total_keys": len(SAGE_RUNTIME_ENV_KEYS),
+                "fingerprint": desired_fingerprint,
+            },
+            "generated": generated,
+            "running": {
+                "status": running_status,
+                "summary": (
+                    "Sage running runtime config matches desired Deployment Settings."
+                    if running_status == "matches_desired"
+                    else "Sage running runtime config differs from desired Deployment Settings."
+                    if running_status == "drifted"
+                    else
+                    "Restart-required Deployment Settings changed since service start."
+                    if restart["restart_required"]
+                    else "Sage live runtime env is not directly introspected in this slice; use service health plus generated env freshness."
+                ),
+                "fingerprint": running_fingerprint,
+                "changed_keys_requiring_restart": [item["key"] for item in restart["changed_keys"]],
+            },
+        },
+        "core_backend": {
+            "desired": {
+                "status": "configured" if configured_core_backend_desired else "not_configured",
+                "configured_keys": configured_core_backend_desired,
+                "total_keys": len(CORE_BACKEND_RUNTIME_ENV_KEYS),
+                "fingerprint": core_backend_desired_fingerprint,
+            },
+            "generated": _core_backend_runtime_env_status(audit_log),
+            "running": {
+                "status": core_backend_running_status,
+                "summary": (
+                    "Core backend running runtime config matches desired Deployment Settings."
+                    if core_backend_running_status == "matches_desired"
+                    else "Core backend running runtime config differs from desired Deployment Settings."
+                    if core_backend_running_status == "drifted"
+                    else "Core backend live runtime env is not directly introspected yet; use generated env freshness."
+                ),
+                "fingerprint": core_backend_running_fingerprint,
+            },
+        },
+    }
+
+
+def _runtime_config_fingerprint(payload: Mapping[str, Any]) -> str:
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _normalize_origin_for_sage(value: str) -> str:
+    parsed = urlparse(value.strip())
+    if not parsed.scheme or not parsed.netloc:
+        return value.strip().rstrip("/")
+    return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+
+def _desired_sage_runtime_fingerprint() -> str:
+    values = _deployment_config_values_for_export(SAGE_RUNTIME_ENV_KEYS)
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in (values.get("CORS_ORIGINS") or "").split(",")
+        if origin.strip()
+    ]
+    frontend_url = values.get("FRONTEND_URL") or ""
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    payload = {
+        "TINFOIL_API_URL": values.get("LLM_API_URL") or "",
+        "TINFOIL_API_KEY": {
+            "configured": bool(values.get("LLM_API_KEY")),
+            "fingerprint": hashlib.sha256((values.get("LLM_API_KEY") or "").encode("utf-8")).hexdigest()
+            if values.get("LLM_API_KEY")
+            else None,
+        },
+        "TINFOIL_MODEL": values.get("LLM_MODEL") or "",
+        "TINFOIL_EMBEDDING_MODEL": values.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
+def _desired_core_backend_runtime_fingerprint() -> str:
+    values = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in (values.get("CORS_ORIGINS") or "").split(",")
+        if origin.strip()
+    ]
+    frontend_url = values.get("FRONTEND_URL") or ""
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    payload = {
+        "LLM_API_URL": values.get("LLM_API_URL") or "",
+        "LLM_API_KEY": {
+            "configured": bool(values.get("LLM_API_KEY")),
+            "fingerprint": hashlib.sha256((values.get("LLM_API_KEY") or "").encode("utf-8")).hexdigest()
+            if values.get("LLM_API_KEY")
+            else None,
+        },
+        "LLM_MODEL": values.get("LLM_MODEL") or "",
+        "EMBEDDING_MODEL": values.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
+def _running_sage_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
+    raw_origins = runtime_config.get("CORS_ORIGINS")
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in raw_origins
+        if isinstance(origin, str) and origin.strip()
+    ] if isinstance(raw_origins, list) else []
+    payload = {
+        "TINFOIL_API_URL": runtime_config.get("TINFOIL_API_URL") or "",
+        "TINFOIL_API_KEY": runtime_config.get("TINFOIL_API_KEY") or {"configured": False, "fingerprint": None},
+        "TINFOIL_MODEL": runtime_config.get("TINFOIL_MODEL") or "",
+        "TINFOIL_EMBEDDING_MODEL": runtime_config.get("TINFOIL_EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": runtime_config.get("FRONTEND_URL"),
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": runtime_config.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
+def _running_core_backend_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
+    raw_origins = runtime_config.get("CORS_ORIGINS")
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in raw_origins
+        if isinstance(origin, str) and origin.strip()
+    ] if isinstance(raw_origins, list) else []
+    payload = {
+        "LLM_API_URL": runtime_config.get("LLM_API_URL") or "",
+        "LLM_API_KEY": runtime_config.get("LLM_API_KEY") or {"configured": False, "fingerprint": None},
+        "LLM_MODEL": runtime_config.get("LLM_MODEL") or "",
+        "EMBEDDING_MODEL": runtime_config.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": runtime_config.get("FRONTEND_URL"),
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": runtime_config.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
+def _core_backend_runtime_config_payload() -> dict[str, Any]:
+    values = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in (values.get("CORS_ORIGINS") or "").split(",")
+        if origin.strip()
+    ]
+    frontend_url = values.get("FRONTEND_URL") or ""
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    return {
+        "LLM_API_URL": values.get("LLM_API_URL") or "",
+        "LLM_API_KEY": {
+            "configured": bool(values.get("LLM_API_KEY")),
+            "fingerprint": hashlib.sha256((values.get("LLM_API_KEY") or "").encode("utf-8")).hexdigest()
+            if values.get("LLM_API_KEY")
+            else None,
+        },
+        "LLM_MODEL": values.get("LLM_MODEL") or "",
+        "EMBEDDING_MODEL": values.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+
+
+def fetch_running_core_backend_config() -> dict[str, Any]:
+    raw_origins = os.getenv("CORS_ORIGINS", "")
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in raw_origins.split(",")
+        if origin.strip()
+    ]
+    frontend_url = os.getenv("FRONTEND_URL", "")
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    api_key = os.getenv("LLM_API_KEY", "")
+    return {
+        "LLM_API_URL": os.getenv("LLM_API_URL", ""),
+        "LLM_API_KEY": {
+            "configured": bool(api_key),
+            "fingerprint": hashlib.sha256(api_key.encode("utf-8")).hexdigest() if api_key else None,
+        },
+        "LLM_MODEL": os.getenv("LLM_MODEL", ""),
+        "EMBEDDING_MODEL": os.getenv("EMBEDDING_MODEL", ""),
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": os.getenv("SEARXNG_URL", ""),
+    }
+
+
+def _require_internal_agent_token(x_internal_agent_token: Optional[str]) -> None:
+    expected = os.getenv("INTERNAL_AGENT_TOKEN", "")
+    if not expected or x_internal_agent_token != expected:
+        raise HTTPException(status_code=403, detail="Invalid internal agent token")
+
+
+async def _fetch_sage_running_runtime_config() -> Optional[Mapping[str, Any]]:
+    runtime_url = (os.getenv("SAGE_WEB_URL", "http://sage:3000")).rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            fingerprint_resp = await client.get(
+                runtime_url + "/internal/runtime-config/fingerprint",
+                headers={"X-Internal-Agent-Token": os.getenv("INTERNAL_AGENT_TOKEN", "")},
+            )
+        if fingerprint_resp.status_code == 200:
+            return (fingerprint_resp.json() or {}).get("runtime_config") or {}
+        logger.warning("Agent Runtime fingerprint check returned %s", fingerprint_resp.status_code)
+    except (httpx.RequestError, ValueError) as e:
+        logger.warning(f"Agent Runtime fingerprint check failed: {e}")
+    return None
 
 
 # Environment variable to config key mapping
@@ -215,6 +644,46 @@ RATE_LIMIT_KEYS: Final[set[str]] = {
     "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE",
     "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR",
 }
+
+SAGE_RUNTIME_ENV_EXPORT_KEY: Final[str] = "sage_runtime_env_export"
+SAGE_RUNTIME_ENV_KEYS: Final[tuple[str, ...]] = (
+    "LLM_API_URL",
+    "LLM_API_KEY",
+    "LLM_MODEL",
+    "EMBEDDING_MODEL",
+    "FRONTEND_URL",
+    "CORS_ORIGINS",
+    "SEARXNG_URL",
+)
+SAGE_RUNTIME_ENV_MAP: Final[tuple[tuple[str, str], ...]] = (
+    ("LLM_API_URL", "TINFOIL_API_URL"),
+    ("LLM_API_KEY", "TINFOIL_API_KEY"),
+    ("LLM_MODEL", "TINFOIL_MODEL"),
+    ("EMBEDDING_MODEL", "TINFOIL_EMBEDDING_MODEL"),
+    ("FRONTEND_URL", "FRONTEND_URL"),
+    ("CORS_ORIGINS", "CORS_ORIGINS"),
+    ("SEARXNG_URL", "SEARXNG_URL"),
+)
+
+CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY: Final[str] = "core_backend_runtime_env_export"
+CORE_BACKEND_RUNTIME_ENV_KEYS: Final[tuple[str, ...]] = (
+    "LLM_API_URL",
+    "LLM_API_KEY",
+    "LLM_MODEL",
+    "EMBEDDING_MODEL",
+    "FRONTEND_URL",
+    "CORS_ORIGINS",
+    "SEARXNG_URL",
+)
+CORE_BACKEND_RUNTIME_ENV_MAP: Final[tuple[tuple[str, str], ...]] = (
+    ("LLM_API_URL", "LLM_API_URL"),
+    ("LLM_API_KEY", "LLM_API_KEY"),
+    ("LLM_MODEL", "LLM_MODEL"),
+    ("EMBEDDING_MODEL", "EMBEDDING_MODEL"),
+    ("FRONTEND_URL", "FRONTEND_URL"),
+    ("CORS_ORIGINS", "CORS_ORIGINS"),
+    ("SEARXNG_URL", "SEARXNG_URL"),
+)
 
 PRODUCTION_UNSAFE_FLAGS: Final[tuple[str, ...]] = (
     "MOCK_EMAIL",
@@ -548,7 +1017,7 @@ async def verify_inference_now(admin: dict = Depends(auth.require_admin)):
 async def export_env_file(
     request: Request,
     admin: dict = Depends(auth.require_admin),
-    _: None = Depends(config_export_limiter),
+    _: None = Depends(check_config_export_rate_limit),
 ):
     """
     Export current configuration as .env file format.
@@ -583,13 +1052,7 @@ async def export_env_file(
             value = database.get_deployment_config_value(config["key"]) or ""
         else:
             value = config["value"] or ""
-        # Quote values with spaces or special chars, escape backslashes, newlines, tabs, and dollar signs
-        if " " in value or "=" in value or "#" in value or '"' in value or "\\" in value or "\n" in value or "\r" in value or "\t" in value or "$" in value:
-            # Escape backslashes first, then quotes, then dollar signs, then control characters
-            value = value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
-            value = f'"{value}"'
-
-        lines.append(f"{config['key']}={value}")
+        lines.append(f"{config['key']}={_dotenv_quote(value)}")
 
     # Explicitly audit high-risk export action.
     # old/new values are intentionally omitted to avoid logging secret material.
@@ -605,6 +1068,81 @@ async def export_env_file(
     )
 
     return "\n".join(lines)
+
+
+@router.get("/runtime-env/sage", response_class=PlainTextResponse)
+@router.get("/config/runtime-env/sage", response_class=PlainTextResponse)
+async def export_sage_runtime_env(
+    request: Request,
+    admin: dict = Depends(auth.require_admin),
+    _: None = Depends(check_config_export_rate_limit),
+):
+    """
+    Export the Sage runtime env generated from Deployment Settings.
+    Secret values are included so the artifact must be handled as sensitive deployment material.
+    """
+    logger.warning(
+        "Sage runtime env export requested by admin=%s from ip=%s",
+        admin.get("pubkey", "unknown"),
+        request.client.host if request.client else "unknown",
+    )
+    content = _sage_runtime_env_text()
+    database.log_config_audit_event(
+        table_name="deployment_config",
+        config_key=SAGE_RUNTIME_ENV_EXPORT_KEY,
+        old_value=None,
+        new_value=(
+            f"exported_keys={len(SAGE_RUNTIME_ENV_MAP)};"
+            f"ip={request.client.host if request.client else 'unknown'}"
+        ),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return content
+
+
+@router.get("/runtime-env/core-backend", response_class=PlainTextResponse)
+@router.get("/config/runtime-env/core-backend", response_class=PlainTextResponse)
+async def export_core_backend_runtime_env(
+    request: Request,
+    admin: dict = Depends(auth.require_admin),
+    _: None = Depends(check_config_export_rate_limit),
+):
+    """
+    Export the core-backend runtime env generated from Deployment Settings.
+    Secret values are included so the artifact must be handled as sensitive deployment material.
+    """
+    logger.warning(
+        "Core backend runtime env export requested by admin=%s from ip=%s",
+        admin.get("pubkey", "unknown"),
+        request.client.host if request.client else "unknown",
+    )
+    content = _core_backend_runtime_env_text()
+    database.log_config_audit_event(
+        table_name="deployment_config",
+        config_key=CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY,
+        old_value=None,
+        new_value=(
+            f"exported_keys={len(CORE_BACKEND_RUNTIME_ENV_MAP)};"
+            f"ip={request.client.host if request.client else 'unknown'}"
+        ),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return content
+
+
+@internal_router.get("/runtime-config/fingerprint", response_model=dict)
+async def get_core_backend_runtime_config_fingerprint(
+    x_internal_agent_token: Optional[str] = Header(default=None),
+) -> dict:
+    """
+    Return safe core-backend runtime config for internal alignment checks.
+    Secret-bearing values are represented by configured/fingerprint metadata only.
+    """
+    _require_internal_agent_token(x_internal_agent_token)
+    return {
+        "service": "core-backend",
+        "runtime_config": fetch_running_core_backend_config(),
+    }
 
 
 @router.get("/config/{key}", response_model=DeploymentConfigItem)
@@ -821,18 +1359,9 @@ async def update_deployment_config_value(
     return _config_to_item(updated)
 
 
-@router.post("/config/validate", response_model=DeploymentValidationResponse)
-async def validate_config(admin: dict = Depends(auth.require_admin)):
-    """
-    Validate current configuration.
-    Checks for required values and valid formats.
-    Requires admin authentication.
-    """
+def _validate_config_values(config_dict: Mapping[str, str]) -> DeploymentValidationResponse:
     errors = []
     warnings = []
-
-    all_config = database.get_all_deployment_config()
-    config_dict = {c["key"]: c["value"] for c in all_config}
 
     # Check required settings
     required = ["LLM_PROVIDER", "QDRANT_HOST", "QDRANT_PORT"]
@@ -935,6 +1464,18 @@ async def validate_config(admin: dict = Depends(auth.require_admin)):
     )
 
 
+@router.post("/config/validate", response_model=DeploymentValidationResponse)
+async def validate_config(admin: dict = Depends(auth.require_admin)) -> DeploymentValidationResponse:
+    """
+    Validate current configuration.
+    Checks for required values and valid formats.
+    Requires admin authentication.
+    """
+    all_config = database.get_all_deployment_config()
+    config_dict = {c["key"]: c["value"] for c in all_config}
+    return _validate_config_values(config_dict)
+
+
 @router.get("/operational-readiness")
 async def get_operational_readiness(admin: dict = Depends(auth.require_admin)) -> Dict[str, Any]:
     """
@@ -942,6 +1483,382 @@ async def get_operational_readiness(admin: dict = Depends(auth.require_admin)) -
     Requires admin authentication.
     """
     return OPERATIONAL_READINESS
+
+
+def _readiness_item(
+    *,
+    key: str,
+    label: str,
+    source: str,
+    severity: str,
+    status: str,
+    summary: str,
+    next_action: str,
+    conversation_blocking: bool = False,
+) -> dict:
+    return {
+        "key": key,
+        "label": label,
+        "source": source,
+        "severity": severity,
+        "status": status,
+        "summary": summary,
+        "next_action": next_action,
+        "conversation_blocking": conversation_blocking,
+    }
+
+
+def _deployment_validation_readiness_items() -> list[dict]:
+    all_config = database.get_all_deployment_config()
+    config_dict = {c["key"]: c["value"] for c in all_config}
+    validation = _validate_config_values(config_dict)
+    items: list[dict] = []
+    if validation.errors:
+        items.append(_readiness_item(
+            key="deployment_settings_validation",
+            label="Deployment Settings Validation",
+            source="deployment_validation",
+            severity="blocker",
+            status="invalid",
+            summary="Deployment Settings validation has errors that must be repaired.",
+            next_action="Review Deployment Settings validation errors.",
+        ))
+    elif validation.warnings:
+        items.append(_readiness_item(
+            key="deployment_settings_validation",
+            label="Deployment Settings Validation",
+            source="deployment_validation",
+            severity="warning",
+            status="warnings",
+            summary="Deployment Settings validation has advisory warnings.",
+            next_action="Review Deployment Settings validation warnings.",
+        ))
+    else:
+        items.append(_readiness_item(
+            key="deployment_settings_validation",
+            label="Deployment Settings Validation",
+            source="deployment_validation",
+            severity="ready",
+            status="valid",
+            summary="Deployment Settings validation has no errors or warnings.",
+            next_action="No action required.",
+        ))
+    return items
+
+
+def _inference_readiness_item() -> dict:
+    configured = _configured_model_provider()
+    status = database.get_current_inference_verification_status(
+        **configured,
+        expected_claims_fingerprint=current_expected_claims_fingerprint(),
+    )
+    status_key = status.get("status", "missing")
+    if status_key == "current":
+        return _readiness_item(
+            key="verifiable_inference",
+            label="Verifiable Inference",
+            source="inference_verification",
+            severity="ready",
+            status=status_key,
+            summary="Current Verifiable Inference evidence is available for normal Conversations.",
+            next_action="No action required.",
+        )
+    return _readiness_item(
+        key="verifiable_inference",
+        label="Verifiable Inference",
+        source="inference_verification",
+        severity="blocker",
+        status=status_key,
+        summary="Current Verifiable Inference is required before normal Conversations can run.",
+        next_action="Run Model Provider verification or repair provider configuration.",
+        conversation_blocking=True,
+    )
+
+
+def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
+    readiness = lifecycle_status.get("lifecycle_readiness") or {}
+    status = readiness.get("status", "needs_review")
+    if status == "reviewed":
+        return _readiness_item(
+            key="lifecycle_readiness",
+            label="Lifecycle Readiness",
+            source="lifecycle_readiness",
+            severity="ready",
+            status=status,
+            summary=readiness.get("summary") or "Lifecycle Readiness has been reviewed.",
+            next_action="No action required.",
+        )
+    return _readiness_item(
+        key="lifecycle_readiness",
+        label="Lifecycle Readiness",
+        source="lifecycle_readiness",
+        severity="warning",
+        status=status,
+        summary=readiness.get("summary") or "Lifecycle Readiness needs Admin review.",
+        next_action="Review lifecycle status and unsupported Deployment Surfaces.",
+    )
+
+
+def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
+    categories = lifecycle_status.get("unsupported_deployment_surface_categories") or []
+    unacknowledged_categories = [
+        category.get("label") or category.get("category") or "Unsupported Deployment Surface category"
+        for category in categories
+        if not category.get("acknowledged")
+    ]
+    surfaces = lifecycle_status.get("unsupported_deployment_surfaces") or []
+    unacknowledged_surfaces = [
+        surface.get("label") or surface.get("key") or "Unsupported Deployment Surface"
+        for surface in surfaces
+        if not surface.get("acknowledged")
+    ]
+    unacknowledged = [*unacknowledged_categories, *unacknowledged_surfaces]
+    if not unacknowledged:
+        return _readiness_item(
+            key="deployment_surface_acknowledgements",
+            label="Deployment Surface Acknowledgements",
+            source="deployment_surfaces",
+            severity="ready",
+            status="acknowledged",
+            summary="Unsupported Deployment Surface categories have been acknowledged.",
+            next_action="No action required.",
+        )
+    return _readiness_item(
+        key="deployment_surface_acknowledgements",
+        label="Deployment Surface Acknowledgements",
+        source="deployment_surfaces",
+        severity="warning",
+        status="needs_acknowledgement",
+        summary=f"{len(unacknowledged)} unsupported Deployment Surface entries need acknowledgement.",
+        next_action="Acknowledge unsupported Deployment Surface categories after review.",
+    )
+
+
+def _backup_restore_readiness_item() -> dict:
+    return _readiness_item(
+        key="backup_restore_drill",
+        label="Backup And Restore Drill",
+        source="operational_readiness",
+        severity="warning",
+        status="operator_evidence_required",
+        summary=OPERATIONAL_READINESS["backup_restore_verification"]["evidence"],
+        next_action="Record a restore drill for the Single-Instance Deployment.",
+    )
+
+
+def _restart_readiness_item() -> dict:
+    restart = _restart_required_status()
+    if restart["restart_required"]:
+        changed = ", ".join(item["key"] for item in restart["changed_keys"])
+        return _readiness_item(
+            key="restart_required",
+            label="Restart Required",
+            source="restart_required",
+            severity="warning",
+            status="restart_required",
+            summary=f"Runtime restart is required for changed Deployment Settings: {changed}.",
+            next_action="Restart the affected service after reviewing changes.",
+        )
+    return _readiness_item(
+        key="restart_required",
+        label="Restart Required",
+        source="restart_required",
+        severity="ready",
+        status="current",
+        summary="No restart-required Deployment Settings have changed since service start.",
+        next_action="No action required.",
+    )
+
+
+def _runtime_env_readiness_item(running_sage_config: Optional[Mapping[str, Any]] = None) -> dict:
+    comparison = _runtime_env_comparison_status(running_sage_config)
+    sage = comparison["sage"]
+    generated_status = sage["generated"]["status"]
+    running_status = sage["running"]["status"]
+    if generated_status == "current" and running_status == "matches_desired":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="matches_desired",
+            summary="Running Sage runtime config matches desired Deployment Settings.",
+            next_action="No action required.",
+        )
+    if generated_status == "current" and running_status == "drifted":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="drifted",
+            summary="Running Sage runtime config differs from desired Deployment Settings.",
+            next_action="Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage.",
+        )
+    if generated_status == "current":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="current",
+            summary="Sage runtime env has been generated from current Deployment Settings.",
+            next_action="No action required unless the generated artifact has not been applied to the Deployment.",
+        )
+    if generated_status == "stale":
+        return _readiness_item(
+            key="sage_runtime_env",
+            label="Sage Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="stale",
+            summary="Deployment Settings changed after the Sage runtime env was generated.",
+            next_action="Export a fresh Sage runtime env and apply it through the Deployment restart path.",
+        )
+    return _readiness_item(
+        key="sage_runtime_env",
+        label="Sage Runtime Config",
+        source="runtime_env",
+        severity="warning",
+        status="not_generated",
+        summary="Sage runtime env has not been generated from Deployment Settings yet.",
+        next_action="Export the Sage runtime env before treating Deployment Settings as applied to Sage.",
+    )
+
+
+def _core_backend_runtime_env_readiness_item(
+    running_core_backend_config: Optional[Mapping[str, Any]] = None,
+) -> dict:
+    comparison = _runtime_env_comparison_status(
+        running_core_backend_config=running_core_backend_config
+    )
+    core_backend = comparison["core_backend"]
+    generated_status = core_backend["generated"]["status"]
+    running_status = core_backend["running"]["status"]
+    if generated_status == "current" and running_status == "matches_desired":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="matches_desired",
+            summary="Running core-backend runtime config matches desired Deployment Settings.",
+            next_action="No action required.",
+        )
+    if generated_status == "current" and running_status == "drifted":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="drifted",
+            summary="Running core-backend runtime config differs from desired Deployment Settings.",
+            next_action="Investigate core-backend runtime config drift, apply the generated core-backend env, and restart core-backend.",
+        )
+    if generated_status == "current":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="current",
+            summary="Core-backend runtime env has been generated from current Deployment Settings.",
+            next_action="No action required unless the generated artifact has not been applied to the Deployment.",
+        )
+    if generated_status == "stale":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="stale",
+            summary="Deployment Settings changed after the core-backend runtime env was generated.",
+            next_action="Export a fresh core-backend runtime env and apply it through the Deployment restart path.",
+        )
+    return _readiness_item(
+        key="core_backend_runtime_env",
+        label="Core Backend Runtime Config",
+        source="runtime_env",
+        severity="not_ready",
+        status="not_generated",
+        summary="Core-backend runtime env has not been generated from Deployment Settings yet.",
+        next_action="Export the core-backend runtime env before treating Deployment Settings as applied to core-backend.",
+    )
+
+
+def _restart_required_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
+    restart_keys = database.get_restart_required_keys()
+    if audit_log is None:
+        audit_log = _deployment_config_audit_log()
+
+    changed_requiring_restart = []
+    for entry in audit_log:
+        if entry["config_key"] in restart_keys:
+            changed_at = _parse_audit_changed_at(entry.get("changed_at"))
+            if changed_at is not None and changed_at > SERVICE_START_TIME:
+                changed_requiring_restart.append({
+                    "key": entry["config_key"],
+                    "changed_at": entry["changed_at"],
+                })
+
+    return {
+        "restart_required": len(changed_requiring_restart) > 0,
+        "changed_keys": changed_requiring_restart[:10],
+    }
+
+
+def deployment_readiness_summary(
+    running_sage_config: Optional[Mapping[str, Any]] = None,
+    running_core_backend_config: Optional[Mapping[str, Any]] = None,
+) -> dict:
+    from lifecycle import get_lifecycle_status
+
+    lifecycle_status = get_lifecycle_status()
+    items = [
+        *_deployment_validation_readiness_items(),
+        _inference_readiness_item(),
+        _lifecycle_readiness_item(lifecycle_status),
+        _unsupported_surface_readiness_item(lifecycle_status),
+        _backup_restore_readiness_item(),
+        _runtime_env_readiness_item(running_sage_config),
+        _core_backend_runtime_env_readiness_item(running_core_backend_config),
+        _restart_readiness_item(),
+        _readiness_item(
+            key="service_health",
+            label="Service Health",
+            source="service_health",
+            severity="warning",
+            status="check_required",
+            summary="Live service health checks should be reviewed before production use.",
+            next_action="Run service health checks from the Admin Deployment surface.",
+        ),
+    ]
+    blockers = sum(1 for item in items if item["severity"] == "blocker")
+    warnings = sum(1 for item in items if item["severity"] == "warning")
+    ready = sum(1 for item in items if item["severity"] == "ready")
+    return {
+        "status": "blocked" if blockers else ("warnings" if warnings else "ready"),
+        "summary": {
+            "blockers": blockers,
+            "warnings": warnings,
+            "ready": ready,
+            "total": len(items),
+        },
+        "items": items,
+    }
+
+
+@router.get("/readiness", response_model=dict)
+async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)) -> dict:
+    """
+    Summarize Deployment Readiness for a Single-Instance Deployment.
+    Requires admin authentication.
+    """
+    running_sage_config = await _fetch_sage_running_runtime_config()
+    return deployment_readiness_summary(
+        running_sage_config,
+        running_core_backend_config=fetch_running_core_backend_config(),
+    )
 
 
 @router.get("/health", response_model=ServiceHealthResponse)
@@ -981,11 +1898,14 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
     provider = (config_dict.get("LLM_PROVIDER") or os.getenv("LLM_PROVIDER", "sage")).strip().lower() or "sage"
     runtime_url = (os.getenv("SAGE_WEB_URL", "http://sage:3000")).rstrip("/")
     llm_health_url = runtime_url + "/health"
+    sage_runtime_config: Optional[Mapping[str, Any]] = None
 
     try:
         start = time.time()
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(llm_health_url)
+            if resp.status_code == 200:
+                sage_runtime_config = await _fetch_sage_running_runtime_config()
         response_time = int((time.time() - start) * 1000)
         services.append(ServiceHealthItem(
             name=f"AI Runtime ({provider})",
@@ -1108,29 +2028,16 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
             error="Not configured",
         ))
 
-    # Check if restart is required
-    restart_keys = database.get_restart_required_keys()
-    audit_log = database.get_config_audit_log(limit=50, table_name="deployment_config")
-
-    # Find keys that were changed since service started
-    changed_requiring_restart = []
-    for entry in audit_log:
-        if entry["config_key"] in restart_keys:
-            try:
-                # Parse the changed_at timestamp and compare to service start time
-                changed_at_str = entry["changed_at"]
-                # Handle both Z suffix and +00:00 suffix for UTC
-                changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
-                if changed_at > SERVICE_START_TIME:
-                    changed_requiring_restart.append(entry["config_key"])
-            except (ValueError, TypeError, AttributeError):
-                # Skip entries with invalid timestamps
-                pass
+    restart = _restart_required_status()
 
     return ServiceHealthResponse(
         services=services,
-        restart_required=len(changed_requiring_restart) > 0,
-        changed_keys_requiring_restart=list(set(changed_requiring_restart)),
+        restart_required=restart["restart_required"],
+        changed_keys_requiring_restart=[item["key"] for item in restart["changed_keys"]],
+        runtime_env=_runtime_env_comparison_status(
+            sage_runtime_config,
+            running_core_backend_config=fetch_running_core_backend_config(),
+        ),
     )
 
 
@@ -1140,29 +2047,7 @@ async def check_restart_required(admin: dict = Depends(auth.require_admin)):
     Check if service restart is needed after config changes.
     Requires admin authentication.
     """
-    restart_keys = database.get_restart_required_keys()
-    audit_log = database.get_config_audit_log(limit=100, table_name="deployment_config")
-
-    changed_requiring_restart = []
-    for entry in audit_log:
-        if entry["config_key"] in restart_keys:
-            try:
-                # Parse the changed_at timestamp and compare to service start time
-                changed_at_str = entry["changed_at"]
-                changed_at = datetime.fromisoformat(changed_at_str.replace("Z", "+00:00"))
-                if changed_at > SERVICE_START_TIME:
-                    changed_requiring_restart.append({
-                        "key": entry["config_key"],
-                        "changed_at": entry["changed_at"],
-                    })
-            except (ValueError, TypeError, AttributeError):
-                # Skip entries with invalid timestamps
-                pass
-
-    return {
-        "restart_required": len(changed_requiring_restart) > 0,
-        "changed_keys": changed_requiring_restart[:10],  # Limit to recent
-    }
+    return _restart_required_status()
 
 
 @router.get("/audit-log", response_model=ConfigAuditLogResponse)

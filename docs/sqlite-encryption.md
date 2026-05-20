@@ -130,7 +130,7 @@ Frontend decrypts in admin UI via NIP-07:
 - `window.nostr.nip04.decrypt(ephemeral_pubkey, ciphertext)`
 
 Admin UI surfaces:
-- Test Dashboard user list is decrypted on load.
+- Diagnostics dashboard user list is decrypted on load.
 - If decryption is unavailable, UI shows `[Encrypted]`.
 
 DB Explorer:

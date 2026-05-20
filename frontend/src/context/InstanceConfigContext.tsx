@@ -5,6 +5,7 @@
  * Settings include: instance name, accent color, and icon choices (configured by admin)
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import i18n from '../i18n'
 import {
   InstanceConfig,
   DEFAULT_INSTANCE_CONFIG,
@@ -22,11 +23,13 @@ import {
   SurfaceStyle,
   StatusIconSet,
   TypographyPreset,
+  DefaultTheme,
   HEADER_LAYOUTS,
   CHAT_BUBBLE_STYLES,
   SURFACE_STYLES,
   STATUS_ICON_SETS,
   TYPOGRAPHY_PRESETS,
+  DEFAULT_THEMES,
   applySurfaceStyle,
   applyTypographyPreset,
 } from '../types/instance'
@@ -143,6 +146,17 @@ function validateTypographyPreset(value: string | undefined): TypographyPreset |
   return TYPOGRAPHY_PRESETS.includes(value as TypographyPreset) ? (value as TypographyPreset) : undefined
 }
 
+function validateDefaultTheme(value: string | undefined): DefaultTheme | undefined {
+  if (!value) return undefined
+  return DEFAULT_THEMES.includes(value as DefaultTheme) ? (value as DefaultTheme) : undefined
+}
+
+function normalizeDefaultLanguage(value: string | undefined): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed ? trimmed : undefined
+}
+
 export function InstanceConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfigState] = useState<InstanceConfig>(DEFAULT_INSTANCE_CONFIG)
 
@@ -230,6 +244,14 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
               validateTypographyPreset(settings.typography_preset) ??
               stored.typographyPreset ??
               DEFAULT_INSTANCE_CONFIG.typographyPreset,
+            defaultLanguage:
+              normalizeDefaultLanguage(settings.default_language) ??
+              stored.defaultLanguage ??
+              DEFAULT_INSTANCE_CONFIG.defaultLanguage,
+            defaultTheme:
+              validateDefaultTheme(settings.default_theme) ??
+              stored.defaultTheme ??
+              DEFAULT_INSTANCE_CONFIG.defaultTheme,
           }
           
           setConfigState(newConfig)
@@ -240,6 +262,11 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
           applyDocumentTitle(newConfig.name)
           applyFavicon(newConfig.faviconUrl)
           applyAppleTouchIcon(newConfig.appleTouchIconUrl)
+          if (newConfig.defaultLanguage && i18n.language !== newConfig.defaultLanguage) {
+            i18n.changeLanguage(newConfig.defaultLanguage).catch((error) => {
+              console.error('Failed to apply instance default language:', error)
+            })
+          }
         }
       } catch (error) {
         console.warn('Failed to fetch instance settings, using cached config:', error)

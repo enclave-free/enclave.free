@@ -126,6 +126,43 @@ describe('AdminDocumentUpload', () => {
     expect(body.getAll('relative_paths')).toEqual(['', ''])
   })
 
+  it('shows server-side partial batch success counts', async () => {
+    const user = userEvent.setup()
+
+    mockAdminFetch
+      .mockResolvedValueOnce(Response.json({ total: 0, jobs: [] }))
+      .mockResolvedValueOnce(Response.json({
+        accepted: [
+          { job_id: 'job-1', filename: 'guide.txt', status: 'pending', message: 'queued' },
+        ],
+        rejected: [
+          { filename: 'locked.pdf', reason: 'Document is password protected' },
+        ],
+      }))
+      .mockResolvedValueOnce(Response.json({ total: 1, jobs: [] }))
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('No uploads yet')
+
+    const input = document.querySelector('input[type="file"]')
+    expect(input).toBeInstanceOf(HTMLInputElement)
+
+    await user.upload(input as HTMLInputElement, [
+      new File(['guide'], 'guide.txt', { type: 'text/plain' }),
+      new File(['locked'], 'locked.pdf', { type: 'application/pdf' }),
+    ])
+    await user.click(screen.getByRole('button', { name: 'Upload documents' }))
+
+    expect(await screen.findByText('1 queued, 1 skipped')).toBeInTheDocument()
+  })
+
   it('shows invalid and duplicate selected files as skipped', async () => {
     mockAdminFetch.mockResolvedValueOnce(Response.json({ total: 0, jobs: [] }))
 

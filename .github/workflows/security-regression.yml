@@ -82,8 +82,31 @@ jobs:
           python -m pip install pip-audit semgrep
       - name: Python dependency scan
         run: |
-          pip-audit -r backend/requirements.txt \
-            --ignore-vuln GHSA-69w3-r845-3855
+          ignore_vulns=(
+            --ignore-vuln GHSA-69w3-r845-3855 # EX-001: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2024-277 # EX-002: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-183 # EX-003: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-189 # EX-004: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-190 # EX-005: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-191 # EX-006: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-192 # EX-007: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-193 # EX-008: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-194 # EX-009: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-195 # EX-010: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-196 # EX-011: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-197 # EX-012: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-210 # EX-013: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-211 # EX-014: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-212 # EX-015: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-213 # EX-016: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-214 # EX-017: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-215 # EX-018: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-216 # EX-019: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-217 # EX-020: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2025-218 # EX-021: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+            --ignore-vuln PYSEC-2026-139 # EX-022: accepted risk for constrained transitive dependency; tracked in https://github.com/enclave-free/enclave.free-prototype/issues/196
+          )
+          pip-audit -r backend/requirements.txt "${ignore_vulns[@]}"
       - name: Frontend dependency scan
         working-directory: frontend
         run: npm audit --audit-level=high

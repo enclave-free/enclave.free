@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { HomeRedirect } from './pages/HomeRedirect'
 import { TestDashboard } from './pages/TestDashboard'
 import { ChatPage } from './pages/ChatPage'
@@ -24,7 +24,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
-        <Route path="/test-dashboard" element={<TestDashboard />} />
+        <Route path="/diagnostics/test-dashboard" element={<TestDashboard />} />
+        <Route path="/test-dashboard" element={<Navigate to="/diagnostics/test-dashboard" replace />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/admin" element={<AdminOnboarding />} />
         <Route path="/admin/setup" element={<AdminRoute><AdminSetup /></AdminRoute>} />

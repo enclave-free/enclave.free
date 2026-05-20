@@ -20,11 +20,14 @@ scripts/tests/
 │   ├── test-config.json    # Test fixtures and constants
 │   ├── test_1a_verify_encryption.py
 │   └── test_1b_decrypt_fidelity.py
-├── RAG/                    # Document ingestion persistence tests (1x, 1 planned)
+├── RAG/                    # Document ingestion persistence and Retrieval evaluation tests
 │   ├── test-config.json    # Test fixtures and constants
 │   └── test_2a_document_persistence.py
 └── TOOLS/                  # Tool behavior parity and route smoke checks
-    └── test_4a_unified_chat_tools_parity.py
+    ├── test_4a_unified_chat_tools_parity.py
+    ├── test_5b_sage_route_smoke.py
+    ├── test_5c_chat_streaming_transport.py
+    └── test_5d_chunk_retrieval_gateway_smoke.py
 ```
 
 ---
@@ -60,7 +63,7 @@ test_{number}{letter}_{description}.py
 | 1A | `test_1a_verify_encryption.py` | CRM | Verify NIP-04 encryption in DB |
 | 1B | `test_1b_decrypt_fidelity.py` | CRM | Decrypt and verify data fidelity |
 | 2A | `test_2a_document_persistence.py` | RAG | Document ingestion and persistence |
-| 2B | (planned) | RAG | RAG query retrieval accuracy |
+| 2B | `backend/tests/test_query_retrieval_hydration.py` | RAG | Chunk Retrieval evaluation through the Sage-to-Enclave Control Plane document-search contract |
 | 3A | `test_3a_key_migration_prepare.py` | AUTH | Prepare admin key migration payload |
 | 3B | `test_3b_key_migration_execute.py` | AUTH | Execute migration and verify re-encryption |
 | 3C | `test_3c_auth_hardening_regression.py` | AUTH | Validate ingest/vector auth, session ownership, and CSRF behavior |
@@ -68,6 +71,7 @@ test_{number}{letter}_{description}.py
 | 4A | `test_4a_unified_chat_tools_parity.py` | TOOLS | Verify `/llm/chat` `tools_used` parity across full-chat and admin-bubble payload shapes |
 | 5B | `test_5b_sage_route_smoke.py` | TOOLS | Smoke-test Sage-owned public routes and auth/CSRF boundaries |
 | 5C | `test_5c_chat_streaming_transport.py` | TOOLS | Verify `/llm/chat/stream` assistant events, Admin Config streaming, and Database trace redaction through the Docker gateway |
+| 5D | `test_5d_chunk_retrieval_gateway_smoke.py` | TOOLS | Seed one Document Library chunk and verify selected Required Context flows through public `/query` with source metadata |
 
 ---
 
@@ -228,6 +232,18 @@ python test_3d_phase3_config_integrity.py --api-base http://localhost:8000
 # Unified admin chat tool parity (4A)
 cd scripts/tests/TOOLS
 python test_4a_unified_chat_tools_parity.py --api-base http://localhost:8000 --admin-token <ADMIN_TOKEN>
+
+# Sage route smoke (5B)
+cd scripts/tests/TOOLS
+python test_5b_sage_route_smoke.py --api-base http://localhost:8000 --token <ADMIN_TOKEN>
+
+# Chat streaming transport (5C)
+cd scripts/tests/TOOLS
+python test_5c_chat_streaming_transport.py --api-base http://localhost:8000
+
+# Chunk retrieval gateway smoke (5D)
+cd scripts/tests/TOOLS
+python test_5d_chunk_retrieval_gateway_smoke.py --api-base http://localhost:8000
 ```
 
 ---

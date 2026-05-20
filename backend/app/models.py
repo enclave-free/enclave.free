@@ -20,6 +20,42 @@ SUPPORTED_USER_FIELD_TYPES = {
     "date",
 }
 
+SUPPORTED_DEFAULT_LANGUAGES = {
+    "en",
+    "es",
+    "pt",
+    "fr",
+    "de",
+    "it",
+    "nl",
+    "ru",
+    "zh-Hans",
+    "zh-Hant",
+    "ja",
+    "ko",
+    "ar",
+    "fa",
+    "hi",
+    "bn",
+    "id",
+    "th",
+    "vi",
+    "tr",
+    "pl",
+    "uk",
+    "sv",
+    "no",
+    "da",
+    "fi",
+    "el",
+    "he",
+    "cs",
+    "ro",
+    "hu",
+}
+
+SUPPORTED_DEFAULT_THEMES = {"light", "dark", "system"}
+
 
 def _validate_email_shape(value: str) -> str:
     normalized = value.strip()
@@ -47,6 +83,26 @@ def normalize_user_field_options(value: Optional[list[str]]) -> Optional[list[st
         if not clean or len(clean) > 200:
             raise ValueError("options must be non-empty strings no longer than 200 characters")
         normalized.append(clean)
+    return normalized
+
+
+def normalize_default_language(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return value
+    normalized = value.strip()
+    if normalized not in SUPPORTED_DEFAULT_LANGUAGES:
+        allowed = ", ".join(sorted(SUPPORTED_DEFAULT_LANGUAGES))
+        raise ValueError(f"default_language must be one of: {allowed}")
+    return normalized
+
+
+def normalize_default_theme(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return value
+    normalized = value.strip().lower()
+    if normalized not in SUPPORTED_DEFAULT_THEMES:
+        allowed = ", ".join(sorted(SUPPORTED_DEFAULT_THEMES))
+        raise ValueError(f"default_theme must be one of: {allowed}")
     return normalized
 
 
@@ -118,6 +174,18 @@ class InstanceSettings(BaseModel):
     surface_style: Optional[str] = None
     status_icon_set: Optional[str] = None
     typography_preset: Optional[str] = None
+    default_language: Optional[str] = None
+    default_theme: Optional[str] = None
+
+    @field_validator("default_language")
+    @classmethod
+    def validate_default_language(cls, value: Optional[str]) -> Optional[str]:
+        return normalize_default_language(value)
+
+    @field_validator("default_theme")
+    @classmethod
+    def validate_default_theme(cls, value: Optional[str]) -> Optional[str]:
+        return normalize_default_theme(value)
 
     class Config:
         extra = "allow"  # Allow arbitrary additional settings
@@ -684,6 +752,7 @@ class ServiceHealthResponse(BaseModel):
     services: list[ServiceHealthItem]
     restart_required: bool = False
     changed_keys_requiring_restart: list[str] = []
+    runtime_env: dict = Field(default_factory=dict)
 
 
 class DeploymentValidationResponse(BaseModel):

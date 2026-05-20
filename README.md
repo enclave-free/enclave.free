@@ -93,7 +93,7 @@ docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/health
 docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/llm/test
 ```
 
-Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the frontend Test Dashboard. Open `http://localhost:5173/` after startup and confirm the dashboard loads and responds.
+Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the explicit diagnostics dashboard at `http://localhost:5173/diagnostics/test-dashboard`. The root frontend route (`http://localhost:5173/`) is the product entry path and redirects based on Instance initiation and authentication state.
 
 Only two services are exposed to the host by default:
 

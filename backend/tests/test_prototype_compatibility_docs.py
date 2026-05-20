@@ -25,6 +25,20 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("legacy Python router still exists", architecture)
         self.assertNotIn("legacy AI route implementations", architecture)
 
+    def test_current_architecture_names_chunk_retrieval_for_sage_context(self) -> None:
+        architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
+        planned = (REPO_ROOT / "ARCHITECTURE_PLANNED.md").read_text(encoding="utf-8")
+        integration_tests = (REPO_ROOT / "docs/integration-tests.md").read_text(encoding="utf-8")
+
+        self.assertIn("chunk Retrieval for Sage context", architecture)
+        self.assertIn("The current Document Library Retrieval architecture is intentionally a half-RAG, half-agent path", architecture)
+        self.assertIn("The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration", architecture)
+        self.assertIn("Sage owns Conversation behavior and consumes retrieved chunks as Agent Runtime context", architecture)
+        self.assertIn("Graph-first RAG remains deferred", architecture)
+        self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
+        self.assertIn("2B", integration_tests)
+        self.assertIn("Chunk Retrieval evaluation", integration_tests)
+
     def test_streaming_docs_do_not_call_llm_chat_a_compatibility_path(self) -> None:
         root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         cutover = (REPO_ROOT / "docs/prototype-sage-cutover.md").read_text(encoding="utf-8")
@@ -109,6 +123,62 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("Model Provider Compatibility Settings On This Prototype", deployment)
         self.assertNotIn("legacy Python Model Provider client config", deployment)
         self.assertNotIn("remaining legacy client paths", deployment)
+
+    def test_admin_deployment_docs_describe_deployment_settings_as_desired_state(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        adr = (REPO_ROOT / "docs/adr/0019-deployment-settings-generate-runtime-env.md").read_text(encoding="utf-8")
+
+        self.assertIn("Deployment Settings express desired operator-controlled runtime configuration", deployment)
+        self.assertIn("Deployment Readiness reports whether running services match that desired state", deployment)
+        self.assertIn("Low-level infrastructure wiring remains outside the first unified Deployment Settings slice", deployment)
+        self.assertNotIn("the deployment UI is not yet a single source of truth for the whole stack", deployment)
+        self.assertIn("generates an auditable runtime env artifact from Deployment Settings", adr)
+        self.assertIn("avoids live process mutation", adr)
+        self.assertIn("root `.env` is operator-authored bootstrap material", adr)
+
+    def test_apply_boundary_adr_records_operator_run_only_prototype_path(self) -> None:
+        adr = (REPO_ROOT / "docs/adr/0019-deployment-settings-generate-runtime-env.md").read_text(encoding="utf-8")
+        normalized = " ".join(adr.split())
+
+        self.assertIn("Operator-run Compose apply is the supported prototype path", normalized)
+        self.assertIn("The product must not apply generated artifacts to live services", normalized)
+        self.assertIn("must not require Docker socket or host-control authority", normalized)
+        self.assertIn("Product-managed apply/restart is rejected for this prototype", normalized)
+        self.assertIn("External Deployment Automation is out of scope until a concrete deployment need exists", normalized)
+
+    def test_admin_deployment_docs_cover_post_apply_evidence_checklist(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("Post-Apply Evidence Checklist", normalized)
+        self.assertIn("generated artifact freshness is current", normalized)
+        self.assertIn("service restart or recreate evidence comes from the Deployment", normalized)
+        self.assertIn("operator terminal or deployment logs", normalized)
+        self.assertIn("Service Health is healthy for the affected service", normalized)
+        self.assertIn("runtime fingerprint reports `matches_desired` where a safe fingerprint endpoint exists", normalized)
+        self.assertIn("the product still did not apply the artifact, rewrite bootstrap env, or restart the service", normalized)
+
+    def test_admin_deployment_docs_cover_runtime_env_artifact_operations(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("Runtime Env Artifact Runbook", normalized)
+        self.assertIn("Store `runtime/generated/sage.env` as sensitive deployment material", normalized)
+        self.assertIn("Apply it with the documented Compose command, then restart or recreate the `sage` service", normalized)
+        self.assertIn("Rotate the artifact after any Model Provider, origin, CORS, or search setting change", normalized)
+        self.assertIn("Dispose of old generated env artifacts after a successful apply", normalized)
+        self.assertIn("If Deployment Readiness reports `stale`, export a fresh Sage env artifact before restarting Sage", normalized)
+        self.assertIn("If Deployment Readiness reports `drifted`, investigate the running Sage runtime fingerprint", normalized)
+
+    def test_admin_deployment_docs_cover_core_backend_runtime_env_artifact_operations(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("Core Backend Runtime Env Export", normalized)
+        self.assertIn("GET /admin/deployment/runtime-env/core-backend", normalized)
+        self.assertIn("Store `runtime/generated/core-backend.env` as sensitive deployment material", normalized)
+        self.assertIn("apply it by recreating the `core-backend` service", normalized)
+        self.assertIn("If Deployment Readiness reports `drifted` for core backend", normalized)
 
     def test_agent_settings_surface_is_not_described_as_compatibility_layer(self) -> None:
         checked_paths = [

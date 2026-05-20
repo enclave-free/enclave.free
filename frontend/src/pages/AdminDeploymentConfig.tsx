@@ -33,9 +33,9 @@ import {
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { Button, Callout, Card, TextField } from '../components/ui'
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi'
-import { useDeploymentConfig, useServiceHealth, useConfigAuditLog, useKeyMigration, useLifecycleStatus, useDeletionTombstones } from '../hooks/useAdminConfig'
+import { useDeploymentConfig, useServiceHealth, useDeploymentReadiness, useConfigAuditLog, useKeyMigration, useLifecycleStatus, useDeletionTombstones } from '../hooks/useAdminConfig'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse, DeletionTombstoneStatusFilter } from '../types/config'
+import type { DeploymentConfigItem, ServiceHealthItem, ConfigCategory, DeploymentConfigItemKey, MigrationPrepareResponse, DecryptedUserData, DecryptedFieldValue, DeploymentValidationResponse, DeploymentReadinessItem, DeletionTombstoneStatusFilter } from '../types/config'
 import { DEFAULT_TINFOIL_MODEL, TINFOIL_SIGNUP_URL, getConfigCategories, getDeploymentConfigItemMeta } from '../types/config'
 import { hasNip04Support, decryptField } from '../utils/encryption'
 import { hasNostrExtension } from '../utils/nostrAuth'
@@ -89,6 +89,8 @@ export function AdminDeploymentConfig() {
     error: configError,
     updateConfig,
     exportEnv,
+    exportSageRuntimeEnv,
+    exportCoreBackendRuntimeEnv,
     validate,
     revealSecret,
   } = useDeploymentConfig()
@@ -99,6 +101,12 @@ export function AdminDeploymentConfig() {
     loading: healthLoading,
     refresh: refreshHealth,
   } = useServiceHealth()
+  const {
+    readiness: deploymentReadiness,
+    loading: readinessLoading,
+    error: readinessError,
+    refresh: refreshReadiness,
+  } = useDeploymentReadiness()
 
   const {
     status: lifecycleStatus,
@@ -139,6 +147,8 @@ export function AdminDeploymentConfig() {
   const [showAuditLog, setShowAuditLog] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [sageRuntimeEnvExported, setSageRuntimeEnvExported] = useState(false)
+  const [coreBackendRuntimeEnvExported, setCoreBackendRuntimeEnvExported] = useState(false)
   const [retryingTombstoneId, setRetryingTombstoneId] = useState<number | null>(null)
   const [tombstoneRetryError, setTombstoneRetryError] = useState<string | null>(null)
   const [acknowledgingSurfaceKey, setAcknowledgingSurfaceKey] = useState<string | null>(null)
@@ -176,6 +186,8 @@ export function AdminDeploymentConfig() {
   const [selectedVerificationRecord, setSelectedVerificationRecord] = useState<InferenceVerificationRecord | null>(null)
   const [selectedVerificationLoading, setSelectedVerificationLoading] = useState(false)
   const [selectedVerificationError, setSelectedVerificationError] = useState<string | null>(null)
+  const [showReadinessWizard, setShowReadinessWizard] = useState(false)
+  const [readinessWizardIndex, setReadinessWizardIndex] = useState(0)
 
   // Test email modal state
   const [showTestEmailModal, setShowTestEmailModal] = useState(false)
@@ -388,6 +400,66 @@ export function AdminDeploymentConfig() {
     if (status === 'not_configured') return t('adminDeployment.lifecycle.notConfigured', 'Not Configured')
     if (status === 'plaintext_by_operator_choice') return t('adminDeployment.lifecycle.plaintextByOperatorChoice', 'Plaintext by Operator Choice')
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+  }
+
+  const formatReadinessSeverity = (severity: string) => {
+    if (severity === 'blocker') return t('adminDeployment.readiness.blocker', 'Blocker')
+    if (severity === 'warning') return t('adminDeployment.readiness.warning', 'Warning')
+    if (severity === 'ready') return t('adminDeployment.readiness.ready', 'Ready')
+    return formatLifecycleStatus(severity)
+  }
+
+  const readinessToneClass = (severity: string) => {
+    if (severity === 'blocker') return 'border-error/20 bg-error/10 text-error'
+    if (severity === 'warning') return 'border-warning/20 bg-warning/10 text-warning'
+    if (severity === 'ready' || severity === 'success') return 'border-success/20 bg-success/10 text-success'
+    return 'border-border bg-surface-muted text-text-muted'
+  }
+
+  const readinessReviewTarget = (item: DeploymentReadinessItem) => {
+    if (item.source === 'inference_verification') {
+      return {
+        href: '#inference-verification',
+        label: t('adminDeployment.readiness.reviewInferenceVerification', 'Review Inference Verification'),
+      }
+    }
+    if (item.source === 'lifecycle_readiness' || item.source === 'deployment_surfaces') {
+      return {
+        href: '#data-lifecycle-status',
+        label: t('adminDeployment.readiness.reviewDataLifecycleStatus', 'Review Data Lifecycle Status'),
+      }
+    }
+    if (item.source === 'deployment_validation') {
+      return {
+        href: '#deployment-settings',
+        label: t('adminDeployment.readiness.reviewDeploymentValidation', 'Review Deployment Settings'),
+      }
+    }
+    if (item.source === 'restart_required') {
+      return {
+        href: '#restart-required',
+        label: t('adminDeployment.readiness.reviewRestartRequired', 'Review Restart Required'),
+      }
+    }
+    if (item.source === 'runtime_env') {
+      if (!health?.runtime_env?.sage) {
+        return null
+      }
+      return {
+        href: '#runtime-config-alignment',
+        label: t('adminDeployment.readiness.reviewRuntimeEnv', 'Review Runtime Env Export'),
+      }
+    }
+    if (item.source === 'operational_readiness') {
+      return {
+        href: '#operational-readiness',
+        label: t('adminDeployment.readiness.reviewOperationalReadiness', 'Review Operational Readiness'),
+      }
+    }
+    return {
+      href: '#service-health',
+      label: t('adminDeployment.readiness.reviewServiceHealth', 'Review Service Health'),
+    }
   }
 
   const tombstoneStatusFilters: Array<{ value: DeletionTombstoneStatusFilter; label: string; ariaLabel: string }> = [
@@ -639,6 +711,54 @@ export function AdminDeploymentConfig() {
       const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
       setExportError(message)
       console.error('Export failed:', err)
+    }
+  }
+
+  const handleExportSageRuntimeEnv = async () => {
+    setExportError(null)
+    setSageRuntimeEnvExported(false)
+    try {
+      const content = await exportSageRuntimeEnv()
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'sage.env'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setSageRuntimeEnvExported(true)
+      await refreshReadiness()
+      await refreshHealth()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
+      setExportError(message)
+      console.error('Sage runtime env export failed:', err)
+    }
+  }
+
+  const handleExportCoreBackendRuntimeEnv = async () => {
+    setExportError(null)
+    setCoreBackendRuntimeEnvExported(false)
+    try {
+      const content = await exportCoreBackendRuntimeEnv()
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'core-backend.env'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setCoreBackendRuntimeEnvExported(true)
+      await refreshReadiness()
+      await refreshHealth()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
+      setExportError(message)
+      console.error('Core backend runtime env export failed:', err)
     }
   }
 
@@ -1241,6 +1361,17 @@ export function AdminDeploymentConfig() {
     }
   }
 
+  const runtimeStateClass = (status?: string) => {
+    if (status === 'current' || status === 'configured' || status === 'matches_desired') return 'border-success/20 bg-success/10 text-success'
+    if (status === 'stale' || status === 'restart_required' || status === 'not_generated' || status === 'drifted') return 'border-warning/20 bg-warning/10 text-warning'
+    return 'border-border bg-surface text-text-muted'
+  }
+
+  const formatRuntimeState = (status?: string) => {
+    if (!status) return t('adminDeployment.runtimeEnv.unknown', 'Unknown')
+    return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
   // Check if a config key is a secret (should be masked in audit log)
   const isSecretKey = (configKey: string): boolean => {
     if (!deploymentConfig) return false
@@ -1423,6 +1554,7 @@ export function AdminDeploymentConfig() {
 
     return (
       <div
+        id="inference-verification"
         role="group"
         aria-label={t('adminDeployment.inferenceVerification.ariaLabel', 'Inference Verification')}
         className="mb-4 rounded-lg border border-border bg-surface p-4"
@@ -1577,6 +1709,193 @@ export function AdminDeploymentConfig() {
     )
   }
 
+  const renderDeploymentReadinessPanel = () => {
+    const summary = deploymentReadiness?.summary
+    const items = deploymentReadiness?.items ?? []
+    const status = deploymentReadiness?.status ?? (readinessLoading ? 'loading' : (readinessError ? 'failed' : 'unknown'))
+    const wizardItem = items[Math.min(readinessWizardIndex, Math.max(items.length - 1, 0))]
+    const wizardTarget = wizardItem ? readinessReviewTarget(wizardItem) : null
+    const isBlocked = status === 'blocked'
+    const isReady = status === 'ready'
+    const statusIcon = isReady
+      ? <CheckCircle className="w-4 h-4 text-success" />
+      : isBlocked
+        ? <AlertCircle className="w-4 h-4 text-error" />
+        : <AlertCircle className="w-4 h-4 text-warning" />
+
+    return (
+      <Card
+        role="group"
+        aria-label={t('adminDeployment.readiness.title', 'Deployment Readiness')}
+        className="bg-surface-overlay"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="heading-sm flex items-center gap-2">
+              {statusIcon}
+              {t('adminDeployment.readiness.statusTitle', 'Deployment Readiness: {{status}}', {
+                status: formatLifecycleStatus(status),
+              })}
+            </h3>
+            <p className="mt-1 text-sm text-text-secondary">
+              {t('adminDeployment.readiness.description', 'Review the evidence needed before this Single-Instance Deployment is ready for normal operation.')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setReadinessWizardIndex(0)
+                setShowReadinessWizard(true)
+              }}
+              disabled={items.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text disabled:opacity-50"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              {t('adminDeployment.readiness.openWizard', 'Open Readiness Review')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void refreshReadiness()}
+              disabled={readinessLoading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${readinessLoading ? 'animate-spin' : ''}`} />
+              {t('adminDeployment.refresh', 'Refresh')}
+            </button>
+          </div>
+        </div>
+
+        {summary && (
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="rounded-lg border border-error/20 bg-error/10 px-2 py-2 text-error">
+              {t('adminDeployment.readiness.blockerCount', '{{count}} blockers', { count: summary.blockers })}
+            </div>
+            <div className="rounded-lg border border-warning/20 bg-warning/10 px-2 py-2 text-warning">
+              {t('adminDeployment.readiness.warningCount', '{{count}} warnings', { count: summary.warnings })}
+            </div>
+            <div className="rounded-lg border border-success/20 bg-success/10 px-2 py-2 text-success">
+              {t('adminDeployment.readiness.readyCount', '{{count}} ready', { count: summary.ready })}
+            </div>
+          </div>
+        )}
+
+        {readinessError && (
+          <p className="mt-4 text-sm text-error">{readinessError}</p>
+        )}
+
+        <div className="mt-4 space-y-2">
+          {items.length === 0 ? (
+            <p className="text-sm text-text-muted">
+              {readinessLoading
+                ? t('common.loading', 'Loading')
+                : t('adminDeployment.readiness.empty', 'No Deployment Readiness checks are available yet.')}
+            </p>
+          ) : items.map((item) => {
+            const target = readinessReviewTarget(item)
+            return (
+              <div key={item.key} className="rounded-lg border border-border bg-surface p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-text">{item.label}</p>
+                    <p className="mt-1 text-xs text-text-secondary">{item.summary}</p>
+                    <p className="mt-2 text-xs text-text-muted">{item.next_action}</p>
+                  </div>
+                  <span className={`self-start rounded-full border px-2 py-0.5 text-xs font-medium ${readinessToneClass(item.severity)}`}>
+                    {formatReadinessSeverity(item.severity)}
+                  </span>
+                </div>
+                {target && (
+                  <a
+                    href={target.href}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent-hover"
+                  >
+                    {target.label}
+                  </a>
+                )}
+                {item.conversation_blocking && (
+                  <p className="mt-2 text-xs font-medium text-error">
+                    {t('adminDeployment.readiness.conversationBlocking', 'Blocks normal Conversations')}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {showReadinessWizard && wizardItem && wizardTarget && (
+          <div
+            role="dialog"
+            aria-label={t('adminDeployment.wizard.title', 'Deployment Wizard')}
+            className="mt-4 rounded-lg border border-border bg-surface p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                  {t('adminDeployment.wizard.step', 'Step {{current}} of {{total}}', {
+                    current: Math.min(readinessWizardIndex + 1, items.length),
+                    total: items.length,
+                  })}
+                </p>
+                <h4 className="mt-1 text-base font-semibold text-text">
+                  {t('adminDeployment.wizard.title', 'Deployment Wizard')}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReadinessWizard(false)}
+                className="rounded-md p-1 text-text-muted hover:text-text"
+                aria-label={t('common.close', 'Close')}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-border bg-surface-overlay p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-text">{wizardItem.label}</p>
+                  <p className="mt-1 text-xs text-text-secondary">{wizardItem.summary}</p>
+                  <p className="mt-2 text-xs text-text-muted">{wizardItem.next_action}</p>
+                </div>
+                <span className={`self-start rounded-full border px-2 py-0.5 text-xs font-medium ${readinessToneClass(wizardItem.severity)}`}>
+                  {formatReadinessSeverity(wizardItem.severity)}
+                </span>
+              </div>
+              <a
+                href={wizardTarget.href}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent-hover"
+              >
+                {wizardTarget.label}
+              </a>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setReadinessWizardIndex((current) => Math.max(current - 1, 0))}
+                disabled={readinessWizardIndex === 0}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text disabled:opacity-50"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                {t('common.previous', 'Previous')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setReadinessWizardIndex((current) => Math.min(current + 1, items.length - 1))}
+                disabled={readinessWizardIndex >= items.length - 1}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text disabled:opacity-50"
+              >
+                {t('common.next', 'Next')}
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </Card>
+    )
+  }
+
   // Render a config category section
   const renderCategory = (category: ConfigCategory, items: DeploymentConfigItem[]) => {
     if (items.length === 0) return null
@@ -1584,7 +1903,6 @@ export function AdminDeploymentConfig() {
     const meta = configCategories[category]
     const helpText = meta.hint || meta.description
     const hasModalHelp = category === 'email' || category === 'llm' || category === 'embedding' || category === 'domains' || category === 'storage' || category === 'search' || category === 'security' || category === 'ssl'
-
     return (
       <Card
         key={category}
@@ -1719,6 +2037,8 @@ export function AdminDeploymentConfig() {
       footer={footer}
     >
       <div className="space-y-6">
+        <div id="deployment-settings" className="sr-only" aria-hidden="true" />
+
         {/* Error display */}
         {configError && (
           <div className="bg-error/10 border border-error/20 rounded-xl p-4">
@@ -1726,8 +2046,10 @@ export function AdminDeploymentConfig() {
           </div>
         )}
 
+        {renderDeploymentReadinessPanel()}
+
         {/* Service Health Section */}
-        <Card>
+        <Card id="service-health">
           <div className="flex items-center justify-between mb-2">
             <h3 className="heading-sm flex items-center gap-2">
               <Server className="w-4 h-4 text-text-muted" />
@@ -1749,20 +2071,166 @@ export function AdminDeploymentConfig() {
             {t('adminDeployment.serviceHealthHint', 'Green means the service is responding normally. If a service shows red, check its configuration below.')}
           </p>
 
-          {health?.restart_required && (
-            <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 mb-4">
-              <div className="flex items-center gap-2 text-warning text-sm font-medium">
-                <AlertCircle className="w-4 h-4" />
-                {t('adminDeployment.restartRequired', 'Service restart required')}
+          {health?.runtime_env?.sage && (
+            <div id="runtime-config-alignment" className="rounded-lg border border-border p-3 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h4 className="text-sm font-medium text-text">
+                    {t('adminDeployment.runtimeEnv.title', 'Runtime Config Alignment')}
+                  </h4>
+                  <p className="text-xs text-text-muted mt-1">
+                    {t('adminDeployment.runtimeEnv.description', 'Compares desired Deployment Settings, generated Sage env, and observable running state.')}
+                  </p>
+                </div>
+                <button
+                  onClick={handleExportSageRuntimeEnv}
+                  className="shrink-0 flex items-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {t('adminDeployment.exportSageRuntimeEnv', 'Export Sage env')}
+                </button>
+                <button
+                  onClick={handleExportCoreBackendRuntimeEnv}
+                  className="shrink-0 flex items-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {t('adminDeployment.exportCoreBackendRuntimeEnv', 'Export core-backend env')}
+                </button>
               </div>
-              {Array.isArray(health.changed_keys_requiring_restart) &&
-               health.changed_keys_requiring_restart.length > 0 && (
-                <p className="text-xs text-text-muted mt-1">
-                  {t('adminDeployment.extracted.changed_keys_6dd885', 'Changed keys:')} {health.changed_keys_requiring_restart.join(', ')}
-                </p>
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.sage.desired?.status)}`}>
+                  <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.desired', 'Desired')}</p>
+                  <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.sage.desired?.status)}</p>
+                  <p className="text-xs mt-1 text-text-muted">
+                    {t('adminDeployment.runtimeEnv.configuredKeys', '{{count}} of {{total}} keys configured', {
+                      count: health.runtime_env.sage.desired?.configured_keys ?? 0,
+                      total: health.runtime_env.sage.desired?.total_keys ?? 0,
+                    })}
+                  </p>
+                </div>
+                <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.sage.generated?.status)}`}>
+                  <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.generated', 'Generated')}</p>
+                  <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.sage.generated?.status)}</p>
+                  <p className="text-xs mt-1 text-text-muted">
+                    {health.runtime_env.sage.generated?.latest_export_at
+                      ? t('adminDeployment.runtimeEnv.exportedAt', 'Exported {{time}}', {
+                          time: formatTimestamp(health.runtime_env.sage.generated.latest_export_at),
+                        })
+                      : t('adminDeployment.runtimeEnv.notExported', 'No Sage env export recorded')}
+                  </p>
+                </div>
+                <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.sage.running?.status)}`}>
+                  <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.running', 'Running')}</p>
+                  <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.sage.running?.status)}</p>
+                  <p className="text-xs mt-1 text-text-muted">
+                    {health.runtime_env.sage.running?.summary || t('adminDeployment.runtimeEnv.runningUnknown', 'Running state is not directly introspected yet.')}
+                  </p>
+                </div>
+              </div>
+              {health.runtime_env.core_backend && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-text">
+                      {t('adminDeployment.runtimeEnv.coreBackend', 'Core Backend')}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {t('adminDeployment.runtimeEnv.coreBackendHint', 'Backend process env alignment')}
+                    </p>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.core_backend.desired?.status)}`}>
+                      <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.coreDesired', 'Core Desired')}</p>
+                      <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.core_backend.desired?.status)}</p>
+                      <p className="text-xs mt-1 text-text-muted">
+                        {t('adminDeployment.runtimeEnv.coreConfiguredKeys', 'Core backend: {{count}} of {{total}} keys configured', {
+                          count: health.runtime_env.core_backend.desired?.configured_keys ?? 0,
+                          total: health.runtime_env.core_backend.desired?.total_keys ?? 0,
+                        })}
+                      </p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.core_backend.generated?.status)}`}>
+                      <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.coreGenerated', 'Core Generated')}</p>
+                      <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.core_backend.generated?.status)}</p>
+                      <p className="text-xs mt-1 text-text-muted">
+                        {health.runtime_env.core_backend.generated?.latest_export_at
+                          ? t('adminDeployment.runtimeEnv.exportedAt', 'Exported {{time}}', {
+                              time: formatTimestamp(health.runtime_env.core_backend.generated.latest_export_at),
+                            })
+                          : t('adminDeployment.runtimeEnv.coreNotExported', 'No core backend env export recorded')}
+                      </p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.core_backend.running?.status)}`}>
+                      <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.coreRunning', 'Core Running')}</p>
+                      <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.core_backend.running?.status)}</p>
+                      <p className="text-xs mt-1 text-text-muted">
+                        {health.runtime_env.core_backend.running?.summary || t('adminDeployment.runtimeEnv.coreRunningUnknown', 'Core backend running state is not directly introspected yet.')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {coreBackendRuntimeEnvExported && (
+                <div className="mt-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
+                  <p className="text-sm font-semibold text-warning">
+                    {t('adminDeployment.runtimeEnv.coreExportedTitle', 'Core-backend env exported')}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.coreSensitiveArtifact', 'Treat core-backend.env as sensitive deployment material.')}
+                  </p>
+                  <code className="mt-2 block overflow-x-auto rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text">
+                    docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend
+                  </code>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.coreExportDoesNotApply', 'Exporting the artifact does not change the running backend process until an Operator applies it and restarts core-backend.')}
+                  </p>
+                </div>
+              )}
+              {sageRuntimeEnvExported && (
+                <div className="mt-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
+                  <p className="text-sm font-semibold text-warning">
+                    {t('adminDeployment.runtimeEnv.exportedTitle', 'Sage env exported')}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.sensitiveArtifact', 'Treat sage.env as sensitive deployment material.')}
+                  </p>
+                  <code className="mt-2 block overflow-x-auto rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text">
+                    docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
+                  </code>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.exportDoesNotApply', 'Exporting the artifact does not change the running Sage process until an Operator applies it and restarts Sage.')}
+                  </p>
+                </div>
               )}
             </div>
           )}
+
+          <div
+            id="restart-required"
+            className={`rounded-lg border p-3 mb-4 ${
+              health?.restart_required
+                ? 'border-warning/20 bg-warning/10'
+                : 'border-success/20 bg-success/10'
+            }`}
+          >
+            <div className={`flex items-center gap-2 text-sm font-medium ${health?.restart_required ? 'text-warning' : 'text-success'}`}>
+              {health?.restart_required ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+              {health?.restart_required
+                ? t('adminDeployment.restartRequired', 'Service restart required')
+                : t('adminDeployment.restartCurrent', 'No restart required')}
+            </div>
+            {health?.restart_required ? (
+              Array.isArray(health.changed_keys_requiring_restart) &&
+              health.changed_keys_requiring_restart.length > 0 && (
+                <p className="text-xs text-text-muted mt-1">
+                  {t('adminDeployment.extracted.changed_keys_6dd885', 'Changed keys:')} {health.changed_keys_requiring_restart.join(', ')}
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-text-muted mt-1">
+                {t('adminDeployment.restartCurrentDesc', 'No restart-required Deployment Settings have changed since service start.')}
+              </p>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             {health?.services.map((service) => (
@@ -1805,7 +2273,7 @@ export function AdminDeploymentConfig() {
         </Card>
 
         {/* Data Lifecycle Status Section */}
-        <Card role="group" aria-label={t('adminDeployment.lifecycle.title', 'Data Lifecycle Status')}>
+        <Card id="data-lifecycle-status" role="group" aria-label={t('adminDeployment.lifecycle.title', 'Data Lifecycle Status')}>
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="heading-sm flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-text-muted" />
@@ -2220,6 +2688,16 @@ export function AdminDeploymentConfig() {
           )}
         </Card>
 
+        <Card id="operational-readiness" role="group" aria-label={t('adminDeployment.operationalReadiness.title', 'Operational Readiness')}>
+          <h3 className="heading-sm mb-2 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-text-muted" />
+            {t('adminDeployment.operationalReadiness.title', 'Operational Readiness')}
+          </h3>
+          <p className="text-sm text-text-secondary">
+            {t('adminDeployment.operationalReadiness.description', 'Review backup, restore, monitoring, and recovery drills before normal operation.')}
+          </p>
+        </Card>
+
         <Card role="group" aria-label={t('adminDeployment.lifecycle.tombstonesTitle', 'Deletion Tombstones')}>
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="heading-sm flex items-center gap-2">
@@ -2335,6 +2813,20 @@ export function AdminDeploymentConfig() {
           >
             <Download className="w-4 h-4" />
             {t('adminDeployment.exportEnv', 'Export .env')}
+          </button>
+          <button
+            onClick={handleExportSageRuntimeEnv}
+            className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-lg px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface"
+          >
+            <Download className="w-4 h-4" />
+            {t('adminDeployment.exportSageRuntimeEnv', 'Export Sage env')}
+          </button>
+          <button
+            onClick={handleExportCoreBackendRuntimeEnv}
+            className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-lg px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface"
+          >
+            <Download className="w-4 h-4" />
+            {t('adminDeployment.exportCoreBackendRuntimeEnv', 'Export core-backend env')}
           </button>
           <button
             onClick={() => setShowAuditLog(!showAuditLog)}

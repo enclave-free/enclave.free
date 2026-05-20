@@ -179,12 +179,73 @@ export interface ServiceHealthResponse {
   services: ServiceHealthItem[]
   restart_required: boolean
   changed_keys_requiring_restart: string[]
+  runtime_env?: {
+    sage?: {
+      desired?: {
+        status: string
+        configured_keys: number
+        total_keys: number
+        fingerprint?: string
+      }
+      generated?: {
+        status: string
+        latest_export_at?: string | null
+        latest_source_change_at?: string | null
+      }
+      running?: {
+        status: string
+        summary: string
+        changed_keys_requiring_restart?: string[]
+      }
+    }
+    core_backend?: {
+      desired?: {
+        status: string
+        configured_keys: number
+        total_keys: number
+      }
+      generated?: {
+        status: string
+        latest_export_at?: string | null
+        latest_source_change_at?: string | null
+      }
+      running?: {
+        status: string
+        summary: string
+        fingerprint?: string | null
+      }
+    }
+  }
 }
 
 export interface DeploymentValidationResponse {
   valid: boolean
   errors: string[]
   warnings: string[]
+}
+
+export type DeploymentReadinessSeverity = 'blocker' | 'warning' | 'ready'
+
+export interface DeploymentReadinessItem {
+  key: string
+  label: string
+  source: string
+  severity: DeploymentReadinessSeverity
+  status: string
+  summary: string
+  next_action: string
+  conversation_blocking: boolean
+}
+
+export interface DeploymentReadinessResponse {
+  status: 'blocked' | 'warnings' | 'ready' | string
+  summary: {
+    blockers: number
+    warnings: number
+    ready: number
+    total: number
+  }
+  items: DeploymentReadinessItem[]
 }
 
 // --- Data Lifecycle Types ---

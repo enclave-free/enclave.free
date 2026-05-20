@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { API_BASE } from '../types/onboarding'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -17,10 +18,18 @@ function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+function getStoredTheme(): Theme | null {
+  if (typeof window === 'undefined') return null
+  const stored = localStorage.getItem(STORAGE_KEY)
+  return isTheme(stored) ? stored : null
+}
+
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'system'
-  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
-  return stored || 'system'
+  return getStoredTheme() ?? 'system'
+}
+
+function isTheme(value: unknown): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -34,6 +43,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme)
     localStorage.setItem(STORAGE_KEY, newTheme)
   }
+
+  useEffect(() => {
+    let active = true
+
+    async function fetchDefaultTheme() {
+      try {
+        const response = await fetch(`${API_BASE}/settings/public`)
+        if (!response.ok) return
+        const data = await response.json()
+        const defaultTheme = data?.settings?.default_theme
+        if (active && isTheme(defaultTheme) && getStoredTheme() === null) {
+          setThemeState(defaultTheme)
+        }
+      } catch {
+        // Keep safe system/browser fallback when public settings are unavailable.
+      }
+    }
+
+    if (getStoredTheme() === null) {
+      void fetchDefaultTheme()
+    }
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const resolved = theme === 'system' ? getSystemTheme() : theme

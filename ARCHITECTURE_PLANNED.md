@@ -2,7 +2,7 @@
 
 > **Note:** This document describes the **planned** architecture for Enclave's future graph-first RAG system using Neo4j + Graphiti. For the **current** implementation (SQLite + Qdrant), see [ARCHITECTURE_CURRENT.md](./ARCHITECTURE_CURRENT.md).
 >
-> **Status:** Not implemented. The current MVP uses a simpler SQLite + Qdrant stack. This architecture represents a future evolution when graph-based knowledge representation becomes necessary.
+> **Status:** Not implemented. The current MVP intentionally uses chunk Retrieval for Sage context with SQLite + Qdrant. This is a deferred architecture, not the current prototype completeness bar, and represents a future evolution when graph-based knowledge representation becomes necessary.
 
 ---
 

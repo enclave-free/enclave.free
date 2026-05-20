@@ -3471,20 +3471,23 @@ def get_current_inference_verification_status_for_config(
 
 # --- Audit Log Operations ---
 
-def get_config_audit_log(limit: int = 100, table_name: str | None = None) -> list[dict]:
+def get_config_audit_log(limit: int | None = 100, table_name: str | None = None) -> list[dict]:
     """Get recent config audit log entries"""
     with get_cursor() as cursor:
+        limit_clause = "" if limit is None else " LIMIT ?"
         if table_name:
+            params: tuple[object, ...] = (table_name,) if limit is None else (table_name, limit)
             cursor.execute("""
                 SELECT * FROM config_audit_log
                 WHERE table_name = ?
-                ORDER BY changed_at DESC LIMIT ?
-            """, (table_name, limit))
+                ORDER BY changed_at DESC
+            """ + limit_clause, params)
         else:
+            params = () if limit is None else (limit,)
             cursor.execute("""
                 SELECT * FROM config_audit_log
-                ORDER BY changed_at DESC LIMIT ?
-            """, (limit,))
+                ORDER BY changed_at DESC
+            """ + limit_clause, params)
         return [dict(row) for row in cursor.fetchall()]
 
 

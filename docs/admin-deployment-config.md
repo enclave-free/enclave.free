@@ -36,7 +36,7 @@ It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to
 | `enclave_web` startup, Postgres memory, AI turn execution | Sage | `sage` container env |
 | Model Provider transport | Tinfoil proxy | `tinfoil-proxy` container |
 
-Important consequence: changing admin deployment config does not automatically rewrite the Sage container environment.
+Important consequence: changing admin deployment config records desired Deployment Settings. It does not mutate live Sage process state until the Operator applies generated runtime env and restarts affected services.
 
 ## Model Provider Deployment Settings On This Prototype
 
@@ -66,7 +66,142 @@ What actually drives Sage:
 - `ENCLAVE_BACKEND_URL`
 - `INTERNAL_AGENT_TOKEN`
 
-Those are currently supplied to the `sage` container through compose or environment, not through the admin deployment UI.
+Those are supplied to the `sage` container through Compose environment interpolation. The admin deployment UI can export a Sage runtime env artifact that maps desired Deployment Settings onto the runtime keys Sage actually reads.
+
+## Sage Runtime Env Export
+
+`GET /admin/deployment/runtime-env/sage` exports an audited, secret-bearing dotenv artifact for Sage. The admin UI exposes this as **Export Sage env**. The older `/admin/deployment/config/runtime-env/sage` path remains as a compatibility alias for current tooling.
+
+The first export slice maps:
+
+| Deployment Setting | Sage runtime env |
+| --- | --- |
+| `LLM_API_URL` | `TINFOIL_API_URL` |
+| `LLM_API_KEY` | `TINFOIL_API_KEY` |
+| `LLM_MODEL` | `TINFOIL_MODEL` |
+| `EMBEDDING_MODEL` | `TINFOIL_EMBEDDING_MODEL` |
+| `FRONTEND_URL` | `FRONTEND_URL` |
+| `CORS_ORIGINS` | `CORS_ORIGINS` |
+| `SEARXNG_URL` | `SEARXNG_URL` |
+
+Apply flow:
+
+```bash
+mkdir -p runtime/generated
+# Save the exported Sage env artifact to runtime/generated/sage.env.
+docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
+```
+
+The product records when the Sage runtime env was exported and Deployment Readiness reports whether Deployment Settings changed afterward. Applying and restarting remains a Deployment responsibility, not a live product mutation.
+
+The Service Health panel also shows Runtime Config Alignment:
+
+- Desired: whether the Deployment Settings used by the Sage runtime env export are configured.
+- Generated: whether the exported Sage env is missing, current, or stale compared with desired Deployment Settings.
+- Running: whether Sage's safe internal runtime-config fingerprint matches the desired Deployment Settings when the Sage endpoint is reachable. If the fingerprint cannot be read, the panel falls back to restart-required evidence and service health.
+
+Sage exposes `GET /internal/runtime-config/fingerprint` for this comparison. The route requires `X-Internal-Agent-Token` and returns non-secret runtime values plus a fingerprint for secret-bearing values, not raw secret material.
+
+## Core Backend Runtime Env Export
+
+`GET /admin/deployment/runtime-env/core-backend` exports an audited,
+secret-bearing dotenv artifact for the Python `core-backend` service. The older
+`/admin/deployment/config/runtime-env/core-backend` path is also available for
+tooling that still uses the deployment config prefix.
+
+The core-backend export intentionally covers the same operator-facing
+integration and origin settings as the first Sage slice. It does not include
+database URLs, internal agent tokens, cookie names, host/port topology, gateway
+route maps, or other low-level bootstrap wiring.
+
+| Deployment Setting | core-backend runtime env |
+| --- | --- |
+| `LLM_API_URL` | `LLM_API_URL` |
+| `LLM_API_KEY` | `LLM_API_KEY` |
+| `LLM_MODEL` | `LLM_MODEL` |
+| `EMBEDDING_MODEL` | `EMBEDDING_MODEL` |
+| `FRONTEND_URL` | `FRONTEND_URL` |
+| `CORS_ORIGINS` | `CORS_ORIGINS` |
+| `SEARXNG_URL` | `SEARXNG_URL` |
+
+Apply flow:
+
+```bash
+mkdir -p runtime/generated
+# Save the exported core-backend env artifact to runtime/generated/core-backend.env.
+docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend
+```
+
+The Admin API exposes `GET /admin/deployment/internal/runtime-config/fingerprint`
+for the core-backend comparison. It requires `X-Internal-Agent-Token` and returns
+only approved runtime values plus configured/fingerprint metadata for
+secret-bearing settings.
+
+## Runtime Env Artifact Runbook
+
+Generated runtime env files are deployment artifacts, not durable product data.
+Store `runtime/generated/sage.env` and `runtime/generated/core-backend.env` as
+sensitive deployment material because they contain provider credentials and
+origin/runtime details. Keep them out of git, limit read access to operators and
+deployment automation, and avoid pasting the contents into tickets, chat, or
+logs.
+
+Store `runtime/generated/sage.env` as sensitive deployment material because it
+includes the provider credential material that Sage reads at process start.
+Store `runtime/generated/core-backend.env` as sensitive deployment material for
+the same reason as the Sage artifact: it includes the provider credential
+material that the backend reads at process start.
+
+Apply it with the documented Compose command, then restart or recreate the
+`sage` service so process-start env is refreshed. For Sage, use:
+
+```bash
+docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
+```
+
+Apply the core-backend artifact with the matching Compose command, then apply it
+by recreating the `core-backend` service so process-start env is refreshed:
+
+```bash
+docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend
+```
+
+Rotate the artifact after any Model Provider, origin, CORS, or search setting
+change that the service reads. Rotate each affected artifact by exporting a
+fresh runtime env artifact from Deployment Settings, applying it through the
+Deployment, and confirming Deployment Readiness no longer reports stale
+generated env.
+
+Post-Apply Evidence Checklist:
+
+1. Confirm generated artifact freshness is current in Deployment Readiness.
+2. Confirm service restart or recreate evidence comes from the Deployment,
+   such as the operator terminal or deployment logs.
+3. Confirm Service Health is healthy for the affected service.
+4. Confirm the runtime fingerprint reports `matches_desired` where a safe
+   fingerprint endpoint exists.
+5. Confirm the product still did not apply the artifact, rewrite bootstrap env,
+   or restart the service.
+
+Dispose of old generated env artifacts after a successful apply. Prefer
+deleting superseded local copies and retaining only deployment-system evidence
+that an export/apply happened. Do not archive old secret-bearing dotenv files as
+ordinary troubleshooting attachments.
+
+Repair flow:
+
+1. If Deployment Readiness reports `stale`, export a fresh Sage env artifact
+   before restarting Sage.
+2. If Deployment Readiness reports `drifted`, investigate the running Sage
+   runtime fingerprint, confirm which setting differs from desired Deployment
+   Settings, apply the current generated artifact, and restart Sage.
+3. If Deployment Readiness reports `drifted` for core backend, inspect the
+   core-backend runtime fingerprint, confirm which setting differs from desired
+   Deployment Settings, apply the current generated core-backend artifact, and
+   restart or recreate `core-backend`.
+4. If the fingerprint cannot be read, treat service health and generated env
+   freshness as the available evidence, then inspect Sage logs and internal
+   token configuration before assuming desired state was applied.
 
 ## Health Checks
 
@@ -135,15 +270,20 @@ Unsupported Deployment Surfaces are grouped by category: runtime logs, database 
 
 ## Common Operator Workflow
 
-1. use the admin deployment UI to inspect health and manage Python-owned settings
-2. keep Sage env and Python deployment config aligned for shared values
-3. restart affected services when changing any setting marked `requires_restart`
-4. if the actual Sage Model Provider path changes, update the `sage` container env as well as the admin config view
+1. use the admin deployment UI to inspect health and manage desired Deployment Settings
+2. export Sage runtime env after changing Model Provider, origin, or search settings that Sage reads
+3. apply the generated runtime env through the Deployment and restart affected services when changing any setting marked `requires_restart`
+4. review Deployment Readiness for stale runtime env, restart-required settings, service health, and lifecycle posture
 
-## Known Temporary State
+## Desired State And Running State
 
-- the deployment UI is not yet a single source of truth for the whole stack
-- Sage runtime config is still partly compose/env-driven
+Deployment Settings express desired operator-controlled runtime configuration. Deployment Readiness reports whether running services match that desired state, including restart-required settings and stale runtime posture.
+
+The first unified Deployment Settings slice covers operator-facing integration and origin settings. Low-level infrastructure wiring remains outside the first unified Deployment Settings slice, including database URLs, internal service tokens, cookie names, gateway route maps, and container host/port topology.
+
+Known temporary state:
+
+- Sage runtime config is still Compose/env-driven at process start
 - Gateway behavior is still file-configured in `gateway/nginx.conf`
 - Agent Settings are no longer part of the Python deployment-config story; they are Sage-owned and Postgres-backed
 
