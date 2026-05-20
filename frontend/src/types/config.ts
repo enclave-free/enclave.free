@@ -185,6 +185,7 @@ export interface ServiceHealthResponse {
         status: string
         configured_keys: number
         total_keys: number
+        fingerprint?: string
       }
       generated?: {
         status: string
@@ -195,6 +196,23 @@ export interface ServiceHealthResponse {
         status: string
         summary: string
         changed_keys_requiring_restart?: string[]
+      }
+    }
+    core_backend?: {
+      desired?: {
+        status: string
+        configured_keys: number
+        total_keys: number
+      }
+      generated?: {
+        status: string
+        latest_export_at?: string | null
+        latest_source_change_at?: string | null
+      }
+      running?: {
+        status: string
+        summary: string
+        fingerprint?: string | null
       }
     }
   }

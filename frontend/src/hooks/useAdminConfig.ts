@@ -424,6 +424,14 @@ export function useDeploymentConfig() {
     return response.text()
   }, [])
 
+  const exportCoreBackendRuntimeEnv = useCallback(async (): Promise<string> => {
+    const response = await adminFetch('/admin/deployment/runtime-env/core-backend')
+    if (!response.ok) {
+      throw new Error(`errors.failedToExport`)
+    }
+    return response.text()
+  }, [])
+
   const validate = useCallback(async (): Promise<DeploymentValidationResponse> => {
     const response = await adminFetch('/admin/deployment/config/validate', {
       method: 'POST',
@@ -451,6 +459,7 @@ export function useDeploymentConfig() {
     updateConfig,
     exportEnv,
     exportSageRuntimeEnv,
+    exportCoreBackendRuntimeEnv,
     validate,
     revealSecret,
   }

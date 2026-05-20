@@ -259,23 +259,23 @@ export function AdminSetup() {
         >
           <div className="label mb-2">{t('adminDashboard.humanReviewTitle', 'Human review handoff')}</div>
           <p className="text-sm font-medium text-text">
-            {t('adminDashboard.humanReviewStatus', 'Human product/design review still required')}
+            {t('adminDashboard.humanReviewStatus', 'External Deployment Automation contract review required')}
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            {t('adminDashboard.humanReviewBody', 'Record remaining follow-ups in issue #176 after reviewing hierarchy, naming, visual priority, and the first-run path.')}
+            {t('adminDashboard.humanReviewBody', 'Operator-run runtime env apply is decided; design any future external Deployment Automation contract in issue #190.')}
           </p>
           <div className="mt-3 flex flex-wrap gap-4">
             <a
-              href="https://github.com/enclave-free/enclave.free-prototype/issues/176"
+              href="https://github.com/enclave-free/enclave.free-prototype/issues/190"
               className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
             >
-              {t('adminDashboard.humanReviewAction', 'Open issue #176')}
+              {t('adminDashboard.humanReviewAction', 'Open issue #190')}
             </a>
             <a
-              href="https://github.com/enclave-free/enclave.free-prototype/issues/new?labels=enhancement&title=Admin%20IA%20follow-up&body=Follow-up%20from%20the%20Admin%20setup%20information%20architecture%20review."
+              href="https://github.com/enclave-free/enclave.free-prototype/issues/new?labels=enhancement&title=Deployment%20Automation%20contract%20follow-up&body=Follow-up%20from%20issue%20%23190%20external%20Deployment%20Automation%20contract%20review."
               className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
             >
-              {t('adminDashboard.humanReviewFollowUpAction', 'Create IA follow-up issue')}
+              {t('adminDashboard.humanReviewFollowUpAction', 'Create automation-contract follow-up')}
             </a>
           </div>
         </section>

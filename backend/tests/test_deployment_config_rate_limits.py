@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import hashlib
+import json
 import os
 import sys
 import tempfile
@@ -36,6 +37,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._orig_rate_limit_valkey_url = os.environ.get("RATE_LIMIT_VALKEY_URL")
         self._orig_session_cookie_secure = os.environ.get("SESSION_COOKIE_SECURE")
         self._orig_backend_reload = os.environ.get("BACKEND_RELOAD")
+        self._orig_internal_agent_token = os.environ.get("INTERNAL_AGENT_TOKEN")
         self._orig_published_service_host = os.environ.get("PUBLISHED_SERVICE_HOST")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
         os.environ["SQLITE_PATH"] = str(self.db_path)
@@ -51,6 +53,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         os.environ.pop("RATE_LIMIT_VALKEY_URL", None)
         os.environ.pop("SESSION_COOKIE_SECURE", None)
         os.environ.pop("BACKEND_RELOAD", None)
+        os.environ.pop("INTERNAL_AGENT_TOKEN", None)
         os.environ.pop("PUBLISHED_SERVICE_HOST", None)
 
         import auth
@@ -88,6 +91,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self._restore_env("RATE_LIMIT_VALKEY_URL", self._orig_rate_limit_valkey_url)
         self._restore_env("SESSION_COOKIE_SECURE", self._orig_session_cookie_secure)
         self._restore_env("BACKEND_RELOAD", self._orig_backend_reload)
+        self._restore_env("INTERNAL_AGENT_TOKEN", self._orig_internal_agent_token)
         self._restore_env("PUBLISHED_SERVICE_HOST", self._orig_published_service_host)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
         self.tmp.cleanup()
@@ -467,7 +471,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         ):
             self.database.update_deployment_config(key, value, "admin-pubkey")
 
-        response = self.client.get("/admin/deployment/runtime-env/sage")
+        response = self.client.get("/admin/deployment/config/runtime-env/sage")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/plain", response.headers["content-type"])
@@ -485,6 +489,50 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(audit_entry["config_key"], self.deployment_config.SAGE_RUNTIME_ENV_EXPORT_KEY)
         self.assertNotIn("configured-secret", audit_entry["new_value"])
         self.assertEqual(audit_entry["changed_by"], "admin-pubkey")
+
+    def test_core_backend_runtime_env_export_maps_desired_settings_and_reports_generated_status(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "https://tinfoil.example/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi k2"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "https://app.example"),
+            ("CORS_ORIGINS", "https://app.example,https://admin.example"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+
+        initial = self.deployment_config._runtime_env_comparison_status()
+        self.assertEqual(initial["core_backend"]["generated"]["status"], "not_generated")
+
+        response = self.client.get("/admin/deployment/config/runtime-env/core-backend")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response.headers["content-type"])
+        body = response.text
+        self.assertIn("# Enclave Core Backend Runtime Env", body)
+        self.assertIn("LLM_API_URL=https://tinfoil.example/v1", body)
+        self.assertIn("LLM_API_KEY=configured-secret", body)
+        self.assertIn('LLM_MODEL="kimi k2"', body)
+        self.assertIn("EMBEDDING_MODEL=nomic-embed-text", body)
+        self.assertIn("FRONTEND_URL=https://app.example", body)
+        self.assertIn("CORS_ORIGINS=https://app.example,https://admin.example", body)
+        self.assertIn("SEARXNG_URL=http://searxng:8080", body)
+        self.assertNotIn("DATABASE_URL", body)
+        self.assertNotIn("INTERNAL_AGENT_TOKEN", body)
+        self.assertNotIn("SECRET_KEY", body)
+
+        current = self.deployment_config._runtime_env_comparison_status()
+        self.assertEqual(current["core_backend"]["generated"]["status"], "current")
+
+        audit_entry = self.database.get_config_audit_log(limit=1, table_name="deployment_config")[0]
+        self.assertEqual(audit_entry["config_key"], self.deployment_config.CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY)
+        self.assertNotIn("configured-secret", audit_entry["new_value"])
+        self.assertEqual(audit_entry["changed_by"], "admin-pubkey")
+
+        self.database.update_deployment_config("FRONTEND_URL", "https://new.example", "admin-pubkey")
+        stale = self.deployment_config._runtime_env_comparison_status()
+        self.assertEqual(stale["core_backend"]["generated"]["status"], "stale")
 
     def test_smtp_import_time_constants_are_not_exported(self) -> None:
         for name in (
@@ -637,6 +685,60 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(item["severity"], "ready")
         self.assertIn("matches desired Deployment Settings", item["summary"])
 
+    def test_deployment_readiness_reports_drifted_running_core_backend_runtime_config(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+        export_response = self.client.get("/admin/deployment/config/runtime-env/core-backend")
+        self.assertEqual(export_response.status_code, 200)
+
+        running_config = {
+            "LLM_API_URL": "http://tinfoil-proxy:8089/v1",
+            "LLM_API_KEY": {
+                "configured": True,
+                "fingerprint": hashlib.sha256(b"configured-secret").hexdigest(),
+            },
+            "LLM_MODEL": "different-model",
+            "EMBEDDING_MODEL": "nomic-embed-text",
+            "FRONTEND_URL": "http://localhost:5173",
+            "CORS_ORIGINS": ["http://localhost:5173"],
+            "SEARXNG_URL": "http://searxng:8080",
+        }
+
+        item = self.deployment_config._core_backend_runtime_env_readiness_item(running_config)
+
+        self.assertEqual(item["key"], "core_backend_runtime_env")
+        self.assertEqual(item["status"], "drifted")
+        self.assertEqual(item["severity"], "warning")
+        self.assertIn("differs from desired Deployment Settings", item["summary"])
+        self.assertIn("apply the generated core-backend env", item["next_action"])
+
+    def test_deployment_readiness_reports_stale_core_backend_runtime_env_after_source_change(self) -> None:
+        item = self.deployment_config._core_backend_runtime_env_readiness_item()
+        self.assertEqual(item["status"], "not_generated")
+        self.assertIn("core-backend runtime env", item["next_action"])
+
+        export_response = self.client.get("/admin/deployment/config/runtime-env/core-backend")
+        self.assertEqual(export_response.status_code, 200)
+
+        item = self.deployment_config._core_backend_runtime_env_readiness_item()
+        self.assertEqual(item["status"], "current")
+
+        update_response = self.client.put("/admin/deployment/config/LLM_MODEL", json={"value": "new-model"})
+        self.assertEqual(update_response.status_code, 200)
+
+        item = self.deployment_config._core_backend_runtime_env_readiness_item()
+        self.assertEqual(item["status"], "stale")
+        self.assertEqual(item["severity"], "warning")
+        self.assertIn("fresh core-backend runtime env", item["next_action"])
+
     def test_deployment_readiness_endpoint_reports_sage_runtime_config_drift(self) -> None:
         for key, value in (
             ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
@@ -679,20 +781,54 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         items_by_key = {item["key"]: item for item in response.json()["items"]}
         self.assertEqual(items_by_key["sage_runtime_env"]["status"], "drifted")
         self.assertEqual(items_by_key["sage_runtime_env"]["severity"], "warning")
+        self.assertEqual(items_by_key["core_backend_runtime_env"]["status"], "matches_desired")
+        self.assertEqual(items_by_key["core_backend_runtime_env"]["severity"], "ready")
 
     def test_service_health_includes_runtime_env_alignment_summary(self) -> None:
         comparison = self.deployment_config._runtime_env_comparison_status()
 
         self.assertIn("sage", comparison)
+        self.assertIn("core_backend", comparison)
         self.assertEqual(comparison["sage"]["generated"]["status"], "not_generated")
         self.assertEqual(comparison["sage"]["desired"]["total_keys"], 7)
         self.assertEqual(comparison["sage"]["running"]["status"], "not_directly_introspected")
+        self.assertEqual(comparison["core_backend"]["generated"]["status"], "not_generated")
+        self.assertEqual(comparison["core_backend"]["desired"]["total_keys"], 7)
+        self.assertEqual(comparison["core_backend"]["running"]["status"], "not_directly_introspected")
 
         export_response = self.client.get("/admin/deployment/config/runtime-env/sage")
         self.assertEqual(export_response.status_code, 200)
 
         comparison = self.deployment_config._runtime_env_comparison_status()
         self.assertEqual(comparison["sage"]["generated"]["status"], "current")
+
+    def test_service_health_includes_core_backend_running_alignment(self) -> None:
+        os.environ["INTERNAL_AGENT_TOKEN"] = "internal-test-token"
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+
+        async def fake_sage_config():
+            return None
+
+        original_fetch = self.deployment_config._fetch_sage_running_runtime_config
+        self.deployment_config._fetch_sage_running_runtime_config = fake_sage_config
+        try:
+            response = self.client.get("/admin/deployment/health")
+        finally:
+            self.deployment_config._fetch_sage_running_runtime_config = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        core_backend = response.json()["runtime_env"]["core_backend"]
+        self.assertEqual(core_backend["running"]["status"], "matches_desired")
+        self.assertNotIn("configured-secret", json.dumps(core_backend))
 
     def test_runtime_env_alignment_compares_running_sage_fingerprint_without_secrets(self) -> None:
         for key, value in (
@@ -727,6 +863,85 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         running_config["TINFOIL_MODEL"] = "different-model"
         comparison = self.deployment_config._runtime_env_comparison_status(running_config)
         self.assertEqual(comparison["sage"]["running"]["status"], "drifted")
+
+    def test_runtime_env_alignment_compares_running_core_backend_fingerprint_without_secrets(self) -> None:
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+
+        running_config = {
+            "LLM_API_URL": "http://tinfoil-proxy:8089/v1",
+            "LLM_API_KEY": {
+                "configured": True,
+                "fingerprint": hashlib.sha256(b"configured-secret").hexdigest(),
+            },
+            "LLM_MODEL": "kimi-k2-6",
+            "EMBEDDING_MODEL": "nomic-embed-text",
+            "FRONTEND_URL": "http://localhost:5173",
+            "CORS_ORIGINS": ["http://localhost:5173"],
+            "SEARXNG_URL": "http://searxng:8080",
+        }
+
+        comparison = self.deployment_config._runtime_env_comparison_status(
+            running_core_backend_config=running_config
+        )
+
+        self.assertEqual(comparison["core_backend"]["running"]["status"], "matches_desired")
+        self.assertEqual(comparison["core_backend"]["desired"]["total_keys"], 7)
+        self.assertNotIn("configured-secret", str(comparison))
+
+        running_config["LLM_MODEL"] = "different-model"
+        comparison = self.deployment_config._runtime_env_comparison_status(
+            running_core_backend_config=running_config
+        )
+        self.assertEqual(comparison["core_backend"]["running"]["status"], "drifted")
+
+    def test_core_backend_runtime_fingerprint_requires_internal_token_and_hides_secret(self) -> None:
+        os.environ["INTERNAL_AGENT_TOKEN"] = "internal-test-token"
+        for key, value in (
+            ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
+            ("LLM_API_KEY", "configured-secret"),
+            ("LLM_MODEL", "kimi-k2-6"),
+            ("EMBEDDING_MODEL", "nomic-embed-text"),
+            ("FRONTEND_URL", "http://localhost:5173"),
+            ("CORS_ORIGINS", "http://localhost:5173"),
+            ("SEARXNG_URL", "http://searxng:8080"),
+        ):
+            self.database.update_deployment_config(key, value, "admin-pubkey")
+
+        missing = self.client.get("/admin/deployment/internal/runtime-config/fingerprint")
+        self.assertEqual(missing.status_code, 403)
+
+        wrong = self.client.get(
+            "/admin/deployment/internal/runtime-config/fingerprint",
+            headers={"X-Internal-Agent-Token": "wrong-token"},
+        )
+        self.assertEqual(wrong.status_code, 403)
+
+        response = self.client.get(
+            "/admin/deployment/internal/runtime-config/fingerprint",
+            headers={"X-Internal-Agent-Token": "internal-test-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["service"], "core-backend")
+        self.assertEqual(payload["runtime_config"]["LLM_API_URL"], "http://tinfoil-proxy:8089/v1")
+        self.assertEqual(payload["runtime_config"]["LLM_MODEL"], "kimi-k2-6")
+        self.assertEqual(payload["runtime_config"]["EMBEDDING_MODEL"], "nomic-embed-text")
+        self.assertEqual(payload["runtime_config"]["LLM_API_KEY"]["configured"], True)
+        self.assertEqual(
+            payload["runtime_config"]["LLM_API_KEY"]["fingerprint"],
+            hashlib.sha256(b"configured-secret").hexdigest(),
+        )
+        self.assertNotIn("configured-secret", response.text)
 
 
 if __name__ == "__main__":

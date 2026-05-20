@@ -132,6 +132,11 @@ describe('AdminDeploymentConfig', () => {
           headers: { 'content-type': 'text/plain' },
         }))
       }
+      if (endpoint === '/admin/deployment/runtime-env/core-backend') {
+        return Promise.resolve(new Response('LLM_MODEL=kimi-k2-6\n', {
+          headers: { 'content-type': 'text/plain' },
+        }))
+      }
       if (endpoint === '/admin/deployment/health') {
         return Promise.resolve(Response.json({
           services: [],
@@ -147,6 +152,14 @@ describe('AdminDeploymentConfig', () => {
                 changed_keys_requiring_restart: [],
               },
             },
+            core_backend: {
+              desired: { status: 'configured', configured_keys: 7, total_keys: 7 },
+              generated: { status: 'current', latest_export_at: '2026-05-19T12:00:00+00:00' },
+              running: {
+                status: 'matches_desired',
+                summary: 'Core backend running runtime config matches desired Deployment Settings.',
+              },
+            },
           },
         }))
       }
@@ -155,9 +168,9 @@ describe('AdminDeploymentConfig', () => {
           status: readinessStatus,
           summary: {
             blockers: readinessStatus === 'blocked' ? 1 : 0,
-            warnings: 2,
+            warnings: 3,
             ready: readinessStatus === 'blocked' ? 2 : 3,
-            total: 5,
+            total: 6,
           },
           items: [
             {
@@ -192,6 +205,16 @@ describe('AdminDeploymentConfig', () => {
               status: 'valid',
               summary: 'Deployment Settings are valid.',
               next_action: 'No action required.',
+              conversation_blocking: false,
+            },
+            {
+              key: 'sage_runtime_env',
+              label: 'Sage Runtime Env',
+              source: 'runtime_env',
+              severity: 'warning',
+              status: 'drifted',
+              summary: 'Running Sage runtime config differs from desired Deployment Settings.',
+              next_action: 'Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage.',
               conversation_blocking: false,
             },
             {
@@ -625,6 +648,49 @@ describe('AdminDeploymentConfig', () => {
     })
   })
 
+  it('shows Sage env apply guidance after export without implying Sage changed live', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Runtime Config Alignment')
+    await user.click(screen.getAllByRole('button', { name: 'Export Sage env' })[0])
+
+    expect(await screen.findByText('Sage env exported')).toBeInTheDocument()
+    expect(screen.getByText('Treat sage.env as sensitive deployment material.')).toBeInTheDocument()
+    expect(screen.getByText('docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage')).toBeInTheDocument()
+    expect(screen.getByText('Exporting the artifact does not change the running Sage process until an Operator or Deployment Automation applies it and restarts Sage.')).toBeInTheDocument()
+  })
+
+  it('lets admins export a core-backend runtime env artifact with apply guidance', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/admin/deployment']}>
+        <Routes>
+          <Route path="/admin/deployment" element={<AdminDeploymentConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Runtime Config Alignment')
+    await user.click(screen.getAllByRole('button', { name: 'Export core-backend env' })[0])
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/deployment/runtime-env/core-backend')
+    })
+    expect(await screen.findByText('Core-backend env exported')).toBeInTheDocument()
+    expect(screen.getByText('Treat core-backend.env as sensitive deployment material.')).toBeInTheDocument()
+    expect(screen.getByText('docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend')).toBeInTheDocument()
+    expect(screen.getByText('Exporting the artifact does not change the running backend process until an Operator or Deployment Automation applies it and restarts core-backend.')).toBeInTheDocument()
+  })
+
   it('shows desired generated and running runtime config alignment', async () => {
     render(
       <MemoryRouter initialEntries={['/admin/deployment']}>
@@ -640,6 +706,8 @@ describe('AdminDeploymentConfig', () => {
     expect(screen.getByText('Running')).toBeInTheDocument()
     expect(screen.getByText('7 of 7 keys configured')).toBeInTheDocument()
     expect(screen.getByText('Sage live runtime env is not directly introspected in this slice; use service health plus generated env freshness.')).toBeInTheDocument()
+    expect(screen.getByText('Core Backend')).toBeInTheDocument()
+    expect(screen.getByText('Core backend running runtime config matches desired Deployment Settings.')).toBeInTheDocument()
   })
 
   it('shows lifecycle readiness warnings without implying user conversations are blocked', async () => {
@@ -669,10 +737,14 @@ describe('AdminDeploymentConfig', () => {
     const readiness = await screen.findByRole('group', { name: 'Deployment Readiness' })
     expect(within(readiness).getByText('Deployment Readiness: Blocked')).toBeInTheDocument()
     expect(within(readiness).getByText('1 blockers')).toBeInTheDocument()
-    expect(within(readiness).getByText('2 warnings')).toBeInTheDocument()
+    expect(within(readiness).getByText('3 warnings')).toBeInTheDocument()
     expect(within(readiness).getByText('Verifiable Inference')).toBeInTheDocument()
     expect(within(readiness).getByText('Current Verifiable Inference is required before normal Conversations can run.')).toBeInTheDocument()
     expect(within(readiness).getByText('Run Model Provider verification or repair provider configuration.')).toBeInTheDocument()
+    expect(within(readiness).getByText('Sage Runtime Env')).toBeInTheDocument()
+    expect(within(readiness).getByText('Running Sage runtime config differs from desired Deployment Settings.')).toBeInTheDocument()
+    expect(within(readiness).getByText('Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage.')).toBeInTheDocument()
+    expect(within(readiness).getByRole('link', { name: 'Review Runtime Env Export' })).toHaveAttribute('href', '#runtime-config-alignment')
     const lifecycleItem = within(readiness).getByText('Lifecycle Readiness').closest('.bg-surface')
     expect(lifecycleItem).not.toBeNull()
     expect(within(lifecycleItem as HTMLElement).getByText('Warning')).toBeInTheDocument()
@@ -697,33 +769,40 @@ describe('AdminDeploymentConfig', () => {
     await user.click(within(readiness).getByRole('button', { name: 'Open Readiness Review' }))
 
     const wizard = await screen.findByRole('dialog', { name: 'Deployment Wizard' })
-    expect(within(wizard).getByText('Step 1 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Step 1 of 6')).toBeInTheDocument()
     expect(within(wizard).getByText('Verifiable Inference')).toBeInTheDocument()
     expect(within(wizard).getByRole('link', { name: 'Review Inference Verification' })).toHaveAttribute('href', '#inference-verification')
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }))
 
-    expect(within(wizard).getByText('Step 2 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Step 2 of 6')).toBeInTheDocument()
     expect(within(wizard).getByText('Lifecycle Readiness')).toBeInTheDocument()
     expect(within(wizard).getByRole('link', { name: 'Review Data Lifecycle Status' })).toHaveAttribute('href', '#data-lifecycle-status')
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }))
 
-    expect(within(wizard).getByText('Step 3 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Step 3 of 6')).toBeInTheDocument()
     expect(within(wizard).getByText('Deployment Validation')).toBeInTheDocument()
     expect(within(wizard).getByRole('link', { name: 'Review Deployment Settings' })).toHaveAttribute('href', '#deployment-settings')
     expect(document.getElementById('deployment-settings')).not.toBeNull()
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }))
 
-    expect(within(wizard).getByText('Step 4 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Step 4 of 6')).toBeInTheDocument()
+    expect(within(wizard).getByText('Sage Runtime Env')).toBeInTheDocument()
+    expect(within(wizard).getByRole('link', { name: 'Review Runtime Env Export' })).toHaveAttribute('href', '#runtime-config-alignment')
+    expect(document.getElementById('runtime-config-alignment')).not.toBeNull()
+
+    await user.click(within(wizard).getByRole('button', { name: 'Next' }))
+
+    expect(within(wizard).getByText('Step 5 of 6')).toBeInTheDocument()
     expect(within(wizard).getByText('Backup And Restore Drill')).toBeInTheDocument()
     expect(within(wizard).getByRole('link', { name: 'Review Operational Readiness' })).toHaveAttribute('href', '#operational-readiness')
     expect(document.getElementById('operational-readiness')).not.toBeNull()
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }))
 
-    expect(within(wizard).getByText('Step 5 of 5')).toBeInTheDocument()
+    expect(within(wizard).getByText('Step 6 of 6')).toBeInTheDocument()
     expect(within(wizard).getByText('Restart Required')).toBeInTheDocument()
     expect(within(wizard).getByRole('link', { name: 'Review Restart Required' })).toHaveAttribute('href', '#restart-required')
     expect(document.getElementById('restart-required')).not.toBeNull()

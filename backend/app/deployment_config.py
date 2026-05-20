@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Final, Mapping, Optional
 from urllib.parse import ParseResult, urlparse
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 
 import httpx
@@ -167,6 +167,20 @@ def _sage_runtime_env_text() -> str:
     return "\n".join(lines)
 
 
+def _core_backend_runtime_env_text() -> str:
+    values = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    lines = [
+        "# Enclave Core Backend Runtime Env",
+        "# Generated from Deployment Settings.",
+        f"# Generated: {datetime.now(timezone.utc).isoformat()}",
+        "# Apply by saving as runtime/generated/core-backend.env and restarting the core-backend service.",
+        "",
+    ]
+    for source_key, runtime_key in CORE_BACKEND_RUNTIME_ENV_MAP:
+        lines.append(f"{runtime_key}={_dotenv_quote(values.get(source_key, ''))}")
+    return "\n".join(lines)
+
+
 def _parse_audit_changed_at(value: Any) -> Optional[datetime]:
     try:
         changed_at = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
@@ -196,7 +210,7 @@ def _latest_audit_marker_from_entries(
 
 
 def _deployment_config_audit_log() -> list[Mapping[str, Any]]:
-    return database.get_config_audit_log(limit=100, table_name="deployment_config")
+    return database.get_config_audit_log(limit=2000, table_name="deployment_config")
 
 
 def _latest_audit_marker(*, table_name: str, config_keys: set[str]) -> Optional[tuple[datetime, int]]:
@@ -225,23 +239,44 @@ def _latest_audit_marker(*, table_name: str, config_keys: set[str]) -> Optional[
 
 
 def _sage_runtime_env_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
+    return _generated_runtime_env_status(
+        export_key=SAGE_RUNTIME_ENV_EXPORT_KEY,
+        source_keys=SAGE_RUNTIME_ENV_KEYS,
+        audit_log=audit_log,
+    )
+
+
+def _core_backend_runtime_env_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
+    return _generated_runtime_env_status(
+        export_key=CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY,
+        source_keys=CORE_BACKEND_RUNTIME_ENV_KEYS,
+        audit_log=audit_log,
+    )
+
+
+def _generated_runtime_env_status(
+    *,
+    export_key: str,
+    source_keys: tuple[str, ...],
+    audit_log: Optional[list[Mapping[str, Any]]] = None,
+) -> dict[str, Any]:
     if audit_log is None:
         latest_export = _latest_audit_marker(
             table_name="deployment_config",
-            config_keys={SAGE_RUNTIME_ENV_EXPORT_KEY},
+            config_keys={export_key},
         )
         latest_source_change = _latest_audit_marker(
             table_name="deployment_config",
-            config_keys=set(SAGE_RUNTIME_ENV_KEYS),
+            config_keys=set(source_keys),
         )
     else:
         latest_export = _latest_audit_marker_from_entries(
             audit_log,
-            config_keys={SAGE_RUNTIME_ENV_EXPORT_KEY},
+            config_keys={export_key},
         )
         latest_source_change = _latest_audit_marker_from_entries(
             audit_log,
-            config_keys=set(SAGE_RUNTIME_ENV_KEYS),
+            config_keys=set(source_keys),
         )
     if latest_export is None:
         return {
@@ -259,6 +294,7 @@ def _sage_runtime_env_status(audit_log: Optional[list[Mapping[str, Any]]] = None
 
 def _runtime_env_comparison_status(
     running_sage_config: Optional[Mapping[str, Any]] = None,
+    running_core_backend_config: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     audit_log = _deployment_config_audit_log()
     generated = _sage_runtime_env_status(audit_log)
@@ -271,6 +307,18 @@ def _runtime_env_comparison_status(
     if running_sage_config is not None:
         running_fingerprint = _running_sage_runtime_fingerprint(running_sage_config)
         running_status = "matches_desired" if running_fingerprint == desired_fingerprint else "drifted"
+    core_backend_desired = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    configured_core_backend_desired = sum(1 for value in core_backend_desired.values() if str(value or "").strip())
+    core_backend_desired_fingerprint = _desired_core_backend_runtime_fingerprint()
+    core_backend_running_status = "not_directly_introspected"
+    core_backend_running_fingerprint = None
+    if running_core_backend_config is not None:
+        core_backend_running_fingerprint = _running_core_backend_runtime_fingerprint(running_core_backend_config)
+        core_backend_running_status = (
+            "matches_desired"
+            if core_backend_running_fingerprint == core_backend_desired_fingerprint
+            else "drifted"
+        )
     return {
         "sage": {
             "desired": {
@@ -295,7 +343,27 @@ def _runtime_env_comparison_status(
                 "fingerprint": running_fingerprint,
                 "changed_keys_requiring_restart": [item["key"] for item in restart["changed_keys"]],
             },
-        }
+        },
+        "core_backend": {
+            "desired": {
+                "status": "configured" if configured_core_backend_desired else "not_configured",
+                "configured_keys": configured_core_backend_desired,
+                "total_keys": len(CORE_BACKEND_RUNTIME_ENV_KEYS),
+                "fingerprint": core_backend_desired_fingerprint,
+            },
+            "generated": _core_backend_runtime_env_status(audit_log),
+            "running": {
+                "status": core_backend_running_status,
+                "summary": (
+                    "Core backend running runtime config matches desired Deployment Settings."
+                    if core_backend_running_status == "matches_desired"
+                    else "Core backend running runtime config differs from desired Deployment Settings."
+                    if core_backend_running_status == "drifted"
+                    else "Core backend live runtime env is not directly introspected yet; use generated env freshness."
+                ),
+                "fingerprint": core_backend_running_fingerprint,
+            },
+        },
     }
 
 
@@ -339,6 +407,34 @@ def _desired_sage_runtime_fingerprint() -> str:
     return _runtime_config_fingerprint(payload)
 
 
+def _desired_core_backend_runtime_fingerprint() -> str:
+    values = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in (values.get("CORS_ORIGINS") or "").split(",")
+        if origin.strip()
+    ]
+    frontend_url = values.get("FRONTEND_URL") or ""
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    payload = {
+        "LLM_API_URL": values.get("LLM_API_URL") or "",
+        "LLM_API_KEY": {
+            "configured": bool(values.get("LLM_API_KEY")),
+            "fingerprint": hashlib.sha256((values.get("LLM_API_KEY") or "").encode("utf-8")).hexdigest()
+            if values.get("LLM_API_KEY")
+            else None,
+        },
+        "LLM_MODEL": values.get("LLM_MODEL") or "",
+        "EMBEDDING_MODEL": values.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
 def _running_sage_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
     raw_origins = runtime_config.get("CORS_ORIGINS")
     origins = [
@@ -356,6 +452,58 @@ def _running_sage_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
         "SEARXNG_URL": runtime_config.get("SEARXNG_URL") or "",
     }
     return _runtime_config_fingerprint(payload)
+
+
+def _running_core_backend_runtime_fingerprint(runtime_config: Mapping[str, Any]) -> str:
+    raw_origins = runtime_config.get("CORS_ORIGINS")
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in raw_origins
+        if isinstance(origin, str) and origin.strip()
+    ] if isinstance(raw_origins, list) else []
+    payload = {
+        "LLM_API_URL": runtime_config.get("LLM_API_URL") or "",
+        "LLM_API_KEY": runtime_config.get("LLM_API_KEY") or {"configured": False, "fingerprint": None},
+        "LLM_MODEL": runtime_config.get("LLM_MODEL") or "",
+        "EMBEDDING_MODEL": runtime_config.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": runtime_config.get("FRONTEND_URL"),
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": runtime_config.get("SEARXNG_URL") or "",
+    }
+    return _runtime_config_fingerprint(payload)
+
+
+def _core_backend_runtime_config_payload() -> dict[str, Any]:
+    values = _deployment_config_values_for_export(CORE_BACKEND_RUNTIME_ENV_KEYS)
+    origins = [
+        _normalize_origin_for_sage(origin)
+        for origin in (values.get("CORS_ORIGINS") or "").split(",")
+        if origin.strip()
+    ]
+    frontend_url = values.get("FRONTEND_URL") or ""
+    frontend_origin = _normalize_origin_for_sage(frontend_url) if frontend_url else ""
+    if frontend_origin and frontend_origin not in origins:
+        origins.append(frontend_origin)
+    return {
+        "LLM_API_URL": values.get("LLM_API_URL") or "",
+        "LLM_API_KEY": {
+            "configured": bool(values.get("LLM_API_KEY")),
+            "fingerprint": hashlib.sha256((values.get("LLM_API_KEY") or "").encode("utf-8")).hexdigest()
+            if values.get("LLM_API_KEY")
+            else None,
+        },
+        "LLM_MODEL": values.get("LLM_MODEL") or "",
+        "EMBEDDING_MODEL": values.get("EMBEDDING_MODEL") or "",
+        "FRONTEND_URL": frontend_url or None,
+        "CORS_ORIGINS": origins,
+        "SEARXNG_URL": values.get("SEARXNG_URL") or "",
+    }
+
+
+def _require_internal_agent_token(x_internal_agent_token: Optional[str]) -> None:
+    expected = os.getenv("INTERNAL_AGENT_TOKEN", "")
+    if not expected or x_internal_agent_token != expected:
+        raise HTTPException(status_code=403, detail="Invalid internal agent token")
 
 
 async def _fetch_sage_running_runtime_config() -> Optional[Mapping[str, Any]]:
@@ -485,6 +633,26 @@ SAGE_RUNTIME_ENV_MAP: Final[tuple[tuple[str, str], ...]] = (
     ("LLM_API_KEY", "TINFOIL_API_KEY"),
     ("LLM_MODEL", "TINFOIL_MODEL"),
     ("EMBEDDING_MODEL", "TINFOIL_EMBEDDING_MODEL"),
+    ("FRONTEND_URL", "FRONTEND_URL"),
+    ("CORS_ORIGINS", "CORS_ORIGINS"),
+    ("SEARXNG_URL", "SEARXNG_URL"),
+)
+
+CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY: Final[str] = "core_backend_runtime_env_export"
+CORE_BACKEND_RUNTIME_ENV_KEYS: Final[tuple[str, ...]] = (
+    "LLM_API_URL",
+    "LLM_API_KEY",
+    "LLM_MODEL",
+    "EMBEDDING_MODEL",
+    "FRONTEND_URL",
+    "CORS_ORIGINS",
+    "SEARXNG_URL",
+)
+CORE_BACKEND_RUNTIME_ENV_MAP: Final[tuple[tuple[str, str], ...]] = (
+    ("LLM_API_URL", "LLM_API_URL"),
+    ("LLM_API_KEY", "LLM_API_KEY"),
+    ("LLM_MODEL", "LLM_MODEL"),
+    ("EMBEDDING_MODEL", "EMBEDDING_MODEL"),
     ("FRONTEND_URL", "FRONTEND_URL"),
     ("CORS_ORIGINS", "CORS_ORIGINS"),
     ("SEARXNG_URL", "SEARXNG_URL"),
@@ -903,6 +1071,51 @@ async def export_sage_runtime_env(
         changed_by=admin.get("pubkey", "unknown"),
     )
     return content
+
+
+@router.get("/runtime-env/core-backend", response_class=PlainTextResponse)
+@router.get("/config/runtime-env/core-backend", response_class=PlainTextResponse)
+async def export_core_backend_runtime_env(
+    request: Request,
+    admin: dict = Depends(auth.require_admin),
+    _: None = Depends(check_config_export_rate_limit),
+):
+    """
+    Export the core-backend runtime env generated from Deployment Settings.
+    Secret values are included so the artifact must be handled as sensitive deployment material.
+    """
+    logger.warning(
+        "Core backend runtime env export requested by admin=%s from ip=%s",
+        admin.get("pubkey", "unknown"),
+        request.client.host if request.client else "unknown",
+    )
+    content = _core_backend_runtime_env_text()
+    database.log_config_audit_event(
+        table_name="deployment_config",
+        config_key=CORE_BACKEND_RUNTIME_ENV_EXPORT_KEY,
+        old_value=None,
+        new_value=(
+            f"exported_keys={len(CORE_BACKEND_RUNTIME_ENV_MAP)};"
+            f"ip={request.client.host if request.client else 'unknown'}"
+        ),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return content
+
+
+@router.get("/internal/runtime-config/fingerprint", response_model=dict)
+async def get_core_backend_runtime_config_fingerprint(
+    x_internal_agent_token: Optional[str] = Header(default=None),
+) -> dict:
+    """
+    Return safe core-backend runtime config for internal alignment checks.
+    Secret-bearing values are represented by configured/fingerprint metadata only.
+    """
+    _require_internal_agent_token(x_internal_agent_token)
+    return {
+        "service": "core-backend",
+        "runtime_config": _core_backend_runtime_config_payload(),
+    }
 
 
 @router.get("/config/{key}", response_model=DeploymentConfigItem)
@@ -1486,6 +1699,66 @@ def _runtime_env_readiness_item(running_sage_config: Optional[Mapping[str, Any]]
     )
 
 
+def _core_backend_runtime_env_readiness_item(
+    running_core_backend_config: Optional[Mapping[str, Any]] = None,
+) -> dict:
+    comparison = _runtime_env_comparison_status(
+        running_core_backend_config=running_core_backend_config
+    )
+    core_backend = comparison["core_backend"]
+    generated_status = core_backend["generated"]["status"]
+    running_status = core_backend["running"]["status"]
+    if generated_status == "current" and running_status == "matches_desired":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="matches_desired",
+            summary="Running core-backend runtime config matches desired Deployment Settings.",
+            next_action="No action required.",
+        )
+    if generated_status == "current" and running_status == "drifted":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="drifted",
+            summary="Running core-backend runtime config differs from desired Deployment Settings.",
+            next_action="Investigate core-backend runtime config drift, apply the generated core-backend env, and restart core-backend.",
+        )
+    if generated_status == "current":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="ready",
+            status="current",
+            summary="Core-backend runtime env has been generated from current Deployment Settings.",
+            next_action="No action required unless the generated artifact has not been applied to the Deployment.",
+        )
+    if generated_status == "stale":
+        return _readiness_item(
+            key="core_backend_runtime_env",
+            label="Core Backend Runtime Config",
+            source="runtime_env",
+            severity="warning",
+            status="stale",
+            summary="Deployment Settings changed after the core-backend runtime env was generated.",
+            next_action="Export a fresh core-backend runtime env and apply it through the Deployment restart path.",
+        )
+    return _readiness_item(
+        key="core_backend_runtime_env",
+        label="Core Backend Runtime Config",
+        source="runtime_env",
+        severity="warning",
+        status="not_generated",
+        summary="Core-backend runtime env has not been generated from Deployment Settings yet.",
+        next_action="Export the core-backend runtime env before treating Deployment Settings as applied to core-backend.",
+    )
+
+
 def _restart_required_status(audit_log: Optional[list[Mapping[str, Any]]] = None) -> dict[str, Any]:
     restart_keys = database.get_restart_required_keys()
     if audit_log is None:
@@ -1507,7 +1780,10 @@ def _restart_required_status(audit_log: Optional[list[Mapping[str, Any]]] = None
     }
 
 
-def deployment_readiness_summary(running_sage_config: Optional[Mapping[str, Any]] = None) -> dict:
+def deployment_readiness_summary(
+    running_sage_config: Optional[Mapping[str, Any]] = None,
+    running_core_backend_config: Optional[Mapping[str, Any]] = None,
+) -> dict:
     from lifecycle import get_lifecycle_status
 
     lifecycle_status = get_lifecycle_status()
@@ -1518,6 +1794,7 @@ def deployment_readiness_summary(running_sage_config: Optional[Mapping[str, Any]
         _unsupported_surface_readiness_item(lifecycle_status),
         _backup_restore_readiness_item(),
         _runtime_env_readiness_item(running_sage_config),
+        _core_backend_runtime_env_readiness_item(running_core_backend_config),
         _restart_readiness_item(),
         _readiness_item(
             key="service_health",
@@ -1551,7 +1828,10 @@ async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)) ->
     Requires admin authentication.
     """
     running_sage_config = await _fetch_sage_running_runtime_config()
-    return deployment_readiness_summary(running_sage_config)
+    return deployment_readiness_summary(
+        running_sage_config,
+        running_core_backend_config=_core_backend_runtime_config_payload(),
+    )
 
 
 @router.get("/health", response_model=ServiceHealthResponse)
@@ -1727,7 +2007,10 @@ async def get_service_health(admin: dict = Depends(auth.require_admin)):
         services=services,
         restart_required=restart["restart_required"],
         changed_keys_requiring_restart=[item["key"] for item in restart["changed_keys"]],
-        runtime_env=_runtime_env_comparison_status(sage_runtime_config),
+        runtime_env=_runtime_env_comparison_status(
+            sage_runtime_config,
+            running_core_backend_config=_core_backend_runtime_config_payload(),
+        ),
     )
 
 

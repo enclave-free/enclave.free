@@ -90,6 +90,7 @@ export function AdminDeploymentConfig() {
     updateConfig,
     exportEnv,
     exportSageRuntimeEnv,
+    exportCoreBackendRuntimeEnv,
     validate,
     revealSecret,
   } = useDeploymentConfig()
@@ -146,6 +147,8 @@ export function AdminDeploymentConfig() {
   const [showAuditLog, setShowAuditLog] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [sageRuntimeEnvExported, setSageRuntimeEnvExported] = useState(false)
+  const [coreBackendRuntimeEnvExported, setCoreBackendRuntimeEnvExported] = useState(false)
   const [retryingTombstoneId, setRetryingTombstoneId] = useState<number | null>(null)
   const [tombstoneRetryError, setTombstoneRetryError] = useState<string | null>(null)
   const [acknowledgingSurfaceKey, setAcknowledgingSurfaceKey] = useState<string | null>(null)
@@ -440,7 +443,7 @@ export function AdminDeploymentConfig() {
     }
     if (item.source === 'runtime_env') {
       return {
-        href: '#deployment-settings',
+        href: '#runtime-config-alignment',
         label: t('adminDeployment.readiness.reviewRuntimeEnv', 'Review Runtime Env Export'),
       }
     }
@@ -710,6 +713,7 @@ export function AdminDeploymentConfig() {
 
   const handleExportSageRuntimeEnv = async () => {
     setExportError(null)
+    setSageRuntimeEnvExported(false)
     try {
       const content = await exportSageRuntimeEnv()
       const blob = new Blob([content], { type: 'text/plain' })
@@ -721,11 +725,37 @@ export function AdminDeploymentConfig() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      refreshReadiness()
+      setSageRuntimeEnvExported(true)
+      await refreshReadiness()
+      await refreshHealth()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
       setExportError(message)
       console.error('Sage runtime env export failed:', err)
+    }
+  }
+
+  const handleExportCoreBackendRuntimeEnv = async () => {
+    setExportError(null)
+    setCoreBackendRuntimeEnvExported(false)
+    try {
+      const content = await exportCoreBackendRuntimeEnv()
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'core-backend.env'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setCoreBackendRuntimeEnvExported(true)
+      await refreshReadiness()
+      await refreshHealth()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('adminDeployment.exportFailed', 'Export failed')
+      setExportError(message)
+      console.error('Core backend runtime env export failed:', err)
     }
   }
 
@@ -1758,25 +1788,34 @@ export function AdminDeploymentConfig() {
                 ? t('common.loading', 'Loading')
                 : t('adminDeployment.readiness.empty', 'No Deployment Readiness checks are available yet.')}
             </p>
-          ) : items.map((item) => (
-            <div key={item.key} className="rounded-lg border border-border bg-surface p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-text">{item.label}</p>
-                  <p className="mt-1 text-xs text-text-secondary">{item.summary}</p>
-                  <p className="mt-2 text-xs text-text-muted">{item.next_action}</p>
+          ) : items.map((item) => {
+            const target = readinessReviewTarget(item)
+            return (
+              <div key={item.key} className="rounded-lg border border-border bg-surface p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-text">{item.label}</p>
+                    <p className="mt-1 text-xs text-text-secondary">{item.summary}</p>
+                    <p className="mt-2 text-xs text-text-muted">{item.next_action}</p>
+                  </div>
+                  <span className={`self-start rounded-full border px-2 py-0.5 text-xs font-medium ${readinessToneClass(item.severity)}`}>
+                    {formatReadinessSeverity(item.severity)}
+                  </span>
                 </div>
-                <span className={`self-start rounded-full border px-2 py-0.5 text-xs font-medium ${readinessToneClass(item.severity)}`}>
-                  {formatReadinessSeverity(item.severity)}
-                </span>
+                <a
+                  href={target.href}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent-hover"
+                >
+                  {target.label}
+                </a>
+                {item.conversation_blocking && (
+                  <p className="mt-2 text-xs font-medium text-error">
+                    {t('adminDeployment.readiness.conversationBlocking', 'Blocks normal Conversations')}
+                  </p>
+                )}
               </div>
-              {item.conversation_blocking && (
-                <p className="mt-2 text-xs font-medium text-error">
-                  {t('adminDeployment.readiness.conversationBlocking', 'Blocks normal Conversations')}
-                </p>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {showReadinessWizard && wizardItem && wizardTarget && (
@@ -2028,7 +2067,7 @@ export function AdminDeploymentConfig() {
           </p>
 
           {health?.runtime_env?.sage && (
-            <div className="rounded-lg border border-border p-3 mb-4">
+            <div id="runtime-config-alignment" className="rounded-lg border border-border p-3 mb-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
                   <h4 className="text-sm font-medium text-text">
@@ -2044,6 +2083,13 @@ export function AdminDeploymentConfig() {
                 >
                   <Download className="w-3.5 h-3.5" />
                   {t('adminDeployment.exportSageRuntimeEnv', 'Export Sage env')}
+                </button>
+                <button
+                  onClick={handleExportCoreBackendRuntimeEnv}
+                  className="shrink-0 flex items-center gap-1.5 border border-border hover:border-accent/50 text-text rounded-lg px-3 py-2 text-xs font-medium transition-all hover:bg-surface"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {t('adminDeployment.exportCoreBackendRuntimeEnv', 'Export core-backend env')}
                 </button>
               </div>
               <div className="grid gap-2 md:grid-cols-3">
@@ -2076,6 +2122,80 @@ export function AdminDeploymentConfig() {
                   </p>
                 </div>
               </div>
+              {health.runtime_env.core_backend && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-text">
+                      {t('adminDeployment.runtimeEnv.coreBackend', 'Core Backend')}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {t('adminDeployment.runtimeEnv.coreBackendHint', 'Backend process env alignment')}
+                    </p>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.core_backend.desired?.status)}`}>
+                      <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.coreDesired', 'Core Desired')}</p>
+                      <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.core_backend.desired?.status)}</p>
+                      <p className="text-xs mt-1 text-text-muted">
+                        {t('adminDeployment.runtimeEnv.coreConfiguredKeys', 'Core backend: {{count}} of {{total}} keys configured', {
+                          count: health.runtime_env.core_backend.desired?.configured_keys ?? 0,
+                          total: health.runtime_env.core_backend.desired?.total_keys ?? 0,
+                        })}
+                      </p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.core_backend.generated?.status)}`}>
+                      <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.coreGenerated', 'Core Generated')}</p>
+                      <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.core_backend.generated?.status)}</p>
+                      <p className="text-xs mt-1 text-text-muted">
+                        {health.runtime_env.core_backend.generated?.latest_export_at
+                          ? t('adminDeployment.runtimeEnv.exportedAt', 'Exported {{time}}', {
+                              time: formatTimestamp(health.runtime_env.core_backend.generated.latest_export_at),
+                            })
+                          : t('adminDeployment.runtimeEnv.coreNotExported', 'No core backend env export recorded')}
+                      </p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${runtimeStateClass(health.runtime_env.core_backend.running?.status)}`}>
+                      <p className="text-xs font-medium">{t('adminDeployment.runtimeEnv.coreRunning', 'Core Running')}</p>
+                      <p className="text-sm font-semibold mt-1">{formatRuntimeState(health.runtime_env.core_backend.running?.status)}</p>
+                      <p className="text-xs mt-1 text-text-muted">
+                        {health.runtime_env.core_backend.running?.summary || t('adminDeployment.runtimeEnv.coreRunningUnknown', 'Core backend running state is not directly introspected yet.')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {coreBackendRuntimeEnvExported && (
+                <div className="mt-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
+                  <p className="text-sm font-semibold text-warning">
+                    {t('adminDeployment.runtimeEnv.coreExportedTitle', 'Core-backend env exported')}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.coreSensitiveArtifact', 'Treat core-backend.env as sensitive deployment material.')}
+                  </p>
+                  <code className="mt-2 block overflow-x-auto rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text">
+                    docker compose --env-file .env --env-file runtime/generated/core-backend.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d core-backend
+                  </code>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.coreExportDoesNotApply', 'Exporting the artifact does not change the running backend process until an Operator or Deployment Automation applies it and restarts core-backend.')}
+                  </p>
+                </div>
+              )}
+              {sageRuntimeEnvExported && (
+                <div className="mt-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
+                  <p className="text-sm font-semibold text-warning">
+                    {t('adminDeployment.runtimeEnv.exportedTitle', 'Sage env exported')}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.sensitiveArtifact', 'Treat sage.env as sensitive deployment material.')}
+                  </p>
+                  <code className="mt-2 block overflow-x-auto rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text">
+                    docker compose --env-file .env --env-file runtime/generated/sage.env -f docker-compose.infra.yml -f docker-compose.app.yml up -d sage
+                  </code>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    {t('adminDeployment.runtimeEnv.exportDoesNotApply', 'Exporting the artifact does not change the running Sage process until an Operator or Deployment Automation applies it and restarts Sage.')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -2695,6 +2815,13 @@ export function AdminDeploymentConfig() {
           >
             <Download className="w-4 h-4" />
             {t('adminDeployment.exportSageRuntimeEnv', 'Export Sage env')}
+          </button>
+          <button
+            onClick={handleExportCoreBackendRuntimeEnv}
+            className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-lg px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface"
+          >
+            <Download className="w-4 h-4" />
+            {t('adminDeployment.exportCoreBackendRuntimeEnv', 'Export core-backend env')}
           </button>
           <button
             onClick={() => setShowAuditLog(!showAuditLog)}

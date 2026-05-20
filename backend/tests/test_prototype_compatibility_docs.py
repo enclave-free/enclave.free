@@ -136,6 +136,49 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("avoids live process mutation", adr)
         self.assertIn("root `.env` is operator-authored bootstrap material", adr)
 
+    def test_apply_boundary_adr_records_operator_run_only_prototype_path(self) -> None:
+        adr = (REPO_ROOT / "docs/adr/0019-deployment-settings-generate-runtime-env.md").read_text(encoding="utf-8")
+        normalized = " ".join(adr.split())
+
+        self.assertIn("Operator-run Compose apply is the supported prototype path", normalized)
+        self.assertIn("The product must not apply generated artifacts to live services", normalized)
+        self.assertIn("must not require Docker socket or host-control authority", normalized)
+        self.assertIn("Product-managed apply/restart is rejected for this prototype", normalized)
+        self.assertIn("external Deployment Automation remains a future option only behind a separate auth, audit, and evidence contract", normalized)
+
+    def test_admin_deployment_docs_cover_post_apply_evidence_checklist(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("Post-Apply Evidence Checklist", normalized)
+        self.assertIn("generated artifact freshness is current", normalized)
+        self.assertIn("service restart or recreate evidence comes from the Deployment", normalized)
+        self.assertIn("Service Health is healthy for the affected service", normalized)
+        self.assertIn("runtime fingerprint reports `matches_desired` where a safe fingerprint endpoint exists", normalized)
+        self.assertIn("the product still did not apply the artifact, rewrite bootstrap env, or restart the service", normalized)
+
+    def test_admin_deployment_docs_cover_runtime_env_artifact_operations(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("Runtime Env Artifact Runbook", normalized)
+        self.assertIn("Store `runtime/generated/sage.env` as sensitive deployment material", normalized)
+        self.assertIn("Apply it with the documented Compose command, then restart or recreate the `sage` service", normalized)
+        self.assertIn("Rotate the artifact after any Model Provider, origin, CORS, or search setting change", normalized)
+        self.assertIn("Dispose of old generated env artifacts after a successful apply", normalized)
+        self.assertIn("If Deployment Readiness reports `stale`, export a fresh Sage env artifact before restarting Sage", normalized)
+        self.assertIn("If Deployment Readiness reports `drifted`, investigate the running Sage runtime fingerprint", normalized)
+
+    def test_admin_deployment_docs_cover_core_backend_runtime_env_artifact_operations(self) -> None:
+        deployment = (REPO_ROOT / "docs/admin-deployment-config.md").read_text(encoding="utf-8")
+        normalized = " ".join(deployment.split())
+
+        self.assertIn("Core Backend Runtime Env Export", normalized)
+        self.assertIn("GET /admin/deployment/runtime-env/core-backend", normalized)
+        self.assertIn("Store `runtime/generated/core-backend.env` as sensitive deployment material", normalized)
+        self.assertIn("apply it by recreating the `core-backend` service", normalized)
+        self.assertIn("If Deployment Readiness reports `drifted` for core backend", normalized)
+
     def test_agent_settings_surface_is_not_described_as_compatibility_layer(self) -> None:
         checked_paths = [
             REPO_ROOT / "backend/app/ai_config.py",

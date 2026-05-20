@@ -108,7 +108,7 @@ describe('AdminSetup', () => {
     expect(checklist).toHaveTextContent('diagnostic surfaces')
   })
 
-  it('keeps the human product review handoff visible with a follow-up issue target', () => {
+  it('keeps the deployment automation boundary review handoff visible with the issue target', () => {
     render(
       <MemoryRouter initialEntries={['/admin/setup']}>
         <Routes>
@@ -119,9 +119,9 @@ describe('AdminSetup', () => {
 
     const handoff = screen.getByRole('region', { name: 'Human review handoff' })
 
-    expect(handoff).toHaveTextContent('Human product/design review still required')
-    expect(handoff).toHaveTextContent('Record remaining follow-ups in issue #176')
-    expect(within(handoff).getByRole('link', { name: 'Open issue #176' })).toHaveAttribute('href', 'https://github.com/enclave-free/enclave.free-prototype/issues/176')
+    expect(handoff).toHaveTextContent('External Deployment Automation contract review required')
+    expect(handoff).toHaveTextContent('Operator-run runtime env apply is decided; design any future external Deployment Automation contract in issue #190')
+    expect(within(handoff).getByRole('link', { name: 'Open issue #190' })).toHaveAttribute('href', 'https://github.com/enclave-free/enclave.free-prototype/issues/190')
   })
 
   it('keeps Data & Content focused on document content instead of diagnostics', () => {
@@ -154,7 +154,7 @@ describe('AdminSetup', () => {
     expect(within(diagnostics).getByRole('link', { name: /Diagnostics Test Dashboard/ })).toHaveAttribute('href', '/diagnostics/test-dashboard')
   })
 
-  it('lets human reviewers open a follow-up issue from the handoff', () => {
+  it('lets human reviewers open an external automation contract follow-up issue from the handoff', () => {
     render(
       <MemoryRouter initialEntries={['/admin/setup']}>
         <Routes>
@@ -164,10 +164,11 @@ describe('AdminSetup', () => {
     )
 
     const handoff = screen.getByRole('region', { name: 'Human review handoff' })
-    const followUp = within(handoff).getByRole('link', { name: 'Create IA follow-up issue' })
+    const followUp = within(handoff).getByRole('link', { name: 'Create automation-contract follow-up' })
 
     expect(followUp).toHaveAttribute('href', expect.stringContaining('https://github.com/enclave-free/enclave.free-prototype/issues/new'))
     expect(followUp).toHaveAttribute('href', expect.stringContaining('labels=enhancement'))
-    expect(followUp).toHaveAttribute('href', expect.stringContaining('Admin%20IA%20follow-up'))
+    expect(followUp).toHaveAttribute('href', expect.stringContaining('Deployment%20Automation%20contract%20follow-up'))
+    expect(followUp).toHaveAttribute('href', expect.stringContaining('%23190'))
   })
 })
