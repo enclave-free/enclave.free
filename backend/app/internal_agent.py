@@ -238,7 +238,6 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
         "situation_details": payload.situation_details,
     }
     search_query = _build_search_query(payload.query, session_stub)
-    query_embedding = embed_texts([f"query: {search_query}"])[0]
 
     search_filter = None
     accessible_job_ids = _build_accessible_job_ids(payload.user, payload.job_ids)
@@ -250,6 +249,8 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
             search_query=search_query,
             top_k=payload.top_k,
         )
+
+    query_embedding = embed_texts([f"query: {search_query}"])[0]
 
     search_filter = {
         "should": [{"key": "job_id", "match": {"value": job_id}} for job_id in accessible_job_ids]

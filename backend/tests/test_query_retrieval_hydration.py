@@ -412,6 +412,8 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
             source_file="Deleted Guide.md",
             text="Deleted guide text must not be hydrated into context.",
         )
+        embed_calls = []
+        self.internal_agent.embed_texts = lambda texts: embed_calls.append(texts) or [[0.1, 0.2, 0.3]]
         with patch.object(self.internal_agent.httpx, "post") as fake_post:
             response = self.client.post(
                 "/internal/agent/document-search",
@@ -427,6 +429,7 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["sources"], [])
         self.assertEqual(body["context"], "")
+        self.assertEqual(embed_calls, [])
         fake_post.assert_not_called()
 
     def test_query_skips_hydration_when_chunk_row_belongs_to_different_document(self) -> None:

@@ -15,7 +15,9 @@ describe('getInstanceConfig', () => {
         delete store[key]
       }),
       clear: vi.fn(() => {
-        store = {}
+        Object.keys(store).forEach((key) => {
+          delete store[key]
+        })
       }),
     })
   })
@@ -31,5 +33,14 @@ describe('getInstanceConfig', () => {
     }))
 
     expect(getInstanceConfig().defaultLanguage).toBe(DEFAULT_INSTANCE_CONFIG.defaultLanguage)
+  })
+
+  it('trims stored default language before applying it', () => {
+    localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify({
+      ...DEFAULT_INSTANCE_CONFIG,
+      defaultLanguage: ' es ',
+    }))
+
+    expect(getInstanceConfig().defaultLanguage).toBe('es')
   })
 })

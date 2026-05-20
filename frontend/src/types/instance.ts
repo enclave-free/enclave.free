@@ -225,7 +225,7 @@ export function getInstanceConfig(): InstanceConfig {
       statusIconSet: parsed.statusIconSet || DEFAULT_INSTANCE_CONFIG.statusIconSet,
       typographyPreset: parsed.typographyPreset || DEFAULT_INSTANCE_CONFIG.typographyPreset,
       defaultLanguage: typeof parsed.defaultLanguage === 'string' && parsed.defaultLanguage.trim()
-        ? parsed.defaultLanguage
+        ? parsed.defaultLanguage.trim()
         : DEFAULT_INSTANCE_CONFIG.defaultLanguage,
       defaultTheme: DEFAULT_THEMES.includes(parsed.defaultTheme) ? parsed.defaultTheme : DEFAULT_INSTANCE_CONFIG.defaultTheme,
     }
