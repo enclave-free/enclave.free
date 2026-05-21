@@ -8,7 +8,7 @@ import { ToolSelector, type Tool } from '../chat/ToolSelector'
 import { DEFAULT_TINFOIL_MODEL, getConfigCategories, getDeploymentConfigItemMeta } from '../../types/config'
 import type { DeploymentConfigItem, DeploymentConfigResponse } from '../../types/config'
 import { API_BASE } from '../../types/onboarding'
-import { extractAdminAssistantChangeSetStrict, redactSecrets, type AdminAssistantChangeSet } from '../../utils/adminAssistant'
+import { extractAdminAssistantChangeSetStrict, redactAdminDeploymentSecretChangeSets, redactSecrets, type AdminAssistantChangeSet } from '../../utils/adminAssistant'
 import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools } from '../../utils/llmChat'
 
 type SnapshotResult = {
@@ -101,7 +101,7 @@ export function AdminConfigAssistant({
   const [error, setError] = useState<string | null>(null)
   const [snapshotInfo, setSnapshotInfo] = useState<{ generatedAtIso: string } | null>(null)
   const [applyState, setApplyState] = useState<ApplyState>({ state: 'idle' })
-  const [selectedTools, setSelectedTools] = useState<string[]>(['web-search'])
+  const [selectedTools, setSelectedTools] = useState<string[]>(['web-search', CONFIG_TOOL_ID])
 
   const secretsForRedactionRef = useRef<string[]>([])
   const deploymentSecretKeysRef = useRef<Set<string>>(new Set())
@@ -160,7 +160,7 @@ export function AdminConfigAssistant({
         if (!res.ok) return
         const data = await res.json()
         if (cancelled) return
-        setSelectedTools(data.web_search_enabled ? ['web-search'] : [])
+        setSelectedTools(data.web_search_enabled ? ['web-search', CONFIG_TOOL_ID] : [CONFIG_TOOL_ID])
       } catch {
         // Keep local defaults on error.
       }
@@ -232,6 +232,8 @@ export function AdminConfigAssistant({
     lines.push('- Treat all secret environment variables as highly sensitive.')
     lines.push('- Do not echo secrets back into chat. If you must reference them, say "[REDACTED]".')
     lines.push('- Prefer actionable, specific guidance: which setting to change, what to set it to, and whether restart is required.')
+    lines.push('- When the admin delegates a configuration task, inspect first-party context, choose reasonable defaults for unspecified details, and state important assumptions briefly.')
+    lines.push('- For a coherent delegated admin configuration task, group related settings into one reviewable Change Confirmation instead of splitting every setting into separate proposals.')
     lines.push('')
     lines.push('CHANGESET FORMAT (optional)')
     lines.push('If you want the admin to apply changes from this chat, include exactly one JSON code block with this shape:')
@@ -408,7 +410,7 @@ export function AdminConfigAssistant({
               raw += delta
               const display = shareSecrets
                 ? redactSecrets(raw, secretsForRedactionRef.current)
-                : raw
+                : redactAdminDeploymentSecretChangeSets(raw)
               setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, {
                 content: display,
               }))
@@ -468,7 +470,7 @@ export function AdminConfigAssistant({
 
       const display = shareSecrets
         ? redactSecrets(raw, secretsForRedactionRef.current)
-        : raw
+        : redactAdminDeploymentSecretChangeSets(raw)
 
       const assistantMessage: Message = {
         id: assistantId,

@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminConfigAssistant } from './AdminConfigAssistant'
+import { adminFetch } from '../../utils/adminApi'
 import { sendLlmChatStreamWithUnifiedTools } from '../../utils/llmChat'
 import { ThemeProvider } from '../../theme'
 
@@ -15,6 +16,8 @@ vi.mock('../../utils/llmChat', () => ({
 }))
 
 describe('AdminConfigAssistant', () => {
+  const mockAdminFetch = vi.mocked(adminFetch)
+
   beforeEach(() => {
     const store = new Map<string, string>()
     vi.stubGlobal('localStorage', {
@@ -42,6 +45,48 @@ describe('AdminConfigAssistant', () => {
       removeEventListener: vi.fn(),
     }))
     HTMLElement.prototype.scrollIntoView = vi.fn()
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/settings') {
+        return Promise.resolve(Response.json({ settings: { instance_name: 'Enclave' } }))
+      }
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(Response.json({
+          llm: [],
+          embedding: [],
+          email: [],
+          storage: [],
+          security: [],
+          search: [],
+          domains: [],
+          ssl: [],
+          general: [
+            {
+              key: 'LLM_API_KEY',
+              value: '[CONFIGURED]',
+              is_secret: true,
+              requires_restart: true,
+              description: 'Model Provider API key',
+            },
+          ],
+        }))
+      }
+      if (endpoint === '/admin/deployment/config/LLM_API_KEY/reveal') {
+        return Promise.resolve(Response.json({ key: 'LLM_API_KEY', value: 'super-secret-token' }))
+      }
+      if (endpoint === '/admin/ai-config') {
+        return Promise.resolve(Response.json({ prompt_sections: [], parameters: [], defaults: [] }))
+      }
+      if (endpoint === '/admin/user-types') {
+        return Promise.resolve(Response.json({ types: [] }))
+      }
+      if (endpoint === '/ingest/admin/documents/defaults') {
+        return Promise.resolve(Response.json({ documents: [] }))
+      }
+      if (endpoint === '/admin/deployment/health') {
+        return Promise.resolve(Response.json({ ok: true }))
+      }
+      return Promise.resolve(Response.json({}))
+    })
   })
 
   afterEach(() => {
@@ -102,5 +147,124 @@ describe('AdminConfigAssistant', () => {
       ],
       sessionId: 'session-1',
     }))
+  })
+
+  it('sends scoped Config context by default in admin configuration conversations', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-1', session_id: 'session-1' })
+      onEvent('answer_delta', { message_id: 'msg-1', delta: 'I can update the instance settings.' })
+      onEvent('done', { message_id: 'msg-1', session_id: 'session-1' })
+    })
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    )
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/session-defaults')
+    })
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Set up the theme from the uploaded guide.'
+    )
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled()
+    })
+    expect(vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]).toEqual(expect.objectContaining({
+      content: 'Set up the theme from the uploaded guide.',
+      tools: expect.arrayContaining(['admin-config']),
+      baseToolContext: expect.stringContaining('ADMIN CONFIG ASSISTANT CONTEXT'),
+    }))
+    const context = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0].baseToolContext || ''
+    expect(context).toContain('choose reasonable defaults')
+    expect(context).toContain('group related settings into one reviewable Change Confirmation')
+    expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', undefined)
+  })
+
+  it('presents one reviewable Change Confirmation for coherent multi-setting admin changes', async () => {
+    const user = userEvent.setup()
+    const changeSet = {
+      version: 1,
+      summary: 'Configure instance theme and assistant voice',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: {
+            instance_name: 'WLC Political Prisoners Resource Hub',
+            primary_color: '#1E3A8A',
+            typography_preset: 'humanist',
+          },
+        },
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_tone',
+          body: { value: 'Helpful, concise, and direct.' },
+        },
+      ],
+    }
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-1', session_id: 'session-1' })
+      onEvent('answer_delta', {
+        message_id: 'msg-1',
+        delta: `Here is the reviewable change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+      })
+      onEvent('done', { message_id: 'msg-1', session_id: 'session-1' })
+    })
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    )
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Update the theme and voice in one pass.'
+    )
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    expect(await screen.findByText('Pending changes: Configure instance theme and assistant voice')).toBeInTheDocument()
+    expect(screen.getByText('PUT /admin/settings')).toBeInTheDocument()
+    expect(screen.getByText('PUT /admin/ai-config/prompt_tone')).toBeInTheDocument()
+    expect(screen.getAllByText(/WLC Political Prisoners Resource Hub/).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument()
+  })
+
+  it('does not reveal secret Deployment Setting values in default Config context', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-1', session_id: 'session-1' })
+      onEvent('answer_delta', { message_id: 'msg-1', delta: 'I can review the config safely.' })
+      onEvent('done', { message_id: 'msg-1', session_id: 'session-1' })
+    })
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    )
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Review deployment config.'
+    )
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled()
+    })
+    const context = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0].baseToolContext || ''
+    expect(context).toContain('LLM_API_KEY')
+    expect(context).toContain('secret=true')
+    expect(context).toContain('Secret env vars are NOT included')
+    expect(context).not.toContain('super-secret-token')
+    expect(mockAdminFetch).not.toHaveBeenCalledWith('/admin/deployment/config/LLM_API_KEY/reveal', undefined)
   })
 })

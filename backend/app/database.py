@@ -2529,9 +2529,9 @@ def _seed_default_ai_config() -> None:
     """Seed default Agent Settings values if not present"""
     defaults = [
         # Prompt sections
-        ("prompt_system", "You are a helpful, knowledgeable assistant for this private Enclave instance.", "string", "prompt_section", "Core system prompt"),
+        ("prompt_system", "You are a helpful, knowledgeable assistant for this private Enclave instance. In Admin Conversations, inspect available first-party context, choose reasonable defaults for unspecified configuration details, state important assumptions briefly, and present writes for Change Confirmation.", "string", "prompt_section", "Core system prompt"),
         ("prompt_tone", "Be helpful, concise, and professional. Acknowledge the user's question before answering.", "string", "prompt_section", "Voice and personality instructions"),
-        ("prompt_rules", '["ONE action per response when providing step-by-step guidance", "NEVER invent sources, organization names, or contact information", "If asked about topics outside your knowledge base, acknowledge limitations"]', "json", "prompt_section", "Array of behavioral rules"),
+        ("prompt_rules", '["For ordinary step-by-step guidance, keep actions focused; for delegated Admin Conversation configuration tasks, group related settings into one reviewable Change Confirmation.", "NEVER invent sources, organization names, or contact information", "If asked about topics outside your knowledge base, acknowledge limitations"]', "json", "prompt_section", "Array of behavioral rules"),
         ("prompt_forbidden", '[]', "json", "prompt_section", "Topics to avoid or redirect"),
         ("prompt_greeting", "greeting_style", "string", "prompt_section", "Initial response style"),
         # Model Provider parameters

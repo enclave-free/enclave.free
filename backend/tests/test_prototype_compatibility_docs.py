@@ -53,6 +53,9 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertIn("Gateway routes this request to Sage", assistant)
         self.assertIn("Sage-owned session defaults", assistant)
+        self.assertIn("Config context is default-on for admin configuration conversations", assistant)
+        self.assertIn("automatically uses Document Library Retrieval", assistant)
+        self.assertIn("Secrets are not included by default", assistant)
         self.assertIn("Python does not expose public `/llm/chat` or `/session-defaults` handlers", assistant)
         self.assertNotIn("Transport: uses `POST /llm/chat`", assistant)
         self.assertNotIn("Reads `/session-defaults`", assistant)

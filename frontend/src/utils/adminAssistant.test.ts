@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as adminAssistant from './adminAssistant'
-import { extractAdminAssistantChangeSetStrict } from './adminAssistant'
+import { extractAdminAssistantChangeSetStrict, redactAdminDeploymentSecretChangeSets } from './adminAssistant'
 
 describe('extractAdminAssistantChangeSetStrict', () => {
   it('accepts a raw JSON change set without a fenced code block', () => {
@@ -152,5 +152,38 @@ describe('extractAdminAssistantChangeSetStrict', () => {
     if (extracted.ok) {
       expect(extracted.changeSet.requests[0].body).toEqual({})
     }
+  })
+})
+
+describe('redactAdminDeploymentSecretChangeSets', () => {
+  it('redacts secret deployment values before a streamed JSON fence is complete', () => {
+    const streamedPartial = [
+      'Here is the update.',
+      '```json',
+      '{"version":1,"summary":"Rotate key","requests":[{"method":"PUT","path":"/admin/deployment/config/LLM_API_KEY","body":{"value":"sk-live-secret-value"}}]}',
+    ].join('\n')
+
+    const redacted = redactAdminDeploymentSecretChangeSets(streamedPartial)
+
+    expect(redacted).toContain('[REDACTED]')
+    expect(redacted).not.toContain('sk-live-secret-value')
+  })
+
+  it('keeps non-secret deployment values visible in complete changesets', () => {
+    const changeSet = {
+      version: 1,
+      summary: 'Set public base URL',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/deployment/config/PUBLIC_BASE_URL',
+          body: { value: 'https://example.test' },
+        },
+      ],
+    }
+
+    const redacted = redactAdminDeploymentSecretChangeSets(`\`\`\`json\n${JSON.stringify(changeSet)}\n\`\`\``)
+
+    expect(redacted).toContain('https://example.test')
   })
 })
