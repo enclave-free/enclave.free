@@ -408,9 +408,10 @@ export function AdminConfigAssistant({
             } else if (event === 'answer_delta' && streamMessageId) {
               const delta = typeof data.delta === 'string' ? data.delta : ''
               raw += delta
+              const redactedChangeSets = redactAdminDeploymentSecretChangeSets(raw)
               const display = shareSecrets
-                ? redactSecrets(raw, secretsForRedactionRef.current)
-                : redactAdminDeploymentSecretChangeSets(raw)
+                ? redactSecrets(redactedChangeSets, secretsForRedactionRef.current)
+                : redactedChangeSets
               setMessages((prev) => patchAssistantMessage(prev, streamMessageId!, {
                 content: display,
               }))
@@ -468,9 +469,10 @@ export function AdminConfigAssistant({
 
       const assistantId = data.message_id || generateMessageId()
 
+      const redactedChangeSets = redactAdminDeploymentSecretChangeSets(raw)
       const display = shareSecrets
-        ? redactSecrets(raw, secretsForRedactionRef.current)
-        : redactAdminDeploymentSecretChangeSets(raw)
+        ? redactSecrets(redactedChangeSets, secretsForRedactionRef.current)
+        : redactedChangeSets
 
       const assistantMessage: Message = {
         id: assistantId,

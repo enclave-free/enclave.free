@@ -871,25 +871,25 @@ _Avoid_: full snapshot, config dump
 
 > **Dev:** "Can Sage read uploaded Documents during an Admin Conversation when the Admin asks it to configure the Instance from those materials?"
 > **Domain expert:** "Yes. Uploaded **Documents** are first-party **Instance** context. Sage may read **Document Library** and **Retrieval** context in an **Admin Conversation** to make better configuration decisions, while writes still require **Change Confirmation**."
-
+>
 > **Dev:** "Should the Admin have to manually enable config context before asking Sage to configure the Instance?"
 > **Domain expert:** "No. In admin configuration contexts, Sage should receive scoped configuration context by default. Configuration reads are part of the **Admin Conversation** authority, while any resulting writes still require **Change Confirmation**."
-
+>
 > **Dev:** "Should Sage ask the Admin to specify every missing preference before configuring the Instance?"
 > **Domain expert:** "No. When the Admin delegates a configuration task, Sage should inspect available first-party context, choose reasonable defaults for unspecified details, state important assumptions briefly, and present any writes for **Change Confirmation**."
-
+>
 > **Dev:** "Should this stronger action bias apply to normal User Conversations too?"
 > **Domain expert:** "No. The stronger action bias is for **Admin Conversations** because the Admin has operator authority. **User Conversations** should remain helpful and direct, but they should not inherit admin-style configuration or write-preparation behavior."
-
+>
 > **Dev:** "Should an Admin have to manually select uploaded Documents before asking Sage to configure the Instance from them?"
 > **Domain expert:** "No. When an Admin configuration request refers to uploaded materials, instance theming, copy, or content, Sage should automatically use relevant **Retrieval** over the **Document Library** before choosing defaults or preparing changes."
-
+>
 > **Dev:** "Should Sage prepare one broad Change Confirmation for a coherent admin configuration task, or split every setting into separate confirmations?"
 > **Domain expert:** "Use one reviewable **Change Confirmation** for a coherent delegated task. For example, an instance theming request may include name, tagline, colors, typography, icons, chat bubble style, and copy defaults in one changeset."
-
+>
 > **Dev:** "Should the one-action guidance prevent Sage from configuring several related settings at once?"
 > **Domain expert:** "No. For ordinary step-by-step guidance, Sage should keep actions focused. For delegated **Admin Conversation** configuration tasks, Sage should group related settings into one reviewable **Change Confirmation**."
-
+>
 > **Dev:** "Should Sage receive secret Deployment Setting values by default in Admin Conversations?"
 > **Domain expert:** "No. Sage should receive scoped configuration metadata and non-secret values by default in admin configuration contexts. Secret values require explicit Admin sharing and should remain redacted in chat."
 
