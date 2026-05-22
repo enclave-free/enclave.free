@@ -43,11 +43,11 @@ export function adaptSageStreamEvent(
       }
     }
     case 'trace_final': {
-      if (!assistantTurnId || !payload.trace || typeof payload.trace !== 'object') return null
+      if (!assistantTurnId || !isConversationTrace(payload.trace)) return null
       return {
         type: 'assistantTraceSettled',
         assistantTurnId,
-        trace: payload.trace as ConversationTrace,
+        trace: payload.trace,
       }
     }
     case 'done':
@@ -64,6 +64,17 @@ export function adaptSageStreamEvent(
     default:
       return null
   }
+}
+
+function isConversationTrace(value: unknown): value is ConversationTrace {
+  if (!value || typeof value !== 'object') return false
+  const trace = value as Record<string, unknown>
+  if (!['off', 'minimal', 'summary', 'detailed'].includes(String(trace.visibility))) return false
+  if (trace.tools !== undefined && !Array.isArray(trace.tools)) return false
+  if (trace.retrieval !== undefined && !Array.isArray(trace.retrieval)) return false
+  if (trace.activity_steps !== undefined && !Array.isArray(trace.activity_steps)) return false
+  if (trace.reasoning !== undefined && (!trace.reasoning || typeof trace.reasoning !== 'object')) return false
+  return true
 }
 
 function readActivityStep(payload: Record<string, unknown>): ConversationActivityStep | null {

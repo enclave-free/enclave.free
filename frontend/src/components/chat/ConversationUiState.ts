@@ -308,7 +308,9 @@ export function reduceConversationUiState(
     case 'assistantTurnsRemovedByContentPrefix':
       return {
         ...state,
-        turns: state.turns.filter((turn) => !turn.content.startsWith(action.prefix)),
+        turns: state.turns.filter((turn) => (
+          turn.role !== 'assistant' || !turn.content.startsWith(action.prefix)
+        )),
       }
   }
 }

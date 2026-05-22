@@ -61,6 +61,10 @@ describe('Sage Stream Event Adapter', () => {
       trace,
     })
 
+    expect(adaptSageStreamEvent('trace_final', {
+      trace: { visibility: 'summary', tools: {} },
+    }, 'assistant-1')).toBeNull()
+
     expect(adaptSageStreamEvent('done', { session_id: 'session-1' })).toEqual({
       type: 'assistantTurnFinished',
       sessionId: 'session-1',

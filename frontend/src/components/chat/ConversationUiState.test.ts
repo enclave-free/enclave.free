@@ -204,4 +204,20 @@ describe('Conversation UI State', () => {
       },
     ])
   })
+
+  it('removes generated assistant turns by content prefix without deleting matching user turns', () => {
+    const state = [
+      { type: 'userTurnSubmitted' as const, id: 'user-1', content: 'Search results for policy' },
+      { type: 'assistantTurnAppended' as const, id: 'assistant-1', content: 'Search results for policy' },
+      { type: 'assistantTurnsRemovedByContentPrefix' as const, prefix: 'Search results for' },
+    ].reduce(reduceConversationUiState, createConversationUiState())
+
+    expect(state.turns).toEqual([
+      expect.objectContaining({
+        id: 'user-1',
+        role: 'user',
+        content: 'Search results for policy',
+      }),
+    ])
+  })
 })

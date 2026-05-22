@@ -120,9 +120,9 @@ describe('generateExport', () => {
     })
 
     expect(exported).toContain('Conversation Trace')
-    expect(exported).toContain('Sage used Web search before answering.')
+    expect(exported).toContain('Sage used Web search before answering\\.')
     expect(exported).toContain('Web search')
-    expect(exported).toContain('Found 3 relevant results.')
+    expect(exported).toContain('Found 3 relevant results\\.')
   })
 
   it('exports viewer-visible Conversation Activity Steps with settled trace metadata', () => {
@@ -161,7 +161,7 @@ describe('generateExport', () => {
 
     expect(exported).toContain('Conversation Activity')
     expect(exported).toContain('Admin Config')
-    expect(exported).toContain('Tool completed.')
+    expect(exported).toContain('Tool completed\\.')
   })
 
   it('exports submitted-turn Conversation Control Snapshots without browser state details', () => {
@@ -189,8 +189,8 @@ describe('generateExport', () => {
     })
 
     expect(exportedMarkdown).toContain('Conversation Controls')
-    expect(exportedMarkdown).toContain('Tools: web-search')
-    expect(exportedMarkdown).toContain('Documents: doc-1')
+    expect(exportedMarkdown).toContain('Tools: web\\-search')
+    expect(exportedMarkdown).toContain('Documents: doc\\-1')
     expect(exportedMarkdown).not.toContain('localStorage')
 
     expect(exportedText).toContain('Conversation Controls')
@@ -271,5 +271,49 @@ describe('generateExport', () => {
     expect(exported).not.toContain('Sage used Web search before answering.')
     expect(exported).not.toContain('Found 3 relevant results.')
     expect(exported).not.toContain('Matched eviction timeline section.')
+  })
+
+  it('escapes markdown metacharacters in exported trace and control metadata', () => {
+    const exported = generateExport({
+      messages: [
+        {
+          id: 'm1',
+          role: 'user',
+          content: 'Use selected context.',
+          controlSnapshot: {
+            selectedTools: ['[web](https://example.com)'],
+            selectedDocuments: ['doc-*'],
+          },
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'Done.',
+          trace: {
+            visibility: 'summary',
+            reasoning: { summary: 'Used [reason](https://example.com).' },
+            tools: [{
+              id: 'tool-1',
+              name: '[Tool](https://example.com)',
+              status: 'success',
+              output_summary: 'Saw *markdown*.',
+            }],
+            retrieval: [{
+              title: 'Doc *Title*',
+              summary: 'Matched [section](https://example.com).',
+            }],
+          },
+        },
+      ],
+      format: 'md',
+      translations,
+    })
+
+    expect(exported).toContain('\\[web\\]\\(https://example\\.com\\)')
+    expect(exported).toContain('doc\\-\\*')
+    expect(exported).toContain('\\[Tool\\]\\(https://example\\.com\\)')
+    expect(exported).toContain('Saw \\*markdown\\*')
+    expect(exported).toContain('Doc \\*Title\\*')
+    expect(exported).toContain('Matched \\[section\\]\\(https://example\\.com\\)')
   })
 })

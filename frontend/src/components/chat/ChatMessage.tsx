@@ -165,14 +165,15 @@ function ConversationTracePanel({
   const retrieval = trace?.retrieval ?? []
   const summary = trace?.reasoning?.summary
   const hasActivity = activitySteps.length > 0
-  const hasTraceDetail = Boolean(summary) || tools.length > 0 || retrieval.length > 0
+  const hasTraceChips = tools.length > 0 || retrieval.length > 0
+  const hasTraceDetail = Boolean(summary) || hasTraceChips
   const isLive = Boolean(liveStatus)
 
   if (visibility === 'off' && !isLive && !hasActivity) return null
   if (!isLive && !hasActivity && !hasTraceDetail) return null
 
   if (visibility === 'minimal' && !isLive && !hasActivity) {
-    if (!hasTraceDetail) return null
+    if (!hasTraceChips) return null
 
     return (
       <div className="mt-3 flex flex-wrap gap-2 border-t border-border/70 pt-3 text-xs text-text-muted" aria-label="Conversation trace summary">
@@ -237,6 +238,22 @@ function ConversationTracePanel({
       </div>
     </section>
   )
+}
+
+function isTraceRenderable(
+  trace?: ConversationTrace | null,
+  liveStatus?: string | null,
+  activitySteps: ConversationActivityStep[] = []
+): boolean {
+  const isLive = Boolean(liveStatus)
+  const hasActivity = activitySteps.length > 0 || (trace?.activity_steps?.length ?? 0) > 0
+  if (trace?.visibility === 'off' && !isLive && !hasActivity) return false
+  if (isLive || hasActivity) return true
+  const tools = trace?.tools ?? []
+  const retrieval = trace?.retrieval ?? []
+  const summary = trace?.reasoning?.summary
+  if (trace?.visibility === 'minimal') return tools.length > 0 || retrieval.length > 0
+  return Boolean(summary) || tools.length > 0 || retrieval.length > 0
 }
 
 function TraceRows({ label, children }: { label: string; children: ReactNode }) {
@@ -392,7 +409,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     !isUser &&
     !message.content.trim() &&
     !visibleTraceStatus &&
-    !message.trace &&
+    !isTraceRenderable(message.trace, visibleTraceStatus, message.activitySteps) &&
     !(message.activitySteps && message.activitySteps.length > 0)
   ) {
     return null

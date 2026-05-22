@@ -53,21 +53,21 @@ function formatTraceMarkdown(trace?: ConversationTrace | null): string {
   if (activitySteps.length > 0) {
     lines.push('- Conversation Activity')
     for (const step of activitySteps) {
-      const summary = !compactOnly && step.summary ? `: ${step.summary}` : ''
-      lines.push(`  - ${step.title} (${step.status})${summary}`)
+      const summary = !compactOnly && step.summary ? `: ${escapeMarkdown(step.summary)}` : ''
+      lines.push(`  - ${escapeMarkdown(step.title)} (${escapeMarkdown(step.status)})${summary}`)
     }
   }
   if (!compactOnly && trace.reasoning?.summary) {
-    lines.push(`- ${trace.reasoning.summary}`)
+    lines.push(`- ${escapeMarkdown(trace.reasoning.summary)}`)
   }
   for (const tool of trace.tools ?? []) {
-    const summary = !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : ''
-    lines.push(`- Tool: ${tool.name}${summary}`)
+    const summary = !compactOnly && tool.output_summary ? `: ${escapeMarkdown(tool.output_summary)}` : ''
+    lines.push(`- Tool: ${escapeMarkdown(tool.name)}${summary}`)
   }
   for (const item of trace.retrieval ?? []) {
     const title = item.title || item.source_type || 'Retrieved source'
-    const summary = !compactOnly && item.summary ? `: ${item.summary}` : ''
-    lines.push(`- Retrieval: ${title}${summary}`)
+    const summary = !compactOnly && item.summary ? `: ${escapeMarkdown(item.summary)}` : ''
+    lines.push(`- Retrieval: ${escapeMarkdown(title)}${summary}`)
   }
   return `${lines.join('\n')}\n\n`
 }
@@ -76,10 +76,10 @@ function formatControlSnapshotMarkdown(snapshot?: Message['controlSnapshot']): s
   if (!snapshot) return ''
   const lines = ['**Conversation Controls**']
   if (snapshot.selectedTools.length > 0) {
-    lines.push(`- Tools: ${snapshot.selectedTools.join(', ')}`)
+    lines.push(`- Tools: ${snapshot.selectedTools.map(escapeMarkdown).join(', ')}`)
   }
   if (snapshot.selectedDocuments.length > 0) {
-    lines.push(`- Documents: ${snapshot.selectedDocuments.join(', ')}`)
+    lines.push(`- Documents: ${snapshot.selectedDocuments.map(escapeMarkdown).join(', ')}`)
   }
   return lines.length > 1 ? `${lines.join('\n')}\n\n` : ''
 }

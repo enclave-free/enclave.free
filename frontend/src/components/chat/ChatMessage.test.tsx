@@ -231,6 +231,33 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Tenant Rights Guide')).toBeInTheDocument()
   })
 
+  it('does not render an empty assistant bubble for non-renderable trace metadata', () => {
+    renderMessage('', 'assistant', {
+      visibility: 'summary',
+      tools: [],
+      retrieval: [],
+      suppressed: false,
+    })
+
+    expect(screen.queryByText(DEFAULT_INSTANCE_CONFIG.assistantName)).not.toBeInTheDocument()
+    expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument()
+  })
+
+  it('does not render a minimal trace strip when there are no visible chips', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'minimal',
+      reasoning: {
+        summary: 'Hidden in minimal mode.',
+      },
+      tools: [],
+      retrieval: [],
+      suppressed: false,
+    })
+
+    expect(screen.queryByLabelText('Conversation trace summary')).not.toBeInTheDocument()
+    expect(screen.queryByText('Hidden in minimal mode.')).not.toBeInTheDocument()
+  })
+
   it('does not render the internal writing trace as assistant content', () => {
     render(
       <ThemeProvider>
