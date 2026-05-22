@@ -62,6 +62,9 @@ MAX_BATCH_FILES = int(os.getenv("MAX_BATCH_FILES", "100"))
 MAX_BATCH_BYTES = int(os.getenv("MAX_BATCH_BYTES", str(250 * 1024 * 1024)))
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".txt", ".md"}
 ABANDONED_INGESTION_TIMEOUT_MINUTES = int(os.getenv("ABANDONED_INGESTION_TIMEOUT_MINUTES", "60"))
+ADMIN_DOCUMENT_CONTEXT_MAX_DOCUMENTS = int(os.getenv("ADMIN_DOCUMENT_CONTEXT_MAX_DOCUMENTS", "5"))
+ADMIN_DOCUMENT_CONTEXT_MAX_CHUNKS_PER_DOCUMENT = int(os.getenv("ADMIN_DOCUMENT_CONTEXT_MAX_CHUNKS_PER_DOCUMENT", "3"))
+ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK = int(os.getenv("ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK", "1200"))
 
 # Valid ontology IDs for document extraction
 VALID_ONTOLOGIES = {"general", "bitcoin"}
@@ -1691,6 +1694,67 @@ async def get_document_defaults(admin: dict = Depends(auth.require_admin)):
             ))
 
     return DocumentDefaultsResponse(documents=documents)
+
+
+@router.get("/admin/documents/context-preview")
+async def get_admin_document_context_preview(admin: dict = Depends(auth.require_admin)) -> dict:
+    """
+    Return a bounded preview of default-active Document Library content for admin
+    configuration conversations.
+
+    This is not a general export endpoint. It gives the config assistant enough
+    grounded context to discuss copy, styling, and instance alignment while
+    keeping prompt size predictable.
+    """
+    defaults = database.list_document_defaults()
+    defaults_by_job = {d["job_id"]: d for d in defaults}
+    default_job_ids = set(database.get_default_active_documents())
+    completed_jobs = ingest_db.list_completed_jobs()
+
+    selected_jobs = []
+    for job in completed_jobs:
+        job_id = job["job_id"]
+        defaults_row = defaults_by_job.get(job_id)
+        is_available = bool(defaults_row["is_available"]) if defaults_row else True
+        is_default_active = job_id in default_job_ids or defaults_row is None
+        if is_available and is_default_active:
+            display_order = int(defaults_row["display_order"]) if defaults_row else 0
+            selected_jobs.append((display_order, job))
+
+    selected_jobs.sort(key=lambda item: (item[0], item[1].get("created_at") or ""))
+
+    documents = []
+    for _, job in selected_jobs[:ADMIN_DOCUMENT_CONTEXT_MAX_DOCUMENTS]:
+        chunks = ingest_db.list_retrieval_chunks(job["job_id"])
+        preview_chunks = []
+        for chunk in chunks[:ADMIN_DOCUMENT_CONTEXT_MAX_CHUNKS_PER_DOCUMENT]:
+            text = str(chunk.get("text") or "")
+            if len(text) > ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK:
+                text = f"{text[:ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK].rstrip()}..."
+            preview_chunks.append({
+                "chunk_id": chunk.get("chunk_id"),
+                "index": chunk.get("chunk_index"),
+                "source_file": chunk.get("source_file"),
+                "text": text,
+            })
+
+        documents.append({
+            "job_id": job["job_id"],
+            "filename": job.get("filename"),
+            "status": job.get("status"),
+            "total_chunks": job.get("total_chunks"),
+            "preview_chunks": preview_chunks,
+            "preview_truncated": len(chunks) > len(preview_chunks),
+        })
+
+    return {
+        "documents": documents,
+        "limits": {
+            "max_documents": ADMIN_DOCUMENT_CONTEXT_MAX_DOCUMENTS,
+            "max_chunks_per_document": ADMIN_DOCUMENT_CONTEXT_MAX_CHUNKS_PER_DOCUMENT,
+            "max_chars_per_chunk": ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK,
+        },
+    }
 
 
 @router.put("/admin/documents/{job_id}/defaults", response_model=DocumentDefaultItem)
