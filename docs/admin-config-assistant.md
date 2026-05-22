@@ -25,6 +25,7 @@ The admin's Nostr private key (`nsec`) is custodied by the browser extension via
 ### Secret Environment Variables
 
 - Deployment config secrets are stored encrypted at rest in SQLite (`deployment_config`) and are masked in list endpoints.
+- Secrets are not included by default.
 - The admin UI can reveal a secret value with:
   - `GET /admin/deployment/config/{key}/reveal`
 - The assistant bubble follows a strict rule:
@@ -50,6 +51,8 @@ Defense-in-depth:
 
 Tool defaults:
 - Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
+- Config context is default-on for admin configuration conversations, while web search still follows Sage-owned session defaults.
+- When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage automatically uses Document Library Retrieval as first-party Instance context before answering.
 - In current frontend behavior, admin `/chat` uses this assistant pipeline (runtime tools + changeset review/apply) and does not use document-scope Retrieval mode.
 
 Sidebar behavior:

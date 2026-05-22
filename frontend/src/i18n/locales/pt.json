@@ -123,7 +123,7 @@
       "database": "Consultar o banco de dados SQLite",
       "knowledgeGraph": "Consultar o grafo de conhecimento",
       "config": "Configurações",
-      "configName": "Nome da Configuração",
+      "configName": "Configuração",
       "databaseName": "Banco de dados",
       "webSearchName": "Web"
     },

@@ -125,7 +125,7 @@
       "databaseName": "Baza danych",
       "knowledgeGraph": "Zapytaj graf wiedzy",
       "config": "Konfiguracja",
-      "configName": "Nazwa konfiguracji"
+      "configName": "Konfiguracja"
     },
     "documentScope": {
       "title": "Bazy wiedzy",

@@ -52,6 +52,11 @@ export type ConversationUiAction =
       delta: string
     }
   | {
+      type: 'assistantContentReplaced'
+      assistantTurnId: string
+      content: string
+    }
+  | {
       type: 'assistantTraceSettled'
       assistantTurnId: string
       trace: ConversationTrace
@@ -183,6 +188,11 @@ export function reduceConversationUiState(
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         content: `${turn.content}${action.delta}`,
+      }))
+    case 'assistantContentReplaced':
+      return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
+        ...turn,
+        content: action.content,
       }))
     case 'assistantTraceSettled':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({

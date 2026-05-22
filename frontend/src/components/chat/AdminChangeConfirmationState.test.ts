@@ -77,5 +77,10 @@ describe('Admin Change Confirmation State', () => {
       deploymentSecretKeysLoaded: true,
       deploymentSecretKeys: new Set(['TINFOIL_API_KEY']),
     }).requests[0].body).toEqual({ value: '[REDACTED]' })
+
+    expect(buildAdminChangePreview(changeSet, {
+      deploymentSecretKeysLoaded: true,
+      deploymentSecretKeys: new Set(),
+    }).requests[0].body).toEqual({ value: '[REDACTED]' })
   })
 })

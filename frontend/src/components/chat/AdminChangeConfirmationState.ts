@@ -81,7 +81,10 @@ function maskDeploymentSecretBody(
 ): unknown {
   if (!path.startsWith('/admin/deployment/config/')) return body
   const key = path.split('/').pop() || ''
-  const shouldRedact = !options.deploymentSecretKeysLoaded || options.deploymentSecretKeys.has(key)
+  const shouldRedact =
+    !options.deploymentSecretKeysLoaded ||
+    options.deploymentSecretKeys.has(key) ||
+    /SECRET|TOKEN|KEY|PASSWORD/i.test(key)
   if (!shouldRedact || !body || typeof body !== 'object' || Array.isArray(body)) return body
 
   const objectBody = body as Record<string, unknown>

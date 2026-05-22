@@ -367,3 +367,47 @@ export function redactSecrets(text: string, secrets: string[]): string {
   }
   return out
 }
+
+export function redactAdminDeploymentSecretChangeSets(text: string): string {
+  if (!text || !text.includes('/admin/deployment/config/')) return text
+
+  const redactParsedBlock = (match: string, body: string): string => {
+    try {
+      const parsed = JSON.parse(body)
+      if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.requests)) return match
+      let changed = false
+      const requests = parsed.requests.map((request: unknown) => {
+        if (!_isPlainObject(request)) return request
+        const path = typeof request.path === 'string' ? request.path : ''
+        const key = path.startsWith('/admin/deployment/config/')
+          ? path.split('/').pop() || ''
+          : ''
+        const bodyValue = request.body
+        if (
+          request.method === 'PUT'
+          && /SECRET|TOKEN|KEY|PASSWORD/i.test(key)
+          && _isPlainObject(bodyValue)
+          && typeof bodyValue.value === 'string'
+          && bodyValue.value.length > 0
+        ) {
+          changed = true
+          return { ...request, body: { ...bodyValue, value: '[REDACTED]' } }
+        }
+        return request
+      })
+      if (!changed) return match
+      return `\`\`\`json\n${JSON.stringify({ ...parsed, requests }, null, 2)}\n\`\`\``
+    } catch {
+      return match
+    }
+  }
+
+  let out = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, redactParsedBlock)
+
+  out = out.replace(
+    /("path"\s*:\s*"\/admin\/deployment\/config\/[^"]*(?:SECRET|TOKEN|KEY|PASSWORD)[^"]*"[\s\S]*?"value"\s*:\s*")([^"]*)/gi,
+    (_match, prefix: string) => `${prefix}[REDACTED]`,
+  )
+
+  return out
+}

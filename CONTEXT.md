@@ -892,6 +892,30 @@ _Avoid_: full snapshot, config dump
 > **Dev:** "Which admin tool actions need confirmation?"
 > **Domain expert:** "Every write that changes **Instance** or **Agent Runtime** state needs **Change Confirmation**. Reads can happen within the authority of the **Admin Conversation**."
 
+> **Dev:** "Can Sage read uploaded Documents during an Admin Conversation when the Admin asks it to configure the Instance from those materials?"
+> **Domain expert:** "Yes. Uploaded **Documents** are first-party **Instance** context. Sage may read **Document Library** and **Retrieval** context in an **Admin Conversation** to make better configuration decisions, while writes still require **Change Confirmation**."
+>
+> **Dev:** "Should the Admin have to manually enable config context before asking Sage to configure the Instance?"
+> **Domain expert:** "No. In admin configuration contexts, Sage should receive scoped configuration context by default. Configuration reads are part of the **Admin Conversation** authority, while any resulting writes still require **Change Confirmation**."
+>
+> **Dev:** "Should Sage ask the Admin to specify every missing preference before configuring the Instance?"
+> **Domain expert:** "No. When the Admin delegates a configuration task, Sage should inspect available first-party context, choose reasonable defaults for unspecified details, state important assumptions briefly, and present any writes for **Change Confirmation**."
+>
+> **Dev:** "Should this stronger action bias apply to normal User Conversations too?"
+> **Domain expert:** "No. The stronger action bias is for **Admin Conversations** because the Admin has operator authority. **User Conversations** should remain helpful and direct, but they should not inherit admin-style configuration or write-preparation behavior."
+>
+> **Dev:** "Should an Admin have to manually select uploaded Documents before asking Sage to configure the Instance from them?"
+> **Domain expert:** "No. When an Admin configuration request refers to uploaded materials, instance theming, copy, or content, Sage should automatically use relevant **Retrieval** over the **Document Library** before choosing defaults or preparing changes."
+>
+> **Dev:** "Should Sage prepare one broad Change Confirmation for a coherent admin configuration task, or split every setting into separate confirmations?"
+> **Domain expert:** "Use one reviewable **Change Confirmation** for a coherent delegated task. For example, an instance theming request may include name, tagline, colors, typography, icons, chat bubble style, and copy defaults in one changeset."
+>
+> **Dev:** "Should the one-action guidance prevent Sage from configuring several related settings at once?"
+> **Domain expert:** "No. For ordinary step-by-step guidance, Sage should keep actions focused. For delegated **Admin Conversation** configuration tasks, Sage should group related settings into one reviewable **Change Confirmation**."
+>
+> **Dev:** "Should Sage receive secret Deployment Setting values by default in Admin Conversations?"
+> **Domain expert:** "No. Sage should receive scoped configuration metadata and non-secret values by default in admin configuration contexts. Secret values require explicit Admin sharing and should remain redacted in chat."
+
 > **Dev:** "Can users ask Sage to change things for them?"
 > **Domain expert:** "Not as a general tool authority model in the current prototype. **User Conversations** are read/assistive, except for user-owned actions handled by ordinary product flows."
 
@@ -961,6 +985,14 @@ _Avoid_: full snapshot, config dump
 - "query session" is implementation/API language; resolved: use **Conversation** for the product/domain concept.
 - "user message" is too narrow for privacy discussions; resolved: use **Conversation Content** for the full inference payload sent to a **Model Provider**.
 - "proposal-only admin assistant" is too weak; resolved: Sage may directly apply configuration or control-plane changes during an **Admin Conversation** after **Change Confirmation**.
+- "admin document access" can be mistaken for a write authority escalation; resolved: Sage may autonomously read uploaded **Documents** as first-party **Instance** context in an **Admin Conversation**, but changing **Instance Settings**, **Agent Settings**, **Deployment Settings**, or document governance still requires **Change Confirmation**.
+- "config tool access" should not require the Admin to pre-debug the right context switch in admin configuration flows; resolved: scoped configuration reads are default context for admin configuration **Conversations**.
+- "ask before choosing" is too timid for delegated admin configuration; resolved: Sage should choose reasonable defaults from first-party context and present writes for **Change Confirmation** rather than making the Admin supply every preference.
+- "sovereign Sage" can overreach if applied globally; resolved: stronger action bias is scoped to **Admin Conversations**, not normal **User Conversations**.
+- "uploaded document available" is too passive for admin configuration; resolved: when an **Admin Conversation** refers to uploaded materials, theming, copy, or content, Sage should automatically use relevant **Retrieval** over the **Document Library**.
+- "one action per response" should not force fragmented admin setup; resolved: a coherent delegated admin configuration task can be presented as one reviewable **Change Confirmation** containing multiple related writes.
+- "ONE action per response" is too broad when applied to delegated admin setup; resolved: ordinary guidance should stay focused, while related admin configuration writes can be grouped into one **Change Confirmation**.
+- "config access" should not imply secret exposure; resolved: non-secret scoped configuration is default admin context, while secret values require explicit Admin sharing and stay redacted in chat.
 - User-agent write authority is not defined yet; resolved for now: **User Conversations** are read/assistive and should not receive general write-capable tools.
 - **Ordinary Product Flow** exists to distinguish direct product actions from Sage tool authority inside a **Conversation**.
 - Future control model may introduce delegated or multiple administrators; unresolved until that design is discussed.

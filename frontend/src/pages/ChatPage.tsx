@@ -26,6 +26,7 @@ import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools, sendQue
 import { Button, Callout, IconButton } from '../components/ui'
 import {
   extractAdminAssistantChangeSetStrict,
+  redactAdminDeploymentSecretChangeSets,
   type AdminAssistantChangeSet,
 } from '../utils/adminAssistant'
 
@@ -73,7 +74,7 @@ export function ChatPage() {
   const [conversationState, dispatchConversation] = useReducer(
     reduceConversationUiState,
     undefined,
-    () => createConversationUiState()
+    () => createConversationUiState({ selectedTools: isAdmin ? [CONFIG_TOOL_ID] : [] })
   )
   const [adminApplyState, dispatchAdminApply] = useReducer(
     reduceAdminChangeConfirmationState,
@@ -291,12 +292,11 @@ export function ChatPage() {
         const res = await fetch(url)
         if (res.ok) {
           const data = await res.json()
-          // Apply web search default
-          if (data.web_search_enabled) {
-            dispatchConversation({ type: 'selectedToolsChanged', selectedTools: ['web-search'] })
-          } else {
-            dispatchConversation({ type: 'selectedToolsChanged', selectedTools: [] })
-          }
+          const defaultTools = data.web_search_enabled ? ['web-search'] : []
+          dispatchConversation({
+            type: 'selectedToolsChanged',
+            selectedTools: isAdmin ? [...defaultTools, CONFIG_TOOL_ID] : defaultTools,
+          })
           // Store default document IDs to apply once documents are loaded
           if (data.default_document_ids && data.default_document_ids.length > 0) {
             setPendingDefaultDocs(data.default_document_ids)
@@ -304,19 +304,25 @@ export function ChatPage() {
         } else {
           // Non-2xx response - fall back to web search enabled by default
           console.warn('Failed to fetch session defaults:', res.status)
-          dispatchConversation({ type: 'selectedToolsChanged', selectedTools: ['web-search'] })
+          dispatchConversation({
+            type: 'selectedToolsChanged',
+            selectedTools: isAdmin ? ['web-search', CONFIG_TOOL_ID] : ['web-search'],
+          })
         }
       } catch (err) {
         console.error('Failed to fetch session defaults:', err)
         // Fall back to web search enabled by default on error
-        dispatchConversation({ type: 'selectedToolsChanged', selectedTools: ['web-search'] })
+        dispatchConversation({
+          type: 'selectedToolsChanged',
+          selectedTools: isAdmin ? ['web-search', CONFIG_TOOL_ID] : ['web-search'],
+        })
       } finally {
         setSessionDefaultsLoaded(true)
       }
     }
 
     fetchSessionDefaults()
-  }, [sessionDefaultsLoaded])
+  }, [isAdmin, sessionDefaultsLoaded])
 
   // Fetch available documents from ingest jobs
   useEffect(() => {
@@ -432,7 +438,11 @@ export function ChatPage() {
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
-                dispatchStreamEvent(event, data, streamMessageId)
+                dispatchConversation({
+                  type: 'assistantContentReplaced',
+                  assistantTurnId: streamMessageId,
+                  content: redactAdminDeploymentSecretChangeSets(streamContent),
+                })
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string') streamSessionId = data.session_id
                 if (typeof data.search_term === 'string') streamSearchTerm = data.search_term
@@ -506,7 +516,11 @@ export function ChatPage() {
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
-                dispatchStreamEvent(event, data, streamMessageId)
+                dispatchConversation({
+                  type: 'assistantContentReplaced',
+                  assistantTurnId: streamMessageId,
+                  content: redactAdminDeploymentSecretChangeSets(streamContent),
+                })
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string') streamSessionId = data.session_id
                 dispatchStreamEvent(event, data, streamMessageId)
@@ -607,7 +621,7 @@ export function ChatPage() {
       dispatchConversation({
         type: 'assistantTurnCompleted',
         id: typeof data.message_id === 'string' ? data.message_id : generateMessageId(),
-        content: responseContent,
+        content: redactAdminDeploymentSecretChangeSets(responseContent),
         trace: data.trace ?? null,
         sessionId: typeof data.session_id === 'string' ? data.session_id : undefined,
       })

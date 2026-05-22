@@ -99,6 +99,24 @@ describe('Conversation UI State', () => {
     ])
   })
 
+  it('replaces streamed assistant content when display text is sanitized', () => {
+    const state = [
+      { type: 'assistantTurnStarted' as const, id: 'assistant-1' },
+      {
+        type: 'assistantContentDeltaReceived' as const,
+        assistantTurnId: 'assistant-1',
+        delta: 'Set API_TOKEN to secret-value',
+      },
+      {
+        type: 'assistantContentReplaced' as const,
+        assistantTurnId: 'assistant-1',
+        content: 'Set API_TOKEN to [REDACTED]',
+      },
+    ].reduce(reduceConversationUiState, createConversationUiState())
+
+    expect(state.turns[0].content).toBe('Set API_TOKEN to [REDACTED]')
+  })
+
   it('keeps partial assistant content but removes empty placeholders when streaming fails', () => {
     const withPartialContent = [
       { type: 'assistantTurnStarted' as const, id: 'assistant-1' },

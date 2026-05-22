@@ -123,7 +123,7 @@
       "database": "Dotaz na SQLite databázi",
       "knowledgeGraph": "Dotaz na znalostní graf",
       "config": "Konfigurace",
-      "configName": "Název konfigurace",
+      "configName": "Konfigurace",
       "databaseName": "Databáze",
       "webSearchName": "Web"
     },
