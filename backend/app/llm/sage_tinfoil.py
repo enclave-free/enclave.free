@@ -35,7 +35,7 @@ class SageTinfoilProvider(LLMProvider):
             or "http://tinfoil-proxy:8089/v1"
         )
         self.api_key = get_config("LLM_API_KEY") or ""
-        self.default_model = get_config("LLM_MODEL") or "gpt-oss:120b"
+        self.default_model = get_config("LLM_MODEL") or "kimi-k2-6"
 
         self._init_client()
 

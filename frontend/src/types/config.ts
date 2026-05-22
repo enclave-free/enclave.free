@@ -4,7 +4,7 @@
 
 import type { TFunction } from 'i18next'
 
-export const DEFAULT_TINFOIL_MODEL = 'gpt-oss:120b'
+export const DEFAULT_TINFOIL_MODEL = 'kimi-k2-6'
 export const TINFOIL_SIGNUP_URL = 'https://tinfoil.sh'
 
 // --- Agent Settings Types ---
