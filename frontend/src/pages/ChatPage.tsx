@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Database, Mail, Plus, Search, Settings2, X } from 'lucide-react'
 import { ChatContainer } from '../components/chat/ChatContainer'
-import { MessageList } from '../components/chat/MessageList'
-import { ChatInput } from '../components/chat/ChatInput'
+import { ConversationSurface } from '../components/chat/ConversationSurface'
+import { buildConversationSurfaceTurns } from '../components/chat/ConversationSurfaceModel'
 import { ToolSelector, Tool } from '../components/chat/ToolSelector'
 import { DocumentScope, DocumentSource } from '../components/chat/DocumentScope'
 import { ExportButton } from '../components/chat/ExportButton'
 import { AppHeader } from '../components/shared/AppHeader'
-import { Message } from '../components/chat/ChatMessage'
+import { ConversationActivityStep, Message } from '../components/chat/ChatMessage'
 import { ReachoutModal, type ReachoutMode } from '../components/reachout/ReachoutModal'
 import { API_BASE, STORAGE_KEYS, getSelectedUserTypeId, saveSelectedUserTypeId } from '../types/onboarding'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
@@ -356,6 +356,38 @@ export function ChatPage() {
     )))
   }
 
+  const appendAssistantActivityStep = (id: string, step: ConversationActivityStep) => {
+    setMessages((prev) => prev.map((message) => (
+      message.id === id
+        ? { ...message, activitySteps: [...(message.activitySteps ?? []), step] }
+        : message
+    )))
+  }
+
+  const readActivityStep = (payload: Record<string, unknown>): ConversationActivityStep | null => {
+    const raw = payload.activity_step
+    if (!raw || typeof raw !== 'object') return null
+    const step = raw as Record<string, unknown>
+    if (
+      typeof step.id !== 'string' ||
+      typeof step.kind !== 'string' ||
+      typeof step.title !== 'string' ||
+      typeof step.status !== 'string'
+    ) {
+      return null
+    }
+    return {
+      id: step.id,
+      kind: step.kind,
+      title: step.title,
+      status: step.status,
+      summary: typeof step.summary === 'string' ? step.summary : undefined,
+      warnings: Array.isArray(step.warnings)
+        ? step.warnings.filter((warning): warning is string => typeof warning === 'string')
+        : undefined,
+    }
+  }
+
   const handleSend = async (content: string) => {
     const userMessage: Message = {
       id: generateMessageId(),
@@ -413,6 +445,9 @@ export function ChatPage() {
               } else if (event === 'trace_status' && streamMessageId) {
                 const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
                 updateAssistantMessage(streamMessageId, { traceStatus: status })
+              } else if (event === 'activity_step' && streamMessageId) {
+                const step = readActivityStep(data)
+                if (step) appendAssistantActivityStep(streamMessageId, step)
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
@@ -489,6 +524,9 @@ export function ChatPage() {
               } else if (event === 'trace_status' && streamMessageId) {
                 const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
                 updateAssistantMessage(streamMessageId, { traceStatus: status })
+              } else if (event === 'activity_step' && streamMessageId) {
+                const step = readActivityStep(data)
+                if (step) appendAssistantActivityStep(streamMessageId, step)
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
@@ -923,6 +961,7 @@ IMPORTANT: Return a CONDENSED response:
         <DocumentScope selectedDocuments={selectedDocuments} onToggle={handleDocumentToggle} documents={documents} />
       </>
     )
+  const conversationTurns = buildConversationSurfaceTurns(messages)
 
   return (
     <ChatContainer header={header}>
@@ -933,9 +972,16 @@ IMPORTANT: Return a CONDENSED response:
         onClose={() => setReachoutOpen(false)}
       />
 
-      <MessageList
-        messages={messages}
-        isLoading={isLoading}
+      <ConversationSurface
+        turns={conversationTurns}
+        onSend={handleSend}
+        isRunning={isLoading}
+        placeholder={
+          !isAdmin && selectedDocuments.length > 0
+            ? t('chat.input.placeholderWithDocs')
+            : t('chat.input.placeholder')
+        }
+        toolbar={inputToolbar}
       />
 
       {error && (
@@ -1023,16 +1069,6 @@ IMPORTANT: Return a CONDENSED response:
         </div>
       )}
 
-      <ChatInput
-        onSend={handleSend}
-        disabled={isLoading}
-        placeholder={
-          !isAdmin && selectedDocuments.length > 0
-            ? t('chat.input.placeholderWithDocs')
-            : t('chat.input.placeholder')
-        }
-        toolbar={inputToolbar}
-      />
     </ChatContainer>
   )
 }

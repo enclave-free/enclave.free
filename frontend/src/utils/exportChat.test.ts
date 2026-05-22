@@ -125,6 +125,45 @@ describe('generateExport', () => {
     expect(exported).toContain('Found 3 relevant results.')
   })
 
+  it('exports viewer-visible Conversation Activity Steps with settled trace metadata', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        trace: {
+          visibility: 'detailed',
+          reasoning: {
+            summary: 'Sage checked configuration before answering.',
+          },
+          tools: [],
+          retrieval: [],
+          activity_steps: [
+            {
+              id: 'tool-admin-config',
+              kind: 'tool',
+              title: 'Admin Config',
+              status: 'succeeded',
+              summary: 'Tool completed.',
+              warnings: [],
+            },
+          ],
+          suppressed: false,
+        },
+      },
+    ]
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    })
+
+    expect(exported).toContain('Conversation Activity')
+    expect(exported).toContain('Admin Config')
+    expect(exported).toContain('Tool completed.')
+  })
+
   it('normalizes instance name metadata to one safe line', () => {
     const exported = generateExport({
       messages: [],

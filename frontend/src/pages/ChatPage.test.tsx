@@ -8,6 +8,7 @@ import { InstanceConfigProvider } from '../context/InstanceConfigContext'
 import { ThemeProvider } from '../theme'
 import { DEFAULT_INSTANCE_CONFIG, INSTANCE_CONFIG_KEY } from '../types/instance'
 import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools } from '../utils/llmChat'
+import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -51,6 +52,8 @@ describe('ChatPage', () => {
     localStorage.setItem('enclave-theme', 'light')
     localStorage.setItem(INSTANCE_CONFIG_KEY, JSON.stringify(DEFAULT_INSTANCE_CONFIG))
     localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'reader@example.com')
+    vi.mocked(isAdminAuthenticated).mockReturnValue(false)
+    vi.mocked(adminFetch).mockResolvedValue(Response.json({}))
 
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
@@ -179,6 +182,74 @@ describe('ChatPage', () => {
       expect(screen.queryByText('Writing answer...')).not.toBeInTheDocument()
     })
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled()
+  })
+
+  it('renders streamed Conversation Activity Steps before the assistant answer', async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-stream', session_id: 'session-1' })
+      onEvent('activity_step', {
+        message_id: 'msg-stream',
+        activity_step: {
+          id: 'tool-web-search',
+          kind: 'tool',
+          title: 'Web Search',
+          status: 'succeeded',
+          summary: 'Tool completed.',
+        },
+      })
+      onEvent('answer_delta', { message_id: 'msg-stream', delta: 'Streamed hello.' })
+      onEvent('done', { message_id: 'msg-stream', session_id: 'session-1' })
+    })
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: 'Docs 1' }))
+    await user.click(screen.getByRole('button', { name: /operator-handbook/ }))
+
+    await user.type(screen.getByRole('textbox', { name: 'Ask anything...' }), 'Hello')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    const activity = await screen.findByText('Web Search')
+    const answer = await screen.findByText('Streamed hello.')
+    expect(activity.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('Tool completed.')).toBeInTheDocument()
+  })
+
+  it('uses the shared surface for Admin Conversations while preserving admin-only tools', async () => {
+    const user = userEvent.setup()
+    vi.mocked(isAdminAuthenticated).mockReturnValue(true)
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(async ({ onEvent }) => {
+      onEvent('assistant_message_started', { message_id: 'msg-stream', session_id: 'session-1' })
+      onEvent('activity_step', {
+        message_id: 'msg-stream',
+        activity_step: {
+          id: 'tool-admin-config',
+          kind: 'tool',
+          title: 'Admin Config',
+          status: 'succeeded',
+          summary: 'Tool completed.',
+        },
+      })
+      onEvent('answer_delta', { message_id: 'msg-stream', delta: 'Admin answer.' })
+      onEvent('done', { message_id: 'msg-stream', session_id: 'session-1' })
+    })
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper })
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config Name' })).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('button', { name: /Docs/ })).not.toBeInTheDocument()
+
+    await user.type(screen.getByRole('textbox', { name: 'Ask anything...' }), 'Check config')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    expect(await screen.findByText('Admin Config')).toBeInTheDocument()
+    expect(await screen.findByText('Admin answer.')).toBeInTheDocument()
   })
 
   it('surfaces stream errors without retrying after answer text has started', async () => {

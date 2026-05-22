@@ -32,7 +32,17 @@ export interface ConversationTrace {
     summary?: string | null
     score?: number | null
   }>
+  activity_steps?: ConversationActivityStep[]
   suppressed?: boolean
+}
+
+export interface ConversationActivityStep {
+  id: string
+  kind: string
+  title: string
+  status: string
+  summary?: string
+  warnings?: string[]
 }
 
 export interface Message {
@@ -42,6 +52,7 @@ export interface Message {
   timestamp?: Date
   trace?: ConversationTrace | null
   traceStatus?: string | null
+  activitySteps?: ConversationActivityStep[]
 }
 
 interface ChatMessageProps {

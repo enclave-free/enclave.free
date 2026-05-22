@@ -43,6 +43,14 @@ function formatTraceMarkdown(trace?: ConversationTrace | null): string {
   if (!trace || trace.visibility === 'off') return ''
   const lines: string[] = ['**Conversation Trace**']
   const compactOnly = trace.visibility === 'minimal'
+  const activitySteps = trace.activity_steps ?? []
+  if (activitySteps.length > 0) {
+    lines.push('- Conversation Activity')
+    for (const step of activitySteps) {
+      const summary = !compactOnly && step.summary ? `: ${step.summary}` : ''
+      lines.push(`  - ${step.title} (${step.status})${summary}`)
+    }
+  }
   if (!compactOnly && trace.reasoning?.summary) {
     lines.push(`- ${trace.reasoning.summary}`)
   }
@@ -62,6 +70,14 @@ function formatTraceText(trace?: ConversationTrace | null): string {
   if (!trace || trace.visibility === 'off') return ''
   const lines: string[] = ['Conversation Trace']
   const compactOnly = trace.visibility === 'minimal'
+  const activitySteps = trace.activity_steps ?? []
+  if (activitySteps.length > 0) {
+    lines.push('- Conversation Activity')
+    for (const step of activitySteps) {
+      const summary = !compactOnly && step.summary ? `: ${step.summary}` : ''
+      lines.push(`  - ${step.title} (${step.status})${summary}`)
+    }
+  }
   if (!compactOnly && trace.reasoning?.summary) {
     lines.push(`- ${trace.reasoning.summary}`)
   }
