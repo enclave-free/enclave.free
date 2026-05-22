@@ -17,6 +17,7 @@ import { sendLlmChatStreamWithUnifiedTools, sendLlmChatWithUnifiedTools, sendQue
 import { Button, Callout, IconButton } from '../components/ui'
 import {
   extractAdminAssistantChangeSetStrict,
+  redactAdminDeploymentSecretChangeSets,
   type AdminAssistantChangeSet,
 } from '../utils/adminAssistant'
 
@@ -268,12 +269,8 @@ export function ChatPage() {
         const res = await fetch(url)
         if (res.ok) {
           const data = await res.json()
-          // Apply web search default
-          if (data.web_search_enabled) {
-            setSelectedTools(['web-search'])
-          } else {
-            setSelectedTools([])
-          }
+          const defaultTools = data.web_search_enabled ? ['web-search'] : []
+          setSelectedTools(isAdmin ? [...defaultTools, CONFIG_TOOL_ID] : defaultTools)
           // Store default document IDs to apply once documents are loaded
           if (data.default_document_ids && data.default_document_ids.length > 0) {
             setPendingDefaultDocs(data.default_document_ids)
@@ -281,19 +278,19 @@ export function ChatPage() {
         } else {
           // Non-2xx response - fall back to web search enabled by default
           console.warn('Failed to fetch session defaults:', res.status)
-          setSelectedTools(['web-search'])
+          setSelectedTools(isAdmin ? ['web-search', CONFIG_TOOL_ID] : ['web-search'])
         }
       } catch (err) {
         console.error('Failed to fetch session defaults:', err)
         // Fall back to web search enabled by default on error
-        setSelectedTools(['web-search'])
+        setSelectedTools(isAdmin ? ['web-search', CONFIG_TOOL_ID] : ['web-search'])
       } finally {
         setSessionDefaultsLoaded(true)
       }
     }
 
     fetchSessionDefaults()
-  }, [sessionDefaultsLoaded])
+  }, [isAdmin, sessionDefaultsLoaded])
 
   // Fetch available documents from ingest jobs
   useEffect(() => {
@@ -417,7 +414,7 @@ export function ChatPage() {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
                 updateAssistantMessage(streamMessageId, {
-                  content: streamContent,
+                  content: redactAdminDeploymentSecretChangeSets(streamContent),
                 })
               } else if (event === 'trace_final' && streamMessageId) {
                 updateAssistantMessage(streamMessageId, {
@@ -493,7 +490,7 @@ export function ChatPage() {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
                 updateAssistantMessage(streamMessageId, {
-                  content: streamContent,
+                  content: redactAdminDeploymentSecretChangeSets(streamContent),
                 })
               } else if (event === 'trace_final' && streamMessageId) {
                 updateAssistantMessage(streamMessageId, {
@@ -592,7 +589,7 @@ export function ChatPage() {
       const assistantMessage: Message = {
         id: typeof data.message_id === 'string' ? data.message_id : generateMessageId(),
         role: 'assistant',
-        content: responseContent,
+        content: redactAdminDeploymentSecretChangeSets(responseContent),
         timestamp: new Date(),
         trace: data.trace ?? null,
       }
@@ -772,7 +769,7 @@ export function ChatPage() {
       let bodyDisplay: unknown = r.body
       if (r.method === 'PUT' && r.path.startsWith('/admin/deployment/config/')) {
         const key = r.path.split('/').pop() || ''
-        const shouldRedact = !deploymentSecretKeysLoaded || deploymentSecretKeys.has(key)
+        const shouldRedact = !deploymentSecretKeysLoaded || deploymentSecretKeys.has(key) || /SECRET|TOKEN|KEY|PASSWORD/i.test(key)
         if (shouldRedact && r.body && typeof r.body === 'object') {
           const o = r.body as Record<string, unknown>
           if (typeof o.value === 'string' && o.value.length > 0) {
