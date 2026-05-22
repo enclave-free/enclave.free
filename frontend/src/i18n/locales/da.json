@@ -125,7 +125,7 @@
       "databaseName": "Datasamling",
       "knowledgeGraph": "Forespørg vidensgrafen",
       "config": "Konfiguration",
-      "configName": "Konfigurationsnavn"
+      "configName": "Konfiguration"
     },
     "documentScope": {
       "title": "Vidensbaser",

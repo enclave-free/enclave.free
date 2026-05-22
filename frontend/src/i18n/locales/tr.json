@@ -125,7 +125,7 @@
       "databaseName": "Veritabanı",
       "knowledgeGraph": "Bilgi grafiğini sorgula",
       "config": "Yapılandırma",
-      "configName": "Yapılandırma Adı"
+      "configName": "Yapılandırma"
     },
     "documentScope": {
       "title": "Bilgi Tabanları",

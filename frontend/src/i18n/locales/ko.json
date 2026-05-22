@@ -125,7 +125,7 @@
       "databaseName": "데이터베이스",
       "knowledgeGraph": "지식 그래프 쿼리",
       "config": "설정",
-      "configName": "설정 이름"
+      "configName": "설정"
     },
     "documentScope": {
       "title": "지식 베이스",

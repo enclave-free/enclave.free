@@ -240,7 +240,7 @@ describe('ChatPage', () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper })
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Config Name' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute('aria-pressed', 'true')
     })
 
     await user.type(screen.getByRole('textbox', { name: 'Ask anything...' }), 'Review instance config.')

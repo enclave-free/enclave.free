@@ -677,7 +677,7 @@
       "databaseName": "Basis Data",
       "knowledgeGraph": "Query graf pengetahuan",
       "config": "Konfigurasi",
-      "configName": "Nama Konfigurasi"
+      "configName": "Konfigurasi"
     },
     "documentScope": {
       "title": "Basis Pengetahuan",

@@ -123,7 +123,7 @@
       "database": "Interroga il database SQLite",
       "knowledgeGraph": "Interroga il grafo della conoscenza",
       "config": "Configurazione",
-      "configName": "Nome configurazione",
+      "configName": "Configurazione",
       "databaseName": "Base di dati",
       "webSearchName": "Web"
     },

@@ -731,7 +731,7 @@
       "databaseName": "Database",
       "knowledgeGraph": "Query the knowledge graph",
       "config": "Config",
-      "configName": "Config Name"
+      "configName": "Config"
     },
     "documentScope": {
       "title": "Knowledge Bases",
