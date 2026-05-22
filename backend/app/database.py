@@ -573,6 +573,7 @@ def init_schema():
 
     # Seed default Agent Settings values
     _seed_default_ai_config()
+    seed_default_settings()
 
 
 def _migrate_add_approved_column() -> None:
@@ -1364,6 +1365,7 @@ def seed_default_settings():
         "surface_style": "plain",
         "status_icon_set": "classic",
         "typography_preset": "modern",
+        "default_theme": "system",
         "auto_approve_users": "true",  # true = auto-approve, false = require manual approval
 
         # User reachout (user-facing email submission; disabled by default)
