@@ -90,6 +90,12 @@ class AdminConfigToolTest(unittest.TestCase):
         self.assertIn("prompt", context)
         self.assertIn("max tokens", context)
 
+    def test_deployment_requests_still_use_deployment_settings_context(self) -> None:
+        context = self._admin_config_context("change the model provider and restart settings")
+
+        self.assertIn("scope: deployment-settings", context)
+        self.assertIn("DEPLOYMENT SETTINGS", context)
+
 
 if __name__ == "__main__":
     unittest.main()
