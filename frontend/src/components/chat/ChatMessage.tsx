@@ -3,9 +3,20 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, Copy } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Copy,
+  Database,
+  FileSearch,
+  Info,
+  Loader2,
+  Search,
+  Wrench,
+} from 'lucide-react'
 import { useTheme } from '../../theme'
 import { useInstanceConfig } from '../../context/InstanceConfigContext'
 import { DynamicIcon } from '../shared/DynamicIcon'
@@ -53,6 +64,10 @@ export interface Message {
   trace?: ConversationTrace | null
   traceStatus?: string | null
   activitySteps?: ConversationActivityStep[]
+  controlSnapshot?: {
+    selectedTools: string[]
+    selectedDocuments: string[]
+  }
 }
 
 interface ChatMessageProps {
@@ -136,25 +151,40 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
   )
 }
 
-function ConversationTracePanel({ trace }: { trace: ConversationTrace }) {
-  const tools = trace.tools ?? []
-  const retrieval = trace.retrieval ?? []
-  const summary = trace.reasoning?.summary
+function ConversationTracePanel({
+  trace,
+  activitySteps = [],
+  liveStatus,
+}: {
+  trace?: ConversationTrace | null
+  activitySteps?: ConversationActivityStep[]
+  liveStatus?: string | null
+}) {
+  const visibility = trace?.visibility
+  const tools = trace?.tools ?? []
+  const retrieval = trace?.retrieval ?? []
+  const summary = trace?.reasoning?.summary
+  const hasActivity = activitySteps.length > 0
+  const hasTraceDetail = Boolean(summary) || tools.length > 0 || retrieval.length > 0
+  const isLive = Boolean(liveStatus)
 
-  if (trace.visibility === 'off') return null
+  if (visibility === 'off' && !isLive && !hasActivity) return null
+  if (!isLive && !hasActivity && !hasTraceDetail) return null
 
-  if (trace.visibility === 'minimal') {
-    if (tools.length === 0 && retrieval.length === 0) return null
+  if (visibility === 'minimal' && !isLive && !hasActivity) {
+    if (!hasTraceDetail) return null
 
     return (
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-border/70 pt-3 text-xs text-text-muted">
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-border/70 pt-3 text-xs text-text-muted" aria-label="Conversation trace summary">
         {tools.map((tool) => (
-          <div key={tool.id} className="rounded-md border border-border bg-surface px-2 py-1">
+          <div key={tool.id} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1">
+            <TraceIcon kind="tool" name={tool.name} />
             <span className="font-medium text-text">{tool.name}</span>
           </div>
         ))}
         {retrieval.map((item, index) => (
-          <div key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`} className="rounded-md border border-border bg-surface px-2 py-1">
+          <div key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1">
+            <FileSearch className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
             <span className="font-medium text-text">{item.title || item.source_type || 'Retrieved source'}</span>
           </div>
         ))}
@@ -163,30 +193,170 @@ function ConversationTracePanel({ trace }: { trace: ConversationTrace }) {
   }
 
   return (
-    <details className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
-      <summary className="mb-2 cursor-pointer select-none font-medium text-text">Conversation Trace</summary>
-      {summary && <p className="mb-2 leading-relaxed">{summary}</p>}
-      {tools.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {tools.map((tool, index) => (
-            <div key={`${tool.id}-${tool.input_summary ?? ''}-${index}`} className="rounded-md border border-border bg-surface px-2 py-1">
-              <span className="font-medium text-text">{tool.name}</span>
-              {tool.output_summary && <span className="ml-1">{tool.output_summary}</span>}
-            </div>
-          ))}
+    <section className="mt-3 overflow-hidden rounded-lg border border-border/80 bg-surface text-xs text-text-muted" aria-label="Conversation trace">
+      <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-surface-raised px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {isLive ? (
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-accent" aria-hidden="true" />
+          ) : (
+            <Info className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
+          )}
+          <span className="font-medium text-text">Conversation Trace</span>
+          {visibility && (
+            <span className="rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-text-muted">
+              {visibility}
+            </span>
+          )}
         </div>
-      )}
-      {retrieval.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {retrieval.map((item, index) => (
-            <div key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`} className="rounded-md border border-border bg-surface px-2 py-1">
-              <span className="font-medium text-text">{item.title || item.source_type || 'Retrieved source'}</span>
-              {item.summary && <span className="ml-1">{item.summary}</span>}
-            </div>
-          ))}
+        {liveStatus && <span className="truncate text-right text-[11px] text-text-secondary">{liveStatus}</span>}
+      </div>
+
+      <div className="space-y-3 px-3 py-3">
+        {summary && <p className="leading-relaxed text-text-secondary">{summary}</p>}
+        {hasActivity && (
+          <div className="space-y-2" aria-label="Conversation activity">
+            {activitySteps.map((step) => (
+              <ActivityStepRow key={step.id} step={step} />
+            ))}
+          </div>
+        )}
+        {tools.length > 0 && (
+          <TraceRows label="Tools">
+            {tools.map((tool, index) => (
+              <ToolTraceRow key={`${tool.id}-${tool.input_summary ?? ''}-${index}`} tool={tool} />
+            ))}
+          </TraceRows>
+        )}
+        {retrieval.length > 0 && (
+          <TraceRows label="Retrieval">
+            {retrieval.map((item, index) => (
+              <RetrievalTraceRow key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`} item={item} />
+            ))}
+          </TraceRows>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function TraceRows({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">{label}</div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  )
+}
+
+function ActivityStepRow({ step }: { step: ConversationActivityStep }) {
+  return (
+    <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
+      <div className="flex items-start gap-2">
+        <TraceIcon kind={step.kind} name={step.title} status={step.status} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-medium text-text">{step.title}</span>
+            <TraceStatus status={step.status} />
+          </div>
+          {step.summary && <p className="mt-1 leading-relaxed text-text-secondary">{step.summary}</p>}
+          <TraceWarnings warnings={step.warnings ?? []} />
         </div>
-      )}
-    </details>
+      </div>
+    </div>
+  )
+}
+
+type ToolTrace = NonNullable<ConversationTrace['tools']>[number]
+type RetrievalTrace = NonNullable<ConversationTrace['retrieval']>[number]
+
+function ToolTraceRow({ tool }: { tool: ToolTrace }) {
+  return (
+    <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
+      <div className="flex items-start gap-2">
+        <TraceIcon kind="tool" name={tool.name} status={tool.status} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-medium text-text">{tool.name}</span>
+            {tool.execution && <span className="text-[11px] text-text-muted">{tool.execution}</span>}
+            {tool.status && <TraceStatus status={tool.status} />}
+          </div>
+          {tool.input_summary && (
+            <p className="mt-1 leading-relaxed">
+              <span className="font-medium text-text-secondary">Input:</span> {tool.input_summary}
+            </p>
+          )}
+          {tool.output_summary && (
+            <p className="mt-1 leading-relaxed">
+              <span className="font-medium text-text-secondary">Output:</span> {tool.output_summary}
+            </p>
+          )}
+          <TraceWarnings warnings={tool.warnings ?? []} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RetrievalTraceRow({ item }: { item: RetrievalTrace }) {
+  return (
+    <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
+      <div className="flex items-start gap-2">
+        <FileSearch className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-medium text-text">{item.title || item.source_type || 'Retrieved source'}</span>
+            {typeof item.score === 'number' && <span className="text-[11px] text-text-muted">score {item.score.toFixed(2)}</span>}
+          </div>
+          {item.summary && <p className="mt-1 leading-relaxed text-text-secondary">{item.summary}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TraceIcon({ kind, name, status }: { kind: string; name?: string; status?: string }) {
+  const normalizedName = (name ?? '').toLowerCase()
+  const normalizedStatus = (status ?? '').toLowerCase()
+  const className = `mt-0.5 h-3.5 w-3.5 shrink-0 ${normalizedStatus.includes('fail') || normalizedStatus.includes('error') ? 'text-danger' : 'text-accent'}`
+
+  if (normalizedStatus.includes('running') || normalizedStatus.includes('prepar')) {
+    return <Loader2 className={`${className} animate-spin`} aria-hidden="true" />
+  }
+  if (normalizedStatus.includes('success') || normalizedStatus.includes('complete')) {
+    return <CheckCircle2 className={className} aria-hidden="true" />
+  }
+  if (kind === 'tool' && normalizedName.includes('database')) {
+    return <Database className={className} aria-hidden="true" />
+  }
+  if (kind === 'tool' && normalizedName.includes('search')) {
+    return <Search className={className} aria-hidden="true" />
+  }
+  if (kind === 'retrieval') {
+    return <FileSearch className={className} aria-hidden="true" />
+  }
+  return <Wrench className={className} aria-hidden="true" />
+}
+
+function TraceStatus({ status }: { status: string }) {
+  return (
+    <span className="rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-text-muted">
+      {status}
+    </span>
+  )
+}
+
+function TraceWarnings({ warnings }: { warnings: string[] }) {
+  if (warnings.length === 0) return null
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {warnings.map((warning) => (
+        <span key={warning} className="inline-flex items-center gap-1 rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">
+          <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+          {warning}
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -218,7 +388,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
     ? message.traceStatus
     : null
 
-  if (!isUser && !message.content.trim() && !visibleTraceStatus && !message.trace) {
+  if (
+    !isUser &&
+    !message.content.trim() &&
+    !visibleTraceStatus &&
+    !message.trace &&
+    !(message.activitySteps && message.activitySteps.length > 0)
+  ) {
     return null
   }
 
@@ -295,9 +471,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <div className={assistantBubbleClass}>
               {copyAction}
               <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
+                <ConversationTracePanel
+                  trace={message.trace}
+                  activitySteps={message.activitySteps}
+                  liveStatus={visibleTraceStatus}
+                />
+                {message.content.trim() && (
+                  <div className={message.trace || visibleTraceStatus || (message.activitySteps && message.activitySteps.length > 0) ? 'mt-3' : ''}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
                   code({ node, className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || '')
                     const isInline = !match && !className
@@ -420,16 +603,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
                       </td>
                     )
                   },
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-                {visibleTraceStatus && (
-                  <div className="mt-3 border-t border-border/70 pt-3 text-xs text-text-muted">
-                    {visibleTraceStatus}
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
                   </div>
                 )}
-                {message.trace && <ConversationTracePanel trace={message.trace} />}
               </div>
             </div>
           )}

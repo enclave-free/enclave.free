@@ -164,6 +164,41 @@ describe('generateExport', () => {
     expect(exported).toContain('Tool completed.')
   })
 
+  it('exports submitted-turn Conversation Control Snapshots without browser state details', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'user',
+        content: 'Use the handbook.',
+        controlSnapshot: {
+          selectedTools: ['web-search'],
+          selectedDocuments: ['doc-1'],
+        },
+      },
+    ]
+
+    const exportedMarkdown = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    })
+    const exportedText = generateExport({
+      messages,
+      format: 'txt',
+      translations,
+    })
+
+    expect(exportedMarkdown).toContain('Conversation Controls')
+    expect(exportedMarkdown).toContain('Tools: web-search')
+    expect(exportedMarkdown).toContain('Documents: doc-1')
+    expect(exportedMarkdown).not.toContain('localStorage')
+
+    expect(exportedText).toContain('Conversation Controls')
+    expect(exportedText).toContain('Tools: web-search')
+    expect(exportedText).toContain('Documents: doc-1')
+    expect(exportedText).not.toContain('localStorage')
+  })
+
   it('normalizes instance name metadata to one safe line', () => {
     const exported = generateExport({
       messages: [],

@@ -54,50 +54,17 @@ export function ConversationSurface({
             ) : (
               <>
                 {turns.map((turn) => (
-                  <div key={turn.id}>
-                    {turn.role === 'assistant' && turn.activitySteps.length > 0 && (
-                      <div className="mb-3 ml-10 space-y-2" aria-label="Conversation activity">
-                        {turn.activitySteps.map((step) => (
-                          <div
-                            key={step.id}
-                            className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm shadow-sm"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-medium text-text">{step.title}</span>
-                              <span className="label text-[10px]">{step.status}</span>
-                            </div>
-                            {step.summary && (
-                              <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-                                {step.summary}
-                              </p>
-                            )}
-                            {step.warnings && step.warnings.length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {step.warnings.map((warning) => (
-                                  <span
-                                    key={warning}
-                                    className="rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning"
-                                  >
-                                    {warning}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <ChatMessage
-                      message={{
-                        id: turn.id,
-                        role: turn.role,
-                        content: turn.content,
-                        trace: turn.trace,
-                        traceStatus: turn.traceStatus,
-                        activitySteps: turn.activitySteps,
-                      }}
-                    />
-                  </div>
+                  <ChatMessage
+                    key={turn.id}
+                    message={{
+                      id: turn.id,
+                      role: turn.role,
+                      content: turn.content,
+                      trace: turn.trace,
+                      traceStatus: turn.traceStatus,
+                      activitySteps: turn.activitySteps,
+                    }}
+                  />
                 ))}
                 {isRunning && <ConversationRunningIndicator label={t('chat.typing')} />}
               </>

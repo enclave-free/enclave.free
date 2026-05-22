@@ -328,6 +328,14 @@ _Avoid_: streaming-shaped response, fake streaming, delayed batch response
 The user-facing interface where **Users** or **Admins** read and send **Conversation** messages, inspect permitted **Conversation Trace** details, and choose visible conversation controls.
 _Avoid_: agent runtime, chatbot service, conversation owner
 
+**Conversation UI State**:
+Client-owned state needed to operate the **Conversation UI Surface** for the current actor, including visible turns, in-progress turn status, selected controls, transient errors, and pending confirmation prompts.
+_Avoid_: session memory, conversation owner, agent state
+
+**Conversation Control Snapshot**:
+The selected visible conversation controls captured when a **User** or **Admin** submits a turn, such as selected **Tools** or selected **Documents**.
+_Avoid_: current controls, session settings, agent settings
+
 **Trace Visibility Policy**:
 The **Operator** configured **Instance Setting** or **Agent Setting** that determines which **Conversation Trace** details are visible for **Admin Conversations** and **User Conversations**.
 _Avoid_: debug mode, logging level, provider trace setting
@@ -618,6 +626,8 @@ _Avoid_: full snapshot, config dump
 - **Data Retention** eligibility for **Conversations** should be based on last **Conversation** activity rather than creation time
 - **Conversation** activity for **Data Retention** means human and Sage assistant turns, not lifecycle retries, audit writes, retention scans, or tombstone updates
 - Opening or viewing a **Conversation** is not **Conversation** activity for **Data Retention**
+- **Conversation UI State** belongs to the **Conversation UI Surface** and must not become the source of truth for **Session Memory** or durable **Conversation** ownership
+- A **Conversation Control Snapshot** describes the visible controls that shaped a submitted turn, while current controls describe defaults for the next turn
 - The first **Conversation** retention policy should be **Instance** level rather than **User Type** specific
 - **Admin Conversations** and **User Conversations** should share the same **Conversation Content** and **Session Memory** retention window in the first version
 - **Retention Execution** should re-check **Conversation** eligibility before deletion and skip candidates that became active

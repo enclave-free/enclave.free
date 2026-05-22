@@ -19,7 +19,7 @@ interface ExportOptions {
   instanceName?: string
 }
 
-type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp' | 'trace'>
+type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp' | 'trace' | 'controlSnapshot'>
 
 function formatTimestamp(date?: Date): string {
   if (!date) return ''
@@ -27,7 +27,13 @@ function formatTimestamp(date?: Date): string {
 }
 
 function toConversationExportMessages(messages: Message[]): ConversationExportMessage[] {
-  return messages.map(({ role, content, timestamp, trace }) => ({ role, content, timestamp, trace }))
+  return messages.map(({ role, content, timestamp, trace, controlSnapshot }) => ({
+    role,
+    content,
+    timestamp,
+    trace,
+    controlSnapshot,
+  }))
 }
 
 function sanitizeInstanceName(instanceName: string): string {
@@ -64,6 +70,30 @@ function formatTraceMarkdown(trace?: ConversationTrace | null): string {
     lines.push(`- Retrieval: ${title}${summary}`)
   }
   return `${lines.join('\n')}\n\n`
+}
+
+function formatControlSnapshotMarkdown(snapshot?: Message['controlSnapshot']): string {
+  if (!snapshot) return ''
+  const lines = ['**Conversation Controls**']
+  if (snapshot.selectedTools.length > 0) {
+    lines.push(`- Tools: ${snapshot.selectedTools.join(', ')}`)
+  }
+  if (snapshot.selectedDocuments.length > 0) {
+    lines.push(`- Documents: ${snapshot.selectedDocuments.join(', ')}`)
+  }
+  return lines.length > 1 ? `${lines.join('\n')}\n\n` : ''
+}
+
+function formatControlSnapshotText(snapshot?: Message['controlSnapshot']): string {
+  if (!snapshot) return ''
+  const lines = ['Conversation Controls']
+  if (snapshot.selectedTools.length > 0) {
+    lines.push(`- Tools: ${snapshot.selectedTools.join(', ')}`)
+  }
+  if (snapshot.selectedDocuments.length > 0) {
+    lines.push(`- Documents: ${snapshot.selectedDocuments.join(', ')}`)
+  }
+  return lines.length > 1 ? `${lines.join('\n')}\n\n` : ''
 }
 
 function formatTraceText(trace?: ConversationTrace | null): string {
@@ -116,6 +146,7 @@ export function generateExport({ messages, format, title, translations, instance
       if (message.role === 'user') {
         // User messages are plain text, wrap in blockquote
         content += `> ${message.content.split('\n').join('\n> ')}\n\n`
+        content += formatControlSnapshotMarkdown(message.controlSnapshot)
       } else {
         // Assistant messages may contain markdown, preserve as-is
         content += `${message.content}\n\n`
@@ -143,6 +174,9 @@ export function generateExport({ messages, format, title, translations, instance
 
     content += `${role}${time}:\n`
     content += `${message.content}\n\n`
+    if (message.role === 'user') {
+      content += formatControlSnapshotText(message.controlSnapshot)
+    }
     if (message.role === 'assistant') {
       content += formatTraceText(message.trace)
     }

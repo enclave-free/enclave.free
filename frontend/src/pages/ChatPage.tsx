@@ -1,15 +1,24 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useReducer } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Database, Mail, Plus, Search, Settings2, X } from 'lucide-react'
 import { ChatContainer } from '../components/chat/ChatContainer'
 import { ConversationSurface } from '../components/chat/ConversationSurface'
 import { buildConversationSurfaceTurns } from '../components/chat/ConversationSurfaceModel'
+import {
+  adaptSageStreamEvent,
+  buildAdminChangePreview,
+  createAdminChangeConfirmationState,
+  createConversationUiState,
+  reduceAdminChangeConfirmationState,
+  reduceConversationUiState,
+  type ConversationUiTurn,
+} from '../components/chat'
 import { ToolSelector, Tool } from '../components/chat/ToolSelector'
 import { DocumentScope, DocumentSource } from '../components/chat/DocumentScope'
 import { ExportButton } from '../components/chat/ExportButton'
 import { AppHeader } from '../components/shared/AppHeader'
-import { ConversationActivityStep, Message } from '../components/chat/ChatMessage'
+import { Message } from '../components/chat/ChatMessage'
 import { ReachoutModal, type ReachoutMode } from '../components/reachout/ReachoutModal'
 import { API_BASE, STORAGE_KEYS, getSelectedUserTypeId, saveSelectedUserTypeId } from '../types/onboarding'
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi'
@@ -20,15 +29,20 @@ import {
   type AdminAssistantChangeSet,
 } from '../utils/adminAssistant'
 
-type AdminApplyState =
-  | { state: 'idle' }
-  | { state: 'review'; changeSet: AdminAssistantChangeSet }
-  | { state: 'applying'; changeSet: AdminAssistantChangeSet }
-  | { state: 'applied'; message: string }
-  | { state: 'error'; message: string }
-
 const CONFIG_TOOL_ID = 'admin-config'
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL
+
+function conversationTurnToMessage(turn: ConversationUiTurn): Message {
+  return {
+    id: turn.id,
+    role: turn.role,
+    content: turn.content,
+    trace: turn.trace,
+    traceStatus: turn.traceStatus,
+    activitySteps: turn.activitySteps,
+    controlSnapshot: turn.controlSnapshot,
+  }
+}
 
 function slugify(value: string): string {
   return String(value || '')
@@ -56,18 +70,27 @@ export function ChatPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const isAdmin = isAdminAuthenticated()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedTools, setSelectedTools] = useState<string[]>([])
-  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
-  const [conversationSessionId, setConversationSessionId] = useState<string | null>(null)
+  const [conversationState, dispatchConversation] = useReducer(
+    reduceConversationUiState,
+    undefined,
+    () => createConversationUiState()
+  )
+  const [adminApplyState, dispatchAdminApply] = useReducer(
+    reduceAdminChangeConfirmationState,
+    undefined,
+    () => createAdminChangeConfirmationState()
+  )
   const [documents, setDocuments] = useState<DocumentSource[]>([])
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false)
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([])
-  const [adminApplyState, setAdminApplyState] = useState<AdminApplyState>({ state: 'idle' })
   const [deploymentSecretKeys, setDeploymentSecretKeys] = useState<Set<string>>(new Set())
   const [deploymentSecretKeysLoaded, setDeploymentSecretKeysLoaded] = useState(false)
+  const messages = useMemo(() => conversationState.turns.map(conversationTurnToMessage), [conversationState.turns])
+  const selectedTools = conversationState.selectedTools
+  const selectedDocuments = conversationState.selectedDocuments
+  const conversationSessionId = conversationState.conversationSessionId
+  const isLoading = conversationState.isRunning
+  const error = conversationState.error
 
   const [reachoutOpen, setReachoutOpen] = useState(false)
   const [reachoutEnabled, setReachoutEnabled] = useState(false)
@@ -270,9 +293,9 @@ export function ChatPage() {
           const data = await res.json()
           // Apply web search default
           if (data.web_search_enabled) {
-            setSelectedTools(['web-search'])
+            dispatchConversation({ type: 'selectedToolsChanged', selectedTools: ['web-search'] })
           } else {
-            setSelectedTools([])
+            dispatchConversation({ type: 'selectedToolsChanged', selectedTools: [] })
           }
           // Store default document IDs to apply once documents are loaded
           if (data.default_document_ids && data.default_document_ids.length > 0) {
@@ -281,12 +304,12 @@ export function ChatPage() {
         } else {
           // Non-2xx response - fall back to web search enabled by default
           console.warn('Failed to fetch session defaults:', res.status)
-          setSelectedTools(['web-search'])
+          dispatchConversation({ type: 'selectedToolsChanged', selectedTools: ['web-search'] })
         }
       } catch (err) {
         console.error('Failed to fetch session defaults:', err)
         // Fall back to web search enabled by default on error
-        setSelectedTools(['web-search'])
+        dispatchConversation({ type: 'selectedToolsChanged', selectedTools: ['web-search'] })
       } finally {
         setSessionDefaultsLoaded(true)
       }
@@ -327,80 +350,44 @@ export function ChatPage() {
       // Filter to only include IDs that exist in the documents list
       const validIds = pendingDefaultDocs.filter(id => documents.some(d => d.id === id))
       if (validIds.length > 0) {
-        setSelectedDocuments(validIds)
+        dispatchConversation({ type: 'selectedDocumentsChanged', selectedDocuments: validIds })
       }
       setPendingDefaultDocs([])
     }
   }, [pendingDefaultDocs, documents])
 
   const handleToolToggle = useCallback((toolId: string) => {
-    if (toolId === CONFIG_TOOL_ID && selectedTools.includes(CONFIG_TOOL_ID)) {
-      setAdminApplyState({ state: 'idle' })
+    const selectedAfterToggle = !selectedTools.includes(toolId)
+    if (toolId === CONFIG_TOOL_ID) {
+      dispatchAdminApply({ type: 'adminConfigToolToggled', selectedAfterToggle })
     }
-    setSelectedTools((prev) =>
-      prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
-    )
+    dispatchConversation({ type: 'toolToggled', toolId })
   }, [selectedTools])
 
   const handleDocumentToggle = useCallback((docId: string) => {
-    setSelectedDocuments((prev) =>
-      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
-    )
+    dispatchConversation({ type: 'documentToggled', documentId: docId })
   }, [])
 
   const generateMessageId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-  const updateAssistantMessage = (id: string, patch: Partial<Message>) => {
-    setMessages((prev) => prev.map((message) => (
-      message.id === id ? { ...message, ...patch } : message
-    )))
-  }
-
-  const appendAssistantActivityStep = (id: string, step: ConversationActivityStep) => {
-    setMessages((prev) => prev.map((message) => (
-      message.id === id
-        ? { ...message, activitySteps: [...(message.activitySteps ?? []), step] }
-        : message
-    )))
-  }
-
-  const readActivityStep = (payload: Record<string, unknown>): ConversationActivityStep | null => {
-    const raw = payload.activity_step
-    if (!raw || typeof raw !== 'object') return null
-    const step = raw as Record<string, unknown>
-    if (
-      typeof step.id !== 'string' ||
-      typeof step.kind !== 'string' ||
-      typeof step.title !== 'string' ||
-      typeof step.status !== 'string'
-    ) {
-      return null
-    }
-    return {
-      id: step.id,
-      kind: step.kind,
-      title: step.title,
-      status: step.status,
-      summary: typeof step.summary === 'string' ? step.summary : undefined,
-      warnings: Array.isArray(step.warnings)
-        ? step.warnings.filter((warning): warning is string => typeof warning === 'string')
-        : undefined,
-    }
+  const dispatchStreamEvent = (
+    event: string,
+    payload: Record<string, unknown>,
+    assistantTurnId?: string | null
+  ) => {
+    const action = adaptSageStreamEvent(event, payload, assistantTurnId)
+    if (action) dispatchConversation(action)
+    return action
   }
 
   const handleSend = async (content: string) => {
-    const userMessage: Message = {
+    dispatchConversation({
+      type: 'userTurnSubmitted',
       id: generateMessageId(),
-      role: 'user',
       content,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setIsLoading(true)
-    setError(null)
+    })
     if (adminApplyState.state === 'error' || adminApplyState.state === 'applied') {
-      setAdminApplyState({ state: 'idle' })
+      dispatchAdminApply({ type: 'dismissed' })
     }
 
     try {
@@ -432,58 +419,53 @@ export function ChatPage() {
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>
               if (event === 'assistant_message_started') {
-                const id = typeof data.message_id === 'string' ? data.message_id : generateMessageId()
+                if (typeof data.message_id !== 'string') data.message_id = generateMessageId()
+                const id = data.message_id as string
                 streamMessageId = id
-                if (typeof data.session_id === 'string') streamSessionId = data.session_id
-                setMessages((prev) => [...prev, {
+                streamSessionId = typeof data.session_id === 'string' ? data.session_id : streamSessionId
+                dispatchConversation({
+                  type: 'assistantTurnStarted',
                   id,
-                  role: 'assistant',
-                  content: '',
-                  timestamp: new Date(),
+                  sessionId: streamSessionId,
                   traceStatus: t('chat.trace.writing', 'Writing answer...'),
-                }])
-              } else if (event === 'trace_status' && streamMessageId) {
-                const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
-                updateAssistantMessage(streamMessageId, { traceStatus: status })
-              } else if (event === 'activity_step' && streamMessageId) {
-                const step = readActivityStep(data)
-                if (step) appendAssistantActivityStep(streamMessageId, step)
+                })
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
-                updateAssistantMessage(streamMessageId, {
-                  content: streamContent,
-                })
-              } else if (event === 'trace_final' && streamMessageId) {
-                updateAssistantMessage(streamMessageId, {
-                  trace: data.trace as Message['trace'],
-                  traceStatus: null,
-                })
+                dispatchStreamEvent(event, data, streamMessageId)
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string') streamSessionId = data.session_id
                 if (typeof data.search_term === 'string') streamSearchTerm = data.search_term
+                dispatchStreamEvent(event, data, streamMessageId)
               } else if (event === 'error') {
                 throw new Error(typeof data.detail === 'string' ? data.detail : t('errors.failedToSendMessage'))
+              } else if (streamMessageId) {
+                dispatchStreamEvent(event, data, streamMessageId)
               }
             },
           })
-          if (streamSessionId) setConversationSessionId(streamSessionId)
-          if (streamMessageId) {
-            updateAssistantMessage(streamMessageId, { traceStatus: null })
-          }
-          setAdminApplyState({ state: 'idle' })
+          if (streamSessionId) dispatchConversation({ type: 'conversationSessionChanged', sessionId: streamSessionId })
+          if (streamMessageId) dispatchConversation({ type: 'assistantTurnFinished', sessionId: streamSessionId })
+          dispatchAdminApply({ type: 'dismissed' })
           if (streamSearchTerm) {
             await triggerAutoSearch(streamSearchTerm, streamSessionId ?? conversationSessionId)
           }
           streamed = true
         } catch (streamError) {
           if (streamMessageId && streamContent.trim()) {
-            updateAssistantMessage(streamMessageId, { traceStatus: null })
-            setError(streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'))
+            dispatchConversation({
+              type: 'assistantTurnFailed',
+              assistantTurnId: streamMessageId,
+              message: streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'),
+            })
             return
           }
           if (streamMessageId) {
-            setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
+            dispatchConversation({
+              type: 'assistantTurnFailed',
+              assistantTurnId: streamMessageId,
+              message: streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'),
+            })
           }
           console.warn('Streaming query failed; falling back to non-streaming query:', streamError)
         }
@@ -511,63 +493,58 @@ export function ChatPage() {
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>
               if (event === 'assistant_message_started') {
-                const id = typeof data.message_id === 'string' ? data.message_id : generateMessageId()
+                if (typeof data.message_id !== 'string') data.message_id = generateMessageId()
+                const id = data.message_id as string
                 streamMessageId = id
-                if (typeof data.session_id === 'string') streamSessionId = data.session_id
-                setMessages((prev) => [...prev, {
+                streamSessionId = typeof data.session_id === 'string' ? data.session_id : streamSessionId
+                dispatchConversation({
+                  type: 'assistantTurnStarted',
                   id,
-                  role: 'assistant',
-                  content: '',
-                  timestamp: new Date(),
+                  sessionId: streamSessionId,
                   traceStatus: t('chat.trace.writing', 'Writing answer...'),
-                }])
-              } else if (event === 'trace_status' && streamMessageId) {
-                const status = typeof data.status === 'string' ? data.status : t('chat.trace.writing', 'Writing answer...')
-                updateAssistantMessage(streamMessageId, { traceStatus: status })
-              } else if (event === 'activity_step' && streamMessageId) {
-                const step = readActivityStep(data)
-                if (step) appendAssistantActivityStep(streamMessageId, step)
+                })
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : ''
                 streamContent += delta
-                updateAssistantMessage(streamMessageId, {
-                  content: streamContent,
-                })
-              } else if (event === 'trace_final' && streamMessageId) {
-                updateAssistantMessage(streamMessageId, {
-                  trace: data.trace as Message['trace'],
-                  traceStatus: null,
-                })
+                dispatchStreamEvent(event, data, streamMessageId)
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string') streamSessionId = data.session_id
+                dispatchStreamEvent(event, data, streamMessageId)
               } else if (event === 'error') {
                 throw new Error(typeof data.detail === 'string' ? data.detail : t('errors.failedToSendMessage'))
+              } else if (streamMessageId) {
+                dispatchStreamEvent(event, data, streamMessageId)
               }
             },
           })
-          if (streamSessionId) setConversationSessionId(streamSessionId)
-          if (streamMessageId) {
-            updateAssistantMessage(streamMessageId, { traceStatus: null })
-          }
+          if (streamSessionId) dispatchConversation({ type: 'conversationSessionChanged', sessionId: streamSessionId })
+          if (streamMessageId) dispatchConversation({ type: 'assistantTurnFinished', sessionId: streamSessionId })
           if (hasConfigTool) {
             const extracted = extractAdminAssistantChangeSetStrict(streamContent)
             if (extracted.ok) {
-              setAdminApplyState({ state: 'review', changeSet: extracted.changeSet })
+              dispatchAdminApply({ type: 'changeSetReadyForReview', changeSet: extracted.changeSet })
             } else if (streamContent.includes('```json') && streamContent.includes('"requests"')) {
-              setAdminApplyState({ state: 'error', message: extracted.error })
+              dispatchAdminApply({ type: 'applyFailed', message: extracted.error })
             }
           } else {
-            setAdminApplyState({ state: 'idle' })
+            dispatchAdminApply({ type: 'dismissed' })
           }
           streamed = true
         } catch (streamError) {
           if (streamMessageId && streamContent.trim()) {
-            updateAssistantMessage(streamMessageId, { traceStatus: null })
-            setError(streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'))
+            dispatchConversation({
+              type: 'assistantTurnFailed',
+              assistantTurnId: streamMessageId,
+              message: streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'),
+            })
             return
           }
           if (streamMessageId) {
-            setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
+            dispatchConversation({
+              type: 'assistantTurnFailed',
+              assistantTurnId: streamMessageId,
+              message: streamError instanceof Error ? streamError.message : t('errors.failedToSendMessage'),
+            })
           }
           console.warn('Streaming chat failed; falling back to non-streaming chat:', streamError)
         }
@@ -606,50 +583,51 @@ export function ChatPage() {
         
         // Save session_id for conversation continuity
         if (data.session_id) {
-          setConversationSessionId(data.session_id)
+          dispatchConversation({ type: 'conversationSessionChanged', sessionId: data.session_id })
         }
       } else {
         responseContent = data.message
         if (data.session_id) {
-          setConversationSessionId(data.session_id)
+          dispatchConversation({ type: 'conversationSessionChanged', sessionId: data.session_id })
         }
 
         if (hasConfigTool) {
           const raw = String(data.message || '')
           const extracted = extractAdminAssistantChangeSetStrict(raw)
           if (extracted.ok) {
-            setAdminApplyState({ state: 'review', changeSet: extracted.changeSet })
+            dispatchAdminApply({ type: 'changeSetReadyForReview', changeSet: extracted.changeSet })
           } else if (raw.includes('```json') && raw.includes('"requests"')) {
-            setAdminApplyState({ state: 'error', message: extracted.error })
+            dispatchAdminApply({ type: 'applyFailed', message: extracted.error })
           }
         } else {
-          setAdminApplyState({ state: 'idle' })
+          dispatchAdminApply({ type: 'dismissed' })
         }
       }
 
-      const assistantMessage: Message = {
+      dispatchConversation({
+        type: 'assistantTurnCompleted',
         id: typeof data.message_id === 'string' ? data.message_id : generateMessageId(),
-        role: 'assistant',
         content: responseContent,
-        timestamp: new Date(),
         trace: data.trace ?? null,
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
+        sessionId: typeof data.session_id === 'string' ? data.session_id : undefined,
+      })
       
       // Handle auto-search if backend returned a search term
       if (responseIsRag && data.search_term) {
         await triggerAutoSearch(data.search_term, data.session_id ?? conversationSessionId)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('errors.failedToSendMessage'))
+      dispatchConversation({
+        type: 'requestFailed',
+        message: e instanceof Error ? e.message : t('errors.failedToSendMessage'),
+      })
     } finally {
-      setIsLoading(false)
+      dispatchConversation({ type: 'assistantTurnFinished' })
     }
   }
 
   const handleAdminApply = useCallback(async (changeSet: AdminAssistantChangeSet) => {
-    setAdminApplyState({ state: 'applying', changeSet })
+    dispatchAdminApply({ type: 'applyStarted' })
     try {
       const userTypeSlugToId = new Map<string, number>()
       try {
@@ -786,50 +764,23 @@ export function ChatPage() {
       }
 
       const summary = [baseSummary, ...postApplyNotes].join(' ') + failureSummary
-      setAdminApplyState({ state: 'applied', message: summary })
-
-      setMessages((prev) => ([
-        ...prev,
-        {
-          id: generateMessageId(),
-          role: 'assistant',
-          content: summary,
-          timestamp: new Date(),
-        },
-      ]))
+      dispatchAdminApply({ type: 'applySucceeded', message: summary })
+      dispatchConversation({
+        type: 'assistantTurnAppended',
+        id: generateMessageId(),
+        content: summary,
+      })
     } catch (e) {
-      setAdminApplyState({ state: 'error', message: e instanceof Error ? e.message : String(e) })
+      dispatchAdminApply({ type: 'applyFailed', message: e instanceof Error ? e.message : String(e) })
     }
   }, [fetchJson, t])
 
   const adminApplyPreview = useMemo(() => {
     if (adminApplyState.state !== 'review' && adminApplyState.state !== 'applying') return null
-    const changeSet = adminApplyState.changeSet
-
-    const pretty = changeSet.requests.map((r, idx) => {
-      let bodyDisplay: unknown = r.body
-      if (r.method === 'PUT' && r.path.startsWith('/admin/deployment/config/')) {
-        const key = r.path.split('/').pop() || ''
-        const shouldRedact = !deploymentSecretKeysLoaded || deploymentSecretKeys.has(key)
-        if (shouldRedact && r.body && typeof r.body === 'object') {
-          const o = r.body as Record<string, unknown>
-          if (typeof o.value === 'string' && o.value.length > 0) {
-            bodyDisplay = { ...o, value: '[REDACTED]' }
-          }
-        }
-      }
-      return {
-        idx: idx + 1,
-        method: r.method,
-        path: r.path,
-        body: bodyDisplay,
-      }
+    return buildAdminChangePreview(adminApplyState.changeSet, {
+      deploymentSecretKeys,
+      deploymentSecretKeysLoaded,
     })
-
-    return {
-      summary: changeSet.summary || '',
-      requests: pretty,
-    }
   }, [adminApplyState, deploymentSecretKeys, deploymentSecretKeysLoaded])
   
   // Auto-search triggered by backend - injects results back into RAG session
@@ -842,7 +793,11 @@ export function ChatPage() {
         content: t('chat.messages.searching', { term: searchTerm }),
         timestamp: new Date(),
       }
-      setMessages((prev) => [...prev, searchingMessage])
+      dispatchConversation({
+        type: 'assistantTurnAppended',
+        id: searchingMessage.id,
+        content: searchingMessage.content,
+      })
       
       // Build context-aware search prompt with condensing instructions
       const searchPrompt = `Search for: ${searchTerm}
@@ -866,7 +821,7 @@ IMPORTANT: Return a CONDENSED response:
       
       const searchData = await searchRes.json()
       if (searchData.session_id) {
-        setConversationSessionId(searchData.session_id)
+        dispatchConversation({ type: 'conversationSessionChanged', sessionId: searchData.session_id })
       }
       const searchResults = searchData.message
       
@@ -880,9 +835,11 @@ IMPORTANT: Return a CONDENSED response:
       
       // Remove the "Searching..." message and add results
       const searchingPrefix = `🔍 ${t('chat.messages.searchingPrefix')}`
-      setMessages((prev) => {
-        const withoutSearching = prev.filter(m => !m.content.startsWith(searchingPrefix))
-        return [...withoutSearching, searchResultMessage]
+      dispatchConversation({ type: 'assistantTurnsRemovedByContentPrefix', prefix: searchingPrefix })
+      dispatchConversation({
+        type: 'assistantTurnAppended',
+        id: searchResultMessage.id,
+        content: searchResultMessage.content,
       })
       
       // Inject search results back into RAG session for context continuity
@@ -909,15 +866,13 @@ IMPORTANT: Return a CONDENSED response:
       console.error('Auto-search failed:', e)
       // Remove searching message on error
       const searchingPrefix = `🔍 ${t('chat.messages.searchingPrefix')}`
-      setMessages((prev) => prev.filter(m => !m.content.startsWith(searchingPrefix)))
+      dispatchConversation({ type: 'assistantTurnsRemovedByContentPrefix', prefix: searchingPrefix })
     }
   }
 
   const handleNewChat = () => {
-    setMessages([])
-    setError(null)
-    setConversationSessionId(null) // Reset session for new conversation
-    setAdminApplyState({ state: 'idle' })
+    dispatchConversation({ type: 'newConversationStarted' })
+    dispatchAdminApply({ type: 'newConversationStarted' })
   }
 
   const rightActions = (
@@ -996,7 +951,7 @@ IMPORTANT: Return a CONDENSED response:
               <span className="flex-1">{error}</span>
               <IconButton
                 label={t('common.close', 'Close')}
-                onClick={() => setError(null)}
+                onClick={() => dispatchConversation({ type: 'requestErrorDismissed' })}
                 variant="ghost"
                 size="sm"
                 className="text-error hover:bg-error/10"
@@ -1029,7 +984,7 @@ IMPORTANT: Return a CONDENSED response:
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Button
-                  onClick={() => setAdminApplyState({ state: 'idle' })}
+                  onClick={() => dispatchAdminApply({ type: 'dismissed' })}
                   variant="ghost"
                   size="sm"
                 >
