@@ -125,7 +125,7 @@
       "databaseName": "Databas",
       "knowledgeGraph": "Sök i kunskapsgrafen",
       "config": "Konfiguration",
-      "configName": "Konfigurationsnamn"
+      "configName": "Konfiguration"
     },
     "documentScope": {
       "title": "Kunskapsbaser",

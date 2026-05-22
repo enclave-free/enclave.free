@@ -125,7 +125,7 @@
       "databaseName": "Adatbázis",
       "knowledgeGraph": "Tudásgráf lekérdezése",
       "config": "Konfiguráció",
-      "configName": "Konfiguráció neve"
+      "configName": "Konfiguráció"
     },
     "documentScope": {
       "title": "Tudásbázisok",

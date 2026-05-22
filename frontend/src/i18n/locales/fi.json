@@ -125,7 +125,7 @@
       "databaseName": "Tietokanta",
       "knowledgeGraph": "Kysy tietograafista",
       "config": "Konfiguraatio",
-      "configName": "Konfiguraation nimi"
+      "configName": "Konfiguraatio"
     },
     "documentScope": {
       "title": "Tietokannat",

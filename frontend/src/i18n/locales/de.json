@@ -123,7 +123,7 @@
       "database": "SQLite-Datenbank abfragen",
       "knowledgeGraph": "Wissensgraph abfragen",
       "config": "Konfiguration",
-      "configName": "Konfigurationsname",
+      "configName": "Konfiguration",
       "databaseName": "Datenbank",
       "webSearchName": "Web"
     },

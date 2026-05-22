@@ -679,7 +679,7 @@
       "databaseName": "数据库",
       "knowledgeGraph": "查询知识图谱",
       "config": "配置",
-      "configName": "配置名称"
+      "configName": "配置"
     },
     "documentScope": {
       "title": "知识库",

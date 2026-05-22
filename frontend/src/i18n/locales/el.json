@@ -677,7 +677,7 @@
       "database": "Ερώτημα στη βάση δεδομένων SQLite",
       "knowledgeGraph": "Ερώτημα στο γράφο γνώσης",
       "config": "Διαμόρφωση",
-      "configName": "Όνομα διαμόρφωσης",
+      "configName": "Διαμόρφωση",
       "databaseName": "Βάση Δεδομένων",
       "webSearchName": "Ιστός"
     },

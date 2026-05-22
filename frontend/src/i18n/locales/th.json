@@ -125,7 +125,7 @@
       "databaseName": "ฐานข้อมูล",
       "knowledgeGraph": "สืบค้นกราฟความรู้",
       "config": "การกำหนดค่า",
-      "configName": "ชื่อการกำหนดค่า"
+      "configName": "การกำหนดค่า"
     },
     "documentScope": {
       "title": "ฐานความรู้",

@@ -125,7 +125,7 @@
       "databaseName": "Cơ sở dữ liệu",
       "knowledgeGraph": "Truy vấn đồ thị kiến thức",
       "config": "Cấu hình",
-      "configName": "Tên cấu hình"
+      "configName": "Cấu hình"
     },
     "documentScope": {
       "title": "Cơ sở kiến thức",

@@ -677,7 +677,7 @@
       "databaseName": "Gegevensbank",
       "knowledgeGraph": "Query de kennisgraaf",
       "config": "Configuratie",
-      "configName": "Configuratienaam"
+      "configName": "Configuratie"
     },
     "documentScope": {
       "title": "Kennisbanken",

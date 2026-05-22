@@ -678,7 +678,7 @@
       "databaseName": "資料庫",
       "knowledgeGraph": "查詢知識圖譜",
       "config": "配置",
-      "configName": "配置名稱"
+      "configName": "配置"
     },
     "documentScope": {
       "title": "知識庫",

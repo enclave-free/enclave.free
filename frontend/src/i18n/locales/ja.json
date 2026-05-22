@@ -125,7 +125,7 @@
       "databaseName": "データベース",
       "knowledgeGraph": "ナレッジグラフをクエリ",
       "config": "設定",
-      "configName": "設定名"
+      "configName": "設定"
     },
     "documentScope": {
       "title": "ナレッジベース",

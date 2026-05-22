@@ -125,7 +125,7 @@
       "databaseName": "База даних",
       "knowledgeGraph": "Запит до графу знань",
       "config": "Конфігурація",
-      "configName": "Назва конфігурації"
+      "configName": "Конфігурація"
     },
     "documentScope": {
       "title": "Бази знань",

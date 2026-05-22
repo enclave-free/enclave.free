@@ -125,7 +125,7 @@
       "databaseName": "قاعدة البيانات",
       "knowledgeGraph": "استعلام الرسم البياني المعرفي",
       "config": "التكوين",
-      "configName": "اسم التكوين"
+      "configName": "التكوين"
     },
     "documentScope": {
       "title": "قواعد المعرفة",
