@@ -285,14 +285,21 @@ def get_retrieval_chunk(chunk_id: str) -> Optional[dict]:
     return chunk
 
 
-def list_retrieval_chunks(job_id: str) -> list[dict]:
+def list_retrieval_chunks(job_id: str, limit: int | None = None) -> list[dict]:
     """List raw encrypted retrieval chunk rows for one document job."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM retrieval_chunks WHERE job_id = ? ORDER BY chunk_index ASC",
-        (job_id,),
-    )
+    if limit is None:
+        cursor.execute(
+            "SELECT * FROM retrieval_chunks WHERE job_id = ? ORDER BY chunk_index ASC, id ASC",
+            (job_id,),
+        )
+    else:
+        bounded_limit = max(0, int(limit))
+        cursor.execute(
+            "SELECT * FROM retrieval_chunks WHERE job_id = ? ORDER BY chunk_index ASC, id ASC LIMIT ?",
+            (job_id, bounded_limit),
+        )
     rows = cursor.fetchall()
     cursor.close()
     return [dict(row) for row in rows]

@@ -35,7 +35,7 @@ describe('Admin Change Confirmation State', () => {
     })
     expect(applied).toEqual({ state: 'applied', message: 'Applied 1 change' })
 
-    const error = reduceAdminChangeConfirmationState(applied, {
+    const error = reduceAdminChangeConfirmationState(applying, {
       type: 'applyFailed',
       message: 'Config validation failed',
     })
@@ -54,6 +54,24 @@ describe('Admin Change Confirmation State', () => {
     })).toEqual({ state: 'idle' })
     expect(reduceAdminChangeConfirmationState(review, {
       type: 'newConversationStarted',
+    })).toEqual({ state: 'idle' })
+  })
+
+  it('ignores late apply results after confirmation state has been cleared', () => {
+    const review = reduceAdminChangeConfirmationState(createAdminChangeConfirmationState(), {
+      type: 'changeSetReadyForReview',
+      changeSet,
+    })
+    const applying = reduceAdminChangeConfirmationState(review, { type: 'applyStarted' })
+    const cleared = reduceAdminChangeConfirmationState(applying, { type: 'dismissed' })
+
+    expect(reduceAdminChangeConfirmationState(cleared, {
+      type: 'applySucceeded',
+      message: 'Applied late',
+    })).toEqual({ state: 'idle' })
+    expect(reduceAdminChangeConfirmationState(cleared, {
+      type: 'applyFailed',
+      message: 'Failed late',
     })).toEqual({ state: 'idle' })
   })
 

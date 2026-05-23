@@ -1725,9 +1725,12 @@ async def get_admin_document_context_preview(admin: dict = Depends(auth.require_
 
     documents = []
     for _, job in selected_jobs[:ADMIN_DOCUMENT_CONTEXT_MAX_DOCUMENTS]:
-        chunks = ingest_db.list_retrieval_chunks(job["job_id"])
+        chunks = ingest_db.list_retrieval_chunks(
+            job["job_id"],
+            limit=ADMIN_DOCUMENT_CONTEXT_MAX_CHUNKS_PER_DOCUMENT,
+        )
         preview_chunks = []
-        for chunk in chunks[:ADMIN_DOCUMENT_CONTEXT_MAX_CHUNKS_PER_DOCUMENT]:
+        for chunk in chunks:
             text = str(chunk.get("text") or "")
             if len(text) > ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK:
                 text = f"{text[:ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK].rstrip()}..."
@@ -1744,7 +1747,7 @@ async def get_admin_document_context_preview(admin: dict = Depends(auth.require_
             "status": job.get("status"),
             "total_chunks": job.get("total_chunks"),
             "preview_chunks": preview_chunks,
-            "preview_truncated": len(chunks) > len(preview_chunks),
+            "preview_truncated": int(job.get("total_chunks") or 0) > len(preview_chunks),
         })
 
     return {

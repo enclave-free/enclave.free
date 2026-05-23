@@ -42,9 +42,13 @@ export function reduceAdminChangeConfirmationState(
         ? { state: 'applying', changeSet: state.changeSet }
         : state
     case 'applySucceeded':
-      return { state: 'applied', message: action.message }
+      return state.state === 'applying'
+        ? { state: 'applied', message: action.message }
+        : state
     case 'applyFailed':
-      return { state: 'error', message: action.message }
+      return state.state === 'applying'
+        ? { state: 'error', message: action.message }
+        : state
     case 'adminConfigToolToggled':
       return action.selectedAfterToggle ? state : { state: 'idle' }
     case 'newConversationStarted':

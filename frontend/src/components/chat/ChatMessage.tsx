@@ -164,7 +164,8 @@ function ConversationTracePanel({
   const tools = trace?.tools ?? []
   const retrieval = trace?.retrieval ?? []
   const summary = trace?.reasoning?.summary
-  const hasActivity = activitySteps.length > 0
+  const combinedActivitySteps = activitySteps.length > 0 ? activitySteps : trace?.activity_steps ?? []
+  const hasActivity = combinedActivitySteps.length > 0
   const hasTraceChips = tools.length > 0 || retrieval.length > 0
   const hasTraceDetail = Boolean(summary) || hasTraceChips
   const isLive = Boolean(liveStatus)
@@ -216,7 +217,7 @@ function ConversationTracePanel({
         {summary && <p className="leading-relaxed text-text-secondary">{summary}</p>}
         {hasActivity && (
           <div className="space-y-2" aria-label="Conversation activity">
-            {activitySteps.map((step) => (
+            {combinedActivitySteps.map((step) => (
               <ActivityStepRow key={step.id} step={step} />
             ))}
           </div>

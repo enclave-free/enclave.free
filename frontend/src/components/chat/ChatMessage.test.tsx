@@ -199,6 +199,28 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Found 3 relevant results.')).toBeInTheDocument()
   })
 
+  it('renders Conversation activity from trace metadata when no separate activity prop is present', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'summary',
+      tools: [],
+      retrieval: [],
+      activity_steps: [
+        {
+          id: 'activity-1',
+          kind: 'tool',
+          title: 'Checking configuration',
+          status: 'completed',
+          summary: 'Loaded Instance visual identity context.',
+        },
+      ],
+      suppressed: false,
+    })
+
+    expect(screen.getByText('Conversation Trace')).toBeInTheDocument()
+    expect(screen.getByText('Checking configuration')).toBeInTheDocument()
+    expect(screen.getByText('Loaded Instance visual identity context.')).toBeInTheDocument()
+  })
+
   it('renders minimal assistant trace as compact usage badges', () => {
     renderMessage('Here is the answer.', 'assistant', {
       visibility: 'minimal',
