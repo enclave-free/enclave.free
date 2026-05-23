@@ -27,7 +27,10 @@ vi.mock('../../utils/promptBudget', async (importOriginal) => {
   };
 });
 
-import { planAdminPromptBudget } from '../../utils/promptBudget';
+import {
+  DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS,
+  planAdminPromptBudget,
+} from '../../utils/promptBudget';
 
 describe('AdminConfigAssistant', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
@@ -288,6 +291,161 @@ describe('AdminConfigAssistant', () => {
       '/admin/deployment/config',
       undefined
     );
+  });
+
+  it('bounds oversized assembled context for provider calls and surfaces a reduced-context notice', async () => {
+    const user = userEvent.setup();
+    const oversizedAdminPadding = `ADMIN-PAD-${'A'.repeat(20_000)}`;
+    const oversizedDocumentPadding = `DOC-PAD-${'D'.repeat(10_000)}`;
+
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/settings') {
+        return Promise.resolve(
+          Response.json({
+            settings: {
+              instance_name: 'Enclave',
+              brand_notes: oversizedAdminPadding,
+            },
+          })
+        );
+      }
+      if (endpoint === '/ingest/admin/documents/context-preview') {
+        return Promise.resolve(
+          Response.json({
+            documents: [
+              {
+                job_id: 'job-brand-guide',
+                filename: 'brand-guide.pdf',
+                preview_chunks: [{ text: oversizedDocumentPadding }],
+              },
+            ],
+            limits: {
+              max_documents: 5,
+              max_chunks_per_document: 3,
+              max_chars_per_chunk: 12_000,
+            },
+          })
+        );
+      }
+      if (endpoint === '/admin/deployment/health') {
+        return Promise.resolve(Response.json({ ok: true }));
+      }
+      return Promise.resolve(Response.json({}));
+    });
+
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Set up the theme from the uploaded guide.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
+    });
+
+    const providerCall = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    const context = providerCall.baseToolContext || '';
+
+    expect(context).not.toContain(oversizedAdminPadding);
+    expect(context).not.toContain(oversizedDocumentPadding);
+    expect(context).toContain('...[context truncated for provider budget]');
+    expect(context.length).toBeLessThanOrEqual(
+      DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.adminConfigChars +
+        DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.documentContextChars +
+        500
+    );
+    expect(mockPlanAdminPromptBudget).toHaveBeenCalled();
+
+    const notice = await screen.findByRole('note', {
+      name: 'Reduced context notice',
+    });
+    expect(notice).toHaveTextContent(/admin configuration context/);
+    expect(notice).toHaveTextContent(/document library context/);
+    expect(notice).not.toHaveTextContent('ADMIN-PAD-');
+    expect(notice).not.toHaveTextContent('DOC-PAD-');
+  });
+
+  it('bounds long conversation history for provider calls using real prompt planning', async () => {
+    const user = userEvent.setup();
+    const longTurnBody = `TURN-PAD-${'H'.repeat(3_000)}`;
+
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: `msg-${Math.random()}`,
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant',
+          delta: longTurnBody,
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    for (let index = 0; index < 10; index += 1) {
+      await user.type(
+        screen.getByRole('textbox', {
+          name: 'Ask about admin configuration...',
+        }),
+        `Turn ${index} question about theme.`
+      );
+      await user.click(screen.getByRole('button', { name: 'Send message' }));
+      await waitFor(() => {
+        expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(
+          index + 1
+        );
+      });
+    }
+
+    const lastCall = vi
+      .mocked(sendLlmChatStreamWithUnifiedTools)
+      .mock.calls.at(-1)?.[0];
+    expect(lastCall?.conversationHistory).toHaveLength(
+      DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.conversationTurns
+    );
+    expect(lastCall?.conversationHistory?.[0]?.content).toContain('Turn 5');
+    expect(
+      lastCall?.conversationHistory?.every(
+        (turn) =>
+          turn.content.length <=
+          DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.conversationCharsPerTurn
+      )
+    ).toBe(true);
+    expect(lastCall?.conversationHistory?.join('')).not.toContain(
+      'H'.repeat(2_500)
+    );
+
+    const notice = await screen.findByRole('note', {
+      name: 'Reduced context notice',
+    });
+    expect(notice).toHaveTextContent(/recent conversation history/);
   });
 
   it('shows a reduced-context notice when prompt planning trims context', async () => {
