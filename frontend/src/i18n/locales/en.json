@@ -259,6 +259,7 @@
       "applyIntentNoPending": "There are no pending configuration changes to apply. Ask the assistant to propose a change set first.",
       "inputPlaceholder": "Ask about admin configuration...",
       "startNewConversation": "Start new assistant conversation",
+      "reducedContextNoticeLabel": "Reduced context notice",
       "applySummary": {
         "appliedCounts": "Applied {{ok}}/{{total}} change(s).",
         "appliedCountsWithFailures": "Applied {{ok}}/{{total}} change(s), {{failed}} failed.",

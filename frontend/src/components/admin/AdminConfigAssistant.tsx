@@ -36,7 +36,10 @@ import {
   buildScopedAdminConfigContext,
 } from '../../utils/adminConfigContext';
 import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
-import { planAdminPromptBudget } from '../../utils/promptBudget';
+import {
+  planAdminPromptBudget,
+  formatAdminReducedContextNotice,
+} from '../../utils/promptBudget';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -138,6 +141,9 @@ export function AdminConfigAssistant({
   const [error, setError] = useState<string | null>(null);
   const [recoveryError, setRecoveryError] =
     useState<ClassifiedProviderError | null>(null);
+  const [reducedContextNotice, setReducedContextNotice] = useState<
+    string | null
+  >(null);
   const [snapshotInfo, setSnapshotInfo] = useState<{
     generatedAtIso: string;
   } | null>(null);
@@ -286,6 +292,7 @@ export function AdminConfigAssistant({
     setMessages([]);
     setError(null);
     setRecoveryError(null);
+    setReducedContextNotice(null);
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
     deploymentSecretKeysRef.current = new Set();
@@ -308,6 +315,7 @@ export function AdminConfigAssistant({
       setIsLoading(true);
       setError(null);
       setRecoveryError(null);
+      setReducedContextNotice(null);
 
       if (applyIntent.kind === 'unambiguous' && applyState.state === 'review') {
         try {
@@ -351,6 +359,7 @@ export function AdminConfigAssistant({
         if (!hasConfigTool) {
           setSnapshotInfo(null);
           setApplyState({ state: 'idle' });
+          setReducedContextNotice(null);
         } else {
           const snap = await buildScopedAdminConfigContext({
             query: content,
@@ -373,6 +382,9 @@ export function AdminConfigAssistant({
           });
           baseToolContext = promptPlan.toolContext || undefined;
           boundedConversationHistory = promptPlan.conversationHistory;
+          setReducedContextNotice(
+            formatAdminReducedContextNotice(promptPlan.reducedSections)
+          );
           setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
           secretsForRedactionRef.current = snap.secretValues;
           deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
@@ -1087,6 +1099,19 @@ export function AdminConfigAssistant({
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {reducedContextNotice && (
+            <div
+              role="note"
+              aria-label={t(
+                'admin.configAssistant.reducedContextNoticeLabel',
+                'Reduced context notice'
+              )}
+              className="text-sm text-warning bg-warning/10 border border-warning/25 rounded-xl px-3 py-2"
+            >
+              {reducedContextNotice}
             </div>
           )}
 

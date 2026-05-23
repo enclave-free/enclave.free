@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS,
+  formatAdminReducedContextNotice,
   planAdminPromptBudget,
 } from './promptBudget';
 
@@ -74,5 +75,17 @@ describe('planAdminPromptBudget', () => {
     expect(plan.reducedSections).toEqual([]);
     expect(plan.estimatedChars).toBeGreaterThan(0);
     expect(DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.adminConfigChars).toBe(12_000);
+  });
+});
+
+describe('formatAdminReducedContextNotice', () => {
+  it('returns operator-facing notice when sections were reduced', () => {
+    expect(
+      formatAdminReducedContextNotice(['admin-config', 'document-context'])
+    ).toMatch(/admin configuration context/);
+    expect(
+      formatAdminReducedContextNotice(['admin-config', 'document-context'])
+    ).toMatch(/document library context/);
+    expect(formatAdminReducedContextNotice([])).toBeNull();
   });
 });

@@ -18,8 +18,20 @@ vi.mock('../../utils/llmChat', () => ({
   sendLlmChatWithUnifiedTools: vi.fn(),
 }));
 
+vi.mock('../../utils/promptBudget', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../utils/promptBudget')>();
+  return {
+    ...actual,
+    planAdminPromptBudget: vi.fn(actual.planAdminPromptBudget),
+  };
+});
+
+import { planAdminPromptBudget } from '../../utils/promptBudget';
+
 describe('AdminConfigAssistant', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
+  const mockPlanAdminPromptBudget = vi.mocked(planAdminPromptBudget);
 
   beforeEach(() => {
     const store = new Map<string, string>();
@@ -276,6 +288,48 @@ describe('AdminConfigAssistant', () => {
       '/admin/deployment/config',
       undefined
     );
+  });
+
+  it('shows a reduced-context notice when prompt planning trims context', async () => {
+    const user = userEvent.setup();
+    mockPlanAdminPromptBudget.mockReturnValueOnce({
+      toolContext: 'SCOPED CONFIG CONTEXT\nsmall section',
+      conversationHistory: [],
+      includedSections: ['admin-config', 'document-context'],
+      reducedSections: ['admin-config', 'document-context'],
+      omittedSections: ['recent-conversation'],
+      estimatedChars: 500,
+      warningNote:
+        'PROMPT BUDGET NOTE\n- admin-config was reduced to fit the provider budget',
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Review deployment config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    const notice = await screen.findByRole('note', {
+      name: 'Reduced context notice',
+    });
+    expect(notice).toHaveTextContent(/admin configuration context/);
+    expect(notice).toHaveTextContent(/document library context/);
+    expect(notice).not.toHaveTextContent('PROMPT BUDGET NOTE');
   });
 
   it('presents one reviewable Change Confirmation for coherent multi-setting admin changes', async () => {
