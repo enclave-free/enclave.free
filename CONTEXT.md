@@ -316,9 +316,25 @@ _Avoid_: user message, prompt text
 Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and safe reasoning summaries when available.
 _Avoid_: chain of thought, debug log, audit log, provider trace
 
+**Conversation Activity Step**:
+A sanitized user-visible step in a **Conversation** that shows meaningful **Sage** activity during an assistant turn, such as using a tool, retrieving context, checking configuration, or preparing a response.
+_Avoid_: trace blob, debug event, raw tool call
+
 **Conversation Streaming Transport**:
 A conversation response path that sends assistant turn, live trace status, answer deltas, and completion events to the client as they become available.
 _Avoid_: streaming-shaped response, fake streaming, delayed batch response
+
+**Conversation UI Surface**:
+The user-facing interface where **Users** or **Admins** read and send **Conversation** messages, inspect permitted **Conversation Trace** details, and choose visible conversation controls.
+_Avoid_: agent runtime, chatbot service, conversation owner
+
+**Conversation UI State**:
+Client-owned state needed to operate the **Conversation UI Surface** for the current actor, including visible turns, in-progress turn status, selected controls, transient errors, and pending confirmation prompts.
+_Avoid_: session memory, conversation owner, agent state
+
+**Conversation Control Snapshot**:
+The selected visible conversation controls captured when a **User** or **Admin** submits a turn, such as selected **Tools** or selected **Documents**.
+_Avoid_: current controls, session settings, agent settings
 
 **Trace Visibility Policy**:
 The **Operator** configured **Instance Setting** or **Agent Setting** that determines which **Conversation Trace** details are visible for **Admin Conversations** and **User Conversations**.
@@ -610,6 +626,8 @@ _Avoid_: full snapshot, config dump
 - **Data Retention** eligibility for **Conversations** should be based on last **Conversation** activity rather than creation time
 - **Conversation** activity for **Data Retention** means human and Sage assistant turns, not lifecycle retries, audit writes, retention scans, or tombstone updates
 - Opening or viewing a **Conversation** is not **Conversation** activity for **Data Retention**
+- **Conversation UI State** belongs to the **Conversation UI Surface** and must not become the source of truth for **Session Memory** or durable **Conversation** ownership
+- A **Conversation Control Snapshot** describes the visible controls that shaped a submitted turn, while current controls describe defaults for the next turn
 - The first **Conversation** retention policy should be **Instance** level rather than **User Type** specific
 - **Admin Conversations** and **User Conversations** should share the same **Conversation Content** and **Session Memory** retention window in the first version
 - **Retention Execution** should re-check **Conversation** eligibility before deletion and skip candidates that became active
@@ -639,6 +657,7 @@ _Avoid_: full snapshot, config dump
 - A **Conversation** may include **Retrieval**, **Required Context**, and **User Profile** context
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
 - A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, and **Reasoning Summary** details
+- A **Conversation Activity Step** is a user-visible rendering unit derived from sanitized **Conversation Trace** metadata
 - A **Conversation Trace** must not expose raw hidden chain of thought, raw provider trace blobs, full prompts, full unredacted tool outputs, decrypted database rows, secrets, or hidden system/developer instructions in ordinary chat surfaces
 - A **Reasoning Summary** is a safe summary of how **Sage** approached a response, not hidden chain of thought
 - The first **Reasoning Summary** implementation should be authored by **Sage** from orchestration events rather than relying on provider-specific raw reasoning APIs
@@ -650,10 +669,14 @@ _Avoid_: full snapshot, config dump
 - **Session Memory Deletion** should delete persisted **Conversation Traces** for the associated **Conversation**
 - Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
 - **Conversation Trace** should be exposed through a structured `trace` response object on both assistant-style and retrieval-first conversation routes
+- **Admin Conversations** and **User Conversations** should share the same **Conversation UI Surface** with role-specific controls
 - **Conversation Traces** should render inline with the assistant turn they describe, with minimal traces as compact badges and richer traces inside a collapsed per-message disclosure
 - The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
+- The **Conversation UI Surface** should adapt to Sage-owned **Conversation Streaming Transport** rather than redefining **Agent Runtime** behavior
 - **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
-- During streaming turns, the chat UI should show compact live status derived from **Conversation Trace** events and then collapse the final sanitized trace into the assistant turn's per-message trace panel
+- During streaming turns, the **Conversation UI Surface** should render meaningful **Conversation Activity Steps** in order before the final assistant response is complete
+- **Conversation Activity Steps** should remain scannable after completion rather than being packed only into a dense trace blob
+- During streaming turns, **Conversation Activity Steps** must be emitted and sanitized by **Sage**, and the prototype should bias toward showing enough activity to make the agent loop inspectable
 - During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status to that turn, and attach the final sanitized **Conversation Trace** when it arrives
 - Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**

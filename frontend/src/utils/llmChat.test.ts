@@ -113,6 +113,48 @@ describe('sendLlmChatWithUnifiedTools', () => {
     expect(events[2].data).toEqual({ message_id: 'msg_1', delta: 'Hello' })
   })
 
+  it('streams Conversation Activity Step events from the chat stream endpoint', async () => {
+    const encoder = new TextEncoder()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode([
+            'event: activity_step',
+            'data: {"message_id":"msg_1","activity_step":{"id":"tool-db-query","kind":"tool","title":"Database Query","status":"succeeded","summary":"Database results were redacted from the trace.","warnings":["raw_results_redacted"]}}',
+            '',
+            '',
+          ].join('\n')))
+          controller.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } }
+    )))
+    const events: Array<{ event: string; data: unknown }> = []
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'Check settings',
+      tools: ['db-query'],
+      onEvent: (event, data) => events.push({ event, data }),
+    })
+
+    expect(events).toEqual([
+      {
+        event: 'activity_step',
+        data: {
+          message_id: 'msg_1',
+          activity_step: {
+            id: 'tool-db-query',
+            kind: 'tool',
+            title: 'Database Query',
+            status: 'succeeded',
+            summary: 'Database results were redacted from the trace.',
+            warnings: ['raw_results_redacted'],
+          },
+        },
+      },
+    ])
+  })
+
   it('streams admin-config as an explicit backend tool without requiring client context', async () => {
     const encoder = new TextEncoder()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(

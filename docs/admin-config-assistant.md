@@ -67,6 +67,7 @@ Sidebar behavior:
 
 Every scoped config context includes:
 
+- `ADMIN-VISIBLE TOOL CAPABILITIES` for the public Tool IDs an authenticated admin can select
 - Admin-assistant rules
 - Change-set format and mutation constraints
 - Secret-handling rules
@@ -77,7 +78,7 @@ When scope selection is unsure, the tool should return `overview` only. The assi
 Available scopes:
 
 - `overview`: small summary suitable for ambiguous configuration questions
-- `instance-settings`: instance branding, public behavior, and other Instance Settings
+- `instance-settings`: instance branding, public behavior, Instance visual identity settings, and other Instance Settings
 - `deployment-settings`: Deployment Settings, grouped by config category, with secrets masked by default
 - `agent-settings`: Agent Settings, including prompt sections, parameters, defaults, and per-user-type effective values when relevant
 - `user-types`: user types and onboarding field definitions
@@ -86,12 +87,27 @@ Available scopes:
 
 Scope selection starts as deterministic runtime-tool classification:
 
+- Theme, appearance, branding, palette, color, typography, chat style, surface style, or status icon questions use `instance-settings`.
 - Email, SMTP, domains, SSL, provider, model, SearXNG, env, or restart questions use `deployment-settings`.
 - Prompt, temperature, max tokens, model behavior, user-type AI, or personalization questions use `agent-settings`.
 - User type, onboarding question, or field questions use `user-types`.
 - Document, default document, access, or ingestion-default questions use `document-defaults`.
 - Broken, validate, health, restart, or service-status questions use `health` plus the relevant config scope.
 - Ambiguous admin configuration questions use `overview`.
+
+For Admin Conversations, theme requests mean Instance visual identity settings:
+
+- `default_theme`
+- `primary_color`
+- `chat_bubble_style`
+- `chat_bubble_shadow`
+- `surface_style`
+- `status_icon_set`
+- `typography_preset`
+
+They mean Instance Settings, not frontend CSS token or source-code theme edits. Developer-facing theme implementation remains outside the Admin Configuration Assistant.
+
+Instance visual identity changes should be proposed as a confirmed change set using a partial `PUT /admin/settings` request body. They still require Admin Change Confirmation before any write is applied.
 
 The former full snapshot behavior fetched:
 

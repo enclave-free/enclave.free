@@ -176,6 +176,15 @@ class InstanceStatusTest(unittest.TestCase):
         self.assertEqual(status_settings["default_language"], "es")
         self.assertEqual(status_settings["default_theme"], "dark")
 
+    def test_fresh_instance_exposes_system_default_theme(self) -> None:
+        admin_settings = self.client.get("/admin/settings").json()["settings"]
+        public_settings = self.client.get("/settings/public").json()["settings"]
+        status_settings = self.client.get("/instance/status").json()["settings"]
+
+        self.assertEqual(admin_settings["default_theme"], "system")
+        self.assertEqual(public_settings["default_theme"], "system")
+        self.assertEqual(status_settings["default_theme"], "system")
+
     def test_admin_language_and_theme_defaults_reject_unknown_values(self) -> None:
         language_response = self.client.put("/admin/settings", json={
             "default_language": "klingon",

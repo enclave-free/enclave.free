@@ -29,7 +29,7 @@ See [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md
 | --- | --- | --- | --- |
 | `web-search` | `web_search` | all users | hits SearXNG for current/external information |
 | `db-query` | `db_query` | admins only | delegates to Python safe read-only admin DB query |
-| `admin-config` | `admin_config` | admins only | reads Scoped Config Context for Admin Conversations |
+| `admin-config` | `admin_config` | admins only | reads Scoped Config Context for Admin Conversations, including an admin-visible Tool capability overview and Instance visual identity context when relevant |
 
 `knowledge_search` is not a public frontend toggle. Sage registers it internally for retrieval-first turns so the agent can revisit Enclave document retrieval during the turn.
 

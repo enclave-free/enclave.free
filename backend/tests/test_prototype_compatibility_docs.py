@@ -60,6 +60,18 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("Transport: uses `POST /llm/chat`", assistant)
         self.assertNotIn("Reads `/session-defaults`", assistant)
 
+    def test_admin_assistant_docs_describe_visual_identity_scope(self) -> None:
+        assistant = (REPO_ROOT / "docs/admin-config-assistant.md").read_text(encoding="utf-8")
+        tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
+
+        self.assertIn("ADMIN-VISIBLE TOOL CAPABILITIES", assistant)
+        self.assertIn("Instance visual identity settings", assistant)
+        self.assertIn("theme requests mean Instance visual identity settings", assistant)
+        self.assertIn("not frontend CSS token or source-code theme edits", assistant)
+        self.assertIn("partial `PUT /admin/settings`", assistant)
+        self.assertIn("Admin Change Confirmation", assistant)
+        self.assertIn("Instance visual identity context", tools)
+
     def test_locale_provider_copy_does_not_teach_maple_aliases(self) -> None:
         locale_dir = REPO_ROOT / "frontend/src/i18n/locales"
         checked_keys = (

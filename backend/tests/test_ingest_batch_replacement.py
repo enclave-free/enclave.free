@@ -220,6 +220,28 @@ class IngestBatchReplacementTest(unittest.TestCase):
         finally:
             self.ingest.store_chunk = original_store_chunk
 
+    def test_list_retrieval_chunks_can_return_ordered_limited_rows(self) -> None:
+        job_id = "job-limited-preview"
+        self.ingest_db.create_job(
+            job_id=job_id,
+            filename="Handbook.md",
+            file_path=str(self.uploads_dir / "Handbook.md"),
+            ontology_id="default",
+        )
+        for index in [3, 1, 2, 0]:
+            self.ingest_db.upsert_retrieval_chunk(
+                chunk_id=f"{job_id}-{index}",
+                job_id=job_id,
+                chunk_index=index,
+                source_file="Handbook.md",
+                text=f"chunk {index}",
+            )
+
+        rows = self.ingest_db.list_retrieval_chunks(job_id, limit=2)
+
+        self.assertEqual([row["chunk_index"] for row in rows], [0, 1])
+        self.assertEqual(len(rows), 2)
+
     def test_upload_requires_content_key_when_encryption_required(self) -> None:
         self.database.update_setting_with_audit(
             "DOCUMENT_ARTIFACT_ENCRYPTION",

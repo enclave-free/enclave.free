@@ -199,6 +199,28 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Found 3 relevant results.')).toBeInTheDocument()
   })
 
+  it('renders Conversation activity from trace metadata when no separate activity prop is present', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'summary',
+      tools: [],
+      retrieval: [],
+      activity_steps: [
+        {
+          id: 'activity-1',
+          kind: 'tool',
+          title: 'Checking configuration',
+          status: 'completed',
+          summary: 'Loaded Instance visual identity context.',
+        },
+      ],
+      suppressed: false,
+    })
+
+    expect(screen.getByText('Conversation Trace')).toBeInTheDocument()
+    expect(screen.getByText('Checking configuration')).toBeInTheDocument()
+    expect(screen.getByText('Loaded Instance visual identity context.')).toBeInTheDocument()
+  })
+
   it('renders minimal assistant trace as compact usage badges', () => {
     renderMessage('Here is the answer.', 'assistant', {
       visibility: 'minimal',
@@ -229,6 +251,33 @@ describe('ChatMessage', () => {
     expect(screen.queryByText('Found 3 relevant results.')).not.toBeInTheDocument()
     expect(screen.getByText('Web search')).toBeInTheDocument()
     expect(screen.getByText('Tenant Rights Guide')).toBeInTheDocument()
+  })
+
+  it('does not render an empty assistant bubble for non-renderable trace metadata', () => {
+    renderMessage('', 'assistant', {
+      visibility: 'summary',
+      tools: [],
+      retrieval: [],
+      suppressed: false,
+    })
+
+    expect(screen.queryByText(DEFAULT_INSTANCE_CONFIG.assistantName)).not.toBeInTheDocument()
+    expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument()
+  })
+
+  it('does not render a minimal trace strip when there are no visible chips', () => {
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'minimal',
+      reasoning: {
+        summary: 'Hidden in minimal mode.',
+      },
+      tools: [],
+      retrieval: [],
+      suppressed: false,
+    })
+
+    expect(screen.queryByLabelText('Conversation trace summary')).not.toBeInTheDocument()
+    expect(screen.queryByText('Hidden in minimal mode.')).not.toBeInTheDocument()
   })
 
   it('does not render the internal writing trace as assistant content', () => {
