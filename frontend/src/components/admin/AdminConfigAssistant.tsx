@@ -36,6 +36,7 @@ import {
   buildScopedAdminConfigContext,
 } from '../../utils/adminConfigContext';
 import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
+import { planAdminPromptBudget } from '../../utils/promptBudget';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -341,6 +342,12 @@ export function AdminConfigAssistant({
 
       try {
         let baseToolContext: string | undefined;
+        let boundedConversationHistory = messages.map(
+          ({ role, content: turnContent }) => ({
+            role,
+            content: turnContent,
+          })
+        );
         if (!hasConfigTool) {
           setSnapshotInfo(null);
           setApplyState({ state: 'idle' });
@@ -353,14 +360,19 @@ export function AdminConfigAssistant({
             deploymentMeta,
             tracePolicyLines: TRACE_POLICY_CONTEXT_LINES,
           });
-          baseToolContext = snap.context;
           const documentContext = await fetchBoundedAdminDocumentContext({
             query: content,
             fetchJson,
           });
-          if (documentContext.included) {
-            baseToolContext = `${snap.context}\n\n${documentContext.context}`;
-          }
+          const promptPlan = planAdminPromptBudget({
+            adminConfigContext: snap.context,
+            documentContext: documentContext.included
+              ? documentContext.context
+              : '',
+            conversationHistory: boundedConversationHistory,
+          });
+          baseToolContext = promptPlan.toolContext || undefined;
+          boundedConversationHistory = promptPlan.conversationHistory;
           setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
           secretsForRedactionRef.current = snap.secretValues;
           deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
@@ -378,10 +390,7 @@ export function AdminConfigAssistant({
             tools: selectedTools,
             baseToolContext,
             sessionId: conversationSessionId,
-            conversationHistory: messages.map(({ role, content }) => ({
-              role,
-              content,
-            })),
+            conversationHistory: boundedConversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
               if (event === 'assistant_message_started') {
@@ -517,10 +526,7 @@ export function AdminConfigAssistant({
             tools: selectedTools,
             baseToolContext,
             sessionId: conversationSessionId,
-            conversationHistory: messages.map(({ role, content }) => ({
-              role,
-              content,
-            })),
+            conversationHistory: boundedConversationHistory,
           });
           if (res.status === 401) {
             window.location.href = '/admin';
