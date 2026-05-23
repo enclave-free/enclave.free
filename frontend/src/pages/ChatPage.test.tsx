@@ -15,6 +15,7 @@ import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../utils/llmChat';
+import { SUMMARY_HEADER } from '../utils/sessionMemoryCompaction';
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -946,5 +947,81 @@ describe('ChatPage', () => {
     });
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('compacts Session Memory for long authenticated admin chat turns', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: `msg-${Math.random()}`,
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant',
+          delta: 'Acknowledged.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    for (let index = 0; index < 7; index += 1) {
+      await user.type(
+        screen.getByRole('textbox', { name: 'Ask anything...' }),
+        `Theme question ${index} about palette and typography.`
+      );
+      await user.click(screen.getByRole('button', { name: 'Send message' }));
+      await waitFor(() => {
+        expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(
+          index + 1
+        );
+      });
+    }
+
+    const lastCall = vi
+      .mocked(sendLlmChatStreamWithUnifiedTools)
+      .mock.calls.at(-1)?.[0];
+    expect(lastCall?.conversationHistory?.[0]?.content).toContain(
+      SUMMARY_HEADER
+    );
+    expect(lastCall?.conversationHistory?.at(-1)?.content).toBe(
+      'Acknowledged.'
+    );
+
+    const notice = await screen.findByRole('note', {
+      name: 'Session Memory compaction notice',
+    });
+    expect(notice).toHaveTextContent(/Session Memory was compacted/);
   });
 });

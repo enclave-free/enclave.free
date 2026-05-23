@@ -260,6 +260,7 @@
       "inputPlaceholder": "Ask about admin configuration...",
       "startNewConversation": "Start new assistant conversation",
       "reducedContextNoticeLabel": "Reduced context notice",
+      "sessionMemoryNoticeLabel": "Session Memory compaction notice",
       "applySummary": {
         "appliedCounts": "Applied {{ok}}/{{total}} change(s).",
         "appliedCountsWithFailures": "Applied {{ok}}/{{total}} change(s), {{failed}} failed.",

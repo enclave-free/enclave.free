@@ -31,6 +31,7 @@ import {
   DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS,
   planAdminPromptBudget,
 } from '../../utils/promptBudget';
+import { SUMMARY_HEADER } from '../../utils/sessionMemoryCompaction';
 
 describe('AdminConfigAssistant', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
@@ -293,6 +294,68 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
+  it('compacts Session Memory for long admin conversations before provider calls', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: `msg-${Math.random()}`,
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant',
+          delta: 'Acknowledged.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    for (let index = 0; index < 7; index += 1) {
+      await user.type(
+        screen.getByRole('textbox', {
+          name: 'Ask about admin configuration...',
+        }),
+        `Theme question ${index} about palette and typography.`
+      );
+      await user.click(screen.getByRole('button', { name: 'Send message' }));
+      await waitFor(() => {
+        expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(
+          index + 1
+        );
+      });
+    }
+
+    const lastCall = vi
+      .mocked(sendLlmChatStreamWithUnifiedTools)
+      .mock.calls.at(-1)?.[0];
+    expect(lastCall?.conversationHistory?.[0]?.content).toContain(
+      SUMMARY_HEADER
+    );
+    expect(lastCall?.conversationHistory?.[0]?.content).toContain(
+      'Theme question 0'
+    );
+    expect(lastCall?.conversationHistory?.at(-1)?.content).toBe(
+      'Acknowledged.'
+    );
+
+    const notice = await screen.findByRole('note', {
+      name: 'Session Memory compaction notice',
+    });
+    expect(notice).toHaveTextContent(/Session Memory was compacted/);
+    expect(notice).toHaveTextContent(/earlier messages summarized/);
+    expect(notice).not.toHaveTextContent('Theme question 0');
+  });
+
   it('bounds oversized assembled context for provider calls and surfaces a reduced-context notice', async () => {
     const user = userEvent.setup();
     const oversizedAdminPadding = `ADMIN-PAD-${'A'.repeat(20_000)}`;
@@ -409,7 +472,7 @@ describe('AdminConfigAssistant', () => {
       </ThemeProvider>
     );
 
-    for (let index = 0; index < 10; index += 1) {
+    for (let index = 0; index < 5; index += 1) {
       await user.type(
         screen.getByRole('textbox', {
           name: 'Ask about admin configuration...',
@@ -427,10 +490,8 @@ describe('AdminConfigAssistant', () => {
     const lastCall = vi
       .mocked(sendLlmChatStreamWithUnifiedTools)
       .mock.calls.at(-1)?.[0];
-    expect(lastCall?.conversationHistory).toHaveLength(
-      DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.conversationTurns
-    );
-    expect(lastCall?.conversationHistory?.[0]?.content).toContain('Turn 5');
+    expect(lastCall?.conversationHistory).toHaveLength(8);
+    expect(lastCall?.conversationHistory?.[0]?.content).toContain('Turn 0');
     expect(
       lastCall?.conversationHistory?.every(
         (turn) =>

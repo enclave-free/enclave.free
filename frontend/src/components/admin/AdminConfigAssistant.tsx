@@ -40,6 +40,7 @@ import {
   planAdminPromptBudget,
   formatAdminReducedContextNotice,
 } from '../../utils/promptBudget';
+import { compactAdminSessionMemory } from '../../utils/sessionMemoryCompaction';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -144,6 +145,9 @@ export function AdminConfigAssistant({
   const [reducedContextNotice, setReducedContextNotice] = useState<
     string | null
   >(null);
+  const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
+    null
+  );
   const [snapshotInfo, setSnapshotInfo] = useState<{
     generatedAtIso: string;
   } | null>(null);
@@ -293,6 +297,7 @@ export function AdminConfigAssistant({
     setError(null);
     setRecoveryError(null);
     setReducedContextNotice(null);
+    setSessionMemoryNotice(null);
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
     deploymentSecretKeysRef.current = new Set();
@@ -316,6 +321,7 @@ export function AdminConfigAssistant({
       setError(null);
       setRecoveryError(null);
       setReducedContextNotice(null);
+      setSessionMemoryNotice(null);
 
       if (applyIntent.kind === 'unambiguous' && applyState.state === 'review') {
         try {
@@ -360,7 +366,14 @@ export function AdminConfigAssistant({
           setSnapshotInfo(null);
           setApplyState({ state: 'idle' });
           setReducedContextNotice(null);
+          setSessionMemoryNotice(null);
         } else {
+          const sessionMemoryPlan = compactAdminSessionMemory({
+            conversationHistory: boundedConversationHistory,
+          });
+          boundedConversationHistory = sessionMemoryPlan.conversationHistory;
+          setSessionMemoryNotice(sessionMemoryPlan.notice);
+
           const snap = await buildScopedAdminConfigContext({
             query: content,
             shareSecrets,
@@ -1099,6 +1112,19 @@ export function AdminConfigAssistant({
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {sessionMemoryNotice && (
+            <div
+              role="note"
+              aria-label={t(
+                'admin.configAssistant.sessionMemoryNoticeLabel',
+                'Session Memory compaction notice'
+              )}
+              className="text-sm text-info bg-info/10 border border-info/25 rounded-xl px-3 py-2"
+            >
+              {sessionMemoryNotice}
             </div>
           )}
 

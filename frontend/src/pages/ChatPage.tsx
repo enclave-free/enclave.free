@@ -67,6 +67,7 @@ import {
   shouldOfferNewAssistantConversation,
 } from '../utils/providerErrors';
 import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
+import { compactAdminSessionMemory } from '../utils/sessionMemoryCompaction';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -191,6 +192,9 @@ export function ChatPage() {
     buttonLabel?: string;
     successMessage?: string;
   }>({});
+  const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -582,6 +586,21 @@ export function ChatPage() {
     try {
       const backendTools = selectedTools;
       const useRag = !isAdmin && selectedDocuments.length > 0;
+      let conversationHistory = messages.map(
+        ({ role, content: turnContent }) => ({
+          role,
+          content: turnContent,
+        })
+      );
+      if (hasConfigTool) {
+        const sessionMemoryPlan = compactAdminSessionMemory({
+          conversationHistory,
+        });
+        conversationHistory = sessionMemoryPlan.conversationHistory;
+        setSessionMemoryNotice(sessionMemoryPlan.notice);
+      } else {
+        setSessionMemoryNotice(null);
+      }
 
       let response: Response;
       if (useRag) {
@@ -713,10 +732,7 @@ export function ChatPage() {
             content,
             tools: backendTools,
             sessionId: conversationSessionId,
-            conversationHistory: messages.map(({ role, content }) => ({
-              role,
-              content,
-            })),
+            conversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
               if (event === 'assistant_message_started') {
@@ -846,10 +862,7 @@ export function ChatPage() {
           content,
           tools: backendTools,
           sessionId: conversationSessionId,
-          conversationHistory: messages.map(({ role, content }) => ({
-            role,
-            content,
-          })),
+          conversationHistory,
         });
       }
 
@@ -1324,6 +1337,7 @@ IMPORTANT: Return a CONDENSED response:
   const handleNewChat = () => {
     dispatchConversation({ type: 'newConversationStarted' });
     dispatchAdminApply({ type: 'newConversationStarted' });
+    setSessionMemoryNotice(null);
   };
 
   const rightActions = (
@@ -1451,6 +1465,25 @@ IMPORTANT: Return a CONDENSED response:
           </div>
         </div>
       )}
+
+      {isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        sessionMemoryNotice && (
+          <div className="px-3 sm:px-4 pb-2">
+            <div className="max-w-3xl mx-auto">
+              <div
+                role="note"
+                aria-label={t(
+                  'admin.configAssistant.sessionMemoryNoticeLabel',
+                  'Session Memory compaction notice'
+                )}
+                className="text-sm text-info bg-info/10 border border-info/25 rounded-xl px-3 py-2"
+              >
+                {sessionMemoryNotice}
+              </div>
+            </div>
+          </div>
+        )}
 
       {isAdmin &&
         selectedTools.includes(CONFIG_TOOL_ID) &&
