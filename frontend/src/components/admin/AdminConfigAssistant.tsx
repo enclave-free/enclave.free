@@ -28,6 +28,7 @@ import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   redactSecrets,
+  validateAdminAssistantChangeSet,
   type AdminAssistantChangeSet,
 } from '../../utils/adminAssistant';
 import {
@@ -626,6 +627,19 @@ export function AdminConfigAssistant({
         for (const req of changeSet.requests) {
           try {
             const resolvedPath = rewritePath(req.path);
+            const requestValidation = validateAdminAssistantChangeSet({
+              version: 1,
+              requests: [req],
+            });
+            if (!requestValidation.ok) {
+              results.push({
+                ok: false,
+                method: req.method,
+                path: resolvedPath,
+                error: requestValidation.error || 'Invalid request',
+              });
+              continue;
+            }
             let resolvedBody: unknown = req.body;
             if (
               resolvedBody &&

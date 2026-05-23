@@ -137,8 +137,12 @@ export async function fetchBoundedAdminDocumentContext(
     return { included: false, context: '', reduced: false };
   }
 
-  const preview = await options.fetchJson<AdminDocumentContextPreview>(
-    '/ingest/admin/documents/context-preview'
-  );
-  return buildAdminDocumentContextSection(preview);
+  try {
+    const preview = await options.fetchJson<AdminDocumentContextPreview>(
+      '/ingest/admin/documents/context-preview'
+    );
+    return buildAdminDocumentContextSection(preview);
+  } catch {
+    return { included: false, context: '', reduced: false };
+  }
 }

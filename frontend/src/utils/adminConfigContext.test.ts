@@ -68,6 +68,15 @@ describe('selectAdminConfigScope', () => {
     expect(
       selectAdminConfigScope('Check deployment readiness and service health')
     ).toBe('health');
+    expect(selectAdminConfigScope('Check service status and readiness')).toBe(
+      'health'
+    );
+  });
+
+  it('selects instance-settings for status icon configuration requests', () => {
+    expect(selectAdminConfigScope('Update status icon set to minimal')).toBe(
+      'instance-settings'
+    );
   });
 
   it('falls back to overview for ambiguous admin configuration requests', () => {

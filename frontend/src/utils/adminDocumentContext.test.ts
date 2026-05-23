@@ -124,4 +124,23 @@ describe('fetchBoundedAdminDocumentContext', () => {
     expect(result.included).toBe(true);
     expect(result.context).toContain('guide.pdf');
   });
+
+  it('returns no document context when the preview fetch fails', async () => {
+    const fetchJson = vi.fn(async (endpoint: string) => {
+      if (endpoint === '/ingest/admin/documents/context-preview') {
+        throw new Error('context preview unavailable');
+      }
+      throw new Error(`unexpected fetch: ${endpoint}`);
+    });
+
+    const result = await fetchBoundedAdminDocumentContext({
+      query: 'Set up the theme from the uploaded guide.',
+      fetchJson,
+    });
+
+    expect(fetchJson).toHaveBeenCalledWith(
+      '/ingest/admin/documents/context-preview'
+    );
+    expect(result).toEqual({ included: false, context: '', reduced: false });
+  });
 });

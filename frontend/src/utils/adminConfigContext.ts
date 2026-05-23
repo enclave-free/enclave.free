@@ -50,7 +50,6 @@ const INSTANCE_VISUAL_IDENTITY_KEYWORDS = new Set([
   'copy',
   'identity',
   'palette',
-  'status',
   'surface',
   'theme',
   'themes',
@@ -211,6 +210,9 @@ export function containsKeyword(
  * Deterministically selects the scoped admin config area for a request.
  */
 export function selectAdminConfigScope(query: string): AdminConfigScope {
+  const normalized = query.toLowerCase();
+  if (/status[_\s-]?icon/.test(normalized)) return 'instance-settings';
+  if (containsKeyword(query, HEALTH_KEYWORDS)) return 'health';
   if (containsKeyword(query, INSTANCE_VISUAL_IDENTITY_KEYWORDS))
     return 'instance-settings';
   if (
@@ -222,7 +224,6 @@ export function selectAdminConfigScope(query: string): AdminConfigScope {
   if (containsKeyword(query, AGENT_SETTINGS_KEYWORDS)) return 'agent-settings';
   if (containsKeyword(query, DOCUMENT_DEFAULTS_KEYWORDS))
     return 'document-defaults';
-  if (containsKeyword(query, HEALTH_KEYWORDS)) return 'health';
   if (containsKeyword(query, DEPLOYMENT_KEYWORDS)) return 'deployment-settings';
   return 'overview';
 }

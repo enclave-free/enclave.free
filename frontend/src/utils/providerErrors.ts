@@ -4,6 +4,7 @@
 
 export type ProviderErrorCategory =
   | 'context_limit'
+  | 'quota_exhausted'
   | 'timeout'
   | 'unavailable'
   | 'text'
@@ -19,8 +20,13 @@ export interface ClassifiedProviderError {
   shouldFallbackToNonStreaming: boolean;
 }
 
-const CONTEXT_LIMIT_PATTERNS = [
+const QUOTA_EXHAUSTION_PATTERNS = [
   /insufficient_quota/i,
+  /exceeded your (?:current )?quota/i,
+  /quota (?:has been )?exhausted/i,
+];
+
+const CONTEXT_LIMIT_PATTERNS = [
   /token limit exceeded/i,
   /context (?:length|window|limit)/i,
   /maximum context/i,
@@ -54,6 +60,17 @@ const SENSITIVE_PATTERNS = [
 export function classifyProviderError(raw: unknown): ClassifiedProviderError {
   const detail = extractSafeDetail(raw);
   const normalized = detail.toLowerCase();
+
+  if (QUOTA_EXHAUSTION_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return {
+      category: 'quota_exhausted',
+      message: 'The Model Provider quota for this account has been exhausted.',
+      recoveryHint:
+        'Check billing or upgrade your Model Provider plan, then try again.',
+      retryPolicy: 'never',
+      shouldFallbackToNonStreaming: false,
+    };
+  }
 
   if (CONTEXT_LIMIT_PATTERNS.some((pattern) => pattern.test(normalized))) {
     return {

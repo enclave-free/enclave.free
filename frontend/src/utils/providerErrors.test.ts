@@ -19,6 +19,21 @@ describe('classifyProviderError', () => {
     });
   });
 
+  it('classifies quota exhaustion separately from context limits', () => {
+    const classified = classifyProviderError(
+      '{"error":{"code":"insufficient_quota","message":"You exceeded your current quota."}}'
+    );
+
+    expect(classified).toEqual({
+      category: 'quota_exhausted',
+      message: 'The Model Provider quota for this account has been exhausted.',
+      recoveryHint:
+        'Check billing or upgrade your Model Provider plan, then try again.',
+      retryPolicy: 'never',
+      shouldFallbackToNonStreaming: false,
+    });
+  });
+
   it('extracts safe context limit messages from raw provider payloads', () => {
     const classified = classifyProviderError(
       'HttpError: Invalid status code 429 Too Many Requests with message: {"error":{"code":"insufficient_quota","message":"Token limit exceeded for this session. Please start a new session."}}'
