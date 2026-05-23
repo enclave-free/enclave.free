@@ -8,6 +8,9 @@
     "build": "tsc && vite build",
     "test": "vitest run",
     "preview": "vite preview",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "verify:pre-commit": "lint-staged && npm run test",
     "prepare": "cd .. && husky frontend/.husky"
   },
   "dependencies": {
