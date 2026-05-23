@@ -255,6 +255,8 @@
       "reviewMaskedSecrets": "Review: values for secret deployment keys are masked here.",
       "applyingChanges": "Applying changes...",
       "applyingAdminChanges": "Applying admin configuration changes...",
+      "applyIntentUsePanel": "Use the pending changes panel below and click Apply to confirm these configuration updates.",
+      "applyIntentNoPending": "There are no pending configuration changes to apply. Ask the assistant to propose a change set first.",
       "inputPlaceholder": "Ask about admin configuration...",
       "applySummary": {
         "appliedCounts": "Applied {{ok}}/{{total}} change(s).",

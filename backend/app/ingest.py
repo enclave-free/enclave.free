@@ -1731,7 +1731,8 @@ async def get_admin_document_context_preview(admin: dict = Depends(auth.require_
         )
         preview_chunks = []
         for chunk in chunks:
-            text = str(chunk.get("text") or "")
+            hydrated_chunk = ingest_db.get_retrieval_chunk(str(chunk.get("chunk_id") or ""))
+            text = str((hydrated_chunk or chunk).get("text") or "")
             if len(text) > ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK:
                 text = f"{text[:ADMIN_DOCUMENT_CONTEXT_MAX_CHARS_PER_CHUNK].rstrip()}..."
             preview_chunks.append({

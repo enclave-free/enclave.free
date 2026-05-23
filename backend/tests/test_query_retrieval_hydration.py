@@ -151,6 +151,99 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.assertEqual(body["sources"][0]["hydration_status"], "hydrated")
         self.assertEqual(body["sources"][0]["text"], "Encrypted retrieval context reaches the model.")
 
+    def test_query_hydrates_plaintext_utf8_chunk_storage_when_content_key_is_unset(self) -> None:
+        original_content_key = os.environ.pop("CONTENT_ENCRYPTION_KEY", None)
+        try:
+            self.create_completed_document("world-liberty", filename="World Liberty Congress.pdf")
+            chunk_text = "World Liberty Congress supports political prisoners, families, and civic leaders — across borders."
+            self.ingest_db.upsert_retrieval_chunk(
+                chunk_id="world-liberty_chunk_0000",
+                job_id="world-liberty",
+                chunk_index=0,
+                source_file="World Liberty Congress.pdf",
+                text=chunk_text,
+            )
+
+            def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
+                return FakeQdrantResponse([
+                    {
+                        "score": 0.93,
+                        "payload": {
+                            "type": "chunk",
+                            "chunk_id": "world-liberty_chunk_0000",
+                            "job_id": "world-liberty",
+                            "source_file": "World Liberty Congress.pdf",
+                        },
+                    }
+                ])
+
+            with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+                response = self.client.post(
+                    "/internal/agent/document-search",
+                    headers=self.internal_headers,
+                    json={
+                        "query": "Get a basic understanding of our org from the uploaded PDF.",
+                        "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                    },
+                )
+        finally:
+            self._restore_env("CONTENT_ENCRYPTION_KEY", original_content_key)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(chunk_text, body["context"])
+        self.assertEqual(body["sources"][0]["text"], chunk_text)
+        self.assertTrue(body["sources"][0]["hydrated"])
+        self.assertEqual(body["sources"][0]["hydration_status"], "hydrated")
+
+    def test_document_overview_query_includes_opening_document_context(self) -> None:
+        self.create_completed_document("world-liberty", filename="World Liberty Congress.pdf")
+        opening_text = "World Liberty Congress is a global movement supporting democracy activists and political prisoners."
+        matched_text = "Communications campaigns should define hashtags, publication timing, and strategic tagging."
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="world-liberty_chunk_0000",
+            job_id="world-liberty",
+            chunk_index=0,
+            source_file="World Liberty Congress.pdf",
+            text=opening_text,
+        )
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="world-liberty_chunk_0088",
+            job_id="world-liberty",
+            chunk_index=88,
+            source_file="World Liberty Congress.pdf",
+            text=matched_text,
+        )
+
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
+            return FakeQdrantResponse([
+                {
+                    "score": 0.89,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "world-liberty_chunk_0088",
+                        "job_id": "world-liberty",
+                        "source_file": "World Liberty Congress.pdf",
+                    },
+                }
+            ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "Read my uploaded doc and get a basic understanding of our org",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(opening_text, body["context"])
+        self.assertIn(matched_text, body["context"])
+        self.assertLess(body["context"].index(opening_text), body["context"].index(matched_text))
+
     def test_retrieval_evaluation_returns_expected_hydrated_sources(self) -> None:
         self.create_completed_document("safety-handbook", filename="Safety Handbook.md")
         self.create_completed_document("benefits-guide", filename="Benefits Guide.md")
