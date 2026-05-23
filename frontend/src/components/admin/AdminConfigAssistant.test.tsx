@@ -32,12 +32,18 @@ import {
   planAdminPromptBudget,
 } from '../../utils/promptBudget';
 import { SUMMARY_HEADER } from '../../utils/sessionMemoryCompaction';
+import {
+  registerAdminResilienceInstrumentationListener,
+  resetAdminResilienceInstrumentationListeners,
+  type AdminResilienceInstrumentationEvent,
+} from '../../utils/adminResilienceInstrumentation';
 
 describe('AdminConfigAssistant', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
   const mockPlanAdminPromptBudget = vi.mocked(planAdminPromptBudget);
 
   beforeEach(() => {
+    resetAdminResilienceInstrumentationListeners();
     const store = new Map<string, string>();
     vi.stubGlobal('localStorage', {
       getItem: vi.fn((key: string) => store.get(key) ?? null),
@@ -145,6 +151,7 @@ describe('AdminConfigAssistant', () => {
   });
 
   afterEach(() => {
+    resetAdminResilienceInstrumentationListeners();
     cleanup();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
@@ -360,6 +367,10 @@ describe('AdminConfigAssistant', () => {
     const user = userEvent.setup();
     const oversizedAdminPadding = `ADMIN-PAD-${'A'.repeat(20_000)}`;
     const oversizedDocumentPadding = `DOC-PAD-${'D'.repeat(10_000)}`;
+    const instrumentationEvents: AdminResilienceInstrumentationEvent[] = [];
+    registerAdminResilienceInstrumentationListener((event) => {
+      instrumentationEvents.push(event);
+    });
 
     mockAdminFetch.mockImplementation((endpoint: string) => {
       if (endpoint === '/admin/settings') {
@@ -443,6 +454,26 @@ describe('AdminConfigAssistant', () => {
     expect(notice).toHaveTextContent(/document library context/);
     expect(notice).not.toHaveTextContent('ADMIN-PAD-');
     expect(notice).not.toHaveTextContent('DOC-PAD-');
+
+    expect(instrumentationEvents).toHaveLength(1);
+    expect(instrumentationEvents[0]).toMatchObject({
+      kind: 'admin_context_plan',
+      surface: 'admin_config_assistant',
+      promptBudget: {
+        reducedSections: expect.arrayContaining([
+          'admin-config',
+          'document-context',
+        ]),
+        hasWarningNote: true,
+      },
+    });
+    expect(JSON.stringify(instrumentationEvents[0])).not.toContain(
+      'ADMIN-PAD-'
+    );
+    expect(JSON.stringify(instrumentationEvents[0])).not.toContain('DOC-PAD-');
+    expect(JSON.stringify(instrumentationEvents[0])).not.toContain(
+      'PROMPT BUDGET NOTE'
+    );
   });
 
   it('bounds long conversation history for provider calls using real prompt planning', async () => {
@@ -771,6 +802,12 @@ describe('AdminConfigAssistant', () => {
 
   it('starts a fresh assistant conversation after a context limit failure', async () => {
     const user = userEvent.setup();
+    const instrumentationEvents: AdminResilienceInstrumentationEvent[] = [];
+    registerAdminResilienceInstrumentationListener((event) => {
+      instrumentationEvents.push(event);
+    });
+    const rawProviderDetail =
+      'Token limit exceeded for this session. Please start a new session.';
     let streamCalls = 0;
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
       async ({ sessionId, onEvent }) => {
@@ -783,8 +820,7 @@ describe('AdminConfigAssistant', () => {
           onEvent('error', {
             message_id: 'msg-1',
             session_id: 'session-1',
-            detail:
-              'Token limit exceeded for this session. Please start a new session.',
+            detail: rawProviderDetail,
           });
           return;
         }
@@ -815,6 +851,20 @@ describe('AdminConfigAssistant', () => {
         'Token limit exceeded for this session. Start a new assistant conversation to continue.'
       )
     ).toBeInTheDocument();
+
+    const providerFailureEvents = instrumentationEvents.filter(
+      (event) => event.kind === 'provider_failure'
+    );
+    expect(providerFailureEvents).toHaveLength(1);
+    expect(providerFailureEvents[0]).toMatchObject({
+      kind: 'provider_failure',
+      surface: 'admin_config_assistant',
+      category: 'context_limit',
+      recoveryAction: 'new_assistant_conversation',
+    });
+    expect(JSON.stringify(providerFailureEvents[0])).not.toContain(
+      rawProviderDetail
+    );
 
     await user.click(
       screen.getByRole('button', {

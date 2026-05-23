@@ -68,6 +68,10 @@ import {
 } from '../utils/providerErrors';
 import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
 import { compactAdminSessionMemory } from '../utils/sessionMemoryCompaction';
+import {
+  recordAdminContextPlanInstrumentation,
+  recordProviderFailureInstrumentation,
+} from '../utils/adminResilienceInstrumentation';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -109,11 +113,18 @@ async function readErrorDetail(res: Response): Promise<string> {
 
 function formatProviderStreamError(
   detail: unknown,
-  fallbackMessage: string
+  fallbackMessage: string,
+  options?: { recordAdminInstrumentation?: boolean }
 ): string {
   const classified = classifyProviderError(
     typeof detail === 'string' ? detail : detail
   );
+  if (options?.recordAdminInstrumentation) {
+    recordProviderFailureInstrumentation({
+      surface: 'admin_chat_page',
+      classified,
+    });
+  }
   if (classified.category === 'unknown' && typeof detail !== 'string') {
     return fallbackMessage;
   }
@@ -122,9 +133,16 @@ function formatProviderStreamError(
 
 function formatProviderResponseError(
   detail: unknown,
-  statusFallback: string
+  statusFallback: string,
+  options?: { recordAdminInstrumentation?: boolean }
 ): string {
   const classified = classifyProviderError(detail);
+  if (options?.recordAdminInstrumentation) {
+    recordProviderFailureInstrumentation({
+      surface: 'admin_chat_page',
+      classified,
+    });
+  }
   if (classified.category === 'unknown' && !detail) {
     return statusFallback;
   }
@@ -598,6 +616,10 @@ export function ChatPage() {
         });
         conversationHistory = sessionMemoryPlan.conversationHistory;
         setSessionMemoryNotice(sessionMemoryPlan.notice);
+        recordAdminContextPlanInstrumentation({
+          surface: 'admin_chat_page',
+          sessionMemoryPlan,
+        });
       } else {
         setSessionMemoryNotice(null);
       }
@@ -767,7 +789,8 @@ export function ChatPage() {
                 throw new Error(
                   formatProviderStreamError(
                     typeof data.detail === 'string' ? data.detail : data,
-                    t('errors.failedToSendMessage')
+                    t('errors.failedToSendMessage'),
+                    { recordAdminInstrumentation: hasConfigTool }
                   )
                 );
               } else if (streamMessageId) {
@@ -884,7 +907,9 @@ export function ChatPage() {
       if (!response.ok) {
         const detail = await readErrorDetail(response);
         throw new Error(
-          formatProviderResponseError(detail, `HTTP ${response.status}`)
+          formatProviderResponseError(detail, `HTTP ${response.status}`, {
+            recordAdminInstrumentation: hasConfigTool,
+          })
         );
       }
 

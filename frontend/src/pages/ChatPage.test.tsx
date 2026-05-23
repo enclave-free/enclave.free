@@ -16,6 +16,11 @@ import {
   sendLlmChatWithUnifiedTools,
 } from '../utils/llmChat';
 import { SUMMARY_HEADER } from '../utils/sessionMemoryCompaction';
+import {
+  registerAdminResilienceInstrumentationListener,
+  resetAdminResilienceInstrumentationListeners,
+  type AdminResilienceInstrumentationEvent,
+} from '../utils/adminResilienceInstrumentation';
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -44,6 +49,7 @@ describe('ChatPage', () => {
   const mockIsAdminAuthenticated = vi.mocked(isAdminAuthenticated);
 
   beforeEach(() => {
+    resetAdminResilienceInstrumentationListeners();
     mockIsAdminAuthenticated.mockReturnValue(false);
     mockAdminFetch.mockResolvedValue(Response.json({}));
     const store = new Map<string, string>();
@@ -132,6 +138,7 @@ describe('ChatPage', () => {
   });
 
   afterEach(() => {
+    resetAdminResilienceInstrumentationListeners();
     cleanup();
     vi.unstubAllGlobals();
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
@@ -951,6 +958,10 @@ describe('ChatPage', () => {
 
   it('compacts Session Memory for long authenticated admin chat turns', async () => {
     const user = userEvent.setup();
+    const instrumentationEvents: AdminResilienceInstrumentationEvent[] = [];
+    registerAdminResilienceInstrumentationListener((event) => {
+      instrumentationEvents.push(event);
+    });
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
       if (endpoint === '/admin/deployment/config') {
@@ -1023,5 +1034,24 @@ describe('ChatPage', () => {
       name: 'Session Memory compaction notice',
     });
     expect(notice).toHaveTextContent(/Session Memory was compacted/);
+
+    const contextPlanEvents = instrumentationEvents.filter(
+      (event) => event.kind === 'admin_context_plan'
+    );
+    expect(contextPlanEvents.length).toBeGreaterThan(0);
+    expect(contextPlanEvents.at(-1)).toMatchObject({
+      kind: 'admin_context_plan',
+      surface: 'admin_chat_page',
+      sessionMemory: {
+        compacted: true,
+        compactedMessageCount: expect.any(Number),
+      },
+    });
+    expect(JSON.stringify(contextPlanEvents.at(-1))).not.toContain(
+      SUMMARY_HEADER
+    );
+    expect(JSON.stringify(contextPlanEvents.at(-1))).not.toContain(
+      'Theme question 0'
+    );
   });
 });

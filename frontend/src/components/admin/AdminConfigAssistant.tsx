@@ -42,6 +42,10 @@ import {
 } from '../../utils/promptBudget';
 import { compactAdminSessionMemory } from '../../utils/sessionMemoryCompaction';
 import {
+  recordAdminContextPlanInstrumentation,
+  recordProviderFailureInstrumentation,
+} from '../../utils/adminResilienceInstrumentation';
+import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../../utils/llmChat';
@@ -398,6 +402,11 @@ export function AdminConfigAssistant({
           setReducedContextNotice(
             formatAdminReducedContextNotice(promptPlan.reducedSections)
           );
+          recordAdminContextPlanInstrumentation({
+            surface: 'admin_config_assistant',
+            sessionMemoryPlan,
+            promptPlan,
+          });
           setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
           secretsForRedactionRef.current = snap.secretValues;
           deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
@@ -478,6 +487,10 @@ export function AdminConfigAssistant({
                   typeof data.detail === 'string' ? data.detail : data
                 );
                 classifiedStreamError = classified;
+                recordProviderFailureInstrumentation({
+                  surface: 'admin_config_assistant',
+                  classified,
+                });
                 throw new Error(
                   classified.category === 'unknown' &&
                     typeof data.detail !== 'string'
@@ -560,6 +573,10 @@ export function AdminConfigAssistant({
           if (!res.ok) {
             const detail = await readErrorDetail(res);
             const classified = classifyProviderError(detail);
+            recordProviderFailureInstrumentation({
+              surface: 'admin_config_assistant',
+              classified,
+            });
             if (shouldOfferNewAssistantConversation(classified)) {
               setRecoveryError(classified);
             }
