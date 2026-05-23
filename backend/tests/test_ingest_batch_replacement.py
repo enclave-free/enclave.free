@@ -220,6 +220,29 @@ class IngestBatchReplacementTest(unittest.TestCase):
         finally:
             self.ingest.store_chunk = original_store_chunk
 
+    def test_admin_document_context_preview_includes_hydrated_chunk_text(self) -> None:
+        upload = self.upload_text("World Liberty Congress.pdf", "placeholder")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        self.complete_job(job_id)
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id=f"{job_id}_chunk_0000",
+            job_id=job_id,
+            chunk_index=0,
+            source_file="World Liberty Congress.pdf",
+            text="World Liberty Congress supports political prisoners, families, and civic leaders.",
+        )
+
+        response = self.client.get("/ingest/admin/documents/context-preview")
+
+        self.assertEqual(response.status_code, 200)
+        document = response.json()["documents"][0]
+        self.assertEqual(document["job_id"], job_id)
+        self.assertEqual(
+            document["preview_chunks"][0]["text"],
+            "World Liberty Congress supports political prisoners, families, and civic leaders.",
+        )
+
     def test_list_retrieval_chunks_can_return_ordered_limited_rows(self) -> None:
         job_id = "job-limited-preview"
         self.ingest_db.create_job(
