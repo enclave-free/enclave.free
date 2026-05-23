@@ -342,16 +342,16 @@ describe('AdminConfigAssistant', () => {
       });
     }
 
-    const lastCall = vi
-      .mocked(sendLlmChatStreamWithUnifiedTools)
-      .mock.calls.at(-1)?.[0];
+    const streamCalls = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls;
+    const lastCall = streamCalls[streamCalls.length - 1]?.[0];
     expect(lastCall?.conversationHistory?.[0]?.content).toContain(
       SUMMARY_HEADER
     );
     expect(lastCall?.conversationHistory?.[0]?.content).toContain(
       'Theme question 0'
     );
-    expect(lastCall?.conversationHistory?.at(-1)?.content).toBe(
+    const lastHistory = lastCall?.conversationHistory;
+    expect(lastHistory?.[lastHistory.length - 1]?.content).toBe(
       'Acknowledged.'
     );
 
@@ -518,9 +518,8 @@ describe('AdminConfigAssistant', () => {
       });
     }
 
-    const lastCall = vi
-      .mocked(sendLlmChatStreamWithUnifiedTools)
-      .mock.calls.at(-1)?.[0];
+    const streamCalls = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls;
+    const lastCall = streamCalls[streamCalls.length - 1]?.[0];
     expect(lastCall?.conversationHistory).toHaveLength(8);
     expect(lastCall?.conversationHistory?.[0]?.content).toContain('Turn 0');
     expect(

@@ -21,6 +21,7 @@ export const DEFAULT_SESSION_MEMORY_COMPACTION_LIMITS: SessionMemoryCompactionLi
 export interface SessionMemoryCompactionInput {
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
   limits?: Partial<SessionMemoryCompactionLimits>;
+  formatNotice?: (compactedMessageCount: number) => string;
 }
 
 export interface SessionMemoryCompactionPlan {
@@ -76,7 +77,9 @@ export function compactAdminSessionMemory(
     ],
     compacted: true,
     compactedMessageCount: compactedHistory.length,
-    notice: formatSessionMemoryCompactionNotice(compactedHistory.length),
+    notice:
+      input.formatNotice?.(compactedHistory.length) ??
+      formatSessionMemoryCompactionNotice(compactedHistory.length),
   };
 }
 

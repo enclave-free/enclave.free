@@ -59,7 +59,9 @@ describe('planAdminPromptBudget', () => {
 
     expect(plan.conversationHistory).toHaveLength(4);
     expect(plan.conversationHistory[0]?.content).toContain('Turn 8');
-    expect(plan.conversationHistory.at(-1)?.content).toContain('Turn 11');
+    expect(
+      plan.conversationHistory[plan.conversationHistory.length - 1]?.content
+    ).toContain('Turn 11');
     expect(plan.reducedSections).toContain('recent-conversation');
     expect(
       plan.conversationHistory.every((turn) => turn.content.length <= 500)
@@ -87,5 +89,17 @@ describe('formatAdminReducedContextNotice', () => {
       formatAdminReducedContextNotice(['admin-config', 'document-context'])
     ).toMatch(/document library context/);
     expect(formatAdminReducedContextNotice([])).toBeNull();
+  });
+
+  it('uses provided operator-facing notice copy and translated section labels', () => {
+    expect(
+      formatAdminReducedContextNotice(['recent-conversation'], {
+        sectionLabels: {
+          'recent-conversation': 'historial reciente traducido',
+        },
+        formatNotice: (labels) =>
+          `contexto reducido traducido: ${labels.join(' + ')}`,
+      })
+    ).toBe('contexto reducido traducido: historial reciente traducido');
   });
 });

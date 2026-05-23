@@ -1,4 +1,10 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { type ReactNode } from 'react';
@@ -1020,13 +1026,13 @@ describe('ChatPage', () => {
       });
     }
 
-    const lastCall = vi
-      .mocked(sendLlmChatStreamWithUnifiedTools)
-      .mock.calls.at(-1)?.[0];
+    const streamCalls = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls;
+    const lastCall = streamCalls[streamCalls.length - 1]?.[0];
     expect(lastCall?.conversationHistory?.[0]?.content).toContain(
       SUMMARY_HEADER
     );
-    expect(lastCall?.conversationHistory?.at(-1)?.content).toBe(
+    const lastHistory = lastCall?.conversationHistory;
+    expect(lastHistory?.[lastHistory.length - 1]?.content).toBe(
       'Acknowledged.'
     );
 
@@ -1039,7 +1045,9 @@ describe('ChatPage', () => {
       (event) => event.kind === 'admin_context_plan'
     );
     expect(contextPlanEvents.length).toBeGreaterThan(0);
-    expect(contextPlanEvents.at(-1)).toMatchObject({
+    const lastContextPlanEvent =
+      contextPlanEvents[contextPlanEvents.length - 1];
+    expect(lastContextPlanEvent).toMatchObject({
       kind: 'admin_context_plan',
       surface: 'admin_chat_page',
       sessionMemory: {
@@ -1047,11 +1055,82 @@ describe('ChatPage', () => {
         compactedMessageCount: expect.any(Number),
       },
     });
-    expect(JSON.stringify(contextPlanEvents.at(-1))).not.toContain(
-      SUMMARY_HEADER
-    );
-    expect(JSON.stringify(contextPlanEvents.at(-1))).not.toContain(
+    expect(JSON.stringify(lastContextPlanEvent)).not.toContain(SUMMARY_HEADER);
+    expect(JSON.stringify(lastContextPlanEvent)).not.toContain(
       'Theme question 0'
     );
+  });
+
+  it('surfaces a reduced-context notice for oversized admin chat Config history', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: `msg-${Math.random()}`,
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant',
+          delta: 'Acknowledged.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything...' }), {
+      target: {
+        value: `Summarize this admin context ${'SAFE_PADDING '.repeat(220)}`,
+      },
+    });
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything...' }), {
+      target: { value: 'Continue with config advice.' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    const notice = await screen.findByRole('note', {
+      name: 'Reduced context notice',
+    });
+    expect(notice).toHaveTextContent(
+      /Some context was reduced to fit the Model Provider budget/
+    );
+    expect(notice).toHaveTextContent(/recent conversation history/);
+    expect(notice).not.toHaveTextContent('SAFE_PADDING');
   });
 });

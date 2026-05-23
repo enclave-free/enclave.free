@@ -144,7 +144,7 @@ Resilience layering on admin sends (sidebar assistant):
 2. **Prompt budget planning** — admin config, document, and recent-conversation sections are capped separately (`frontend/src/utils/promptBudget.ts`).
 3. **Transport trim** — `llmChat` still bounds recent history as a final guard.
 
-Admin `/chat` with **Config** selected runs client-side Session Memory compaction before Sage assembles the turn. Prompt budget planning and reduced-context notices are surfaced in the sidebar assistant; Sage owns prompt assembly for the full chat admin-config path.
+Admin `/chat` with **Config** selected runs client-side Session Memory compaction before Sage assembles the turn. Prompt budget planning and reduced-context notices are surfaced in both the sidebar assistant and the full chat admin-config path; Sage owns final prompt assembly for the full chat path.
 
 Operator-facing notices (no raw prompts):
 

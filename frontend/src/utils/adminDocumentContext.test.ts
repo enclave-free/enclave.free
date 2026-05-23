@@ -111,7 +111,8 @@ describe('fetchBoundedAdminDocumentContext', () => {
         };
       }
       throw new Error(`unexpected fetch: ${endpoint}`);
-    });
+    }) as unknown as (<T>(endpoint: string) => Promise<T>) &
+      ReturnType<typeof vi.fn>;
 
     const result = await fetchBoundedAdminDocumentContext({
       query: 'Set up the theme from the uploaded guide.',

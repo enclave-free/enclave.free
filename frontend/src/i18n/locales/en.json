@@ -261,6 +261,13 @@
       "startNewConversation": "Start new assistant conversation",
       "reducedContextNoticeLabel": "Reduced context notice",
       "sessionMemoryNoticeLabel": "Session Memory compaction notice",
+      "sessionMemoryNotice": "Session Memory was compacted to keep this admin conversation within Model Provider limits ({{count}} earlier messages summarized). Recent turns are preserved; start a new assistant conversation if you need the full earlier transcript.",
+      "reducedContextNotice": "Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.",
+      "reducedContextSections": {
+        "adminConfig": "admin configuration context",
+        "documentContext": "document library context",
+        "recentConversation": "recent conversation history"
+      },
       "applySummary": {
         "appliedCounts": "Applied {{ok}}/{{total}} change(s).",
         "appliedCountsWithFailures": "Applied {{ok}}/{{total}} change(s), {{failed}} failed.",

@@ -115,19 +115,29 @@ const REDUCED_SECTION_LABELS: Record<PromptBudgetSectionId, string> = {
   'recent-conversation': 'recent conversation history',
 };
 
+export interface AdminReducedContextNoticeOptions {
+  sectionLabels?: Partial<Record<PromptBudgetSectionId, string>>;
+  formatNotice?: (sectionLabels: string[]) => string;
+}
+
 /**
  * Build operator-facing reduced-context copy from a prompt budget plan.
  */
 export function formatAdminReducedContextNotice(
-  reducedSections: PromptBudgetSectionId[]
+  reducedSections: PromptBudgetSectionId[],
+  options: AdminReducedContextNoticeOptions = {}
 ): string | null {
   if (reducedSections.length === 0) {
     return null;
   }
 
   const labels = reducedSections.map(
-    (section) => REDUCED_SECTION_LABELS[section]
+    (section) =>
+      options.sectionLabels?.[section] ?? REDUCED_SECTION_LABELS[section]
   );
+  if (options.formatNotice) {
+    return options.formatNotice(labels);
+  }
   return `Some context was reduced to fit the Model Provider budget (${labels.join(', ')}). Answers may be less complete until you start a new assistant conversation.`;
 }
 

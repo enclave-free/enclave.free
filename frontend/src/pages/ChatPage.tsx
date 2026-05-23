@@ -69,6 +69,10 @@ import {
 import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
 import { compactAdminSessionMemory } from '../utils/sessionMemoryCompaction';
 import {
+  formatAdminReducedContextNotice,
+  planAdminPromptBudget,
+} from '../utils/promptBudget';
+import {
   recordAdminContextPlanInstrumentation,
   recordProviderFailureInstrumentation,
 } from '../utils/adminResilienceInstrumentation';
@@ -213,6 +217,9 @@ export function ChatPage() {
   const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
     null
   );
+  const [reducedContextNotice, setReducedContextNotice] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -613,15 +620,51 @@ export function ChatPage() {
       if (hasConfigTool) {
         const sessionMemoryPlan = compactAdminSessionMemory({
           conversationHistory,
+          formatNotice: (compactedMessageCount) =>
+            t(
+              'admin.configAssistant.sessionMemoryNotice',
+              'Session Memory was compacted to keep this admin conversation within Model Provider limits ({{count}} earlier messages summarized). Recent turns are preserved; start a new assistant conversation if you need the full earlier transcript.',
+              { count: compactedMessageCount }
+            ),
         });
-        conversationHistory = sessionMemoryPlan.conversationHistory;
+        const promptPlan = planAdminPromptBudget({
+          adminConfigContext: '',
+          conversationHistory: sessionMemoryPlan.conversationHistory,
+        });
+        conversationHistory = promptPlan.conversationHistory;
         setSessionMemoryNotice(sessionMemoryPlan.notice);
+        setReducedContextNotice(
+          formatAdminReducedContextNotice(promptPlan.reducedSections, {
+            sectionLabels: {
+              'admin-config': t(
+                'admin.configAssistant.reducedContextSections.adminConfig',
+                'admin configuration context'
+              ),
+              'document-context': t(
+                'admin.configAssistant.reducedContextSections.documentContext',
+                'document library context'
+              ),
+              'recent-conversation': t(
+                'admin.configAssistant.reducedContextSections.recentConversation',
+                'recent conversation history'
+              ),
+            },
+            formatNotice: (sectionLabels) =>
+              t(
+                'admin.configAssistant.reducedContextNotice',
+                'Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.',
+                { sections: sectionLabels.join(', ') }
+              ),
+          })
+        );
         recordAdminContextPlanInstrumentation({
           surface: 'admin_chat_page',
           sessionMemoryPlan,
+          promptPlan,
         });
       } else {
         setSessionMemoryNotice(null);
+        setReducedContextNotice(null);
       }
 
       let response: Response;
@@ -1505,6 +1548,25 @@ IMPORTANT: Return a CONDENSED response:
                 className="text-sm text-info bg-info/10 border border-info/25 rounded-xl px-3 py-2"
               >
                 {sessionMemoryNotice}
+              </div>
+            </div>
+          </div>
+        )}
+
+      {isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        reducedContextNotice && (
+          <div className="px-3 sm:px-4 pb-2">
+            <div className="max-w-3xl mx-auto">
+              <div
+                role="note"
+                aria-label={t(
+                  'admin.configAssistant.reducedContextNoticeLabel',
+                  'Reduced context notice'
+                )}
+                className="text-sm text-warning bg-warning/10 border border-warning/25 rounded-xl px-3 py-2"
+              >
+                {reducedContextNotice}
               </div>
             </div>
           </div>

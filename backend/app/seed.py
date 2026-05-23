@@ -16,6 +16,11 @@ import database
 
 # Use unified embedding from store.py
 from store import embed_texts, get_embedding_dimension, EMBEDDING_MODEL, EMBEDDING_PROVIDER
+from seed_status import (
+    should_continue_after_qdrant_seed_failure,
+    write_degraded_seed_status,
+    write_ready_seed_status,
+)
 
 # Configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
@@ -148,6 +153,7 @@ def main():
     # Seed data
     try:
         seed_qdrant(client)
+        write_ready_seed_status()
 
         print("\n" + "=" * 60)
         print("Seeding complete!")
@@ -155,6 +161,11 @@ def main():
         print("=" * 60)
 
     except Exception as e:
+        if should_continue_after_qdrant_seed_failure(e):
+            status = write_degraded_seed_status(e)
+            print(f"WARNING: {status['message']}")
+            print(f"Seed degraded reason: {status['reason']}")
+            return
         print(f"ERROR during seeding: {e}")
         sys.exit(1)
 

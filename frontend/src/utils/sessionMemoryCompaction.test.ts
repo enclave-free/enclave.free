@@ -43,10 +43,28 @@ describe('compactAdminSessionMemory', () => {
     expect(plan.conversationHistory[0]?.content).toContain(SUMMARY_HEADER);
     expect(plan.conversationHistory[0]?.content).toContain('User turn 0');
     expect(plan.conversationHistory[0]?.content).toContain('User turn 8');
-    expect(plan.conversationHistory.at(-1)?.content).toContain(
-      'Assistant turn 13'
-    );
+    expect(
+      plan.conversationHistory[plan.conversationHistory.length - 1]?.content
+    ).toContain('Assistant turn 13');
     expect(plan.notice).toMatch(/Session Memory was compacted/);
+  });
+
+  it('uses provided operator-facing notice copy when compaction runs', () => {
+    const history = Array.from({ length: 12 }, (_, index) => ({
+      role: index % 2 === 0 ? ('user' as const) : ('assistant' as const),
+      content: `Turn ${index}`,
+    }));
+
+    const plan = compactAdminSessionMemory({
+      conversationHistory: history,
+      limits: {
+        maxMessagesBeforeCompaction: 10,
+        keepRecentMessages: 4,
+      },
+      formatNotice: (count) => `translated compaction notice for ${count}`,
+    });
+
+    expect(plan.notice).toBe('translated compaction notice for 8');
   });
 
   it('uses default limits when none are provided', () => {

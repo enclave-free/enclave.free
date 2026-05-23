@@ -374,6 +374,12 @@ export function AdminConfigAssistant({
         } else {
           const sessionMemoryPlan = compactAdminSessionMemory({
             conversationHistory: boundedConversationHistory,
+            formatNotice: (compactedMessageCount) =>
+              t(
+                'admin.configAssistant.sessionMemoryNotice',
+                'Session Memory was compacted to keep this admin conversation within Model Provider limits ({{count}} earlier messages summarized). Recent turns are preserved; start a new assistant conversation if you need the full earlier transcript.',
+                { count: compactedMessageCount }
+              ),
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
           setSessionMemoryNotice(sessionMemoryPlan.notice);
@@ -400,7 +406,28 @@ export function AdminConfigAssistant({
           baseToolContext = promptPlan.toolContext || undefined;
           boundedConversationHistory = promptPlan.conversationHistory;
           setReducedContextNotice(
-            formatAdminReducedContextNotice(promptPlan.reducedSections)
+            formatAdminReducedContextNotice(promptPlan.reducedSections, {
+              sectionLabels: {
+                'admin-config': t(
+                  'admin.configAssistant.reducedContextSections.adminConfig',
+                  'admin configuration context'
+                ),
+                'document-context': t(
+                  'admin.configAssistant.reducedContextSections.documentContext',
+                  'document library context'
+                ),
+                'recent-conversation': t(
+                  'admin.configAssistant.reducedContextSections.recentConversation',
+                  'recent conversation history'
+                ),
+              },
+              formatNotice: (sectionLabels) =>
+                t(
+                  'admin.configAssistant.reducedContextNotice',
+                  'Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.',
+                  { sections: sectionLabels.join(', ') }
+                ),
+            })
           );
           recordAdminContextPlanInstrumentation({
             surface: 'admin_config_assistant',
