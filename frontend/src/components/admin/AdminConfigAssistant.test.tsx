@@ -99,6 +99,28 @@ describe('AdminConfigAssistant', () => {
       if (endpoint === '/ingest/admin/documents/defaults') {
         return Promise.resolve(Response.json({ documents: [] }));
       }
+      if (endpoint === '/ingest/admin/documents/context-preview') {
+        return Promise.resolve(
+          Response.json({
+            documents: [
+              {
+                job_id: 'job-brand-guide',
+                filename: 'brand-guide.pdf',
+                preview_chunks: [
+                  {
+                    text: 'Use muted blue tones for the primary brand palette.',
+                  },
+                ],
+              },
+            ],
+            limits: {
+              max_documents: 5,
+              max_chunks_per_document: 3,
+              max_chars_per_chunk: 1200,
+            },
+          })
+        );
+      }
       if (endpoint === '/admin/deployment/health') {
         return Promise.resolve(Response.json({ ok: true }));
       }
@@ -235,11 +257,17 @@ describe('AdminConfigAssistant', () => {
         .baseToolContext || '';
     expect(context).toContain('scope: instance-settings');
     expect(context).toContain('INSTANCE VISUAL IDENTITY SETTINGS');
+    expect(context).toContain('BOUNDED DOCUMENT CONTEXT');
+    expect(context).toContain('brand-guide.pdf');
     expect(context).toContain('choose reasonable defaults');
     expect(context).toContain(
       'group related settings into one reviewable Change Confirmation'
     );
     expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', undefined);
+    expect(mockAdminFetch).toHaveBeenCalledWith(
+      '/ingest/admin/documents/context-preview',
+      undefined
+    );
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/ai-config',
       undefined
@@ -351,8 +379,13 @@ describe('AdminConfigAssistant', () => {
     expect(context).toContain('secret=true');
     expect(context).toContain('Secret env vars are NOT included');
     expect(context).not.toContain('super-secret-token');
+    expect(context).not.toContain('BOUNDED DOCUMENT CONTEXT');
     expect(mockAdminFetch).toHaveBeenCalledWith(
       '/admin/deployment/config',
+      undefined
+    );
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/ingest/admin/documents/context-preview',
       undefined
     );
     expect(mockAdminFetch).not.toHaveBeenCalledWith(

@@ -34,6 +34,7 @@ import {
   buildFullAdminConfigContext,
   buildScopedAdminConfigContext,
 } from '../../utils/adminConfigContext';
+import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -337,6 +338,13 @@ export function AdminConfigAssistant({
             tracePolicyLines: TRACE_POLICY_CONTEXT_LINES,
           });
           baseToolContext = snap.context;
+          const documentContext = await fetchBoundedAdminDocumentContext({
+            query: content,
+            fetchJson,
+          });
+          if (documentContext.included) {
+            baseToolContext = `${snap.context}\n\n${documentContext.context}`;
+          }
           setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
           secretsForRedactionRef.current = snap.secretValues;
           deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
