@@ -748,4 +748,124 @@ describe('ChatPage', () => {
     expect(document.body.textContent).toContain('[REDACTED]');
     expect(document.body.textContent).not.toContain('sk-live-secret-value');
   });
+
+  it('preserves a pending change set after a provider failure and applies it without another model call', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+
+    mockAdminFetch.mockImplementation(
+      (endpoint: string, options?: RequestInit) => {
+        if (endpoint === '/admin/deployment/config') {
+          return Promise.resolve(
+            Response.json({
+              llm: [],
+              embedding: [],
+              email: [],
+              storage: [],
+              security: [],
+              search: [],
+              domains: [],
+              ssl: [],
+              general: [],
+            })
+          );
+        }
+        if (endpoint === '/admin/user-types') {
+          return Promise.resolve(Response.json({ types: [] }));
+        }
+        if (endpoint === '/admin/settings' && options?.method === 'PUT') {
+          return Promise.resolve(Response.json({ ok: true }));
+        }
+        if (endpoint === '/admin/deployment/config/validate') {
+          return Promise.resolve(Response.json({ valid: true, warnings: [] }));
+        }
+        if (endpoint === '/admin/deployment/restart-required') {
+          return Promise.resolve(
+            Response.json({ restart_required: false, changed_keys: [] })
+          );
+        }
+        return Promise.resolve(Response.json({}));
+      }
+    );
+
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('error', {
+          message_id: 'admin-msg-2',
+          detail:
+            'Token limit exceeded for this session. Please start a new session.',
+        });
+      });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Continue reviewing deployment config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByRole('note', { name: 'Chat request error' })
+    ).toHaveTextContent(
+      'Token limit exceeded for this session. Start a new assistant conversation to continue.'
+    );
+    expect(
+      screen.getByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Apply them'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ primary_color: '#1E3A8A' }),
+        })
+      );
+    });
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
 });

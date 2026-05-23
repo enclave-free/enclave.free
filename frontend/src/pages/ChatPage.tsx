@@ -1,4 +1,11 @@
-import { useState, useCallback, useEffect, useMemo, useReducer } from 'react';
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  type Dispatch,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +27,7 @@ import {
   createConversationUiState,
   reduceAdminChangeConfirmationState,
   reduceConversationUiState,
+  type AdminChangeConfirmationAction,
   type ConversationUiTurn,
 } from '../components/chat';
 import { ToolSelector, Tool } from '../components/chat/ToolSelector';
@@ -56,6 +64,7 @@ import {
   classifyProviderError,
   formatClassifiedProviderError,
 } from '../utils/providerErrors';
+import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -117,6 +126,23 @@ function formatProviderResponseError(
     return statusFallback;
   }
   return formatClassifiedProviderError(classified);
+}
+
+function stagePendingAdminChangeSet(
+  content: string,
+  hasConfigTool: boolean,
+  dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
+): void {
+  if (!hasConfigTool || !content.trim()) return;
+  if (!content.includes('```json') || !content.includes('"requests"')) return;
+
+  const extracted = extractAdminAssistantChangeSetStrict(content);
+  if (extracted.ok) {
+    dispatchAdminApply({
+      type: 'changeSetReadyForReview',
+      changeSet: extracted.changeSet,
+    });
+  }
 }
 
 export function ChatPage() {
@@ -502,11 +528,48 @@ export function ChatPage() {
   };
 
   const handleSend = async (content: string) => {
+    const hasConfigTool = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
+    const hasPendingChangeSet = adminApplyState.state === 'review';
+    const applyIntent = hasConfigTool
+      ? resolveAdminApplyIntent(content, hasPendingChangeSet)
+      : { kind: 'none' as const };
+
     dispatchConversation({
       type: 'userTurnSubmitted',
       id: generateMessageId(),
       content,
     });
+
+    if (
+      applyIntent.kind === 'unambiguous' &&
+      adminApplyState.state === 'review'
+    ) {
+      try {
+        await handleAdminApply(adminApplyState.changeSet);
+      } finally {
+        dispatchConversation({ type: 'assistantTurnFinished' });
+      }
+      return;
+    }
+
+    if (applyIntent.kind === 'ambiguous') {
+      dispatchConversation({
+        type: 'assistantTurnAppended',
+        id: generateMessageId(),
+        content: hasPendingChangeSet
+          ? t(
+              'admin.configAssistant.applyIntentUsePanel',
+              'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+            )
+          : t(
+              'admin.configAssistant.applyIntentNoPending',
+              'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
+            ),
+      });
+      dispatchConversation({ type: 'assistantTurnFinished' });
+      return;
+    }
+
     if (
       adminApplyState.state === 'error' ||
       adminApplyState.state === 'applied'
@@ -515,7 +578,6 @@ export function ChatPage() {
     }
 
     try {
-      const hasConfigTool = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
       const backendTools = selectedTools;
       const useRag = !isAdmin && selectedDocuments.length > 0;
 
@@ -730,6 +792,12 @@ export function ChatPage() {
             streamError instanceof Error
               ? streamError.message
               : t('errors.failedToSendMessage');
+
+          stagePendingAdminChangeSet(
+            streamContent,
+            hasConfigTool,
+            dispatchAdminApply
+          );
 
           if (streamMessageId && streamContent.trim()) {
             dispatchConversation({

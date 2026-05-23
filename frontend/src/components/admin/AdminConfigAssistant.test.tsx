@@ -413,7 +413,7 @@ describe('AdminConfigAssistant', () => {
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Apply them'
+      'Continue reviewing deployment config.'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
@@ -450,7 +450,7 @@ describe('AdminConfigAssistant', () => {
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Apply them'
+      'Continue reviewing deployment config.'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
@@ -460,6 +460,137 @@ describe('AdminConfigAssistant', () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByText(/insufficient_quota/)).not.toBeInTheDocument();
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('preserves a pending change set after a provider failure and applies it without another model call', async () => {
+    const user = userEvent.setup();
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+
+    let streamCalls = 0;
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        streamCalls += 1;
+        if (streamCalls === 1) {
+          onEvent('assistant_message_started', {
+            message_id: 'msg-1',
+            session_id: 'session-1',
+          });
+          onEvent('answer_delta', {
+            message_id: 'msg-1',
+            delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+          });
+          onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+          return;
+        }
+
+        onEvent('assistant_message_started', {
+          message_id: 'msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('error', {
+          message_id: 'msg-2',
+          detail:
+            'Token limit exceeded for this session. Please start a new session.',
+        });
+      }
+    );
+
+    mockAdminFetch.mockImplementation(
+      (endpoint: string, options?: RequestInit) => {
+        if (endpoint === '/admin/settings' && options?.method === 'PUT') {
+          return Promise.resolve(Response.json({ ok: true }));
+        }
+        if (endpoint === '/admin/deployment/config/validate') {
+          return Promise.resolve(Response.json({ valid: true, warnings: [] }));
+        }
+        if (endpoint === '/admin/deployment/restart-required') {
+          return Promise.resolve(
+            Response.json({ restart_required: false, changed_keys: [] })
+          );
+        }
+        if (endpoint === '/admin/settings') {
+          return Promise.resolve(
+            Response.json({ settings: { instance_name: 'Enclave' } })
+          );
+        }
+        if (endpoint === '/admin/deployment/config') {
+          return Promise.resolve(
+            Response.json({
+              llm: [],
+              embedding: [],
+              email: [],
+              storage: [],
+              security: [],
+              search: [],
+              domains: [],
+              ssl: [],
+              general: [],
+            })
+          );
+        }
+        return Promise.resolve(Response.json({}));
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Continue reviewing deployment config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      await screen.findByText(/Token limit exceeded for this session/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Apply them'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ primary_color: '#1E3A8A' }),
+        })
+      );
+    });
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 });

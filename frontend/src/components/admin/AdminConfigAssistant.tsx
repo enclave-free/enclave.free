@@ -42,6 +42,7 @@ import {
   classifyProviderError,
   formatClassifiedProviderError,
 } from '../../utils/providerErrors';
+import { resolveAdminApplyIntent } from '../../utils/adminApplyIntent';
 
 type ApplyState =
   | { state: 'idle' }
@@ -77,6 +78,20 @@ function patchAssistantMessage(
   return messages.map((message) =>
     message.id === id ? { ...message, ...patch } : message
   );
+}
+
+function stagePendingAdminChangeSet(
+  content: string,
+  hasConfigTool: boolean,
+  setApplyState: (state: ApplyState) => void
+): void {
+  if (!hasConfigTool || !content.trim()) return;
+  if (!content.includes('```json') || !content.includes('"requests"')) return;
+
+  const extracted = extractAdminAssistantChangeSetStrict(content);
+  if (extracted.ok) {
+    setApplyState({ state: 'review', changeSet: extracted.changeSet });
+  }
 }
 
 function slugify(value: string): string {
@@ -127,6 +142,9 @@ export function AdminConfigAssistant({
 
   const secretsForRedactionRef = useRef<string[]>([]);
   const deploymentSecretKeysRef = useRef<Set<string>>(new Set());
+  const handleApplyRef = useRef<
+    (changeSet: AdminAssistantChangeSet) => Promise<void>
+  >(async () => {});
 
   const configCategories = useMemo(() => getConfigCategories(t), [t]);
   const deploymentMeta = useMemo(() => getDeploymentConfigItemMeta(t), [t]);
@@ -258,6 +276,11 @@ export function AdminConfigAssistant({
 
   const handleSend = useCallback(
     async (content: string) => {
+      const hasPendingChangeSet = applyState.state === 'review';
+      const applyIntent = hasConfigTool
+        ? resolveAdminApplyIntent(content, hasPendingChangeSet)
+        : { kind: 'none' as const };
+
       const userMessage: Message = {
         id: generateMessageId(),
         role: 'user',
@@ -267,6 +290,37 @@ export function AdminConfigAssistant({
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
       setError(null);
+
+      if (applyIntent.kind === 'unambiguous' && applyState.state === 'review') {
+        try {
+          await handleApplyRef.current(applyState.changeSet);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (applyIntent.kind === 'ambiguous') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            role: 'assistant',
+            content: hasPendingChangeSet
+              ? t(
+                  'admin.configAssistant.applyIntentUsePanel',
+                  'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+                )
+              : t(
+                  'admin.configAssistant.applyIntentNoPending',
+                  'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
+                ),
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
 
       try {
         let baseToolContext: string | undefined;
@@ -385,6 +439,8 @@ export function AdminConfigAssistant({
           }
           streamed = true;
         } catch (streamError) {
+          stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
+
           if (streamMessageId && raw.trim()) {
             setMessages((prev) =>
               patchAssistantMessage(prev, streamMessageId!, {
@@ -482,11 +538,13 @@ export function AdminConfigAssistant({
       }
     },
     [
+      applyState,
       configCategories,
       conversationSessionId,
       deploymentMeta,
       fetchJson,
       hasConfigTool,
+      messages,
       selectedTools,
       shareSecrets,
       t,
@@ -760,6 +818,7 @@ export function AdminConfigAssistant({
     },
     [fetchJson, t]
   );
+  handleApplyRef.current = handleApply;
 
   const applyPreview = useMemo(() => {
     if (applyState.state !== 'review' && applyState.state !== 'applying')
