@@ -7,11 +7,12 @@
 import { execSync } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter as pathDelimiter, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const frontendRoot = join(import.meta.dirname, "..");
-const repoRoot = join(frontendRoot, "..");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const frontendRoot = join(__dirname, "..");
 const lintStagedBin = join(frontendRoot, "node_modules", ".bin", "lint-staged");
 const prettierBin = join(frontendRoot, "node_modules", ".bin", "prettier");
 
@@ -24,7 +25,7 @@ function run(command: string, cwd: string): string {
     encoding: "utf8",
     env: {
       ...process.env,
-      PATH: `${join(frontendRoot, "node_modules", ".bin")}:${process.env.PATH ?? ""}`,
+      PATH: `${join(frontendRoot, "node_modules", ".bin")}${pathDelimiter}${process.env.PATH ?? ""}`,
     },
   });
 }
