@@ -275,7 +275,7 @@ def get_retrieval_chunk(chunk_id: str) -> Optional[dict]:
         return None
     chunk = dict(row)
     try:
-        chunk["text"] = content_artifacts.decrypt_bytes(chunk["encrypted_text"].encode("ascii")).decode("utf-8")
+        chunk["text"] = content_artifacts.decrypt_bytes(chunk["encrypted_text"].encode("utf-8")).decode("utf-8")
     except Exception as exc:
         chunk["text"] = None
         chunk["decryption_error"] = {

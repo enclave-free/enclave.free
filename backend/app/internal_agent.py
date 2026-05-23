@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 import database
+import ingest_db
 from query import _build_context, _build_search_query, _process_search_results
 from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
@@ -27,6 +28,7 @@ logger = logging.getLogger("enclave.internal_agent")
 router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 
 INTERNAL_AGENT_TOKEN = os.getenv("INTERNAL_AGENT_TOKEN", "").strip()
+DOCUMENT_OVERVIEW_OPENING_CHUNKS_PER_DOCUMENT = 2
 
 
 class InternalActorContext(BaseModel):
@@ -116,6 +118,32 @@ def _filter_results_to_accessible_jobs(search_results: list[dict], accessible_jo
         for result in search_results
         if result.get("payload", {}).get("job_id") in allowed
     ]
+
+
+def _is_document_overview_query(query: str) -> bool:
+    normalized = query.lower()
+    material_terms = ("uploaded", "document", "doc", "pdf", "book", "file")
+    overview_terms = ("read", "overview", "basic understanding", "understanding", "summarize", "summary", "our org", "organization")
+    return any(term in normalized for term in material_terms) and any(term in normalized for term in overview_terms)
+
+
+def _opening_chunk_texts_for_documents(job_ids: list[str], seen_chunk_ids: set[str]) -> list[str]:
+    opening_texts: list[str] = []
+    for job_id in job_ids:
+        rows = ingest_db.list_retrieval_chunks(
+            job_id,
+            limit=DOCUMENT_OVERVIEW_OPENING_CHUNKS_PER_DOCUMENT,
+        )
+        for row in rows:
+            chunk_id = str(row.get("chunk_id") or "")
+            if not chunk_id or chunk_id in seen_chunk_ids:
+                continue
+            chunk = ingest_db.get_retrieval_chunk(chunk_id)
+            text = (chunk or {}).get("text")
+            if text:
+                opening_texts.append(str(text))
+                seen_chunk_ids.add(chunk_id)
+    return opening_texts
 
 
 def _execute_safe_select(sql: str) -> dict:
@@ -270,6 +298,10 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
     search_results = response.json().get("result", [])
     search_results = _filter_results_to_accessible_jobs(search_results, accessible_job_ids)
     sources, _, chunk_texts = _process_search_results(search_results)
+    if _is_document_overview_query(payload.query):
+        seen_chunk_ids = {str(source.get("chunk_id") or "") for source in sources}
+        opening_chunk_texts = _opening_chunk_texts_for_documents(accessible_job_ids, seen_chunk_ids)
+        chunk_texts = opening_chunk_texts + chunk_texts
     context = _build_context(chunk_texts, sources)
     return InternalDocumentSearchResponse(
         sources=sources,
