@@ -32,7 +32,7 @@ npm install       # also wires Husky via prepare
 npm run dev       # http://localhost:5173
 npm run build     # typecheck + production build
 npm run preview   # serve dist/
-npm run format    # apply Prettier repo-wide
+npm run format    # apply Prettier to frontend (`prettier --write .` in frontend/package.json)
 npm run verify:pre-commit  # lint-staged + vitest (same as the git hook)
 ```
 Commits run `frontend/.husky/pre-commit`, which formats staged files with Prettier and runs the frontend test suite.
