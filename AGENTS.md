@@ -28,11 +28,14 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down       
 Frontend-only development:
 ```bash
 cd frontend
-npm install
+npm install       # also wires Husky via prepare
 npm run dev       # http://localhost:5173
 npm run build     # typecheck + production build
 npm run preview   # serve dist/
+npm run format    # apply Prettier to frontend (`prettier --write .` in frontend/package.json)
+npm run verify:pre-commit  # lint-staged + vitest (same as the git hook)
 ```
+Commits run `frontend/.husky/pre-commit`, which formats staged files with Prettier and runs the frontend test suite.
 Smoke tests:
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
