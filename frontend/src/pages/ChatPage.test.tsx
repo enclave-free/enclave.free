@@ -622,6 +622,85 @@ describe('ChatPage', () => {
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 
+  it('offers a fresh assistant conversation recovery action after admin context limit failures', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+
+    let streamCalls = 0;
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ sessionId, onEvent }) => {
+        streamCalls += 1;
+        if (streamCalls === 1) {
+          onEvent('assistant_message_started', {
+            message_id: 'admin-msg',
+            session_id: 'session-1',
+          });
+          onEvent('error', {
+            message_id: 'admin-msg',
+            detail:
+              'Token limit exceeded for this session. Please start a new session.',
+          });
+          return;
+        }
+
+        expect(sessionId).toBeNull();
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-2',
+        });
+        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-2' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Config' })
+      ).toBeInTheDocument();
+    });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Continue this long session.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Start new assistant conversation',
+      })
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Try again after reset.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('surfaces safe non-streaming provider failures for admin chat', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);

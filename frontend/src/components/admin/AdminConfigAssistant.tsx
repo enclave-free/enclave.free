@@ -43,6 +43,8 @@ import {
 import {
   classifyProviderError,
   formatClassifiedProviderError,
+  shouldOfferNewAssistantConversation,
+  type ClassifiedProviderError,
 } from '../../utils/providerErrors';
 import { resolveAdminApplyIntent } from '../../utils/adminApplyIntent';
 
@@ -133,6 +135,8 @@ export function AdminConfigAssistant({
   >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] =
+    useState<ClassifiedProviderError | null>(null);
   const [snapshotInfo, setSnapshotInfo] = useState<{
     generatedAtIso: string;
   } | null>(null);
@@ -276,6 +280,16 @@ export function AdminConfigAssistant({
     [selectedTools]
   );
 
+  const handleStartNewAssistantConversation = useCallback(() => {
+    setConversationSessionId(null);
+    setMessages([]);
+    setError(null);
+    setRecoveryError(null);
+    setShareSecrets(false);
+    secretsForRedactionRef.current = [];
+    deploymentSecretKeysRef.current = new Set();
+  }, []);
+
   const handleSend = useCallback(
     async (content: string) => {
       const hasPendingChangeSet = applyState.state === 'review';
@@ -292,6 +306,7 @@ export function AdminConfigAssistant({
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
       setError(null);
+      setRecoveryError(null);
 
       if (applyIntent.kind === 'unambiguous' && applyState.state === 'review') {
         try {
@@ -356,6 +371,7 @@ export function AdminConfigAssistant({
         let raw = '';
         let streamSessionId: string | null = null;
         let streamReportedError = false;
+        let classifiedStreamError: ClassifiedProviderError | null = null;
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
@@ -427,6 +443,7 @@ export function AdminConfigAssistant({
                 const classified = classifyProviderError(
                   typeof data.detail === 'string' ? data.detail : data
                 );
+                classifiedStreamError = classified;
                 throw new Error(
                   classified.category === 'unknown' &&
                     typeof data.detail !== 'string'
@@ -461,6 +478,12 @@ export function AdminConfigAssistant({
                 ? streamError.message
                 : t('errors.failedToSendMessage')
             );
+            if (
+              classifiedStreamError &&
+              shouldOfferNewAssistantConversation(classifiedStreamError)
+            ) {
+              setRecoveryError(classifiedStreamError);
+            }
             return;
           }
           if (streamMessageId) {
@@ -474,6 +497,12 @@ export function AdminConfigAssistant({
                 ? streamError.message
                 : t('errors.failedToSendMessage')
             );
+            if (
+              classifiedStreamError &&
+              shouldOfferNewAssistantConversation(classifiedStreamError)
+            ) {
+              setRecoveryError(classifiedStreamError);
+            }
             return;
           }
           console.warn(
@@ -499,9 +528,11 @@ export function AdminConfigAssistant({
           }
           if (!res.ok) {
             const detail = await readErrorDetail(res);
-            throw new Error(
-              formatClassifiedProviderError(classifyProviderError(detail))
-            );
+            const classified = classifyProviderError(detail);
+            if (shouldOfferNewAssistantConversation(classified)) {
+              setRecoveryError(classified);
+            }
+            throw new Error(formatClassifiedProviderError(classified));
           }
           const data = (await res.json()) as {
             message?: string;
@@ -1054,8 +1085,18 @@ export function AdminConfigAssistant({
           )}
 
           {error && (
-            <div className="text-sm text-error bg-error/10 border border-error/20 rounded-xl px-3 py-2">
-              {error}
+            <div className="text-sm text-error bg-error/10 border border-error/20 rounded-xl px-3 py-2 space-y-2">
+              <div>{error}</div>
+              {recoveryError &&
+                shouldOfferNewAssistantConversation(recoveryError) && (
+                  <button
+                    type="button"
+                    onClick={handleStartNewAssistantConversation}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-border text-text hover:bg-surface-overlay transition-colors text-sm font-medium"
+                  >
+                    {t('admin.configAssistant.startNewConversation')}
+                  </button>
+                )}
             </div>
           )}
 

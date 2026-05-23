@@ -122,6 +122,15 @@ export function classifyProviderError(raw: unknown): ClassifiedProviderError {
 }
 
 /**
+ * Whether the admin assistant should offer a fresh-conversation recovery action.
+ */
+export function shouldOfferNewAssistantConversation(
+  error: ClassifiedProviderError
+): boolean {
+  return error.category === 'context_limit';
+}
+
+/**
  * Render a classified provider error for admin chat UI copy.
  */
 export function formatClassifiedProviderError(

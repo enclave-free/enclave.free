@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyProviderError,
   formatClassifiedProviderError,
+  shouldOfferNewAssistantConversation,
 } from './providerErrors';
 
 describe('classifyProviderError', () => {
@@ -116,5 +117,24 @@ describe('formatClassifiedProviderError', () => {
     expect(formatted).toBe(
       'Token limit exceeded for this session. Start a new assistant conversation to continue.'
     );
+  });
+});
+
+describe('shouldOfferNewAssistantConversation', () => {
+  it('offers recovery for context limit failures only', () => {
+    expect(
+      shouldOfferNewAssistantConversation(
+        classifyProviderError(
+          'Token limit exceeded for this session. Please start a new session.'
+        )
+      )
+    ).toBe(true);
+    expect(
+      shouldOfferNewAssistantConversation(
+        classifyProviderError(
+          '{"error":{"code":"insufficient_quota","message":"You exceeded your current quota."}}'
+        )
+      )
+    ).toBe(false);
   });
 });

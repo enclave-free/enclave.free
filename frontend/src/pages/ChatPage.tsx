@@ -64,6 +64,7 @@ import {
 import {
   classifyProviderError,
   formatClassifiedProviderError,
+  shouldOfferNewAssistantConversation,
 } from '../utils/providerErrors';
 import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
 
@@ -1411,7 +1412,7 @@ IMPORTANT: Return a CONDENSED response:
 
       {error && (
         <div className="px-3 sm:px-4 pb-2">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto space-y-2">
             <Callout
               label={t('chat.errors.requestLabel', 'Chat request error')}
               tone="error"
@@ -1434,6 +1435,19 @@ IMPORTANT: Return a CONDENSED response:
                 <X className="h-4 w-4" aria-hidden="true" />
               </IconButton>
             </Callout>
+            {isAdmin &&
+              selectedTools.includes(CONFIG_TOOL_ID) &&
+              shouldOfferNewAssistantConversation(
+                classifyProviderError(error)
+              ) && (
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-border text-text hover:bg-surface-overlay transition-colors text-sm font-medium"
+                >
+                  {t('admin.configAssistant.startNewConversation')}
+                </button>
+              )}
           </div>
         </div>
       )}

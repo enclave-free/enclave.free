@@ -496,6 +496,155 @@ describe('AdminConfigAssistant', () => {
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 
+  it('starts a fresh assistant conversation after a context limit failure', async () => {
+    const user = userEvent.setup();
+    let streamCalls = 0;
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ sessionId, onEvent }) => {
+        streamCalls += 1;
+        if (streamCalls === 1) {
+          onEvent('assistant_message_started', {
+            message_id: 'msg-1',
+            session_id: 'session-1',
+          });
+          onEvent('error', {
+            message_id: 'msg-1',
+            session_id: 'session-1',
+            detail:
+              'Token limit exceeded for this session. Please start a new session.',
+          });
+          return;
+        }
+
+        expect(sessionId).toBeNull();
+        onEvent('assistant_message_started', {
+          message_id: 'msg-2',
+          session_id: 'session-2',
+        });
+        onEvent('done', { message_id: 'msg-2', session_id: 'session-2' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Continue reviewing deployment config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText(
+        'Token limit exceeded for this session. Start a new assistant conversation to continue.'
+      )
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Start new assistant conversation',
+      })
+    );
+
+    expect(
+      screen.queryByText(
+        'Token limit exceeded for this session. Start a new assistant conversation to continue.'
+      )
+    ).not.toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Review deployment config again.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('preserves a pending change set when starting a fresh assistant conversation', async () => {
+    const user = userEvent.setup();
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+
+    let streamCalls = 0;
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        streamCalls += 1;
+        if (streamCalls === 1) {
+          onEvent('assistant_message_started', {
+            message_id: 'msg-1',
+            session_id: 'session-1',
+          });
+          onEvent('answer_delta', {
+            message_id: 'msg-1',
+            delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+          });
+          onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+          return;
+        }
+
+        onEvent('assistant_message_started', {
+          message_id: 'msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('error', {
+          message_id: 'msg-2',
+          detail:
+            'Token limit exceeded for this session. Please start a new session.',
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Continue reviewing deployment config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Start new assistant conversation',
+      })
+    );
+
+    expect(
+      screen.getByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Token limit exceeded for this session/)
+    ).not.toBeInTheDocument();
+  });
+
   it('preserves a pending change set after a provider failure and applies it without another model call', async () => {
     const user = userEvent.setup();
     const changeSet = {
