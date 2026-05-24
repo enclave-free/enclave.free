@@ -186,6 +186,73 @@ describe('ChatPage', () => {
     );
   });
 
+  it('uses the shared Conversation Surface for User Conversations while preserving surrounding controls', async () => {
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(
+          Response.json({
+            settings: {
+              reachout_enabled: 'true',
+              reachout_mode: 'help',
+            },
+          })
+        );
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: ['doc-1'],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(
+          Response.json({
+            jobs: [
+              {
+                job_id: 'doc-1',
+                filename: 'operator-handbook.pdf',
+                status: 'completed',
+                total_chunks: 12,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    expect(
+      await screen.findByRole('region', { name: 'Conversation surface' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Web' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Get help' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'No messages to export' })
+    ).toBeInTheDocument();
+  });
+
   it('contains chat request failures in a named error note', async () => {
     const user = (await import('@testing-library/user-event')).default.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockRejectedValueOnce(
@@ -345,6 +412,9 @@ describe('ChatPage', () => {
         screen.getByRole('button', { name: 'Config' })
       ).toBeInTheDocument();
     });
+    expect(
+      screen.getByRole('region', { name: 'Conversation surface' })
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /Docs/ })
     ).not.toBeInTheDocument();

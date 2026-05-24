@@ -1,23 +1,23 @@
-import { ReactNode, useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { MessageCircle, Sparkles } from 'lucide-react'
+import { ReactNode, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { MessageCircle, Sparkles } from 'lucide-react';
 import {
   AssistantRuntimeProvider,
   useExternalStoreRuntime,
   type AppendMessage,
   type ThreadMessage,
-} from '@assistant-ui/react'
-import { ChatInput } from './ChatInput'
-import { ChatMessage } from './ChatMessage'
-import type { ConversationSurfaceTurn } from './ConversationSurfaceModel'
+} from '@assistant-ui/react';
+import { ChatInput } from './ChatInput';
+import { ChatMessage } from './ChatMessage';
+import type { ConversationSurfaceTurn } from './ConversationSurfaceModel';
 
 interface ConversationSurfaceProps {
-  turns: ConversationSurfaceTurn[]
-  onSend: (message: string) => void
-  isRunning?: boolean
-  disabled?: boolean
-  placeholder?: string
-  toolbar?: ReactNode
+  turns: ConversationSurfaceTurn[];
+  onSend: (message: string) => void;
+  isRunning?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  toolbar?: ReactNode;
 }
 
 export function ConversationSurface({
@@ -28,25 +28,31 @@ export function ConversationSurface({
   placeholder,
   toolbar,
 }: ConversationSurfaceProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   const runtimeMessages = useMemo(
     () => turns.map(convertTurnToAssistantMessage),
     [turns]
-  )
-  const handleNew = useCallback(async (message: AppendMessage) => {
-    const text = extractAppendMessageText(message).trim()
-    if (text) onSend(text)
-  }, [onSend])
+  );
+  const handleNew = useCallback(
+    async (message: AppendMessage) => {
+      const text = extractAppendMessageText(message).trim();
+      if (text) onSend(text);
+    },
+    [onSend]
+  );
   const runtime = useExternalStoreRuntime({
     messages: runtimeMessages,
     isRunning,
     isDisabled: disabled,
     onNew: handleNew,
-  })
+  });
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <div className="flex min-h-0 flex-1 flex-col">
+      <section
+        aria-label="Conversation surface"
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <div className="flex-1 overflow-y-auto px-3 py-6 sm:px-4">
           <div className="mx-auto w-full max-w-3xl">
             {turns.length === 0 && !isRunning ? (
@@ -66,7 +72,9 @@ export function ConversationSurface({
                     }}
                   />
                 ))}
-                {isRunning && <ConversationRunningIndicator label={t('chat.typing')} />}
+                {isRunning && (
+                  <ConversationRunningIndicator label={t('chat.typing')} />
+                )}
               </>
             )}
           </div>
@@ -77,13 +85,13 @@ export function ConversationSurface({
           placeholder={placeholder}
           toolbar={toolbar}
         />
-      </div>
+      </section>
     </AssistantRuntimeProvider>
-  )
+  );
 }
 
 function ConversationEmptyState() {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
     <div className="flex min-h-[24rem] items-center justify-center p-4">
@@ -91,16 +99,21 @@ function ConversationEmptyState() {
         <div className="relative mx-auto mb-8 h-20 w-20">
           <div className="absolute inset-0 rotate-6 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 scale-95" />
           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-accent-hover shadow-xl ring-1 ring-white/10">
-            <MessageCircle className="h-10 w-10 text-white" strokeWidth={1.75} />
+            <MessageCircle
+              className="h-10 w-10 text-white"
+              strokeWidth={1.75}
+            />
           </div>
         </div>
-        <h2 className="heading-xl mb-2 text-balance">{t('chat.emptyState.title')}</h2>
+        <h2 className="heading-xl mb-2 text-balance">
+          {t('chat.emptyState.title')}
+        </h2>
         <p className="mx-auto mb-0 max-w-xs text-pretty text-sm text-text-secondary sm:max-w-prose">
           {t('chat.emptyState.description')}
         </p>
       </div>
     </div>
-  )
+  );
 }
 
 function ConversationRunningIndicator({ label }: { label: string }) {
@@ -116,14 +129,18 @@ function ConversationRunningIndicator({ label }: { label: string }) {
             <span className="typing-dot h-2 w-2 rounded-full bg-accent/60" />
             <span className="typing-dot h-2 w-2 rounded-full bg-accent/60" />
           </div>
-          <span className="animate-pulse-subtle text-sm text-text-secondary">{label}</span>
+          <span className="animate-pulse-subtle text-sm text-text-secondary">
+            {label}
+          </span>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function convertTurnToAssistantMessage(turn: ConversationSurfaceTurn): ThreadMessage {
+function convertTurnToAssistantMessage(
+  turn: ConversationSurfaceTurn
+): ThreadMessage {
   const common = {
     id: turn.id,
     createdAt: new Date(),
@@ -135,20 +152,22 @@ function convertTurnToAssistantMessage(turn: ConversationSurfaceTurn): ThreadMes
         traceStatus: turn.traceStatus,
       },
     },
-  }
+  };
 
   if (turn.role === 'user') {
     return {
       ...common,
       role: 'user',
       attachments: [],
-    }
+    };
   }
 
   return {
     ...common,
     role: turn.role,
-    status: turn.traceStatus ? { type: 'running' } : { type: 'complete', reason: 'stop' },
+    status: turn.traceStatus
+      ? { type: 'running' }
+      : { type: 'complete', reason: 'stop' },
     metadata: {
       ...common.metadata,
       unstable_state: null,
@@ -156,11 +175,13 @@ function convertTurnToAssistantMessage(turn: ConversationSurfaceTurn): ThreadMes
       unstable_data: [],
       steps: [],
     },
-  }
+  };
 }
 
 function extractAppendMessageText(message: AppendMessage): string {
   return message.content
-    .map((part) => ('text' in part && typeof part.text === 'string' ? part.text : ''))
-    .join('')
+    .map((part) =>
+      'text' in part && typeof part.text === 'string' ? part.text : ''
+    )
+    .join('');
 }
