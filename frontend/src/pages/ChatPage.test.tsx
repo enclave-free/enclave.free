@@ -1,4 +1,10 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { type ReactNode } from 'react';
@@ -15,6 +21,11 @@ import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../utils/llmChat';
+import {
+  registerAdminResilienceInstrumentationListener,
+  resetAdminResilienceInstrumentationListeners,
+  type AdminResilienceInstrumentationEvent,
+} from '../utils/adminResilienceInstrumentation';
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -43,6 +54,7 @@ describe('ChatPage', () => {
   const mockIsAdminAuthenticated = vi.mocked(isAdminAuthenticated);
 
   beforeEach(() => {
+    resetAdminResilienceInstrumentationListeners();
     mockIsAdminAuthenticated.mockReturnValue(false);
     mockAdminFetch.mockResolvedValue(Response.json({}));
     const store = new Map<string, string>();
@@ -131,6 +143,7 @@ describe('ChatPage', () => {
   });
 
   afterEach(() => {
+    resetAdminResilienceInstrumentationListeners();
     cleanup();
     vi.unstubAllGlobals();
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
@@ -564,6 +577,536 @@ describe('ChatPage', () => {
     });
   });
 
+  it('sends confirm language back to Sage when admin chat has no executable change set', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta:
+            'Here is the reviewable Change Confirmation: update greeting and tone.',
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-2',
+          delta: 'I need to generate an executable JSON change set first.',
+        });
+        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-1' });
+      });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Style my instance.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText(/reviewable Change Confirmation/)
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'I confirm'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.queryByText(/There are no pending configuration changes/)
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/executable JSON change set/)
+    ).toBeInTheDocument();
+  });
+
+  it('sends yes-do-it language back to Sage when admin chat has no executable change set', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta:
+            'Here is the reviewable Change Confirmation: update greeting and tone.',
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-2',
+          delta: 'I need to generate an executable JSON change set first.',
+        });
+        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-1' });
+      });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Style my instance.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText(/reviewable Change Confirmation/)
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'yes do it'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.queryByText(/There are no pending configuration changes/)
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/executable JSON change set/)
+    ).toBeInTheDocument();
+  });
+
+  it('sends pasted confirm prose back to Sage when admin chat has no executable change set', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta:
+            'Here is the reviewable Change Confirmation: update greeting and tone.',
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-2',
+          delta: 'I need to generate an executable JSON change set first.',
+        });
+        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-1' });
+      });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Style my instance.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText(/reviewable Change Confirmation/)
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'I confirm: "Greeting: update greeting. Tone: update tone."'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.queryByText(/There are no pending configuration changes/)
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/executable JSON change set/)
+    ).toBeInTheDocument();
+  });
+
+  it('keeps admin chat apply language from executing a pending change set', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Apply them'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText(
+        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+      )
+    ).toBeInTheDocument();
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/admin/settings',
+      expect.objectContaining({ method: 'PUT' })
+    );
+  });
+
+  it('keeps imperative apply requests from executing a pending admin chat change set', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Apply the theme changes we discussed earlier'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText(
+        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+      )
+    ).toBeInTheDocument();
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/admin/settings',
+      expect.objectContaining({ method: 'PUT' })
+    );
+  });
+
+  it('keeps yes-do-it language from executing a pending admin chat change set', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'yes do it'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText(
+        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+      )
+    ).toBeInTheDocument();
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/admin/settings',
+      expect.objectContaining({ method: 'PUT' })
+    );
+  });
+
+  it('lets non-apply confirm questions continue to Sage while a change set is pending', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-2',
+          delta: 'The pending primary color is #1E3A8A.',
+        });
+        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-1' });
+      });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Can you confirm the current primary color?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.queryByText(
+        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+      )
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText('The pending primary color is #1E3A8A.')
+    ).toBeInTheDocument();
+  });
+
   it('surfaces safe provider context limit errors in admin chat without non-streaming fallback', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
@@ -620,6 +1163,85 @@ describe('ChatPage', () => {
       'Token limit exceeded for this session. Start a new assistant conversation to continue.'
     );
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('offers a fresh assistant conversation recovery action after admin context limit failures', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+
+    let streamCalls = 0;
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ sessionId, onEvent }) => {
+        streamCalls += 1;
+        if (streamCalls === 1) {
+          onEvent('assistant_message_started', {
+            message_id: 'admin-msg',
+            session_id: 'session-1',
+          });
+          onEvent('error', {
+            message_id: 'admin-msg',
+            detail:
+              'Token limit exceeded for this session. Please start a new session.',
+          });
+          return;
+        }
+
+        expect(sessionId).toBeNull();
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-2',
+        });
+        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-2' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Config' })
+      ).toBeInTheDocument();
+    });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Continue this long session.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Start new assistant conversation',
+      })
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Try again after reset.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('surfaces safe non-streaming provider failures for admin chat', async () => {
@@ -850,11 +1472,7 @@ describe('ChatPage', () => {
       screen.getByText('Pending changes: Update instance theme')
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Apply them'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(
@@ -867,5 +1485,177 @@ describe('ChatPage', () => {
     });
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('compacts Session Memory for long authenticated admin chat turns', async () => {
+    const user = userEvent.setup();
+    const instrumentationEvents: AdminResilienceInstrumentationEvent[] = [];
+    registerAdminResilienceInstrumentationListener((event) => {
+      instrumentationEvents.push(event);
+    });
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: `msg-${Math.random()}`,
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant',
+          delta: 'Acknowledged.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    for (let index = 0; index < 17; index += 1) {
+      await user.type(
+        screen.getByRole('textbox', { name: 'Ask anything...' }),
+        `Theme question ${index} about palette and typography.`
+      );
+      await user.click(screen.getByRole('button', { name: 'Send message' }));
+      await waitFor(() => {
+        expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(
+          index + 1
+        );
+      });
+    }
+
+    const streamCalls = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls;
+    const lastCall = streamCalls[streamCalls.length - 1]?.[0];
+    expect(lastCall?.conversationHistory?.[0]?.content).toContain(
+      'Theme question 12'
+    );
+    const lastHistory = lastCall?.conversationHistory;
+    expect(lastHistory?.[lastHistory.length - 1]?.content).toBe(
+      'Acknowledged.'
+    );
+
+    expect(
+      screen.queryByRole('note', {
+        name: 'Session Memory compaction notice',
+      })
+    ).not.toBeInTheDocument();
+
+    const contextPlanEvents = instrumentationEvents.filter(
+      (event) => event.kind === 'admin_context_plan'
+    );
+    expect(contextPlanEvents.length).toBeGreaterThan(0);
+    const lastContextPlanEvent =
+      contextPlanEvents[contextPlanEvents.length - 1];
+    expect(lastContextPlanEvent).toMatchObject({
+      kind: 'admin_context_plan',
+      surface: 'admin_chat_page',
+      sessionMemory: {
+        compacted: true,
+        compactedMessageCount: expect.any(Number),
+      },
+    });
+    expect(JSON.stringify(lastContextPlanEvent)).not.toContain(
+      'Theme question 0'
+    );
+  });
+
+  it('surfaces a reduced-context notice for oversized admin chat Config history', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: `msg-${Math.random()}`,
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant',
+          delta: 'Acknowledged.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything...' }), {
+      target: {
+        value: `Summarize this admin context ${'SAFE_PADDING '.repeat(220)}`,
+      },
+    });
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything...' }), {
+      target: { value: 'Continue with config advice.' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    const notice = await screen.findByRole('note', {
+      name: 'Reduced context notice',
+    });
+    expect(notice).toHaveTextContent(
+      /Some context was reduced to fit the Model Provider budget/
+    );
+    expect(notice).toHaveTextContent(/recent conversation history/);
+    expect(notice).not.toHaveTextContent('SAFE_PADDING');
   });
 });

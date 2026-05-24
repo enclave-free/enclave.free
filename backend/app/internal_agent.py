@@ -29,6 +29,7 @@ router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 
 INTERNAL_AGENT_TOKEN = os.getenv("INTERNAL_AGENT_TOKEN", "").strip()
 DOCUMENT_OVERVIEW_OPENING_CHUNKS_PER_DOCUMENT = 2
+MAX_OVERVIEW_DOCS = 5
 
 
 class InternalActorContext(BaseModel):
@@ -300,7 +301,11 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
     sources, _, chunk_texts = _process_search_results(search_results)
     if _is_document_overview_query(payload.query):
         seen_chunk_ids = {str(source.get("chunk_id") or "") for source in sources}
-        opening_chunk_texts = _opening_chunk_texts_for_documents(accessible_job_ids, seen_chunk_ids)
+        overview_job_ids = sorted(accessible_job_ids)[:MAX_OVERVIEW_DOCS]
+        opening_chunk_texts = _opening_chunk_texts_for_documents(
+            overview_job_ids,
+            seen_chunk_ids,
+        )
         chunk_texts = opening_chunk_texts + chunk_texts
     context = _build_context(chunk_texts, sources)
     return InternalDocumentSearchResponse(

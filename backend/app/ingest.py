@@ -840,6 +840,13 @@ async def store_chunk(chunk_id: str, chunk_text_content: str, source_file: str) 
     return result
 
 
+async def verify_embedding_provider_available() -> None:
+    """Fail fast before starting per-chunk storage when embeddings are unavailable."""
+    from store import get_embedding_dimension
+
+    await asyncio.to_thread(get_embedding_dimension)
+
+
 async def delete_document_chunks(job_id: str) -> int:
     """Delete stored vector chunks for a document job."""
     from store import delete_chunks_from_qdrant
@@ -913,6 +920,17 @@ async def process_document(job_id: str, file_path: Path, sample_percent: float):
         JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
         _sync_job_to_db(job_id)
         logger.info(f"[{job_id}] Chunking complete: {len(chunks)} chunks created, starting storage...")
+
+        try:
+            await verify_embedding_provider_available()
+        except Exception as e:
+            message = f"Embedding provider unavailable: {e}"
+            logger.error("[%s] %s", job_id, message, exc_info=True)
+            JOBS[job_id]["status"] = "failed"
+            JOBS[job_id]["error"] = message
+            JOBS[job_id]["updated_at"] = datetime.utcnow().isoformat()
+            _sync_job_to_db(job_id)
+            return
 
         # Process chunks with limited concurrency
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_CHUNKS)
@@ -1365,10 +1383,6 @@ async def get_job_status(job_id: str, admin: dict = Depends(auth.require_admin))
 
     job = JOBS[job_id]
 
-    # Count processed chunks
-    job_chunks = [c for c in CHUNKS.values() if c["job_id"] == job_id]
-    processed = sum(1 for c in job_chunks if c["status"] == "stored")
-
     return JobStatus(
         job_id=job["job_id"],
         filename=job["filename"],
@@ -1377,7 +1391,7 @@ async def get_job_status(job_id: str, admin: dict = Depends(auth.require_admin))
         created_at=job["created_at"],
         updated_at=job["updated_at"],
         total_chunks=job["total_chunks"],
-        processed_chunks=processed,
+        processed_chunks=job.get("processed_chunks", 0),
         error=job.get("error"),
         canonical_name=job.get("canonical_name") or job.get("filename"),
         replacement_for_job_id=job.get("replacement_for_job_id"),

@@ -2,22 +2,23 @@
  * Resolve conversational admin apply intent against a pending change set.
  */
 
-export type AdminApplyIntentKind = 'none' | 'unambiguous' | 'ambiguous';
+export type AdminApplyIntentKind = 'none' | 'needs-panel';
 
 export interface AdminApplyIntent {
   kind: AdminApplyIntentKind;
 }
 
-const UNAMBIGUOUS_WHEN_PENDING = [
+const APPLY_COMMAND_WHEN_PENDING = [
   /^apply\.?$/i,
+  /^apply\b.+/i,
   /^apply\s+(them|it|changes|now|please)\.?$/i,
   /^please\s+apply(?:\s+(them|it|changes))?\s*\.?$/i,
   /^go\s+ahead(?:\s+and\s+apply(?:\s+(them|it|changes))?)?\.?$/i,
   /^yes,?\s*apply(?:\s+(them|it|changes))?\s*\.?$/i,
+  /^yes,?\s*(do\s+it|please)\.?$/i,
+  /^i\s+confirm\.?$/i,
   /^confirm(?:\s+and\s+apply)?\.?$/i,
 ];
-
-const APPLY_LANGUAGE = /\b(apply|confirm|go ahead)\b/i;
 
 /**
  * Classify whether an admin chat message is trying to apply a pending change set.
@@ -32,17 +33,11 @@ export function resolveAdminApplyIntent(
   }
 
   if (hasPendingChangeSet) {
-    if (UNAMBIGUOUS_WHEN_PENDING.some((pattern) => pattern.test(normalized))) {
-      return { kind: 'unambiguous' };
+    if (
+      APPLY_COMMAND_WHEN_PENDING.some((pattern) => pattern.test(normalized))
+    ) {
+      return { kind: 'needs-panel' };
     }
-    if (APPLY_LANGUAGE.test(normalized)) {
-      return { kind: 'ambiguous' };
-    }
-    return { kind: 'none' };
-  }
-
-  if (APPLY_LANGUAGE.test(normalized)) {
-    return { kind: 'ambiguous' };
   }
 
   return { kind: 'none' };

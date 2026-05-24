@@ -30,6 +30,7 @@ from typing import Optional, List, Dict
 from llm import get_sage_provider
 from inference_repair import current_inference_repair_status
 from store import embed_texts
+from seed_status import read_seed_status
 import database
 from data_deletion import (
     deletion_target_failed,
@@ -568,10 +569,21 @@ async def smoke_test():
                     "message": "Seeded embedding not found"
                 }
         else:
-            qdrant_result = {
-                "status": "error",
-                "message": f"Collection '{COLLECTION_NAME}' does not exist. Run seed script."
-            }
+            seed_status = read_seed_status()
+            if seed_status and seed_status.get("status") == "degraded":
+                qdrant_result = {
+                    "status": "degraded",
+                    "reason": seed_status.get("reason"),
+                    "message": seed_status.get(
+                        "message",
+                        f"Collection '{COLLECTION_NAME}' does not exist. Run seed script."
+                    ),
+                }
+            else:
+                qdrant_result = {
+                    "status": "error",
+                    "message": f"Collection '{COLLECTION_NAME}' does not exist. Run seed script."
+                }
     except Exception as e:
         qdrant_result = {
             "status": "error",

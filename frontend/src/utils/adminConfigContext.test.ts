@@ -68,6 +68,15 @@ describe('selectAdminConfigScope', () => {
     expect(
       selectAdminConfigScope('Check deployment readiness and service health')
     ).toBe('health');
+    expect(selectAdminConfigScope('Check service status and readiness')).toBe(
+      'health'
+    );
+  });
+
+  it('selects instance-settings for status icon configuration requests', () => {
+    expect(selectAdminConfigScope('Update status icon set to minimal')).toBe(
+      'instance-settings'
+    );
   });
 
   it('falls back to overview for ambiguous admin configuration requests', () => {
@@ -117,6 +126,10 @@ describe('buildScopedAdminConfigContext', () => {
     expect(result.context).toContain('scope: instance-settings');
     expect(result.context).toContain('INSTANCE VISUAL IDENTITY SETTINGS');
     expect(result.context).toContain('primary_color');
+    expect(result.context).toContain(
+      'Never call prose-only bullets or recommendations a Change Confirmation'
+    );
+    expect(result.context).toContain('exactly one valid JSON change set');
     expect(result.context).not.toContain('AI CONFIG');
     expect(result.context).not.toContain('DEPLOYMENT CONFIG');
   });

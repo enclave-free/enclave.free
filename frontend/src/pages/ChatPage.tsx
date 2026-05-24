@@ -58,13 +58,24 @@ import { Button, Callout, IconButton } from '../components/ui';
 import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
+  validateAdminAssistantChangeSet,
   type AdminAssistantChangeSet,
 } from '../utils/adminAssistant';
 import {
   classifyProviderError,
   formatClassifiedProviderError,
+  shouldOfferNewAssistantConversation,
 } from '../utils/providerErrors';
 import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
+import { compactAdminSessionMemory } from '../utils/sessionMemoryCompaction';
+import {
+  formatAdminReducedContextNotice,
+  planAdminPromptBudget,
+} from '../utils/promptBudget';
+import {
+  recordAdminContextPlanInstrumentation,
+  recordProviderFailureInstrumentation,
+} from '../utils/adminResilienceInstrumentation';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -106,11 +117,18 @@ async function readErrorDetail(res: Response): Promise<string> {
 
 function formatProviderStreamError(
   detail: unknown,
-  fallbackMessage: string
+  fallbackMessage: string,
+  options?: { recordAdminInstrumentation?: boolean }
 ): string {
   const classified = classifyProviderError(
     typeof detail === 'string' ? detail : detail
   );
+  if (options?.recordAdminInstrumentation) {
+    recordProviderFailureInstrumentation({
+      surface: 'admin_chat_page',
+      classified,
+    });
+  }
   if (classified.category === 'unknown' && typeof detail !== 'string') {
     return fallbackMessage;
   }
@@ -119,9 +137,16 @@ function formatProviderStreamError(
 
 function formatProviderResponseError(
   detail: unknown,
-  statusFallback: string
+  statusFallback: string,
+  options?: { recordAdminInstrumentation?: boolean }
 ): string {
   const classified = classifyProviderError(detail);
+  if (options?.recordAdminInstrumentation) {
+    recordProviderFailureInstrumentation({
+      surface: 'admin_chat_page',
+      classified,
+    });
+  }
   if (classified.category === 'unknown' && !detail) {
     return statusFallback;
   }
@@ -189,6 +214,9 @@ export function ChatPage() {
     buttonLabel?: string;
     successMessage?: string;
   }>({});
+  const [reducedContextNotice, setReducedContextNotice] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -540,31 +568,14 @@ export function ChatPage() {
       content,
     });
 
-    if (
-      applyIntent.kind === 'unambiguous' &&
-      adminApplyState.state === 'review'
-    ) {
-      try {
-        await handleAdminApply(adminApplyState.changeSet);
-      } finally {
-        dispatchConversation({ type: 'assistantTurnFinished' });
-      }
-      return;
-    }
-
-    if (applyIntent.kind === 'ambiguous') {
+    if (applyIntent.kind === 'needs-panel') {
       dispatchConversation({
         type: 'assistantTurnAppended',
         id: generateMessageId(),
-        content: hasPendingChangeSet
-          ? t(
-              'admin.configAssistant.applyIntentUsePanel',
-              'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-            )
-          : t(
-              'admin.configAssistant.applyIntentNoPending',
-              'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
-            ),
+        content: t(
+          'admin.configAssistant.applyIntentUsePanel',
+          'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+        ),
       });
       dispatchConversation({ type: 'assistantTurnFinished' });
       return;
@@ -580,6 +591,53 @@ export function ChatPage() {
     try {
       const backendTools = selectedTools;
       const useRag = !isAdmin && selectedDocuments.length > 0;
+      let conversationHistory = messages.map(
+        ({ role, content: turnContent }) => ({
+          role,
+          content: turnContent,
+        })
+      );
+      if (hasConfigTool) {
+        const sessionMemoryPlan = compactAdminSessionMemory({
+          conversationHistory,
+        });
+        const promptPlan = planAdminPromptBudget({
+          adminConfigContext: '',
+          conversationHistory: sessionMemoryPlan.conversationHistory,
+        });
+        conversationHistory = promptPlan.conversationHistory;
+        setReducedContextNotice(
+          formatAdminReducedContextNotice(promptPlan.reducedSections, {
+            sectionLabels: {
+              'admin-config': t(
+                'admin.configAssistant.reducedContextSections.adminConfig',
+                'admin configuration context'
+              ),
+              'document-context': t(
+                'admin.configAssistant.reducedContextSections.documentContext',
+                'document library context'
+              ),
+              'recent-conversation': t(
+                'admin.configAssistant.reducedContextSections.recentConversation',
+                'recent conversation history'
+              ),
+            },
+            formatNotice: (sectionLabels) =>
+              t(
+                'admin.configAssistant.reducedContextNotice',
+                'Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.',
+                { sections: sectionLabels.join(', ') }
+              ),
+          })
+        );
+        recordAdminContextPlanInstrumentation({
+          surface: 'admin_chat_page',
+          sessionMemoryPlan,
+          promptPlan,
+        });
+      } else {
+        setReducedContextNotice(null);
+      }
 
       let response: Response;
       if (useRag) {
@@ -635,9 +693,10 @@ export function ChatPage() {
                 dispatchStreamEvent(event, data, streamMessageId);
               } else if (event === 'error') {
                 throw new Error(
-                  typeof data.detail === 'string'
-                    ? data.detail
-                    : t('errors.failedToSendMessage')
+                  formatProviderStreamError(
+                    data.detail,
+                    t('errors.failedToSendMessage')
+                  )
                 );
               } else if (streamMessageId) {
                 dispatchStreamEvent(event, data, streamMessageId);
@@ -710,10 +769,7 @@ export function ChatPage() {
             content,
             tools: backendTools,
             sessionId: conversationSessionId,
-            conversationHistory: messages.map(({ role, content }) => ({
-              role,
-              content,
-            })),
+            conversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
               if (event === 'assistant_message_started') {
@@ -748,7 +804,8 @@ export function ChatPage() {
                 throw new Error(
                   formatProviderStreamError(
                     typeof data.detail === 'string' ? data.detail : data,
-                    t('errors.failedToSendMessage')
+                    t('errors.failedToSendMessage'),
+                    { recordAdminInstrumentation: hasConfigTool }
                   )
                 );
               } else if (streamMessageId) {
@@ -843,10 +900,7 @@ export function ChatPage() {
           content,
           tools: backendTools,
           sessionId: conversationSessionId,
-          conversationHistory: messages.map(({ role, content }) => ({
-            role,
-            content,
-          })),
+          conversationHistory,
         });
       }
 
@@ -868,7 +922,9 @@ export function ChatPage() {
       if (!response.ok) {
         const detail = await readErrorDetail(response);
         throw new Error(
-          formatProviderResponseError(detail, `HTTP ${response.status}`)
+          formatProviderResponseError(detail, `HTTP ${response.status}`, {
+            recordAdminInstrumentation: hasConfigTool,
+          })
         );
       }
 
@@ -1000,6 +1056,19 @@ export function ChatPage() {
         for (const req of changeSet.requests) {
           try {
             const resolvedPath = rewritePath(req.path);
+            const requestValidation = validateAdminAssistantChangeSet({
+              version: 1,
+              requests: [req],
+            });
+            if (!requestValidation.ok) {
+              results.push({
+                ok: false,
+                method: req.method,
+                path: resolvedPath,
+                error: requestValidation.error || 'Invalid request',
+              });
+              continue;
+            }
             let resolvedBody: unknown = req.body;
             if (
               resolvedBody &&
@@ -1396,7 +1465,7 @@ IMPORTANT: Return a CONDENSED response:
 
       {error && (
         <div className="px-3 sm:px-4 pb-2">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto space-y-2">
             <Callout
               label={t('chat.errors.requestLabel', 'Chat request error')}
               tone="error"
@@ -1419,9 +1488,41 @@ IMPORTANT: Return a CONDENSED response:
                 <X className="h-4 w-4" aria-hidden="true" />
               </IconButton>
             </Callout>
+            {isAdmin &&
+              selectedTools.includes(CONFIG_TOOL_ID) &&
+              shouldOfferNewAssistantConversation(
+                classifyProviderError(error)
+              ) && (
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-border text-text hover:bg-surface-overlay transition-colors text-sm font-medium"
+                >
+                  {t('admin.configAssistant.startNewConversation')}
+                </button>
+              )}
           </div>
         </div>
       )}
+
+      {isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        reducedContextNotice && (
+          <div className="px-3 sm:px-4 pb-2">
+            <div className="max-w-3xl mx-auto">
+              <div
+                role="note"
+                aria-label={t(
+                  'admin.configAssistant.reducedContextNoticeLabel',
+                  'Reduced context notice'
+                )}
+                className="text-sm text-warning bg-warning/10 border border-warning/25 rounded-xl px-3 py-2"
+              >
+                {reducedContextNotice}
+              </div>
+            </div>
+          </div>
+        )}
 
       {isAdmin &&
         selectedTools.includes(CONFIG_TOOL_ID) &&

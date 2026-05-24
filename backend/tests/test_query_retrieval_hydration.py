@@ -244,6 +244,37 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.assertIn(matched_text, body["context"])
         self.assertLess(body["context"].index(opening_text), body["context"].index(matched_text))
 
+    def test_document_overview_query_caps_opening_document_context(self) -> None:
+        for index in range(6):
+            job_id = f"doc-{index:02d}"
+            self.create_completed_document(job_id, filename=f"{job_id}.pdf")
+            self.ingest_db.upsert_retrieval_chunk(
+                chunk_id=f"{job_id}_chunk_0000",
+                job_id=job_id,
+                chunk_index=0,
+                source_file=f"{job_id}.pdf",
+                text=f"Opening excerpt for {job_id}.",
+            )
+
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
+            return FakeQdrantResponse([])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "Read my uploaded doc and get a basic understanding of our org",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        for index in range(5):
+            self.assertIn(f"Opening excerpt for doc-{index:02d}.", body["context"])
+        self.assertNotIn("Opening excerpt for doc-05.", body["context"])
+
     def test_retrieval_evaluation_returns_expected_hydrated_sources(self) -> None:
         self.create_completed_document("safety-handbook", filename="Safety Handbook.md")
         self.create_completed_document("benefits-guide", filename="Benefits Guide.md")

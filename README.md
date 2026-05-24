@@ -75,6 +75,12 @@ First startup will:
 3. download the embedding model cache
 4. initialize SQLite and Sage Postgres state
 
+In local development, a transient embedding provider quota or context-limit
+failure during Qdrant smoke-test seeding no longer blocks the stack from
+booting. The backend logs the degraded seed state and `/test` reports Qdrant as
+`degraded` until seeding succeeds. In production (`ENCLAVE_ENV=production`),
+the same seed failure still fails startup.
+
 ### Verify Setup
 
 ```bash

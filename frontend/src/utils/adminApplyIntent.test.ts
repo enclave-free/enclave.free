@@ -2,45 +2,62 @@ import { describe, expect, it } from 'vitest';
 import { resolveAdminApplyIntent } from './adminApplyIntent';
 
 describe('resolveAdminApplyIntent', () => {
-  it('treats short apply commands as unambiguous when a pending change set exists', () => {
+  it('routes apply language to the pending panel when a change set exists', () => {
     expect(resolveAdminApplyIntent('Apply them', true)).toEqual({
-      kind: 'unambiguous',
+      kind: 'needs-panel',
     });
     expect(resolveAdminApplyIntent('apply', true)).toEqual({
-      kind: 'unambiguous',
+      kind: 'needs-panel',
     });
     expect(resolveAdminApplyIntent('Go ahead and apply', true)).toEqual({
-      kind: 'unambiguous',
+      kind: 'needs-panel',
     });
     expect(resolveAdminApplyIntent('Please apply changes', true)).toEqual({
-      kind: 'unambiguous',
+      kind: 'needs-panel',
     });
-  });
-
-  it('treats broader apply language as ambiguous when a pending change set exists', () => {
+    expect(resolveAdminApplyIntent('I confirm', true)).toEqual({
+      kind: 'needs-panel',
+    });
+    expect(resolveAdminApplyIntent('yes do it', true)).toEqual({
+      kind: 'needs-panel',
+    });
     expect(
       resolveAdminApplyIntent(
         'Apply the theme changes we discussed earlier',
         true
       )
     ).toEqual({
-      kind: 'ambiguous',
-    });
-    expect(
-      resolveAdminApplyIntent('Can you confirm the deployment updates?', true)
-    ).toEqual({
-      kind: 'ambiguous',
+      kind: 'needs-panel',
     });
   });
 
-  it('treats apply language as ambiguous when no pending change set exists', () => {
+  it('lets broader apply or confirm questions continue to Sage even when a change set exists', () => {
+    expect(
+      resolveAdminApplyIntent('Can you confirm the deployment updates?', true)
+    ).toEqual({
+      kind: 'none',
+    });
+  });
+
+  it('lets apply language continue to Sage when no change set exists', () => {
     expect(resolveAdminApplyIntent('Apply them', false)).toEqual({
-      kind: 'ambiguous',
+      kind: 'none',
     });
     expect(
       resolveAdminApplyIntent('Please apply the new settings', false)
     ).toEqual({
-      kind: 'ambiguous',
+      kind: 'none',
+    });
+    expect(resolveAdminApplyIntent('I confirm', false)).toEqual({
+      kind: 'none',
+    });
+    expect(
+      resolveAdminApplyIntent(
+        'I confirm: "Greeting: update greeting. Tone: update tone."',
+        false
+      )
+    ).toEqual({
+      kind: 'none',
     });
   });
 

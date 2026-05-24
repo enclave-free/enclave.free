@@ -118,6 +118,8 @@ class AdminConfigTool(BaseTool):
                 "CHANGESET FORMAT",
                 "State-changing Admin Conversation writes require Admin Change Confirmation before apply.",
                 "Use exactly one JSON change set. Instance Settings are updated with a partial PUT /admin/settings body.",
+                "Never call prose-only bullets or recommendations a Change Confirmation. A Change Confirmation requires exactly one valid JSON change set that the UI can validate and preview.",
+                "If you already described changes in prose but did not emit JSON, the admin cannot apply them yet. On apply/confirm follow-up language, generate the missing JSON change set or ask one focused follow-up.",
                 "Do not include secret Deployment Settings unless the Admin explicitly requested setting them.",
                 json.dumps(example_change_set, indent=2, sort_keys=True),
             ])

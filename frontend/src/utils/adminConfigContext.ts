@@ -50,7 +50,6 @@ const INSTANCE_VISUAL_IDENTITY_KEYWORDS = new Set([
   'copy',
   'identity',
   'palette',
-  'status',
   'surface',
   'theme',
   'themes',
@@ -211,6 +210,9 @@ export function containsKeyword(
  * Deterministically selects the scoped admin config area for a request.
  */
 export function selectAdminConfigScope(query: string): AdminConfigScope {
+  const normalized = query.toLowerCase();
+  if (/status[_\s-]?icon/.test(normalized)) return 'instance-settings';
+  if (containsKeyword(query, HEALTH_KEYWORDS)) return 'health';
   if (containsKeyword(query, INSTANCE_VISUAL_IDENTITY_KEYWORDS))
     return 'instance-settings';
   if (
@@ -222,7 +224,6 @@ export function selectAdminConfigScope(query: string): AdminConfigScope {
   if (containsKeyword(query, AGENT_SETTINGS_KEYWORDS)) return 'agent-settings';
   if (containsKeyword(query, DOCUMENT_DEFAULTS_KEYWORDS))
     return 'document-defaults';
-  if (containsKeyword(query, HEALTH_KEYWORDS)) return 'health';
   if (containsKeyword(query, DEPLOYMENT_KEYWORDS)) return 'deployment-settings';
   return 'overview';
 }
@@ -288,6 +289,9 @@ export async function buildScopedAdminConfigContext(
       );
       sections.push(
         'Use exactly one JSON change set. Instance Settings are updated with a partial PUT /admin/settings body.'
+      );
+      sections.push(
+        'Never call prose-only bullets or recommendations a Change Confirmation. A Change Confirmation requires exactly one valid JSON change set that the UI can validate and preview.'
       );
       sections.push(
         JSON.stringify(buildVisualIdentityChangeSetExample(), null, 2)
@@ -596,7 +600,8 @@ function buildControlContract({
     '- Do not echo secrets back into chat. If you must reference them, say "[REDACTED]".',
     '- Prefer actionable, specific guidance: which setting to change, what to set it to, and whether restart is required.',
     '- When the admin delegates a configuration task, inspect first-party context, choose reasonable defaults for unspecified details, and state important assumptions briefly.',
-    '- For a coherent delegated admin configuration task, group related settings into one reviewable Change Confirmation instead of splitting every setting into separate proposals.',
+    '- For a coherent delegated admin configuration task, group related settings into one executable change set instead of splitting every setting into separate proposals.',
+    '- Never call prose-only bullets or recommendations a Change Confirmation. A Change Confirmation requires exactly one valid JSON change set that the UI can validate and preview.',
     '',
     'CHANGESET FORMAT (optional)',
     'If you want the admin to apply changes from this chat, include exactly one JSON code block with this shape:',
@@ -623,6 +628,7 @@ function buildControlContract({
     ),
     '```',
     'Notes:',
+    '- If you already described changes in prose but did not emit JSON, the admin cannot apply them yet. On apply/confirm follow-up language, generate the missing JSON change set or ask one focused follow-up.',
     '- Instance settings are updated via PUT /admin/settings with a JSON body of keys (example: {"instance_name":"My Enclave","primary_color":"#F7931A"}).',
     '- primary_color accepts either a preset name (blue, purple, green, orange, pink, teal) or any valid hex color like "#F7931A".',
     '- status_icon_set must be one of: classic, minimal, playful.',

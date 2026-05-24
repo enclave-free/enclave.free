@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyProviderError,
   formatClassifiedProviderError,
+  shouldOfferNewAssistantConversation,
 } from './providerErrors';
 
 describe('classifyProviderError', () => {
@@ -14,6 +15,21 @@ describe('classifyProviderError', () => {
       category: 'context_limit',
       message: 'Token limit exceeded for this session.',
       recoveryHint: 'Start a new assistant conversation to continue.',
+      retryPolicy: 'never',
+      shouldFallbackToNonStreaming: false,
+    });
+  });
+
+  it('classifies quota exhaustion separately from context limits', () => {
+    const classified = classifyProviderError(
+      '{"error":{"code":"insufficient_quota","message":"You exceeded your current quota."}}'
+    );
+
+    expect(classified).toEqual({
+      category: 'quota_exhausted',
+      message: 'The Model Provider quota for this account has been exhausted.',
+      recoveryHint:
+        'Check billing or upgrade your Model Provider plan, then try again.',
       retryPolicy: 'never',
       shouldFallbackToNonStreaming: false,
     });
@@ -101,5 +117,24 @@ describe('formatClassifiedProviderError', () => {
     expect(formatted).toBe(
       'Token limit exceeded for this session. Start a new assistant conversation to continue.'
     );
+  });
+});
+
+describe('shouldOfferNewAssistantConversation', () => {
+  it('offers recovery for context limit failures only', () => {
+    expect(
+      shouldOfferNewAssistantConversation(
+        classifyProviderError(
+          'Token limit exceeded for this session. Please start a new session.'
+        )
+      )
+    ).toBe(true);
+    expect(
+      shouldOfferNewAssistantConversation(
+        classifyProviderError(
+          '{"error":{"code":"insufficient_quota","message":"You exceeded your current quota."}}'
+        )
+      )
+    ).toBe(false);
   });
 });

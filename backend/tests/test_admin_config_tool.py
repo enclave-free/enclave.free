@@ -80,6 +80,7 @@ class AdminConfigToolTest(unittest.TestCase):
         self.assertIn('"path": "/admin/settings"', context)
         self.assertIn('"default_theme": "dark"', context)
         self.assertIn("Change Confirmation", context)
+        self.assertIn("valid JSON change set", context)
         self.assertNotIn("/admin/settings/default_theme", context)
 
     def test_agent_behavior_requests_use_agent_settings_context(self) -> None:

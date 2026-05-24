@@ -132,7 +132,30 @@ If secret sharing is enabled, it additionally fetches:
 - For every deployment config item with `is_secret=true`:
   - `GET /admin/deployment/config/{key}/reveal`
 
-The former full snapshot behavior is retained only as a manual/debug behavior.
+The former full snapshot behavior is retained only as a manual/debug behavior via **Refresh context** in the sidebar assistant. Normal admin turns use scoped reads assembled on the client for the sidebar assistant and via Sage for admin `/chat` when `admin-config` is selected.
+
+### Model Provider Resilience
+
+Long Admin Configuration Assistant conversations can hit Model Provider context or session limits. The product handles this with bounded context assembly, explicit recovery, direct confirmed apply, and sanitized observability.
+
+Resilience layering on admin sends (sidebar assistant):
+
+1. **Session Memory compaction** — older turns are summarized before the provider call (`frontend/src/utils/sessionMemoryCompaction.ts`).
+2. **Prompt budget planning** — admin config, document, and recent-conversation sections are capped separately (`frontend/src/utils/promptBudget.ts`).
+3. **Transport trim** — `llmChat` still bounds recent history as a final guard.
+
+Admin `/chat` with **Config** selected runs client-side Session Memory compaction before Sage assembles the turn. Prompt budget planning and reduced-context notices are surfaced in both the sidebar assistant and the full chat admin-config path; Sage owns final prompt assembly for the full chat path.
+
+Operator-facing notices (no raw prompts):
+
+- **Session Memory compaction** — shown when older turns were summarized to stay within limits.
+- **Reduced context** — shown when prompt budgeting trimmed admin, document, or conversation sections.
+
+**Model Provider errors** are classified into safe categories (context limit, quota, timeout, unavailable, and others). Context-limit failures offer **Start new assistant conversation**, which clears the assistant session id and session-local secret sharing without deleting Instance, Deployment, Agent Settings, or Documents.
+
+**Direct apply:** When a valid pending change set is in review, **Apply** executes authorized admin endpoints without another Model Provider turn. Conversational shortcuts such as “apply them” route to the existing confirmation flow only when intent is unambiguous.
+
+**Sanitized instrumentation** (`frontend/src/utils/adminResilienceInstrumentation.ts`): maintainers can register listeners for structured metadata after compaction, prompt budgeting, and classified provider failures. Payloads include section names, estimated sizes, included/reduced/omitted scopes, provider category, and recovery action — never raw prompts, secrets, or provider traces.
 
 ### Scoped Read Resilience
 
@@ -299,13 +322,15 @@ Explicitly blocked:
 
 ## Operational Notes
 
-- Secret sharing is intentionally not persisted (it resets when the assistant is closed).
-- The assistant now shows the same tool toggles as full chat and uses the same backend endpoint/tool semantics.
+- Secret sharing is intentionally not persisted (it resets when the assistant is closed on mobile/tablet drawer dismiss, or when starting a new assistant conversation after a context-limit recovery).
+- The assistant shows the same tool toggles as full chat and uses the same backend endpoint/tool semantics.
 - If a deployment key change requires restart, the assistant should mention it. The backend already tracks restart-required keys via `/admin/deployment/restart-required`.
 - After applying a change set, the UI runs:
   - `POST /admin/deployment/config/validate`
   - `GET /admin/deployment/restart-required`
   and appends a short summary to the chat.
+- Pending change sets are preserved through Model Provider failures so reviewed configuration work is not lost.
+- Streamed provider errors on the admin assistant path do not fall through to wasteful non-streaming retries when the failure category is known (for example context limit or quota exhaustion).
 
 ## Troubleshooting
 

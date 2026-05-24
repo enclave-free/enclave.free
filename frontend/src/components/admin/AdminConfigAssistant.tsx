@@ -28,6 +28,7 @@ import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   redactSecrets,
+  validateAdminAssistantChangeSet,
   type AdminAssistantChangeSet,
 } from '../../utils/adminAssistant';
 import {
@@ -36,12 +37,23 @@ import {
 } from '../../utils/adminConfigContext';
 import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
 import {
+  planAdminPromptBudget,
+  formatAdminReducedContextNotice,
+} from '../../utils/promptBudget';
+import { compactAdminSessionMemory } from '../../utils/sessionMemoryCompaction';
+import {
+  recordAdminContextPlanInstrumentation,
+  recordProviderFailureInstrumentation,
+} from '../../utils/adminResilienceInstrumentation';
+import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../../utils/llmChat';
 import {
   classifyProviderError,
   formatClassifiedProviderError,
+  shouldOfferNewAssistantConversation,
+  type ClassifiedProviderError,
 } from '../../utils/providerErrors';
 import { resolveAdminApplyIntent } from '../../utils/adminApplyIntent';
 
@@ -132,6 +144,11 @@ export function AdminConfigAssistant({
   >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] =
+    useState<ClassifiedProviderError | null>(null);
+  const [reducedContextNotice, setReducedContextNotice] = useState<
+    string | null
+  >(null);
   const [snapshotInfo, setSnapshotInfo] = useState<{
     generatedAtIso: string;
   } | null>(null);
@@ -275,6 +292,17 @@ export function AdminConfigAssistant({
     [selectedTools]
   );
 
+  const handleStartNewAssistantConversation = useCallback(() => {
+    setConversationSessionId(null);
+    setMessages([]);
+    setError(null);
+    setRecoveryError(null);
+    setReducedContextNotice(null);
+    setShareSecrets(false);
+    secretsForRedactionRef.current = [];
+    deploymentSecretKeysRef.current = new Set();
+  }, []);
+
   const handleSend = useCallback(
     async (content: string) => {
       const hasPendingChangeSet = applyState.state === 'review';
@@ -291,31 +319,19 @@ export function AdminConfigAssistant({
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
       setError(null);
+      setRecoveryError(null);
+      setReducedContextNotice(null);
 
-      if (applyIntent.kind === 'unambiguous' && applyState.state === 'review') {
-        try {
-          await handleApplyRef.current(applyState.changeSet);
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (applyIntent.kind === 'ambiguous') {
+      if (applyIntent.kind === 'needs-panel') {
         setMessages((prev) => [
           ...prev,
           {
             id: generateMessageId(),
             role: 'assistant',
-            content: hasPendingChangeSet
-              ? t(
-                  'admin.configAssistant.applyIntentUsePanel',
-                  'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-                )
-              : t(
-                  'admin.configAssistant.applyIntentNoPending',
-                  'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
-                ),
+            content: t(
+              'admin.configAssistant.applyIntentUsePanel',
+              'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+            ),
             timestamp: new Date(),
           },
         ]);
@@ -325,10 +341,22 @@ export function AdminConfigAssistant({
 
       try {
         let baseToolContext: string | undefined;
+        let boundedConversationHistory = messages.map(
+          ({ role, content: turnContent }) => ({
+            role,
+            content: turnContent,
+          })
+        );
         if (!hasConfigTool) {
           setSnapshotInfo(null);
           setApplyState({ state: 'idle' });
+          setReducedContextNotice(null);
         } else {
+          const sessionMemoryPlan = compactAdminSessionMemory({
+            conversationHistory: boundedConversationHistory,
+          });
+          boundedConversationHistory = sessionMemoryPlan.conversationHistory;
+
           const snap = await buildScopedAdminConfigContext({
             query: content,
             shareSecrets,
@@ -337,14 +365,48 @@ export function AdminConfigAssistant({
             deploymentMeta,
             tracePolicyLines: TRACE_POLICY_CONTEXT_LINES,
           });
-          baseToolContext = snap.context;
           const documentContext = await fetchBoundedAdminDocumentContext({
             query: content,
             fetchJson,
           });
-          if (documentContext.included) {
-            baseToolContext = `${snap.context}\n\n${documentContext.context}`;
-          }
+          const promptPlan = planAdminPromptBudget({
+            adminConfigContext: snap.context,
+            documentContext: documentContext.included
+              ? documentContext.context
+              : '',
+            conversationHistory: boundedConversationHistory,
+          });
+          baseToolContext = promptPlan.toolContext || undefined;
+          boundedConversationHistory = promptPlan.conversationHistory;
+          setReducedContextNotice(
+            formatAdminReducedContextNotice(promptPlan.reducedSections, {
+              sectionLabels: {
+                'admin-config': t(
+                  'admin.configAssistant.reducedContextSections.adminConfig',
+                  'admin configuration context'
+                ),
+                'document-context': t(
+                  'admin.configAssistant.reducedContextSections.documentContext',
+                  'document library context'
+                ),
+                'recent-conversation': t(
+                  'admin.configAssistant.reducedContextSections.recentConversation',
+                  'recent conversation history'
+                ),
+              },
+              formatNotice: (sectionLabels) =>
+                t(
+                  'admin.configAssistant.reducedContextNotice',
+                  'Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.',
+                  { sections: sectionLabels.join(', ') }
+                ),
+            })
+          );
+          recordAdminContextPlanInstrumentation({
+            surface: 'admin_config_assistant',
+            sessionMemoryPlan,
+            promptPlan,
+          });
           setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
           secretsForRedactionRef.current = snap.secretValues;
           deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
@@ -355,16 +417,14 @@ export function AdminConfigAssistant({
         let raw = '';
         let streamSessionId: string | null = null;
         let streamReportedError = false;
+        let classifiedStreamError: ClassifiedProviderError | null = null;
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: selectedTools,
             baseToolContext,
             sessionId: conversationSessionId,
-            conversationHistory: messages.map(({ role, content }) => ({
-              role,
-              content,
-            })),
+            conversationHistory: boundedConversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
               if (event === 'assistant_message_started') {
@@ -426,6 +486,11 @@ export function AdminConfigAssistant({
                 const classified = classifyProviderError(
                   typeof data.detail === 'string' ? data.detail : data
                 );
+                classifiedStreamError = classified;
+                recordProviderFailureInstrumentation({
+                  surface: 'admin_config_assistant',
+                  classified,
+                });
                 throw new Error(
                   classified.category === 'unknown' &&
                     typeof data.detail !== 'string'
@@ -460,6 +525,12 @@ export function AdminConfigAssistant({
                 ? streamError.message
                 : t('errors.failedToSendMessage')
             );
+            if (
+              classifiedStreamError &&
+              shouldOfferNewAssistantConversation(classifiedStreamError)
+            ) {
+              setRecoveryError(classifiedStreamError);
+            }
             return;
           }
           if (streamMessageId) {
@@ -473,6 +544,12 @@ export function AdminConfigAssistant({
                 ? streamError.message
                 : t('errors.failedToSendMessage')
             );
+            if (
+              classifiedStreamError &&
+              shouldOfferNewAssistantConversation(classifiedStreamError)
+            ) {
+              setRecoveryError(classifiedStreamError);
+            }
             return;
           }
           console.warn(
@@ -487,10 +564,7 @@ export function AdminConfigAssistant({
             tools: selectedTools,
             baseToolContext,
             sessionId: conversationSessionId,
-            conversationHistory: messages.map(({ role, content }) => ({
-              role,
-              content,
-            })),
+            conversationHistory: boundedConversationHistory,
           });
           if (res.status === 401) {
             window.location.href = '/admin';
@@ -498,9 +572,15 @@ export function AdminConfigAssistant({
           }
           if (!res.ok) {
             const detail = await readErrorDetail(res);
-            throw new Error(
-              formatClassifiedProviderError(classifyProviderError(detail))
-            );
+            const classified = classifyProviderError(detail);
+            recordProviderFailureInstrumentation({
+              surface: 'admin_config_assistant',
+              classified,
+            });
+            if (shouldOfferNewAssistantConversation(classified)) {
+              setRecoveryError(classified);
+            }
+            throw new Error(formatClassifiedProviderError(classified));
           }
           const data = (await res.json()) as {
             message?: string;
@@ -626,6 +706,19 @@ export function AdminConfigAssistant({
         for (const req of changeSet.requests) {
           try {
             const resolvedPath = rewritePath(req.path);
+            const requestValidation = validateAdminAssistantChangeSet({
+              version: 1,
+              requests: [req],
+            });
+            if (!requestValidation.ok) {
+              results.push({
+                ok: false,
+                method: req.method,
+                path: resolvedPath,
+                error: requestValidation.error || 'Invalid request',
+              });
+              continue;
+            }
             let resolvedBody: unknown = req.body;
             if (
               resolvedBody &&
@@ -1039,9 +1132,32 @@ export function AdminConfigAssistant({
             </div>
           )}
 
+          {reducedContextNotice && (
+            <div
+              role="note"
+              aria-label={t(
+                'admin.configAssistant.reducedContextNoticeLabel',
+                'Reduced context notice'
+              )}
+              className="text-sm text-warning bg-warning/10 border border-warning/25 rounded-xl px-3 py-2"
+            >
+              {reducedContextNotice}
+            </div>
+          )}
+
           {error && (
-            <div className="text-sm text-error bg-error/10 border border-error/20 rounded-xl px-3 py-2">
-              {error}
+            <div className="text-sm text-error bg-error/10 border border-error/20 rounded-xl px-3 py-2 space-y-2">
+              <div>{error}</div>
+              {recoveryError &&
+                shouldOfferNewAssistantConversation(recoveryError) && (
+                  <button
+                    type="button"
+                    onClick={handleStartNewAssistantConversation}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-border text-text hover:bg-surface-overlay transition-colors text-sm font-medium"
+                  >
+                    {t('admin.configAssistant.startNewConversation')}
+                  </button>
+                )}
             </div>
           )}
 
