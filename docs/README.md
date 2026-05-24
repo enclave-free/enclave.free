@@ -20,6 +20,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [security.md](security.md): security overview and production hardening guidance.
 - [security-data-protection-checklist.md](security-data-protection-checklist.md): engineering-facing security checklist.
 - [integration-tests.md](integration-tests.md): backend and runtime parity checks.
+- [conversation-ui-surface-review.md](conversation-ui-surface-review.md): pre-smoke browser review for the shared Conversation UI Surface.
 
 ## Admin And Ops
 

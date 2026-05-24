@@ -330,6 +330,33 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("Signal User Reachout", combined)
         self.assertNotIn("Sage-mediated Reachout is implemented", combined)
 
+    def test_conversation_ui_surface_review_checklist_prepares_full_smoke(self) -> None:
+        checklist_path = REPO_ROOT / "docs/conversation-ui-surface-review.md"
+        self.assertTrue(checklist_path.exists())
+
+        checklist = checklist_path.read_text(encoding="utf-8")
+        integration = (REPO_ROOT / "docs/integration-tests.md").read_text(
+            encoding="utf-8"
+        )
+        docs_index = (REPO_ROOT / "docs/README.md").read_text(encoding="utf-8")
+        normalized = " ".join(checklist.split())
+
+        self.assertIn("Full End-To-End Smoke Gate", checklist)
+        self.assertIn("User Conversation browser flow", normalized)
+        self.assertIn("message sending, streaming, activity steps, document scope, reachout, export, and fallback/error states", normalized)
+        self.assertIn("Admin Conversation browser flow", normalized)
+        self.assertIn("selected tools, activity steps, Change Confirmation, secret redaction, final trace rendering, and fallback/error states", normalized)
+        self.assertIn("desktop and mobile layout checks", normalized)
+        self.assertIn("human reviewer confirms the activity timeline is inspectable enough for the prototype", normalized)
+        self.assertIn("file separate follow-up issues", normalized)
+        self.assertIn("Sage owns Agent Runtime behavior", normalized)
+        self.assertIn("Enclave-specific controls stay outside the shared ConversationSurface", normalized)
+        self.assertIn("Conversation UI Surface browser review", integration)
+        self.assertIn("docs/conversation-ui-surface-review.md", integration)
+        self.assertIn("before the full end-to-end smoke", integration)
+        self.assertIn("conversation-ui-surface-review.md", docs_index)
+        self.assertIn("pre-smoke browser review", docs_index)
+
     def test_mock_email_docs_and_locales_do_not_teach_mock_smtp_alias(self) -> None:
         checked_paths = [
             REPO_ROOT / "docs/email-auth.md",

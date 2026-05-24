@@ -137,6 +137,10 @@ The AUTH tests use deterministic admin keypairs for migration. The `test_user` v
 
 ## Running Tests
 
+### Conversation UI Surface pre-smoke review
+
+Run the Conversation UI Surface browser review in `docs/conversation-ui-surface-review.md` before the full end-to-end smoke. This keeps browser workflow and layout review separate from Compose/runtime availability checks.
+
 ### Prerequisites
 
 ```bash
