@@ -162,7 +162,12 @@ class IngestBatchReplacementTest(unittest.TestCase):
         async def fake_store_chunk(*_args, **_kwargs):
             return {"qdrant": {"points_inserted": 1}}
 
+        async def fake_verify_embedding_provider_available():
+            return None
+
+        original_verify = self.ingest.verify_embedding_provider_available
         original_store_chunk = self.ingest.store_chunk
+        self.ingest.verify_embedding_provider_available = fake_verify_embedding_provider_available
         self.ingest.store_chunk = fake_store_chunk
         try:
             upload = self.upload_text("Handbook.md", "operator knowledge for retrieval")
@@ -187,6 +192,7 @@ class IngestBatchReplacementTest(unittest.TestCase):
             self.assertEqual(actions["delete_retrieval_chunk_text"]["status"], "succeeded")
             self.assertEqual(self.ingest_db.list_retrieval_chunks(job_id), [])
         finally:
+            self.ingest.verify_embedding_provider_available = original_verify
             self.ingest.store_chunk = original_store_chunk
 
     def test_processing_persists_plaintext_retrieval_chunk_text_without_key_by_default(self) -> None:
@@ -200,7 +206,12 @@ class IngestBatchReplacementTest(unittest.TestCase):
         async def fake_store_chunk(*_args, **_kwargs):
             return {"qdrant": {"points_inserted": 1}}
 
+        async def fake_verify_embedding_provider_available():
+            return None
+
+        original_verify = self.ingest.verify_embedding_provider_available
         original_store_chunk = self.ingest.store_chunk
+        self.ingest.verify_embedding_provider_available = fake_verify_embedding_provider_available
         self.ingest.store_chunk = fake_store_chunk
         try:
             upload = self.upload_text("Handbook.md", "plaintext artifact and retrieval")
@@ -218,6 +229,36 @@ class IngestBatchReplacementTest(unittest.TestCase):
             raw_rows = self.ingest_db.list_retrieval_chunks(job_id)
             self.assertEqual(raw_rows[0]["encrypted_text"], "plaintext artifact and retrieval")
         finally:
+            self.ingest.verify_embedding_provider_available = original_verify
+            self.ingest.store_chunk = original_store_chunk
+
+    def test_processing_fails_fast_when_embedding_provider_is_unavailable(self) -> None:
+        async def fake_verify_embedding_provider_available():
+            raise RuntimeError("Token limit exceeded for this session")
+
+        async def fake_store_chunk(*_args, **_kwargs):
+            self.fail("Chunks should not be stored after embedding preflight fails")
+
+        original_verify = self.ingest.verify_embedding_provider_available
+        original_store_chunk = self.ingest.store_chunk
+        self.ingest.verify_embedding_provider_available = fake_verify_embedding_provider_available
+        self.ingest.store_chunk = fake_store_chunk
+        try:
+            upload = self.upload_text("Handbook.md", "operator knowledge for retrieval")
+            self.assertEqual(upload.status_code, 200)
+            job_id = upload.json()["job_id"]
+            artifact_path = Path(self.ingest.JOBS[job_id]["file_path"])
+
+            asyncio.run(self.ingest.process_document(job_id, artifact_path, sample_percent=100.0))
+
+            job = self.ingest.JOBS[job_id]
+            self.assertEqual(job["status"], "failed")
+            self.assertEqual(job["processed_chunks"], 0)
+            self.assertEqual(job["failed_chunks"], 0)
+            self.assertIn("Embedding provider unavailable", job["error"])
+            self.assertIn("Token limit exceeded", job["error"])
+        finally:
+            self.ingest.verify_embedding_provider_available = original_verify
             self.ingest.store_chunk = original_store_chunk
 
     def test_admin_document_context_preview_includes_hydrated_chunk_text(self) -> None:
@@ -300,6 +341,18 @@ class IngestBatchReplacementTest(unittest.TestCase):
 
         self.assertEqual(self.ingest.JOBS, {})
         self.assertEqual(self.ingest_db.list_jobs(), [])
+
+    def test_status_uses_durable_processed_chunk_count_when_runtime_chunks_are_absent(self) -> None:
+        upload = self.upload_text("Handbook.md", "operator knowledge")
+        self.assertEqual(upload.status_code, 200)
+        job_id = upload.json()["job_id"]
+        self.complete_job(job_id)
+        self.ingest.CHUNKS = {}
+
+        response = self.client.get(f"/ingest/status/{job_id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["processed_chunks"], 1)
 
     def complete_job(self, job_id: str) -> None:
         """Mark a job completed for state-machine tests; does not exercise process_document."""

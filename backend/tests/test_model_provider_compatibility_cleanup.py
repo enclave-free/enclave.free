@@ -63,22 +63,22 @@ class ModelProviderCompatibilityCleanupTest(unittest.TestCase):
         self.assertIsNone(self.config_loader.get_config("LLM_MODEL"))
         self.assertIsNone(self.config_loader.get_config("LLM_API_KEY"))
 
-    def test_llm_api_key_environment_does_not_configure_python_provider_auth(self) -> None:
+    def test_llm_api_key_environment_configures_python_provider_auth(self) -> None:
         os.environ["LLM_API_KEY"] = "env-only-key"
 
         self.config_loader.invalidate_cache()
 
-        self.assertIsNone(self.config_loader.get_config("LLM_API_KEY"))
-        self.assertIsNone(self.config_loader.get_llm_config()["api_key"])
+        self.assertEqual(self.config_loader.get_config("LLM_API_KEY"), "env-only-key")
+        self.assertEqual(self.config_loader.get_llm_config()["api_key"], "env-only-key")
 
-    def test_provider_ignores_env_only_llm_api_key(self) -> None:
+    def test_provider_uses_env_only_llm_api_key(self) -> None:
         os.environ["LLM_API_KEY"] = "env-only-key"
 
         from llm.sage_tinfoil import SageTinfoilProvider
 
         provider = SageTinfoilProvider()
 
-        self.assertEqual(provider.api_key, "")
+        self.assertEqual(provider.api_key, "env-only-key")
 
     def test_maple_provider_label_is_not_coerced_to_sage(self) -> None:
         os.environ["LLM_PROVIDER"] = "maple"

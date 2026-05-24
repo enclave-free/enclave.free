@@ -284,6 +284,14 @@ _Avoid_: memory type, importance score
 The conversation-specific information **Sage** retains to support an ongoing agent interaction.
 _Avoid_: user profile, chat history
 
+**Session Memory Compaction**:
+The continuity-preserving summarization of older **Conversation Content** so an active **Conversation** can continue within **Model Provider** limits. It is not itself a user-facing loss of context.
+_Avoid_: context loss, deletion, warning
+
+**Reduced Conversation Context**:
+A user-visible degradation where relevant **Conversation Content**, **Scoped Config Context**, **Document Library** context, or other expected context was omitted or materially reduced before inference.
+_Avoid_: normal compaction, session memory summary
+
 **Session Memory Deletion**:
 **Data Deletion** for **Sage** owned **Session Memory** associated with a **Conversation**.
 _Avoid_: delete query session
@@ -349,8 +357,16 @@ A non-agent UI or API path where a **User** or **Admin** performs an action dire
 _Avoid_: tool, conversation action
 
 **Change Confirmation**:
-The explicit **Admin** approval Sage must receive before applying state-changing actions during an **Admin Conversation**.
-_Avoid_: review-only workflow
+The explicit **Admin** approval required before state-changing actions proposed during an **Admin Conversation** are applied. Executable approval is represented by **Conversation UI State** for a valid pending change set, not by free-form conversational acknowledgement alone.
+_Avoid_: review-only workflow, chat-only confirmation
+
+**Executable Change Set**:
+A structured state-change proposal from **Sage** that the **Conversation UI Surface** can validate, preview, and place into **Change Confirmation**. Prose-only recommendations are not executable change sets.
+_Avoid_: prose proposal, suggested edits, assistant recommendation
+
+**Change Set Recovery Turn**:
+An **Admin Conversation** turn where the **Admin** indicates they want to apply prior guidance but no valid pending **Executable Change Set** exists. The turn should continue to **Sage** so Sage can produce an **Executable Change Set** or ask a focused follow-up.
+_Avoid_: no pending changes error, frontend apply failure
 
 **User Conversation**:
 A **Conversation** between a **User** and **Sage** for assistance inside an **Instance**.
@@ -619,6 +635,8 @@ _Avoid_: full snapshot, config dump
 - Admin-authored **User Memory** should default to a durable **User Memory Retention Class**
 - Superseded **User Memory** is eligible for scheduled retention after its retention window
 - **Session Memory** belongs to the **Agent Runtime**
+- **Session Memory Compaction** should preserve continuity for the active **Conversation** and should not be presented as **Reduced Conversation Context** unless expected context was actually omitted or materially degraded
+- **Session Memory Compaction** should preserve enough recent **Conversation Content** that ordinary multi-turn admin setup conversations do not feel reset after a short exchange
 - **Session Memory Deletion** must remove the **Session Memory** associated with a **Conversation**
 - **Session Memory Deletion** is logical active-storage deletion in the first version, not **Secure Erase**
 - **Session Memory** is the first priority **Lifecycle Data Class** for completing **Operator-Controlled Data Lifecycle** across the **Enclave Control Plane** and **Agent Runtime** boundary
@@ -711,6 +729,8 @@ _Avoid_: full snapshot, config dump
 - An **Admin Conversation** may have a **Subject User**
 - An **Admin Conversation** may directly perform **Enclave Control Plane** actions after **Change Confirmation**
 - Every admin-conversation write that changes **Instance** or **Agent Runtime** state requires **Change Confirmation**
+- **Sage** must express state-changing admin proposals as an **Executable Change Set** before the **Conversation UI Surface** can place them into **Change Confirmation**
+- The **Conversation UI Surface** should treat admin apply language without a valid pending **Executable Change Set** as a **Change Set Recovery Turn**, not as a failed local apply attempt
 - The **Admin Configuration Assistant** uses **Scoped Config Context** so configuration reads can stay focused while preserving **Change Confirmation** for writes
 - A **User Conversation** must not perform admin-only **Enclave Control Plane** actions
 - **User Conversations** are read/assistive in the current prototype and do not have general write-capable tool authority
@@ -992,6 +1012,9 @@ _Avoid_: full snapshot, config dump
 - "uploaded document available" is too passive for admin configuration; resolved: when an **Admin Conversation** refers to uploaded materials, theming, copy, or content, Sage should automatically use relevant **Retrieval** over the **Document Library**.
 - "one action per response" should not force fragmented admin setup; resolved: a coherent delegated admin configuration task can be presented as one reviewable **Change Confirmation** containing multiple related writes.
 - "ONE action per response" is too broad when applied to delegated admin setup; resolved: ordinary guidance should stay focused, while related admin configuration writes can be grouped into one **Change Confirmation**.
+- "prose Change Confirmation" is not executable; resolved: Sage may explain proposed changes in prose, but only an **Executable Change Set** can enter **Change Confirmation**.
+- "no pending changes" is a poor recovery for apply language after prose-only guidance; resolved: treat it as a **Change Set Recovery Turn** so Sage can generate the missing **Executable Change Set**.
+- "compaction" is not inherently a failure; resolved: ordinary **Session Memory Compaction** should be quiet continuity machinery, while **Reduced Conversation Context** is the user-visible degradation.
 - "config access" should not imply secret exposure; resolved: non-secret scoped configuration is default admin context, while secret values require explicit Admin sharing and stay redacted in chat.
 - User-agent write authority is not defined yet; resolved for now: **User Conversations** are read/assistive and should not receive general write-capable tools.
 - **Ordinary Product Flow** exists to distinguish direct product actions from Sage tool authority inside a **Conversation**.

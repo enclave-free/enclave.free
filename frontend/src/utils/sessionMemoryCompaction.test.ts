@@ -8,7 +8,7 @@ import {
 
 describe('compactAdminSessionMemory', () => {
   it('leaves short conversations unchanged', () => {
-    const history = Array.from({ length: 8 }, (_, index) => ({
+    const history = Array.from({ length: 24 }, (_, index) => ({
       role: index % 2 === 0 ? ('user' as const) : ('assistant' as const),
       content: `Turn ${index}`,
     }));
@@ -70,8 +70,10 @@ describe('compactAdminSessionMemory', () => {
   it('uses default limits when none are provided', () => {
     expect(
       DEFAULT_SESSION_MEMORY_COMPACTION_LIMITS.maxMessagesBeforeCompaction
-    ).toBe(10);
-    expect(DEFAULT_SESSION_MEMORY_COMPACTION_LIMITS.keepRecentMessages).toBe(4);
+    ).toBe(30);
+    expect(DEFAULT_SESSION_MEMORY_COMPACTION_LIMITS.keepRecentMessages).toBe(
+      10
+    );
   });
 });
 

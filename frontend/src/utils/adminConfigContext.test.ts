@@ -126,6 +126,10 @@ describe('buildScopedAdminConfigContext', () => {
     expect(result.context).toContain('scope: instance-settings');
     expect(result.context).toContain('INSTANCE VISUAL IDENTITY SETTINGS');
     expect(result.context).toContain('primary_color');
+    expect(result.context).toContain(
+      'Never call prose-only bullets or recommendations a Change Confirmation'
+    );
+    expect(result.context).toContain('exactly one valid JSON change set');
     expect(result.context).not.toContain('AI CONFIG');
     expect(result.context).not.toContain('DEPLOYMENT CONFIG');
   });

@@ -13,8 +13,8 @@ export interface SessionMemoryCompactionLimits {
 
 export const DEFAULT_SESSION_MEMORY_COMPACTION_LIMITS: SessionMemoryCompactionLimits =
   {
-    maxMessagesBeforeCompaction: 10,
-    keepRecentMessages: 4,
+    maxMessagesBeforeCompaction: 30,
+    keepRecentMessages: 10,
     summaryMaxChars: 1_500,
   };
 

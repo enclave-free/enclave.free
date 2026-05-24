@@ -214,9 +214,6 @@ export function ChatPage() {
     buttonLabel?: string;
     successMessage?: string;
   }>({});
-  const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
-    null
-  );
   const [reducedContextNotice, setReducedContextNotice] = useState<
     string | null
   >(null);
@@ -571,31 +568,14 @@ export function ChatPage() {
       content,
     });
 
-    if (
-      applyIntent.kind === 'unambiguous' &&
-      adminApplyState.state === 'review'
-    ) {
-      try {
-        await handleAdminApply(adminApplyState.changeSet);
-      } finally {
-        dispatchConversation({ type: 'assistantTurnFinished' });
-      }
-      return;
-    }
-
-    if (applyIntent.kind === 'ambiguous') {
+    if (applyIntent.kind === 'needs-panel') {
       dispatchConversation({
         type: 'assistantTurnAppended',
         id: generateMessageId(),
-        content: hasPendingChangeSet
-          ? t(
-              'admin.configAssistant.applyIntentUsePanel',
-              'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-            )
-          : t(
-              'admin.configAssistant.applyIntentNoPending',
-              'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
-            ),
+        content: t(
+          'admin.configAssistant.applyIntentUsePanel',
+          'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+        ),
       });
       dispatchConversation({ type: 'assistantTurnFinished' });
       return;
@@ -620,19 +600,12 @@ export function ChatPage() {
       if (hasConfigTool) {
         const sessionMemoryPlan = compactAdminSessionMemory({
           conversationHistory,
-          formatNotice: (compactedMessageCount) =>
-            t(
-              'admin.configAssistant.sessionMemoryNotice',
-              'Session Memory was compacted to keep this admin conversation within Model Provider limits ({{count}} earlier messages summarized). Recent turns are preserved; start a new assistant conversation if you need the full earlier transcript.',
-              { count: compactedMessageCount }
-            ),
         });
         const promptPlan = planAdminPromptBudget({
           adminConfigContext: '',
           conversationHistory: sessionMemoryPlan.conversationHistory,
         });
         conversationHistory = promptPlan.conversationHistory;
-        setSessionMemoryNotice(sessionMemoryPlan.notice);
         setReducedContextNotice(
           formatAdminReducedContextNotice(promptPlan.reducedSections, {
             sectionLabels: {
@@ -663,7 +636,6 @@ export function ChatPage() {
           promptPlan,
         });
       } else {
-        setSessionMemoryNotice(null);
         setReducedContextNotice(null);
       }
 
@@ -1405,7 +1377,6 @@ IMPORTANT: Return a CONDENSED response:
   const handleNewChat = () => {
     dispatchConversation({ type: 'newConversationStarted' });
     dispatchAdminApply({ type: 'newConversationStarted' });
-    setSessionMemoryNotice(null);
   };
 
   const rightActions = (
@@ -1533,25 +1504,6 @@ IMPORTANT: Return a CONDENSED response:
           </div>
         </div>
       )}
-
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        sessionMemoryNotice && (
-          <div className="px-3 sm:px-4 pb-2">
-            <div className="max-w-3xl mx-auto">
-              <div
-                role="note"
-                aria-label={t(
-                  'admin.configAssistant.sessionMemoryNoticeLabel',
-                  'Session Memory compaction notice'
-                )}
-                className="text-sm text-info bg-info/10 border border-info/25 rounded-xl px-3 py-2"
-              >
-                {sessionMemoryNotice}
-              </div>
-            </div>
-          </div>
-        )}
 
       {isAdmin &&
         selectedTools.includes(CONFIG_TOOL_ID) &&

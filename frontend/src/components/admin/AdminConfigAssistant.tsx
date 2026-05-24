@@ -149,9 +149,6 @@ export function AdminConfigAssistant({
   const [reducedContextNotice, setReducedContextNotice] = useState<
     string | null
   >(null);
-  const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
-    null
-  );
   const [snapshotInfo, setSnapshotInfo] = useState<{
     generatedAtIso: string;
   } | null>(null);
@@ -301,7 +298,6 @@ export function AdminConfigAssistant({
     setError(null);
     setRecoveryError(null);
     setReducedContextNotice(null);
-    setSessionMemoryNotice(null);
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
     deploymentSecretKeysRef.current = new Set();
@@ -325,32 +321,17 @@ export function AdminConfigAssistant({
       setError(null);
       setRecoveryError(null);
       setReducedContextNotice(null);
-      setSessionMemoryNotice(null);
 
-      if (applyIntent.kind === 'unambiguous' && applyState.state === 'review') {
-        try {
-          await handleApplyRef.current(applyState.changeSet);
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (applyIntent.kind === 'ambiguous') {
+      if (applyIntent.kind === 'needs-panel') {
         setMessages((prev) => [
           ...prev,
           {
             id: generateMessageId(),
             role: 'assistant',
-            content: hasPendingChangeSet
-              ? t(
-                  'admin.configAssistant.applyIntentUsePanel',
-                  'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-                )
-              : t(
-                  'admin.configAssistant.applyIntentNoPending',
-                  'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
-                ),
+            content: t(
+              'admin.configAssistant.applyIntentUsePanel',
+              'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+            ),
             timestamp: new Date(),
           },
         ]);
@@ -370,19 +351,11 @@ export function AdminConfigAssistant({
           setSnapshotInfo(null);
           setApplyState({ state: 'idle' });
           setReducedContextNotice(null);
-          setSessionMemoryNotice(null);
         } else {
           const sessionMemoryPlan = compactAdminSessionMemory({
             conversationHistory: boundedConversationHistory,
-            formatNotice: (compactedMessageCount) =>
-              t(
-                'admin.configAssistant.sessionMemoryNotice',
-                'Session Memory was compacted to keep this admin conversation within Model Provider limits ({{count}} earlier messages summarized). Recent turns are preserved; start a new assistant conversation if you need the full earlier transcript.',
-                { count: compactedMessageCount }
-              ),
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
-          setSessionMemoryNotice(sessionMemoryPlan.notice);
 
           const snap = await buildScopedAdminConfigContext({
             query: content,
@@ -1156,19 +1129,6 @@ export function AdminConfigAssistant({
                   </span>
                 </div>
               </div>
-            </div>
-          )}
-
-          {sessionMemoryNotice && (
-            <div
-              role="note"
-              aria-label={t(
-                'admin.configAssistant.sessionMemoryNoticeLabel',
-                'Session Memory compaction notice'
-              )}
-              className="text-sm text-info bg-info/10 border border-info/25 rounded-xl px-3 py-2"
-            >
-              {sessionMemoryNotice}
             </div>
           )}
 
