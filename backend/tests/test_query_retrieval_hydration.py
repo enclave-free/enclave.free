@@ -244,6 +244,37 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.assertIn(matched_text, body["context"])
         self.assertLess(body["context"].index(opening_text), body["context"].index(matched_text))
 
+    def test_uploaded_resource_learn_about_my_org_query_includes_opening_document_context(self) -> None:
+        self.create_completed_document(
+            "wlc-political-prisoners",
+            filename="WLC_Political-Prisoners_EN.pdf",
+        )
+        opening_text = "PPST supports political prisoners and their families through international advocacy."
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="wlc-political-prisoners_chunk_0000",
+            job_id="wlc-political-prisoners",
+            chunk_index=0,
+            source_file="WLC_Political-Prisoners_EN.pdf",
+            text=opening_text,
+        )
+
+        def fake_post(*_args: Any, **_kwargs: Any) -> FakeQdrantResponse:
+            return FakeQdrantResponse([])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "Learn about my org PPST from my uploaded resource WLC_Political-Prisoners_EN.pdf",
+                    "user": {"id": 1, "type": "admin", "pubkey": "admin-pubkey"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn(opening_text, body["context"])
+
     def test_document_overview_query_caps_opening_document_context(self) -> None:
         for index in range(6):
             job_id = f"doc-{index:02d}"

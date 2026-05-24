@@ -123,9 +123,30 @@ def _filter_results_to_accessible_jobs(search_results: list[dict], accessible_jo
 
 def _is_document_overview_query(query: str) -> bool:
     normalized = query.lower()
-    material_terms = ("uploaded", "document", "doc", "pdf", "book", "file")
-    overview_terms = ("read", "overview", "basic understanding", "understanding", "summarize", "summary", "our org", "organization")
-    return any(term in normalized for term in material_terms) and any(term in normalized for term in overview_terms)
+    material_terms = (
+        "uploaded",
+        "document",
+        "doc",
+        "pdf",
+        "book",
+        "file",
+        "resource",
+    )
+    overview_terms = (
+        "read",
+        "learn about",
+        "overview",
+        "basic understanding",
+        "understanding",
+        "summarize",
+        "summary",
+        "my org",
+        "our org",
+        "organization",
+    )
+    return any(term in normalized for term in material_terms) and any(
+        term in normalized for term in overview_terms
+    )
 
 
 def _opening_chunk_texts_for_documents(job_ids: list[str], seen_chunk_ids: set[str]) -> list[str]:
