@@ -328,6 +328,10 @@ _Avoid_: chain of thought, debug log, audit log, provider trace
 A sanitized user-visible step in a **Conversation** that shows meaningful **Sage** activity during an assistant turn, such as using a tool, retrieving context, checking configuration, or preparing a response.
 _Avoid_: trace blob, debug event, raw tool call
 
+**Activity**:
+The user-facing presentation of live **Conversation Activity Steps** and final sanitized **Conversation Trace** metadata for an assistant turn. It is one visible concept even when the **Conversation Streaming Transport** delivers live steps and final trace metadata separately, and it should remain transparent enough for prototype debugging without presenting itself as a raw debug panel.
+_Avoid_: trace UI, raw debug panel, hidden tool-call UI
+
 **Conversation Streaming Transport**:
 A conversation response path that sends assistant turn, live trace status, answer deltas, and completion events to the client as they become available.
 _Avoid_: streaming-shaped response, fake streaming, delayed batch response
@@ -335,6 +339,10 @@ _Avoid_: streaming-shaped response, fake streaming, delayed batch response
 **Conversation UI Surface**:
 The user-facing interface where **Users** or **Admins** read and send **Conversation** messages, inspect permitted **Conversation Trace** details, and choose visible conversation controls.
 _Avoid_: agent runtime, chatbot service, conversation owner
+
+**Conversation Sidebar**:
+The session-navigation region of the **Conversation UI Surface**. In the current prototype slice it may establish the ChatGPT-like shell with local current-conversation affordances, while durable history, resume, rename, delete, and cross-device persistence remain future **Sage** session-history work.
+_Avoid_: fake persistent history, session memory owner
 
 **Conversation Channel**:
 A delivery path through which a **User** or **Admin** participates in a **Conversation** with the same **Sage** inside an **Instance**.
@@ -363,6 +371,10 @@ _Avoid_: tool, conversation action
 **Change Confirmation**:
 The explicit **Admin** approval required before state-changing actions proposed during an **Admin Conversation** are applied. Executable approval is represented by **Conversation UI State** for a valid pending change set, not by free-form conversational acknowledgement alone.
 _Avoid_: review-only workflow, chat-only confirmation
+
+**Superseded Change Confirmation**:
+A prior pending **Change Confirmation** that is no longer actionable because a later assistant turn produced a newer **Executable Change Set**.
+_Avoid_: duplicate pending approval, stale apply button
 
 **Executable Change Set**:
 A structured state-change proposal from **Sage** that the **Conversation UI Surface** can validate, preview, and place into **Change Confirmation**. Prose-only recommendations are not executable change sets.
@@ -647,6 +659,7 @@ _Avoid_: full snapshot, config dump
 - Superseded **User Memory** is eligible for scheduled retention after its retention window
 - **Session Memory** belongs to the **Agent Runtime**
 - **Session Memory Compaction** should preserve continuity for the active **Conversation** and should not be presented as **Reduced Conversation Context** unless expected context was actually omitted or materially degraded
+- Ordinary **Session Memory Compaction** should render, when visible, as a quiet system notice rather than **Activity**
 - **Session Memory Compaction** should preserve enough recent **Conversation Content** that ordinary multi-turn admin setup conversations do not feel reset after a short exchange
 - **Session Memory Deletion** must remove the **Session Memory** associated with a **Conversation**
 - **Session Memory Deletion** is logical active-storage deletion in the first version, not **Secure Erase**
@@ -699,13 +712,16 @@ _Avoid_: full snapshot, config dump
 - Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
 - **Conversation Trace** should be exposed through a structured `trace` response object on both assistant-style and retrieval-first conversation routes
 - **Admin Conversations** and **User Conversations** should share the same **Conversation UI Surface** with role-specific controls
-- **Conversation Traces** should render inline with the assistant turn they describe, with minimal traces as compact badges and richer traces inside a collapsed per-message disclosure
+- **Activity** should be the user-facing presentation for both live **Conversation Activity Steps** and final sanitized **Conversation Trace** metadata
+- **Activity** should be visible by default during the prototype phase, with a polished timeline that is verbose enough for debugging but does not expose raw payloads in ordinary chat
+- **Activity** should use progressive disclosure: visible rows for meaningful work, expandable sanitized row details, and no raw JSON, raw SQL results, provider traces, backend event names, or internal identifiers in normal chat
 - The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
 - The **Conversation UI Surface** should adapt to Sage-owned **Conversation Streaming Transport** rather than redefining **Agent Runtime** behavior
 - **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
 - During streaming turns, the **Conversation UI Surface** should render meaningful **Conversation Activity Steps** in order before the final assistant response is complete
 - **Conversation Activity Steps** should remain scannable after completion rather than being packed only into a dense trace blob
 - During streaming turns, **Conversation Activity Steps** must be emitted and sanitized by **Sage**, and the prototype should bias toward showing enough activity to make the agent loop inspectable
+- **Activity** may explain that **Sage** prepared an **Executable Change Set**, but **Change Confirmation** should remain a separate approval artifact because it authorizes state-changing action
 - During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status to that turn, and attach the final sanitized **Conversation Trace** when it arrives
 - Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
@@ -734,6 +750,8 @@ _Avoid_: full snapshot, config dump
 - The first **Trace Visibility Policy** implementation should not include per-**User Type** overrides, but the model may evolve to support them later
 - The default **Admin Conversation** trace posture should expose detailed sanitized traces for troubleshooting and configuration work
 - The default **User Conversation** trace posture should be minimal or off, exposing confidence-building summaries without operational detail
+- **Activity** should be more verbose by default in **Admin Conversations** than in **User Conversations** during the prototype phase
+- **User Conversation** Activity should focus on confidence-building context such as retrieved **Documents** or searched sources, not operator internals
 - **Sage** may invoke **Tools** during a **Conversation**
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
@@ -742,6 +760,10 @@ _Avoid_: full snapshot, config dump
 - Every admin-conversation write that changes **Instance** or **Agent Runtime** state requires **Change Confirmation**
 - **Sage** must express state-changing admin proposals as an **Executable Change Set** before the **Conversation UI Surface** can place them into **Change Confirmation**
 - The **Conversation UI Surface** should treat admin apply language without a valid pending **Executable Change Set** as a **Change Set Recovery Turn**, not as a failed local apply attempt
+- **Change Confirmation** should render inline with the assistant turn that produced the related **Executable Change Set**, so the explanation, **Activity**, and approval artifact remain together
+- Pending **Change Confirmation** should not block ordinary follow-up turns in the **Admin Conversation**
+- The **Conversation UI Surface** should allow only one actionable pending **Change Confirmation** at a time; a later pending **Executable Change Set** should make the earlier card a **Superseded Change Confirmation**
+- **Change Confirmation** is the only approval artifact defined for **Conversations** in the current prototype and is scoped to **Admin Conversations**
 - The **Admin Configuration Assistant** uses **Scoped Config Context** so configuration reads can stay focused while preserving **Change Confirmation** for writes
 - A **User Conversation** must not perform admin-only **Enclave Control Plane** actions
 - **User Conversations** are read/assistive in the current prototype and do not have general write-capable tool authority

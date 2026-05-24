@@ -18,6 +18,18 @@ const changeSet: AdminAssistantChangeSet = {
   ],
 };
 
+const newerChangeSet: AdminAssistantChangeSet = {
+  version: 1,
+  summary: 'Update instance theme',
+  requests: [
+    {
+      method: 'PUT',
+      path: '/admin/settings',
+      body: { primary_color: '#1E3A8A' },
+    },
+  ],
+};
+
 describe('Admin Change Confirmation State', () => {
   it('tracks review, applying, applied, and error states separately from shared Conversation UI State', () => {
     const review = reduceAdminChangeConfirmationState(
@@ -75,6 +87,27 @@ describe('Admin Change Confirmation State', () => {
         type: 'newConversationStarted',
       })
     ).toEqual({ state: 'idle' });
+  });
+
+  it('marks an older pending confirmation as superseded when a newer change set is staged', () => {
+    const review = reduceAdminChangeConfirmationState(
+      createAdminChangeConfirmationState(),
+      {
+        type: 'changeSetReadyForReview',
+        changeSet,
+      }
+    );
+
+    const superseded = reduceAdminChangeConfirmationState(review, {
+      type: 'changeSetReadyForReview',
+      changeSet: newerChangeSet,
+    });
+
+    expect(superseded).toEqual({
+      state: 'review',
+      changeSet: newerChangeSet,
+      supersededChangeSet: changeSet,
+    });
   });
 
   it('ignores late apply results after confirmation state has been cleared', () => {

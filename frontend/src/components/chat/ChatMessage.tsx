@@ -207,7 +207,7 @@ function ConversationTracePanel({
     return (
       <div
         className="mt-3 flex flex-wrap gap-2 border-t border-border/70 pt-3 text-xs text-text-muted"
-        aria-label="Conversation trace summary"
+        aria-label="Activity summary"
       >
         {tools.map((tool) => (
           <div
@@ -239,7 +239,7 @@ function ConversationTracePanel({
   return (
     <section
       className="mt-3 overflow-hidden rounded-lg border border-border/80 bg-surface text-xs text-text-muted"
-      aria-label="Conversation trace"
+      aria-label="Activity"
     >
       <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-surface-raised px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
@@ -254,12 +254,7 @@ function ConversationTracePanel({
               aria-hidden="true"
             />
           )}
-          <span className="font-medium text-text">Conversation Trace</span>
-          {visibility && (
-            <span className="rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-text-muted">
-              {visibility}
-            </span>
-          )}
+          <span className="font-medium text-text">Activity</span>
         </div>
         {liveStatus && (
           <span className="truncate text-right text-[11px] text-text-secondary">
@@ -280,21 +275,21 @@ function ConversationTracePanel({
               className={`h-3.5 w-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
               aria-hidden="true"
             />
-            {detailsOpen ? 'Hide trace details' : 'Show trace details'}
+            {detailsOpen ? 'Hide activity details' : 'Show activity details'}
           </button>
         )}
         {detailsOpen && summary && (
           <p className="leading-relaxed text-text-secondary">{summary}</p>
         )}
         {hasActivity && (
-          <div className="space-y-2" aria-label="Conversation activity">
+          <div className="space-y-2" aria-label="Activity timeline">
             {combinedActivitySteps.map((step) => (
               <ActivityStepRow key={step.id} step={step} />
             ))}
           </div>
         )}
         {tools.length > 0 && (
-          <TraceRows label="Tools">
+          <TraceRows label="Tool calls">
             {tools.map((tool, index) => (
               <ToolTraceRow
                 key={`${tool.id}-${tool.input_summary ?? ''}-${index}`}
@@ -363,7 +358,9 @@ function ActivityStepRow({ step }: { step: ConversationActivityStep }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-medium text-text">{step.title}</span>
-            <TraceStatus status={step.status} />
+            {!isSettledSuccessStatus(step.status) && (
+              <TraceStatus status={step.status} />
+            )}
           </div>
           {step.summary && (
             <p className="mt-1 leading-relaxed text-text-secondary">
@@ -503,6 +500,11 @@ function TraceStatus({ status }: { status: string }) {
   );
 }
 
+function isSettledSuccessStatus(status: string) {
+  const normalized = status.trim().toLowerCase();
+  return normalized === 'completed' || normalized === 'complete';
+}
+
 function TraceWarnings({ warnings }: { warnings: string[] }) {
   if (warnings.length === 0) return null;
 
@@ -594,7 +596,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
     bubbleStyles[config.chatBubbleStyle] || bubbleStyles.soft;
   const bubbleShadow = config.chatBubbleShadow ? 'shadow-sm' : '';
   const userBubbleClass = `group/message relative inline-block max-w-72 sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 pr-11 ${bubbleRadius.user} ${bubbleShadow}`;
-  const assistantBubbleClass = `group/message relative inline-block max-w-72 sm:max-w-[min(100%,48rem)] bg-surface-raised border border-border px-4 py-3 pr-11 ${bubbleRadius.assistant}`;
+  const assistantBubbleClass =
+    'group/message relative w-full max-w-[48rem] px-1 py-1 pr-11';
   const copyButtonClass = isUser
     ? 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-accent-text/75 opacity-70 transition hover:bg-white/15 hover:text-accent-text hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70'
     : 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-text-muted opacity-70 transition hover:bg-surface-overlay hover:text-text focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
@@ -633,7 +636,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div
           className={`flex-1 min-w-0 ${isUser ? 'flex flex-col items-end' : 'flex flex-col items-start'}`}
         >
-          {label?.trim() && (
+          {label?.trim() && isUser && (
             <div className="text-xs text-text-muted mb-1">{label}</div>
           )}
           {isUser ? (

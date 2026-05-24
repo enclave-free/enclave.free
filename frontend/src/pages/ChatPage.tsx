@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   type Dispatch,
+  type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -162,9 +163,9 @@ function stagePendingAdminChangeSet(
   content: string,
   hasConfigTool: boolean,
   dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
-): boolean {
-  if (!hasConfigTool || !content.trim()) return false;
-  if (!content.includes('"requests"')) return false;
+): AdminAssistantChangeSet | null {
+  if (!hasConfigTool || !content.trim()) return null;
+  if (!content.includes('"requests"')) return null;
 
   const extracted = extractAdminAssistantChangeSetStrict(content);
   if (extracted.ok) {
@@ -172,9 +173,9 @@ function stagePendingAdminChangeSet(
       type: 'changeSetReadyForReview',
       changeSet: extracted.changeSet,
     });
-    return true;
+    return extracted.changeSet;
   }
-  return false;
+  return null;
 }
 
 function prepareAssistantContentForDisplay(
@@ -193,7 +194,13 @@ function AdminChangeApprovalCard({
   onReject,
 }: {
   preview: ReturnType<typeof buildAdminChangePreview>;
-  state: 'review' | 'applying' | 'applied' | 'rejected' | 'error';
+  state:
+    | 'review'
+    | 'applying'
+    | 'applied'
+    | 'rejected'
+    | 'error'
+    | 'superseded';
   message?: string;
   onApprove: () => void;
   onReject: () => void;
@@ -202,7 +209,10 @@ function AdminChangeApprovalCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const isApplying = state === 'applying';
   const isFinal =
-    state === 'applied' || state === 'rejected' || state === 'error';
+    state === 'applied' ||
+    state === 'rejected' ||
+    state === 'error' ||
+    state === 'superseded';
 
   return (
     <div
@@ -219,7 +229,7 @@ function AdminChangeApprovalCard({
             <h3 className="text-sm font-semibold text-text">
               {t(
                 'admin.configAssistant.approvalCardTitle',
-                'Admin Change Confirmation'
+                'Approve configuration changes'
               )}
             </h3>
             {isApplying && (
@@ -240,6 +250,11 @@ function AdminChangeApprovalCard({
             {state === 'error' && (
               <span className="rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-medium text-error">
                 {t('admin.configAssistant.failed', 'Failed')}
+              </span>
+            )}
+            {state === 'superseded' && (
+              <span className="rounded-full bg-surface-overlay px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                {t('admin.configAssistant.superseded', 'Superseded')}
               </span>
             )}
           </div>
@@ -340,6 +355,12 @@ export function ChatPage() {
   const [adminApprovalTurnId, setAdminApprovalTurnId] = useState<string | null>(
     null
   );
+  const [supersededAdminApprovals, setSupersededAdminApprovals] = useState<
+    Array<{
+      turnId: string;
+      changeSet: AdminAssistantChangeSet;
+    }>
+  >([]);
   const [documents, setDocuments] = useState<DocumentSource[]>([]);
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false);
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([]);
@@ -377,6 +398,9 @@ export function ChatPage() {
   const [reducedContextNotice, setReducedContextNotice] = useState<
     string | null
   >(null);
+  const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -715,6 +739,33 @@ export function ChatPage() {
     return action;
   };
 
+  const stageAdminChangeSetForTurn = useCallback(
+    (turnId: string | null | undefined) => {
+      if (!turnId) return;
+      if (
+        (adminApplyState.state === 'review' ||
+          adminApplyState.state === 'applying') &&
+        adminApprovalTurnId
+      ) {
+        setSupersededAdminApprovals((existing) => {
+          if (
+            existing.some((approval) => approval.turnId === adminApprovalTurnId)
+          )
+            return existing;
+          return [
+            ...existing,
+            {
+              turnId: adminApprovalTurnId,
+              changeSet: adminApplyState.changeSet,
+            },
+          ];
+        });
+      }
+      setAdminApprovalTurnId(turnId);
+    },
+    [adminApplyState, adminApprovalTurnId]
+  );
+
   const handleSend = async (content: string) => {
     const hasConfigTool = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
     const hasPendingChangeSet = adminApplyState.state === 'review';
@@ -754,6 +805,14 @@ export function ChatPage() {
         const sessionMemoryPlan = compactAdminSessionMemory({
           conversationHistory,
         });
+        setSessionMemoryNotice(
+          sessionMemoryPlan.compacted
+            ? t(
+                'admin.configAssistant.sessionMemoryNotice',
+                'Older context was summarized to keep this conversation going.'
+              )
+            : null
+        );
         const promptPlan = planAdminPromptBudget({
           adminConfigContext: '',
           conversationHistory: sessionMemoryPlan.conversationHistory,
@@ -790,6 +849,7 @@ export function ChatPage() {
         });
       } else {
         setReducedContextNotice(null);
+        setSessionMemoryNotice(null);
       }
 
       let response: Response;
@@ -986,6 +1046,7 @@ export function ChatPage() {
             const extracted =
               extractAdminAssistantChangeSetStrict(streamContent);
             if (extracted.ok) {
+              stageAdminChangeSetForTurn(streamMessageId);
               dispatchAdminApply({
                 type: 'changeSetReadyForReview',
                 changeSet: extracted.changeSet,
@@ -1006,11 +1067,12 @@ export function ChatPage() {
               ? streamError.message
               : t('errors.failedToSendMessage');
 
-          stagePendingAdminChangeSet(
+          const stagedChangeSet = stagePendingAdminChangeSet(
             streamContent,
             hasConfigTool,
             dispatchAdminApply
           );
+          if (stagedChangeSet) stageAdminChangeSetForTurn(streamMessageId);
 
           if (streamMessageId && streamContent.trim()) {
             dispatchConversation({
@@ -1110,6 +1172,9 @@ export function ChatPage() {
           const raw = String(data.message || '');
           const extracted = extractAdminAssistantChangeSetStrict(raw);
           if (extracted.ok) {
+            stageAdminChangeSetForTurn(
+              typeof data.message_id === 'string' ? data.message_id : null
+            );
             dispatchAdminApply({
               type: 'changeSetReadyForReview',
               changeSet: extracted.changeSet,
@@ -1524,6 +1589,9 @@ IMPORTANT: Return a CONDENSED response:
   const handleNewChat = () => {
     dispatchConversation({ type: 'newConversationStarted' });
     dispatchAdminApply({ type: 'newConversationStarted' });
+    setSupersededAdminApprovals([]);
+    setSessionMemoryNotice(null);
+    setReducedContextNotice(null);
   };
 
   const rightActions = (
@@ -1584,6 +1652,7 @@ IMPORTANT: Return a CONDENSED response:
         size="sm"
         leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
         className="w-full justify-start"
+        data-dismiss-sidebar="true"
       >
         {t('chat.new', 'New chat')}
       </Button>
@@ -1596,6 +1665,7 @@ IMPORTANT: Return a CONDENSED response:
           aria-current="page"
           aria-label={`${sessionTitle} ${sessionMeta}`}
           className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-left text-sm text-text shadow-sm"
+          data-dismiss-sidebar="true"
         >
           <MessageSquare
             className="h-4 w-4 shrink-0 text-accent"
@@ -1623,10 +1693,14 @@ IMPORTANT: Return a CONDENSED response:
       className="flex w-full flex-col gap-2"
     >
       <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-medium text-text-muted">
+          {t('chat.tools.label', 'Tools')}
+        </span>
         <ToolSelector
           tools={availableTools}
           selectedTools={selectedTools}
           onToggle={handleToolToggle}
+          compact
         />
       </div>
     </section>
@@ -1638,7 +1712,7 @@ IMPORTANT: Return a CONDENSED response:
       {selectedDocumentSources.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-medium text-text-muted">
-            {t('chat.contextTitle', 'Context')}
+            {t('chat.documentsContextTitle', 'Documents')}
           </span>
           {selectedDocumentSources.map((document) => (
             <span
@@ -1652,16 +1726,24 @@ IMPORTANT: Return a CONDENSED response:
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-medium text-text-muted">
+          {t('chat.tools.label', 'Tools')}
+        </span>
         <ToolSelector
           tools={availableTools}
           selectedTools={selectedTools}
           onToggle={handleToolToggle}
+          compact
         />
         <div className="h-4 w-px bg-border" />
+        <span className="text-[11px] font-medium text-text-muted">
+          {t('chat.documentsContextTitle', 'Documents')}
+        </span>
         <DocumentScope
           selectedDocuments={selectedDocuments}
           onToggle={handleDocumentToggle}
           documents={documents}
+          compact
         />
       </div>
     </section>
@@ -1674,17 +1756,10 @@ IMPORTANT: Return a CONDENSED response:
     [conversationTurns]
   );
   useEffect(() => {
-    if (
-      adminApplyState.state === 'review' &&
-      lastAssistantTurnId &&
-      adminApprovalTurnId !== lastAssistantTurnId
-    ) {
-      setAdminApprovalTurnId(lastAssistantTurnId);
-    }
     if (adminApplyState.state === 'idle' && adminApprovalTurnId) {
       setAdminApprovalTurnId(null);
     }
-  }, [adminApplyState.state, adminApprovalTurnId, lastAssistantTurnId]);
+  }, [adminApplyState.state, adminApprovalTurnId]);
   const turnAccessories = useMemo(() => {
     const isApprovalVisible =
       adminApplyState.state === 'review' ||
@@ -1695,6 +1770,23 @@ IMPORTANT: Return a CONDENSED response:
     const cardTurnId = adminApprovalTurnId ?? lastAssistantTurnId;
     const changeSet =
       'changeSet' in adminApplyState ? adminApplyState.changeSet : undefined;
+    const accessories: Record<string, ReactNode> = {};
+
+    for (const supersededApproval of supersededAdminApprovals) {
+      const preview = buildAdminChangePreview(supersededApproval.changeSet, {
+        deploymentSecretKeysLoaded,
+        deploymentSecretKeys,
+      });
+      accessories[supersededApproval.turnId] = (
+        <AdminChangeApprovalCard
+          preview={preview}
+          state="superseded"
+          onApprove={() => undefined}
+          onReject={() => undefined}
+        />
+      );
+    }
+
     if (
       !isAdmin ||
       !selectedTools.includes(CONFIG_TOOL_ID) ||
@@ -1702,26 +1794,25 @@ IMPORTANT: Return a CONDENSED response:
       !cardTurnId ||
       !isApprovalVisible
     ) {
-      return undefined;
+      return Object.keys(accessories).length > 0 ? accessories : undefined;
     }
 
     const preview = buildAdminChangePreview(changeSet, {
       deploymentSecretKeysLoaded,
       deploymentSecretKeys,
     });
-    return {
-      [cardTurnId]: (
-        <AdminChangeApprovalCard
-          preview={preview}
-          state={adminApplyState.state}
-          message={
-            'message' in adminApplyState ? adminApplyState.message : undefined
-          }
-          onApprove={() => handleAdminApply(changeSet)}
-          onReject={() => dispatchAdminApply({ type: 'rejected' })}
-        />
-      ),
-    };
+    accessories[cardTurnId] = (
+      <AdminChangeApprovalCard
+        preview={preview}
+        state={adminApplyState.state}
+        message={
+          'message' in adminApplyState ? adminApplyState.message : undefined
+        }
+        onApprove={() => handleAdminApply(changeSet)}
+        onReject={() => dispatchAdminApply({ type: 'rejected' })}
+      />
+    );
+    return accessories;
   }, [
     adminApprovalTurnId,
     adminApplyState,
@@ -1731,6 +1822,7 @@ IMPORTANT: Return a CONDENSED response:
     isAdmin,
     lastAssistantTurnId,
     selectedTools,
+    supersededAdminApprovals,
   ]);
   const threadNotices = (
     <div className="mt-4 space-y-2">
@@ -1769,6 +1861,20 @@ IMPORTANT: Return a CONDENSED response:
           >
             {t('admin.configAssistant.startNewConversation')}
           </button>
+        )}
+      {isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        sessionMemoryNotice && (
+          <div
+            role="note"
+            aria-label={t(
+              'admin.configAssistant.sessionMemoryNoticeLabel',
+              'Session Memory compaction notice'
+            )}
+            className="rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-text-secondary"
+          >
+            {sessionMemoryNotice}
+          </div>
         )}
       {isAdmin &&
         selectedTools.includes(CONFIG_TOOL_ID) &&

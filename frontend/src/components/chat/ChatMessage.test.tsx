@@ -199,7 +199,7 @@ describe('ChatMessage', () => {
     expect(clipboardWriteText).toHaveBeenCalledWith(content);
   });
 
-  it('renders assistant Conversation Trace as compact rows with expandable details', async () => {
+  it('renders assistant Activity as visible timeline rows with expandable details', async () => {
     const user = userEvent.setup();
     renderMessage('Here is the answer.', 'assistant', {
       visibility: 'summary',
@@ -222,7 +222,11 @@ describe('ChatMessage', () => {
       suppressed: false,
     });
 
-    expect(screen.getByText('Conversation Trace')).toBeInTheDocument();
+    expect(screen.getByText('Activity')).toBeInTheDocument();
+    expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument();
+    expect(screen.queryByText('summary')).not.toBeInTheDocument();
+    expect(screen.getByText('Tool calls')).toBeInTheDocument();
+    expect(screen.queryByText('Tools')).not.toBeInTheDocument();
     expect(screen.getByText('Web search')).toBeInTheDocument();
     expect(
       screen.queryByText('Sage used Web search before answering.')
@@ -232,7 +236,7 @@ describe('ChatMessage', () => {
     ).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('button', { name: 'Show trace details' })
+      screen.getByRole('button', { name: 'Show activity details' })
     );
 
     expect(
@@ -241,7 +245,7 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Found 3 relevant results.')).toBeInTheDocument();
   });
 
-  it('renders Conversation activity from trace metadata when no separate activity prop is present', () => {
+  it('renders Activity from trace metadata when no separate activity prop is present', () => {
     renderMessage('Here is the answer.', 'assistant', {
       visibility: 'summary',
       tools: [],
@@ -258,8 +262,9 @@ describe('ChatMessage', () => {
       suppressed: false,
     });
 
-    expect(screen.getByText('Conversation Trace')).toBeInTheDocument();
+    expect(screen.getByText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Checking configuration')).toBeInTheDocument();
+    expect(screen.queryByText('completed')).not.toBeInTheDocument();
     expect(
       screen.getByText('Loaded Instance visual identity context.')
     ).toBeInTheDocument();
@@ -326,9 +331,7 @@ describe('ChatMessage', () => {
       suppressed: false,
     });
 
-    expect(
-      screen.queryByLabelText('Conversation trace summary')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Activity summary')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Hidden in minimal mode.')
     ).not.toBeInTheDocument();

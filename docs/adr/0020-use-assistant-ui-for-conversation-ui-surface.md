@@ -4,19 +4,21 @@ The Enclave Free Prototype will use assistant-ui as the shared Conversation UI S
 
 ## Refined Product Direction
 
-The Conversation UI Surface should move from a custom chat implementation that only wraps assistant-ui runtime primitives to a modern assistant-ui-led chat shell. Sage still owns the Agent Runtime, Conversation Streaming Transport, tool execution, trace sanitization, session memory, compaction, and inference boundaries. The frontend should use assistant-ui primitives and patterns for the ordinary chat experience, then add only thin Enclave-specific renderers for product behavior that assistant-ui cannot own safely.
+The Conversation UI Surface should move from a custom chat implementation that only wraps assistant-ui runtime primitives to a modern assistant-ui-led chat shell. Sage still owns the Agent Runtime, Conversation Streaming Transport, tool execution, trace sanitization, session memory, compaction, and inference boundaries. The frontend should use assistant-ui primitives and patterns for the ordinary chat experience, then add only thin Enclave-specific renderers for product behavior that assistant-ui cannot own safely. This refactor should prefer deleting or heavily rewriting bespoke chat components when assistant-ui provides a sensible default, rather than preserving the old chat surface behind an assistant-ui adapter.
 
 The visual reference is a ChatGPT-like assistant interface with compact agentic affordances, not an agent console. Normal turns should feel calm, familiar, and message-first. Conversation Activity Steps and Conversation Trace metadata should remain visible by default when activity exists, because this prototype still needs strong feedback and transparency, but they should render as compact, expandable rows before the final assistant answer rather than as a dense debug blob.
+
+The core message layout should follow modern assistant defaults: assistant responses are mostly unboxed text in a readable column, user turns use compact right-aligned bubbles, Activity renders as a visible structured timeline attached to assistant turns, and approval artifacts render as separate inline cards. Avatars and message actions should be subtle, with actions available through hover or compact controls instead of permanently loud chrome.
 
 Admin Change Confirmation should become an inline approval card attached to the relevant assistant turn. The card should show a human-readable summary, affected settings, warnings, and masked secrets by default, with approve/reject actions and collapsed review details. Approvals should be non-blocking for normal conversation, with one clear pending admin-config approval at a time. Applying an approval should disable only that approval card, and historical cards should preserve their final state.
 
 The chat layout should include a session-sidebar shell now, even before persistent session history is implemented. The shell may be static or local-only in this slice, but it should establish the future ChatGPT-style layout: sidebar for new chat and session navigation, light top bar for current chat context, composer toolbar for next-turn tools and document context, and thread content for assistant output, visible traces, compaction notices, errors, and approvals.
 
-Document scope should be represented as composer context rather than as a separate dashboard-like control. True per-message file attachments, drag-and-drop upload, and assistant-ui attachment adapters are out of scope for this slice. Export should remain available but should move away from the primary path, such as into an overflow or secondary action area.
+Document scope and tool selection should be represented as compact composer context rather than as separate dashboard-like controls. They should use quiet chips, icon buttons, popovers, or menus near the composer so the selected Documents and Tools read as context for the next turn. True per-message file attachments, drag-and-drop upload, and assistant-ui attachment adapters are out of scope for this slice. Export should remain available but should move away from the primary path, such as into an overflow or secondary action area.
 
 The chat should use Enclave theme tokens lightly for text, backgrounds, borders, accent, danger, and warning states, but should not preserve heavy legacy chat styling such as glow, strong gradients, oversized empty-state ornamentation, or bespoke bubble chrome. The Conversation UI Surface should become the best-designed part of the product and should be allowed to pull future theme work forward.
 
-The current Sage stream contract emits safe, sanitized activity and trace events rather than native assistant-ui tool-call lifecycle parts. This slice should render those existing events directly as Enclave trace metadata. Native assistant-ui tool-call parts should only be adopted later if Sage's stream contract changes to provide a compatible, sanitized tool-call protocol.
+The current Sage stream contract emits safe, sanitized activity and trace events rather than native assistant-ui tool-call lifecycle parts. This slice should keep that contract and adapt `activity_step`, `trace_status`, and `trace_final` into the new Activity presentation. Native assistant-ui tool-call parts should only be adopted later if Sage's stream contract changes to provide a compatible, sanitized, durable tool-call protocol.
 
 ## Implementation Boundaries
 
@@ -26,7 +28,7 @@ The current Sage stream contract emits safe, sanitized activity and trace events
 - Render traces before assistant answers when activity exists.
 - Keep trace details expandable with local UI state only; do not persist open/closed state.
 - Keep compaction notices as small system notices inside the thread rather than prominent warning blocks.
-- Do not add message edit, regenerate, or full stop/cancel generation unless the existing transport can support the behavior cleanly.
+- Do not add message edit, regenerate, or full stop/cancel generation unless the existing Sage transport can support the behavior truthfully without corrupting **Conversation UI State**, **Session Memory**, or later turns.
 - Preserve behavioral tests around stream adaptation, conversation state, trace visibility, Admin Change Confirmation, document context, and export, while rewriting brittle DOM or style assertions as needed.
 
 ## Current Slice Status
@@ -38,6 +40,10 @@ Admin Change Confirmation cards are now UI-based rather than text-command-based.
 The sidebar remains local-only. It shows the active conversation title and message count and supports starting a fresh chat, but durable session listing, resume, rename, delete, and cross-device persistence remain future work owned by the session-history slice.
 
 Visual cleanup in this slice intentionally moves chat toward calm assistant defaults: lighter avatars, reduced glow/gradient treatment, smaller empty-state ornamentation, secondary export, and thread-contained notices. Broader product theming remains deferred.
+
+## Next Refactor Direction
+
+The next implementation slice should be one coherent modern assistant-ui chat-surface refactor rather than a set of disconnected polish tickets. It should convert the ordinary thread, composer, message layout, running states, and shell toward assistant-ui-led defaults while redesigning Activity, Change Confirmation, composer context controls, compaction notices, and the local-only Conversation Sidebar together.
 
 ## Considered Options
 

@@ -2,7 +2,11 @@ import type { AdminAssistantChangeSet } from '../../utils/adminAssistant';
 
 export type AdminChangeConfirmationState =
   | { state: 'idle' }
-  | { state: 'review'; changeSet: AdminAssistantChangeSet }
+  | {
+      state: 'review';
+      changeSet: AdminAssistantChangeSet;
+      supersededChangeSet?: AdminAssistantChangeSet;
+    }
   | { state: 'applying'; changeSet: AdminAssistantChangeSet }
   | { state: 'applied'; changeSet: AdminAssistantChangeSet; message: string }
   | { state: 'rejected'; changeSet: AdminAssistantChangeSet }
@@ -39,7 +43,13 @@ export function reduceAdminChangeConfirmationState(
 ): AdminChangeConfirmationState {
   switch (action.type) {
     case 'changeSetReadyForReview':
-      return { state: 'review', changeSet: action.changeSet };
+      return {
+        state: 'review',
+        changeSet: action.changeSet,
+        ...(state.state === 'review' || state.state === 'applying'
+          ? { supersededChangeSet: state.changeSet }
+          : {}),
+      };
     case 'applyStarted':
       return state.state === 'review' || state.state === 'applying'
         ? { state: 'applying', changeSet: state.changeSet }

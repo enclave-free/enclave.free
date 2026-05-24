@@ -190,9 +190,14 @@ describe('ChatPage', () => {
   it('shows selected Documents as composer context for the next turn', async () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
+    const composerContext = await screen.findByRole('region', {
+      name: 'Composer context',
+    });
+    expect(composerContext).toBeInTheDocument();
+    expect(within(composerContext).getByText('Tools')).toBeInTheDocument();
     expect(
-      await screen.findByRole('region', { name: 'Composer context' })
-    ).toBeInTheDocument();
+      within(composerContext).getAllByText('Documents').length
+    ).toBeGreaterThan(0);
     expect(await screen.findByText('operator-handbook')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute(
       'aria-pressed',
@@ -290,6 +295,21 @@ describe('ChatPage', () => {
       await screen.findByRole('navigation', { name: 'Chat sessions' })
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('button', { name: 'Open chat sessions' })
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: 'Open chat sessions' })
+    );
+    expect(
+      screen.getAllByRole('navigation', { name: 'Chat sessions' })
+    ).toHaveLength(2);
+    await user.click(
+      screen.getByRole('button', { name: 'Close chat sessions' })
+    );
+    expect(
+      screen.getAllByRole('navigation', { name: 'Chat sessions' })
+    ).toHaveLength(1);
+    expect(
       screen.getByRole('button', { name: 'New chat' })
     ).toBeInTheDocument();
     expect(screen.getByText('Current chat')).toBeInTheDocument();
@@ -311,9 +331,20 @@ describe('ChatPage', () => {
       screen.getByRole('button', { name: 'Hello 2 messages' })
     ).toHaveAttribute('aria-current', 'page');
 
-    await user.click(screen.getByRole('button', { name: 'New chat' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Open chat sessions' })
+    );
+    const mobileSessions = screen.getAllByRole('navigation', {
+      name: 'Chat sessions',
+    })[1];
+    await user.click(
+      within(mobileSessions).getByRole('button', { name: 'New chat' })
+    );
 
     expect(screen.queryByText('First answer.')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('navigation', { name: 'Chat sessions' })
+    ).toHaveLength(1);
     expect(
       screen.getByRole('button', { name: 'Current chat Empty' })
     ).toHaveAttribute('aria-current', 'page');
@@ -779,6 +810,11 @@ describe('ChatPage', () => {
     const approvalCard = await screen.findByRole('group', {
       name: 'Admin Change Confirmation',
     });
+    expect(
+      within(approvalCard).getByRole('heading', {
+        name: 'Approve configuration changes',
+      })
+    ).toBeInTheDocument();
     expect(approvalCard).toHaveTextContent('Update instance theme');
     expect(
       screen.getByRole('button', { name: 'Approve changes' })
@@ -796,6 +832,114 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Review details' }));
 
     expect(approvalCard).toHaveTextContent('PUT /admin/settings');
+  });
+
+  it('supersedes an older pending admin Change Confirmation when a newer change set appears', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const firstChangeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    const secondChangeSet = {
+      version: 1,
+      summary: 'Update assistant voice',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_tone',
+          body: { value: 'Warm and direct.' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-1',
+          delta: `First proposal.\n\n\`\`\`json\n${JSON.stringify(firstChangeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', {
+          message_id: 'admin-msg-1',
+          session_id: 'session-1',
+        });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg-2',
+          delta: `Second proposal.\n\n\`\`\`json\n${JSON.stringify(secondChangeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', {
+          message_id: 'admin-msg-2',
+          session_id: 'session-1',
+        });
+      });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Actually propose the voice update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Update assistant voice')
+    ).toBeInTheDocument();
+    const cards = screen.getAllByRole('group', {
+      name: 'Admin Change Confirmation',
+    });
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent('Update instance theme');
+    expect(cards[0]).toHaveTextContent('Superseded');
+    expect(
+      within(cards[0]).getByRole('button', { name: 'Approve changes' })
+    ).toBeDisabled();
+    expect(cards[1]).toHaveTextContent('Update assistant voice');
+    expect(
+      within(cards[1]).getByRole('button', { name: 'Approve changes' })
+    ).toBeEnabled();
   });
 
   it('keeps a rejected admin Change Confirmation card in the thread history', async () => {
@@ -1848,10 +1992,12 @@ describe('ChatPage', () => {
     );
 
     expect(
-      screen.queryByRole('note', {
+      screen.getByRole('note', {
         name: 'Session Memory compaction notice',
       })
-    ).not.toBeInTheDocument();
+    ).toHaveTextContent(
+      'Older context was summarized to keep this conversation going.'
+    );
 
     const contextPlanEvents = instrumentationEvents.filter(
       (event) => event.kind === 'admin_context_plan'
