@@ -18,6 +18,8 @@ interface ConversationSurfaceProps {
   disabled?: boolean;
   placeholder?: string;
   toolbar?: ReactNode;
+  turnAccessories?: Record<string, ReactNode>;
+  notices?: ReactNode;
 }
 
 export function ConversationSurface({
@@ -27,6 +29,8 @@ export function ConversationSurface({
   disabled = false,
   placeholder,
   toolbar,
+  turnAccessories,
+  notices,
 }: ConversationSurfaceProps) {
   const { t } = useTranslation();
   const runtimeMessages = useMemo(
@@ -60,18 +64,21 @@ export function ConversationSurface({
             ) : (
               <>
                 {turns.map((turn) => (
-                  <ChatMessage
-                    key={turn.id}
-                    message={{
-                      id: turn.id,
-                      role: turn.role,
-                      content: turn.content,
-                      trace: turn.trace,
-                      traceStatus: turn.traceStatus,
-                      activitySteps: turn.activitySteps,
-                    }}
-                  />
+                  <div key={turn.id}>
+                    <ChatMessage
+                      message={{
+                        id: turn.id,
+                        role: turn.role,
+                        content: turn.content,
+                        trace: turn.trace,
+                        traceStatus: turn.traceStatus,
+                        activitySteps: turn.activitySteps,
+                      }}
+                    />
+                    {turnAccessories?.[turn.id]}
+                  </div>
                 ))}
+                {notices}
                 {isRunning && (
                   <ConversationRunningIndicator label={t('chat.typing')} />
                 )}
@@ -96,14 +103,8 @@ function ConversationEmptyState() {
   return (
     <div className="flex min-h-[24rem] items-center justify-center p-4">
       <div className="w-full max-w-lg min-w-0 animate-fade-in text-center">
-        <div className="relative mx-auto mb-8 h-20 w-20">
-          <div className="absolute inset-0 rotate-6 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 scale-95" />
-          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-accent-hover shadow-xl ring-1 ring-white/10">
-            <MessageCircle
-              className="h-10 w-10 text-white"
-              strokeWidth={1.75}
-            />
-          </div>
+        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-surface-raised text-accent">
+          <MessageCircle className="h-7 w-7" strokeWidth={1.75} />
         </div>
         <h2 className="heading-xl mb-2 text-balance">
           {t('chat.emptyState.title')}
@@ -120,8 +121,8 @@ function ConversationRunningIndicator({ label }: { label: string }) {
   return (
     <div className="mb-4 animate-fade-in-up">
       <div className="flex gap-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-hover shadow-md ring-1 ring-white/10">
-          <Sparkles className="h-4 w-4 text-white" aria-hidden="true" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-surface-raised text-accent">
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-border bg-surface-raised px-4 py-3">
           <div className="flex items-center gap-1">

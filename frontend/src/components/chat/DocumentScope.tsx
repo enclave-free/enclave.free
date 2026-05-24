@@ -1,21 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, FileText } from 'lucide-react'
-import { Badge, Button } from '../ui'
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, FileText } from 'lucide-react';
+import { Badge, Button } from '../ui';
 
 export interface DocumentSource {
-  id: string
-  name: string
-  description: string
-  tags: string[]
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
 }
 
 interface DocumentScopeProps {
-  selectedDocuments: string[]
-  onToggle: (docId: string) => void
-  documents: DocumentSource[]
-  compact?: boolean
+  selectedDocuments: string[];
+  onToggle: (docId: string) => void;
+  documents: DocumentSource[];
+  compact?: boolean;
 }
 
 export function DocumentScope({
@@ -24,11 +24,15 @@ export function DocumentScope({
   documents,
   compact = false,
 }: DocumentScopeProps) {
-  const { t } = useTranslation()
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, openUpward: false })
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    openUpward: false,
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,49 +42,52 @@ export function DocumentScope({
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const updatePosition = () => {
         if (buttonRef.current) {
-          const rect = buttonRef.current.getBoundingClientRect()
-          const dropdownHeight = 280 // estimated max height
-          const spaceBelow = window.innerHeight - rect.bottom
-          const spaceAbove = rect.top
-          const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+          const rect = buttonRef.current.getBoundingClientRect();
+          const dropdownHeight = 280; // estimated max height
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const spaceAbove = rect.top;
+          const openUpward =
+            spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
           setDropdownPosition({
             top: openUpward ? rect.top - 6 : rect.bottom + 6,
             left: rect.left,
             openUpward,
-          })
+          });
         }
-      }
+      };
 
-      updatePosition()
-      window.addEventListener('scroll', updatePosition, true)
-      window.addEventListener('resize', updatePosition)
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
 
       return () => {
-        window.removeEventListener('scroll', updatePosition, true)
-        window.removeEventListener('resize', updatePosition)
-      }
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
-  }, [isOpen])
+  }, [isOpen]);
 
-  const selectedCount = selectedDocuments.length
-  const triggerLabel = selectedCount > 0
-    ? t('chat.documentScope.docsLabelWithCount', { count: selectedCount })
-    : t('chat.documentScope.docsLabel')
+  const selectedCount = selectedDocuments.length;
+  const triggerLabel =
+    selectedCount > 0
+      ? t('chat.documentScope.docsLabelWithCount', { count: selectedCount })
+      : t('chat.documentScope.docsLabel');
 
   const dropdownContent = isOpen ? (
     <div
@@ -88,7 +95,9 @@ export function DocumentScope({
       className="fixed w-64 bg-surface-raised border border-border rounded-xl shadow-xl z-[9999] flex flex-col animate-fade-in-scale backdrop-blur-dropdown"
       style={{
         top: dropdownPosition.openUpward ? 'auto' : `${dropdownPosition.top}px`,
-        bottom: dropdownPosition.openUpward ? `${window.innerHeight - dropdownPosition.top}px` : 'auto',
+        bottom: dropdownPosition.openUpward
+          ? `${window.innerHeight - dropdownPosition.top}px`
+          : 'auto',
         left: `${dropdownPosition.left}px`,
         maxHeight: `${dropdownPosition.openUpward ? dropdownPosition.top - 16 : window.innerHeight - dropdownPosition.top - 16}px`,
       }}
@@ -102,11 +111,13 @@ export function DocumentScope({
 
       <div className="overflow-y-auto flex-1 min-h-0">
         {documents.length === 0 ? (
-          <div className="p-4 text-center text-text-muted text-xs">{t('chat.documentScope.noSources')}</div>
+          <div className="p-4 text-center text-text-muted text-xs">
+            {t('chat.documentScope.noSources')}
+          </div>
         ) : (
           <div className="p-1.5">
             {documents.map((source) => {
-              const isSelected = selectedDocuments.includes(source.id)
+              const isSelected = selectedDocuments.includes(source.id);
               return (
                 <button
                   key={source.id}
@@ -125,11 +136,17 @@ export function DocumentScope({
                       }`}
                     >
                       {isSelected && (
-                        <Check className="h-2.5 w-2.5 text-accent-text" aria-hidden="true" strokeWidth={3} />
+                        <Check
+                          className="h-2.5 w-2.5 text-accent-text"
+                          aria-hidden="true"
+                          strokeWidth={3}
+                        />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-text">{source.name}</p>
+                      <p className="text-xs font-medium text-text">
+                        {source.name}
+                      </p>
                       <p className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
                         {source.description}
                       </p>
@@ -151,7 +168,7 @@ export function DocumentScope({
                     </div>
                   </div>
                 </button>
-              )
+              );
             })}
           </div>
         )}
@@ -161,7 +178,10 @@ export function DocumentScope({
         <div className="px-3 py-2 border-t border-border shrink-0">
           <button
             onClick={() => selectedDocuments.forEach((id) => onToggle(id))}
-            aria-label={t('chat.documentScope.clearAllSelectedAria', 'Clear all selected documents')}
+            aria-label={t(
+              'chat.documentScope.clearAllSelectedAria',
+              'Clear all selected documents'
+            )}
             className="text-[10px] text-text-muted hover:text-text transition-colors"
           >
             {t('chat.documentScope.clearAll')}
@@ -169,7 +189,7 @@ export function DocumentScope({
         </div>
       )}
     </div>
-  ) : null
+  ) : null;
 
   return (
     <div className="relative">
@@ -188,17 +208,21 @@ export function DocumentScope({
             aria-hidden="true"
           />
         }
-        className={selectedCount > 0 ? 'text-xs shadow-md glow-accent' : 'text-xs'}
+        className="text-xs"
       >
         {compact ? null : t('chat.documentScope.docsLabel')}
         {selectedCount > 0 && (
-          <Badge tone="neutral" className="min-h-5 border-accent-text/20 bg-accent-text/20 px-1 text-[10px] text-accent-text">
+          <Badge
+            tone="neutral"
+            className="min-h-5 border-accent-text/20 bg-accent-text/20 px-1 text-[10px] text-accent-text"
+          >
             {selectedCount}
           </Badge>
         )}
       </Button>
 
-      {typeof document !== 'undefined' && createPortal(dropdownContent, document.body)}
+      {typeof document !== 'undefined' &&
+        createPortal(dropdownContent, document.body)}
     </div>
-  )
+  );
 }

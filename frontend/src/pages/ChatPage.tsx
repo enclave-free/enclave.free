@@ -10,11 +10,15 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
+  CheckCircle2,
+  ChevronDown,
   Database,
   Mail,
   Plus,
   Search,
   Settings2,
+  MessageSquare,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 import { ChatContainer } from '../components/chat/ChatContainer';
@@ -58,6 +62,7 @@ import { Button, Callout, IconButton } from '../components/ui';
 import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
+  stripAdminAssistantChangeSetJson,
   validateAdminAssistantChangeSet,
   type AdminAssistantChangeSet,
 } from '../utils/adminAssistant';
@@ -157,9 +162,10 @@ function stagePendingAdminChangeSet(
   content: string,
   hasConfigTool: boolean,
   dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
-): void {
-  if (!hasConfigTool || !content.trim()) return;
-  if (!content.includes('```json') || !content.includes('"requests"')) return;
+): boolean {
+  if (!hasConfigTool || !content.trim()) return false;
+  if (!content.includes('```json') || !content.includes('"requests"'))
+    return false;
 
   const extracted = extractAdminAssistantChangeSetStrict(content);
   if (extracted.ok) {
@@ -167,7 +173,152 @@ function stagePendingAdminChangeSet(
       type: 'changeSetReadyForReview',
       changeSet: extracted.changeSet,
     });
+    return true;
   }
+  return false;
+}
+
+function prepareAssistantContentForDisplay(
+  content: string,
+  hasConfigTool: boolean
+): string {
+  const redacted = redactAdminDeploymentSecretChangeSets(content);
+  return hasConfigTool ? stripAdminAssistantChangeSetJson(redacted) : redacted;
+}
+
+function AdminChangeApprovalCard({
+  preview,
+  state,
+  message,
+  onApprove,
+  onReject,
+}: {
+  preview: ReturnType<typeof buildAdminChangePreview>;
+  state: 'review' | 'applying' | 'applied' | 'rejected' | 'error';
+  message?: string;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const { t } = useTranslation();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const isApplying = state === 'applying';
+  const isFinal =
+    state === 'applied' || state === 'rejected' || state === 'error';
+
+  return (
+    <div
+      role="group"
+      aria-label="Admin Change Confirmation"
+      className="mb-4 ml-10 max-w-[min(100%,48rem)] overflow-hidden rounded-xl border border-warning/25 bg-surface-raised shadow-sm"
+    >
+      <div className="flex items-start gap-3 px-4 py-3">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-text">
+              {t(
+                'admin.configAssistant.approvalCardTitle',
+                'Admin Change Confirmation'
+              )}
+            </h3>
+            {isApplying && (
+              <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+                {t('admin.configAssistant.applying', 'Applying')}
+              </span>
+            )}
+            {state === 'applied' && (
+              <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                {t('admin.configAssistant.applied', 'Applied')}
+              </span>
+            )}
+            {state === 'rejected' && (
+              <span className="rounded-full bg-surface-overlay px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+                {t('admin.configAssistant.rejected', 'Rejected')}
+              </span>
+            )}
+            {state === 'error' && (
+              <span className="rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-medium text-error">
+                {t('admin.configAssistant.failed', 'Failed')}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-text-secondary">
+            {preview.summary ||
+              t(
+                'admin.configAssistant.pendingChanges',
+                'Pending configuration changes'
+              )}
+          </p>
+          {message && <p className="mt-2 text-xs text-text-muted">{message}</p>}
+          <p className="mt-2 text-xs text-text-muted">
+            {t('admin.configAssistant.reviewMaskedSecrets')}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((open) => !open)}
+          aria-expanded={detailsOpen}
+          className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text"
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+          {detailsOpen
+            ? t('admin.configAssistant.hideDetails', 'Hide details')
+            : t('admin.configAssistant.reviewDetails', 'Review details')}
+        </button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={onReject}
+            variant="ghost"
+            size="sm"
+            disabled={isApplying || isFinal}
+            aria-label="Reject changes"
+          >
+            {t('admin.configAssistant.reject', 'Reject')}
+          </Button>
+          <Button
+            onClick={onApprove}
+            variant="primary"
+            size="sm"
+            disabled={isApplying || isFinal}
+            aria-label="Approve changes"
+            leadingIcon={
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            }
+          >
+            {t('admin.configAssistant.approve', 'Approve')}
+          </Button>
+        </div>
+      </div>
+
+      {detailsOpen && (
+        <div className="space-y-2 border-t border-border/70 bg-surface px-4 py-3">
+          {preview.requests.map((request) => (
+            <div
+              key={request.idx}
+              className="rounded-lg border border-border bg-surface-raised px-3 py-2"
+            >
+              <div className="text-xs font-mono text-text-secondary">
+                {request.method} {request.path}
+              </div>
+              {request.body !== undefined && (
+                <pre className="mt-2 max-h-40 overflow-auto text-xs text-text-muted">
+                  {JSON.stringify(request.body, null, 2)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ChatPage() {
@@ -187,6 +338,9 @@ export function ChatPage() {
     undefined,
     () => createAdminChangeConfirmationState()
   );
+  const [adminApprovalTurnId, setAdminApprovalTurnId] = useState<string | null>(
+    null
+  );
   const [documents, setDocuments] = useState<DocumentSource[]>([]);
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false);
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([]);
@@ -204,6 +358,13 @@ export function ChatPage() {
   const conversationSessionId = conversationState.conversationSessionId;
   const isLoading = conversationState.isRunning;
   const error = conversationState.error;
+  const selectedDocumentSources = useMemo(
+    () =>
+      selectedDocuments
+        .map((id) => documents.find((document) => document.id === id))
+        .filter((document): document is DocumentSource => Boolean(document)),
+    [documents, selectedDocuments]
+  );
 
   const [reachoutOpen, setReachoutOpen] = useState(false);
   const [reachoutEnabled, setReachoutEnabled] = useState(false);
@@ -574,18 +735,11 @@ export function ChatPage() {
         id: generateMessageId(),
         content: t(
           'admin.configAssistant.applyIntentUsePanel',
-          'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+          'Use the approval card below and click Approve to confirm these configuration updates.'
         ),
       });
       dispatchConversation({ type: 'assistantTurnFinished' });
       return;
-    }
-
-    if (
-      adminApplyState.state === 'error' ||
-      adminApplyState.state === 'applied'
-    ) {
-      dispatchAdminApply({ type: 'dismissed' });
     }
 
     try {
@@ -683,7 +837,10 @@ export function ChatPage() {
                 dispatchConversation({
                   type: 'assistantContentReplaced',
                   assistantTurnId: streamMessageId,
-                  content: redactAdminDeploymentSecretChangeSets(streamContent),
+                  content: prepareAssistantContentForDisplay(
+                    streamContent,
+                    hasConfigTool
+                  ),
                 });
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
@@ -793,7 +950,10 @@ export function ChatPage() {
                 dispatchConversation({
                   type: 'assistantContentReplaced',
                   assistantTurnId: streamMessageId,
-                  content: redactAdminDeploymentSecretChangeSets(streamContent),
+                  content: prepareAssistantContentForDisplay(
+                    streamContent,
+                    hasConfigTool
+                  ),
                 });
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
@@ -975,7 +1135,10 @@ export function ChatPage() {
           typeof data.message_id === 'string'
             ? data.message_id
             : generateMessageId(),
-        content: redactAdminDeploymentSecretChangeSets(responseContent),
+        content: prepareAssistantContentForDisplay(
+          responseContent,
+          hasConfigTool
+        ),
         trace: data.trace ?? null,
         sessionId:
           typeof data.session_id === 'string' ? data.session_id : undefined,
@@ -1263,18 +1426,6 @@ export function ChatPage() {
     [fetchJson, t]
   );
 
-  const adminApplyPreview = useMemo(() => {
-    if (
-      adminApplyState.state !== 'review' &&
-      adminApplyState.state !== 'applying'
-    )
-      return null;
-    return buildAdminChangePreview(adminApplyState.changeSet, {
-      deploymentSecretKeys,
-      deploymentSecretKeysLoaded,
-    });
-  }, [adminApplyState, deploymentSecretKeys, deploymentSecretKeysLoaded]);
-
   // Auto-search triggered by backend - injects results back into RAG session
   const triggerAutoSearch = async (
     searchTerm: string,
@@ -1411,39 +1562,247 @@ IMPORTANT: Return a CONDENSED response:
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
       </IconButton>
-      <ExportButton messages={messages} iconOnly />
     </>
   );
 
   const header = <AppHeader rightActions={rightActions} />;
+  const sessionTitle =
+    messages.find((message) => message.role === 'user')?.content.trim() ||
+    'Current chat';
+  const sessionMeta =
+    messages.length === 0
+      ? 'Empty'
+      : t('chat.sessions.messageCount', {
+          count: messages.length,
+          defaultValue:
+            messages.length === 1 ? '1 message' : `${messages.length} messages`,
+        });
+  const sessionSidebar = (
+    <nav aria-label="Chat sessions" className="flex h-full flex-col gap-3 p-3">
+      <Button
+        onClick={handleNewChat}
+        variant="primary"
+        size="sm"
+        leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+        className="w-full justify-start"
+      >
+        New chat
+      </Button>
+      <div className="space-y-1">
+        <div className="px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">
+          Chats
+        </div>
+        <button
+          type="button"
+          aria-current="page"
+          aria-label={`${sessionTitle} ${sessionMeta}`}
+          className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-left text-sm text-text shadow-sm"
+        >
+          <MessageSquare
+            className="h-4 w-4 shrink-0 text-accent"
+            aria-hidden="true"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate">{sessionTitle}</span>
+            <span className="block truncate text-xs text-text-muted">
+              {sessionMeta}
+            </span>
+          </span>
+        </button>
+      </div>
+      <div className="mt-auto border-t border-border pt-3">
+        <ExportButton messages={messages} />
+      </div>
+    </nav>
+  );
 
   // Admin chat intentionally excludes DocumentScope. Admin tools are Sage-owned
   // assistant tools, while document-grounded retrieval remains a user chat mode.
   const inputToolbar = isAdmin ? (
-    <ToolSelector
-      tools={availableTools}
-      selectedTools={selectedTools}
-      onToggle={handleToolToggle}
-    />
+    <section
+      aria-label="Composer context"
+      className="flex w-full flex-col gap-2"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <ToolSelector
+          tools={availableTools}
+          selectedTools={selectedTools}
+          onToggle={handleToolToggle}
+        />
+      </div>
+    </section>
   ) : (
-    <>
-      <ToolSelector
-        tools={availableTools}
-        selectedTools={selectedTools}
-        onToggle={handleToolToggle}
-      />
-      <div className="w-px h-4 bg-border mx-1" />
-      <DocumentScope
-        selectedDocuments={selectedDocuments}
-        onToggle={handleDocumentToggle}
-        documents={documents}
-      />
-    </>
+    <section
+      aria-label="Composer context"
+      className="flex w-full flex-col gap-2"
+    >
+      {selectedDocumentSources.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-medium text-text-muted">
+            Context
+          </span>
+          {selectedDocumentSources.map((document) => (
+            <span
+              key={document.id}
+              className="inline-flex max-w-[14rem] items-center truncate rounded-full border border-border bg-surface px-2 py-1 text-xs text-text-secondary"
+              title={document.name}
+            >
+              {document.name}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <ToolSelector
+          tools={availableTools}
+          selectedTools={selectedTools}
+          onToggle={handleToolToggle}
+        />
+        <div className="h-4 w-px bg-border" />
+        <DocumentScope
+          selectedDocuments={selectedDocuments}
+          onToggle={handleDocumentToggle}
+          documents={documents}
+        />
+      </div>
+    </section>
   );
   const conversationTurns = buildConversationSurfaceTurns(messages);
+  const lastAssistantTurnId = useMemo(
+    () =>
+      [...conversationTurns].reverse().find((turn) => turn.role === 'assistant')
+        ?.id ?? null,
+    [conversationTurns]
+  );
+  useEffect(() => {
+    if (
+      adminApplyState.state === 'review' &&
+      lastAssistantTurnId &&
+      adminApprovalTurnId !== lastAssistantTurnId
+    ) {
+      setAdminApprovalTurnId(lastAssistantTurnId);
+    }
+    if (adminApplyState.state === 'idle' && adminApprovalTurnId) {
+      setAdminApprovalTurnId(null);
+    }
+  }, [adminApplyState.state, adminApprovalTurnId, lastAssistantTurnId]);
+  const turnAccessories = useMemo(() => {
+    const isApprovalVisible =
+      adminApplyState.state === 'review' ||
+      adminApplyState.state === 'applying' ||
+      adminApplyState.state === 'applied' ||
+      adminApplyState.state === 'rejected' ||
+      adminApplyState.state === 'error';
+    const cardTurnId = adminApprovalTurnId ?? lastAssistantTurnId;
+    const changeSet =
+      'changeSet' in adminApplyState ? adminApplyState.changeSet : undefined;
+    if (
+      !isAdmin ||
+      !selectedTools.includes(CONFIG_TOOL_ID) ||
+      !changeSet ||
+      !cardTurnId ||
+      !isApprovalVisible
+    ) {
+      return undefined;
+    }
+
+    const preview = buildAdminChangePreview(changeSet, {
+      deploymentSecretKeysLoaded,
+      deploymentSecretKeys,
+    });
+    return {
+      [cardTurnId]: (
+        <AdminChangeApprovalCard
+          preview={preview}
+          state={adminApplyState.state}
+          message={
+            'message' in adminApplyState ? adminApplyState.message : undefined
+          }
+          onApprove={() => handleAdminApply(changeSet)}
+          onReject={() => dispatchAdminApply({ type: 'rejected' })}
+        />
+      ),
+    };
+  }, [
+    adminApprovalTurnId,
+    adminApplyState,
+    deploymentSecretKeys,
+    deploymentSecretKeysLoaded,
+    handleAdminApply,
+    isAdmin,
+    lastAssistantTurnId,
+    selectedTools,
+  ]);
+  const threadNotices = (
+    <div className="mt-4 space-y-2">
+      {error && (
+        <Callout
+          label={t('chat.errors.requestLabel', 'Chat request error')}
+          tone="error"
+          className="flex items-center gap-3 animate-fade-in shadow-sm"
+        >
+          <AlertCircle
+            className="h-4 w-4 shrink-0 text-error"
+            aria-hidden="true"
+          />
+          <span className="flex-1">{error}</span>
+          <IconButton
+            label={t('common.close', 'Close')}
+            onClick={() =>
+              dispatchConversation({ type: 'requestErrorDismissed' })
+            }
+            variant="ghost"
+            size="sm"
+            className="text-error hover:bg-error/10"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </IconButton>
+        </Callout>
+      )}
+      {error &&
+        isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        shouldOfferNewAssistantConversation(classifyProviderError(error)) && (
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-border text-text hover:bg-surface-overlay transition-colors text-sm font-medium"
+          >
+            {t('admin.configAssistant.startNewConversation')}
+          </button>
+        )}
+      {isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        reducedContextNotice && (
+          <div
+            role="note"
+            aria-label={t(
+              'admin.configAssistant.reducedContextNoticeLabel',
+              'Reduced context notice'
+            )}
+            className="rounded-xl border border-warning/25 bg-warning/10 px-3 py-2 text-sm text-warning"
+          >
+            {reducedContextNotice}
+          </div>
+        )}
+      {isAdmin &&
+        selectedTools.includes(CONFIG_TOOL_ID) &&
+        adminApplyState.state === 'error' && (
+          <Callout
+            label={t(
+              'admin.configAssistant.applyErrorLabel',
+              'Config apply error'
+            )}
+            tone="error"
+          >
+            {adminApplyState.message}
+          </Callout>
+        )}
+    </div>
+  );
 
   return (
-    <ChatContainer header={header}>
+    <ChatContainer header={header} sidebar={sessionSidebar}>
       <ReachoutModal
         open={reachoutOpen}
         mode={reachoutMode}
@@ -1461,151 +1820,9 @@ IMPORTANT: Return a CONDENSED response:
             : t('chat.input.placeholder')
         }
         toolbar={inputToolbar}
+        turnAccessories={turnAccessories}
+        notices={threadNotices}
       />
-
-      {error && (
-        <div className="px-3 sm:px-4 pb-2">
-          <div className="max-w-3xl mx-auto space-y-2">
-            <Callout
-              label={t('chat.errors.requestLabel', 'Chat request error')}
-              tone="error"
-              className="flex items-center gap-3 animate-fade-in shadow-sm"
-            >
-              <AlertCircle
-                className="h-4 w-4 text-error shrink-0"
-                aria-hidden="true"
-              />
-              <span className="flex-1">{error}</span>
-              <IconButton
-                label={t('common.close', 'Close')}
-                onClick={() =>
-                  dispatchConversation({ type: 'requestErrorDismissed' })
-                }
-                variant="ghost"
-                size="sm"
-                className="text-error hover:bg-error/10"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </IconButton>
-            </Callout>
-            {isAdmin &&
-              selectedTools.includes(CONFIG_TOOL_ID) &&
-              shouldOfferNewAssistantConversation(
-                classifyProviderError(error)
-              ) && (
-                <button
-                  type="button"
-                  onClick={handleNewChat}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-border text-text hover:bg-surface-overlay transition-colors text-sm font-medium"
-                >
-                  {t('admin.configAssistant.startNewConversation')}
-                </button>
-              )}
-          </div>
-        </div>
-      )}
-
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        reducedContextNotice && (
-          <div className="px-3 sm:px-4 pb-2">
-            <div className="max-w-3xl mx-auto">
-              <div
-                role="note"
-                aria-label={t(
-                  'admin.configAssistant.reducedContextNoticeLabel',
-                  'Reduced context notice'
-                )}
-                className="text-sm text-warning bg-warning/10 border border-warning/25 rounded-xl px-3 py-2"
-              >
-                {reducedContextNotice}
-              </div>
-            </div>
-          </div>
-        )}
-
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        adminApplyState.state === 'error' && (
-          <div className="px-3 sm:px-4 pb-2">
-            <div className="max-w-3xl mx-auto">
-              <Callout
-                label={t(
-                  'admin.configAssistant.applyErrorLabel',
-                  'Config apply error'
-                )}
-                tone="error"
-              >
-                {adminApplyState.message}
-              </Callout>
-            </div>
-          </div>
-        )}
-
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        adminApplyState.state === 'review' &&
-        adminApplyPreview && (
-          <div className="px-3 sm:px-4 pb-2">
-            <div className="max-w-3xl mx-auto border border-warning/35 rounded-2xl bg-surface-raised overflow-hidden shadow-md">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-text truncate">
-                  {adminApplyPreview.summary
-                    ? t('admin.configAssistant.pendingChangesWithSummary', {
-                        summary: adminApplyPreview.summary,
-                      })
-                    : t('admin.configAssistant.pendingChanges')}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    onClick={() => dispatchAdminApply({ type: 'dismissed' })}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    {t('admin.configAssistant.dismiss')}
-                  </Button>
-                  <Button
-                    onClick={() => handleAdminApply(adminApplyState.changeSet)}
-                    variant="primary"
-                    size="sm"
-                  >
-                    {t('admin.configAssistant.apply')}
-                  </Button>
-                </div>
-              </div>
-              <div className="px-4 py-2 text-xs text-text-muted border-b border-border bg-warning-subtle/40">
-                {t('admin.configAssistant.reviewMaskedSecrets')}
-              </div>
-              <div className="px-4 py-3 space-y-2 max-h-64 overflow-y-auto">
-                {adminApplyPreview.requests.map((r) => (
-                  <div
-                    key={r.idx}
-                    className="rounded-xl border border-border bg-surface px-3 py-2"
-                  >
-                    <div className="text-xs font-mono text-text-secondary">
-                      {r.method} {r.path}
-                    </div>
-                    {r.body !== undefined && (
-                      <pre className="mt-2 text-xs overflow-x-auto text-text-muted">
-                        {JSON.stringify(r.body, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        adminApplyState.state === 'applying' && (
-          <div className="px-3 sm:px-4 pb-2">
-            <div className="max-w-3xl mx-auto text-sm text-text-muted border border-border rounded-xl px-4 py-3 bg-surface-raised">
-              {t('admin.configAssistant.applyingAdminChanges')}
-            </div>
-          </div>
-        )}
     </ChatContainer>
   );
 }

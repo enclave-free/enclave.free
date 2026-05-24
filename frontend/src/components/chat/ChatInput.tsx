@@ -1,44 +1,49 @@
-import { useState, useRef, useEffect, KeyboardEvent, ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Send } from 'lucide-react'
-import { IconButton } from '../ui'
+import { useState, useRef, useEffect, KeyboardEvent, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Send } from 'lucide-react';
+import { IconButton } from '../ui';
 
 interface ChatInputProps {
-  onSend: (message: string) => void
-  disabled?: boolean
-  placeholder?: string
-  toolbar?: ReactNode
+  onSend: (message: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  toolbar?: ReactNode;
 }
 
-export function ChatInput({ onSend, disabled, placeholder, toolbar }: ChatInputProps) {
-  const { t } = useTranslation()
-  const defaultPlaceholder = t('chat.input.placeholder')
-  const [input, setInput] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+export function ChatInput({
+  onSend,
+  disabled,
+  placeholder,
+  toolbar,
+}: ChatInputProps) {
+  const { t } = useTranslation();
+  const defaultPlaceholder = t('chat.input.placeholder');
+  const [input, setInput] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
     }
-  }, [input])
+  }, [input]);
 
   const handleSubmit = () => {
     if (input.trim() && !disabled) {
-      onSend(input.trim())
-      setInput('')
+      onSend(input.trim());
+      setInput('');
       if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
+        textareaRef.current.style.height = 'auto';
       }
     }
-  }
+  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
+      e.preventDefault();
+      handleSubmit();
     }
-  }
+  };
 
   return (
     <div className="border-t border-border bg-surface px-3 py-3 sm:px-4 shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
@@ -70,7 +75,7 @@ export function ChatInput({ onSend, disabled, placeholder, toolbar }: ChatInputP
               disabled={disabled || !input.trim()}
               title={t('chat.input.sendTitle')}
               variant="primary"
-              className="rounded-xl shadow-sm hover:shadow-md hover:glow-accent disabled:shadow-none"
+              className="rounded-xl shadow-sm disabled:shadow-none"
             >
               <Send className="h-5 w-5" aria-hidden="true" />
             </IconButton>
@@ -78,5 +83,5 @@ export function ChatInput({ onSend, disabled, placeholder, toolbar }: ChatInputP
         </div>
       </div>
     </div>
-  )
+  );
 }
