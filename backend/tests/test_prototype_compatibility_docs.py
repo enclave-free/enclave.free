@@ -214,6 +214,30 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertEqual(violations, [])
 
+    def test_signal_channel_docs_keep_enclave_free_as_sage_home(self) -> None:
+        context = (REPO_ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+        adr = (
+            REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
+        ).read_text(encoding="utf-8")
+        combined = f"{context}\n{adr}"
+
+        self.assertIn("**Conversation Channel**", context)
+        self.assertIn("same **Sage** inside an **Instance**", context)
+        self.assertIn(
+            "**Agent Settings** are the source of truth for Sage's persona and conversation behavior across **Conversation Channels**",
+            context,
+        )
+        self.assertIn(
+            "Agent Settings are the source of truth for Sage identity across Conversation Channels",
+            adr,
+        )
+        self.assertIn(
+            "Upstream-native Sage code is not **Prototype Compatibility Debt** by itself",
+            context,
+        )
+        self.assertIn("channel-specific delivery and formatting constraints", combined)
+        self.assertNotIn("Signal should define Sage's identity", combined)
+
     def test_mock_email_docs_and_locales_do_not_teach_mock_smtp_alias(self) -> None:
         checked_paths = [
             REPO_ROOT / "docs/email-auth.md",

@@ -1,6 +1,6 @@
 # Signal Is A Conversation Channel
 
-The Enclave Free Prototype treats enclave.free as the durable home where Sage lives: the Instance owns the Agent Settings, Conversation authority, Session Memory, and first-party context that shape Sage behavior. Signal should be added, if and when it is added, as a Conversation Channel into that same Sage rather than as a separate native Sage runtime with its own identity, memory, or permission model. This preserves the product boundary that Sage is the Agent Runtime inside enclave.free while still leaving room for Signal-specific delivery and formatting constraints.
+The Enclave Free Prototype treats enclave.free as the durable home where Sage lives: the Instance owns the Agent Settings, Conversation authority, Session Memory, and first-party context that shape Sage behavior. Signal should be added, if and when it is added, as a Conversation Channel into that same Sage rather than as a separate native Sage runtime with its own identity, memory, or permission model. Agent Settings are the source of truth for Sage identity across Conversation Channels. This preserves the product boundary that Sage is the Agent Runtime inside enclave.free while still leaving room for channel-specific delivery and formatting constraints.
 
 ## Considered Options
 
