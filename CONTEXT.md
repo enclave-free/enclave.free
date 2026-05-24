@@ -332,6 +332,10 @@ _Avoid_: trace blob, debug event, raw tool call
 The user-facing presentation of live **Conversation Activity Steps** and final sanitized **Conversation Trace** metadata for an assistant turn. It is one visible concept even when the **Conversation Streaming Transport** delivers live steps and final trace metadata separately, and it should remain transparent enough for prototype debugging without presenting itself as a raw debug panel.
 _Avoid_: trace UI, raw debug panel, hidden tool-call UI
 
+**Conversation Turn Timing**:
+Transient user-visible timing information about meaningful phases within one **Conversation** turn, used to make slow turns understandable without becoming durable **Conversation Trace** or **Audit Log** evidence.
+_Avoid_: phase timing, performance log, provider trace
+
 **Conversation Streaming Transport**:
 A conversation response path that sends assistant turn, live trace status, answer deltas, and completion events to the client as they become available.
 _Avoid_: streaming-shaped response, fake streaming, delayed batch response
