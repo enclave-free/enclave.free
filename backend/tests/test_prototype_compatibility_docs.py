@@ -214,6 +214,149 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertEqual(violations, [])
 
+    def test_signal_channel_docs_keep_enclave_free_as_sage_home(self) -> None:
+        context = (REPO_ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+        adr = (
+            REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
+        ).read_text(encoding="utf-8")
+        combined = f"{context}\n{adr}"
+
+        self.assertIn("**Conversation Channel**", context)
+        self.assertIn("same **Sage** inside an **Instance**", context)
+        self.assertIn(
+            "**Agent Settings** are the source of truth for Sage's persona and conversation behavior across **Conversation Channels**",
+            context,
+        )
+        self.assertIn(
+            "Agent Settings are the source of truth for Sage identity across Conversation Channels",
+            adr,
+        )
+        self.assertIn(
+            "Upstream-native Sage code is not **Prototype Compatibility Debt** by itself",
+            context,
+        )
+        self.assertIn("channel-specific delivery and formatting constraints", combined)
+        self.assertNotIn("Signal should define Sage's identity", combined)
+
+    def test_signal_channel_access_uses_existing_product_authority(self) -> None:
+        adr = (
+            REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
+        ).read_text(encoding="utf-8")
+        context = (REPO_ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+        combined = f"{context}\n{adr}"
+
+        self.assertIn(
+            "Conversation Channel access derives from existing Admin identity and User Approval authority",
+            adr,
+        )
+        self.assertIn(
+            "Channel linking or verification is delivery setup, not a new permission model",
+            adr,
+        )
+        self.assertIn(
+            "**Conversation Channel** access should use existing **Admin** identity and **User Approval** authority",
+            context,
+        )
+        self.assertNotIn("Signal allowlist grants Conversation access", combined)
+
+    def test_user_reachout_docs_keep_signal_out_of_current_scope(self) -> None:
+        reachout = (REPO_ROOT / "docs/user-reachout.md").read_text(encoding="utf-8")
+        reachout_adr = (
+            REPO_ROOT / "docs/adr/0005-user-reachout-is-outside-conversations.md"
+        ).read_text(encoding="utf-8")
+        signal_adr = (
+            REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
+        ).read_text(encoding="utf-8")
+        combined = f"{reachout}\n{reachout_adr}\n{signal_adr}"
+
+        self.assertIn("Email-only", reachout)
+        self.assertIn("outside a Conversation", reachout_adr)
+        self.assertIn("it is not a Sage Tool", reachout_adr)
+        self.assertIn("Future Signal scope", reachout)
+        self.assertIn(
+            "Current User Reachout remains email-only and outside Conversations",
+            reachout,
+        )
+        self.assertIn(
+            "Future direct Admin-to-User contact through a Conversation Channel is separate intent",
+            reachout,
+        )
+        self.assertIn(
+            "current User Reachout remains the email-only ordinary product flow",
+            signal_adr,
+        )
+        self.assertNotIn("User Reachout sends Signal messages", combined)
+        self.assertNotIn("Reachout creates Conversation Content", combined)
+
+    def test_signal_channel_spike_keeps_first_slice_to_sage_conversations(self) -> None:
+        spike_path = REPO_ROOT / "docs/signal-conversation-channel-spike.md"
+        self.assertTrue(spike_path.exists())
+
+        spike = spike_path.read_text(encoding="utf-8")
+        normalized = " ".join(spike.split())
+
+        self.assertIn("smallest end-to-end Signal Conversation Channel slice", normalized)
+        self.assertIn("Conversation access to Sage", normalized)
+        self.assertIn("existing Admin identity and User Approval authority", normalized)
+        self.assertIn("same Conversation and Session Memory model", normalized)
+        self.assertIn("channel-specific delivery and formatting constraints", normalized)
+        self.assertIn("Out of scope: direct Admin-to-User messaging", normalized)
+        self.assertIn("Out of scope: replacing email-only User Reachout", normalized)
+        self.assertIn("ready to break into AFK implementation issues", normalized)
+
+    def test_user_reachout_docs_do_not_absorb_future_signal_contact(self) -> None:
+        reachout = (REPO_ROOT / "docs/user-reachout.md").read_text(encoding="utf-8")
+        adr = (
+            REPO_ROOT / "docs/adr/0005-user-reachout-is-outside-conversations.md"
+        ).read_text(encoding="utf-8")
+        signal_adr = (
+            REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
+        ).read_text(encoding="utf-8")
+        combined = f"{reachout}\n{adr}\n{signal_adr}"
+
+        self.assertIn("User Reachout (Authenticated, Email-Only)", reachout)
+        self.assertIn("Current User Reachout remains email-only", reachout)
+        self.assertIn("outside a Conversation", adr)
+        self.assertIn("not a Sage Tool", adr)
+        self.assertIn("does not create Conversation Content", adr)
+        self.assertIn(
+            "Future Conversation Channels may support direct Admin/User contact, but that is not part of User Reachout v1",
+            reachout,
+        )
+        self.assertIn(
+            "current User Reachout remains the email-only ordinary product flow",
+            signal_adr,
+        )
+        self.assertNotIn("Signal User Reachout", combined)
+        self.assertNotIn("Sage-mediated Reachout is implemented", combined)
+
+    def test_conversation_ui_surface_review_checklist_prepares_full_smoke(self) -> None:
+        checklist_path = REPO_ROOT / "docs/conversation-ui-surface-review.md"
+        self.assertTrue(checklist_path.exists())
+
+        checklist = checklist_path.read_text(encoding="utf-8")
+        integration = (REPO_ROOT / "docs/integration-tests.md").read_text(
+            encoding="utf-8"
+        )
+        docs_index = (REPO_ROOT / "docs/README.md").read_text(encoding="utf-8")
+        normalized = " ".join(checklist.split())
+
+        self.assertIn("Full End-To-End Smoke Gate", checklist)
+        self.assertIn("User Conversation browser flow", normalized)
+        self.assertIn("message sending, streaming, activity steps, document scope, reachout, export, and fallback/error states", normalized)
+        self.assertIn("Admin Conversation browser flow", normalized)
+        self.assertIn("selected tools, activity steps, Change Confirmation, secret redaction, final trace rendering, and fallback/error states", normalized)
+        self.assertIn("desktop and mobile layout checks", normalized)
+        self.assertIn("human reviewer confirms the activity timeline is inspectable enough for the prototype", normalized)
+        self.assertIn("file separate follow-up issues", normalized)
+        self.assertIn("Sage owns Agent Runtime behavior", normalized)
+        self.assertIn("Enclave-specific controls stay outside the shared ConversationSurface", normalized)
+        self.assertIn("Conversation UI Surface browser review", integration)
+        self.assertIn("docs/conversation-ui-surface-review.md", integration)
+        self.assertIn("before the full end-to-end smoke", integration)
+        self.assertIn("conversation-ui-surface-review.md", docs_index)
+        self.assertIn("pre-smoke browser review", docs_index)
+
     def test_mock_email_docs_and_locales_do_not_teach_mock_smtp_alias(self) -> None:
         checked_paths = [
             REPO_ROOT / "docs/email-auth.md",

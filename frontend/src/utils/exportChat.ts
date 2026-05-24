@@ -1,208 +1,290 @@
-import { ConversationTrace, Message } from '../components/chat/ChatMessage'
+import {
+  ConversationActivityStep,
+  ConversationTrace,
+  Message,
+} from '../components/chat/ChatMessage';
 
-export type ExportFormat = 'md' | 'txt'
+export type ExportFormat = 'md' | 'txt';
 
 interface ExportTranslations {
-  defaultTitle: string
-  roleUser: string
-  roleAssistant: string
-  footer: string
-  exportedOn: string
-  copiedExportNotice: string
+  defaultTitle: string;
+  roleUser: string;
+  roleAssistant: string;
+  footer: string;
+  exportedOn: string;
+  copiedExportNotice: string;
 }
 
 interface ExportOptions {
-  messages: Message[]
-  format: ExportFormat
-  title?: string
-  translations: ExportTranslations
-  instanceName?: string
+  messages: Message[];
+  format: ExportFormat;
+  title?: string;
+  translations: ExportTranslations;
+  instanceName?: string;
 }
 
-type ConversationExportMessage = Pick<Message, 'role' | 'content' | 'timestamp' | 'trace' | 'controlSnapshot'>
+type ConversationExportMessage = Pick<
+  Message,
+  | 'role'
+  | 'content'
+  | 'timestamp'
+  | 'trace'
+  | 'activitySteps'
+  | 'controlSnapshot'
+>;
 
 function formatTimestamp(date?: Date): string {
-  if (!date) return ''
-  return date.toLocaleString()
+  if (!date) return '';
+  return date.toLocaleString();
 }
 
-function toConversationExportMessages(messages: Message[]): ConversationExportMessage[] {
-  return messages.map(({ role, content, timestamp, trace, controlSnapshot }) => ({
-    role,
-    content,
-    timestamp,
-    trace,
-    controlSnapshot,
-  }))
+function toConversationExportMessages(
+  messages: Message[]
+): ConversationExportMessage[] {
+  return messages.map(
+    ({ role, content, timestamp, trace, activitySteps, controlSnapshot }) => ({
+      role,
+      content,
+      timestamp,
+      trace,
+      activitySteps,
+      controlSnapshot,
+    })
+  );
 }
 
 function sanitizeInstanceName(instanceName: string): string {
-  const sanitized = instanceName.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim()
-  return (sanitized || 'Enclave').slice(0, 120)
+  const sanitized = instanceName
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return (sanitized || 'Enclave').slice(0, 120);
 }
 
 function escapeMarkdown(value: string): string {
-  return value.replace(/([\\`*_{}\[\]()#+\-.!|>])/g, '\\$1')
+  return value.replace(/([\\`*_{}\[\]()#+\-.!|>])/g, '\\$1');
 }
 
-function formatTraceMarkdown(trace?: ConversationTrace | null): string {
-  if (!trace || trace.visibility === 'off') return ''
-  const lines: string[] = ['**Conversation Trace**']
-  const compactOnly = trace.visibility === 'minimal'
-  const activitySteps = trace.activity_steps ?? []
+function mergeActivitySteps(
+  liveSteps: ConversationActivityStep[] = [],
+  settledSteps: ConversationActivityStep[] = []
+): ConversationActivityStep[] {
+  const merged = new Map<string, ConversationActivityStep>();
+  for (const step of liveSteps) merged.set(step.id, step);
+  for (const step of settledSteps) merged.set(step.id, step);
+  return Array.from(merged.values());
+}
+
+function formatTraceMarkdown(
+  trace?: ConversationTrace | null,
+  liveActivitySteps: ConversationActivityStep[] = []
+): string {
+  const activitySteps = mergeActivitySteps(
+    liveActivitySteps,
+    trace?.activity_steps ?? []
+  );
+  if ((!trace || trace.visibility === 'off') && activitySteps.length === 0)
+    return '';
+  const lines: string[] = ['**Conversation Trace**'];
+  const compactOnly = trace?.visibility === 'minimal';
   if (activitySteps.length > 0) {
-    lines.push('- Conversation Activity')
+    lines.push('- Conversation Activity');
     for (const step of activitySteps) {
-      const summary = !compactOnly && step.summary ? `: ${escapeMarkdown(step.summary)}` : ''
-      lines.push(`  - ${escapeMarkdown(step.title)} (${escapeMarkdown(step.status)})${summary}`)
+      const summary =
+        !compactOnly && step.summary ? `: ${escapeMarkdown(step.summary)}` : '';
+      lines.push(
+        `  - ${escapeMarkdown(step.title)} (${escapeMarkdown(step.status)})${summary}`
+      );
     }
   }
-  if (!compactOnly && trace.reasoning?.summary) {
-    lines.push(`- ${escapeMarkdown(trace.reasoning.summary)}`)
+  if (!compactOnly && trace?.reasoning?.summary) {
+    lines.push(`- ${escapeMarkdown(trace.reasoning.summary)}`);
   }
-  for (const tool of trace.tools ?? []) {
-    const summary = !compactOnly && tool.output_summary ? `: ${escapeMarkdown(tool.output_summary)}` : ''
-    lines.push(`- Tool: ${escapeMarkdown(tool.name)}${summary}`)
+  for (const tool of trace?.tools ?? []) {
+    const summary =
+      !compactOnly && tool.output_summary
+        ? `: ${escapeMarkdown(tool.output_summary)}`
+        : '';
+    lines.push(`- Tool: ${escapeMarkdown(tool.name)}${summary}`);
   }
-  for (const item of trace.retrieval ?? []) {
-    const title = item.title || item.source_type || 'Retrieved source'
-    const summary = !compactOnly && item.summary ? `: ${escapeMarkdown(item.summary)}` : ''
-    lines.push(`- Retrieval: ${escapeMarkdown(title)}${summary}`)
+  for (const item of trace?.retrieval ?? []) {
+    const title = item.title || item.source_type || 'Retrieved source';
+    const summary =
+      !compactOnly && item.summary ? `: ${escapeMarkdown(item.summary)}` : '';
+    lines.push(`- Retrieval: ${escapeMarkdown(title)}${summary}`);
   }
-  return `${lines.join('\n')}\n\n`
+  return `${lines.join('\n')}\n\n`;
 }
 
-function formatControlSnapshotMarkdown(snapshot?: Message['controlSnapshot']): string {
-  if (!snapshot) return ''
-  const lines = ['**Conversation Controls**']
+function formatControlSnapshotMarkdown(
+  snapshot?: Message['controlSnapshot']
+): string {
+  if (!snapshot) return '';
+  const lines = ['**Conversation Controls**'];
   if (snapshot.selectedTools.length > 0) {
-    lines.push(`- Tools: ${snapshot.selectedTools.map(escapeMarkdown).join(', ')}`)
+    lines.push(
+      `- Tools: ${snapshot.selectedTools.map(escapeMarkdown).join(', ')}`
+    );
   }
   if (snapshot.selectedDocuments.length > 0) {
-    lines.push(`- Documents: ${snapshot.selectedDocuments.map(escapeMarkdown).join(', ')}`)
+    lines.push(
+      `- Documents: ${snapshot.selectedDocuments.map(escapeMarkdown).join(', ')}`
+    );
   }
-  return lines.length > 1 ? `${lines.join('\n')}\n\n` : ''
+  return lines.length > 1 ? `${lines.join('\n')}\n\n` : '';
 }
 
-function formatControlSnapshotText(snapshot?: Message['controlSnapshot']): string {
-  if (!snapshot) return ''
-  const lines = ['Conversation Controls']
+function formatControlSnapshotText(
+  snapshot?: Message['controlSnapshot']
+): string {
+  if (!snapshot) return '';
+  const lines = ['Conversation Controls'];
   if (snapshot.selectedTools.length > 0) {
-    lines.push(`- Tools: ${snapshot.selectedTools.join(', ')}`)
+    lines.push(`- Tools: ${snapshot.selectedTools.join(', ')}`);
   }
   if (snapshot.selectedDocuments.length > 0) {
-    lines.push(`- Documents: ${snapshot.selectedDocuments.join(', ')}`)
+    lines.push(`- Documents: ${snapshot.selectedDocuments.join(', ')}`);
   }
-  return lines.length > 1 ? `${lines.join('\n')}\n\n` : ''
+  return lines.length > 1 ? `${lines.join('\n')}\n\n` : '';
 }
 
-function formatTraceText(trace?: ConversationTrace | null): string {
-  if (!trace || trace.visibility === 'off') return ''
-  const lines: string[] = ['Conversation Trace']
-  const compactOnly = trace.visibility === 'minimal'
-  const activitySteps = trace.activity_steps ?? []
+function formatTraceText(
+  trace?: ConversationTrace | null,
+  liveActivitySteps: ConversationActivityStep[] = []
+): string {
+  const activitySteps = mergeActivitySteps(
+    liveActivitySteps,
+    trace?.activity_steps ?? []
+  );
+  if ((!trace || trace.visibility === 'off') && activitySteps.length === 0)
+    return '';
+  const lines: string[] = ['Conversation Trace'];
+  const compactOnly = trace?.visibility === 'minimal';
   if (activitySteps.length > 0) {
-    lines.push('- Conversation Activity')
+    lines.push('- Conversation Activity');
     for (const step of activitySteps) {
-      const summary = !compactOnly && step.summary ? `: ${step.summary}` : ''
-      lines.push(`  - ${step.title} (${step.status})${summary}`)
+      const summary = !compactOnly && step.summary ? `: ${step.summary}` : '';
+      lines.push(`  - ${step.title} (${step.status})${summary}`);
     }
   }
-  if (!compactOnly && trace.reasoning?.summary) {
-    lines.push(`- ${trace.reasoning.summary}`)
+  if (!compactOnly && trace?.reasoning?.summary) {
+    lines.push(`- ${trace.reasoning.summary}`);
   }
-  for (const tool of trace.tools ?? []) {
-    const summary = !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : ''
-    lines.push(`- Tool: ${tool.name}${summary}`)
+  for (const tool of trace?.tools ?? []) {
+    const summary =
+      !compactOnly && tool.output_summary ? `: ${tool.output_summary}` : '';
+    lines.push(`- Tool: ${tool.name}${summary}`);
   }
-  for (const item of trace.retrieval ?? []) {
-    const title = item.title || item.source_type || 'Retrieved source'
-    const summary = !compactOnly && item.summary ? `: ${item.summary}` : ''
-    lines.push(`- Retrieval: ${title}${summary}`)
+  for (const item of trace?.retrieval ?? []) {
+    const title = item.title || item.source_type || 'Retrieved source';
+    const summary = !compactOnly && item.summary ? `: ${item.summary}` : '';
+    lines.push(`- Retrieval: ${title}${summary}`);
   }
-  return `${lines.join('\n')}\n\n`
+  return `${lines.join('\n')}\n\n`;
 }
 
-export function generateExport({ messages, format, title, translations, instanceName = 'Enclave' }: ExportOptions): string {
-  const timestamp = new Date().toLocaleString()
-  const safeInstanceName = sanitizeInstanceName(instanceName)
-  const markdownInstanceName = escapeMarkdown(safeInstanceName)
-  const exportTitle = title || translations.defaultTitle
-  const footerText = translations.footer.replace('{{instanceName}}', format === 'md' ? markdownInstanceName : safeInstanceName)
-  const exportedOnText = translations.exportedOn.replace('{{timestamp}}', timestamp)
-  const conversationMessages = toConversationExportMessages(messages)
+export function generateExport({
+  messages,
+  format,
+  title,
+  translations,
+  instanceName = 'Enclave',
+}: ExportOptions): string {
+  const timestamp = new Date().toLocaleString();
+  const safeInstanceName = sanitizeInstanceName(instanceName);
+  const markdownInstanceName = escapeMarkdown(safeInstanceName);
+  const exportTitle = title || translations.defaultTitle;
+  const footerText = translations.footer.replace(
+    '{{instanceName}}',
+    format === 'md' ? markdownInstanceName : safeInstanceName
+  );
+  const exportedOnText = translations.exportedOn.replace(
+    '{{timestamp}}',
+    timestamp
+  );
+  const conversationMessages = toConversationExportMessages(messages);
 
   if (format === 'md') {
-    let content = `# ${exportTitle}\n\n`
-    content += `*${exportedOnText}*\n\n---\n\n`
-    content += `Source: ${markdownInstanceName} Conversation Export\n\n`
+    let content = `# ${exportTitle}\n\n`;
+    content += `*${exportedOnText}*\n\n---\n\n`;
+    content += `Source: ${markdownInstanceName} Conversation Export\n\n`;
 
     conversationMessages.forEach((message) => {
-      const role = message.role === 'user' ? `**${translations.roleUser}**` : `**${translations.roleAssistant}**`
-      const time = message.timestamp ? ` *(${formatTimestamp(message.timestamp)})*` : ''
+      const role =
+        message.role === 'user'
+          ? `**${translations.roleUser}**`
+          : `**${translations.roleAssistant}**`;
+      const time = message.timestamp
+        ? ` *(${formatTimestamp(message.timestamp)})*`
+        : '';
 
-      content += `### ${role}${time}\n\n`
+      content += `### ${role}${time}\n\n`;
 
       if (message.role === 'user') {
         // User messages are plain text, wrap in blockquote
-        content += `> ${message.content.split('\n').join('\n> ')}\n\n`
-        content += formatControlSnapshotMarkdown(message.controlSnapshot)
+        content += `> ${message.content.split('\n').join('\n> ')}\n\n`;
+        content += formatControlSnapshotMarkdown(message.controlSnapshot);
       } else {
         // Assistant messages may contain markdown, preserve as-is
-        content += `${message.content}\n\n`
-        content += formatTraceMarkdown(message.trace)
+        content += `${message.content}\n\n`;
+        content += formatTraceMarkdown(message.trace, message.activitySteps);
       }
 
-      content += `---\n\n`
-    })
+      content += `---\n\n`;
+    });
 
-    content += `\n> ${translations.copiedExportNotice}\n\n`
-    content += `*${footerText}*`
-    return content
+    content += `\n> ${translations.copiedExportNotice}\n\n`;
+    content += `*${footerText}*`;
+    return content;
   }
 
   // Plain text format
-  let content = `${exportTitle}\n`
-  content += `${'='.repeat(exportTitle.length)}\n\n`
-  content += `${exportedOnText}\n\n`
-  content += `Source: ${safeInstanceName} Conversation Export\n\n`
-  content += `${'─'.repeat(40)}\n\n`
+  let content = `${exportTitle}\n`;
+  content += `${'='.repeat(exportTitle.length)}\n\n`;
+  content += `${exportedOnText}\n\n`;
+  content += `Source: ${safeInstanceName} Conversation Export\n\n`;
+  content += `${'─'.repeat(40)}\n\n`;
 
   conversationMessages.forEach((message) => {
-    const role = message.role === 'user' ? translations.roleUser : translations.roleAssistant
-    const time = message.timestamp ? ` (${formatTimestamp(message.timestamp)})` : ''
+    const role =
+      message.role === 'user'
+        ? translations.roleUser
+        : translations.roleAssistant;
+    const time = message.timestamp
+      ? ` (${formatTimestamp(message.timestamp)})`
+      : '';
 
-    content += `${role}${time}:\n`
-    content += `${message.content}\n\n`
+    content += `${role}${time}:\n`;
+    content += `${message.content}\n\n`;
     if (message.role === 'user') {
-      content += formatControlSnapshotText(message.controlSnapshot)
+      content += formatControlSnapshotText(message.controlSnapshot);
     }
     if (message.role === 'assistant') {
-      content += formatTraceText(message.trace)
+      content += formatTraceText(message.trace, message.activitySteps);
     }
-    content += `${'─'.repeat(40)}\n\n`
-  })
+    content += `${'─'.repeat(40)}\n\n`;
+  });
 
-  content += `\n${translations.copiedExportNotice}\n\n`
-  content += `${footerText}`
-  return content
+  content += `\n${translations.copiedExportNotice}\n\n`;
+  content += `${footerText}`;
+  return content;
 }
 
 export function downloadExport(options: ExportOptions): void {
-  const content = generateExport(options)
-  const extension = options.format === 'md' ? 'md' : 'txt'
-  const mimeType = options.format === 'md' ? 'text/markdown' : 'text/plain'
-  const filename = `enclave-chat-${Date.now()}.${extension}`
+  const content = generateExport(options);
+  const extension = options.format === 'md' ? 'md' : 'txt';
+  const mimeType = options.format === 'md' ? 'text/markdown' : 'text/plain';
+  const filename = `enclave-chat-${Date.now()}.${extension}`;
 
-  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
-  const url = URL.createObjectURL(blob)
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
 
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 
-  URL.revokeObjectURL(url)
+  URL.revokeObjectURL(url);
 }

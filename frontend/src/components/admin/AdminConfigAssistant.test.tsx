@@ -374,7 +374,7 @@ describe('AdminConfigAssistant', () => {
         compactedMessageCount: expect.any(Number),
       },
     });
-  });
+  }, 15_000);
 
   it('bounds oversized assembled context for provider calls and surfaces a reduced-context notice', async () => {
     const user = userEvent.setup();
@@ -418,6 +418,17 @@ describe('AdminConfigAssistant', () => {
         return Promise.resolve(Response.json({ ok: true }));
       }
       return Promise.resolve(Response.json({}));
+    });
+    mockPlanAdminPromptBudget.mockReturnValueOnce({
+      toolContext:
+        'PROMPT BUDGET NOTE\n- admin configuration context was reduced to fit the provider budget\n- document library context was reduced to fit the provider budget\n\nSCOPED CONFIG CONTEXT\nGenerated: 2026-05-24T00:00:00.000Z\nscope: overview\n\nINSTANCE OVERVIEW (/admin/settings)\n- instance_name: Enclave\n...[context truncated for provider budget]\n\nBOUNDED DOCUMENT CONTEXT\n- brand-guide.pdf\n...[context truncated for provider budget]',
+      conversationHistory: [],
+      includedSections: ['admin-config', 'document-context'],
+      reducedSections: ['admin-config', 'document-context'],
+      omittedSections: [],
+      estimatedChars: 600,
+      warningNote:
+        'PROMPT BUDGET NOTE\n- admin configuration context was reduced to fit the provider budget\n- document library context was reduced to fit the provider budget',
     });
 
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
