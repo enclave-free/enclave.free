@@ -1,20 +1,20 @@
-import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Database, Search } from 'lucide-react'
-import { Button } from '../ui'
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Database, Search } from 'lucide-react';
+import { Button } from '../ui';
 
 export interface Tool {
-  id: string
-  name: string
-  icon: React.ReactNode
-  description: string
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  description: string;
 }
 
 interface ToolSelectorProps {
-  tools?: Tool[]
-  selectedTools: string[]
-  onToggle: (toolId: string) => void
-  compact?: boolean
+  tools?: Tool[];
+  selectedTools: string[];
+  onToggle: (toolId: string) => void;
+  compact?: boolean;
 }
 
 export function ToolSelector({
@@ -23,7 +23,7 @@ export function ToolSelector({
   onToggle,
   compact = false,
 }: ToolSelectorProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   const defaultTools: Tool[] = useMemo(
     () => [
@@ -41,17 +41,15 @@ export function ToolSelector({
       },
     ],
     [t]
-  )
+  );
 
-  const activeTools = tools ?? defaultTools
+  const activeTools = tools ?? defaultTools;
 
   return (
     <div className="flex items-center gap-1.5">
-      {!compact && (
-        <span className="label mr-1">{t('chat.tools.label')}</span>
-      )}
+      {!compact && <span className="label mr-1">{t('chat.tools.label')}</span>}
       {activeTools.map((tool) => {
-        const isSelected = selectedTools.includes(tool.id)
+        const isSelected = selectedTools.includes(tool.id);
         return (
           <Button
             key={tool.id}
@@ -60,13 +58,13 @@ export function ToolSelector({
             variant={isSelected ? 'primary' : 'ghost'}
             size="sm"
             leadingIcon={tool.icon}
-            className={isSelected ? 'text-xs shadow-md glow-accent' : 'text-xs'}
+            className="text-xs"
             title={tool.description}
           >
             {tool.name}
           </Button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

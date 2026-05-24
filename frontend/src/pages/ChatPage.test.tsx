@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -186,6 +187,19 @@ describe('ChatPage', () => {
     );
   });
 
+  it('shows selected Documents as composer context for the next turn', async () => {
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    expect(
+      await screen.findByRole('region', { name: 'Composer context' })
+    ).toBeInTheDocument();
+    expect(await screen.findByText('operator-handbook')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
   it('uses the shared Conversation Surface for User Conversations while preserving surrounding controls', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
@@ -248,8 +262,63 @@ describe('ChatPage', () => {
     expect(
       screen.getByRole('button', { name: 'Get help' })
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toHaveAttribute(
+      'title',
+      'No messages to export'
+    );
+  });
+
+  it('shows a session sidebar shell and starts a fresh chat from it', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-stream',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-stream',
+          delta: 'First answer.',
+        });
+        onEvent('done', { message_id: 'msg-stream', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
     expect(
-      screen.getByRole('button', { name: 'No messages to export' })
+      await screen.findByRole('navigation', { name: 'Chat sessions' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New chat' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Current chat')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Docs 1' })
+      ).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: 'Docs 1' }));
+    await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Hello'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('First answer.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hello 2 messages' })
+    ).toHaveAttribute('aria-current', 'page');
+
+    await user.click(screen.getByRole('button', { name: 'New chat' }));
+
+    expect(screen.queryByText('First answer.')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Current chat Empty' })
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen.getByRole('heading', { name: 'What would you like to know?' })
     ).toBeInTheDocument();
   });
 
@@ -282,6 +351,11 @@ describe('ChatPage', () => {
       name: 'Chat request error',
     });
     expect(errorNote).toHaveTextContent('Model gateway unavailable');
+    expect(
+      within(
+        screen.getByRole('region', { name: 'Conversation surface' })
+      ).getByRole('note', { name: 'Chat request error' })
+    ).toBe(errorNote);
   });
 
   it('clears the live trace status when a chat stream finishes without a final trace', async () => {
@@ -620,11 +694,9 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
-      await screen.findByText(
-        'Pending changes: Configure instance theme and assistant voice'
-      )
+      await screen.findByText('Configure instance theme and assistant voice')
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Approve changes' }));
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(
@@ -645,6 +717,157 @@ describe('ChatPage', () => {
         })
       );
     });
+    expect(
+      screen.getByRole('group', { name: 'Admin Change Confirmation' })
+    ).toHaveTextContent('Applied');
+  });
+
+  it('renders admin Change Confirmation as an inline approval card with collapsed details', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    const approvalCard = await screen.findByRole('group', {
+      name: 'Admin Change Confirmation',
+    });
+    expect(approvalCard).toHaveTextContent('Update instance theme');
+    expect(
+      screen.getByRole('button', { name: 'Approve changes' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Reject changes' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Here is the change.')).toBeInTheDocument();
+    expect(screen.queryByText(/"requests"/)).not.toBeInTheDocument();
+    expect(screen.queryByText('/admin/settings')).not.toBeInTheDocument();
+    expect(
+      within(approvalCard).queryByText('/admin/settings')
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Review details' }));
+
+    expect(approvalCard).toHaveTextContent('PUT /admin/settings');
+  });
+
+  it('keeps a rejected admin Change Confirmation card in the thread history', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({ ok: true }));
+    });
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg',
+          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+        });
+        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await screen.findByRole('group', {
+      name: 'Admin Change Confirmation',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Reject changes' }));
+
+    const approvalCard = screen.getByRole('group', {
+      name: 'Admin Change Confirmation',
+    });
+    expect(approvalCard).toHaveTextContent('Rejected');
+    expect(
+      screen.getByRole('button', { name: 'Approve changes' })
+    ).toBeDisabled();
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/admin/settings',
+      expect.objectContaining({ method: 'PUT' })
+    );
   });
 
   it('sends confirm language back to Sage when admin chat has no executable change set', async () => {
@@ -923,7 +1146,7 @@ describe('ChatPage', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
-      await screen.findByText('Pending changes: Update instance theme')
+      await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
@@ -933,10 +1156,8 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
-      await screen.findByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).toBeInTheDocument();
+      screen.getByRole('group', { name: 'Admin Change Confirmation' })
+    ).toHaveTextContent('Update instance theme');
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/settings',
       expect.objectContaining({ method: 'PUT' })
@@ -997,7 +1218,7 @@ describe('ChatPage', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
-      await screen.findByText('Pending changes: Update instance theme')
+      await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
@@ -1007,10 +1228,8 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
-      await screen.findByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).toBeInTheDocument();
+      screen.getByRole('group', { name: 'Admin Change Confirmation' })
+    ).toHaveTextContent('Update instance theme');
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/settings',
       expect.objectContaining({ method: 'PUT' })
@@ -1071,7 +1290,7 @@ describe('ChatPage', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
-      await screen.findByText('Pending changes: Update instance theme')
+      await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
@@ -1081,10 +1300,8 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
-      await screen.findByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).toBeInTheDocument();
+      screen.getByRole('group', { name: 'Admin Change Confirmation' })
+    ).toHaveTextContent('Update instance theme');
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/settings',
       expect.objectContaining({ method: 'PUT' })
@@ -1155,7 +1372,7 @@ describe('ChatPage', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
-      await screen.findByText('Pending changes: Update instance theme')
+      await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
@@ -1169,7 +1386,7 @@ describe('ChatPage', () => {
     });
     expect(
       screen.queryByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+        'Use the approval card below and click Approve to confirm these configuration updates.'
       )
     ).not.toBeInTheDocument();
     expect(
@@ -1432,8 +1649,9 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
-      await screen.findByText('Pending changes: Update model provider secret')
+      await screen.findByText('Update model provider secret')
     ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Review details' }));
     expect(
       screen.getByText('PUT /admin/deployment/config/LLM_API_KEY')
     ).toBeInTheDocument();
@@ -1524,7 +1742,7 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
-      await screen.findByText('Pending changes: Update instance theme')
+      await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
@@ -1538,11 +1756,9 @@ describe('ChatPage', () => {
     ).toHaveTextContent(
       'Token limit exceeded for this session. Start a new assistant conversation to continue.'
     );
-    expect(
-      screen.getByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Update instance theme')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await user.click(screen.getByRole('button', { name: 'Approve changes' }));
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(

@@ -1,31 +1,35 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Moon, Settings, Sun } from 'lucide-react'
-import { useTheme } from '../../theme'
-import { useInstanceConfig } from '../../context/InstanceConfigContext'
-import { DynamicIcon } from './DynamicIcon'
-import { SettingsDrawer } from './SettingsDrawer'
-import { isAdminAuthenticated } from '../../utils/adminApi'
-import { IconButton } from '../ui'
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, Moon, Settings, Sun } from 'lucide-react';
+import { useTheme } from '../../theme';
+import { useInstanceConfig } from '../../context/InstanceConfigContext';
+import { DynamicIcon } from './DynamicIcon';
+import { SettingsDrawer } from './SettingsDrawer';
+import { isAdminAuthenticated } from '../../utils/adminApi';
+import { IconButton } from '../ui';
 
 interface AppHeaderProps {
-  showBackButton?: boolean
-  backTo?: string
-  backLabel?: string
-  rightActions?: ReactNode
-  showSettings?: boolean
+  showBackButton?: boolean;
+  backTo?: string;
+  backLabel?: string;
+  rightActions?: ReactNode;
+  showSettings?: boolean;
 }
 
 function ThemeToggle() {
-  const { t } = useTranslation()
-  const { setTheme, resolvedTheme } = useTheme()
+  const { t } = useTranslation();
+  const { setTheme, resolvedTheme } = useTheme();
 
   return (
     <IconButton
       label={t('common.toggleTheme')}
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      title={resolvedTheme === 'dark' ? t('common.switchToLight') : t('common.switchToDark')}
+      title={
+        resolvedTheme === 'dark'
+          ? t('common.switchToLight')
+          : t('common.switchToDark')
+      }
     >
       {resolvedTheme === 'dark' ? (
         <Sun className="h-4 w-4" aria-hidden="true" />
@@ -33,7 +37,7 @@ function ThemeToggle() {
         <Moon className="h-4 w-4" aria-hidden="true" />
       )}
     </IconButton>
-  )
+  );
 }
 
 export function AppHeader({
@@ -43,23 +47,23 @@ export function AppHeader({
   rightActions,
   showSettings = true,
 }: AppHeaderProps) {
-  const { t } = useTranslation()
-  const resolvedBackLabel = backLabel ?? t('common.back')
-  const { config } = useInstanceConfig()
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [logoError, setLogoError] = useState(false)
-  const isAdmin = isAdminAuthenticated()
-  const showIcon = config.headerLayout !== 'name_only'
-  const showName = config.headerLayout !== 'icon_only'
-  const showTagline = showName && Boolean(config.headerTagline?.trim())
-  const hasLogoImage = Boolean(config.logoUrl?.trim()) && !logoError
+  const { t } = useTranslation();
+  const resolvedBackLabel = backLabel ?? t('common.back');
+  const { config } = useInstanceConfig();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const isAdmin = isAdminAuthenticated();
+  const showIcon = config.headerLayout !== 'name_only';
+  const showName = config.headerLayout !== 'icon_only';
+  const showTagline = showName && Boolean(config.headerTagline?.trim());
+  const hasLogoImage = Boolean(config.logoUrl?.trim()) && !logoError;
   const brandingBadgeClass = hasLogoImage
     ? 'bg-surface'
-    : 'bg-gradient-to-br from-accent to-accent-hover'
+    : 'border border-border bg-surface-raised text-accent';
 
   useEffect(() => {
-    setLogoError(false)
-  }, [config.logoUrl])
+    setLogoError(false);
+  }, [config.logoUrl]);
 
   return (
     <>
@@ -78,7 +82,9 @@ export function AppHeader({
           )}
           <div className="flex items-center gap-2.5">
             {showIcon && (
-              <div className={`w-8 h-8 rounded-lg ${brandingBadgeClass} flex items-center justify-center shadow-md ring-1 ring-white/10`}>
+              <div
+                className={`w-8 h-8 rounded-lg ${brandingBadgeClass} flex items-center justify-center`}
+              >
                 {hasLogoImage ? (
                   <img
                     src={config.logoUrl}
@@ -87,15 +93,25 @@ export function AppHeader({
                     onError={() => setLogoError(true)}
                   />
                 ) : (
-                  <DynamicIcon name={config.icon} size={18} className="text-white" />
+                  <DynamicIcon
+                    name={config.icon}
+                    size={18}
+                    className="text-accent"
+                  />
                 )}
               </div>
             )}
             {showName && (
-              <div className={`${showIcon ? 'hidden sm:flex' : 'flex'} flex-col leading-tight`}>
-                <span className="font-semibold text-text tracking-tight">{config.name}</span>
+              <div
+                className={`${showIcon ? 'hidden sm:flex' : 'flex'} flex-col leading-tight`}
+              >
+                <span className="font-semibold text-text tracking-tight">
+                  {config.name}
+                </span>
                 {showTagline && (
-                  <span className="text-[11px] text-text-muted">{config.headerTagline}</span>
+                  <span className="text-[11px] text-text-muted">
+                    {config.headerTagline}
+                  </span>
                 )}
               </div>
             )}
@@ -121,7 +137,10 @@ export function AppHeader({
       </div>
 
       {/* Settings Drawer */}
-      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </>
-  )
+  );
 }

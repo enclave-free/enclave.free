@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   buildAdminChangePreview,
   createAdminChangeConfirmationState,
   reduceAdminChangeConfirmationState,
-} from './AdminChangeConfirmationState'
-import type { AdminAssistantChangeSet } from '../../utils/adminAssistant'
+} from './AdminChangeConfirmationState';
+import type { AdminAssistantChangeSet } from '../../utils/adminAssistant';
 
 const changeSet: AdminAssistantChangeSet = {
   version: 1,
@@ -16,70 +16,112 @@ const changeSet: AdminAssistantChangeSet = {
       body: { value: 'secret-value' },
     },
   ],
-}
+};
 
 describe('Admin Change Confirmation State', () => {
   it('tracks review, applying, applied, and error states separately from shared Conversation UI State', () => {
-    const review = reduceAdminChangeConfirmationState(createAdminChangeConfirmationState(), {
-      type: 'changeSetReadyForReview',
-      changeSet,
-    })
-    expect(review).toEqual({ state: 'review', changeSet })
+    const review = reduceAdminChangeConfirmationState(
+      createAdminChangeConfirmationState(),
+      {
+        type: 'changeSetReadyForReview',
+        changeSet,
+      }
+    );
+    expect(review).toEqual({ state: 'review', changeSet });
 
-    const applying = reduceAdminChangeConfirmationState(review, { type: 'applyStarted' })
-    expect(applying).toEqual({ state: 'applying', changeSet })
+    const applying = reduceAdminChangeConfirmationState(review, {
+      type: 'applyStarted',
+    });
+    expect(applying).toEqual({ state: 'applying', changeSet });
 
     const applied = reduceAdminChangeConfirmationState(applying, {
       type: 'applySucceeded',
       message: 'Applied 1 change',
-    })
-    expect(applied).toEqual({ state: 'applied', message: 'Applied 1 change' })
+    });
+    expect(applied).toEqual({
+      state: 'applied',
+      changeSet,
+      message: 'Applied 1 change',
+    });
 
     const error = reduceAdminChangeConfirmationState(applying, {
       type: 'applyFailed',
       message: 'Config validation failed',
-    })
-    expect(error).toEqual({ state: 'error', message: 'Config validation failed' })
-  })
+    });
+    expect(error).toEqual({
+      state: 'error',
+      changeSet,
+      message: 'Config validation failed',
+    });
+  });
 
   it('clears pending confirmation when admin-config is toggled off or a new Conversation starts', () => {
-    const review = reduceAdminChangeConfirmationState(createAdminChangeConfirmationState(), {
-      type: 'changeSetReadyForReview',
-      changeSet,
-    })
+    const review = reduceAdminChangeConfirmationState(
+      createAdminChangeConfirmationState(),
+      {
+        type: 'changeSetReadyForReview',
+        changeSet,
+      }
+    );
 
-    expect(reduceAdminChangeConfirmationState(review, {
-      type: 'adminConfigToolToggled',
-      selectedAfterToggle: false,
-    })).toEqual({ state: 'idle' })
-    expect(reduceAdminChangeConfirmationState(review, {
-      type: 'newConversationStarted',
-    })).toEqual({ state: 'idle' })
-  })
+    expect(
+      reduceAdminChangeConfirmationState(review, {
+        type: 'adminConfigToolToggled',
+        selectedAfterToggle: false,
+      })
+    ).toEqual({ state: 'idle' });
+    expect(
+      reduceAdminChangeConfirmationState(review, {
+        type: 'newConversationStarted',
+      })
+    ).toEqual({ state: 'idle' });
+  });
 
   it('ignores late apply results after confirmation state has been cleared', () => {
-    const review = reduceAdminChangeConfirmationState(createAdminChangeConfirmationState(), {
-      type: 'changeSetReadyForReview',
-      changeSet,
-    })
-    const applying = reduceAdminChangeConfirmationState(review, { type: 'applyStarted' })
-    const cleared = reduceAdminChangeConfirmationState(applying, { type: 'dismissed' })
+    const review = reduceAdminChangeConfirmationState(
+      createAdminChangeConfirmationState(),
+      {
+        type: 'changeSetReadyForReview',
+        changeSet,
+      }
+    );
+    const applying = reduceAdminChangeConfirmationState(review, {
+      type: 'applyStarted',
+    });
+    const cleared = reduceAdminChangeConfirmationState(applying, {
+      type: 'dismissed',
+    });
 
-    expect(reduceAdminChangeConfirmationState(cleared, {
-      type: 'applySucceeded',
-      message: 'Applied late',
-    })).toEqual({ state: 'idle' })
-    expect(reduceAdminChangeConfirmationState(cleared, {
-      type: 'applyFailed',
-      message: 'Failed late',
-    })).toEqual({ state: 'idle' })
-  })
+    expect(
+      reduceAdminChangeConfirmationState(cleared, {
+        type: 'applySucceeded',
+        message: 'Applied late',
+      })
+    ).toEqual({ state: 'idle' });
+    expect(
+      reduceAdminChangeConfirmationState(cleared, {
+        type: 'applyFailed',
+        message: 'Failed late',
+      })
+    ).toEqual({ state: 'idle' });
+  });
+
+  it('surfaces parse failures even when no confirmation card is active', () => {
+    expect(
+      reduceAdminChangeConfirmationState(createAdminChangeConfirmationState(), {
+        type: 'parseFailed',
+        message: 'Invalid change set',
+      })
+    ).toEqual({ state: 'error', message: 'Invalid change set' });
+  });
 
   it('masks secret deployment config preview values pessimistically', () => {
-    expect(buildAdminChangePreview(changeSet, {
-      deploymentSecretKeysLoaded: false,
-      deploymentSecretKeys: new Set(),
-    })).toEqual({
+    expect(
+      buildAdminChangePreview(changeSet, {
+        deploymentSecretKeysLoaded: false,
+        deploymentSecretKeys: new Set(),
+      })
+    ).toEqual({
       summary: 'Update provider key',
       requests: [
         {
@@ -89,16 +131,20 @@ describe('Admin Change Confirmation State', () => {
           body: { value: '[REDACTED]' },
         },
       ],
-    })
+    });
 
-    expect(buildAdminChangePreview(changeSet, {
-      deploymentSecretKeysLoaded: true,
-      deploymentSecretKeys: new Set(['TINFOIL_API_KEY']),
-    }).requests[0].body).toEqual({ value: '[REDACTED]' })
+    expect(
+      buildAdminChangePreview(changeSet, {
+        deploymentSecretKeysLoaded: true,
+        deploymentSecretKeys: new Set(['TINFOIL_API_KEY']),
+      }).requests[0].body
+    ).toEqual({ value: '[REDACTED]' });
 
-    expect(buildAdminChangePreview(changeSet, {
-      deploymentSecretKeysLoaded: true,
-      deploymentSecretKeys: new Set(),
-    }).requests[0].body).toEqual({ value: '[REDACTED]' })
-  })
-})
+    expect(
+      buildAdminChangePreview(changeSet, {
+        deploymentSecretKeysLoaded: true,
+        deploymentSecretKeys: new Set(),
+      }).requests[0].body
+    ).toEqual({ value: '[REDACTED]' });
+  });
+});

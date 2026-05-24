@@ -1,36 +1,39 @@
-import { useEffect, useRef } from 'react'
-import { MessageCircle, Sparkles } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { ChatMessage, Message } from './ChatMessage'
+import { useEffect, useRef } from 'react';
+import { MessageCircle, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ChatMessage, Message } from './ChatMessage';
 
 interface MessageListProps {
-  messages: Message[]
-  isLoading?: boolean
-  onSuggestedPrompt?: (prompt: string) => void
+  messages: Message[];
+  isLoading?: boolean;
+  onSuggestedPrompt?: (prompt: string) => void;
 }
 
-function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string) => void }) {
-  const { t } = useTranslation()
+function EmptyState({
+  onSuggestedPrompt,
+}: {
+  onSuggestedPrompt?: (prompt: string) => void;
+}) {
+  const { t } = useTranslation();
   const suggestedPrompts = [
     t('chat.suggestedPrompts.documents'),
     t('chat.suggestedPrompts.summarize'),
     t('chat.suggestedPrompts.ragPipeline'),
     t('chat.suggestedPrompts.entities'),
-  ]
+  ];
 
   return (
     <div className="flex-1 flex items-center justify-center p-4">
       <div className="text-center w-full max-w-lg min-w-0 animate-fade-in">
         {/* Icon */}
-        <div className="relative mx-auto mb-8 w-20 h-20">
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 rotate-6 scale-95" />
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-accent to-accent-hover flex items-center justify-center shadow-xl ring-1 ring-white/10">
-            <MessageCircle className="w-10 h-10 text-white" strokeWidth={1.75} />
-          </div>
+        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-surface-raised text-accent">
+          <MessageCircle className="w-7 h-7" strokeWidth={1.75} />
         </div>
 
         {/* Text */}
-        <h2 className="heading-xl mb-2 text-balance">{t('chat.emptyState.title')}</h2>
+        <h2 className="heading-xl mb-2 text-balance">
+          {t('chat.emptyState.title')}
+        </h2>
         <p className="text-text-secondary text-sm mb-8 mx-auto max-w-xs sm:max-w-prose text-pretty">
           {t('chat.emptyState.description')}
         </p>
@@ -44,7 +47,7 @@ function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string
                 <button
                   key={i}
                   onClick={() => onSuggestedPrompt(prompt)}
-                  className="px-4 py-2 text-sm text-text-secondary bg-surface-raised border border-border rounded-full hover:border-accent hover:text-accent hover:bg-accent/5 hover:-translate-y-0.5 hover:shadow-md transition-all active:scale-95"
+                  className="px-4 py-2 text-sm text-text-secondary bg-surface-raised border border-border rounded-full hover:border-accent hover:text-accent hover:bg-accent/5 transition-colors active:scale-95"
                 >
                   {prompt}
                 </button>
@@ -54,18 +57,18 @@ function EmptyState({ onSuggestedPrompt }: { onSuggestedPrompt?: (prompt: string
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function TypingIndicator() {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
     <div className="animate-fade-in-up mb-4">
       <div className="flex gap-3">
         {/* Avatar */}
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent-hover flex items-center justify-center shrink-0 shadow-md ring-1 ring-white/10">
-          <Sparkles className="w-4 h-4 text-white" aria-hidden="true" />
+        <div className="w-7 h-7 rounded-full border border-border bg-surface-raised flex items-center justify-center shrink-0 text-accent">
+          <Sparkles className="w-4 h-4" aria-hidden="true" />
         </div>
 
         {/* Typing bubble */}
@@ -75,22 +78,28 @@ function TypingIndicator() {
             <span className="w-2 h-2 bg-accent/60 rounded-full typing-dot" />
             <span className="w-2 h-2 bg-accent/60 rounded-full typing-dot" />
           </div>
-          <span className="text-sm text-text-secondary animate-pulse-subtle">{t('chat.typing')}</span>
+          <span className="text-sm text-text-secondary animate-pulse-subtle">
+            {t('chat.typing')}
+          </span>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export function MessageList({ messages, isLoading, onSuggestedPrompt }: MessageListProps) {
-  const bottomRef = useRef<HTMLDivElement>(null)
+export function MessageList({
+  messages,
+  isLoading,
+  onSuggestedPrompt,
+}: MessageListProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
 
   if (messages.length === 0 && !isLoading) {
-    return <EmptyState onSuggestedPrompt={onSuggestedPrompt} />
+    return <EmptyState onSuggestedPrompt={onSuggestedPrompt} />;
   }
 
   return (
@@ -103,5 +112,5 @@ export function MessageList({ messages, isLoading, onSuggestedPrompt }: MessageL
         <div ref={bottomRef} />
       </div>
     </div>
-  )
+  );
 }
