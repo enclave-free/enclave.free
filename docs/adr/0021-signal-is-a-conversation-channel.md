@@ -10,4 +10,4 @@ The Enclave Free Prototype treats enclave.free as the durable home where Sage li
 
 ## Consequences
 
-The first Signal integration should provide Conversation access to Sage, not direct Admin-to-User messaging. Direct contact paths may be considered later, but current User Reachout remains the email-only ordinary product flow until a separate decision changes it. Signal access should use existing Admin identity and User Approval authority, with channel linking or verification treated as delivery setup rather than a new permission system.
+The first Signal integration should provide Conversation access to Sage, not direct Admin-to-User messaging. Conversation Channel access derives from existing Admin identity and User Approval authority. Channel linking or verification is delivery setup, not a new permission model. Direct contact paths may be considered later, but current User Reachout remains the email-only ordinary product flow until a separate decision changes it.

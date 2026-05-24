@@ -21,6 +21,10 @@ Non-goals (for v1):
 - Guaranteeing delivery (SMTP availability varies).
 - Cross-replica shared rate limiting (see Limitations).
 
+## Future Signal scope
+
+Current User Reachout remains email-only and outside Conversations. Future direct Admin-to-User contact through a Conversation Channel is separate intent: it should be designed against the Signal Conversation Channel boundary, not by expanding this reachout path into Sage mediation, Conversation Content, or support-ticket storage. Future Conversation Channels may support direct Admin/User contact, but that is not part of User Reachout v1.
+
 ## Implementation Plan (Now Shipped)
 
 ### 1. Admin Configuration (Instance Settings)
