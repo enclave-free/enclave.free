@@ -1684,6 +1684,30 @@ IMPORTANT: Return a CONDENSED response:
       </div>
     </nav>
   );
+  const conversationTopbar = (
+    <div
+      role="region"
+      aria-label={t('chat.currentChatAria', 'Current chat')}
+      className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3"
+    >
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold text-text">
+          {sessionTitle}
+        </div>
+        <div className="truncate text-xs text-text-muted">{sessionMeta}</div>
+      </div>
+      <Button
+        onClick={handleNewChat}
+        aria-label={t('chat.newFromCurrent', 'Start a new chat')}
+        variant="secondary"
+        size="sm"
+        leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+        className="shrink-0"
+      >
+        {t('chat.new', 'New chat')}
+      </Button>
+    </div>
+  );
 
   // Admin chat intentionally excludes DocumentScope. Admin tools are Sage-owned
   // assistant tools, while document-grounded retrieval remains a user chat mode.
@@ -1907,7 +1931,11 @@ IMPORTANT: Return a CONDENSED response:
   );
 
   return (
-    <ChatContainer header={header} sidebar={sessionSidebar}>
+    <ChatContainer
+      header={header}
+      sidebar={sessionSidebar}
+      topbar={conversationTopbar}
+    >
       <ReachoutModal
         open={reachoutOpen}
         mode={reachoutMode}

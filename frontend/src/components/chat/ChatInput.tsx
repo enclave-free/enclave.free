@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, KeyboardEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ComposerPrimitive } from '@assistant-ui/react';
 import { Send } from 'lucide-react';
 import { IconButton } from '../ui';
 
@@ -8,6 +9,7 @@ interface ChatInputProps {
   disabled?: boolean;
   placeholder?: string;
   toolbar?: ReactNode;
+  assistantRuntime?: boolean;
 }
 
 export function ChatInput({
@@ -15,6 +17,7 @@ export function ChatInput({
   disabled,
   placeholder,
   toolbar,
+  assistantRuntime = false,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const defaultPlaceholder = t('chat.input.placeholder');
@@ -56,30 +59,49 @@ export function ChatInput({
             </div>
           )}
 
-          {/* Input row */}
-          <div className="flex items-end gap-2 p-2">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              aria-label={placeholder || defaultPlaceholder}
-              placeholder={placeholder || defaultPlaceholder}
-              disabled={disabled}
-              rows={1}
-              className="flex-1 bg-transparent text-text placeholder:text-text-muted resize-none outline-none focus-visible:outline-none border-none px-2 py-2 max-h-40 text-[15px] leading-relaxed"
-            />
-            <IconButton
-              label={t('chat.input.sendLabel')}
-              onClick={handleSubmit}
-              disabled={disabled || !input.trim()}
-              title={t('chat.input.sendTitle')}
-              variant="primary"
-              className="rounded-xl shadow-sm disabled:shadow-none"
-            >
-              <Send className="h-5 w-5" aria-hidden="true" />
-            </IconButton>
-          </div>
+          {assistantRuntime ? (
+            <ComposerPrimitive.Root className="flex items-end gap-2 p-2">
+              <ComposerPrimitive.Input
+                aria-label={placeholder || defaultPlaceholder}
+                placeholder={placeholder || defaultPlaceholder}
+                disabled={disabled}
+                rows={1}
+                submitMode="enter"
+                className="max-h-40 flex-1 resize-none border-none bg-transparent px-2 py-2 text-[15px] leading-relaxed text-text outline-none placeholder:text-text-muted focus-visible:outline-none"
+              />
+              <ComposerPrimitive.Send
+                aria-label={t('chat.input.sendLabel')}
+                title={t('chat.input.sendTitle')}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+              >
+                <Send className="h-5 w-5" aria-hidden="true" />
+              </ComposerPrimitive.Send>
+            </ComposerPrimitive.Root>
+          ) : (
+            <div className="flex items-end gap-2 p-2">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                aria-label={placeholder || defaultPlaceholder}
+                placeholder={placeholder || defaultPlaceholder}
+                disabled={disabled}
+                rows={1}
+                className="flex-1 bg-transparent text-text placeholder:text-text-muted resize-none outline-none focus-visible:outline-none border-none px-2 py-2 max-h-40 text-[15px] leading-relaxed"
+              />
+              <IconButton
+                label={t('chat.input.sendLabel')}
+                onClick={handleSubmit}
+                disabled={disabled || !input.trim()}
+                title={t('chat.input.sendTitle')}
+                variant="primary"
+                className="rounded-xl shadow-sm disabled:shadow-none"
+              >
+                <Send className="h-5 w-5" aria-hidden="true" />
+              </IconButton>
+            </div>
+          )}
         </div>
       </div>
     </div>

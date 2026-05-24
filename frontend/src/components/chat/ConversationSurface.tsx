@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageCircle, Sparkles } from 'lucide-react';
 import {
   AssistantRuntimeProvider,
+  ThreadPrimitive,
   useExternalStoreRuntime,
   type AppendMessage,
   type ThreadMessage,
@@ -34,7 +35,8 @@ export function ConversationSurface({
 }: ConversationSurfaceProps) {
   const { t } = useTranslation();
   const runtimeMessages = useMemo(
-    () => turns.map(convertTurnToAssistantMessage),
+    () =>
+      turns.map((turn, index) => convertTurnToAssistantMessage(turn, index)),
     [turns]
   );
   const handleNew = useCallback(
@@ -57,40 +59,46 @@ export function ConversationSurface({
         aria-label="Conversation surface"
         className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="flex-1 overflow-y-auto px-3 py-6 sm:px-4">
-          <div className="mx-auto w-full max-w-3xl">
-            {turns.length === 0 && !isRunning ? (
-              <ConversationEmptyState />
-            ) : (
-              <>
-                {turns.map((turn) => (
-                  <div key={turn.id}>
-                    <ChatMessage
-                      message={{
-                        id: turn.id,
-                        role: turn.role,
-                        content: turn.content,
-                        trace: turn.trace,
-                        traceStatus: turn.traceStatus,
-                        activitySteps: turn.activitySteps,
-                      }}
-                    />
-                    {turnAccessories?.[turn.id]}
-                  </div>
-                ))}
-                {notices}
-                {isRunning && (
-                  <ConversationRunningIndicator label={t('chat.typing')} />
-                )}
-              </>
-            )}
-          </div>
-        </div>
+        <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col">
+          <ThreadPrimitive.Viewport
+            autoScroll
+            className="flex-1 overflow-y-auto px-3 py-6 sm:px-4"
+          >
+            <div className="mx-auto w-full max-w-3xl">
+              {turns.length === 0 && !isRunning ? (
+                <ConversationEmptyState />
+              ) : (
+                <>
+                  {turns.map((turn) => (
+                    <div key={turn.id}>
+                      <ChatMessage
+                        message={{
+                          id: turn.id,
+                          role: turn.role,
+                          content: turn.content,
+                          trace: turn.trace,
+                          traceStatus: turn.traceStatus,
+                          activitySteps: turn.activitySteps,
+                        }}
+                      />
+                      {turnAccessories?.[turn.id]}
+                    </div>
+                  ))}
+                  {notices}
+                  {isRunning && (
+                    <ConversationRunningIndicator label={t('chat.typing')} />
+                  )}
+                </>
+              )}
+            </div>
+          </ThreadPrimitive.Viewport>
+        </ThreadPrimitive.Root>
         <ChatInput
           onSend={onSend}
           disabled={disabled || isRunning}
           placeholder={placeholder}
           toolbar={toolbar}
+          assistantRuntime
         />
       </section>
     </AssistantRuntimeProvider>
@@ -140,10 +148,11 @@ function ConversationRunningIndicator({ label }: { label: string }) {
 }
 
 function convertTurnToAssistantMessage(
-  turn: ConversationSurfaceTurn
+  turn: ConversationSurfaceTurn,
+  index: number
 ): ThreadMessage {
   const common = {
-    id: turn.id,
+    id: `${turn.id}:${index}`,
     createdAt: new Date(),
     content: [{ type: 'text' as const, text: turn.content }],
     metadata: {

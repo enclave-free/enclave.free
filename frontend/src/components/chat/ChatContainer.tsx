@@ -4,12 +4,14 @@ interface ChatContainerProps {
   children: ReactNode;
   header?: ReactNode;
   sidebar?: ReactNode;
+  topbar?: ReactNode;
 }
 
 export function ChatContainer({
   children,
   header,
   sidebar,
+  topbar,
 }: ChatContainerProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -66,6 +68,11 @@ export function ChatContainer({
           </>
         )}
         <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {topbar && (
+            <div className="shrink-0 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur">
+              {topbar}
+            </div>
+          )}
           {children}
         </main>
       </div>

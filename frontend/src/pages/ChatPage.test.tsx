@@ -312,7 +312,13 @@ describe('ChatPage', () => {
     expect(
       screen.getByRole('button', { name: 'New chat' })
     ).toBeInTheDocument();
-    expect(screen.getByText('Current chat')).toBeInTheDocument();
+    const currentChatBar = screen.getByRole('region', {
+      name: 'Current chat',
+    });
+    expect(
+      within(currentChatBar).getByRole('button', { name: 'Start a new chat' })
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Current chat').length).toBeGreaterThan(0);
 
     await waitFor(() => {
       expect(
