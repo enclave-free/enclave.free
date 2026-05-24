@@ -336,6 +336,10 @@ _Avoid_: streaming-shaped response, fake streaming, delayed batch response
 The user-facing interface where **Users** or **Admins** read and send **Conversation** messages, inspect permitted **Conversation Trace** details, and choose visible conversation controls.
 _Avoid_: agent runtime, chatbot service, conversation owner
 
+**Conversation Channel**:
+A delivery path through which a **User** or **Admin** participates in a **Conversation** with the same **Sage** inside an **Instance**.
+_Avoid_: separate agent, native runtime, alternate Sage
+
 **Conversation UI State**:
 Client-owned state needed to operate the **Conversation UI Surface** for the current actor, including visible turns, in-progress turn status, selected controls, transient errors, and pending confirmation prompts.
 _Avoid_: session memory, conversation owner, agent state
@@ -495,6 +499,7 @@ _Avoid_: full snapshot, config dump
 - **User Reachout** requires authentication but does not require **User Approval**
 - **User Reachout** is an **Ordinary Product Flow**, not a **Conversation** or **Tool**
 - A **Reachout Message** is not **Conversation Content** unless a future feature sends it to **Sage** or a **Model Provider**
+- Future **Conversation Channels** may support more direct **Admin** and **User** contact paths, but the current **User Reachout** remains the email-only ordinary product flow
 - The **Admin** is the authenticated control identity for the **Operator** in the current prototype
 - An **Instance** has zero or more **Users**
 - A **User** belongs to at most one **User Type**
@@ -507,11 +512,17 @@ _Avoid_: full snapshot, config dump
 - **Instance Settings** belong to the **Instance**
 - **Deployment Settings** belong to the **Deployment**
 - **Agent Settings** belong to **Sage**
+- **Agent Settings** are the source of truth for Sage's persona and conversation behavior across **Conversation Channels**
+- **Conversation Channels** may shape delivery and formatting, but should not define a separate Sage identity
+- The first Signal **Conversation Channel** should provide **Conversation** access to **Sage** rather than direct **Admin** to **User** messaging
+- **Conversation Channels** should share the same **Conversation** and **Session Memory** model rather than creating channel-specific Sage memory
+- **Conversation Channel** access should use existing **Admin** identity and **User Approval** authority rather than a separate channel-specific permission model
 - **Model Provider** is an **Agent Setting**
 - A **Model Provider** must satisfy the **Model Provider Requirement**
 - **Tinfoil** is the current preferred **Model Provider**
 - Maple-era provider labels, aliases, and UI copy are **Prototype Compatibility Debt** in the **Enclave Free Prototype**
 - The **Enclave Free Prototype** should fail clearly rather than silently honoring Maple-era **Model Provider** aliases
+- Upstream-native Sage code is not **Prototype Compatibility Debt** by itself, but channel-native assumptions become **Prototype Compatibility Debt** when they leak into enclave.free product behavior, docs, UI, or **Agent Settings**
 - Generic deployment-facing `LLM_*` settings may remain while they describe Python-side **Deployment Settings**, diagnostics, and verification metadata
 - Generic deployment-facing `LLM_*` settings should not be described as live Sage **Agent Settings** until runtime configuration is unified
 - Admin-facing copy should not teach obsolete **Model Provider** labels or imply that Python deployment config live-edits Sage runtime environment
