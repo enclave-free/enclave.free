@@ -106,6 +106,15 @@ describe('Admin Change Confirmation State', () => {
     ).toEqual({ state: 'idle' });
   });
 
+  it('surfaces parse failures even when no confirmation card is active', () => {
+    expect(
+      reduceAdminChangeConfirmationState(createAdminChangeConfirmationState(), {
+        type: 'parseFailed',
+        message: 'Invalid change set',
+      })
+    ).toEqual({ state: 'error', message: 'Invalid change set' });
+  });
+
   it('masks secret deployment config preview values pessimistically', () => {
     expect(
       buildAdminChangePreview(changeSet, {

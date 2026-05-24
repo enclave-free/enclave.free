@@ -13,6 +13,7 @@ export type AdminChangeConfirmationAction =
   | { type: 'applyStarted' }
   | { type: 'applySucceeded'; message: string }
   | { type: 'applyFailed'; message: string }
+  | { type: 'parseFailed'; message: string }
   | { type: 'adminConfigToolToggled'; selectedAfterToggle: boolean }
   | { type: 'newConversationStarted' }
   | { type: 'dismissed' }
@@ -59,6 +60,8 @@ export function reduceAdminChangeConfirmationState(
             message: action.message,
           }
         : state;
+    case 'parseFailed':
+      return { state: 'error', message: action.message };
     case 'rejected':
       return state.state === 'review' || state.state === 'applying'
         ? { state: 'rejected', changeSet: state.changeSet }

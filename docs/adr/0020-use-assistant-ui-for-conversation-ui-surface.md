@@ -33,7 +33,7 @@ The current Sage stream contract emits safe, sanitized activity and trace events
 
 The current implementation establishes the assistant-ui-backed Conversation Surface for Admin and User Conversations with a session-sidebar shell, shared composer, visible Conversation Activity Steps, expandable Conversation Trace details, composer-scoped tools and Documents, secondary export placement, and inline Admin Change Confirmation approval cards.
 
-Admin Change Confirmation cards are now UI-based rather than text-command based. The assistant turn keeps human-readable prose, strips raw change-set JSON from the visible message after staging the approval, masks deployment secret values in review details, and preserves applied or rejected card state in the thread history. This keeps the prototype transparent without forcing operators to read or act on raw JSON.
+Admin Change Confirmation cards are now UI-based rather than text-command-based. The assistant turn keeps human-readable prose, strips raw change-set JSON from the visible message after staging the approval, masks deployment secret values in review details, and preserves applied or rejected card state in the thread history. This keeps the prototype transparent without forcing operators to read or act on raw JSON.
 
 The sidebar remains local-only. It shows the active conversation title and message count and supports starting a fresh chat, but durable session listing, resume, rename, delete, and cross-device persistence remain future work owned by the session-history slice.
 

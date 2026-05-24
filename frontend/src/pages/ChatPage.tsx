@@ -164,8 +164,7 @@ function stagePendingAdminChangeSet(
   dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
 ): boolean {
   if (!hasConfigTool || !content.trim()) return false;
-  if (!content.includes('```json') || !content.includes('"requests"'))
-    return false;
+  if (!content.includes('"requests"')) return false;
 
   const extracted = extractAdminAssistantChangeSetStrict(content);
   if (extracted.ok) {
@@ -991,12 +990,9 @@ export function ChatPage() {
                 type: 'changeSetReadyForReview',
                 changeSet: extracted.changeSet,
               });
-            } else if (
-              streamContent.includes('```json') &&
-              streamContent.includes('"requests"')
-            ) {
+            } else if (streamContent.includes('"requests"')) {
               dispatchAdminApply({
-                type: 'applyFailed',
+                type: 'parseFailed',
                 message: extracted.error,
               });
             }
@@ -1118,9 +1114,9 @@ export function ChatPage() {
               type: 'changeSetReadyForReview',
               changeSet: extracted.changeSet,
             });
-          } else if (raw.includes('```json') && raw.includes('"requests"')) {
+          } else if (raw.includes('"requests"')) {
             dispatchAdminApply({
-              type: 'applyFailed',
+              type: 'parseFailed',
               message: extracted.error,
             });
           }
@@ -1568,17 +1564,20 @@ IMPORTANT: Return a CONDENSED response:
   const header = <AppHeader rightActions={rightActions} />;
   const sessionTitle =
     messages.find((message) => message.role === 'user')?.content.trim() ||
-    'Current chat';
+    t('chat.sessions.current', 'Current chat');
   const sessionMeta =
     messages.length === 0
-      ? 'Empty'
+      ? t('chat.sessions.empty', 'Empty')
       : t('chat.sessions.messageCount', {
           count: messages.length,
           defaultValue:
             messages.length === 1 ? '1 message' : `${messages.length} messages`,
         });
   const sessionSidebar = (
-    <nav aria-label="Chat sessions" className="flex h-full flex-col gap-3 p-3">
+    <nav
+      aria-label={t('chat.sessions.ariaLabel', 'Chat sessions')}
+      className="flex h-full flex-col gap-3 p-3"
+    >
       <Button
         onClick={handleNewChat}
         variant="primary"
@@ -1586,11 +1585,11 @@ IMPORTANT: Return a CONDENSED response:
         leadingIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
         className="w-full justify-start"
       >
-        New chat
+        {t('chat.new', 'New chat')}
       </Button>
       <div className="space-y-1">
         <div className="px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">
-          Chats
+          {t('chat.listTitle', 'Chats')}
         </div>
         <button
           type="button"
@@ -1620,7 +1619,7 @@ IMPORTANT: Return a CONDENSED response:
   // assistant tools, while document-grounded retrieval remains a user chat mode.
   const inputToolbar = isAdmin ? (
     <section
-      aria-label="Composer context"
+      aria-label={t('chat.composerContextAria', 'Composer context')}
       className="flex w-full flex-col gap-2"
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -1633,13 +1632,13 @@ IMPORTANT: Return a CONDENSED response:
     </section>
   ) : (
     <section
-      aria-label="Composer context"
+      aria-label={t('chat.composerContextAria', 'Composer context')}
       className="flex w-full flex-col gap-2"
     >
       {selectedDocumentSources.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-medium text-text-muted">
-            Context
+            {t('chat.contextTitle', 'Context')}
           </span>
           {selectedDocumentSources.map((document) => (
             <span

@@ -313,18 +313,25 @@ export function extractAdminAssistantChangeSetStrict(
 
 export function stripAdminAssistantChangeSetJson(text: string): string {
   if (!text || !text.includes('"requests"')) return text;
+  const shouldStripChangeSet = (value: unknown): boolean => {
+    const coerced = _coerceChangeSet(value);
+    if (!coerced) return false;
+    return validateAdminAssistantChangeSet(
+      normalizeAdminAssistantChangeSet(coerced)
+    ).ok;
+  };
   const withoutBlocks = text.replace(
     /```(?:json)?\s*([\s\S]*?)\s*```/gi,
     (match, body) => {
       const parsed = _safeJsonParse(String(body).trim());
-      return _coerceChangeSet(parsed) ? '' : match;
+      return shouldStripChangeSet(parsed) ? '' : match;
     }
   );
   const withoutRaw = withoutBlocks.replace(
     /\{[\s\S]*"requests"[\s\S]*\}/g,
     (match) => {
       const parsed = _safeJsonParse(match.trim());
-      return _coerceChangeSet(parsed) ? '' : match;
+      return shouldStripChangeSet(parsed) ? '' : match;
     }
   );
   return withoutRaw.replace(/\n{3,}/g, '\n\n').trim();

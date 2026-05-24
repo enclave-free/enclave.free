@@ -762,6 +762,17 @@
       "copy": "Copy message",
       "copied": "Copied message"
     },
+    "new": "New chat",
+    "listTitle": "Chats",
+    "contextTitle": "Context",
+    "composerContextAria": "Composer context",
+    "sessions": {
+      "ariaLabel": "Chat sessions",
+      "current": "Current chat",
+      "empty": "Empty",
+      "messageCount_one": "{{count}} message",
+      "messageCount_other": "{{count}} messages"
+    },
     "code": {
       "copy": "Copy",
       "copied": "Copied!",

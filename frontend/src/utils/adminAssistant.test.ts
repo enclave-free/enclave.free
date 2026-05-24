@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import * as adminAssistant from './adminAssistant'
-import { extractAdminAssistantChangeSetStrict, redactAdminDeploymentSecretChangeSets } from './adminAssistant'
+import { describe, expect, it } from 'vitest';
+import * as adminAssistant from './adminAssistant';
+import {
+  extractAdminAssistantChangeSetStrict,
+  redactAdminDeploymentSecretChangeSets,
+  stripAdminAssistantChangeSetJson,
+} from './adminAssistant';
 
 describe('extractAdminAssistantChangeSetStrict', () => {
   it('accepts a raw JSON change set without a fenced code block', () => {
@@ -12,7 +16,8 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           method: 'PUT',
           path: '/admin/settings',
           body: {
-            instance_name: 'World Liberty Congress - Political Prisoners Support',
+            instance_name:
+              'World Liberty Congress - Political Prisoners Support',
             description: 'Support resources and knowledge base',
             primary_color: '#1E40AF',
             typography_preset: 'humanist',
@@ -21,11 +26,11 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           },
         },
       ],
-    })
+    });
 
-    const extracted = extractAdminAssistantChangeSetStrict(raw)
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(true)
+    expect(extracted.ok).toBe(true);
     if (extracted.ok) {
       expect(extracted.changeSet.requests[0]).toEqual({
         method: 'PUT',
@@ -38,9 +43,9 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           status_icon_set: 'minimal',
           surface_style: 'plain',
         },
-      })
+      });
     }
-  })
+  });
 
   it('still rejects raw JSON for disallowed mutation paths', () => {
     const raw = JSON.stringify({
@@ -52,15 +57,15 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           body: { tool_id: 'db-query' },
         },
       ],
-    })
+    });
 
-    const extracted = extractAdminAssistantChangeSetStrict(raw)
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(false)
+    expect(extracted.ok).toBe(false);
     if (!extracted.ok) {
-      expect(extracted.error).toContain('Disallowed')
+      expect(extracted.error).toContain('Disallowed');
     }
-  })
+  });
 
   it('allows confirmed Trace Visibility Policy changes through Agent Settings', () => {
     const raw = JSON.stringify({
@@ -73,12 +78,12 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           body: { value: 'summary' },
         },
       ],
-    })
+    });
 
-    const extracted = extractAdminAssistantChangeSetStrict(raw)
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(true)
-  })
+    expect(extracted.ok).toBe(true);
+  });
 
   it('rejects detailed Trace Visibility Policy for User Conversations', () => {
     const raw = JSON.stringify({
@@ -91,19 +96,19 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           body: { value: 'detailed' },
         },
       ],
-    })
+    });
 
-    const extracted = extractAdminAssistantChangeSetStrict(raw)
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(false)
+    expect(extracted.ok).toBe(false);
     if (!extracted.ok) {
-      expect(extracted.error).toContain('User Conversation')
+      expect(extracted.error).toContain('User Conversation');
     }
-  })
+  });
 
   it('does not export the old non-strict change set extractor', () => {
-    expect('extractAdminAssistantChangeSet' in adminAssistant).toBe(false)
-  })
+    expect('extractAdminAssistantChangeSet' in adminAssistant).toBe(false);
+  });
 
   it('does not normalize user type alias body keys', () => {
     const raw = JSON.stringify({
@@ -118,15 +123,15 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           },
         },
       ],
-    })
+    });
 
-    const extracted = extractAdminAssistantChangeSetStrict(raw)
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(true)
+    expect(extracted.ok).toBe(true);
     if (extracted.ok) {
-      expect(extracted.changeSet.requests[0].body).toEqual({ name: 'Members' })
+      expect(extracted.changeSet.requests[0].body).toEqual({ name: 'Members' });
     }
-  })
+  });
 
   it('does not normalize user field alias body keys', () => {
     const raw = JSON.stringify({
@@ -144,16 +149,16 @@ describe('extractAdminAssistantChangeSetStrict', () => {
           },
         },
       ],
-    })
+    });
 
-    const extracted = extractAdminAssistantChangeSetStrict(raw)
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(true)
+    expect(extracted.ok).toBe(true);
     if (extracted.ok) {
-      expect(extracted.changeSet.requests[0].body).toEqual({})
+      expect(extracted.changeSet.requests[0].body).toEqual({});
     }
-  })
-})
+  });
+});
 
 describe('redactAdminDeploymentSecretChangeSets', () => {
   it('redacts secret deployment values before a streamed JSON fence is complete', () => {
@@ -161,13 +166,13 @@ describe('redactAdminDeploymentSecretChangeSets', () => {
       'Here is the update.',
       '```json',
       '{"version":1,"summary":"Rotate key","requests":[{"method":"PUT","path":"/admin/deployment/config/LLM_API_KEY","body":{"value":"sk-live-secret-value"}}]}',
-    ].join('\n')
+    ].join('\n');
 
-    const redacted = redactAdminDeploymentSecretChangeSets(streamedPartial)
+    const redacted = redactAdminDeploymentSecretChangeSets(streamedPartial);
 
-    expect(redacted).toContain('[REDACTED]')
-    expect(redacted).not.toContain('sk-live-secret-value')
-  })
+    expect(redacted).toContain('[REDACTED]');
+    expect(redacted).not.toContain('sk-live-secret-value');
+  });
 
   it('keeps non-secret deployment values visible in complete changesets', () => {
     const changeSet = {
@@ -180,10 +185,31 @@ describe('redactAdminDeploymentSecretChangeSets', () => {
           body: { value: 'https://example.test' },
         },
       ],
-    }
+    };
 
-    const redacted = redactAdminDeploymentSecretChangeSets(`\`\`\`json\n${JSON.stringify(changeSet)}\n\`\`\``)
+    const redacted = redactAdminDeploymentSecretChangeSets(
+      `\`\`\`json\n${JSON.stringify(changeSet)}\n\`\`\``
+    );
 
-    expect(redacted).toContain('https://example.test')
-  })
-})
+    expect(redacted).toContain('https://example.test');
+  });
+});
+
+describe('stripAdminAssistantChangeSetJson', () => {
+  it('keeps structurally valid but disallowed raw change sets visible', () => {
+    const disallowed = JSON.stringify({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/tools/execute',
+          body: { tool_id: 'db-query' },
+        },
+      ],
+    });
+
+    expect(
+      stripAdminAssistantChangeSetJson(`Review this:\n${disallowed}`)
+    ).toBe(`Review this:\n${disallowed}`);
+  });
+});

@@ -94,6 +94,25 @@ function AssistantIcon({ iconName }: { iconName: string }) {
   );
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (
+    typeof navigator === 'undefined' ||
+    !navigator.clipboard ||
+    typeof navigator.clipboard.writeText !== 'function'
+  ) {
+    console.error('Clipboard API is unavailable.');
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (error) {
+    console.error('Failed to copy text to clipboard.', error);
+    return false;
+  }
+}
+
 interface CodeBlockProps {
   language: string | null;
   children: string;
@@ -105,7 +124,8 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
   const { t } = useTranslation();
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(children);
+    const copiedToClipboard = await copyTextToClipboard(children);
+    if (!copiedToClipboard) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -545,7 +565,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
   }
 
   const handleCopyMessage = async () => {
-    await navigator.clipboard.writeText(message.content);
+    const copiedToClipboard = await copyTextToClipboard(message.content);
+    if (!copiedToClipboard) return;
     setCopiedMessage(true);
     setTimeout(() => setCopiedMessage(false), 2000);
   };
@@ -646,7 +667,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
                       remarkPlugins={[remarkGfm]}
                       components={{
                         code({ node, className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || '');
+                          const match = /language-([\w+-]+)/.exec(
+                            className || ''
+                          );
                           const isInline = !match && !className;
 
                           if (isInline) {
