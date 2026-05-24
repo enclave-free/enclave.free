@@ -66,6 +66,9 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build 
 
 # rebuild only the app layer
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d core-backend sage backend frontend
+
+# reset local runtime state, rebuild, and smoke test through the gateway
+scripts/reset_local_instance.sh
 ```
 
 First startup will:
@@ -151,5 +154,7 @@ Stop the stack:
 
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down
-docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v
+docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v  # removes all Compose volumes, including caches
 ```
+
+For repeatable local smoke tests, prefer `scripts/reset_local_instance.sh`. It removes runtime state volumes (`qdrant_data`, `sage_postgres_data`, `sage_workspace`, and `sqlite_data`), preserves the embedding cache by default, restarts the stack, and verifies `/test` plus `/llm/test` through the gateway. Use `scripts/reset_local_instance.sh --all` only when you also want to discard cached model data.

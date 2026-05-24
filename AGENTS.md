@@ -24,6 +24,7 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build 
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d     # detached mode
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml logs -f backend   # follow backend logs
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down              # stop services
+scripts/reset_local_instance.sh                                                    # reset local runtime state, rebuild, and smoke test
 ```
 Frontend-only development:
 ```bash
@@ -44,6 +45,8 @@ curl http://localhost:8000/test
 curl http://localhost:8000/llm/test
 ```
 These curls must reach the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:8000`, stop that process or verify through the gateway container with `docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test` before treating a 404 as product behavior.
+
+For repeatable local smoke tests, prefer `scripts/reset_local_instance.sh` over `docker compose ... down -v`; it clears runtime state while preserving the embedding cache by default. Use `scripts/reset_local_instance.sh --all` only when cached model data should be removed too.
 
 ## Coding Style & Naming Conventions
 Python uses 4-space indentation and type hints. Prefer `snake_case` for functions/modules and `CamelCase` for classes/Pydantic models. TypeScript/TSX uses 2-space indentation and single quotes; React components are `PascalCase.tsx` (e.g., `ChatPage.tsx`). Keep Tailwind class lists readable and reuse shared components in `frontend/src/components/`.
