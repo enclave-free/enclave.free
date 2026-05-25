@@ -98,6 +98,10 @@ describe('ChatPage', () => {
           );
         }
 
+        if (url.endsWith('/query/sessions')) {
+          return Promise.resolve(Response.json({ conversations: [] }));
+        }
+
         if (url.endsWith('/ingest/jobs')) {
           return Promise.resolve(
             Response.json({
@@ -203,6 +207,12 @@ describe('ChatPage', () => {
       'aria-pressed',
       'true'
     );
+    expect(
+      document.querySelector('input[type="file"]')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /attach|upload/i })
+    ).not.toBeInTheDocument();
   });
 
   it('uses the shared Conversation Surface for User Conversations while preserving surrounding controls', async () => {
@@ -357,6 +367,889 @@ describe('ChatPage', () => {
     expect(
       screen.getByRole('heading', { name: 'What would you like to know?' })
     ).toBeInTheDocument();
+  });
+
+  it('lists durable Conversations in the session sidebar', async () => {
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Draft membership policy',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 4,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Draft membership policy 4 messages',
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('rejects malformed resumed Conversations instead of clearing the thread', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-local',
+          session_id: 'local-session',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-local',
+          delta: 'Local answer remains.',
+        });
+        onEvent('done', {
+          message_id: 'msg-local',
+          session_id: 'local-session',
+        });
+      }
+    );
+
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Malformed saved chat',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Malformed saved chat',
+            messages: null,
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Keep this local thread'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Local answer remains.')
+    ).toBeInTheDocument();
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Malformed saved chat 2 messages',
+      })
+    );
+
+    expect(
+      await screen.findByRole('note', { name: 'Chat request error' })
+    ).toHaveTextContent('Unable to load that Conversation.');
+    expect(screen.getByText('Local answer remains.')).toBeInTheDocument();
+  });
+
+  it('resumes a selected durable Conversation and continues the same session on the next turn', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Draft membership policy',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Draft membership policy',
+            messages: [
+              {
+                id: 'msg-user-1',
+                role: 'user',
+                content: 'What should membership include?',
+              },
+              {
+                id: 'msg-assistant-1',
+                role: 'assistant',
+                content: 'Membership should include clear renewal terms.',
+                activity_steps: [
+                  {
+                    id: 'knowledge-search',
+                    kind: 'tool',
+                    title: 'Knowledge Search',
+                    status: 'completed',
+                    summary: 'Checked uploaded policy material.',
+                  },
+                ],
+                trace: {
+                  visibility: 'summary',
+                  tools: [
+                    {
+                      id: 'knowledge-search',
+                      name: 'Knowledge Search',
+                      status: 'completed',
+                    },
+                  ],
+                  activity_steps: [
+                    {
+                      id: 'knowledge-search',
+                      kind: 'tool',
+                      title: 'Knowledge Search',
+                      status: 'completed',
+                      summary: 'Checked uploaded policy material.',
+                    },
+                  ],
+                },
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ sessionId, onEvent }) => {
+        expect(sessionId).toBe('session-1');
+        onEvent('assistant_message_started', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant-2',
+          delta: 'Continued in the saved Conversation.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Draft membership policy 2 messages',
+      })
+    );
+
+    expect(
+      await screen.findByText('What should membership include?')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Membership should include clear renewal terms.')
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Knowledge Search').length).toBeGreaterThan(0);
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Draft membership policy 2 messages',
+      })
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen.getByRole('region', { name: 'Current chat' })
+    ).toHaveTextContent('Draft membership policy');
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'What comes next?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Continued in the saved Conversation.')
+    ).toBeInTheDocument();
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps server history titles and preserves the list when refresh fails', async () => {
+    const user = userEvent.setup();
+    let historyCalls = 0;
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        historyCalls += 1;
+        if (historyCalls > 1) {
+          return Promise.resolve(Response.json({}, { status: 503 }));
+        }
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Server saved title',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Stale hydrated title',
+            messages: [
+              {
+                id: 'msg-user-1',
+                role: 'user',
+                content: 'Existing question',
+              },
+              {
+                id: 'msg-assistant-1',
+                role: 'assistant',
+                content: 'Existing answer with malformed trace.',
+                trace: {
+                  visibility: 'summary',
+                  tools: 'not-an-array',
+                },
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ sessionId, onEvent }) => {
+        expect(sessionId).toBe('session-1');
+        onEvent('assistant_message_started', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant-2',
+          delta: 'Refresh failed but list stayed.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Server saved title 2 messages',
+      })
+    );
+
+    expect(
+      screen.getByRole('region', { name: 'Current chat' })
+    ).toHaveTextContent('Server saved title');
+    expect(
+      await screen.findByText('Existing answer with malformed trace.')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Continue'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Refresh failed but list stayed.')
+    ).toBeInTheDocument();
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Server saved title 2 messages',
+      })
+    ).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('starts a durable-history-aware New Chat without deleting saved Conversations', async () => {
+    const user = userEvent.setup();
+    let historyCalls = 0;
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        historyCalls += 1;
+        return Promise.resolve(
+          Response.json({
+            conversations:
+              historyCalls === 1
+                ? [
+                    {
+                      id: 'session-1',
+                      title: 'Existing policy chat',
+                      updated_at: '2026-05-24T20:00:00Z',
+                      message_count: 2,
+                    },
+                  ]
+                : [
+                    {
+                      id: 'session-2',
+                      title: 'Start separate thread',
+                      updated_at: '2026-05-24T20:05:00Z',
+                      message_count: 2,
+                    },
+                    {
+                      id: 'session-1',
+                      title: 'Existing policy chat',
+                      updated_at: '2026-05-24T20:00:00Z',
+                      message_count: 2,
+                    },
+                  ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Existing policy chat',
+            messages: [
+              {
+                id: 'msg-user-1',
+                role: 'user',
+                content: 'Existing question',
+              },
+              {
+                id: 'msg-assistant-1',
+                role: 'assistant',
+                content: 'Existing answer',
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ sessionId, onEvent }) => {
+        expect(sessionId).toBeNull();
+        onEvent('assistant_message_started', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-2',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant-2',
+          delta: 'Fresh answer',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-2',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Existing policy chat 2 messages',
+      })
+    );
+    expect(await screen.findByText('Existing answer')).toBeInTheDocument();
+
+    await user.click(within(sidebar).getByRole('button', { name: 'New chat' }));
+    expect(screen.queryByText('Existing answer')).not.toBeInTheDocument();
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Existing policy chat 2 messages',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Current chat Empty' })
+    ).toHaveAttribute('aria-current', 'page');
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Start separate thread'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Fresh answer')).toBeInTheDocument();
+    expect(
+      await within(sidebar).findByRole('button', {
+        name: 'Start separate thread 2 messages',
+      })
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Existing policy chat 2 messages',
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('renames the active durable Conversation and keeps the hydrated turns intact', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Draft membership policy',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (
+        url.endsWith('/query/session/session-1') &&
+        init?.method === 'PATCH'
+      ) {
+        expect(JSON.parse(String(init.body))).toEqual({
+          title: 'Board policy',
+        });
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Board policy',
+            message_count: 2,
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Draft membership policy',
+            messages: [
+              {
+                id: 'msg-user-1',
+                role: 'user',
+                content: 'Existing question',
+              },
+              {
+                id: 'msg-assistant-1',
+                role: 'assistant',
+                content: 'Existing answer',
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Draft membership policy 2 messages',
+      })
+    );
+    expect(await screen.findByText('Existing answer')).toBeInTheDocument();
+
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Rename Draft membership policy',
+      })
+    );
+    const titleInput = within(sidebar).getByRole('textbox', {
+      name: 'Conversation title',
+    });
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Board policy');
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Save conversation title',
+      })
+    );
+
+    expect(
+      await within(sidebar).findByRole('button', {
+        name: 'Board policy 2 messages',
+      })
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen.getByRole('region', { name: 'Current chat' })
+    ).toHaveTextContent('Board policy');
+    expect(screen.getByText('Existing answer')).toBeInTheDocument();
+  });
+
+  it('deletes the active durable Conversation from the sidebar without exposing turn contents in the confirmation', async () => {
+    const user = userEvent.setup();
+    const conversations = [
+      {
+        id: 'session-1',
+        title: 'Safe board policy title',
+        updated_at: '2026-05-24T20:00:00Z',
+        message_count: 2,
+      },
+    ];
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(Response.json({ conversations }));
+      }
+
+      if (
+        url.endsWith('/query/session/session-1') &&
+        init?.method === 'DELETE'
+      ) {
+        conversations.length = 0;
+        return Promise.resolve(
+          Response.json({
+            status: 'deleted',
+            deletion: {
+              session_id: 'session-1',
+              message_count: 2,
+              deleted_at: '2026-05-24T20:05:00Z',
+            },
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Safe board policy title',
+            messages: [
+              {
+                id: 'msg-user-1',
+                role: 'user',
+                content: 'Raw question with secret@example.com inside',
+              },
+              {
+                id: 'msg-assistant-1',
+                role: 'assistant',
+                content: 'Private answer that should never enter confirmation',
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Safe board policy title 2 messages',
+      })
+    );
+    expect(
+      await screen.findByText(
+        'Private answer that should never enter confirmation'
+      )
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Delete Safe board policy title',
+      })
+    );
+    expect(
+      within(sidebar).getByText('Delete "Safe board policy title"?')
+    ).toBeInTheDocument();
+    expect(
+      within(sidebar).queryByText(/secret@example.com/)
+    ).not.toBeInTheDocument();
+    expect(
+      within(sidebar).queryByText(
+        /Private answer that should never enter confirmation/
+      )
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Cancel conversation delete',
+      })
+    );
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Safe board policy title 2 messages',
+      })
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen.getByText('Private answer that should never enter confirmation')
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Delete Safe board policy title',
+      })
+    );
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Delete conversation',
+      })
+    );
+
+    await waitFor(() => {
+      expect(
+        within(sidebar).queryByRole('button', {
+          name: 'Safe board policy title 2 messages',
+        })
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText('Private answer that should never enter confirmation')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Current chat Empty' })
+    ).toHaveAttribute('aria-current', 'page');
   });
 
   it('contains chat request failures in a named error note', async () => {
@@ -1975,9 +2868,13 @@ describe('ChatPage', () => {
     });
 
     for (let index = 0; index < 17; index += 1) {
-      await user.type(
+      fireEvent.change(
         screen.getByRole('textbox', { name: 'Ask anything...' }),
-        `Theme question ${index} about palette and typography.`
+        {
+          target: {
+            value: `Theme question ${index} about palette and typography.`,
+          },
+        }
       );
       await user.click(screen.getByRole('button', { name: 'Send message' }));
       await waitFor(() => {

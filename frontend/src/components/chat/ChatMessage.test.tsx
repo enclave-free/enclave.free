@@ -34,17 +34,20 @@ function stubLocalStorage() {
 function renderMessage(
   content: string,
   role: 'user' | 'assistant' = 'assistant',
-  trace?: Parameters<typeof ChatMessage>[0]['message']['trace']
+  trace?: Parameters<typeof ChatMessage>[0]['message']['trace'],
+  props?: Partial<Parameters<typeof ChatMessage>[0]>
 ) {
   return render(
     <ThemeProvider>
       <InstanceConfigProvider>
         <ChatMessage
+          {...props}
           message={{
             id: 'message-1',
             role,
             content,
             trace,
+            ...props?.message,
           }}
         />
       </InstanceConfigProvider>
@@ -197,6 +200,62 @@ describe('ChatMessage', () => {
     await user.click(screen.getByRole('button', { name: 'Copy message' }));
 
     expect(clipboardWriteText).toHaveBeenCalledWith(content);
+  });
+
+  it('renders capability-gated message actions without mutating by default', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    const message = {
+      id: 'message-1',
+      role: 'assistant' as const,
+      content: 'Answer ready.',
+      actions: [
+        {
+          id: 'regenerate' as const,
+          label: 'Regenerate response',
+          disabled: true,
+          disabledReason: 'Wait for the current response to finish first.',
+        },
+        {
+          id: 'stop' as const,
+          label: 'Stop response',
+          disabled: false,
+        },
+      ],
+    };
+
+    renderMessage('Answer ready.', 'assistant', undefined, {
+      onAction,
+      message,
+    });
+
+    expect(
+      screen.getByRole('toolbar', { name: 'Message actions' })
+    ).toBeInTheDocument();
+    const disabledAction = screen.getByRole('button', {
+      name: 'Regenerate response',
+    });
+    expect(disabledAction).toBeDisabled();
+    expect(disabledAction).toHaveAttribute(
+      'title',
+      'Wait for the current response to finish first.'
+    );
+
+    await user.click(disabledAction);
+
+    expect(onAction).not.toHaveBeenCalled();
+
+    const enabledAction = screen.getByRole('button', {
+      name: 'Stop response',
+    });
+    expect(enabledAction).toBeEnabled();
+
+    await user.click(enabledAction);
+
+    expect(onAction).toHaveBeenCalledWith(
+      'stop',
+      expect.objectContaining({ id: 'message-1' })
+    );
   });
 
   it('renders assistant Activity as visible timeline rows with expandable details', async () => {

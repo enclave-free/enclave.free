@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   type Dispatch,
+  type FormEvent,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,11 +16,13 @@ import {
   ChevronDown,
   Database,
   Mail,
+  Pencil,
   Plus,
   Search,
   Settings2,
   MessageSquare,
   ShieldCheck,
+  Trash2,
   X,
 } from 'lucide-react';
 import { ChatContainer } from '../components/chat/ChatContainer';
@@ -43,6 +46,10 @@ import {
 import { ExportButton } from '../components/chat/ExportButton';
 import { AppHeader } from '../components/shared/AppHeader';
 import { Message } from '../components/chat/ChatMessage';
+import type {
+  ConversationActivityStep,
+  ConversationTrace,
+} from '../components/chat/ChatMessage';
 import {
   ReachoutModal,
   type ReachoutMode,
@@ -98,11 +105,161 @@ function conversationTurnToMessage(turn: ConversationUiTurn): Message {
   };
 }
 
+interface ConversationHistorySummary {
+  id: string;
+  title: string;
+  messageCount: number | null;
+  updatedAt: string | null;
+}
+
+interface ConversationSessionView {
+  id: string;
+  title: string | null;
+  turns: ConversationUiTurn[];
+}
+
 function slugify(value: string): string {
   return String(value || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
+}
+
+function conversationHistorySummaryFromApi(
+  value: unknown
+): ConversationHistorySummary | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record.id !== 'string' || !record.id.trim()) return null;
+  const rawTitle =
+    typeof record.title === 'string' && record.title.trim()
+      ? record.title.trim()
+      : null;
+  const messageCount =
+    typeof record.message_count === 'number' &&
+    Number.isFinite(record.message_count)
+      ? Math.max(0, Math.floor(record.message_count))
+      : null;
+  const updatedAt =
+    typeof record.updated_at === 'string' && record.updated_at.trim()
+      ? record.updated_at
+      : null;
+
+  return {
+    id: record.id,
+    title: rawTitle ?? 'Untitled chat',
+    messageCount,
+    updatedAt,
+  };
+}
+
+function conversationSessionViewFromApi(
+  value: unknown
+): ConversationSessionView | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record.id !== 'string' || !record.id.trim()) return null;
+  if (!Array.isArray(record.messages)) return null;
+  const rawMessages = record.messages;
+  return {
+    id: record.id,
+    title:
+      typeof record.title === 'string' && record.title.trim()
+        ? record.title.trim()
+        : null,
+    turns: rawMessages
+      .map((message, index) =>
+        conversationTurnFromSessionMessage(message, record.id as string, index)
+      )
+      .filter((turn): turn is ConversationUiTurn => Boolean(turn)),
+  };
+}
+
+function conversationTurnFromSessionMessage(
+  value: unknown,
+  sessionId: string,
+  index: number
+): ConversationUiTurn | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  if (record.role !== 'user' && record.role !== 'assistant') return null;
+  if (typeof record.content !== 'string') return null;
+  const trace = conversationTraceFromApi(record.trace);
+  const activitySteps = activityStepsFromApi(record.activity_steps);
+  return {
+    id:
+      typeof record.id === 'string' && record.id.trim()
+        ? record.id
+        : `${sessionId}-${index}`,
+    role: record.role,
+    content: record.content,
+    activitySteps:
+      activitySteps.length > 0
+        ? activitySteps
+        : trace?.activity_steps
+          ? activityStepsFromApi(trace.activity_steps)
+          : [],
+    trace,
+    traceStatus: null,
+  };
+}
+
+function conversationTraceFromApi(value: unknown): ConversationTrace | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  if (
+    !['off', 'minimal', 'summary', 'detailed'].includes(
+      String(record.visibility)
+    )
+  ) {
+    return null;
+  }
+  if (!isOptionalObjectArray(record.tools)) return null;
+  if (!isOptionalObjectArray(record.retrieval)) {
+    return null;
+  }
+  if (!isOptionalObjectArray(record.activity_steps)) {
+    return null;
+  }
+  return record as unknown as ConversationTrace;
+}
+
+function isOptionalObjectArray(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.every((item) => Boolean(item) && typeof item === 'object'))
+  );
+}
+
+function activityStepsFromApi(value: unknown): ConversationActivityStep[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item): ConversationActivityStep | null => {
+      if (!item || typeof item !== 'object') return null;
+      const step = item as Record<string, unknown>;
+      if (
+        typeof step.id !== 'string' ||
+        typeof step.kind !== 'string' ||
+        typeof step.title !== 'string' ||
+        typeof step.status !== 'string'
+      ) {
+        return null;
+      }
+      return {
+        id: step.id,
+        kind: step.kind,
+        title: step.title,
+        status: step.status,
+        summary: typeof step.summary === 'string' ? step.summary : undefined,
+        warnings: Array.isArray(step.warnings)
+          ? step.warnings.filter(
+              (warning): warning is string => typeof warning === 'string'
+            )
+          : undefined,
+      };
+    })
+    .filter((step): step is ConversationActivityStep => Boolean(step));
 }
 
 async function readErrorDetail(res: Response): Promise<string> {
@@ -401,6 +558,29 @@ export function ChatPage() {
   const [sessionMemoryNotice, setSessionMemoryNotice] = useState<string | null>(
     null
   );
+  const [conversationHistory, setConversationHistory] = useState<
+    ConversationHistorySummary[]
+  >([]);
+  const [conversationHistoryStatus, setConversationHistoryStatus] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [activeConversationTitle, setActiveConversationTitle] = useState<
+    string | null
+  >(null);
+  const [renameDraft, setRenameDraft] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [renameStatus, setRenameStatus] = useState<'idle' | 'saving' | 'error'>(
+    'idle'
+  );
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [deleteDraft, setDeleteDraft] =
+    useState<ConversationHistorySummary | null>(null);
+  const [deleteStatus, setDeleteStatus] = useState<
+    'idle' | 'deleting' | 'error'
+  >('idle');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -531,6 +711,49 @@ export function ChatPage() {
       isCancelled = true;
     };
   }, []);
+
+  const loadConversationHistory = useCallback(async () => {
+    setConversationHistoryStatus('loading');
+    try {
+      const res = await fetch(`${API_BASE}/query/sessions`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        setConversationHistoryStatus('error');
+        return;
+      }
+
+      const payload = await res.json();
+      const rawConversations: unknown[] = Array.isArray(payload?.conversations)
+        ? payload.conversations
+        : [];
+      setConversationHistory(
+        rawConversations
+          .map(conversationHistorySummaryFromApi)
+          .filter((conversation): conversation is ConversationHistorySummary =>
+            Boolean(conversation)
+          )
+      );
+      setConversationHistoryStatus('ready');
+    } catch {
+      setConversationHistoryStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchConversationHistory() {
+      await loadConversationHistory();
+      if (cancelled) return;
+    }
+
+    fetchConversationHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadConversationHistory]);
 
   // Check auth and approval status on mount
   useEffect(() => {
@@ -725,6 +948,167 @@ export function ChatPage() {
   const handleDocumentToggle = useCallback((docId: string) => {
     dispatchConversation({ type: 'documentToggled', documentId: docId });
   }, []);
+
+  const handleConversationSelect = useCallback(
+    async (conversation: ConversationHistorySummary) => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/query/session/${encodeURIComponent(conversation.id)}`,
+          {
+            credentials: 'include',
+          }
+        );
+        if (!res.ok) {
+          dispatchConversation({
+            type: 'requestFailed',
+            message: await readErrorDetail(res),
+          });
+          return;
+        }
+        const payload = await res.json();
+        const view = conversationSessionViewFromApi(payload);
+        if (!view) {
+          dispatchConversation({
+            type: 'requestFailed',
+            message: t(
+              'chat.sessions.resumeInvalid',
+              'Unable to load that Conversation.'
+            ),
+          });
+          return;
+        }
+        dispatchConversation({
+          type: 'conversationHydrated',
+          sessionId: view.id,
+          turns: view.turns,
+        });
+        setActiveConversationTitle(view.title ?? conversation.title);
+        dispatchAdminApply({ type: 'newConversationStarted' });
+        setSupersededAdminApprovals([]);
+        setSessionMemoryNotice(null);
+        setReducedContextNotice(null);
+        setRenameDraft(null);
+        setRenameStatus('idle');
+        setRenameError(null);
+        setDeleteDraft(null);
+        setDeleteStatus('idle');
+        setDeleteError(null);
+      } catch (err) {
+        dispatchConversation({
+          type: 'requestFailed',
+          message:
+            err instanceof Error
+              ? err.message
+              : t(
+                  'chat.sessions.resumeInvalid',
+                  'Unable to load that Conversation.'
+                ),
+        });
+      }
+    },
+    [t]
+  );
+
+  const handleRenameSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!renameDraft) return;
+      const title = renameDraft.title.trim();
+      if (!title) {
+        setRenameStatus('error');
+        setRenameError(
+          t('chat.sessions.renameEmpty', 'Conversation title is required.')
+        );
+        return;
+      }
+
+      setRenameStatus('saving');
+      setRenameError(null);
+      try {
+        const res = await fetch(
+          `${API_BASE}/query/session/${encodeURIComponent(renameDraft.id)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ title }),
+          }
+        );
+        if (!res.ok) {
+          throw new Error(await readErrorDetail(res));
+        }
+        const payload = await res.json();
+        const confirmedTitle =
+          typeof payload?.title === 'string' && payload.title.trim()
+            ? payload.title.trim()
+            : title;
+
+        setConversationHistory((existing) =>
+          existing.map((conversation) =>
+            conversation.id === renameDraft.id
+              ? { ...conversation, title: confirmedTitle }
+              : conversation
+          )
+        );
+        if (conversationSessionId === renameDraft.id) {
+          setActiveConversationTitle(confirmedTitle);
+        }
+        setRenameDraft(null);
+        setRenameStatus('idle');
+      } catch (err) {
+        setRenameStatus('error');
+        setRenameError(
+          err instanceof Error
+            ? err.message
+            : t('chat.sessions.renameError', 'Unable to rename Conversation.')
+        );
+      }
+    },
+    [conversationSessionId, renameDraft, t]
+  );
+
+  const handleDeleteConversation = useCallback(async () => {
+    if (!deleteDraft) return;
+
+    setDeleteStatus('deleting');
+    setDeleteError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/query/session/${encodeURIComponent(deleteDraft.id)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      );
+      if (!res.ok) {
+        throw new Error(await readErrorDetail(res));
+      }
+
+      setConversationHistory((existing) =>
+        existing.filter((conversation) => conversation.id !== deleteDraft.id)
+      );
+      if (conversationSessionId === deleteDraft.id) {
+        dispatchConversation({ type: 'newConversationStarted' });
+        dispatchAdminApply({ type: 'newConversationStarted' });
+        setSupersededAdminApprovals([]);
+        setSessionMemoryNotice(null);
+        setReducedContextNotice(null);
+        setActiveConversationTitle(null);
+      }
+      setDeleteDraft(null);
+      setDeleteStatus('idle');
+      setDeleteError(null);
+    } catch (err) {
+      setDeleteStatus('error');
+      setDeleteError(
+        err instanceof Error
+          ? err.message
+          : t('chat.sessions.deleteError', 'Unable to delete Conversation.')
+      );
+    }
+  }, [conversationSessionId, deleteDraft, t]);
 
   const generateMessageId = () =>
     `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -964,7 +1348,10 @@ export function ChatPage() {
             streamError
           );
         }
-        if (streamed) return;
+        if (streamed) {
+          await loadConversationHistory();
+          return;
+        }
 
         response = await fetch(`${API_BASE}/query`, {
           method: 'POST',
@@ -1112,7 +1499,10 @@ export function ChatPage() {
             streamError
           );
         }
-        if (streamed) return;
+        if (streamed) {
+          await loadConversationHistory();
+          return;
+        }
 
         response = await sendLlmChatWithUnifiedTools({
           content,
@@ -1212,6 +1602,7 @@ export function ChatPage() {
           data.session_id ?? conversationSessionId
         );
       }
+      await loadConversationHistory();
     } catch (e) {
       dispatchConversation({
         type: 'requestFailed',
@@ -1592,6 +1983,13 @@ IMPORTANT: Return a CONDENSED response:
     setSupersededAdminApprovals([]);
     setSessionMemoryNotice(null);
     setReducedContextNotice(null);
+    setActiveConversationTitle(null);
+    setRenameDraft(null);
+    setRenameStatus('idle');
+    setRenameError(null);
+    setDeleteDraft(null);
+    setDeleteStatus('idle');
+    setDeleteError(null);
   };
 
   const rightActions = (
@@ -1630,7 +2028,12 @@ IMPORTANT: Return a CONDENSED response:
   );
 
   const header = <AppHeader rightActions={rightActions} />;
+  const activeHistoryConversation = conversationHistory.find(
+    (conversation) => conversation.id === conversationSessionId
+  );
   const sessionTitle =
+    activeHistoryConversation?.title ||
+    activeConversationTitle ||
     messages.find((message) => message.role === 'user')?.content.trim() ||
     t('chat.sessions.current', 'Current chat');
   const sessionMeta =
@@ -1660,24 +2063,256 @@ IMPORTANT: Return a CONDENSED response:
         <div className="px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">
           {t('chat.listTitle', 'Chats')}
         </div>
-        <button
-          type="button"
-          aria-current="page"
-          aria-label={`${sessionTitle} ${sessionMeta}`}
-          className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-left text-sm text-text shadow-sm"
-          data-dismiss-sidebar="true"
-        >
-          <MessageSquare
-            className="h-4 w-4 shrink-0 text-accent"
-            aria-hidden="true"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate">{sessionTitle}</span>
-            <span className="block truncate text-xs text-text-muted">
-              {sessionMeta}
+        {conversationHistoryStatus === 'loading' && (
+          <div className="px-2 py-1 text-xs text-text-muted">
+            {t('chat.sessions.loading', 'Loading chats...')}
+          </div>
+        )}
+        {conversationHistoryStatus === 'error' && (
+          <div role="note" className="px-2 py-1 text-xs text-text-muted">
+            {t('chat.sessions.error', 'Unable to load chats')}
+          </div>
+        )}
+        {conversationHistory.map((conversation) => {
+          const meta =
+            conversation.messageCount === null
+              ? t('chat.sessions.saved', 'Saved chat')
+              : t('chat.sessions.messageCount', {
+                  count: conversation.messageCount,
+                  defaultValue:
+                    conversation.messageCount === 1
+                      ? '1 message'
+                      : `${conversation.messageCount} messages`,
+                });
+          if (deleteDraft?.id === conversation.id) {
+            return (
+              <div
+                key={conversation.id}
+                className="rounded-lg border border-danger/40 bg-surface p-2"
+              >
+                <div className="text-sm font-medium text-text">
+                  {t('chat.sessions.deleteConfirmTitle', {
+                    title: conversation.title,
+                    defaultValue: `Delete "${conversation.title}"?`,
+                  })}
+                </div>
+                <div className="mt-1 text-xs text-text-muted">
+                  {t(
+                    'chat.sessions.deleteConfirmBody',
+                    'This removes the saved Conversation and its Session Memory.'
+                  )}
+                </div>
+                <div className="mt-2 flex items-center justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDeleteDraft(null);
+                      setDeleteStatus('idle');
+                      setDeleteError(null);
+                    }}
+                    disabled={deleteStatus === 'deleting'}
+                    aria-label={t(
+                      'chat.sessions.deleteCancel',
+                      'Cancel conversation delete'
+                    )}
+                  >
+                    {t('chat.sessions.cancel', 'Cancel')}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleDeleteConversation}
+                    disabled={deleteStatus === 'deleting'}
+                  >
+                    {t('chat.sessions.deleteConfirm', 'Delete conversation')}
+                  </Button>
+                </div>
+                {deleteStatus === 'deleting' && (
+                  <div role="status" className="mt-1 text-xs text-text-muted">
+                    {t('chat.sessions.deleteDeleting', 'Deleting...')}
+                  </div>
+                )}
+                {deleteStatus === 'error' && deleteError && (
+                  <div role="note" className="mt-1 text-xs text-danger">
+                    {deleteError}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          if (renameDraft?.id === conversation.id) {
+            return (
+              <form
+                key={conversation.id}
+                onSubmit={handleRenameSubmit}
+                className="rounded-lg border border-border bg-surface p-2"
+              >
+                <label
+                  htmlFor={`conversation-title-${conversation.id}`}
+                  className="sr-only"
+                >
+                  {t('chat.sessions.renameInput', 'Conversation title')}
+                </label>
+                <input
+                  id={`conversation-title-${conversation.id}`}
+                  value={renameDraft.title}
+                  onChange={(event) =>
+                    setRenameDraft({
+                      id: conversation.id,
+                      title: event.target.value,
+                    })
+                  }
+                  className="w-full rounded-md border border-border bg-surface-raised px-2 py-1.5 text-sm text-text focus-ring"
+                  aria-invalid={renameStatus === 'error' ? true : undefined}
+                  autoFocus
+                />
+                <div className="mt-2 flex items-center justify-end gap-1">
+                  <IconButton
+                    label={t(
+                      'chat.sessions.renameCancel',
+                      'Cancel conversation rename'
+                    )}
+                    title={t(
+                      'chat.sessions.renameCancel',
+                      'Cancel conversation rename'
+                    )}
+                    onClick={() => {
+                      setRenameDraft(null);
+                      setRenameStatus('idle');
+                      setRenameError(null);
+                    }}
+                    disabled={renameStatus === 'saving'}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    label={t(
+                      'chat.sessions.renameSave',
+                      'Save conversation title'
+                    )}
+                    title={t(
+                      'chat.sessions.renameSave',
+                      'Save conversation title'
+                    )}
+                    type="submit"
+                    disabled={renameStatus === 'saving'}
+                  >
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  </IconButton>
+                </div>
+                {renameStatus === 'saving' && (
+                  <div role="status" className="mt-1 text-xs text-text-muted">
+                    {t('chat.sessions.renameSaving', 'Renaming...')}
+                  </div>
+                )}
+                {renameStatus === 'error' && renameError && (
+                  <div role="note" className="mt-1 text-xs text-danger">
+                    {renameError}
+                  </div>
+                )}
+              </form>
+            );
+          }
+          return (
+            <div
+              key={conversation.id}
+              className={
+                conversation.id === conversationSessionId
+                  ? 'flex w-full items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text shadow-sm'
+                  : 'flex w-full items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-text transition-colors hover:bg-surface-overlay'
+              }
+            >
+              <button
+                type="button"
+                onClick={() => handleConversationSelect(conversation)}
+                aria-current={
+                  conversation.id === conversationSessionId ? 'page' : undefined
+                }
+                aria-label={`${conversation.title} ${meta}`}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-0.5 py-0.5 text-left"
+                data-dismiss-sidebar="true"
+              >
+                <MessageSquare
+                  className="h-4 w-4 shrink-0 text-text-muted"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{conversation.title}</span>
+                  <span className="block truncate text-xs text-text-muted">
+                    {meta}
+                  </span>
+                </span>
+              </button>
+              <IconButton
+                label={t('chat.sessions.rename', {
+                  title: conversation.title,
+                  defaultValue: `Rename ${conversation.title}`,
+                })}
+                title={t('chat.sessions.rename', {
+                  title: conversation.title,
+                  defaultValue: `Rename ${conversation.title}`,
+                })}
+                onClick={() => {
+                  setRenameDraft({
+                    id: conversation.id,
+                    title: conversation.title,
+                  });
+                  setRenameStatus('idle');
+                  setRenameError(null);
+                  setDeleteDraft(null);
+                  setDeleteStatus('idle');
+                  setDeleteError(null);
+                }}
+                className="h-8 w-8 p-1.5"
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+              </IconButton>
+              <IconButton
+                label={t('chat.sessions.delete', {
+                  title: conversation.title,
+                  defaultValue: `Delete ${conversation.title}`,
+                })}
+                title={t('chat.sessions.delete', {
+                  title: conversation.title,
+                  defaultValue: `Delete ${conversation.title}`,
+                })}
+                onClick={() => {
+                  setDeleteDraft(conversation);
+                  setDeleteStatus('idle');
+                  setDeleteError(null);
+                  setRenameDraft(null);
+                  setRenameStatus('idle');
+                  setRenameError(null);
+                }}
+                variant="danger"
+                className="h-8 w-8 p-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              </IconButton>
+            </div>
+          );
+        })}
+        {!activeHistoryConversation && (
+          <button
+            type="button"
+            aria-current="page"
+            aria-label={`${sessionTitle} ${sessionMeta}`}
+            className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-2.5 py-2 text-left text-sm text-text shadow-sm"
+            data-dismiss-sidebar="true"
+          >
+            <MessageSquare
+              className="h-4 w-4 shrink-0 text-accent"
+              aria-hidden="true"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">{sessionTitle}</span>
+              <span className="block truncate text-xs text-text-muted">
+                {sessionMeta}
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
+        )}
       </div>
       <div className="mt-auto border-t border-border pt-3">
         <ExportButton messages={messages} />
@@ -1955,6 +2590,7 @@ IMPORTANT: Return a CONDENSED response:
         toolbar={inputToolbar}
         turnAccessories={turnAccessories}
         notices={threadNotices}
+        hasPersistedSession={Boolean(conversationSessionId)}
       />
     </ChatContainer>
   );

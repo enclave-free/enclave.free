@@ -202,7 +202,9 @@ Use this checklist to:
   - `/ingest/pipeline-stats`
 - [x] Restrict `/vector-search` (admin-only or remove payload text and enforce doc scoping).
 - [x] Enforce session ownership checks for:
+  - `GET /query/sessions`
   - `GET /query/session/{session_id}`
+  - `PATCH /query/session/{session_id}`
   - `DELETE /query/session/{session_id}`
 - [x] Replace wildcard CORS with deployment-configured allowlist.
 - [x] Move bearer tokens out of `localStorage`.
@@ -342,6 +344,13 @@ curl -i -X POST http://localhost:8000/vector-search \
 # S4-3: Authenticated requests should succeed on owned query-session records
 curl -i -H 'Authorization: Bearer <token>' http://localhost:8000/query/session/test-session-id
 
+# S4-3: Unauthenticated query-session requests should fail
+curl -i http://localhost:8000/query/sessions
+curl -i http://localhost:8000/query/session/test-session-id
+curl -i -X PATCH http://localhost:8000/query/session/test-session-id \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"test"}'
+
 # S4-4: CORS should reject disallowed origins
 curl -i -X OPTIONS http://localhost:8000/health \
   -H 'Origin: https://evil.example.com' \
@@ -418,7 +427,9 @@ Use these guardrails while security fixes are in progress:
 - Manual Section 7.1 checks:
   - `GET /ingest/pending` unauthenticated: `401`
   - `POST /vector-search` unauthenticated: `401`
+  - `GET /query/sessions` unauthenticated: `401`
   - `GET /query/session/test-session-id` unauthenticated: `401`
+  - `PATCH /query/session/test-session-id` unauthenticated: `401`
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
   - Published ports: `enclave-backend` and `enclave-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
   - Smoke endpoints: `GET /test` -> `200`, `GET /llm/test` -> `200`

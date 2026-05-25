@@ -18,13 +18,20 @@ import {
   FileSearch,
   Info,
   Loader2,
+  Pencil,
+  RotateCcw,
   Search,
+  Square,
   Wrench,
 } from 'lucide-react';
 import { useTheme } from '../../theme';
 import { useInstanceConfig } from '../../context/InstanceConfigContext';
 import { DynamicIcon } from '../shared/DynamicIcon';
 import { Button } from '../ui';
+import type {
+  ConversationMessageAction,
+  ConversationMessageActionId,
+} from './ConversationMessageActions';
 
 export interface ConversationTrace {
   visibility: 'off' | 'minimal' | 'summary' | 'detailed';
@@ -72,10 +79,12 @@ export interface Message {
     selectedTools: string[];
     selectedDocuments: string[];
   };
+  actions?: ConversationMessageAction[];
 }
 
 interface ChatMessageProps {
   message: Message;
+  onAction?: (actionId: ConversationMessageActionId, message: Message) => void;
 }
 
 function UserIcon({ iconName }: { iconName: string }) {
@@ -540,7 +549,7 @@ function isSafeMarkdownHref(href?: string) {
   }
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onAction }: ChatMessageProps) {
   const { resolvedTheme } = useTheme();
   const { t } = useTranslation();
   const { config } = useInstanceConfig();
@@ -595,12 +604,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const bubbleRadius =
     bubbleStyles[config.chatBubbleStyle] || bubbleStyles.soft;
   const bubbleShadow = config.chatBubbleShadow ? 'shadow-sm' : '';
-  const userBubbleClass = `group/message relative inline-block max-w-72 sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 pr-11 ${bubbleRadius.user} ${bubbleShadow}`;
+  const userBubbleClass = `group/message relative inline-block max-w-[min(88vw,42rem)] sm:max-w-[min(85%,42rem)] bg-accent text-accent-text px-4 py-2.5 pr-11 ${bubbleRadius.user} ${bubbleShadow}`;
   const assistantBubbleClass =
     'group/message relative w-full max-w-[48rem] px-1 py-1 pr-11';
   const copyButtonClass = isUser
-    ? 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-accent-text/75 opacity-70 transition hover:bg-white/15 hover:text-accent-text hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70'
-    : 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-text-muted opacity-70 transition hover:bg-surface-overlay hover:text-text focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
+    ? 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-accent-text/75 opacity-0 transition hover:bg-white/15 hover:text-accent-text hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 group-hover/message:opacity-80'
+    : 'absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-text-muted opacity-0 transition hover:bg-surface-overlay hover:text-text hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 group-hover/message:opacity-80';
   const copyIcon = copiedMessage ? (
     <Check className="h-3.5 w-3.5" aria-hidden="true" />
   ) : (
@@ -621,6 +630,30 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {copyIcon}
     </button>
   );
+  const messageActions =
+    message.actions && message.actions.length > 0 ? (
+      <div
+        role="toolbar"
+        aria-label={t('chat.messageActions')}
+        className={`mt-1.5 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}
+      >
+        {message.actions.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            onClick={() => {
+              if (!action.disabled) onAction?.(action.id, message);
+            }}
+            disabled={action.disabled}
+            aria-label={action.label}
+            title={action.disabledReason ?? action.label}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition hover:bg-surface-overlay hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+          >
+            <MessageActionIcon actionId={action.id} />
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   return (
     <div className="animate-fade-in-up mb-4 last:mb-0">
@@ -640,202 +673,224 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <div className="text-xs text-text-muted mb-1">{label}</div>
           )}
           {isUser ? (
-            <div className={userBubbleClass}>
-              {copyAction}
-              <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-                {message.content}
-              </p>
-            </div>
+            <>
+              <div className={userBubbleClass}>
+                {copyAction}
+                <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+                  {message.content}
+                </p>
+              </div>
+              {messageActions}
+            </>
           ) : (
-            <div className={assistantBubbleClass}>
-              {copyAction}
-              <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
-                <ConversationTracePanel
-                  trace={message.trace}
-                  activitySteps={message.activitySteps}
-                  liveStatus={visibleTraceStatus}
-                />
-                {message.content.trim() && (
-                  <div
-                    className={
-                      message.trace ||
-                      visibleTraceStatus ||
-                      (message.activitySteps &&
-                        message.activitySteps.length > 0)
-                        ? 'mt-3'
-                        : ''
-                    }
-                  >
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ node, className, children, ...props }) {
-                          const match = /language-([\w+-]+)/.exec(
-                            className || ''
-                          );
-                          const isInline = !match && !className;
+            <>
+              <div className={assistantBubbleClass}>
+                {copyAction}
+                <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
+                  <ConversationTracePanel
+                    trace={message.trace}
+                    activitySteps={message.activitySteps}
+                    liveStatus={visibleTraceStatus}
+                  />
+                  {message.content.trim() && (
+                    <div
+                      className={
+                        message.trace ||
+                        visibleTraceStatus ||
+                        (message.activitySteps &&
+                          message.activitySteps.length > 0)
+                          ? 'mt-3'
+                          : ''
+                      }
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, className, children, ...props }) {
+                            const match = /language-([\w+-]+)/.exec(
+                              className || ''
+                            );
+                            const isInline = !match && !className;
 
-                          if (isInline) {
+                            if (isInline) {
+                              return (
+                                <code
+                                  className="bg-surface-overlay px-1.5 py-0.5 rounded text-[0.875em] font-mono text-text"
+                                  {...props}
+                                >
+                                  {children}
+                                </code>
+                              );
+                            }
+
                             return (
-                              <code
-                                className="bg-surface-overlay px-1.5 py-0.5 rounded text-[0.875em] font-mono text-text"
-                                {...props}
+                              <CodeBlock
+                                language={match ? match[1] : null}
+                                resolvedTheme={resolvedTheme}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </CodeBlock>
+                            );
+                          },
+                          p({ children }) {
+                            return (
+                              <p className="mb-3 last:mb-0 text-[15px] leading-relaxed">
+                                {children}
+                              </p>
+                            );
+                          },
+                          a({ href, children }) {
+                            if (!isSafeMarkdownHref(href)) {
+                              return <span>{children}</span>;
+                            }
+                            return (
+                              <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-accent hover:text-accent-hover underline underline-offset-2 decoration-accent/30 hover:decoration-accent transition-colors"
                               >
                                 {children}
-                              </code>
+                              </a>
                             );
-                          }
-
-                          return (
-                            <CodeBlock
-                              language={match ? match[1] : null}
-                              resolvedTheme={resolvedTheme}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </CodeBlock>
-                          );
-                        },
-                        p({ children }) {
-                          return (
-                            <p className="mb-3 last:mb-0 text-[15px] leading-relaxed">
-                              {children}
-                            </p>
-                          );
-                        },
-                        a({ href, children }) {
-                          if (!isSafeMarkdownHref(href)) {
-                            return <span>{children}</span>;
-                          }
-                          return (
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-accent hover:text-accent-hover underline underline-offset-2 decoration-accent/30 hover:decoration-accent transition-colors"
-                            >
-                              {children}
-                            </a>
-                          );
-                        },
-                        ul({ children }) {
-                          return (
-                            <ul className="mb-3 last:mb-0 list-disc space-y-1.5 pl-5 text-[15px]">
-                              {children}
-                            </ul>
-                          );
-                        },
-                        ol({ children }) {
-                          return (
-                            <ol className="mb-3 last:mb-0 list-decimal space-y-1.5 pl-5 text-[15px]">
-                              {children}
-                            </ol>
-                          );
-                        },
-                        li({ children }) {
-                          return (
-                            <li className="pl-1 leading-relaxed marker:text-accent">
-                              {children}
-                            </li>
-                          );
-                        },
-                        blockquote({ children }) {
-                          return (
-                            <blockquote className="my-4 border-l-4 border-border pl-4 text-text-secondary text-[15px] leading-relaxed [&>p]:mb-0">
-                              {children}
-                            </blockquote>
-                          );
-                        },
-                        em({ children }) {
-                          return (
-                            <em className="italic text-inherit">{children}</em>
-                          );
-                        },
-                        h1({ children }) {
-                          return (
-                            <h1 className="text-xl font-semibold mb-3 mt-4 first:mt-0 text-text tracking-tight">
-                              {children}
-                            </h1>
-                          );
-                        },
-                        h2({ children }) {
-                          return (
-                            <h2 className="text-lg font-semibold mb-2 mt-4 first:mt-0 text-text tracking-tight">
-                              {children}
-                            </h2>
-                          );
-                        },
-                        h3({ children }) {
-                          return (
-                            <h3 className="text-base font-semibold mb-2 mt-3 first:mt-0 text-text tracking-tight">
-                              {children}
-                            </h3>
-                          );
-                        },
-                        hr() {
-                          return <hr className="my-4 border-border" />;
-                        },
-                        strong({ children }) {
-                          return (
-                            <strong className="font-semibold text-text">
-                              {children}
-                            </strong>
-                          );
-                        },
-                        table({ children }) {
-                          return (
-                            <div className="my-4 overflow-x-auto rounded-xl border border-border shadow-sm">
-                              <table className="min-w-full text-sm divide-y divide-border">
+                          },
+                          ul({ children }) {
+                            return (
+                              <ul className="mb-3 last:mb-0 list-disc space-y-1.5 pl-5 text-[15px]">
                                 {children}
-                              </table>
-                            </div>
-                          );
-                        },
-                        thead({ children }) {
-                          return (
-                            <thead className="bg-surface-raised">
-                              {children}
-                            </thead>
-                          );
-                        },
-                        tbody({ children }) {
-                          return (
-                            <tbody className="divide-y divide-border bg-surface">
-                              {children}
-                            </tbody>
-                          );
-                        },
-                        tr({ children }) {
-                          return (
-                            <tr className="hover:bg-surface-overlay transition-colors duration-150 even:bg-surface-raised/50">
-                              {children}
-                            </tr>
-                          );
-                        },
-                        th({ children }) {
-                          return (
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-text uppercase tracking-wider">
-                              {children}
-                            </th>
-                          );
-                        },
-                        td({ children }) {
-                          return (
-                            <td className="px-4 py-3 text-text-secondary">
-                              {children}
-                            </td>
-                          );
-                        },
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
+                              </ul>
+                            );
+                          },
+                          ol({ children }) {
+                            return (
+                              <ol className="mb-3 last:mb-0 list-decimal space-y-1.5 pl-5 text-[15px]">
+                                {children}
+                              </ol>
+                            );
+                          },
+                          li({ children }) {
+                            return (
+                              <li className="pl-1 leading-relaxed marker:text-accent">
+                                {children}
+                              </li>
+                            );
+                          },
+                          blockquote({ children }) {
+                            return (
+                              <blockquote className="my-4 border-l-4 border-border pl-4 text-text-secondary text-[15px] leading-relaxed [&>p]:mb-0">
+                                {children}
+                              </blockquote>
+                            );
+                          },
+                          em({ children }) {
+                            return (
+                              <em className="italic text-inherit">
+                                {children}
+                              </em>
+                            );
+                          },
+                          h1({ children }) {
+                            return (
+                              <h1 className="text-xl font-semibold mb-3 mt-4 first:mt-0 text-text tracking-tight">
+                                {children}
+                              </h1>
+                            );
+                          },
+                          h2({ children }) {
+                            return (
+                              <h2 className="text-lg font-semibold mb-2 mt-4 first:mt-0 text-text tracking-tight">
+                                {children}
+                              </h2>
+                            );
+                          },
+                          h3({ children }) {
+                            return (
+                              <h3 className="text-base font-semibold mb-2 mt-3 first:mt-0 text-text tracking-tight">
+                                {children}
+                              </h3>
+                            );
+                          },
+                          hr() {
+                            return <hr className="my-4 border-border" />;
+                          },
+                          strong({ children }) {
+                            return (
+                              <strong className="font-semibold text-text">
+                                {children}
+                              </strong>
+                            );
+                          },
+                          table({ children }) {
+                            return (
+                              <div className="my-4 overflow-x-auto rounded-xl border border-border shadow-sm">
+                                <table className="min-w-full text-sm divide-y divide-border">
+                                  {children}
+                                </table>
+                              </div>
+                            );
+                          },
+                          thead({ children }) {
+                            return (
+                              <thead className="bg-surface-raised">
+                                {children}
+                              </thead>
+                            );
+                          },
+                          tbody({ children }) {
+                            return (
+                              <tbody className="divide-y divide-border bg-surface">
+                                {children}
+                              </tbody>
+                            );
+                          },
+                          tr({ children }) {
+                            return (
+                              <tr className="hover:bg-surface-overlay transition-colors duration-150 even:bg-surface-raised/50">
+                                {children}
+                              </tr>
+                            );
+                          },
+                          th({ children }) {
+                            return (
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-text uppercase tracking-wider">
+                                {children}
+                              </th>
+                            );
+                          },
+                          td({ children }) {
+                            return (
+                              <td className="px-4 py-3 text-text-secondary">
+                                {children}
+                              </td>
+                            );
+                          },
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+              {messageActions}
+            </>
           )}
         </div>
       </div>
     </div>
   );
+}
+
+function MessageActionIcon({
+  actionId,
+}: {
+  actionId: ConversationMessageActionId;
+}) {
+  if (actionId === 'stop') {
+    return <Square className="h-3.5 w-3.5" aria-hidden="true" />;
+  }
+  if (actionId === 'regenerate') {
+    return <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />;
+  }
+  return <Pencil className="h-3.5 w-3.5" aria-hidden="true" />;
 }
