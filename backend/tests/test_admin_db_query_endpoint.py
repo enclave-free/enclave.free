@@ -29,6 +29,7 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
         self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
         self._orig_secret_key = os.environ.get("SECRET_KEY")
         self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
+        self._orig_internal_agent_token = os.environ.get("INTERNAL_AGENT_TOKEN")
         self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
         sys.modules["sentence_transformers"] = types.SimpleNamespace(
             SentenceTransformer=DummySentenceTransformer
@@ -36,13 +37,16 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
         os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
+        os.environ["INTERNAL_AGENT_TOKEN"] = "test-internal-token"
 
         import auth
         import database
+        import internal_agent
         import main
 
         self.auth = importlib.reload(auth)
         self.database = importlib.reload(database)
+        self.internal_agent = importlib.reload(internal_agent)
         self.main = importlib.reload(main)
         self.database.init_schema()
         self.main.app.dependency_overrides[self.auth.require_admin] = lambda: {
@@ -59,6 +63,7 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
         self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
         self._restore_env("SECRET_KEY", self._orig_secret_key)
         self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
+        self._restore_env("INTERNAL_AGENT_TOKEN", self._orig_internal_agent_token)
         self._restore_sentence_transformers()
         self.tmp.cleanup()
 
@@ -89,6 +94,43 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
     def test_admin_query_allows_allowlisted_read_only_tables(self) -> None:
         response = self.client.post(
             "/admin/db/query",
+            json={"sql": "SELECT id, email FROM users ORDER BY id"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["columns"], ["id", "email"])
+        self.assertEqual(body["rows"], [])
+
+    def test_internal_admin_query_rejects_multi_statement_select(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-db-query",
+            headers={"X-Internal-Agent-Token": "test-internal-token"},
+            json={"sql": "SELECT id, email FROM users; DROP TABLE users"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["success"])
+        self.assertEqual(body["error"], "Only a single SELECT statement is allowed.")
+
+    def test_internal_admin_query_rejects_select_with_forbidden_keyword(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-db-query",
+            headers={"X-Internal-Agent-Token": "test-internal-token"},
+            json={"sql": "SELECT id, email FROM users UPDATE users"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["success"])
+        self.assertEqual(body["error"], "Query contains forbidden keyword")
+
+    def test_internal_admin_query_allows_single_read_only_select(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-db-query",
+            headers={"X-Internal-Agent-Token": "test-internal-token"},
             json={"sql": "SELECT id, email FROM users ORDER BY id"},
         )
 
