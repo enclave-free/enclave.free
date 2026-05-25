@@ -2,109 +2,80 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildFullAdminConfigContext,
   buildScopedAdminConfigContext,
-  selectAdminConfigScope,
-  selectDeploymentCategory,
+  fetchServerScopedConfigContext,
 } from './adminConfigContext';
-import type { DeploymentConfigResponse } from '../types/config';
-
-const emptyDeploymentConfig = (): DeploymentConfigResponse => ({
-  llm: [],
-  embedding: [],
-  email: [],
-  storage: [],
-  security: [],
-  search: [],
-  domains: [],
-  ssl: [],
-  general: [],
-});
+import type { ServerScopedConfigContextResponse } from './adminConfigContext';
 
 function mockFetchJson(
-  handler: (endpoint: string) => Promise<unknown>
-): (<T>(endpoint: string) => Promise<T>) & { mock: { calls: unknown[][] } } {
-  return vi.fn(handler) as unknown as (<T>(endpoint: string) => Promise<T>) & {
-    mock: { calls: unknown[][] };
-  };
+  handler: (endpoint: string, options?: RequestInit) => Promise<unknown>
+): (<T>(endpoint: string, options?: RequestInit) => Promise<T>) & {
+  mock: { calls: unknown[][] };
+} {
+  return vi.fn(handler) as unknown as (<T>(
+    endpoint: string,
+    options?: RequestInit
+  ) => Promise<T>) & { mock: { calls: unknown[][] } };
 }
 
-describe('selectAdminConfigScope', () => {
-  it('selects instance-settings for branding and theme requests', () => {
-    expect(
-      selectAdminConfigScope('Set up the theme from the uploaded guide.')
-    ).toBe('instance-settings');
-    expect(
-      selectAdminConfigScope('Update primary color and typography preset')
-    ).toBe('instance-settings');
-  });
+const instanceSettingsResponse: ServerScopedConfigContextResponse = {
+  version: 1,
+  primary_scope: 'instance-settings',
+  included_scopes: ['instance-settings'],
+  context_text:
+    'SCOPED CONFIG CONTEXT\nscope: instance-settings\n\nINSTANCE SETTINGS (/admin/settings)\n- default_theme: dark',
+  warnings: [],
+  generated_at: '2026-05-25T12:00:00+00:00',
+  secret_policy: { mode: 'masked' },
+  deployment_secret_keys: [],
+};
 
-  it('selects deployment-settings for provider and env requests', () => {
-    expect(selectAdminConfigScope('Review deployment config.')).toBe(
-      'deployment-settings'
-    );
-    expect(
-      selectAdminConfigScope('Change the model provider and restart settings')
-    ).toBe('deployment-settings');
-  });
+const fullRefreshResponse: ServerScopedConfigContextResponse = {
+  version: 1,
+  primary_scope: 'overview',
+  included_scopes: [
+    'overview',
+    'instance-settings',
+    'deployment-settings',
+    'agent-settings',
+    'user-types',
+    'document-defaults',
+    'health',
+  ],
+  context_text:
+    'SCOPED CONFIG CONTEXT\nscope: overview\n\nAGENT SETTINGS (/admin/ai-config)\nUSER TYPES (/admin/user-types)',
+  warnings: [],
+  generated_at: '2026-05-25T12:05:00+00:00',
+  secret_policy: { mode: 'masked' },
+  deployment_secret_keys: ['SMTP_PASSWORD'],
+};
 
-  it('selects agent-settings for prompt and model behavior requests', () => {
-    expect(
-      selectAdminConfigScope('Change the admin prompt and max tokens')
-    ).toBe('agent-settings');
-  });
+describe('fetchServerScopedConfigContext', () => {
+  it('posts to the admin scoped-config-context endpoint', async () => {
+    const fetchJson = mockFetchJson(async (endpoint, options) => {
+      expect(endpoint).toBe('/admin/scoped-config-context');
+      expect(options?.method).toBe('POST');
+      expect(JSON.parse(String(options?.body))).toEqual({
+        query: 'update the theme',
+        mode: 'auto',
+      });
+      return instanceSettingsResponse;
+    });
 
-  it('selects user-types for onboarding field requests', () => {
-    expect(
-      selectAdminConfigScope('Add a new onboarding question for advocates')
-    ).toBe('user-types');
-  });
+    const response = await fetchServerScopedConfigContext({
+      query: 'update the theme',
+      fetchJson,
+    });
 
-  it('selects document-defaults for ingestion default requests', () => {
-    expect(selectAdminConfigScope('Update default document access rules')).toBe(
-      'document-defaults'
-    );
-  });
-
-  it('selects health for readiness and validation requests', () => {
-    expect(
-      selectAdminConfigScope('Check deployment readiness and service health')
-    ).toBe('health');
-    expect(selectAdminConfigScope('Check service status and readiness')).toBe(
-      'health'
-    );
-  });
-
-  it('selects instance-settings for status icon configuration requests', () => {
-    expect(selectAdminConfigScope('Update status icon set to minimal')).toBe(
-      'instance-settings'
-    );
-  });
-
-  it('falls back to overview for ambiguous admin configuration requests', () => {
-    expect(selectAdminConfigScope('Help me configure this instance')).toBe(
-      'overview'
-    );
-    expect(selectAdminConfigScope('your suggestions above')).toBe('overview');
-  });
-});
-
-describe('selectDeploymentCategory', () => {
-  it('narrows deployment scope to the relevant category when possible', () => {
-    expect(selectDeploymentCategory('Update SMTP host and port')).toBe('email');
-    expect(selectDeploymentCategory('Change the model provider')).toBe('llm');
+    expect(response.primary_scope).toBe('instance-settings');
+    expect(fetchJson).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('buildScopedAdminConfigContext', () => {
-  it('builds instance-settings context without loading unrelated admin surfaces', async () => {
-    const fetchJson = mockFetchJson(async (endpoint: string) => {
-      if (endpoint === '/admin/settings') {
-        return {
-          settings: {
-            instance_name: 'Enclave',
-            primary_color: 'blue',
-            typography_preset: 'modern',
-          },
-        };
+  it('uses server-built context instead of client-side admin fetches', async () => {
+    const fetchJson = mockFetchJson(async (endpoint) => {
+      if (endpoint === '/admin/scoped-config-context') {
+        return instanceSettingsResponse;
       }
       throw new Error(`unexpected fetch: ${endpoint}`);
     });
@@ -113,41 +84,27 @@ describe('buildScopedAdminConfigContext', () => {
       query: 'Set up the theme from the uploaded guide.',
       shareSecrets: false,
       fetchJson,
-      configCategories: {},
-      deploymentMeta: {},
-      tracePolicyLines: ['- Trace policy line'],
     });
 
     expect(fetchJson).toHaveBeenCalledTimes(1);
-    expect(fetchJson).toHaveBeenCalledWith('/admin/settings');
     expect(result.scope).toBe('instance-settings');
+    expect(result.primaryScope).toBe('instance-settings');
     expect(result.mode).toBe('scoped');
     expect(result.context).toContain('SCOPED CONFIG CONTEXT');
-    expect(result.context).toContain('scope: instance-settings');
-    expect(result.context).toContain('INSTANCE VISUAL IDENTITY SETTINGS');
-    expect(result.context).toContain('primary_color');
-    expect(result.context).toContain(
-      'Never call prose-only bullets or recommendations a Change Confirmation'
-    );
-    expect(result.context).toContain('exactly one valid JSON change set');
-    expect(result.context).not.toContain('AI CONFIG');
-    expect(result.context).not.toContain('DEPLOYMENT CONFIG');
+    expect(result.context).toContain('default_theme');
+    expect(result.generatedAtIso).toBe('2026-05-25T12:00:00+00:00');
+    expect(result.warnings).toEqual([]);
   });
 
-  it('builds deployment-settings context while preserving secret opt-in behavior', async () => {
-    const fetchJson = mockFetchJson(async (endpoint: string) => {
-      if (endpoint === '/admin/deployment/config') {
+  it('preserves deployment secret redaction metadata without echoing raw secrets', async () => {
+    const fetchJson = mockFetchJson(async (endpoint) => {
+      if (endpoint === '/admin/scoped-config-context') {
         return {
-          ...emptyDeploymentConfig(),
-          general: [
-            {
-              key: 'LLM_API_KEY',
-              value: '[CONFIGURED]',
-              is_secret: true,
-              requires_restart: true,
-              description: 'Model Provider API key',
-            },
-          ],
+          ...instanceSettingsResponse,
+          primary_scope: 'deployment-settings',
+          included_scopes: ['deployment-settings'],
+          context_text: 'SCOPED CONFIG CONTEXT\nSMTP_PASSWORD = [REDACTED]',
+          deployment_secret_keys: ['SMTP_PASSWORD'],
         };
       }
       throw new Error(`unexpected fetch: ${endpoint}`);
@@ -157,115 +114,71 @@ describe('buildScopedAdminConfigContext', () => {
       query: 'Review deployment config.',
       shareSecrets: false,
       fetchJson,
-      configCategories: { general: 'General' },
-      deploymentMeta: {},
-      tracePolicyLines: [],
     });
 
-    expect(fetchJson).toHaveBeenCalledWith('/admin/deployment/config');
-    expect(fetchJson).not.toHaveBeenCalledWith(
-      '/admin/deployment/config/LLM_API_KEY/reveal'
-    );
-    expect(result.scope).toBe('deployment-settings');
-    expect(result.context).toContain('LLM_API_KEY');
-    expect(result.context).toContain('secret=true');
-    expect(result.context).toContain('Secret env vars are NOT included');
+    expect(result.deploymentSecretKeys).toEqual(new Set(['SMTP_PASSWORD']));
     expect(result.secretValues).toEqual([]);
+    expect(result.context).toContain('[REDACTED]');
+    expect(result.context).not.toContain('super-secret');
   });
 
-  it('builds agent-settings context with Agent Settings data', async () => {
-    const fetchJson = mockFetchJson(async (endpoint: string) => {
-      if (endpoint === '/admin/ai-config') {
-        return {
-          prompt_sections: [{ id: 'tone', value: 'Helpful' }],
-          parameters: [],
-          defaults: [],
-        };
-      }
-      if (endpoint === '/admin/user-types') {
-        return { types: [] };
-      }
-      throw new Error(`unexpected fetch: ${endpoint}`);
-    });
+  it('surfaces server warnings in result metadata', async () => {
+    const fetchJson = mockFetchJson(async () => ({
+      ...instanceSettingsResponse,
+      primary_scope: 'user-types',
+      included_scopes: ['user-types'],
+      warnings: ['user-fields user_type_id=2 failed'],
+    }));
 
     const result = await buildScopedAdminConfigContext({
-      query: 'Change the admin prompt and max tokens',
+      query: 'Add onboarding questions',
       shareSecrets: false,
       fetchJson,
-      configCategories: {},
-      deploymentMeta: {},
-      tracePolicyLines: [],
     });
 
-    expect(fetchJson).toHaveBeenCalledWith('/admin/ai-config');
-    expect(result.scope).toBe('agent-settings');
-    expect(result.context).toContain('AGENT SETTINGS');
-    expect(result.context).toContain('prompt_sections');
-    expect(result.context).not.toContain('DEPLOYMENT CONFIG');
-  });
-
-  it('builds bounded overview context for ambiguous requests', async () => {
-    const fetchJson = mockFetchJson(async (endpoint: string) => {
-      if (endpoint === '/admin/settings') {
-        return {
-          settings: {
-            instance_name: 'Enclave',
-            instance_description: 'Secure knowledge base',
-          },
-        };
-      }
-      throw new Error(`unexpected fetch: ${endpoint}`);
-    });
-
-    const result = await buildScopedAdminConfigContext({
-      query: 'Help me configure this instance',
-      shareSecrets: false,
-      fetchJson,
-      configCategories: {},
-      deploymentMeta: {},
-      tracePolicyLines: [],
-    });
-
-    expect(fetchJson).toHaveBeenCalledTimes(1);
-    expect(result.scope).toBe('overview');
-    expect(result.context).toContain('scope: overview');
-    expect(result.context).toContain('instance_name');
-    expect(result.context).not.toContain('DEPLOYMENT CONFIG');
-    expect(result.context).not.toContain('AI CONFIG');
+    expect(result.warnings).toEqual(['user-fields user_type_id=2 failed']);
   });
 });
 
 describe('buildFullAdminConfigContext', () => {
-  it('loads the full manual snapshot across admin surfaces', async () => {
-    const fetchJson = mockFetchJson(async (endpoint: string) => {
-      if (endpoint === '/admin/settings')
-        return { settings: { instance_name: 'Enclave' } };
-      if (endpoint === '/admin/deployment/config')
-        return emptyDeploymentConfig();
-      if (endpoint === '/admin/ai-config')
-        return { prompt_sections: [], parameters: [], defaults: [] };
-      if (endpoint === '/admin/user-types') return { types: [] };
-      if (endpoint === '/ingest/admin/documents/defaults')
-        return { documents: [] };
-      if (endpoint === '/ingest/admin/documents/context-preview')
-        return { excerpts: [] };
-      if (endpoint === '/admin/deployment/health') return { ok: true };
-      throw new Error(`unexpected fetch: ${endpoint}`);
+  it('requests server full refresh mode for manual context refresh', async () => {
+    const fetchJson = mockFetchJson(async (endpoint, options) => {
+      expect(endpoint).toBe('/admin/scoped-config-context');
+      expect(JSON.parse(String(options?.body))).toMatchObject({
+        mode: 'full',
+      });
+      return fullRefreshResponse;
     });
 
     const result = await buildFullAdminConfigContext({
       shareSecrets: false,
       fetchJson,
-      configCategories: {},
-      deploymentMeta: {},
-      tracePolicyLines: [],
     });
 
     expect(result.mode).toBe('full');
-    expect(result.context).toContain('FULL ADMIN CONFIG SNAPSHOT');
-    expect(result.context).toContain('DEPLOYMENT CONFIG');
-    expect(result.context).toContain('AI CONFIG');
-    expect(fetchJson).toHaveBeenCalledWith('/admin/deployment/config');
-    expect(fetchJson).toHaveBeenCalledWith('/admin/ai-config');
+    expect(result.scope).toBe('full');
+    expect(result.includedScopes).toHaveLength(7);
+    expect(result.deploymentSecretKeys).toEqual(new Set(['SMTP_PASSWORD']));
+    expect(result.context).toContain('AGENT SETTINGS (/admin/ai-config)');
+  });
+
+  it('reveals secret values only when shareSecrets is enabled', async () => {
+    const fetchJson = mockFetchJson(async (endpoint) => {
+      if (endpoint === '/admin/scoped-config-context') {
+        return fullRefreshResponse;
+      }
+      if (endpoint === '/admin/deployment/config/SMTP_PASSWORD/reveal') {
+        return { key: 'SMTP_PASSWORD', value: 'smtp-secret-value' };
+      }
+      throw new Error(`unexpected fetch: ${endpoint}`);
+    });
+
+    const result = await buildFullAdminConfigContext({
+      shareSecrets: true,
+      fetchJson,
+    });
+
+    expect(result.secretValues).toEqual(['smtp-secret-value']);
+    expect(result.context).not.toContain('smtp-secret-value');
   });
 });

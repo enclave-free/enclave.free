@@ -20,6 +20,12 @@ from pydantic import BaseModel
 import database
 import ingest_db
 from query import _build_context, _build_search_query, _process_search_results
+from scoped_config_context import (
+    ScopedConfigAuthorizationError,
+    ScopedConfigMode,
+    ScopedConfigScope,
+    build_scoped_config_context,
+)
 from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
 
@@ -75,6 +81,35 @@ class InternalDocumentSearchResponse(BaseModel):
 
 class InternalAdminDbQueryRequest(BaseModel):
     sql: str
+
+
+class InternalScopedConfigContextRequest(BaseModel):
+    query: str
+    actor: InternalActorContext
+    mode: ScopedConfigMode = "auto"
+    requested_scopes: Optional[list[ScopedConfigScope]] = None
+
+
+class InternalScopedConfigContextSection(BaseModel):
+    scope: str
+    title: str
+    content: str
+    fields: list[dict[str, str]] = []
+
+
+class InternalScopedConfigSecretPolicy(BaseModel):
+    mode: Literal["masked"] = "masked"
+
+
+class InternalScopedConfigContextResponse(BaseModel):
+    version: int
+    primary_scope: ScopedConfigScope
+    included_scopes: list[ScopedConfigScope]
+    context_text: str
+    sections: list[InternalScopedConfigContextSection]
+    warnings: list[str]
+    generated_at: str
+    secret_policy: InternalScopedConfigSecretPolicy
 
 
 class InternalUserRecordResponse(BaseModel):
@@ -373,3 +408,24 @@ async def admin_db_query(request: InternalAdminDbQueryRequest):
 @router.get("/health", dependencies=[Depends(_require_internal_token)])
 async def internal_agent_health():
     return {"status": "healthy"}
+
+
+@router.post(
+    "/scoped-config-context",
+    response_model=InternalScopedConfigContextResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def scoped_config_context(
+    payload: InternalScopedConfigContextRequest,
+) -> InternalScopedConfigContextResponse:
+    try:
+        result = build_scoped_config_context(
+            query=payload.query,
+            actor=payload.actor.model_dump(),
+            mode=payload.mode,
+            requested_scopes=payload.requested_scopes,
+        )
+    except ScopedConfigAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    return InternalScopedConfigContextResponse(**result)

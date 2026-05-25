@@ -323,6 +323,131 @@ Example unsafe SQL response:
 }
 ```
 
+### `POST /internal/agent/scoped-config-context`
+
+Returns authoritative **Scoped Config Context** for config-enabled Admin
+Conversations. Sage calls this endpoint when the `admin-config` prepared-context
+tool is selected. The Enclave Control Plane owns scope classification and scoped
+reads; Sage budgets the returned prompt-ready text into the Admin Conversation.
+
+Request:
+
+```json
+{
+  "query": "what tools do you have?",
+  "actor": {
+    "id": 1,
+    "type": "admin",
+    "approved": true,
+    "pubkey": "<hex-pubkey>"
+  },
+  "mode": "auto",
+  "requested_scopes": null
+}
+```
+
+Request fields:
+
+- `query`: the Admin's configuration question
+- `actor`: internal actor context; only `type: "admin"` actors are authorized
+- `mode`: `auto` classifies the query, `overview` forces overview scope, or
+  `full` includes all readable scopes for manual refresh/debug flows
+- `requested_scopes`: optional explicit scope hints for multi-scope reads
+
+Response:
+
+```json
+{
+  "version": 1,
+  "primary_scope": "overview",
+  "included_scopes": ["overview"],
+  "context_text": "SCOPED CONFIG CONTEXT\n...",
+  "sections": [
+    {
+      "scope": "overview",
+      "title": "Instance overview",
+      "content": "INSTANCE OVERVIEW (/admin/settings)\n- instance_name: Example"
+    }
+  ],
+  "warnings": [],
+  "generated_at": "2026-05-25T12:00:00+00:00",
+  "secret_policy": {
+    "mode": "masked"
+  }
+}
+```
+
+Field contract:
+
+- `version`: contract version; currently `1`
+- `primary_scope`: classified or requested primary scope. Allowed values are
+  `overview`, `instance-settings`, `deployment-settings`, `agent-settings`,
+  `user-types`, `document-defaults`, and `health`
+- `included_scopes`: scopes represented in the response. May include multiple
+  scopes when a request crosses boundaries
+- `context_text`: prompt-ready scoped config context for Sage
+- `sections`: structured scope sections backing `context_text`
+- `warnings`: non-fatal scoped-read failures or not-yet-implemented scope notices
+- `generated_at`: ISO-8601 UTC timestamp for the assembled context
+- `secret_policy.mode`: currently `masked`; Deployment Setting secret values stay
+  masked unless a future secret-aware Admin Conversation extends the contract
+
+Authorization behavior:
+
+- Missing or invalid `X-Internal-Agent-Token` returns `403`
+- Non-admin actors return `403` and do not receive scoped config context
+- Partial scoped-read failures after auth succeed return available context plus
+  `warnings` rather than failing the whole request
+
+`overview` mode returns the bounded control contract (tool capabilities, rules,
+change-set format) plus a concise current-state summary for key Instance Settings
+such as `instance_name`, `description`, `assistant_name`, and `header_tagline`.
+
+`instance-settings` scope returns branding, theme, and copy fields with current
+values, supported values where known, and mutation guidance via a partial
+`PUT /admin/settings` request body. Structured `sections[].fields` mirrors the
+same field metadata for contract tests and Sage consumers.
+
+`deployment-settings` scope returns Deployment Settings for the classified or
+requested category, with secret values masked (`********` in structured reads and
+`[REDACTED]` in prompt text). Secret metadata (`secret=true`) is included; raw
+secret values are never returned while `secret_policy.mode` is `masked`.
+
+`agent-settings` scope returns global Agent Settings plus effective per-user-type
+values when user types exist. Large fan-out reads are bounded to the first 10
+user types and emit a warning when reduced.
+
+`user-types` scope returns user types and onboarding field definitions per user
+type, with the same fan-out bound and partial-read warnings when a per-type fetch
+fails after authorization.
+
+`document-defaults` scope returns global document defaults plus effective
+per-user-type defaults, with the same fan-out and partial-read warning behavior.
+
+`health` scope returns restart-required deployment keys, configured service
+endpoints from Deployment Settings, and guidance to use
+`GET /admin/deployment/health` for live service probes. Cross-boundary health
+queries (for example restart plus provider env) may include both `health` and
+`deployment-settings` in `included_scopes`.
+
+Multi-scope behavior:
+
+- `mode: auto` classifies a primary scope and may include additional scopes when
+  the query crosses keyword boundaries
+- `mode: full` includes all documented scopes for manual refresh/debug flows
+- `requested_scopes` merges explicit scope hints with the classified primary
+  scope
+- Partial scoped-read failures after auth succeed return available sections plus
+  `warnings`; authorization failures still fail closed
+
+### Admin UI route
+
+Authenticated admins call `POST /admin/scoped-config-context` with the same
+request shape (`query`, `mode`, optional `requested_scopes`). The response adds
+`deployment_secret_keys` for client-side redaction metadata while keeping secret
+values masked in `context_text`. Browser surfaces must not assemble scoped
+context locally.
+
 ## Removed Endpoints
 
 Obsolete compatibility-only endpoints are absent from Python. Do not add new

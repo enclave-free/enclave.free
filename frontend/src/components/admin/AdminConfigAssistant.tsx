@@ -19,10 +19,6 @@ import { adminFetch } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
-import {
-  getConfigCategories,
-  getDeploymentConfigItemMeta,
-} from '../../types/config';
 import { API_BASE } from '../../types/onboarding';
 import {
   extractAdminAssistantChangeSetStrict,
@@ -72,12 +68,6 @@ interface AdminConfigAssistantProps {
 }
 
 const CONFIG_TOOL_ID = 'admin-config';
-
-export const TRACE_POLICY_CONTEXT_LINES = [
-  '- Trace Visibility Policy is an Agent Setting. Use PUT /admin/ai-config/admin_trace_visibility or PUT /admin/ai-config/user_trace_visibility.',
-  '- Valid trace visibility values are off, minimal, summary, and detailed for Admin Conversations; User Conversations only allow off, minimal, or summary.',
-  '- Raising User Conversation trace visibility is privacy-relevant. Explain that users will see more Conversation Trace metadata before proposing the change.',
-];
 
 function generateMessageId() {
   return `admin-msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -164,8 +154,6 @@ export function AdminConfigAssistant({
     (changeSet: AdminAssistantChangeSet) => Promise<void>
   >(async () => {});
 
-  const configCategories = useMemo(() => getConfigCategories(t), [t]);
-  const deploymentMeta = useMemo(() => getDeploymentConfigItemMeta(t), [t]);
   const availableTools = useMemo<Tool[]>(
     () => [
       {
@@ -361,9 +349,6 @@ export function AdminConfigAssistant({
             query: content,
             shareSecrets,
             fetchJson,
-            configCategories,
-            deploymentMeta,
-            tracePolicyLines: TRACE_POLICY_CONTEXT_LINES,
           });
           const documentContext = await fetchBoundedAdminDocumentContext({
             query: content,
@@ -442,14 +427,17 @@ export function AdminConfigAssistant({
                     role: 'assistant',
                     content: '',
                     timestamp: new Date(),
-                    traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                    traceStatus: t(
+                      'chat.trace.finalizing',
+                      'Finalizing response...'
+                    ),
                   },
                 ]);
               } else if (event === 'trace_status' && streamMessageId) {
                 const status =
                   typeof data.status === 'string'
                     ? data.status
-                    : t('chat.trace.writing', 'Writing answer...');
+                    : t('chat.trace.finalizing', 'Finalizing response...');
                 setMessages((prev) =>
                   patchAssistantMessage(prev, streamMessageId!, {
                     traceStatus: status,
@@ -627,9 +615,7 @@ export function AdminConfigAssistant({
     },
     [
       applyState,
-      configCategories,
       conversationSessionId,
-      deploymentMeta,
       fetchJson,
       hasConfigTool,
       messages,
@@ -1012,9 +998,6 @@ export function AdminConfigAssistant({
                 const snap = await buildFullAdminConfigContext({
                   shareSecrets,
                   fetchJson,
-                  configCategories,
-                  deploymentMeta,
-                  tracePolicyLines: TRACE_POLICY_CONTEXT_LINES,
                 });
                 setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
                 secretsForRedactionRef.current = snap.secretValues;
