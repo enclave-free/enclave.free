@@ -52,17 +52,19 @@ admin = database.get_admin_by_pubkey(pub)
 if not admin:
     conn = sqlite3.connect("/data/enclave.db")
     cur = conn.cursor()
-    cur.execute("select count(*) from admins")
-    if cur.fetchone()[0]:
-        cur.execute(
-            "update admins set pubkey=? where id=(select id from admins limit 1)",
-            (pub,),
-        )
-        conn.commit()
+    cur.execute("insert into admins(pubkey) values(?)", (pub,))
+    conn.commit()
     conn.close()
     admin = database.get_admin_by_pubkey(pub)
 if not admin:
-    database.add_admin(pub)
+    try:
+        database.add_admin(pub)
+    except Exception:
+        conn = sqlite3.connect("/data/enclave.db")
+        cur = conn.cursor()
+        cur.execute("insert into admins(pubkey) values(?)", (pub,))
+        conn.commit()
+    conn.close()
     admin = database.get_admin_by_pubkey(pub)
 
 def user_token(email, name):
@@ -121,6 +123,11 @@ def gateway_request(
         cwd=REPO_ROOT,
         timeout=timeout + 10,
     )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "gateway request failed "
+            f"with {result.returncode}: stderr={result.stderr.strip()} stdout={result.stdout.strip()}"
+        )
     raw = result.stdout
     body, _, status_text = raw.rpartition("\n")
     status = int(status_text) if status_text.isdigit() else 0

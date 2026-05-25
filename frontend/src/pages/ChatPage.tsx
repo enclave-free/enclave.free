@@ -205,11 +205,30 @@ function conversationTurnFromSessionMessage(
 
 function conversationTraceFromApi(value: unknown): ConversationTrace | null {
   if (!value || typeof value !== 'object') return null;
-  const trace = value as ConversationTrace;
-  if (!['off', 'minimal', 'summary', 'detailed'].includes(trace.visibility)) {
+  const record = value as Record<string, unknown>;
+  if (
+    !['off', 'minimal', 'summary', 'detailed'].includes(
+      String(record.visibility)
+    )
+  ) {
     return null;
   }
-  return trace;
+  if (!isOptionalObjectArray(record.tools)) return null;
+  if (!isOptionalObjectArray(record.retrieval)) {
+    return null;
+  }
+  if (!isOptionalObjectArray(record.activity_steps)) {
+    return null;
+  }
+  return record as unknown as ConversationTrace;
+}
+
+function isOptionalObjectArray(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.every((item) => Boolean(item) && typeof item === 'object'))
+  );
 }
 
 function activityStepsFromApi(value: unknown): ConversationActivityStep[] {
@@ -699,7 +718,6 @@ export function ChatPage() {
         credentials: 'include',
       });
       if (!res.ok) {
-        setConversationHistory([]);
         setConversationHistoryStatus('error');
         return;
       }
@@ -717,7 +735,6 @@ export function ChatPage() {
       );
       setConversationHistoryStatus('ready');
     } catch {
-      setConversationHistory([]);
       setConversationHistoryStatus('error');
     }
   }, []);
@@ -2014,6 +2031,7 @@ IMPORTANT: Return a CONDENSED response:
     (conversation) => conversation.id === conversationSessionId
   );
   const sessionTitle =
+    activeHistoryConversation?.title ||
     activeConversationTitle ||
     messages.find((message) => message.role === 'user')?.content.trim() ||
     t('chat.sessions.current', 'Current chat');
@@ -2571,6 +2589,7 @@ IMPORTANT: Return a CONDENSED response:
         toolbar={inputToolbar}
         turnAccessories={turnAccessories}
         notices={threadNotices}
+        hasPersistedSession={Boolean(conversationSessionId)}
       />
     </ChatContainer>
   );

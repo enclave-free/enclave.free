@@ -205,36 +205,57 @@ describe('ChatMessage', () => {
   it('renders capability-gated message actions without mutating by default', async () => {
     const user = userEvent.setup();
     const onAction = vi.fn();
+    const message = {
+      id: 'message-1',
+      role: 'assistant' as const,
+      content: 'Answer ready.',
+      actions: [
+        {
+          id: 'regenerate' as const,
+          label: 'Regenerate response',
+          disabled: true,
+          disabledReason: 'Wait for the current response to finish first.',
+        },
+        {
+          id: 'stop' as const,
+          label: 'Stop response',
+          disabled: false,
+        },
+      ],
+    };
 
     renderMessage('Answer ready.', 'assistant', undefined, {
       onAction,
-      message: {
-        id: 'message-1',
-        role: 'assistant',
-        content: 'Answer ready.',
-        actions: [
-          {
-            id: 'regenerate',
-            label: 'Regenerate response',
-            disabled: true,
-            disabledReason: 'Wait for the current response to finish first.',
-          },
-        ],
-      },
+      message,
     });
 
-    const action = screen.getByRole('button', {
+    expect(
+      screen.getByRole('toolbar', { name: 'Message actions' })
+    ).toBeInTheDocument();
+    const disabledAction = screen.getByRole('button', {
       name: 'Regenerate response',
     });
-    expect(action).toBeDisabled();
-    expect(action).toHaveAttribute(
+    expect(disabledAction).toBeDisabled();
+    expect(disabledAction).toHaveAttribute(
       'title',
       'Wait for the current response to finish first.'
     );
 
-    await user.click(action);
+    await user.click(disabledAction);
 
     expect(onAction).not.toHaveBeenCalled();
+
+    const enabledAction = screen.getByRole('button', {
+      name: 'Stop response',
+    });
+    expect(enabledAction).toBeEnabled();
+
+    await user.click(enabledAction);
+
+    expect(onAction).toHaveBeenCalledWith(
+      'stop',
+      expect.objectContaining({ id: 'message-1' })
+    );
   });
 
   it('renders assistant Activity as visible timeline rows with expandable details', async () => {

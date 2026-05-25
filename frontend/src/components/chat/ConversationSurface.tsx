@@ -11,6 +11,11 @@ import {
   extractAppendMessageText,
 } from './AssistantTurnAdapter';
 import { AssistantComposerInput } from './AssistantComposerInput';
+import type { Message } from './ChatMessage';
+import type {
+  ConversationMessageActionId,
+  ConversationTransportCapabilities,
+} from './ConversationMessageActions';
 import type { ConversationSurfaceTurn } from './ConversationSurfaceModel';
 
 interface ConversationSurfaceProps {
@@ -22,6 +27,13 @@ interface ConversationSurfaceProps {
   toolbar?: ReactNode;
   turnAccessories?: Record<string, ReactNode>;
   notices?: ReactNode;
+  transportCapabilities?: ConversationTransportCapabilities;
+  hasPersistedSession?: boolean;
+  hasPendingApproval?: boolean;
+  onMessageAction?: (
+    actionId: ConversationMessageActionId,
+    message: Message
+  ) => void;
 }
 
 export function ConversationSurface({
@@ -33,6 +45,10 @@ export function ConversationSurface({
   toolbar,
   turnAccessories,
   notices,
+  transportCapabilities,
+  hasPersistedSession = false,
+  hasPendingApproval = false,
+  onMessageAction,
 }: ConversationSurfaceProps) {
   const { t } = useTranslation();
   const assistantState = useMemo(
@@ -42,8 +58,19 @@ export function ConversationSurface({
         isRunning,
         disabled,
         turnAccessories,
+        transportCapabilities,
+        hasPersistedSession,
+        hasPendingApproval,
       }),
-    [disabled, isRunning, turnAccessories, turns]
+    [
+      disabled,
+      hasPendingApproval,
+      hasPersistedSession,
+      isRunning,
+      transportCapabilities,
+      turnAccessories,
+      turns,
+    ]
   );
   const handleNew = useCallback(
     async (message: AppendMessage) => {
@@ -69,6 +96,7 @@ export function ConversationSurface({
           assistantState={assistantState}
           runningLabel={t('chat.typing')}
           notices={notices}
+          onMessageAction={onMessageAction}
         />
         <AssistantComposerInput
           disabled={disabled || isRunning}

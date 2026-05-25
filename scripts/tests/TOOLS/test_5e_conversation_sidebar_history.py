@@ -52,17 +52,19 @@ admin = database.get_admin_by_pubkey(pub)
 if not admin:
     conn = sqlite3.connect("/data/enclave.db")
     cur = conn.cursor()
-    cur.execute("select count(*) from admins")
-    if cur.fetchone()[0]:
-        cur.execute(
-            "update admins set pubkey=? where id=(select id from admins limit 1)",
-            (pub,),
-        )
-        conn.commit()
+    cur.execute("insert into admins(pubkey) values(?)", (pub,))
+    conn.commit()
     conn.close()
     admin = database.get_admin_by_pubkey(pub)
 if not admin:
-    database.add_admin(pub)
+    try:
+        database.add_admin(pub)
+    except Exception:
+        conn = sqlite3.connect("/data/enclave.db")
+        cur = conn.cursor()
+        cur.execute("insert into admins(pubkey) values(?)", (pub,))
+        conn.commit()
+    conn.close()
     admin = database.get_admin_by_pubkey(pub)
 
 email = "sidebar-history-smoke@example.test"
@@ -170,6 +172,8 @@ def main() -> int:
         "user history includes safe title",
         any(
             item.get("title") == "Sidebar history smoke user title"
+            and (item.get("session_id") or item.get("id"))
+            == user_response.get("session_id")
             for item in user_conversations
             if isinstance(item, dict)
         ),
@@ -178,6 +182,8 @@ def main() -> int:
         "admin history includes safe title",
         any(
             item.get("title") == "Sidebar history smoke admin title"
+            and (item.get("session_id") or item.get("id"))
+            == admin_response.get("session_id")
             for item in admin_conversations
             if isinstance(item, dict)
         ),

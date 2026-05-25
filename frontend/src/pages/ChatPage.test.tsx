@@ -586,6 +586,137 @@ describe('ChatPage', () => {
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps server history titles and preserves the list when refresh fails', async () => {
+    const user = userEvent.setup();
+    let historyCalls = 0;
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        historyCalls += 1;
+        if (historyCalls > 1) {
+          return Promise.resolve(Response.json({}, { status: 503 }));
+        }
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Server saved title',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Stale hydrated title',
+            messages: [
+              {
+                id: 'msg-user-1',
+                role: 'user',
+                content: 'Existing question',
+              },
+              {
+                id: 'msg-assistant-1',
+                role: 'assistant',
+                content: 'Existing answer with malformed trace.',
+                trace: {
+                  visibility: 'summary',
+                  tools: 'not-an-array',
+                },
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ sessionId, onEvent }) => {
+        expect(sessionId).toBe('session-1');
+        onEvent('assistant_message_started', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-assistant-2',
+          delta: 'Refresh failed but list stayed.',
+        });
+        onEvent('done', {
+          message_id: 'msg-assistant-2',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Server saved title 2 messages',
+      })
+    );
+
+    expect(
+      screen.getByRole('region', { name: 'Current chat' })
+    ).toHaveTextContent('Server saved title');
+    expect(
+      await screen.findByText('Existing answer with malformed trace.')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Continue'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Refresh failed but list stayed.')
+    ).toBeInTheDocument();
+    expect(
+      within(sidebar).getByRole('button', {
+        name: 'Server saved title 2 messages',
+      })
+    ).toHaveAttribute('aria-current', 'page');
+  });
+
   it('starts a durable-history-aware New Chat without deleting saved Conversations', async () => {
     const user = userEvent.setup();
     let historyCalls = 0;

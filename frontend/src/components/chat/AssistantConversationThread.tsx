@@ -2,19 +2,25 @@ import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageCircle, Sparkles } from 'lucide-react';
 import { ThreadPrimitive } from '@assistant-ui/react';
-import { ChatMessage } from './ChatMessage';
+import { ChatMessage, type Message } from './ChatMessage';
 import type { AssistantConversationState } from './AssistantTurnAdapter';
+import type { ConversationMessageActionId } from './ConversationMessageActions';
 
 interface AssistantConversationThreadProps {
   assistantState: AssistantConversationState;
   runningLabel: string;
   notices?: ReactNode;
+  onMessageAction?: (
+    actionId: ConversationMessageActionId,
+    message: Message
+  ) => void;
 }
 
 export function AssistantConversationThread({
   assistantState,
   runningLabel,
   notices,
+  onMessageAction,
 }: AssistantConversationThreadProps) {
   return (
     <div
@@ -46,6 +52,7 @@ export function AssistantConversationThread({
                           activitySteps: turn.activitySteps,
                           actions,
                         }}
+                        onAction={onMessageAction}
                       />
                       {accessory}
                     </div>
