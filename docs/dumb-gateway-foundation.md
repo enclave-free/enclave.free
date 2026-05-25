@@ -20,7 +20,9 @@ The public route surface is unchanged:
 
 - `POST /llm/chat`
 - `POST /query`
+- `GET /query/sessions`
 - `GET /query/session/{session_id}`
+- `PATCH /query/session/{session_id}`
 - `DELETE /query/session/{session_id}`
 - `GET /session-defaults`
 - `/admin/ai-config/*`

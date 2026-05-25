@@ -83,8 +83,12 @@ Sage verifies the session token itself, hydrates the user/admin record from Pyth
 ### API Behavior
 
 - `POST /query` creates or resumes a session and returns `session_id`
+- `GET /query/sessions` returns the current actor's active ordinary-history Conversation summaries for the chat sidebar
 - `GET /query/session/{session_id}` returns the stored conversation view for that session
+- `PATCH /query/session/{session_id}` updates safe Conversation title metadata without rewriting Conversation Content or Session Memory
 - `DELETE /query/session/{session_id}` deletes the public query-session record and coordinates Session Memory Deletion for the associated Sage-owned Conversation memory
+
+The chat sidebar uses the safe summary title for rename/delete controls. Delete confirmation does not echo stored prompts, answers, tool output, or hydrated Conversation Content.
 
 Current nuance:
 

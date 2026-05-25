@@ -72,6 +72,9 @@ test_{number}{letter}_{description}.py
 | 5B | `test_5b_sage_route_smoke.py` | TOOLS | Smoke-test Sage-owned public routes and auth/CSRF boundaries |
 | 5C | `test_5c_chat_streaming_transport.py` | TOOLS | Verify `/llm/chat/stream` assistant events, Admin Config streaming, and Database trace redaction through the Docker gateway |
 | 5D | `test_5d_chunk_retrieval_gateway_smoke.py` | TOOLS | Seed one Document Library chunk and verify selected Required Context flows through public `/query` with source metadata |
+| 5E | `test_5e_conversation_sidebar_history.py` | TOOLS | Verify `/query/sessions` returns role-scoped durable Conversation summaries through the Docker gateway |
+| 5F | `test_5f_conversation_resume_and_rename.py` | TOOLS | Verify saved Conversation resume metadata and authorized title-only rename through the Docker gateway |
+| 5G | `test_5g_conversation_delete_lifecycle.py` | TOOLS | Verify authorized saved Conversation deletion removes resume/history access through the Docker gateway |
 
 ---
 

@@ -202,7 +202,9 @@ Use this checklist to:
   - `/ingest/pipeline-stats`
 - [x] Restrict `/vector-search` (admin-only or remove payload text and enforce doc scoping).
 - [x] Enforce session ownership checks for:
+  - `GET /query/sessions`
   - `GET /query/session/{session_id}`
+  - `PATCH /query/session/{session_id}`
   - `DELETE /query/session/{session_id}`
 - [x] Replace wildcard CORS with deployment-configured allowlist.
 - [x] Move bearer tokens out of `localStorage`.
@@ -418,7 +420,9 @@ Use these guardrails while security fixes are in progress:
 - Manual Section 7.1 checks:
   - `GET /ingest/pending` unauthenticated: `401`
   - `POST /vector-search` unauthenticated: `401`
+  - `GET /query/sessions` unauthenticated: `401`
   - `GET /query/session/test-session-id` unauthenticated: `401`
+  - `PATCH /query/session/test-session-id` unauthenticated: `401`
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
   - Published ports: `enclave-backend` and `enclave-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
   - Smoke endpoints: `GET /test` -> `200`, `GET /llm/test` -> `200`
