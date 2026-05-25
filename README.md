@@ -28,6 +28,7 @@ Public route ownership on this branch:
 | `/llm/chat` | Sage |
 | `/llm/chat/stream` | Sage |
 | `/query` | Sage |
+| `/query/sessions` | Sage |
 | `/query/session/*` | Sage |
 | `/session-defaults` | Sage |
 | `/admin/tools/execute` | Sage public entry, executed through Python private control-plane endpoint |

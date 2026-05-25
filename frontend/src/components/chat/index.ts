@@ -1,6 +1,13 @@
 export { ChatContainer } from './ChatContainer';
 export { ChatInput } from './ChatInput';
 export { ChatMessage, type Message } from './ChatMessage';
+export { AssistantConversationThread } from './AssistantConversationThread';
+export {
+  buildAssistantConversationState,
+  extractAppendMessageText,
+  type AssistantConversationState,
+  type AssistantTurnAccessoryRegistry,
+} from './AssistantTurnAdapter';
 export { ConversationSurface } from './ConversationSurface';
 export {
   createAdminChangeConfirmationState,

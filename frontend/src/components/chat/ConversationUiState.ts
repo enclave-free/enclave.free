@@ -1,124 +1,137 @@
-import type { ConversationActivityStep, ConversationTrace } from './ChatMessage'
+import type {
+  ConversationActivityStep,
+  ConversationTrace,
+} from './ChatMessage';
 
 export interface ConversationControlSnapshot {
-  selectedTools: string[]
-  selectedDocuments: string[]
+  selectedTools: string[];
+  selectedDocuments: string[];
 }
 
 export interface ConversationUiTurn {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  activitySteps: ConversationActivityStep[]
-  trace: ConversationTrace | null
-  traceStatus: string | null
-  controlSnapshot?: ConversationControlSnapshot
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  activitySteps: ConversationActivityStep[];
+  trace: ConversationTrace | null;
+  traceStatus: string | null;
+  controlSnapshot?: ConversationControlSnapshot;
 }
 
 export interface ConversationUiState {
-  turns: ConversationUiTurn[]
-  selectedTools: string[]
-  selectedDocuments: string[]
-  isRunning: boolean
-  error: string | null
-  conversationSessionId: string | null
+  turns: ConversationUiTurn[];
+  selectedTools: string[];
+  selectedDocuments: string[];
+  isRunning: boolean;
+  error: string | null;
+  conversationSessionId: string | null;
 }
 
 export type ConversationUiAction =
   | {
-      type: 'userTurnSubmitted'
-      id: string
-      content: string
+      type: 'userTurnSubmitted';
+      id: string;
+      content: string;
     }
   | {
-      type: 'assistantTurnStarted'
-      id: string
-      sessionId?: string | null
-      traceStatus?: string | null
+      type: 'assistantTurnStarted';
+      id: string;
+      sessionId?: string | null;
+      traceStatus?: string | null;
     }
   | {
-      type: 'assistantActivityStepReceived'
-      assistantTurnId: string
-      step: ConversationActivityStep
+      type: 'assistantActivityStepReceived';
+      assistantTurnId: string;
+      step: ConversationActivityStep;
     }
   | {
-      type: 'assistantTraceStatusChanged'
-      assistantTurnId: string
-      traceStatus: string
+      type: 'assistantTraceStatusChanged';
+      assistantTurnId: string;
+      traceStatus: string;
     }
   | {
-      type: 'assistantContentDeltaReceived'
-      assistantTurnId: string
-      delta: string
+      type: 'assistantContentDeltaReceived';
+      assistantTurnId: string;
+      delta: string;
     }
   | {
-      type: 'assistantContentReplaced'
-      assistantTurnId: string
-      content: string
+      type: 'assistantContentReplaced';
+      assistantTurnId: string;
+      content: string;
     }
   | {
-      type: 'assistantTraceSettled'
-      assistantTurnId: string
-      trace: ConversationTrace
+      type: 'assistantTraceSettled';
+      assistantTurnId: string;
+      trace: ConversationTrace;
     }
   | {
-      type: 'assistantTurnFinished'
-      sessionId?: string | null
+      type: 'assistantTurnFinished';
+      sessionId?: string | null;
     }
   | {
-      type: 'assistantTurnFailed'
-      assistantTurnId: string
-      message: string
+      type: 'assistantTurnFailed';
+      assistantTurnId: string;
+      message: string;
     }
   | {
-      type: 'requestFailed'
-      message: string
+      type: 'requestFailed';
+      message: string;
     }
   | {
-      type: 'requestErrorDismissed'
+      type: 'requestErrorDismissed';
     }
   | {
-      type: 'toolToggled'
-      toolId: string
+      type: 'toolToggled';
+      toolId: string;
     }
   | {
-      type: 'documentToggled'
-      documentId: string
+      type: 'documentToggled';
+      documentId: string;
     }
   | {
-      type: 'newConversationStarted'
+      type: 'newConversationStarted';
     }
   | {
-      type: 'selectedToolsChanged'
-      selectedTools: string[]
+      type: 'selectedToolsChanged';
+      selectedTools: string[];
     }
   | {
-      type: 'selectedDocumentsChanged'
-      selectedDocuments: string[]
+      type: 'selectedDocumentsChanged';
+      selectedDocuments: string[];
     }
   | {
-      type: 'conversationSessionChanged'
-      sessionId: string | null
+      type: 'conversationSessionChanged';
+      sessionId: string | null;
     }
   | {
-      type: 'assistantTurnCompleted'
-      id: string
-      content: string
-      trace?: ConversationTrace | null
-      sessionId?: string | null
+      type: 'conversationHydrated';
+      sessionId: string;
+      turns: ConversationUiTurn[];
     }
   | {
-      type: 'assistantTurnAppended'
-      id: string
-      content: string
+      type: 'assistantTurnCompleted';
+      id: string;
+      content: string;
+      trace?: ConversationTrace | null;
+      sessionId?: string | null;
     }
   | {
-      type: 'assistantTurnsRemovedByContentPrefix'
-      prefix: string
+      type: 'assistantTurnAppended';
+      id: string;
+      content: string;
     }
+  | {
+      type: 'assistantTurnsRemovedByContentPrefix';
+      prefix: string;
+    };
 
 export function createConversationUiState(
-  initial: Partial<Pick<ConversationUiState, 'selectedTools' | 'selectedDocuments' | 'conversationSessionId'>> = {}
+  initial: Partial<
+    Pick<
+      ConversationUiState,
+      'selectedTools' | 'selectedDocuments' | 'conversationSessionId'
+    >
+  > = {}
 ): ConversationUiState {
   return {
     turns: [],
@@ -127,7 +140,7 @@ export function createConversationUiState(
     isRunning: false,
     error: null,
     conversationSessionId: initial.conversationSessionId ?? null,
-  }
+  };
 }
 
 export function reduceConversationUiState(
@@ -155,7 +168,7 @@ export function reduceConversationUiState(
         ],
         isRunning: true,
         error: null,
-      }
+      };
     case 'assistantTurnStarted':
       return {
         ...state,
@@ -173,83 +186,90 @@ export function reduceConversationUiState(
         isRunning: true,
         error: null,
         conversationSessionId: action.sessionId ?? state.conversationSessionId,
-      }
+      };
     case 'assistantActivityStepReceived':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         activitySteps: mergeActivitySteps(turn.activitySteps, [action.step]),
-      }))
+      }));
     case 'assistantTraceStatusChanged':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         traceStatus: action.traceStatus,
-      }))
+      }));
     case 'assistantContentDeltaReceived':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         content: `${turn.content}${action.delta}`,
-      }))
+      }));
     case 'assistantContentReplaced':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         content: action.content,
-      }))
+      }));
     case 'assistantTraceSettled':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         trace: action.trace,
         traceStatus: null,
-        activitySteps: mergeActivitySteps(turn.activitySteps, action.trace.activity_steps ?? []),
-      }))
+        activitySteps: mergeActivitySteps(
+          turn.activitySteps,
+          action.trace.activity_steps ?? []
+        ),
+      }));
     case 'assistantTurnFinished':
       return {
         ...state,
         isRunning: false,
         conversationSessionId: action.sessionId ?? state.conversationSessionId,
-        turns: state.turns.map((turn) => (
+        turns: state.turns.map((turn) =>
           turn.role === 'assistant' ? { ...turn, traceStatus: null } : turn
-        )),
-      }
+        ),
+      };
     case 'assistantTurnFailed':
       return {
         ...state,
         isRunning: false,
         error: action.message,
         turns: state.turns
-          .map((turn) => (
+          .map((turn) =>
             turn.id === action.assistantTurnId && turn.role === 'assistant'
               ? { ...turn, traceStatus: null }
               : turn
-          ))
-          .filter((turn) => (
-            turn.id !== action.assistantTurnId ||
-            turn.role !== 'assistant' ||
-            turn.content.trim() ||
-            turn.activitySteps.length > 0 ||
-            turn.trace
-          )),
-      }
+          )
+          .filter(
+            (turn) =>
+              turn.id !== action.assistantTurnId ||
+              turn.role !== 'assistant' ||
+              turn.content.trim() ||
+              turn.activitySteps.length > 0 ||
+              turn.trace
+          ),
+      };
     case 'requestFailed':
       return {
         ...state,
         isRunning: false,
         error: action.message,
-      }
+      };
     case 'requestErrorDismissed':
       return {
         ...state,
         error: null,
-      }
+      };
     case 'toolToggled':
       return {
         ...state,
         selectedTools: toggleValue(state.selectedTools, action.toolId),
-      }
+      };
     case 'documentToggled':
       return {
         ...state,
-        selectedDocuments: toggleValue(state.selectedDocuments, action.documentId),
-      }
+        selectedDocuments: toggleValue(
+          state.selectedDocuments,
+          action.documentId
+        ),
+      };
     case 'newConversationStarted':
       return {
         ...state,
@@ -257,22 +277,30 @@ export function reduceConversationUiState(
         isRunning: false,
         error: null,
         conversationSessionId: null,
-      }
+      };
     case 'selectedToolsChanged':
       return {
         ...state,
         selectedTools: [...action.selectedTools],
-      }
+      };
     case 'selectedDocumentsChanged':
       return {
         ...state,
         selectedDocuments: [...action.selectedDocuments],
-      }
+      };
     case 'conversationSessionChanged':
       return {
         ...state,
         conversationSessionId: action.sessionId,
-      }
+      };
+    case 'conversationHydrated':
+      return {
+        ...state,
+        turns: [...action.turns],
+        isRunning: false,
+        error: null,
+        conversationSessionId: action.sessionId,
+      };
     case 'assistantTurnCompleted':
       return {
         ...state,
@@ -289,7 +317,7 @@ export function reduceConversationUiState(
         ],
         isRunning: false,
         conversationSessionId: action.sessionId ?? state.conversationSessionId,
-      }
+      };
     case 'assistantTurnAppended':
       return {
         ...state,
@@ -304,14 +332,15 @@ export function reduceConversationUiState(
             traceStatus: null,
           },
         ],
-      }
+      };
     case 'assistantTurnsRemovedByContentPrefix':
       return {
         ...state,
-        turns: state.turns.filter((turn) => (
-          turn.role !== 'assistant' || !turn.content.startsWith(action.prefix)
-        )),
-      }
+        turns: state.turns.filter(
+          (turn) =>
+            turn.role !== 'assistant' || !turn.content.startsWith(action.prefix)
+        ),
+      };
   }
 }
 
@@ -322,24 +351,26 @@ function updateAssistantTurn(
 ): ConversationUiState {
   return {
     ...state,
-    turns: state.turns.map((turn) => (
-      turn.id === assistantTurnId && turn.role === 'assistant' ? update(turn) : turn
-    )),
-  }
+    turns: state.turns.map((turn) =>
+      turn.id === assistantTurnId && turn.role === 'assistant'
+        ? update(turn)
+        : turn
+    ),
+  };
 }
 
 function mergeActivitySteps(
   existing: ConversationActivityStep[],
   incoming: ConversationActivityStep[]
 ): ConversationActivityStep[] {
-  const merged = new Map<string, ConversationActivityStep>()
-  for (const step of existing) merged.set(step.id, step)
-  for (const step of incoming) merged.set(step.id, step)
-  return Array.from(merged.values())
+  const merged = new Map<string, ConversationActivityStep>();
+  for (const step of existing) merged.set(step.id, step);
+  for (const step of incoming) merged.set(step.id, step);
+  return Array.from(merged.values());
 }
 
 function toggleValue(values: string[], value: string): string[] {
   return values.includes(value)
     ? values.filter((existing) => existing !== value)
-    : [...values, value]
+    : [...values, value];
 }
