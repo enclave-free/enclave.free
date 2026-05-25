@@ -65,6 +65,59 @@ INSTANCE_VISUAL_IDENTITY_KEYWORDS: frozenset[str] = frozenset({
     "visual",
 })
 
+INSTANCE_COPY_KEYWORDS: frozenset[str] = frozenset({
+    "copy",
+    "description",
+    "label",
+    "logo",
+    "name",
+    "tagline",
+    "title",
+})
+
+INSTANCE_COPY_SETTINGS: tuple[dict[str, str], ...] = (
+    {
+        "key": "instance_name",
+        "label": "Instance name",
+        "valid_values": "string",
+    },
+    {
+        "key": "description",
+        "label": "Instance description",
+        "valid_values": "string",
+    },
+    {
+        "key": "logo_url",
+        "label": "Logo URL",
+        "valid_values": "URL or empty string",
+    },
+    {
+        "key": "icon",
+        "label": "Instance icon",
+        "valid_values": "icon name",
+    },
+    {
+        "key": "assistant_icon",
+        "label": "Assistant icon",
+        "valid_values": "icon name",
+    },
+    {
+        "key": "assistant_name",
+        "label": "Assistant display name",
+        "valid_values": "string",
+    },
+    {
+        "key": "user_label",
+        "label": "User label",
+        "valid_values": "string",
+    },
+    {
+        "key": "header_tagline",
+        "label": "Header tagline",
+        "valid_values": "string",
+    },
+)
+
 AGENT_SETTINGS_KEYWORDS: frozenset[str] = frozenset({
     "agent",
     "behavior",
@@ -78,6 +131,56 @@ AGENT_SETTINGS_KEYWORDS: frozenset[str] = frozenset({
     "tokens",
     "trace",
 })
+
+USER_TYPES_KEYWORDS: frozenset[str] = frozenset({
+    "field",
+    "fields",
+    "onboarding",
+    "question",
+    "questions",
+    "user",
+    "users",
+})
+
+DOCUMENT_DEFAULTS_KEYWORDS: frozenset[str] = frozenset({
+    "access",
+    "default",
+    "defaults",
+    "document",
+    "documents",
+    "ingestion",
+    "library",
+})
+
+HEALTH_KEYWORDS: frozenset[str] = frozenset({
+    "broken",
+    "health",
+    "readiness",
+    "service",
+    "status",
+    "validate",
+    "validation",
+})
+
+SCOPE_PRIORITY: tuple[str, ...] = (
+    "overview",
+    "health",
+    "instance-settings",
+    "user-types",
+    "agent-settings",
+    "document-defaults",
+    "deployment-settings",
+)
+
+ALL_DOCUMENTED_SCOPES: tuple[str, ...] = (
+    "overview",
+    "instance-settings",
+    "deployment-settings",
+    "agent-settings",
+    "user-types",
+    "document-defaults",
+    "health",
+)
 
 INSTANCE_VISUAL_IDENTITY_SETTINGS: tuple[dict[str, str], ...] = (
     {
@@ -123,14 +226,73 @@ def contains_keyword(query: str, keywords: frozenset[str]) -> bool:
     return bool(tokens.intersection(keywords))
 
 
+def _matches_scope(query: str, scope: str) -> bool:
+    normalized = query.lower()
+    if scope == "instance-settings":
+        if re.search(r"status[_\s-]?icon", normalized):
+            return True
+        return (
+            contains_keyword(query, INSTANCE_VISUAL_IDENTITY_KEYWORDS)
+            or contains_keyword(query, INSTANCE_COPY_KEYWORDS)
+        )
+    if scope == "health":
+        if re.search(r"status[_\s-]?icon", normalized):
+            return False
+        return contains_keyword(query, HEALTH_KEYWORDS)
+    if scope == "user-types":
+        return (
+            contains_keyword(query, USER_TYPES_KEYWORDS)
+            and not contains_keyword(query, AGENT_SETTINGS_KEYWORDS)
+        )
+    if scope == "agent-settings":
+        return contains_keyword(query, AGENT_SETTINGS_KEYWORDS)
+    if scope == "document-defaults":
+        return contains_keyword(query, DOCUMENT_DEFAULTS_KEYWORDS)
+    if scope == "deployment-settings":
+        return contains_keyword(query, DEPLOYMENT_KEYWORDS)
+    return False
+
+
+def select_matching_scopes(query: str) -> list[str]:
+    """Return all scopes matched by the query, ordered by classification priority."""
+    matched = [scope for scope in SCOPE_PRIORITY if _matches_scope(query, scope)]
+    return matched or ["overview"]
+
+
 def select_scope(query: str) -> str:
-    if contains_keyword(query, INSTANCE_VISUAL_IDENTITY_KEYWORDS):
-        return "instance-settings"
-    if contains_keyword(query, AGENT_SETTINGS_KEYWORDS):
-        return "agent-settings"
-    if contains_keyword(query, DEPLOYMENT_KEYWORDS):
-        return "deployment-settings"
-    return "overview"
+    return select_matching_scopes(query)[0]
+
+
+def resolve_included_scopes(
+    query: str,
+    *,
+    mode: str,
+    requested_scopes: list[str] | None = None,
+) -> tuple[str, list[str]]:
+    """
+    Resolve primary and included scopes for a scoped config context request.
+
+    Parameters:
+        query: Admin configuration question used for auto classification.
+        mode: `auto` classifies the query; `overview` forces overview scope.
+        requested_scopes: Optional explicit scope hints for multi-scope reads.
+    """
+    if mode == "overview":
+        return "overview", ["overview"]
+    if mode == "full":
+        return "overview", list(ALL_DOCUMENTED_SCOPES)
+
+    primary_scope = select_scope(query)
+    if requested_scopes:
+        included_scopes = list(dict.fromkeys(requested_scopes))
+        if primary_scope not in included_scopes:
+            included_scopes.insert(0, primary_scope)
+        return primary_scope, included_scopes
+
+    matched_scopes = select_matching_scopes(query)
+    if len(matched_scopes) > 1:
+        return matched_scopes[0], matched_scopes
+    return primary_scope, [primary_scope]
 
 
 def select_deployment_category(query: str) -> str | None:
@@ -149,3 +311,41 @@ def visual_identity_settings(settings: dict[str, Any]) -> list[dict[str, str]]:
             "mutation": "PUT /admin/settings",
         })
     return values
+
+
+def instance_settings_fields(settings: dict[str, Any]) -> list[dict[str, str]]:
+    """Return branding, theme, and copy Instance Settings with mutation guidance."""
+    fields: list[dict[str, str]] = []
+    for item in (*INSTANCE_COPY_SETTINGS, *INSTANCE_VISUAL_IDENTITY_SETTINGS):
+        fields.append({
+            **item,
+            "current_value": str(settings.get(item["key"], "")),
+            "mutation": "PUT /admin/settings",
+        })
+    return fields
+
+
+def build_instance_settings_change_set_example() -> dict[str, Any]:
+    """Example Executable Change Set for Instance Settings updates."""
+    return {
+        "version": 1,
+        "summary": "Update Instance branding, theme, and copy settings.",
+        "requests": [
+            {
+                "method": "PUT",
+                "path": "/admin/settings",
+                "body": {
+                    "instance_name": "Free Them",
+                    "description": "PPST support instance",
+                    "assistant_name": "Sage",
+                    "default_theme": "dark",
+                    "primary_color": "#3B82F6",
+                    "chat_bubble_style": "soft",
+                    "chat_bubble_shadow": True,
+                    "surface_style": "plain",
+                    "status_icon_set": "minimal",
+                    "typography_preset": "modern",
+                },
+            },
+        ],
+    }

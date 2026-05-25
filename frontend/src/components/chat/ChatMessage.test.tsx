@@ -405,14 +405,16 @@ describe('ChatMessage', () => {
               id: 'message-1',
               role: 'assistant',
               content: '',
-              traceStatus: 'Writing answer...',
+              traceStatus: 'Finalizing response...',
             }}
           />
         </InstanceConfigProvider>
       </ThemeProvider>
     );
 
-    expect(screen.queryByText('Writing answer...')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Finalizing response...')
+    ).not.toBeInTheDocument();
   });
 
   it('renders meaningful live trace status while a streamed assistant turn is in progress', () => {

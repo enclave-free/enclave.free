@@ -53,7 +53,8 @@ Tool defaults:
 - Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
 - Config context is default-on for admin configuration conversations, while web search still follows Sage-owned session defaults.
 - When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage automatically uses Document Library Retrieval as first-party Instance context before answering.
-- In current frontend behavior, admin `/chat` uses this assistant pipeline (runtime tools + changeset review/apply) and does not use document-scope Retrieval mode.
+- Admin `/chat` uses the same assistant pipeline as the sidebar (scoped context + changeset review/apply) and does not use document-scope RAG mode when the config tool is selected.
+- **Context Parity**: Both sidebar and full chat now use identical server-side scoped configuration context assembly.
 
 Sidebar behavior:
 - On desktop admin pages, the assistant appears as a right sidebar by default.
@@ -132,7 +133,9 @@ If secret sharing is enabled, it additionally fetches:
 - For every deployment config item with `is_secret=true`:
   - `GET /admin/deployment/config/{key}/reveal`
 
-The former full snapshot behavior is retained only as a manual/debug behavior via **Refresh context** in the sidebar assistant. Normal admin turns use scoped reads assembled on the client for the sidebar assistant and via Sage for admin `/chat` when `admin-config` is selected.
+**Unified Server-Side Context Assembly**: Both the sidebar assistant and full chat page (`/chat` with admin-config tool) now use the same server-side scoped configuration context contract (`POST /admin/scoped-config-context`). Context assembly is owned by the Control Plane, not the browser.
+
+Full snapshot behavior is retained as a manual/debug behavior via **Refresh context** in the sidebar assistant. Normal admin turns use server-side scoped context classification and assembly for both admin surfaces.
 
 ### Model Provider Resilience
 
@@ -144,7 +147,7 @@ Resilience layering on admin sends (sidebar assistant):
 2. **Prompt budget planning** — admin config, document, and recent-conversation sections are capped separately (`frontend/src/utils/promptBudget.ts`).
 3. **Transport trim** — `llmChat` still bounds recent history as a final guard.
 
-Admin `/chat` with **Config** selected runs client-side Session Memory compaction before Sage assembles the turn. Prompt budget planning and reduced-context notices are surfaced in both the sidebar assistant and the full chat admin-config path; Sage owns final prompt assembly for the full chat path.
+Admin `/chat` with **Config** selected runs the same scoped context pipeline as the sidebar assistant: client-side Session Memory compaction, server-side context assembly via `POST /admin/scoped-config-context`, and prompt budget planning. Both surfaces have identical context behavior and reduced-context notices.
 
 Operator-facing notices (no raw prompts):
 
