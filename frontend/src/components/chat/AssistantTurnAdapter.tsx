@@ -35,6 +35,7 @@ export function buildAssistantConversationState({
   turnAccessories,
   transportCapabilities = {},
   hasPendingApproval = false,
+  hasPersistedSession = false,
 }: {
   turns: ConversationSurfaceTurn[];
   isRunning?: boolean;
@@ -42,6 +43,7 @@ export function buildAssistantConversationState({
   turnAccessories?: AssistantTurnAccessoryRegistry;
   transportCapabilities?: ConversationTransportCapabilities;
   hasPendingApproval?: boolean;
+  hasPersistedSession?: boolean;
 }): AssistantConversationState {
   return {
     messages: turns.map((turn, index) =>
@@ -53,7 +55,7 @@ export function buildAssistantConversationState({
       actions: getConversationMessageActions({
         role: turn.role,
         isRunning,
-        hasSession: turns.length > 0,
+        hasSession: hasPersistedSession,
         transportCapabilities,
         hasPendingApproval,
       }),

@@ -102,6 +102,11 @@ def gateway_request(
         cwd=REPO_ROOT,
         timeout=timeout + 10,
     )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "gateway request failed "
+            f"with {result.returncode}: stderr={result.stderr.strip()} stdout={result.stdout.strip()}"
+        )
     raw = result.stdout
     body, _, status_text = raw.rpartition("\n")
     status = int(status_text) if status_text.isdigit() else 0
@@ -147,7 +152,7 @@ def main() -> int:
     )
     session_id = created.get("session_id")
     failures += 0 if expect("user conversation created", create_status == 200 and isinstance(session_id, str)) else 1
-    if not isinstance(session_id, str):
+    if create_status != 200 or not isinstance(session_id, str):
         return 1
 
     history_status, history_before = gateway_request(tokens["user"], "GET", "/query/sessions")

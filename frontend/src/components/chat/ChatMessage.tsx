@@ -634,7 +634,7 @@ export function ChatMessage({ message, onAction }: ChatMessageProps) {
     message.actions && message.actions.length > 0 ? (
       <div
         role="toolbar"
-        aria-label="Message actions"
+        aria-label={t('chat.messageActions')}
         className={`mt-1.5 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}
       >
         {message.actions.map((action) => (

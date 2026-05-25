@@ -765,6 +765,7 @@
     "new": "New chat",
     "listTitle": "Chats",
     "contextTitle": "Context",
+    "messageActions": "Message actions",
     "composerContextAria": "Composer context",
     "sessions": {
       "ariaLabel": "Chat sessions",

@@ -110,6 +110,43 @@ describe('AssistantTurnAdapter', () => {
     ]);
   });
 
+  it('does not treat local turns as a persisted session for history-mutating actions', () => {
+    const turns: ConversationSurfaceTurn[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: 'Draft this again.',
+        activitySteps: [],
+        trace: null,
+        traceStatus: null,
+      },
+    ];
+
+    const withoutSession = buildAssistantConversationState({
+      turns,
+      transportCapabilities: { edit: true },
+    });
+    const withSession = buildAssistantConversationState({
+      turns,
+      transportCapabilities: { edit: true },
+      hasPersistedSession: true,
+    });
+
+    expect(withoutSession.turnItems[0].actions).toEqual([
+      expect.objectContaining({
+        id: 'edit',
+        disabled: true,
+        disabledReason: 'Start or resume a Conversation first.',
+      }),
+    ]);
+    expect(withSession.turnItems[0].actions).toEqual([
+      expect.objectContaining({
+        id: 'edit',
+        disabled: false,
+      }),
+    ]);
+  });
+
   it('extracts text from assistant-ui append messages', () => {
     expect(
       extractAppendMessageText({
