@@ -344,6 +344,13 @@ curl -i -X POST http://localhost:8000/vector-search \
 # S4-3: Authenticated requests should succeed on owned query-session records
 curl -i -H 'Authorization: Bearer <token>' http://localhost:8000/query/session/test-session-id
 
+# S4-3: Unauthenticated query-session requests should fail
+curl -i http://localhost:8000/query/sessions
+curl -i http://localhost:8000/query/session/test-session-id
+curl -i -X PATCH http://localhost:8000/query/session/test-session-id \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"test"}'
+
 # S4-4: CORS should reject disallowed origins
 curl -i -X OPTIONS http://localhost:8000/health \
   -H 'Origin: https://evil.example.com' \

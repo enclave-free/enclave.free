@@ -54,12 +54,12 @@ describe('AssistantTurnAdapter', () => {
 
     expect(state.messages).toHaveLength(2);
     expect(state.messages[0]).toMatchObject({
-      id: 'user-1:0',
+      id: 'user-1',
       role: 'user',
       content: [{ type: 'text', text: 'Show session memory' }],
     });
     expect(state.messages[1]).toMatchObject({
-      id: 'assistant-1:1',
+      id: 'assistant-1',
       role: 'assistant',
       content: [{ type: 'text', text: 'Session memory is available.' }],
       status: { type: 'running' },

@@ -431,6 +431,109 @@ describe('ChatPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('rejects malformed resumed Conversations instead of clearing the thread', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-local',
+          session_id: 'local-session',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-local',
+          delta: 'Local answer remains.',
+        });
+        onEvent('done', {
+          message_id: 'msg-local',
+          session_id: 'local-session',
+        });
+      }
+    );
+
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Malformed saved chat',
+                updated_at: '2026-05-24T20:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Malformed saved chat',
+            messages: null,
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Keep this local thread'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Local answer remains.')
+    ).toBeInTheDocument();
+
+    const sidebar = await screen.findByRole('navigation', {
+      name: 'Chat sessions',
+    });
+    await user.click(
+      within(sidebar).getByRole('button', {
+        name: 'Malformed saved chat 2 messages',
+      })
+    );
+
+    expect(
+      await screen.findByRole('note', { name: 'Chat request error' })
+    ).toHaveTextContent('Unable to load that Conversation.');
+    expect(screen.getByText('Local answer remains.')).toBeInTheDocument();
+  });
+
   it('resumes a selected durable Conversation and continues the same session on the next turn', async () => {
     const user = userEvent.setup();
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {

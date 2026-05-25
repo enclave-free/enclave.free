@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -98,8 +98,43 @@ function PageLoadingFallback() {
   );
 }
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback ?? (
+          <main className="flex min-h-screen items-center justify-center bg-background text-sm text-text-muted">
+            Failed to load page. Please refresh.
+          </main>
+        )
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function LazyPage({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>;
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
 function App() {

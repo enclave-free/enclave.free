@@ -159,7 +159,8 @@ function conversationSessionViewFromApi(
   if (!value || typeof value !== 'object') return null;
   const record = value as Record<string, unknown>;
   if (typeof record.id !== 'string' || !record.id.trim()) return null;
-  const rawMessages = Array.isArray(record.messages) ? record.messages : [];
+  if (!Array.isArray(record.messages)) return null;
+  const rawMessages = record.messages;
   return {
     id: record.id,
     title:

@@ -2,6 +2,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
+const chatPageMockState = vi.hoisted(() => ({ shouldThrow: false }));
+
 vi.mock('./pages/HomeRedirect', () => ({
   HomeRedirect: () => <main>Product home redirect</main>,
 }));
@@ -11,12 +13,19 @@ vi.mock('./pages/TestDashboard', () => ({
 }));
 
 vi.mock('./pages/ChatPage', () => ({
-  ChatPage: () => <main>Chat route</main>,
+  ChatPage: () => {
+    if (chatPageMockState.shouldThrow) {
+      throw new Error('Chat route failed to load');
+    }
+    return <main>Chat route</main>;
+  },
 }));
 
 describe('App routing', () => {
   afterEach(() => {
     cleanup();
+    chatPageMockState.shouldThrow = false;
+    vi.restoreAllMocks();
     window.history.pushState({}, '', '/');
   });
 
@@ -50,5 +59,17 @@ describe('App routing', () => {
       screen.getByRole('status', { name: 'Loading page' })
     ).toBeInTheDocument();
     expect(await screen.findByText('Chat route')).toBeInTheDocument();
+  });
+
+  it('shows a graceful fallback when a lazy route fails', async () => {
+    chatPageMockState.shouldThrow = true;
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    window.history.pushState({}, '', '/chat');
+
+    render(<App />);
+
+    expect(
+      await screen.findByText('Failed to load page. Please refresh.')
+    ).toBeInTheDocument();
   });
 });

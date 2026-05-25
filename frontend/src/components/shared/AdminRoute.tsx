@@ -108,7 +108,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
       ).filter(
         (element) =>
           !element.hasAttribute('disabled') &&
-          !element.getAttribute('aria-hidden')
+          element.getAttribute('aria-hidden') !== 'true'
       );
 
       if (focusable.length === 0) {

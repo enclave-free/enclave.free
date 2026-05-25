@@ -64,7 +64,7 @@ if not admin:
         cur = conn.cursor()
         cur.execute("insert into admins(pubkey) values(?)", (pub,))
         conn.commit()
-    conn.close()
+        conn.close()
     admin = database.get_admin_by_pubkey(pub)
 
 email = "sidebar-history-smoke@example.test"

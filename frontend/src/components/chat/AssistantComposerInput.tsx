@@ -37,7 +37,7 @@ export function AssistantComposerInput({
               disabled={disabled}
               rows={1}
               submitMode="enter"
-              className="max-h-40 flex-1 resize-none border-none bg-transparent px-2 py-2 text-[15px] leading-relaxed text-text outline-none placeholder:text-text-muted focus-visible:outline-none"
+              className="max-h-40 flex-1 resize-none border-none bg-transparent px-2 py-2 text-[15px] leading-relaxed text-text placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             />
             <ComposerPrimitive.Send
               aria-label={t('chat.input.sendLabel')}

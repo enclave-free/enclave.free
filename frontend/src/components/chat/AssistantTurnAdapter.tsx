@@ -46,9 +46,7 @@ export function buildAssistantConversationState({
   hasPersistedSession?: boolean;
 }): AssistantConversationState {
   return {
-    messages: turns.map((turn, index) =>
-      convertTurnToAssistantMessage(turn, index)
-    ),
+    messages: turns.map((turn) => convertTurnToAssistantMessage(turn)),
     turnItems: turns.map((turn) => ({
       turn,
       accessory: turnAccessories?.[turn.id] ?? null,
@@ -72,11 +70,10 @@ export function buildAssistantConversationState({
 }
 
 function convertTurnToAssistantMessage(
-  turn: ConversationSurfaceTurn,
-  index: number
+  turn: ConversationSurfaceTurn
 ): ThreadMessage {
   const common = {
-    id: `${turn.id}:${index}`,
+    id: turn.id,
     createdAt: new Date(),
     content: [{ type: 'text' as const, text: turn.content }],
     metadata: {
