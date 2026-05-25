@@ -30,6 +30,20 @@ router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 INTERNAL_AGENT_TOKEN = os.getenv("INTERNAL_AGENT_TOKEN", "").strip()
 DOCUMENT_OVERVIEW_OPENING_CHUNKS_PER_DOCUMENT = 2
 MAX_OVERVIEW_DOCS = 5
+READ_ONLY_SELECT_FORBIDDEN_KEYWORDS = (
+    "ALTER",
+    "ATTACH",
+    "CREATE",
+    "DELETE",
+    "DETACH",
+    "DROP",
+    "INSERT",
+    "PRAGMA",
+    "REPLACE",
+    "TRUNCATE",
+    "UPDATE",
+    "VACUUM",
+)
 
 
 class InternalActorContext(BaseModel):
@@ -170,7 +184,7 @@ def _opening_chunk_texts_for_documents(job_ids: list[str], seen_chunk_ids: set[s
 
 def _execute_safe_select(sql: str) -> dict:
     normalized = sql.strip()
-    if not normalized.upper().startswith("SELECT"):
+    if not re.match(r"^SELECT\b", normalized, re.IGNORECASE):
         return {
             "success": False,
             "columns": [],
@@ -178,21 +192,17 @@ def _execute_safe_select(sql: str) -> dict:
             "executionTimeMs": 0,
             "error": "Only SELECT queries are allowed. Use the CRUD endpoints for modifications.",
         }
+    if ";" in normalized:
+        return {
+            "success": False,
+            "columns": [],
+            "rows": [],
+            "executionTimeMs": 0,
+            "error": "Only a single SELECT statement is allowed.",
+        }
 
-    dangerous_patterns = [
-        r"\bDROP\b",
-        r"\bDELETE\b",
-        r"\bINSERT\b",
-        r"\bUPDATE\b",
-        r"\bALTER\b",
-        r"\bCREATE\b",
-        r"\bTRUNCATE\b",
-        r"\bATTACH\b",
-        r"\bDETACH\b",
-        r"\bPRAGMA\b",
-    ]
-    for pattern in dangerous_patterns:
-        if re.search(pattern, normalized, re.IGNORECASE):
+    for keyword in READ_ONLY_SELECT_FORBIDDEN_KEYWORDS:
+        if re.search(rf"\b{keyword}\b", normalized, re.IGNORECASE):
             return {
                 "success": False,
                 "columns": [],
