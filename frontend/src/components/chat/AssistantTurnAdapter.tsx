@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import type { AppendMessage, ThreadMessage } from '@assistant-ui/react';
 import type { ConversationSurfaceTurn } from './ConversationSurfaceModel';
+import {
+  getConversationMessageActions,
+  type ConversationMessageAction,
+  type ConversationTransportCapabilities,
+} from './ConversationMessageActions';
 
 export interface AssistantTurnAccessoryRegistry {
   [turnId: string]: ReactNode;
@@ -11,6 +16,7 @@ export interface AssistantConversationState {
   turnItems: Array<{
     turn: ConversationSurfaceTurn;
     accessory: ReactNode | null;
+    actions: ConversationMessageAction[];
   }>;
   isRunning: boolean;
   isDisabled: boolean;
@@ -27,11 +33,15 @@ export function buildAssistantConversationState({
   isRunning = false,
   disabled = false,
   turnAccessories,
+  transportCapabilities = {},
+  hasPendingApproval = false,
 }: {
   turns: ConversationSurfaceTurn[];
   isRunning?: boolean;
   disabled?: boolean;
   turnAccessories?: AssistantTurnAccessoryRegistry;
+  transportCapabilities?: ConversationTransportCapabilities;
+  hasPendingApproval?: boolean;
 }): AssistantConversationState {
   return {
     messages: turns.map((turn, index) =>
@@ -40,6 +50,13 @@ export function buildAssistantConversationState({
     turnItems: turns.map((turn) => ({
       turn,
       accessory: turnAccessories?.[turn.id] ?? null,
+      actions: getConversationMessageActions({
+        role: turn.role,
+        isRunning,
+        hasSession: turns.length > 0,
+        transportCapabilities,
+        hasPendingApproval,
+      }),
     })),
     isRunning,
     isDisabled: disabled,

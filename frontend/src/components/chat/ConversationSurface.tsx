@@ -10,7 +10,7 @@ import {
   buildAssistantConversationState,
   extractAppendMessageText,
 } from './AssistantTurnAdapter';
-import { ChatInput } from './ChatInput';
+import { AssistantComposerInput } from './AssistantComposerInput';
 import type { ConversationSurfaceTurn } from './ConversationSurfaceModel';
 
 interface ConversationSurfaceProps {
@@ -70,12 +70,10 @@ export function ConversationSurface({
           runningLabel={t('chat.typing')}
           notices={notices}
         />
-        <ChatInput
-          onSend={onSend}
+        <AssistantComposerInput
           disabled={disabled || isRunning}
           placeholder={placeholder}
           toolbar={toolbar}
-          assistantRuntime
         />
       </section>
     </AssistantRuntimeProvider>

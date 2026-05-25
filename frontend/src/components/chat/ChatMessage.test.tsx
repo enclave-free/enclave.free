@@ -34,17 +34,20 @@ function stubLocalStorage() {
 function renderMessage(
   content: string,
   role: 'user' | 'assistant' = 'assistant',
-  trace?: Parameters<typeof ChatMessage>[0]['message']['trace']
+  trace?: Parameters<typeof ChatMessage>[0]['message']['trace'],
+  props?: Partial<Parameters<typeof ChatMessage>[0]>
 ) {
   return render(
     <ThemeProvider>
       <InstanceConfigProvider>
         <ChatMessage
+          {...props}
           message={{
             id: 'message-1',
             role,
             content,
             trace,
+            ...props?.message,
           }}
         />
       </InstanceConfigProvider>
@@ -197,6 +200,41 @@ describe('ChatMessage', () => {
     await user.click(screen.getByRole('button', { name: 'Copy message' }));
 
     expect(clipboardWriteText).toHaveBeenCalledWith(content);
+  });
+
+  it('renders capability-gated message actions without mutating by default', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+
+    renderMessage('Answer ready.', 'assistant', undefined, {
+      onAction,
+      message: {
+        id: 'message-1',
+        role: 'assistant',
+        content: 'Answer ready.',
+        actions: [
+          {
+            id: 'regenerate',
+            label: 'Regenerate response',
+            disabled: true,
+            disabledReason: 'Wait for the current response to finish first.',
+          },
+        ],
+      },
+    });
+
+    const action = screen.getByRole('button', {
+      name: 'Regenerate response',
+    });
+    expect(action).toBeDisabled();
+    expect(action).toHaveAttribute(
+      'title',
+      'Wait for the current response to finish first.'
+    );
+
+    await user.click(action);
+
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it('renders assistant Activity as visible timeline rows with expandable details', async () => {

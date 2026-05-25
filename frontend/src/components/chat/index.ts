@@ -1,4 +1,5 @@
 export { ChatContainer } from './ChatContainer';
+export { AssistantComposerInput } from './AssistantComposerInput';
 export { ChatInput } from './ChatInput';
 export { ChatMessage, type Message } from './ChatMessage';
 export { AssistantConversationThread } from './AssistantConversationThread';
@@ -8,6 +9,13 @@ export {
   type AssistantConversationState,
   type AssistantTurnAccessoryRegistry,
 } from './AssistantTurnAdapter';
+export {
+  getConversationMessageActions,
+  type ConversationMessageAction,
+  type ConversationMessageActionContext,
+  type ConversationMessageActionId,
+  type ConversationTransportCapabilities,
+} from './ConversationMessageActions';
 export { ConversationSurface } from './ConversationSurface';
 export {
   createAdminChangeConfirmationState,
@@ -32,6 +40,5 @@ export {
 } from './ConversationUiState';
 export { DocumentScope, type DocumentSource } from './DocumentScope';
 export { ExportButton } from './ExportButton';
-export { MessageList } from './MessageList';
 export { adaptSageStreamEvent } from './SageStreamEventAdapter';
 export { ToolSelector, type Tool } from './ToolSelector';

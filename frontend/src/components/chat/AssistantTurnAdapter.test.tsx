@@ -72,6 +72,8 @@ describe('AssistantTurnAdapter', () => {
     expect(state.turnItems).toHaveLength(2);
     expect(state.turnItems[0].accessory).toBeNull();
     expect(state.turnItems[1].accessory).toEqual(<div>Admin approval</div>);
+    expect(state.turnItems[0].actions).toEqual([]);
+    expect(state.turnItems[1].actions).toEqual([]);
     expect(state.isRunning).toBe(true);
     expect(state.isDisabled).toBe(true);
     expect(state.unsupportedActions).toMatchObject({
@@ -80,6 +82,32 @@ describe('AssistantTurnAdapter', () => {
       regenerate: true,
       stop: true,
     });
+  });
+
+  it('derives message actions only from explicit transport capabilities', () => {
+    const turns: ConversationSurfaceTurn[] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        content: 'Ready.',
+        activitySteps: [],
+        trace: null,
+        traceStatus: null,
+      },
+    ];
+
+    const state = buildAssistantConversationState({
+      turns,
+      isRunning: true,
+      transportCapabilities: { stop: true },
+    });
+
+    expect(state.turnItems[0].actions).toEqual([
+      expect.objectContaining({
+        id: 'stop',
+        disabled: false,
+      }),
+    ]);
   });
 
   it('extracts text from assistant-ui append messages', () => {

@@ -207,6 +207,12 @@ describe('ChatPage', () => {
       'aria-pressed',
       'true'
     );
+    expect(
+      document.querySelector('input[type="file"]')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /attach|upload/i })
+    ).not.toBeInTheDocument();
   });
 
   it('uses the shared Conversation Surface for User Conversations while preserving surrounding controls', async () => {

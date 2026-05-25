@@ -33,9 +33,53 @@ Verification at this checkpoint:
 - `npm run build`
 - `npm test` -> 52 files, 257 tests passed
 
-Known follow-up:
+Known follow-up from this checkpoint:
 
 - The production build still reports the existing Vite large chunk warning. This checkpoint does not address code splitting.
+
+## Checkpoint: assistant-ui cleanup and packaging slices
+
+Date: 2026-05-24
+
+Follow-up cleanup retired the unused bespoke `MessageList` thread path and split the assistant-ui composer into its own `AssistantComposerInput`, leaving the older textarea composer only for the separate Admin Configuration Assistant sidebar flow. `ConversationSurface` now owns the assistant-ui thread plus assistant-ui composer path directly.
+
+Bundle evidence:
+
+- Before route splitting: `index-tPKJYf8I.js` was 5,340.73 kB, 1,736.65 kB gzip, and Vite emitted the large chunk warning.
+- Low-risk route splitting moved Chat, Admin, diagnostics, onboarding, and pending routes into lazy chunks. The Admin Configuration Assistant is also lazy-loaded from `AdminRoute`.
+- After low-risk splitting: `ChatPage-BHlVCX0E.js` is 194.21 kB, `AdminConfigAssistant-DsHqjASd.js` is 36.11 kB, and the entry chunk is reduced to `index-BUY2u4PA.js` at 2,958.81 kB, 1,141.61 kB gzip.
+- The Vite warning remains because shared vendor/config-icon chunks are still over 500 kB, including `DynamicIcon-BBm8YdBF.js` and `adminApplyIntent-DX-jX2yP.js`. A manual vendor split was tested but produced circular chunk warnings, so it was not kept. Further reduction should be a separate dependency/import audit rather than bundler machinery.
+
+Visual polish evidence:
+
+- Composer context controls now live in a named wrapping group so Tools, Documents, and adjacent controls can wrap on narrow viewports instead of forcing horizontal overflow.
+- User message bubbles use a viewport-aware max width on mobile.
+- Copy controls are quieter by default and become visible on hover or focus.
+- Running feedback uses tighter min/max width constraints so it stays attached to the thread without resizing surrounding layout.
+
+## Decision Checkpoint: remaining ChatGPT-style affordances
+
+Date: 2026-05-24
+
+Composer attachment semantics:
+
+- Composer attachments mean selecting already-ingested Document Library records as next-turn Required Context.
+- The chat composer does not upload files, hold ephemeral browser-only file attachments, or expose assistant-ui attachment persistence as a product contract.
+- Document persistence, Retrieval availability, deletion, export, trace visibility, active-content handling, and authorization remain owned by the existing Document Library and Retrieval workflow.
+- Unsupported file attachment affordances should stay absent so the composer does not imply hidden upload, multimodal, or one-turn file semantics.
+
+Transport-backed chat commands:
+
+- Stop, regenerate, and edit are not exposed until Sage publishes transport-backed command semantics for cancellation, turn supersession/branching, Session Memory mutation, Activity/Trace persistence, export, authorization, and Admin Change Confirmation invalidation.
+- The frontend now has a capability-gated message action model that defaults to no actions and hides unsupported controls instead of rendering fake disabled ChatGPT-style buttons.
+- No command mutates Conversation Content or Session Memory in this checkpoint.
+
+Tool-call lifecycle:
+
+- Enclave keeps the current sanitized Activity adapter rather than adopting native assistant-ui tool-call lifecycle parts.
+- Sage remains the authority for sanitized Activity, redaction, persistence, resume, export, and Trace Visibility Policy boundaries.
+- Raw tool inputs/outputs, SQL results, decrypted rows, secrets, prompts, provider traces, hidden instructions, and hidden chain of thought must not be mapped into frontend tool-call parts.
+- Admin Change Confirmation remains separate from Activity and still requires explicit approval.
 
 ## Full End-To-End Smoke Gate
 

@@ -25,7 +25,7 @@ export function AssistantConversationThread({
       <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col">
         <ThreadPrimitive.Viewport
           autoScroll
-          className="flex-1 overflow-y-auto px-3 py-6 sm:px-4"
+          className="flex-1 overflow-y-auto px-2 py-5 sm:px-4 sm:py-6"
         >
           <div className="mx-auto w-full max-w-3xl">
             {assistantState.turnItems.length === 0 &&
@@ -33,21 +33,24 @@ export function AssistantConversationThread({
               <ConversationEmptyState />
             ) : (
               <>
-                {assistantState.turnItems.map(({ turn, accessory }) => (
-                  <div key={turn.id}>
-                    <ChatMessage
-                      message={{
-                        id: turn.id,
-                        role: turn.role,
-                        content: turn.content,
-                        trace: turn.trace,
-                        traceStatus: turn.traceStatus,
-                        activitySteps: turn.activitySteps,
-                      }}
-                    />
-                    {accessory}
-                  </div>
-                ))}
+                {assistantState.turnItems.map(
+                  ({ turn, accessory, actions }) => (
+                    <div key={turn.id}>
+                      <ChatMessage
+                        message={{
+                          id: turn.id,
+                          role: turn.role,
+                          content: turn.content,
+                          trace: turn.trace,
+                          traceStatus: turn.traceStatus,
+                          activitySteps: turn.activitySteps,
+                          actions,
+                        }}
+                      />
+                      {accessory}
+                    </div>
+                  )
+                )}
                 {notices}
                 {assistantState.isRunning && (
                   <ConversationRunningIndicator label={runningLabel} />
@@ -67,8 +70,8 @@ function ConversationEmptyState() {
   return (
     <div className="flex min-h-[24rem] items-center justify-center p-4">
       <div className="w-full max-w-lg min-w-0 animate-fade-in text-center">
-        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-surface-raised text-accent">
-          <MessageCircle className="h-7 w-7" strokeWidth={1.75} />
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-raised text-accent">
+          <MessageCircle className="h-6 w-6" strokeWidth={1.75} />
         </div>
         <h2 className="heading-xl mb-2 text-balance">
           {t('chat.emptyState.title')}
@@ -84,11 +87,11 @@ function ConversationEmptyState() {
 function ConversationRunningIndicator({ label }: { label: string }) {
   return (
     <div className="mb-4 animate-fade-in-up">
-      <div className="flex gap-3">
+      <div className="flex min-w-0 gap-3">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-surface-raised text-accent">
           <Sparkles className="h-4 w-4" aria-hidden="true" />
         </div>
-        <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-border bg-surface-raised px-4 py-3">
+        <div className="flex min-w-0 max-w-full items-center gap-2 rounded-2xl rounded-bl-md border border-border bg-surface-raised px-4 py-3">
           <div className="flex items-center gap-1">
             <span className="typing-dot h-2 w-2 rounded-full bg-accent/60" />
             <span className="typing-dot h-2 w-2 rounded-full bg-accent/60" />
