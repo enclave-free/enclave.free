@@ -101,6 +101,24 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertIn("detail", response.json())
         self.assertNotIn("context_text", response.text)
 
+    def test_unapproved_admin_actor_is_rejected_without_context(self) -> None:
+        payload = {
+            **self.admin_payload,
+            "actor": {
+                **self.admin_payload["actor"],
+                "approved": False,
+            },
+        }
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json=payload,
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("approved admin", response.json()["detail"].lower())
+        self.assertNotIn("context_text", response.text)
+
     def test_overview_response_includes_required_contract_fields(self) -> None:
         response = self.client.post(
             "/internal/agent/scoped-config-context",

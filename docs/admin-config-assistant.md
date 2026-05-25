@@ -53,8 +53,8 @@ Tool defaults:
 - Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
 - Config context is default-on for admin configuration conversations, while web search still follows Sage-owned session defaults.
 - When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage automatically uses Document Library Retrieval as first-party Instance context before answering.
-- Admin `/chat` uses the same assistant pipeline as the sidebar (scoped context + changeset review/apply) and does not use document-scope RAG mode when the config tool is selected.
-- **Context Parity**: Both sidebar and full chat now use identical server-side scoped configuration context assembly.
+- Admin `/chat` and the sidebar use the same server-side scoped configuration context pipeline: scoped context assembly, prompt budgeting, change-set review, and confirmed apply.
+- Admin `/chat` does not use document-scope RAG mode when the config tool is selected.
 
 Sidebar behavior:
 - On desktop admin pages, the assistant appears as a right sidebar by default.
@@ -110,32 +110,15 @@ They mean Instance Settings, not frontend CSS token or source-code theme edits. 
 
 Instance visual identity changes should be proposed as a confirmed change set using a partial `PUT /admin/settings` request body. They still require Admin Change Confirmation before any write is applied.
 
-The former full snapshot behavior fetched:
+Both the sidebar assistant and full chat page (`/chat` with admin-config tool)
+use the same server-side scoped configuration context contract:
+`POST /admin/scoped-config-context`. Context assembly is owned by the Control
+Plane, not the browser.
 
-- Instance settings:
-  - `GET /admin/settings`
-- Deployment config (masked secrets):
-  - `GET /admin/deployment/config`
-- Optional service health:
-  - `GET /admin/deployment/health`
-- Agent Settings:
-  - `GET /admin/ai-config`
-  - `GET /admin/ai-config/user-type/{user_type_id}` for each user type
-- User types + fields:
-  - `GET /admin/user-types`
-  - `GET /admin/user-fields?user_type_id={user_type_id}` for each user type
-- Document defaults:
-  - `GET /ingest/admin/documents/defaults`
-  - `GET /ingest/admin/documents/defaults/user-type/{user_type_id}` for each user type
-
-If secret sharing is enabled, it additionally fetches:
-
-- For every deployment config item with `is_secret=true`:
-  - `GET /admin/deployment/config/{key}/reveal`
-
-**Unified Server-Side Context Assembly**: Both the sidebar assistant and full chat page (`/chat` with admin-config tool) now use the same server-side scoped configuration context contract (`POST /admin/scoped-config-context`). Context assembly is owned by the Control Plane, not the browser.
-
-Full snapshot behavior is retained as a manual/debug behavior via **Refresh context** in the sidebar assistant. Normal admin turns use server-side scoped context classification and assembly for both admin surfaces.
+The browser may request `mode: full` through **Refresh context** for
+manual/debug refreshes, but the returned full context is still assembled by the
+server contract. Normal admin turns use server-side scope classification and
+assembly for both admin surfaces.
 
 ### Model Provider Resilience
 
@@ -147,7 +130,11 @@ Resilience layering on admin sends (sidebar assistant):
 2. **Prompt budget planning** — admin config, document, and recent-conversation sections are capped separately (`frontend/src/utils/promptBudget.ts`).
 3. **Transport trim** — `llmChat` still bounds recent history as a final guard.
 
-Admin `/chat` with **Config** selected runs the same scoped context pipeline as the sidebar assistant: client-side Session Memory compaction, server-side context assembly via `POST /admin/scoped-config-context`, and prompt budget planning. Both surfaces have identical context behavior and reduced-context notices.
+Admin `/chat` with **Config** selected runs the same scoped context pipeline as
+the sidebar assistant: Session Memory compaction, server-side context assembly
+via `POST /admin/scoped-config-context`, prompt budget planning, change-set
+review, and confirmed apply. Both surfaces have identical context behavior and
+reduced-context notices.
 
 Operator-facing notices (no raw prompts):
 
@@ -161,10 +148,6 @@ Operator-facing notices (no raw prompts):
 **Sanitized instrumentation** (`frontend/src/utils/adminResilienceInstrumentation.ts`): maintainers can register listeners for structured metadata after compaction, prompt budgeting, and classified provider failures. Payloads include section names, estimated sizes, included/reduced/omitted scopes, provider category, and recovery action — never raw prompts, secrets, or provider traces.
 
 ### Scoped Read Resilience
-
-Status: planned. The frontend admin assistant currently builds and refreshes
-context in `frontend/src/components/admin/AdminConfigAssistant.tsx`; the Python
-runtime tool only returns a small scoped context and warning field today.
 
 Scoped config reads are best-effort. A slow or failing supporting endpoint should not block the admin assistant turn unless the failure means the admin is not authorized.
 
@@ -200,8 +183,8 @@ The chat request should proceed once the context budget is spent.
 ### Scoped Read Cache
 
 Status: planned. Cache invalidation and scoped-read budgets are design
-requirements for the frontend/backend config-context builder, not guarantees
-currently implemented by `backend/app/tools/admin_config.py`.
+requirements for the server-side scoped configuration context contract, not
+guarantees currently implemented by the Control Plane.
 
 The runtime tool may cache successful scoped reads briefly during an admin assistant conversation:
 

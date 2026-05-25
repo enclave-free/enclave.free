@@ -539,6 +539,7 @@ export function ChatPage() {
   const selectedTools = conversationState.selectedTools;
   const selectedDocuments = conversationState.selectedDocuments;
   const conversationSessionId = conversationState.conversationSessionId;
+  const configToolEnabled = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
   const isLoading = conversationState.isRunning;
   const error = conversationState.error;
   const selectedDocumentSources = useMemo(
@@ -548,6 +549,11 @@ export function ChatPage() {
         .filter((document): document is DocumentSource => Boolean(document)),
     [documents, selectedDocuments]
   );
+
+  useEffect(() => {
+    setShareSecrets(false);
+    setSecretsForRedaction([]);
+  }, [conversationSessionId, configToolEnabled]);
 
   const [reachoutOpen, setReachoutOpen] = useState(false);
   const [reachoutEnabled, setReachoutEnabled] = useState(false);
@@ -945,6 +951,10 @@ export function ChatPage() {
           type: 'adminConfigToolToggled',
           selectedAfterToggle,
         });
+        if (!selectedAfterToggle) {
+          setShareSecrets(false);
+          setSecretsForRedaction([]);
+        }
       }
       dispatchConversation({ type: 'toolToggled', toolId });
     },
@@ -1157,7 +1167,7 @@ export function ChatPage() {
   );
 
   const handleSend = async (content: string) => {
-    const hasConfigTool = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
+    const hasConfigTool = configToolEnabled;
     const hasPendingChangeSet = adminApplyState.state === 'review';
     const applyIntent = hasConfigTool
       ? resolveAdminApplyIntent(content, hasPendingChangeSet)
@@ -2023,6 +2033,8 @@ IMPORTANT: Return a CONDENSED response:
     setSupersededAdminApprovals([]);
     setSessionMemoryNotice(null);
     setReducedContextNotice(null);
+    setShareSecrets(false);
+    setSecretsForRedaction([]);
     setActiveConversationTitle(null);
     setRenameDraft(null);
     setRenameStatus('idle');
