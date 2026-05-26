@@ -390,8 +390,10 @@ def build_scoped_config_context(
         mode: `auto` classifies the query; `overview` forces overview scope.
         requested_scopes: Optional explicit scope hints for multi-scope reads.
     """
-    if actor.get("type") != "admin":
-        raise ScopedConfigAuthorizationError("Admin actor required for scoped config context")
+    if actor.get("type") != "admin" or not actor.get("approved"):
+        raise ScopedConfigAuthorizationError(
+            "Approved admin actor required for scoped config context"
+        )
 
     generated_at = _utc_now_iso()
     primary_scope, included_scopes = resolve_included_scopes(

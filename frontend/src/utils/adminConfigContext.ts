@@ -41,6 +41,8 @@ export interface ServerScopedConfigContextResponse {
 
 type FetchJsonFn = <T>(endpoint: string, options?: RequestInit) => Promise<T>;
 
+const EXPECTED_SCOPED_CONFIG_CONTEXT_VERSION = 1;
+
 interface AdminConfigContextBaseOptions {
   shareSecrets: boolean;
   fetchJson: FetchJsonFn;
@@ -126,6 +128,12 @@ function mapServerResponseToResult(
     fetchJson: FetchJsonFn;
   }
 ): Promise<AdminConfigContextResult> {
+  if (response.version !== EXPECTED_SCOPED_CONFIG_CONTEXT_VERSION) {
+    throw new Error(
+      `Unsupported scoped config context version: ${String(response.version)}`
+    );
+  }
+
   const deploymentSecretKeys = new Set(response.deployment_secret_keys);
   const revealPromise = options.shareSecrets
     ? revealDeploymentSecretValues(

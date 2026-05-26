@@ -1640,6 +1640,40 @@ describe('ChatPage', () => {
     );
   });
 
+  it('clears admin secret sharing when starting fresh or disabling Config', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    const shareToggle = screen.getByLabelText(
+      'Share secret env vars'
+    ) as HTMLInputElement;
+    await user.click(shareToggle);
+    expect(shareToggle).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Start a new chat' }));
+    expect(screen.getByLabelText('Share secret env vars')).not.toBeChecked();
+
+    await user.click(screen.getByLabelText('Share secret env vars'));
+    expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(
+      screen.queryByLabelText('Share secret env vars')
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(screen.getByLabelText('Share secret env vars')).not.toBeChecked();
+  });
+
   it('applies a grouped admin Change Confirmation from authenticated admin chat', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);

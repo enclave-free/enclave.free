@@ -181,4 +181,27 @@ describe('buildFullAdminConfigContext', () => {
     expect(result.secretValues).toEqual(['smtp-secret-value']);
     expect(result.context).not.toContain('smtp-secret-value');
   });
+
+  it('rejects unsupported server contract versions before revealing secrets', async () => {
+    const fetchJson = mockFetchJson(async (endpoint) => {
+      if (endpoint === '/admin/scoped-config-context') {
+        return {
+          ...fullRefreshResponse,
+          version: 2,
+        };
+      }
+      if (endpoint === '/admin/deployment/config/SMTP_PASSWORD/reveal') {
+        throw new Error('secret reveal should not be called');
+      }
+      throw new Error(`unexpected fetch: ${endpoint}`);
+    });
+
+    await expect(
+      buildFullAdminConfigContext({
+        shareSecrets: true,
+        fetchJson,
+      })
+    ).rejects.toThrow('Unsupported scoped config context version: 2');
+    expect(fetchJson).toHaveBeenCalledTimes(1);
+  });
 });
