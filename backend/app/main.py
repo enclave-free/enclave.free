@@ -86,6 +86,7 @@ from ingest import load_jobs_and_resume, router as ingest_router
 from ai_config import router as ai_config_router
 from deployment_config import internal_router as deployment_config_internal_router
 from deployment_config import router as deployment_config_router
+from admin_scoped_config import router as admin_scoped_config_router
 import deployment_config
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
@@ -298,6 +299,7 @@ app.include_router(ingest_router)
 app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(deployment_config_internal_router)
+app.include_router(admin_scoped_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
 app.include_router(lifecycle.router)

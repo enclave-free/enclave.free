@@ -53,11 +53,103 @@ function ChatPageTestWrapper({ children }: { children: ReactNode }) {
 describe('ChatPage', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
   const mockIsAdminAuthenticated = vi.mocked(isAdminAuthenticated);
+  const rawMockAdminFetchImplementation =
+    mockAdminFetch.mockImplementation.bind(mockAdminFetch);
+
+  const scopedConfigResponse = (
+    overrides: Partial<{
+      primary_scope: string;
+      included_scopes: string[];
+      context_text: string;
+      warnings: string[];
+      deployment_secret_keys: string[];
+    }> = {}
+  ) => ({
+    version: 1,
+    primary_scope: 'instance-settings',
+    included_scopes: ['instance-settings'],
+    context_text: [
+      'SCOPED CONFIG CONTEXT',
+      'Generated: 2026-05-25T12:00:00+00:00',
+      'scope: instance-settings',
+      '',
+      'INSTANCE SETTINGS (/admin/settings)',
+      '- default_theme: dark',
+      '',
+      'INSTANCE BRANDING, THEME, AND COPY SETTINGS',
+      '- default_theme (Default theme): current value: dark',
+    ].join('\n'),
+    warnings: [],
+    generated_at: '2026-05-25T12:00:00+00:00',
+    secret_policy: { mode: 'masked' },
+    deployment_secret_keys: [],
+    ...overrides,
+  });
+
+  const scopedConfigResponseForRequest = (options?: RequestInit) => {
+    const body = options?.body ? JSON.parse(String(options.body)) : {};
+    const query = String(body.query ?? '').toLowerCase();
+    if (query.includes('deployment') || query.includes('model')) {
+      return scopedConfigResponse({
+        primary_scope: 'deployment-settings',
+        included_scopes: ['deployment-settings'],
+        context_text: [
+          'SCOPED CONFIG CONTEXT',
+          'scope: deployment-settings',
+          '',
+          'DEPLOYMENT SETTINGS (/admin/deployment/config)',
+          '- LLM_API_KEY = [REDACTED] requires_restart=true secret=true',
+          '',
+          'SECRETS',
+          'Secret env vars are masked in this context.',
+          '- LLM_API_KEY = [REDACTED]',
+        ].join('\n'),
+        deployment_secret_keys: ['LLM_API_KEY'],
+      });
+    }
+    return scopedConfigResponse();
+  };
+
+  const defaultAdminFetch = (endpoint: string, options?: RequestInit) => {
+    if (endpoint === '/admin/scoped-config-context') {
+      return Promise.resolve(
+        Response.json(scopedConfigResponseForRequest(options))
+      );
+    }
+    if (endpoint === '/ingest/admin/documents/context-preview') {
+      return Promise.resolve(
+        Response.json({
+          documents: [
+            {
+              job_id: 'job-brand-guide',
+              filename: 'brand-guide.pdf',
+              preview_chunks: [
+                {
+                  text: 'Use muted blue tones for the primary brand palette.',
+                },
+              ],
+            },
+          ],
+          limits: {
+            max_documents: 5,
+            max_chunks_per_document: 3,
+            max_chars_per_chunk: 1200,
+          },
+        })
+      );
+    }
+    return null;
+  };
 
   beforeEach(() => {
     resetAdminResilienceInstrumentationListeners();
     mockIsAdminAuthenticated.mockReturnValue(false);
-    mockAdminFetch.mockResolvedValue(Response.json({}));
+    mockAdminFetch.mockImplementation = ((implementation) =>
+      rawMockAdminFetchImplementation((endpoint, options) => {
+        const defaultResponse = defaultAdminFetch(endpoint, options);
+        if (defaultResponse) return defaultResponse;
+        return implementation(endpoint, options);
+      })) as typeof mockAdminFetch.mockImplementation;
     const store = new Map<string, string>();
     vi.stubGlobal('localStorage', {
       getItem: vi.fn((key: string) => store.get(key) ?? null),
@@ -78,7 +170,14 @@ describe('ChatPage', () => {
     );
     localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'reader@example.com');
     vi.mocked(isAdminAuthenticated).mockReturnValue(false);
-    vi.mocked(adminFetch).mockResolvedValue(Response.json({}));
+    vi.mocked(adminFetch).mockImplementation(
+      (endpoint: string, options?: RequestInit) => {
+        return (
+          defaultAdminFetch(endpoint, options) ??
+          Promise.resolve(Response.json({}))
+        );
+      }
+    );
 
     vi.stubGlobal(
       'fetch',
@@ -1298,7 +1397,7 @@ describe('ChatPage', () => {
         });
         onEvent('trace_status', {
           message_id: 'msg-stream',
-          status: 'Writing answer...',
+          status: 'Finalizing response...',
         });
         onEvent('answer_delta', {
           message_id: 'msg-stream',
@@ -1326,7 +1425,9 @@ describe('ChatPage', () => {
 
     expect(await screen.findByText('Streamed hello.')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.queryByText('Writing answer...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Finalizing response...')
+      ).not.toBeInTheDocument();
     });
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
@@ -1537,6 +1638,79 @@ describe('ChatPage', () => {
         tools: expect.arrayContaining(['admin-config']),
       })
     );
+  });
+
+  it('clears admin secret sharing when starting fresh or disabling Config', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    const shareToggle = screen.getByLabelText(
+      'Share secret env vars'
+    ) as HTMLInputElement;
+    await user.click(shareToggle);
+    expect(shareToggle).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Start a new chat' }));
+    expect(screen.getByLabelText('Share secret env vars')).not.toBeChecked();
+
+    await user.click(screen.getByLabelText('Share secret env vars'));
+    expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(
+      screen.queryByLabelText('Share secret env vars')
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(screen.getByLabelText('Share secret env vars')).not.toBeChecked();
+  });
+
+  it('preserves admin secret sharing on first persisted session assignment', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg',
+          delta: 'Admin answer.',
+        });
+        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    await user.click(screen.getByLabelText('Share secret env vars'));
+    expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Review instance config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Admin answer.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
   });
 
   it('applies a grouped admin Change Confirmation from authenticated admin chat', async () => {

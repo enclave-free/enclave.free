@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,31 +7,52 @@
     <!-- Fonts: Inter for UI, JetBrains Mono for code -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <!-- Prevent flash of wrong theme -->
     <script>
-      (function() {
+      (function () {
         // Apply dark mode
         const theme = localStorage.getItem('enclave-theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const prefersDark = window.matchMedia(
+          '(prefers-color-scheme: dark)'
+        ).matches;
         if (theme === 'dark' || (!theme && prefersDark)) {
           document.documentElement.classList.add('dark');
         }
 
         // Apply accent color from cached config
         try {
-          const config = JSON.parse(localStorage.getItem('enclave_instance_config') || '{}');
-          const validColors = ['blue', 'purple', 'green', 'orange', 'pink', 'teal'];
+          const config = JSON.parse(
+            localStorage.getItem('enclave_instance_config') || '{}'
+          );
+          const validColors = [
+            'blue',
+            'purple',
+            'green',
+            'orange',
+            'pink',
+            'teal',
+          ];
           if (config.accentColor && validColors.includes(config.accentColor)) {
-            document.documentElement.classList.add('accent-' + config.accentColor);
+            document.documentElement.classList.add(
+              'accent-' + config.accentColor
+            );
           }
 
           if (typeof config.name === 'string' && config.name.trim()) {
             document.title = config.name.trim();
           }
 
-          if (typeof config.faviconUrl === 'string' && config.faviconUrl.trim()) {
-            const existing = document.head.querySelector('link[rel="icon"][data-instance-branding="true"]');
+          if (
+            typeof config.faviconUrl === 'string' &&
+            config.faviconUrl.trim()
+          ) {
+            const existing = document.head.querySelector(
+              'link[rel="icon"][data-instance-branding="true"]'
+            );
             const link = existing || document.createElement('link');
             link.setAttribute('rel', 'icon');
             link.setAttribute('data-instance-branding', 'true');
@@ -41,8 +62,13 @@
             }
           }
 
-          if (typeof config.appleTouchIconUrl === 'string' && config.appleTouchIconUrl.trim()) {
-            const existing = document.head.querySelector('link[rel="apple-touch-icon"][data-instance-branding="true"]');
+          if (
+            typeof config.appleTouchIconUrl === 'string' &&
+            config.appleTouchIconUrl.trim()
+          ) {
+            const existing = document.head.querySelector(
+              'link[rel="apple-touch-icon"][data-instance-branding="true"]'
+            );
             const link = existing || document.createElement('link');
             link.setAttribute('rel', 'apple-touch-icon');
             link.setAttribute('data-instance-branding', 'true');
@@ -56,8 +82,8 @@
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-DqwWBbH0.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-SBLY6izJ.css">
+    <script type="module" crossorigin src="/assets/index-BeSc2lu0.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D081-U1M.css" />
   </head>
   <body>
     <div id="root"></div>

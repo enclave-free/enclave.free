@@ -533,7 +533,10 @@ function TraceWarnings({ warnings }: { warnings: string[] }) {
 }
 
 function isInternalWritingStatus(status: string) {
-  return status.trim().toLowerCase().replace(/\.+$/, '') === 'writing answer';
+  const normalized = status.trim().toLowerCase().replace(/\.+$/, '');
+  return (
+    normalized === 'writing answer' || normalized === 'finalizing response'
+  );
 }
 
 function isSafeMarkdownHref(href?: string) {

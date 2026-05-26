@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   type Dispatch,
   type FormEvent,
   type ReactNode,
@@ -15,6 +16,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Database,
+  EyeOff,
   Mail,
   Pencil,
   Plus,
@@ -70,6 +72,7 @@ import { Button, Callout, IconButton } from '../components/ui';
 import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
+  redactSecrets,
   stripAdminAssistantChangeSetJson,
   validateAdminAssistantChangeSet,
   type AdminAssistantChangeSet,
@@ -89,6 +92,8 @@ import {
   recordAdminContextPlanInstrumentation,
   recordProviderFailureInstrumentation,
 } from '../utils/adminResilienceInstrumentation';
+import { buildScopedAdminConfigContext } from '../utils/adminConfigContext';
+import { fetchBoundedAdminDocumentContext } from '../utils/adminDocumentContext';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -526,6 +531,8 @@ export function ChatPage() {
   );
   const [deploymentSecretKeysLoaded, setDeploymentSecretKeysLoaded] =
     useState(false);
+  const [shareSecrets, setShareSecrets] = useState(false);
+  const [secretsForRedaction, setSecretsForRedaction] = useState<string[]>([]);
   const messages = useMemo(
     () => conversationState.turns.map(conversationTurnToMessage),
     [conversationState.turns]
@@ -533,6 +540,10 @@ export function ChatPage() {
   const selectedTools = conversationState.selectedTools;
   const selectedDocuments = conversationState.selectedDocuments;
   const conversationSessionId = conversationState.conversationSessionId;
+  const configToolEnabled = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
+  const prevConversationSessionIdRef = useRef<string | null>(
+    conversationSessionId
+  );
   const isLoading = conversationState.isRunning;
   const error = conversationState.error;
   const selectedDocumentSources = useMemo(
@@ -542,6 +553,20 @@ export function ChatPage() {
         .filter((document): document is DocumentSource => Boolean(document)),
     [documents, selectedDocuments]
   );
+
+  useEffect(() => {
+    const previousSessionId = prevConversationSessionIdRef.current;
+    const sessionWasReset = conversationSessionId === null;
+    const sessionWasSwapped =
+      previousSessionId !== null && conversationSessionId !== previousSessionId;
+
+    if (!configToolEnabled || sessionWasReset || sessionWasSwapped) {
+      setShareSecrets(false);
+      setSecretsForRedaction([]);
+    }
+
+    prevConversationSessionIdRef.current = conversationSessionId;
+  }, [conversationSessionId, configToolEnabled]);
 
   const [reachoutOpen, setReachoutOpen] = useState(false);
   const [reachoutEnabled, setReachoutEnabled] = useState(false);
@@ -939,6 +964,10 @@ export function ChatPage() {
           type: 'adminConfigToolToggled',
           selectedAfterToggle,
         });
+        if (!selectedAfterToggle) {
+          setShareSecrets(false);
+          setSecretsForRedaction([]);
+        }
       }
       dispatchConversation({ type: 'toolToggled', toolId });
     },
@@ -1151,7 +1180,7 @@ export function ChatPage() {
   );
 
   const handleSend = async (content: string) => {
-    const hasConfigTool = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
+    const hasConfigTool = configToolEnabled;
     const hasPendingChangeSet = adminApplyState.state === 'review';
     const applyIntent = hasConfigTool
       ? resolveAdminApplyIntent(content, hasPendingChangeSet)
@@ -1185,6 +1214,8 @@ export function ChatPage() {
           content: turnContent,
         })
       );
+      let baseToolContext: string | undefined;
+      let secretsForThisRequest = secretsForRedaction;
       if (hasConfigTool) {
         const sessionMemoryPlan = compactAdminSessionMemory({
           conversationHistory,
@@ -1197,11 +1228,29 @@ export function ChatPage() {
               )
             : null
         );
+        // Build scoped admin config context using server contract (same as AdminConfigAssistant)
+        const snap = await buildScopedAdminConfigContext({
+          query: content,
+          shareSecrets,
+          fetchJson,
+        });
+        const documentContext = await fetchBoundedAdminDocumentContext({
+          query: content,
+          fetchJson,
+        });
+
+        secretsForThisRequest = snap.secretValues;
+        setSecretsForRedaction(snap.secretValues);
+
         const promptPlan = planAdminPromptBudget({
-          adminConfigContext: '',
+          adminConfigContext: snap.context,
+          documentContext: documentContext.included
+            ? documentContext.context
+            : '',
           conversationHistory: sessionMemoryPlan.conversationHistory,
         });
         conversationHistory = promptPlan.conversationHistory;
+        baseToolContext = promptPlan.toolContext || undefined;
         setReducedContextNotice(
           formatAdminReducedContextNotice(promptPlan.reducedSections, {
             sectionLabels: {
@@ -1272,7 +1321,10 @@ export function ChatPage() {
                   type: 'assistantTurnStarted',
                   id,
                   sessionId: streamSessionId,
-                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                  traceStatus: t(
+                    'chat.trace.finalizing',
+                    'Finalizing response...'
+                  ),
                 });
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
@@ -1281,7 +1333,9 @@ export function ChatPage() {
                   type: 'assistantContentReplaced',
                   assistantTurnId: streamMessageId,
                   content: prepareAssistantContentForDisplay(
-                    streamContent,
+                    shareSecrets
+                      ? redactSecrets(streamContent, secretsForThisRequest)
+                      : streamContent,
                     hasConfigTool
                   ),
                 });
@@ -1371,6 +1425,7 @@ export function ChatPage() {
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: backendTools,
+            baseToolContext: hasConfigTool ? baseToolContext : undefined,
             sessionId: conversationSessionId,
             conversationHistory,
             onEvent: (event, payload) => {
@@ -1388,7 +1443,10 @@ export function ChatPage() {
                   type: 'assistantTurnStarted',
                   id,
                   sessionId: streamSessionId,
-                  traceStatus: t('chat.trace.writing', 'Writing answer...'),
+                  traceStatus: t(
+                    'chat.trace.finalizing',
+                    'Finalizing response...'
+                  ),
                 });
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
@@ -1397,7 +1455,9 @@ export function ChatPage() {
                   type: 'assistantContentReplaced',
                   assistantTurnId: streamMessageId,
                   content: prepareAssistantContentForDisplay(
-                    streamContent,
+                    shareSecrets
+                      ? redactSecrets(streamContent, secretsForThisRequest)
+                      : streamContent,
                     hasConfigTool
                   ),
                 });
@@ -1507,6 +1567,7 @@ export function ChatPage() {
         response = await sendLlmChatWithUnifiedTools({
           content,
           tools: backendTools,
+          baseToolContext: hasConfigTool ? baseToolContext : undefined,
           sessionId: conversationSessionId,
           conversationHistory,
         });
@@ -1587,7 +1648,9 @@ export function ChatPage() {
             ? data.message_id
             : generateMessageId(),
         content: prepareAssistantContentForDisplay(
-          responseContent,
+          shareSecrets
+            ? redactSecrets(responseContent, secretsForThisRequest)
+            : responseContent,
           hasConfigTool
         ),
         trace: data.trace ?? null,
@@ -1983,6 +2046,8 @@ IMPORTANT: Return a CONDENSED response:
     setSupersededAdminApprovals([]);
     setSessionMemoryNotice(null);
     setReducedContextNotice(null);
+    setShareSecrets(false);
+    setSecretsForRedaction([]);
     setActiveConversationTitle(null);
     setRenameDraft(null);
     setRenameStatus('idle');
@@ -2361,6 +2426,33 @@ IMPORTANT: Return a CONDENSED response:
           onToggle={handleToolToggle}
           compact
         />
+        {isAdmin && selectedTools.includes(CONFIG_TOOL_ID) && (
+          <>
+            <div className="h-4 w-px bg-border" />
+            <label
+              htmlFor="share-secrets-toggle-compact"
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                id="share-secrets-toggle-compact"
+                type="checkbox"
+                checked={shareSecrets}
+                onChange={(e) => {
+                  setShareSecrets(e.target.checked);
+                  setSecretsForRedaction([]);
+                }}
+                className="w-3 h-3"
+              />
+              <EyeOff className="w-3 h-3 text-text-muted" />
+              <span className="text-[10px] text-text-muted">
+                {t(
+                  'admin.configAssistant.shareSecretsTitle',
+                  'Share secret env vars'
+                )}
+              </span>
+            </label>
+          </>
+        )}
       </div>
     </section>
   ) : (
@@ -2394,6 +2486,33 @@ IMPORTANT: Return a CONDENSED response:
           onToggle={handleToolToggle}
           compact
         />
+        {isAdmin && selectedTools.includes(CONFIG_TOOL_ID) && (
+          <>
+            <div className="h-4 w-px bg-border" />
+            <label
+              htmlFor="share-secrets-toggle"
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                id="share-secrets-toggle"
+                type="checkbox"
+                checked={shareSecrets}
+                onChange={(e) => {
+                  setShareSecrets(e.target.checked);
+                  setSecretsForRedaction([]);
+                }}
+                className="w-3 h-3"
+              />
+              <EyeOff className="w-3 h-3 text-text-muted" />
+              <span className="text-[10px] text-text-muted">
+                {t(
+                  'admin.configAssistant.shareSecretsTitle',
+                  'Share secret env vars'
+                )}
+              </span>
+            </label>
+          </>
+        )}
         <div className="h-4 w-px bg-border" />
         <span className="text-[11px] font-medium text-text-muted">
           {t('chat.documentsContextTitle', 'Documents')}
