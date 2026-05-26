@@ -259,12 +259,92 @@ def _build_agent_settings_section(
     }
 
 
+def _build_user_type_write_contract_lines() -> list[str]:
+    private_field_example = {
+        "version": 1,
+        "summary": "Create an Activist user type with private onboarding fields.",
+        "requests": [
+            {
+                "method": "POST",
+                "path": "/admin/user-types",
+                "body": {
+                    "name": "Activist",
+                    "description": "Users participating as activists",
+                    "display_order": 0,
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/admin/user-fields",
+                "body": {
+                    "field_name": "Name",
+                    "field_type": "text",
+                    "required": True,
+                    "display_order": 0,
+                    "user_type_id": "@type:activist",
+                    "placeholder": "Your name",
+                    "encryption_enabled": True,
+                    "include_in_chat": False,
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/admin/user-fields",
+                "body": {
+                    "field_name": "Email",
+                    "field_type": "email",
+                    "required": True,
+                    "display_order": 1,
+                    "user_type_id": "@type:activist",
+                    "placeholder": "you@example.org",
+                    "encryption_enabled": True,
+                    "include_in_chat": False,
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/admin/user-fields",
+                "body": {
+                    "field_name": "Phone Number",
+                    "field_type": "text",
+                    "required": True,
+                    "display_order": 2,
+                    "user_type_id": "@type:activist",
+                    "placeholder": "Your phone number",
+                    "encryption_enabled": True,
+                    "include_in_chat": False,
+                },
+            },
+        ],
+    }
+    return [
+        "",
+        "USER TYPE AND FIELD WRITE CONTRACT",
+        "- Create user types with POST /admin/user-types and body keys: "
+        "name, description, icon, display_order.",
+        "- Create onboarding fields with POST /admin/user-fields and body keys: "
+        "field_name, field_type, required, display_order, user_type_id, "
+        "placeholder, options, encryption_enabled, include_in_chat.",
+        "- Supported field_type values: text, textarea, number, boolean, email, "
+        "url, select, multi_select, date.",
+        "- For phone/contact numbers, prefer field_type text so formatting and "
+        "leading +/0 characters are preserved.",
+        "- Private onboarding fields use encryption_enabled=true and "
+        "include_in_chat=false. Encrypted fields cannot be included in chat context.",
+        "- Use @type:<slug> placeholders when one change set creates a user type "
+        "and then creates fields for it.",
+        "Example private onboarding change set:",
+        json.dumps(private_field_example, indent=2, sort_keys=True),
+    ]
+
+
 def _build_user_types_section(*, warnings: list[str]) -> dict[str, Any]:
     user_types = database.list_user_types()
     lines = [
         "USER TYPES (/admin/user-types)",
         json.dumps({"types": user_types}, indent=2, sort_keys=True, default=str),
     ]
+    lines.extend(_build_user_type_write_contract_lines())
     included_types = user_types[:MAX_USER_TYPES_FANOUT]
     if len(user_types) > MAX_USER_TYPES_FANOUT:
         warnings.append(

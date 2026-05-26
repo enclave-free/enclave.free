@@ -255,6 +255,33 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertIn("USER FIELDS (user_type_id=", context_text)
         self.assertIn("Focus Area", context_text)
 
+    def test_user_type_context_includes_actionable_private_field_contract(self) -> None:
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": (
+                    'Help me configure a new user type "Activist". '
+                    "I need to get their name, email, and number when they onboard "
+                    "but keep their name and number private."
+                ),
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["primary_scope"], "user-types")
+        context_text = body["context_text"]
+        self.assertIn("USER TYPE AND FIELD WRITE CONTRACT", context_text)
+        self.assertIn("POST /admin/user-types", context_text)
+        self.assertIn("POST /admin/user-fields", context_text)
+        self.assertIn("encryption_enabled", context_text)
+        self.assertIn("include_in_chat", context_text)
+        self.assertIn("@type:activist", context_text)
+        self.assertIn('"field_name": "Phone Number"', context_text)
+
     def test_document_defaults_includes_global_and_per_type_defaults(self) -> None:
         type_id = self.database.create_user_type(name="Advocate", display_order=0)
 

@@ -164,9 +164,12 @@ AGENT_SETTINGS_KEYWORDS: frozenset[str] = frozenset({
 USER_TYPES_KEYWORDS: frozenset[str] = frozenset({
     "field",
     "fields",
+    "onboard",
     "onboarding",
     "question",
     "questions",
+    "type",
+    "types",
     "user",
     "users",
 })
@@ -255,11 +258,22 @@ def contains_keyword(query: str, keywords: frozenset[str]) -> bool:
     return bool(tokens.intersection(keywords))
 
 
+def is_user_type_configuration_query(query: str) -> bool:
+    normalized = query.lower()
+    return bool(
+        re.search(r"\buser\s+types?\b", normalized)
+        or re.search(r"\bonboarding\b|\bonboard\b", normalized)
+        or re.search(r"\buser\s+fields?\b", normalized)
+    )
+
+
 def _matches_scope(query: str, scope: str) -> bool:
     normalized = query.lower()
     if scope == "overview":
         return contains_keyword(query, OVERVIEW_KEYWORDS)
     if scope == "instance-settings":
+        if is_user_type_configuration_query(query):
+            return False
         if re.search(r"status[_\s-]?icon", normalized):
             return True
         return (
@@ -272,7 +286,10 @@ def _matches_scope(query: str, scope: str) -> bool:
         return contains_keyword(query, HEALTH_KEYWORDS)
     if scope == "user-types":
         return (
-            contains_keyword(query, USER_TYPES_KEYWORDS)
+            (
+                is_user_type_configuration_query(query)
+                or contains_keyword(query, USER_TYPES_KEYWORDS)
+            )
             and not contains_keyword(query, AGENT_SETTINGS_KEYWORDS)
         )
     if scope == "agent-settings":
