@@ -51,6 +51,38 @@ ADMIN_VISIBLE_TOOLS: tuple[dict[str, Any], ...] = (
             "Show me recent user onboarding activity",
             "List all user types and their field counts",
         ],
+        "available_tables": [
+            {
+                "name": "users",
+                "description": "User accounts with identity, profile, and approval status",
+                "key_columns": ["id", "pubkey", "user_type_id", "approved", "created_at"],
+            },
+            {
+                "name": "user_types",
+                "description": "User type definitions for segmenting onboarding workflows",
+                "key_columns": ["id", "name", "description"],
+            },
+            {
+                "name": "user_field_definitions",
+                "description": "Custom onboarding field definitions; may be global (user_type_id=NULL) or per-type",
+                "key_columns": ["id", "field_name", "field_type", "user_type_id", "required", "encryption_enabled"],
+            },
+            {
+                "name": "user_field_values",
+                "description": "User answers to onboarding questions (one row per user per field)",
+                "key_columns": ["id", "user_id", "field_id", "encryption_enabled"],
+            },
+            {
+                "name": "instance_settings",
+                "description": "Instance configuration including branding, copy, and operational settings",
+                "key_columns": ["key", "value"],
+            },
+            {
+                "name": "admins",
+                "description": "Admin accounts authorized to configure the instance",
+                "key_columns": ["id", "pubkey"],
+            },
+        ],
     },
 )
 

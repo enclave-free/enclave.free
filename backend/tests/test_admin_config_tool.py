@@ -156,6 +156,50 @@ class AdminConfigToolTest(unittest.TestCase):
                 )
                 self.assertIsNone(result.error)
 
+    def test_db_query_tool_includes_available_tables(self) -> None:
+        result = asyncio.run(self.tool.execute(query="what tools do you have?"))
+
+        self.assertTrue(result.success)
+        tools = result.data["tool_capabilities"]
+        db_query_tool = next(tool for tool in tools if tool["id"] == "db-query")
+        self.assertIn("available_tables", db_query_tool)
+        available_tables = db_query_tool["available_tables"]
+        self.assertIsInstance(available_tables, (list, tuple))
+        self.assertGreaterEqual(len(available_tables), 4)
+
+        table_names = {table["name"] for table in available_tables}
+        expected_tables = {"users", "user_types", "user_field_definitions", "user_field_values", "instance_settings", "admins"}
+        self.assertSetEqual(table_names, expected_tables)
+
+    def test_db_query_available_tables_have_descriptions_and_key_columns(self) -> None:
+        result = asyncio.run(self.tool.execute(query="what tools do you have?"))
+
+        tools = result.data["tool_capabilities"]
+        db_query_tool = next(tool for tool in tools if tool["id"] == "db-query")
+
+        for table in db_query_tool["available_tables"]:
+            with self.subTest(table=table["name"]):
+                self.assertIn("name", table)
+                self.assertIn("description", table)
+                self.assertIn("key_columns", table)
+                self.assertIsInstance(table["description"], str)
+                self.assertGreater(len(table["description"]), 0)
+                self.assertIsInstance(table["key_columns"], (list, tuple))
+                self.assertGreaterEqual(len(table["key_columns"]), 2)
+
+    def test_db_query_schema_key_columns_include_important_fields(self) -> None:
+        result = asyncio.run(self.tool.execute(query="what tools do you have?"))
+
+        tools = result.data["tool_capabilities"]
+        db_query_tool = next(tool for tool in tools if tool["id"] == "db-query")
+
+        tables_by_name = {table["name"]: table["key_columns"] for table in db_query_tool["available_tables"]}
+
+        self.assertIn("user_type_id", tables_by_name.get("users", []))
+        self.assertIn("approved", tables_by_name.get("users", []))
+        self.assertIn("encryption_enabled", tables_by_name.get("user_field_definitions", []))
+        self.assertIn("user_type_id", tables_by_name.get("user_field_definitions", []))
+
 
 if __name__ == "__main__":
     unittest.main()
