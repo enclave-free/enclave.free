@@ -568,6 +568,34 @@ class ScopedConfigContextContractTest(unittest.TestCase):
                     f"Tool guidance missing in mode={mode}",
                 )
 
+    def test_name_keyword_user_type_query_not_misclassified_as_instance_settings(self) -> None:
+        self.database.create_user_type(
+            name="Designer",
+            description="Design-focused users",
+            display_order=0,
+        )
+
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": (
+                    'Help me configure a new user type "Researcher". '
+                    "I need their name and email as onboarding questions."
+                ),
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["primary_scope"], "user-types")
+        self.assertNotEqual(body["primary_scope"], "instance-settings")
+        context_text = body["context_text"]
+        self.assertIn("USER TYPES (/admin/user-types)", context_text)
+        self.assertNotIn("INSTANCE VISUAL IDENTITY SETTINGS", context_text)
+
 
 if __name__ == "__main__":
     unittest.main()
