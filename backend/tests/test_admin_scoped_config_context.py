@@ -154,6 +154,110 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
         self.assertNotIn("super-secret-smtp-password", body["context_text"])
         self.assertNotIn("super-secret-smtp-password", response.text)
 
+    def test_ppst_free_them_instance_settings_includes_branding_theme_and_copy(self) -> None:
+        self.database.update_setting("instance_name", "Free Them")
+        self.database.update_setting("description", "PPST support instance")
+        self.database.update_setting("assistant_name", "Sage")
+        self.database.update_setting("header_tagline", "Support political prisoners")
+        self.database.update_setting("user_label", "Advocate")
+        self.database.update_setting("default_theme", "dark")
+        self.database.update_setting("primary_color", "#C53030")
+        self.database.update_setting("chat_bubble_style", "soft")
+        self.database.update_setting("status_icon_set", "minimal")
+        self.database.update_setting("typography_preset", "modern")
+        self.database.upsert_deployment_config(
+            key="LLM_API_KEY",
+            value="secret-api-key",
+            is_secret=True,
+            requires_restart=False,
+            category="llm",
+            description="Model Provider API key",
+            changed_by="test-admin",
+        )
+
+        response = self.client.post(
+            "/admin/scoped-config-context",
+            json={
+                "query": (
+                    "Help me configure a Free Them instance for PPST. "
+                    "Set up branding, theme, and copy that fits a political "
+                    "prisoner support organization."
+                ),
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        context_text = body["context_text"]
+
+        self.assertEqual(body["primary_scope"], "instance-settings")
+        self.assertEqual(body["secret_policy"], {"mode": "masked"})
+
+        branding_copy_keys = [
+            "instance_name",
+            "description",
+            "logo_url",
+            "icon",
+            "assistant_icon",
+            "assistant_name",
+            "user_label",
+            "header_tagline",
+        ]
+        for key in branding_copy_keys:
+            self.assertIn(key, context_text, f"Branding/copy key {key} missing from context")
+
+        theme_identity_keys = [
+            "default_theme",
+            "primary_color",
+            "chat_bubble_style",
+            "chat_bubble_shadow",
+            "surface_style",
+            "status_icon_set",
+            "typography_preset",
+        ]
+        for key in theme_identity_keys:
+            self.assertIn(key, context_text, f"Theme/identity key {key} missing from context")
+
+        self.assertIn("Free Them", context_text)
+        self.assertIn("PPST support instance", context_text)
+        self.assertIn("Sage", context_text)
+        self.assertIn("dark", context_text)
+
+        self.assertIn("partial PUT /admin/settings", context_text)
+        self.assertIn('"method": "PUT"', context_text)
+        self.assertIn('"path": "/admin/settings"', context_text)
+        self.assertIn("Change Confirmation", context_text)
+        self.assertIn("valid JSON change set", context_text)
+
+        self.assertNotIn("secret-api-key", context_text)
+        self.assertNotIn("secret-api-key", response.text)
+
+        self.assertIn("LLM_API_KEY", body["deployment_secret_keys"])
+        secret_keys_in_context = body["deployment_secret_keys"]
+        self.assertIn("LLM_API_KEY", secret_keys_in_context)
+
+    def test_ppst_free_them_instance_settings_claims_no_keys_unavailable(self) -> None:
+        self.database.update_setting("instance_name", "Free Them")
+        self.database.update_setting("assistant_name", "Sage")
+
+        response = self.client.post(
+            "/admin/scoped-config-context",
+            json={
+                "query": "What branding and copy settings are available for my Free Them instance?",
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+
+        self.assertNotIn("/admin/settings/default_theme", context_text)
+        self.assertNotIn("/admin/settings/primary_color", context_text)
+        self.assertNotIn("/admin/settings/instance_name", context_text)
+        self.assertNotIn("not configurable", context_text.lower())
+        self.assertNotIn("read only", context_text.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
