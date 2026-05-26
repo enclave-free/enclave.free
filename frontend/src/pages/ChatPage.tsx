@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   type Dispatch,
   type FormEvent,
   type ReactNode,
@@ -540,6 +541,9 @@ export function ChatPage() {
   const selectedDocuments = conversationState.selectedDocuments;
   const conversationSessionId = conversationState.conversationSessionId;
   const configToolEnabled = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
+  const prevConversationSessionIdRef = useRef<string | null>(
+    conversationSessionId
+  );
   const isLoading = conversationState.isRunning;
   const error = conversationState.error;
   const selectedDocumentSources = useMemo(
@@ -551,8 +555,17 @@ export function ChatPage() {
   );
 
   useEffect(() => {
-    setShareSecrets(false);
-    setSecretsForRedaction([]);
+    const previousSessionId = prevConversationSessionIdRef.current;
+    const sessionWasReset = conversationSessionId === null;
+    const sessionWasSwapped =
+      previousSessionId !== null && conversationSessionId !== previousSessionId;
+
+    if (!configToolEnabled || sessionWasReset || sessionWasSwapped) {
+      setShareSecrets(false);
+      setSecretsForRedaction([]);
+    }
+
+    prevConversationSessionIdRef.current = conversationSessionId;
   }, [conversationSessionId, configToolEnabled]);
 
   const [reachoutOpen, setReachoutOpen] = useState(false);

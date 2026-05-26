@@ -1674,6 +1674,45 @@ describe('ChatPage', () => {
     expect(screen.getByLabelText('Share secret env vars')).not.toBeChecked();
   });
 
+  it('preserves admin secret sharing on first persisted session assignment', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg',
+          delta: 'Admin answer.',
+        });
+        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    await user.click(screen.getByLabelText('Share secret env vars'));
+    expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'Review instance config.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Admin answer.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
+  });
+
   it('applies a grouped admin Change Confirmation from authenticated admin chat', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
