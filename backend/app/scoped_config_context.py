@@ -14,7 +14,7 @@ from typing import Any, Callable, Literal, Optional
 
 import database
 from tools.admin_config_context import (
-    ADMIN_VISIBLE_TOOL_CAPABILITIES,
+    ADMIN_VISIBLE_TOOLS,
     build_instance_settings_change_set_example,
     instance_settings_fields,
     resolve_included_scopes,
@@ -75,7 +75,7 @@ def _build_control_contract_lines(
         "",
         "ADMIN-VISIBLE TOOL CAPABILITIES",
     ]
-    for tool in ADMIN_VISIBLE_TOOL_CAPABILITIES:
+    for tool in ADMIN_VISIBLE_TOOLS:
         lines.append(
             f"- {tool['id']} ({tool['name']}): {tool['description']} Access: {tool['access']}."
         )
@@ -90,6 +90,17 @@ def _build_control_contract_lines(
         "- When the admin delegates a configuration task, inspect first-party context, choose reasonable defaults for unspecified details, and state important assumptions briefly.",
         "- For a coherent delegated admin configuration task, group related settings into one executable change set instead of splitting every setting into separate proposals.",
         "- Never call prose-only bullets or recommendations a Change Confirmation. A Change Confirmation requires exactly one valid JSON change set that the UI can validate and preview.",
+        "",
+        "HOW TO USE THESE TOOLS",
+        "",
+        "admin-config: Call to inspect or understand any configuration area.",
+        "Each call returns the relevant configuration scope and context for that area.",
+        "You may call it multiple times to understand different configuration areas.",
+        "",
+        "db-query: Call for analytics, user counts, or data inspection.",
+        "Use this for questions about existing data, patterns, or inventory.",
+        "",
+        "web-search: Call for current information or best practices (when enabled).",
         "",
         "CHANGESET FORMAT (optional)",
         "If you want the admin to apply changes from this chat, include exactly one JSON code block with this shape:",

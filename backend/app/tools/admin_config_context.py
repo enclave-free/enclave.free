@@ -4,24 +4,53 @@ import re
 from typing import Any
 
 
-ADMIN_VISIBLE_TOOL_CAPABILITIES: tuple[dict[str, str], ...] = (
+ADMIN_VISIBLE_TOOLS: tuple[dict[str, Any], ...] = (
     {
         "id": "web-search",
         "name": "Web Search",
         "access": "all users when enabled",
-        "description": "Looks up current or external information through the configured SearXNG service.",
+        "description": (
+            "Looks up current or external information through the configured SearXNG service. "
+            "Use this to find best practices, current documentation, or external reference material "
+            "that may inform configuration decisions."
+        ),
+        "examples": [
+            "Search for current best practices on data retention policies",
+            "Look up the latest documentation for Enclave deployment settings",
+            "Find guidance on GDPR compliance for user onboarding",
+        ],
     },
     {
         "id": "admin-config",
         "name": "Admin Config",
         "access": "admins only",
-        "description": "Reads scoped admin configuration context and can support confirmed configuration changes.",
+        "description": (
+            "Read instance configuration including settings, deployment configuration, user types, "
+            "onboarding structure, document access policies, and agent behavior. Ask about what you "
+            "need to inspect or change, and the tool returns the relevant context with actionable "
+            "schema for configuration changes."
+        ),
+        "examples": [
+            "What user types are configured?",
+            "Show me the SMTP email settings",
+            "How do I create a user type with encrypted private fields?",
+            "What instance settings control data retention?",
+        ],
     },
     {
         "id": "db-query",
         "name": "Database",
         "access": "admins only",
-        "description": "Runs safe read-only admin database queries for troubleshooting and inspection.",
+        "description": (
+            "Runs safe read-only admin database queries using natural language for analytics, "
+            "user inspection, troubleshooting, or data analysis. Use this for questions about "
+            "existing data, patterns, or inventory."
+        ),
+        "examples": [
+            "How many users are currently registered?",
+            "Show me recent user onboarding activity",
+            "List all user types and their field counts",
+        ],
     },
 )
 
@@ -228,6 +257,8 @@ def contains_keyword(query: str, keywords: frozenset[str]) -> bool:
 
 def _matches_scope(query: str, scope: str) -> bool:
     normalized = query.lower()
+    if scope == "overview":
+        return contains_keyword(query, OVERVIEW_KEYWORDS)
     if scope == "instance-settings":
         if re.search(r"status[_\s-]?icon", normalized):
             return True
@@ -293,6 +324,48 @@ def resolve_included_scopes(
     if len(matched_scopes) > 1:
         return matched_scopes[0], matched_scopes
     return primary_scope, [primary_scope]
+
+
+OVERVIEW_KEYWORDS: frozenset[str] = frozenset({
+    "capabilities",
+    "capability",
+    "tool",
+    "tools",
+})
+
+SCOPE_DESCRIPTIONS: dict[str, str] = {
+    "overview": "High-level instance summary with instance name, description, and assistant identity.",
+    "instance-settings": "Instance branding, theme, visual identity, and copy settings.",
+    "deployment-settings": "Deployment environment settings including SMTP, SSL, model provider, and SearXNG configuration.",
+    "agent-settings": "Sage agent behavior settings including prompts, max tokens, temperature, and personalization.",
+    "user-types": "User type definitions and onboarding field configuration.",
+    "document-defaults": "Document access defaults and ingestion policies per user type.",
+    "health": "Service health, readiness, and restart-required deployment keys.",
+}
+
+CONFIDENCE_THRESHOLD = 0.7
+
+
+def compute_scope_confidence(query: str, matched_scopes: list[str]) -> float:
+    if not matched_scopes:
+        return 0.0
+    if matched_scopes == ["overview"]:
+        return 0.9 if contains_keyword(query, OVERVIEW_KEYWORDS) else 0.3
+    match_count = len(matched_scopes)
+    if match_count == 1:
+        return 0.9
+    if match_count == 2:
+        return 0.85
+    if match_count == 3:
+        return 0.8
+    return 0.7
+
+
+def build_available_scopes_response() -> list[dict[str, str]]:
+    return [
+        {"id": scope, "description": SCOPE_DESCRIPTIONS.get(scope, "")}
+        for scope in ALL_DOCUMENTED_SCOPES
+    ]
 
 
 def select_deployment_category(query: str) -> str | None:

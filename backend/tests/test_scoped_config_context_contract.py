@@ -503,6 +503,44 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertEqual(tagline_field["mutation"], "PUT /admin/settings")
         self.assertIn("valid_values", tagline_field)
 
+    def test_scoped_context_includes_tool_use_guidance_section(self) -> None:
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={**self.admin_payload, "mode": "overview"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+        self.assertIn("HOW TO USE THESE TOOLS", context_text)
+        self.assertIn("admin-config: Call to inspect or understand any configuration area", context_text)
+        self.assertIn("db-query: Call for analytics, user counts, or data inspection", context_text)
+        self.assertIn("web-search: Call for current information or best practices", context_text)
+        self.assertIn("You may call it multiple times to understand different configuration areas", context_text)
+
+    def test_tool_use_guidance_appears_in_all_scoped_context_modes(self) -> None:
+        modes_with_queries = [
+            ("auto", "change the admin prompt and max tokens"),
+            ("overview", "what tools do you have?"),
+        ]
+        for mode, query in modes_with_queries:
+            with self.subTest(mode=mode):
+                response = self.client.post(
+                    "/internal/agent/scoped-config-context",
+                    headers=self.headers,
+                    json={
+                        **self.admin_payload,
+                        "query": query,
+                        "mode": mode,
+                    },
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(
+                    "HOW TO USE THESE TOOLS",
+                    response.json()["context_text"],
+                    f"Tool guidance missing in mode={mode}",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

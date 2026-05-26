@@ -10,8 +10,12 @@ import database
 
 from .base import BaseTool, ToolDefinition, ToolResult
 from .admin_config_context import (
-    ADMIN_VISIBLE_TOOL_CAPABILITIES,
+    ADMIN_VISIBLE_TOOLS,
+    build_available_scopes_response,
+    compute_scope_confidence,
+    CONFIDENCE_THRESHOLD,
     select_deployment_category,
+    select_matching_scopes,
     select_scope,
     visual_identity_settings,
 )
@@ -42,12 +46,26 @@ class AdminConfigTool(BaseTool):
     async def execute(self, **kwargs: Any) -> ToolResult:
         try:
             query = str(kwargs.get("query") or "")
+            matched_scopes = select_matching_scopes(query)
+            confidence = compute_scope_confidence(query, matched_scopes)
+            if confidence < CONFIDENCE_THRESHOLD:
+                return ToolResult(
+                    success=False,
+                    data={
+                        "available_scopes": build_available_scopes_response(),
+                        "confidence": confidence,
+                    },
+                    error=(
+                        "Unable to confidently classify query. "
+                        "Please clarify which configuration area you are asking about."
+                    ),
+                )
             scope = select_scope(query)
             settings = database.get_all_settings()
             data: dict[str, Any] = {
                 "scope": scope,
                 "instance_settings": settings,
-                "tool_capabilities": ADMIN_VISIBLE_TOOL_CAPABILITIES,
+                "tool_capabilities": ADMIN_VISIBLE_TOOLS,
                 "visual_identity_settings": visual_identity_settings(settings),
                 "warnings": [],
             }
