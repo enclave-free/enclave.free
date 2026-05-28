@@ -93,7 +93,6 @@ import {
   recordProviderFailureInstrumentation,
 } from '../utils/adminResilienceInstrumentation';
 import { refreshAdminConfigRedactionMetadata } from '../utils/adminConfigContext';
-import { fetchBoundedAdminDocumentContext } from '../utils/adminDocumentContext';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -1252,10 +1251,6 @@ export function ChatPage() {
               )
             : null
         );
-        const documentContext = await fetchBoundedAdminDocumentContext({
-          query: content,
-          fetchJson,
-        });
 
         if (shareSecrets) {
           const metadata = await refreshAdminConfigRedactionMetadata({
@@ -1268,9 +1263,7 @@ export function ChatPage() {
 
         const promptPlan = planAdminPromptBudget({
           adminConfigContext: '',
-          documentContext: documentContext.included
-            ? documentContext.context
-            : '',
+          documentContext: '',
           conversationHistory: sessionMemoryPlan.conversationHistory,
         });
         conversationHistory = promptPlan.conversationHistory;

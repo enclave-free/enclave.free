@@ -32,7 +32,6 @@ import {
   loadDeploymentSecretKeysFromConfig,
   refreshAdminConfigRedactionMetadata,
 } from '../../utils/adminConfigContext';
-import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
 import {
   planAdminPromptBudget,
   formatAdminReducedContextNotice,
@@ -366,15 +365,9 @@ export function AdminConfigAssistant({
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
-          const documentContext = await fetchBoundedAdminDocumentContext({
-            query: content,
-            fetchJson,
-          });
           const promptPlan = planAdminPromptBudget({
             adminConfigContext: '',
-            documentContext: documentContext.included
-              ? documentContext.context
-              : '',
+            documentContext: '',
             conversationHistory: boundedConversationHistory,
           });
           baseToolContext = promptPlan.toolContext || undefined;

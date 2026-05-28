@@ -315,7 +315,7 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
-  it('delegates scoped config to Sage and only sends bounded document context on send', async () => {
+  it('relies on Sage for document context retrieval (Sage-only path)', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
       async ({ onEvent }) => {
@@ -362,15 +362,14 @@ describe('AdminConfigAssistant', () => {
       vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
         .baseToolContext || '';
     expect(context).not.toContain('SCOPED CONFIG CONTEXT');
-    expect(context).toContain('BOUNDED DOCUMENT CONTEXT');
-    expect(context).toContain('brand-guide.pdf');
+    expect(context).not.toContain('BOUNDED DOCUMENT CONTEXT');
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/scoped-config-context',
       expect.objectContaining({
         method: 'POST',
       })
     );
-    expect(mockAdminFetch).toHaveBeenCalledWith(
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/ingest/admin/documents/context-preview',
       undefined
     );
@@ -457,9 +456,8 @@ describe('AdminConfigAssistant', () => {
     });
   }, 15_000);
 
-  it('bounds oversized assembled context for provider calls and surfaces a reduced-context notice', async () => {
+  it('skips client-side document context fetching (Sage-only path)', async () => {
     const user = userEvent.setup();
-    const oversizedAdminPadding = `ADMIN-PAD-${'A'.repeat(20_000)}`;
     const oversizedDocumentPadding = `DOC-PAD-${'D'.repeat(10_000)}`;
     const instrumentationEvents: AdminResilienceInstrumentationEvent[] = [];
     registerAdminResilienceInstrumentationListener((event) => {
@@ -491,15 +489,13 @@ describe('AdminConfigAssistant', () => {
       return Promise.resolve(Response.json({}));
     });
     mockPlanAdminPromptBudget.mockReturnValueOnce({
-      toolContext:
-        'PROMPT BUDGET NOTE\n- document library context was reduced to fit the provider budget\n\nBOUNDED DOCUMENT CONTEXT\n- brand-guide.pdf\n...[context truncated for provider budget]',
+      toolContext: 'No document context sent from client',
       conversationHistory: [],
-      includedSections: ['document-context'],
-      reducedSections: ['document-context'],
-      omittedSections: ['admin-config'],
-      estimatedChars: 600,
-      warningNote:
-        'PROMPT BUDGET NOTE\n- document library context was reduced to fit the provider budget',
+      includedSections: [],
+      reducedSections: [],
+      omittedSections: ['document-context'],
+      estimatedChars: 50,
+      warningNote: null,
     });
 
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
@@ -532,41 +528,17 @@ describe('AdminConfigAssistant', () => {
       .calls[0][0];
     const context = providerCall.baseToolContext || '';
 
-    expect(context).not.toContain(oversizedAdminPadding);
     expect(context).not.toContain(oversizedDocumentPadding);
-    expect(context).toContain('...[context truncated for provider budget]');
-    expect(context.length).toBeLessThanOrEqual(
-      DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.documentContextChars + 500
-    );
+    expect(context).not.toContain('BOUNDED DOCUMENT CONTEXT');
     expect(mockPlanAdminPromptBudget).toHaveBeenCalledWith(
       expect.objectContaining({
         adminConfigContext: '',
+        documentContext: '',
       })
     );
-
-    const notice = await screen.findByRole('note', {
-      name: 'Reduced context notice',
-    });
-    expect(notice).toHaveTextContent(/document library context/);
-    expect(notice).not.toHaveTextContent(/admin configuration context/);
-    expect(notice).not.toHaveTextContent('ADMIN-PAD-');
-    expect(notice).not.toHaveTextContent('DOC-PAD-');
-
-    expect(instrumentationEvents).toHaveLength(1);
-    expect(instrumentationEvents[0]).toMatchObject({
-      kind: 'admin_context_plan',
-      surface: 'admin_config_assistant',
-      promptBudget: {
-        reducedSections: ['document-context'],
-        hasWarningNote: true,
-      },
-    });
-    expect(JSON.stringify(instrumentationEvents[0])).not.toContain(
-      'ADMIN-PAD-'
-    );
-    expect(JSON.stringify(instrumentationEvents[0])).not.toContain('DOC-PAD-');
-    expect(JSON.stringify(instrumentationEvents[0])).not.toContain(
-      'PROMPT BUDGET NOTE'
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/ingest/admin/documents/context-preview',
+      undefined
     );
   });
 
