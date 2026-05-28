@@ -273,9 +273,10 @@ describe('AdminConfigAssistant', () => {
       </ThemeProvider>
     );
 
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/session-defaults');
-    });
+    expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -343,9 +344,10 @@ describe('AdminConfigAssistant', () => {
       </ThemeProvider>
     );
 
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/session-defaults');
-    });
+    expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -385,9 +387,10 @@ describe('AdminConfigAssistant', () => {
       </ThemeProvider>
     );
 
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/session-defaults');
-    });
+    expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),

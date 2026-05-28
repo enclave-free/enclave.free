@@ -1356,7 +1356,12 @@ async def update_deployment_config_value(
         from scoped_config_context import invalidate_scoped_config_context_cache
         invalidate_scoped_config_context_cache()
     except Exception as e:
-        logger.debug(f"scoped_config_context cache invalidation skipped after {key}: {e}")
+        logger.warning(
+            "invalidate_scoped_config_context_cache failed after updating %s: %s",
+            key,
+            e,
+            exc_info=True,
+        )
 
     # Return updated config
     updated = database.get_deployment_config(key)

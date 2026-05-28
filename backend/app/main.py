@@ -136,7 +136,10 @@ def _invalidate_scoped_config_context_cache() -> None:
         from scoped_config_context import invalidate_scoped_config_context_cache
         invalidate_scoped_config_context_cache()
     except Exception as exc:
-        logger.debug(f"Failed to invalidate scoped config context cache: {exc}")
+        logger.warning(
+            f"Failed to invalidate scoped config context cache: {exc}",
+            exc_info=True,
+        )
 
 
 app = FastAPI(

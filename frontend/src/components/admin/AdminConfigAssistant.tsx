@@ -19,7 +19,6 @@ import { adminFetch } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
-import { API_BASE } from '../../types/onboarding';
 import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
@@ -234,27 +233,6 @@ export function AdminConfigAssistant({
   );
 
   const hasConfigTool = selectedTools.includes(CONFIG_TOOL_ID);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchSessionDefaults = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/session-defaults`);
-        if (!res.ok) return;
-        if (cancelled) return;
-        setSelectedTools([CONFIG_TOOL_ID]);
-      } catch {
-        // Keep local defaults on error.
-      }
-    };
-
-    fetchSessionDefaults();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -617,7 +595,6 @@ export function AdminConfigAssistant({
     [
       applyState,
       conversationSessionId,
-      fetchJson,
       hasConfigTool,
       messages,
       selectedTools,
