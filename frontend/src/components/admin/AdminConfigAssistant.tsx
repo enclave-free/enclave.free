@@ -19,7 +19,6 @@ import { adminFetch } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
-import { API_BASE } from '../../types/onboarding';
 import {
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
@@ -29,9 +28,9 @@ import {
 } from '../../utils/adminAssistant';
 import {
   buildFullAdminConfigContext,
-  buildScopedAdminConfigContext,
+  loadDeploymentSecretKeysFromConfig,
+  refreshAdminConfigRedactionMetadata,
 } from '../../utils/adminConfigContext';
-import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
 import {
   planAdminPromptBudget,
   formatAdminReducedContextNotice,
@@ -144,7 +143,6 @@ export function AdminConfigAssistant({
   } | null>(null);
   const [applyState, setApplyState] = useState<ApplyState>({ state: 'idle' });
   const [selectedTools, setSelectedTools] = useState<string[]>([
-    'web-search',
     CONFIG_TOOL_ID,
   ]);
 
@@ -239,28 +237,23 @@ export function AdminConfigAssistant({
   useEffect(() => {
     let cancelled = false;
 
-    const fetchSessionDefaults = async () => {
+    const loadDeploymentSecretKeys = async () => {
       try {
-        const res = await fetch(`${API_BASE}/session-defaults`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        setSelectedTools(
-          data.web_search_enabled
-            ? ['web-search', CONFIG_TOOL_ID]
-            : [CONFIG_TOOL_ID]
-        );
+        const secretKeys = await loadDeploymentSecretKeysFromConfig(fetchJson);
+        if (!cancelled) {
+          deploymentSecretKeysRef.current = secretKeys;
+        }
       } catch {
-        // Keep local defaults on error.
+        // Keep pessimistic masking when metadata is unavailable.
       }
     };
 
-    fetchSessionDefaults();
+    loadDeploymentSecretKeys();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchJson]);
 
   const handleToolToggle = useCallback(
     (toolId: string) => {
@@ -345,20 +338,9 @@ export function AdminConfigAssistant({
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
-          const snap = await buildScopedAdminConfigContext({
-            query: content,
-            shareSecrets,
-            fetchJson,
-          });
-          const documentContext = await fetchBoundedAdminDocumentContext({
-            query: content,
-            fetchJson,
-          });
           const promptPlan = planAdminPromptBudget({
-            adminConfigContext: snap.context,
-            documentContext: documentContext.included
-              ? documentContext.context
-              : '',
+            adminConfigContext: '',
+            documentContext: '',
             conversationHistory: boundedConversationHistory,
           });
           baseToolContext = promptPlan.toolContext || undefined;
@@ -392,9 +374,6 @@ export function AdminConfigAssistant({
             sessionMemoryPlan,
             promptPlan,
           });
-          setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
-          secretsForRedactionRef.current = snap.secretValues;
-          deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
         }
 
         let streamed = false;
@@ -616,7 +595,6 @@ export function AdminConfigAssistant({
     [
       applyState,
       conversationSessionId,
-      fetchJson,
       hasConfigTool,
       messages,
       selectedTools,
@@ -1059,10 +1037,23 @@ export function AdminConfigAssistant({
             type="checkbox"
             checked={shareSecrets}
             disabled={!hasConfigTool}
-            onChange={(e) => {
-              setShareSecrets(e.target.checked);
-              // Clear redaction cache until next snapshot build.
-              secretsForRedactionRef.current = [];
+            onChange={async (e) => {
+              const checked = e.target.checked;
+              setShareSecrets(checked);
+              if (!checked) {
+                secretsForRedactionRef.current = [];
+                return;
+              }
+              try {
+                const metadata = await refreshAdminConfigRedactionMetadata({
+                  shareSecrets: true,
+                  fetchJson,
+                });
+                secretsForRedactionRef.current = metadata.secretValues;
+                deploymentSecretKeysRef.current = metadata.deploymentSecretKeys;
+              } catch {
+                secretsForRedactionRef.current = [];
+              }
             }}
             className="mt-1 disabled:cursor-not-allowed"
           />

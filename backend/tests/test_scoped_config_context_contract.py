@@ -33,9 +33,11 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         os.environ["INTERNAL_AGENT_TOKEN"] = "test-internal-token"
 
         import database
+        import scoped_config_context
         import internal_agent
 
         self.database = importlib.reload(database)
+        self.scoped_config_context = importlib.reload(scoped_config_context)
         self.internal_agent = importlib.reload(internal_agent)
         self.database.init_schema()
 
@@ -158,6 +160,71 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertIn("instance_name: Free Them", context_text)
         self.assertIn("assistant_name: Enclave Assistant", context_text)
 
+    def test_scope_sections_are_cached_until_explicit_invalidation(self) -> None:
+        self.database.update_setting("instance_name", "Before Cache")
+        payload = {
+            **self.admin_payload,
+            "query": "update the instance name and theme",
+            "mode": "auto",
+        }
+
+        first = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json=payload,
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertIn("Before Cache", first.json()["context_text"])
+
+        self.database.update_setting("instance_name", "After Cache")
+        cached = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json=payload,
+        )
+        self.assertEqual(cached.status_code, 200)
+        self.assertIn("Before Cache", cached.json()["context_text"])
+        self.assertNotIn("After Cache", cached.json()["context_text"])
+
+        self.scoped_config_context.invalidate_scoped_config_context_cache()
+        refreshed = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json=payload,
+        )
+        self.assertEqual(refreshed.status_code, 200)
+        self.assertIn("After Cache", refreshed.json()["context_text"])
+
+    def test_scope_cache_expires_after_ttl(self) -> None:
+        original_ttl = self.scoped_config_context.SCOPED_CONFIG_CACHE_TTL_SECONDS
+        try:
+            self.scoped_config_context.SCOPED_CONFIG_CACHE_TTL_SECONDS = -1
+            self.database.update_setting("instance_name", "Before TTL")
+            payload = {
+                **self.admin_payload,
+                "query": "update the instance name and theme",
+                "mode": "auto",
+            }
+            first = self.client.post(
+                "/internal/agent/scoped-config-context",
+                headers=self.headers,
+                json=payload,
+            )
+            self.assertEqual(first.status_code, 200)
+            self.assertIn("Before TTL", first.json()["context_text"])
+
+            self.database.update_setting("instance_name", "After TTL")
+            expired = self.client.post(
+                "/internal/agent/scoped-config-context",
+                headers=self.headers,
+                json=payload,
+            )
+            self.assertEqual(expired.status_code, 200)
+            self.assertIn("After TTL", expired.json()["context_text"])
+        finally:
+            self.scoped_config_context.SCOPED_CONFIG_CACHE_TTL_SECONDS = original_ttl
+            self.scoped_config_context.invalidate_scoped_config_context_cache()
+
     def test_agent_settings_includes_global_ai_config(self) -> None:
         response = self.client.post(
             "/internal/agent/scoped-config-context",
@@ -180,6 +247,27 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertIn("max_tokens", context_text)
         section = next(item for item in body["sections"] if item["scope"] == "agent-settings")
         self.assertIn("prompt_system", section["content"])
+
+    def test_agent_settings_summarizes_large_prompt_values_without_prompt_body(self) -> None:
+        large_prompt = "LARGE-PROMPT-BODY-" + ("x" * 4000)
+        self.database.update_ai_config("prompt_system", large_prompt, changed_by="test-admin")
+
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": "change the admin prompt and max tokens",
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+        self.assertIn("AGENT SETTINGS (/admin/ai-config)", context_text)
+        self.assertIn("prompt_system", context_text)
+        self.assertIn('"value_length":4018', context_text)
+        self.assertNotIn(large_prompt, context_text)
 
     def test_deployment_settings_masks_secret_values(self) -> None:
         self.database.upsert_deployment_config(
@@ -254,6 +342,33 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertIn("Bitcoin Designer", context_text)
         self.assertIn("USER FIELDS (user_type_id=", context_text)
         self.assertIn("Focus Area", context_text)
+
+    def test_user_type_context_includes_actionable_private_field_contract(self) -> None:
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": (
+                    'Help me configure a new user type "Activist". '
+                    "I need to get their name, email, and number when they onboard "
+                    "but keep their name and number private."
+                ),
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["primary_scope"], "user-types")
+        context_text = body["context_text"]
+        self.assertIn("USER TYPE AND FIELD WRITE CONTRACT", context_text)
+        self.assertIn("POST /admin/user-types", context_text)
+        self.assertIn("POST /admin/user-fields", context_text)
+        self.assertIn("encryption_enabled", context_text)
+        self.assertIn("include_in_chat", context_text)
+        self.assertIn("@type:activist", context_text)
+        self.assertIn('"field_name": "Phone Number"', context_text)
 
     def test_document_defaults_includes_global_and_per_type_defaults(self) -> None:
         type_id = self.database.create_user_type(name="Advocate", display_order=0)
@@ -502,6 +617,66 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         self.assertEqual(tagline_field["current_value"], "Support political prisoners")
         self.assertEqual(tagline_field["mutation"], "PUT /admin/settings")
         self.assertIn("valid_values", tagline_field)
+
+    def test_scoped_context_includes_tool_use_guidance_section(self) -> None:
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={**self.admin_payload, "mode": "overview"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+        self.assertIn("HOW TO USE THESE TOOLS", context_text)
+        self.assertIn("admin-config: Call to inspect or understand any configuration area", context_text)
+        self.assertIn("db-query: Call for analytics, user counts, or data inspection", context_text)
+        self.assertIn("web-search: Call for current information or best practices", context_text)
+        self.assertIn("You may call it multiple times to understand different configuration areas", context_text)
+
+    def test_non_overview_scoped_context_uses_compact_tool_contract_reference(self) -> None:
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": "change the admin prompt and max tokens",
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+        self.assertNotIn("ADMIN-VISIBLE TOOL CAPABILITIES", context_text)
+        self.assertNotIn("HOW TO USE THESE TOOLS", context_text)
+        self.assertIn("Tool capability contract: see overview scope.", context_text)
+
+    def test_name_keyword_user_type_query_not_misclassified_as_instance_settings(self) -> None:
+        self.database.create_user_type(
+            name="Designer",
+            description="Design-focused users",
+            display_order=0,
+        )
+
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": (
+                    'Help me configure a new user type "Researcher". '
+                    "I need their name and email as onboarding questions."
+                ),
+                "mode": "auto",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["primary_scope"], "user-types")
+        self.assertNotEqual(body["primary_scope"], "instance-settings")
+        context_text = body["context_text"]
+        self.assertIn("USER TYPES (/admin/user-types)", context_text)
+        self.assertNotIn("INSTANCE VISUAL IDENTITY SETTINGS", context_text)
 
 
 if __name__ == "__main__":

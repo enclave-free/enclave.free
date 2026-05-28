@@ -92,8 +92,7 @@ import {
   recordAdminContextPlanInstrumentation,
   recordProviderFailureInstrumentation,
 } from '../utils/adminResilienceInstrumentation';
-import { buildScopedAdminConfigContext } from '../utils/adminConfigContext';
-import { fetchBoundedAdminDocumentContext } from '../utils/adminDocumentContext';
+import { refreshAdminConfigRedactionMetadata } from '../utils/adminConfigContext';
 
 const CONFIG_TOOL_ID = 'admin-config';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
@@ -686,6 +685,28 @@ export function ChatPage() {
     []
   );
 
+  const handleShareSecretsToggle = useCallback(
+    async (checked: boolean) => {
+      setShareSecrets(checked);
+      if (!checked) {
+        setSecretsForRedaction([]);
+        return;
+      }
+      try {
+        const metadata = await refreshAdminConfigRedactionMetadata({
+          shareSecrets: true,
+          fetchJson,
+        });
+        setSecretsForRedaction(metadata.secretValues);
+        setDeploymentSecretKeys(metadata.deploymentSecretKeys);
+        setDeploymentSecretKeysLoaded(true);
+      } catch {
+        setSecretsForRedaction([]);
+      }
+    },
+    [fetchJson]
+  );
+
   // Reachout settings (public)
   useEffect(() => {
     let isCancelled = false;
@@ -862,13 +883,19 @@ export function ChatPage() {
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          const defaultTools = data.web_search_enabled ? ['web-search'] : [];
-          dispatchConversation({
-            type: 'selectedToolsChanged',
-            selectedTools: isAdmin
-              ? [...defaultTools, CONFIG_TOOL_ID]
-              : defaultTools,
-          });
+          // Admin config sidebar: config-only by default, no inherited web-search
+          if (isAdmin) {
+            dispatchConversation({
+              type: 'selectedToolsChanged',
+              selectedTools: [CONFIG_TOOL_ID],
+            });
+          } else {
+            const defaultTools = data.web_search_enabled ? ['web-search'] : [];
+            dispatchConversation({
+              type: 'selectedToolsChanged',
+              selectedTools: defaultTools,
+            });
+          }
           // Store default document IDs to apply once documents are loaded
           if (
             data.default_document_ids &&
@@ -877,23 +904,19 @@ export function ChatPage() {
             setPendingDefaultDocs(data.default_document_ids);
           }
         } else {
-          // Non-2xx response - fall back to web search enabled by default
+          // Non-2xx response - fall back to web search enabled by default (non-admin only)
           console.warn('Failed to fetch session defaults:', res.status);
           dispatchConversation({
             type: 'selectedToolsChanged',
-            selectedTools: isAdmin
-              ? ['web-search', CONFIG_TOOL_ID]
-              : ['web-search'],
+            selectedTools: isAdmin ? [CONFIG_TOOL_ID] : ['web-search'],
           });
         }
       } catch (err) {
         console.error('Failed to fetch session defaults:', err);
-        // Fall back to web search enabled by default on error
+        // Fall back to web search enabled by default on error (non-admin only)
         dispatchConversation({
           type: 'selectedToolsChanged',
-          selectedTools: isAdmin
-            ? ['web-search', CONFIG_TOOL_ID]
-            : ['web-search'],
+          selectedTools: isAdmin ? [CONFIG_TOOL_ID] : ['web-search'],
         });
       } finally {
         setSessionDefaultsLoaded(true);
@@ -1228,25 +1251,19 @@ export function ChatPage() {
               )
             : null
         );
-        // Build scoped admin config context using server contract (same as AdminConfigAssistant)
-        const snap = await buildScopedAdminConfigContext({
-          query: content,
-          shareSecrets,
-          fetchJson,
-        });
-        const documentContext = await fetchBoundedAdminDocumentContext({
-          query: content,
-          fetchJson,
-        });
 
-        secretsForThisRequest = snap.secretValues;
-        setSecretsForRedaction(snap.secretValues);
+        if (shareSecrets) {
+          const metadata = await refreshAdminConfigRedactionMetadata({
+            shareSecrets: true,
+            fetchJson,
+          });
+          secretsForThisRequest = metadata.secretValues;
+          setSecretsForRedaction(metadata.secretValues);
+        }
 
         const promptPlan = planAdminPromptBudget({
-          adminConfigContext: snap.context,
-          documentContext: documentContext.included
-            ? documentContext.context
-            : '',
+          adminConfigContext: '',
+          documentContext: '',
           conversationHistory: sessionMemoryPlan.conversationHistory,
         });
         conversationHistory = promptPlan.conversationHistory;
@@ -2438,8 +2455,7 @@ IMPORTANT: Return a CONDENSED response:
                 type="checkbox"
                 checked={shareSecrets}
                 onChange={(e) => {
-                  setShareSecrets(e.target.checked);
-                  setSecretsForRedaction([]);
+                  void handleShareSecretsToggle(e.target.checked);
                 }}
                 className="w-3 h-3"
               />
@@ -2498,8 +2514,7 @@ IMPORTANT: Return a CONDENSED response:
                 type="checkbox"
                 checked={shareSecrets}
                 onChange={(e) => {
-                  setShareSecrets(e.target.checked);
-                  setSecretsForRedaction([]);
+                  void handleShareSecretsToggle(e.target.checked);
                 }}
                 className="w-3 h-3"
               />

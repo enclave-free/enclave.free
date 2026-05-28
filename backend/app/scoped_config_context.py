@@ -9,12 +9,15 @@ config-enabled Admin Conversations.
 from __future__ import annotations
 
 import json
+import threading
+import time
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Callable, Literal, Optional
 
 import database
 from tools.admin_config_context import (
-    ADMIN_VISIBLE_TOOL_CAPABILITIES,
+    ADMIN_VISIBLE_TOOLS,
     build_instance_settings_change_set_example,
     instance_settings_fields,
     resolve_included_scopes,
@@ -23,6 +26,10 @@ from tools.admin_config_context import (
 
 CONTRACT_VERSION = 1
 MAX_USER_TYPES_FANOUT = 10
+SCOPED_CONFIG_CACHE_TTL_SECONDS = 30
+
+_scoped_config_cache: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
+_scoped_config_cache_lock = threading.Lock()
 
 ScopedConfigScope = Literal[
     "overview",
@@ -52,6 +59,40 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+def invalidate_scoped_config_context_cache() -> None:
+    """Clear short-lived scoped config context reads after admin writes."""
+    with _scoped_config_cache_lock:
+        _scoped_config_cache.clear()
+
+
+def _compact_json(value: Any) -> str:
+    return json.dumps(value, separators=(",", ":"), sort_keys=True, default=str)
+
+
+def _cache_get(key: tuple[str, str]) -> dict[str, Any] | None:
+    now = time.time()
+    with _scoped_config_cache_lock:
+        cached = _scoped_config_cache.get(key)
+        if cached is None:
+            return None
+        cached_at, section = cached
+        if now - cached_at >= SCOPED_CONFIG_CACHE_TTL_SECONDS:
+            _scoped_config_cache.pop(key, None)
+            return None
+        return deepcopy(section)
+
+
+def _cache_put(key: tuple[str, str], section: dict[str, Any]) -> None:
+    with _scoped_config_cache_lock:
+        _scoped_config_cache[key] = (time.time(), deepcopy(section))
+
+
+def _cache_key_for_scope(scope: str, query: str) -> tuple[str, str]:
+    if scope == "deployment-settings":
+        return (scope, select_deployment_category(query) or "__all__")
+    return (scope, "")
+
+
 def _format_overview_settings(settings: dict[str, Any]) -> str:
     lines: list[str] = []
     for key in OVERVIEW_SETTING_KEYS:
@@ -72,10 +113,20 @@ def _build_control_contract_lines(
         "SCOPED CONFIG CONTEXT",
         f"Generated: {generated_at}",
         f"scope: {primary_scope}",
+    ]
+    if primary_scope != "overview":
+        lines.extend([
+            "",
+            "Tool capability contract: see overview scope.",
+            "State-changing writes still require exactly one valid JSON change set and Admin Change Confirmation.",
+        ])
+        return lines
+
+    lines.extend([
         "",
         "ADMIN-VISIBLE TOOL CAPABILITIES",
-    ]
-    for tool in ADMIN_VISIBLE_TOOL_CAPABILITIES:
+    ])
+    for tool in ADMIN_VISIBLE_TOOLS:
         lines.append(
             f"- {tool['id']} ({tool['name']}): {tool['description']} Access: {tool['access']}."
         )
@@ -90,6 +141,17 @@ def _build_control_contract_lines(
         "- When the admin delegates a configuration task, inspect first-party context, choose reasonable defaults for unspecified details, and state important assumptions briefly.",
         "- For a coherent delegated admin configuration task, group related settings into one executable change set instead of splitting every setting into separate proposals.",
         "- Never call prose-only bullets or recommendations a Change Confirmation. A Change Confirmation requires exactly one valid JSON change set that the UI can validate and preview.",
+        "",
+        "HOW TO USE THESE TOOLS",
+        "",
+        "admin-config: Call to inspect or understand any configuration area.",
+        "Each call returns the relevant configuration scope and context for that area.",
+        "You may call it multiple times to understand different configuration areas.",
+        "",
+        "db-query: Call for analytics, user counts, or data inspection.",
+        "Use this for questions about existing data, patterns, or inventory.",
+        "",
+        "web-search: Call for current information or best practices (when enabled).",
         "",
         "CHANGESET FORMAT (optional)",
         "If you want the admin to apply changes from this chat, include exactly one JSON code block with this shape:",
@@ -133,7 +195,7 @@ def _build_overview_section(settings: dict[str, Any]) -> dict[str, Any]:
 def _format_instance_settings_lines(settings: dict[str, Any]) -> list[str]:
     lines = [
         "INSTANCE SETTINGS (/admin/settings)",
-        json.dumps(settings, indent=2, sort_keys=True),
+        _compact_json(settings),
         "",
         "INSTANCE BRANDING, THEME, AND COPY SETTINGS",
     ]
@@ -180,6 +242,22 @@ def _format_deployment_items(items: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
+def _summarize_ai_config_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    summarized: list[dict[str, Any]] = []
+    for row in rows:
+        value = row.get("value")
+        value_text = "" if value is None else str(value)
+        summarized.append({
+            "key": row.get("key"),
+            "category": row.get("category"),
+            "value_type": row.get("value_type"),
+            "description": row.get("description"),
+            "value_length": len(value_text),
+            "is_override": bool(row.get("is_override", False)),
+        })
+    return summarized
+
+
 def _build_deployment_settings_section(
     query: str,
     *,
@@ -219,7 +297,8 @@ def _build_agent_settings_section(
 ) -> dict[str, Any]:
     lines = [
         "AGENT SETTINGS (/admin/ai-config)",
-        json.dumps(database.get_all_ai_config(), indent=2, sort_keys=True, default=str),
+        "AI CONFIG SUMMARY",
+        _compact_json(_summarize_ai_config_rows(database.get_all_ai_config())),
     ]
     user_types = database.list_user_types()
     included_types = user_types[:MAX_USER_TYPES_FANOUT]
@@ -235,7 +314,7 @@ def _build_agent_settings_section(
             lines.extend([
                 "",
                 f"AGENT SETTINGS (user_type_id={user_type['id']} {user_type['name']})",
-                json.dumps(effective_config, indent=2, sort_keys=True, default=str),
+                _compact_json(_summarize_ai_config_rows(effective_config)),
             ])
         except Exception as exc:
             warnings.append(f"agent-settings user_type_id={user_type['id']} failed: {exc}")
@@ -248,12 +327,92 @@ def _build_agent_settings_section(
     }
 
 
+def _build_user_type_write_contract_lines() -> list[str]:
+    private_field_example = {
+        "version": 1,
+        "summary": "Create an Activist user type with private onboarding fields.",
+        "requests": [
+            {
+                "method": "POST",
+                "path": "/admin/user-types",
+                "body": {
+                    "name": "Activist",
+                    "description": "Users participating as activists",
+                    "display_order": 0,
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/admin/user-fields",
+                "body": {
+                    "field_name": "Name",
+                    "field_type": "text",
+                    "required": True,
+                    "display_order": 0,
+                    "user_type_id": "@type:activist",
+                    "placeholder": "Your name",
+                    "encryption_enabled": True,
+                    "include_in_chat": False,
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/admin/user-fields",
+                "body": {
+                    "field_name": "Email",
+                    "field_type": "email",
+                    "required": True,
+                    "display_order": 1,
+                    "user_type_id": "@type:activist",
+                    "placeholder": "you@example.org",
+                    "encryption_enabled": True,
+                    "include_in_chat": False,
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/admin/user-fields",
+                "body": {
+                    "field_name": "Phone Number",
+                    "field_type": "text",
+                    "required": True,
+                    "display_order": 2,
+                    "user_type_id": "@type:activist",
+                    "placeholder": "Your phone number",
+                    "encryption_enabled": True,
+                    "include_in_chat": False,
+                },
+            },
+        ],
+    }
+    return [
+        "",
+        "USER TYPE AND FIELD WRITE CONTRACT",
+        "- Create user types with POST /admin/user-types and body keys: "
+        "name, description, icon, display_order.",
+        "- Create onboarding fields with POST /admin/user-fields and body keys: "
+        "field_name, field_type, required, display_order, user_type_id, "
+        "placeholder, options, encryption_enabled, include_in_chat.",
+        "- Supported field_type values: text, textarea, number, boolean, email, "
+        "url, select, multi_select, date.",
+        "- For phone/contact numbers, prefer field_type text so formatting and "
+        "leading +/0 characters are preserved.",
+        "- Private onboarding fields use encryption_enabled=true and "
+        "include_in_chat=false. Encrypted fields cannot be included in chat context.",
+        "- Use @type:<slug> placeholders when one change set creates a user type "
+        "and then creates fields for it.",
+        "Example private onboarding change set:",
+        json.dumps(private_field_example, indent=2, sort_keys=True),
+    ]
+
+
 def _build_user_types_section(*, warnings: list[str]) -> dict[str, Any]:
     user_types = database.list_user_types()
     lines = [
         "USER TYPES (/admin/user-types)",
-        json.dumps({"types": user_types}, indent=2, sort_keys=True, default=str),
+        _compact_json({"types": user_types}),
     ]
+    lines.extend(_build_user_type_write_contract_lines())
     included_types = user_types[:MAX_USER_TYPES_FANOUT]
     if len(user_types) > MAX_USER_TYPES_FANOUT:
         warnings.append(
@@ -267,7 +426,7 @@ def _build_user_types_section(*, warnings: list[str]) -> dict[str, Any]:
             lines.extend([
                 "",
                 f"USER FIELDS (user_type_id={user_type['id']} {user_type['name']})",
-                json.dumps(fields, indent=2, sort_keys=True, default=str),
+                _compact_json(fields),
             ])
         except Exception as exc:
             warnings.append(f"user-fields user_type_id={user_type['id']} failed: {exc}")
@@ -284,7 +443,7 @@ def _build_document_defaults_section(*, warnings: list[str]) -> dict[str, Any]:
     global_defaults = database.list_document_defaults()
     lines = [
         "DOCUMENT DEFAULTS (/ingest/admin/documents/defaults)",
-        json.dumps(global_defaults, indent=2, sort_keys=True, default=str),
+        _compact_json(global_defaults),
     ]
     user_types = database.list_user_types()
     included_types = user_types[:MAX_USER_TYPES_FANOUT]
@@ -300,7 +459,7 @@ def _build_document_defaults_section(*, warnings: list[str]) -> dict[str, Any]:
             lines.extend([
                 "",
                 f"DOCUMENT DEFAULTS (user_type_id={user_type['id']} {user_type['name']})",
-                json.dumps(effective_defaults, indent=2, sort_keys=True, default=str),
+                _compact_json(effective_defaults),
             ])
         except Exception as exc:
             warnings.append(
@@ -340,7 +499,7 @@ def _build_health_section(*, warnings: list[str]) -> dict[str, Any]:
     }
     lines = [
         "SERVICE HEALTH (/admin/deployment/health)",
-        json.dumps(health_payload, indent=2, sort_keys=True, default=str),
+        _compact_json(health_payload),
         "",
         "RESTART-REQUIRED DEPLOYMENT KEYS",
     ]
@@ -428,7 +587,13 @@ def build_scoped_config_context(
         if builder is None:
             warnings.append(f"Unknown scoped config scope requested: {scope}")
             continue
-        section = builder()
+        cache_key = _cache_key_for_scope(scope, query)
+        section = _cache_get(cache_key)
+        if section is None:
+            warning_count_before = len(warnings)
+            section = builder()
+            if len(warnings) == warning_count_before:
+                _cache_put(cache_key, section)
         sections.append(section)
         context_lines.extend(["", section["content"]])
 

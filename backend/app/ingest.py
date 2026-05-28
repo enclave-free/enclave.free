@@ -55,6 +55,17 @@ logger = logging.getLogger("enclave.ingest")
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
+
+def _invalidate_scoped_config_context_cache() -> None:
+    try:
+        from scoped_config_context import invalidate_scoped_config_context_cache
+        invalidate_scoped_config_context_cache()
+    except Exception as exc:
+        logger.warning(
+            f"Failed to invalidate scoped config context cache: {exc}",
+            exc_info=True,
+        )
+
 # Processing configuration
 MAX_CONCURRENT_CHUNKS = int(os.getenv("MAX_CONCURRENT_CHUNKS", "3"))
 UPLOAD_RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_UPLOAD_PER_MINUTE", "20"))
@@ -1816,6 +1827,7 @@ async def update_document_defaults(
         changed_by=admin_pubkey,
     )
 
+    _invalidate_scoped_config_context_cache()
     return DocumentDefaultItem(
         job_id=job_id,
         filename=job["filename"],
@@ -1875,6 +1887,9 @@ async def batch_update_document_defaults(
             changed_by=admin_pubkey,
         )
         updated += 1
+
+    if updated:
+        _invalidate_scoped_config_context_cache()
 
     message = f"Updated {updated} document defaults"
     if skipped:
@@ -2035,6 +2050,7 @@ async def set_document_defaults_override(
         is_default_active=update.is_default_active,
         changed_by=admin_pubkey,
     )
+    _invalidate_scoped_config_context_cache()
 
     # Get the effective state after update
     override = database.get_document_defaults_override(job_id, user_type_id)
@@ -2099,6 +2115,7 @@ async def delete_document_defaults_override(
             detail=f"No override found for job '{job_id}' and user type {user_type_id}"
         )
 
+    _invalidate_scoped_config_context_cache()
     return {"success": True, "message": f"Override for document '{job_id}' reverted to global default"}
 
 

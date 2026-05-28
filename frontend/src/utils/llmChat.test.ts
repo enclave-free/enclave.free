@@ -243,17 +243,15 @@ describe('sendLlmChatWithUnifiedTools', () => {
   it('includes classified provider details when streamed chat returns a non-OK status', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          Response.json(
-            {
-              detail:
-                'Token limit exceeded for this session. Please start a new session.',
-            },
-            { status: 429 }
-          )
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            detail:
+              'Token limit exceeded for this session. Please start a new session.',
+          },
+          { status: 429 }
         )
+      )
     );
 
     await expect(
@@ -336,6 +334,48 @@ describe('sendLlmChatWithUnifiedTools', () => {
             'I recommend updating Instance Name, Assistant Name, and Reachout Title.',
         },
       ],
+    });
+  });
+
+  it('omits redundant admin-config conversation history once Sage owns the session', async () => {
+    const encoder = new TextEncoder();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                encoder.encode('event: done\ndata: {"message_id":"msg_1"}\n\n')
+              );
+              controller.close();
+            },
+          }),
+          { headers: { 'Content-Type': 'text/event-stream' } }
+        )
+      )
+    );
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'continue',
+      tools: ['admin-config'],
+      sessionId: 'session-123',
+      conversationHistory: [
+        { role: 'user', content: 'Change more of the copy.' },
+        {
+          role: 'assistant',
+          content:
+            'Here is the change.\n```json\n{"version":1,"requests":[]}\n```',
+        },
+      ],
+      onEvent: vi.fn(),
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'continue',
+      tools: ['admin-config'],
+      session_id: 'session-123',
     });
   });
 
