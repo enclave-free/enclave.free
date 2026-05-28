@@ -315,6 +315,54 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
+  it('ignores public web-search defaults for admin config sends', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/session-defaults')) {
+          return Promise.resolve(Response.json({ web_search_enabled: true }));
+        }
+        return Promise.resolve(Response.json({}));
+      })
+    );
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/session-defaults');
+    });
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'What is the SMTP host?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
+    });
+
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toContain('admin-config');
+    expect(callArgs.tools).not.toContain('web-search');
+  });
+
   it('relies on Sage for document context retrieval (Sage-only path)', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(

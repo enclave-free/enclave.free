@@ -242,13 +242,8 @@ export function AdminConfigAssistant({
       try {
         const res = await fetch(`${API_BASE}/session-defaults`);
         if (!res.ok) return;
-        const data = await res.json();
         if (cancelled) return;
-        setSelectedTools(
-          data.web_search_enabled
-            ? ['web-search', CONFIG_TOOL_ID]
-            : [CONFIG_TOOL_ID]
-        );
+        setSelectedTools([CONFIG_TOOL_ID]);
       } catch {
         // Keep local defaults on error.
       }
