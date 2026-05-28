@@ -102,6 +102,28 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
         self.assertIn("default_theme", body["context_text"])
         self.assertEqual(body["secret_policy"], {"mode": "masked"})
 
+    def test_admin_settings_write_invalidates_scoped_context_cache(self) -> None:
+        self.database.update_setting("instance_name", "Before Endpoint Cache")
+        payload = {
+            "query": "update the instance name and theme",
+            "mode": "auto",
+        }
+
+        first = self.client.post("/admin/scoped-config-context", json=payload)
+        self.assertEqual(first.status_code, 200)
+        self.assertIn("Before Endpoint Cache", first.json()["context_text"])
+
+        update = self.client.put(
+            "/admin/settings",
+            json={"instance_name": "After Endpoint Cache"},
+        )
+        self.assertEqual(update.status_code, 200)
+
+        refreshed = self.client.post("/admin/scoped-config-context", json=payload)
+        self.assertEqual(refreshed.status_code, 200)
+        self.assertIn("After Endpoint Cache", refreshed.json()["context_text"])
+        self.assertNotIn("Before Endpoint Cache", refreshed.json()["context_text"])
+
     def test_full_mode_refresh_includes_all_documented_scopes(self) -> None:
         response = self.client.post(
             "/admin/scoped-config-context",

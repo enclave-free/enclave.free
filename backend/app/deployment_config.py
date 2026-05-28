@@ -1352,6 +1352,12 @@ async def update_deployment_config_value(
     except ImportError as e:
         logger.debug(f"config_loader not available, skipping cache invalidation: {e}")
 
+    try:
+        from scoped_config_context import invalidate_scoped_config_context_cache
+        invalidate_scoped_config_context_cache()
+    except Exception as e:
+        logger.debug(f"scoped_config_context cache invalidation skipped after {key}: {e}")
+
     # Return updated config
     updated = database.get_deployment_config(key)
     if not updated:

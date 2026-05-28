@@ -131,6 +131,14 @@ def _best_effort_config_audit_event(**kwargs) -> None:
         )
 
 
+def _invalidate_scoped_config_context_cache() -> None:
+    try:
+        from scoped_config_context import invalidate_scoped_config_context_cache
+        invalidate_scoped_config_context_cache()
+    except Exception as exc:
+        logger.debug(f"Failed to invalidate scoped config context cache: {exc}")
+
+
 app = FastAPI(
     title="Enclave API",
     description="Privacy-first RAG system for curated knowledge",
@@ -1528,6 +1536,7 @@ async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth
                 new_value=new_value,
                 changed_by=admin.get("pubkey", "unknown"),
             )
+    _invalidate_scoped_config_context_cache()
     return InstanceSettingsResponse(settings=database.get_all_settings())
 
 
@@ -1586,6 +1595,7 @@ async def create_user_type(user_type: UserTypeCreate, admin: dict = Depends(auth
             }),
             changed_by=admin.get("pubkey", "unknown"),
         )
+        _invalidate_scoped_config_context_cache()
         return UserTypeResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -1625,6 +1635,7 @@ async def update_user_type(type_id: int, user_type: UserTypeUpdate, admin: dict 
         }),
         changed_by=admin.get("pubkey", "unknown"),
     )
+    _invalidate_scoped_config_context_cache()
     return UserTypeResponse(**updated)
 
 
@@ -1647,6 +1658,7 @@ async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admi
             new_value=None,
             changed_by=admin.get("pubkey", "unknown"),
         )
+        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="User type deleted")
     raise HTTPException(status_code=500, detail="Failed to delete user type")
 
@@ -1694,6 +1706,7 @@ async def create_field_definition(field: FieldDefinitionCreate, admin: dict = De
             include_in_chat=field.include_in_chat
         )
         created = database.get_field_definition_by_id(field_id)
+        _invalidate_scoped_config_context_cache()
         return FieldDefinitionResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -1737,6 +1750,7 @@ async def update_field_definition(field_id: int, field: FieldDefinitionUpdate, a
         include_in_chat=field.include_in_chat
     )
     updated = database.get_field_definition_by_id(field_id)
+    _invalidate_scoped_config_context_cache()
     return FieldDefinitionResponse(**updated)
 
 
@@ -1744,6 +1758,7 @@ async def update_field_definition(field_id: int, field: FieldDefinitionUpdate, a
 async def delete_field_definition(field_id: int, admin: dict = Depends(auth.require_admin)):
     """Delete a user field definition (requires admin auth)"""
     if database.delete_field_definition(field_id):
+        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="Field definition deleted")
     raise HTTPException(status_code=404, detail="Field definition not found")
 
@@ -1809,6 +1824,7 @@ async def update_field_encryption(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update field encryption")
 
+    _invalidate_scoped_config_context_cache()
     return FieldEncryptionResponse(
         field_id=field_id,
         encryption_enabled=new_encryption,
