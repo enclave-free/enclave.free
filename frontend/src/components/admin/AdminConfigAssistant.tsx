@@ -29,7 +29,8 @@ import {
 } from '../../utils/adminAssistant';
 import {
   buildFullAdminConfigContext,
-  buildScopedAdminConfigContext,
+  loadDeploymentSecretKeysFromConfig,
+  refreshAdminConfigRedactionMetadata,
 } from '../../utils/adminConfigContext';
 import { fetchBoundedAdminDocumentContext } from '../../utils/adminDocumentContext';
 import {
@@ -144,7 +145,6 @@ export function AdminConfigAssistant({
   } | null>(null);
   const [applyState, setApplyState] = useState<ApplyState>({ state: 'idle' });
   const [selectedTools, setSelectedTools] = useState<string[]>([
-    'web-search',
     CONFIG_TOOL_ID,
   ]);
 
@@ -262,6 +262,27 @@ export function AdminConfigAssistant({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDeploymentSecretKeys = async () => {
+      try {
+        const secretKeys = await loadDeploymentSecretKeysFromConfig(fetchJson);
+        if (!cancelled) {
+          deploymentSecretKeysRef.current = secretKeys;
+        }
+      } catch {
+        // Keep pessimistic masking when metadata is unavailable.
+      }
+    };
+
+    loadDeploymentSecretKeys();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchJson]);
+
   const handleToolToggle = useCallback(
     (toolId: string) => {
       if (toolId === CONFIG_TOOL_ID && selectedTools.includes(CONFIG_TOOL_ID)) {
@@ -345,17 +366,12 @@ export function AdminConfigAssistant({
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
-          const snap = await buildScopedAdminConfigContext({
-            query: content,
-            shareSecrets,
-            fetchJson,
-          });
           const documentContext = await fetchBoundedAdminDocumentContext({
             query: content,
             fetchJson,
           });
           const promptPlan = planAdminPromptBudget({
-            adminConfigContext: snap.context,
+            adminConfigContext: '',
             documentContext: documentContext.included
               ? documentContext.context
               : '',
@@ -392,9 +408,6 @@ export function AdminConfigAssistant({
             sessionMemoryPlan,
             promptPlan,
           });
-          setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
-          secretsForRedactionRef.current = snap.secretValues;
-          deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
         }
 
         let streamed = false;
@@ -1059,10 +1072,23 @@ export function AdminConfigAssistant({
             type="checkbox"
             checked={shareSecrets}
             disabled={!hasConfigTool}
-            onChange={(e) => {
-              setShareSecrets(e.target.checked);
-              // Clear redaction cache until next snapshot build.
-              secretsForRedactionRef.current = [];
+            onChange={async (e) => {
+              const checked = e.target.checked;
+              setShareSecrets(checked);
+              if (!checked) {
+                secretsForRedactionRef.current = [];
+                return;
+              }
+              try {
+                const metadata = await refreshAdminConfigRedactionMetadata({
+                  shareSecrets: true,
+                  fetchJson,
+                });
+                secretsForRedactionRef.current = metadata.secretValues;
+                deploymentSecretKeysRef.current = metadata.deploymentSecretKeys;
+              } catch {
+                secretsForRedactionRef.current = [];
+              }
             }}
             className="mt-1 disabled:cursor-not-allowed"
           />

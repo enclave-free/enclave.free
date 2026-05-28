@@ -1640,6 +1640,71 @@ describe('ChatPage', () => {
     );
   });
 
+  it('admin config defaults to config-only tools without web-search', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [],
+          })
+        );
+      }
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'admin-msg',
+          delta: 'SMTP is configured.',
+        });
+        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    const webSearchButton = screen.queryByRole('button', {
+      name: 'Web Search',
+    });
+    expect(webSearchButton).not.toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      'What is the SMTP host?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
+    });
+
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toContain('admin-config');
+    expect(callArgs.tools).not.toContain('web-search');
+  });
+
   it('clears admin secret sharing when starting fresh or disabling Config', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);

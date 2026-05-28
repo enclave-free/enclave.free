@@ -3,6 +3,8 @@ import {
   buildFullAdminConfigContext,
   buildScopedAdminConfigContext,
   fetchServerScopedConfigContext,
+  loadDeploymentSecretKeysFromConfig,
+  refreshAdminConfigRedactionMetadata,
 } from './adminConfigContext';
 import type { ServerScopedConfigContextResponse } from './adminConfigContext';
 
@@ -203,5 +205,52 @@ describe('buildFullAdminConfigContext', () => {
       })
     ).rejects.toThrow('Unsupported scoped config context version: 2');
     expect(fetchJson).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('loadDeploymentSecretKeysFromConfig', () => {
+  it('collects secret keys from deployment config without scoped context text', async () => {
+    const fetchJson = mockFetchJson(async (endpoint) => {
+      expect(endpoint).toBe('/admin/deployment/config');
+      return {
+        general: [
+          { key: 'LLM_API_KEY', is_secret: true },
+          { key: 'PUBLIC_URL', is_secret: false },
+        ],
+      };
+    });
+
+    const keys = await loadDeploymentSecretKeysFromConfig(fetchJson);
+
+    expect(keys).toEqual(new Set(['LLM_API_KEY']));
+  });
+});
+
+describe('refreshAdminConfigRedactionMetadata', () => {
+  it('reveals secret values only when shareSecrets is enabled', async () => {
+    const fetchJson = mockFetchJson(async (endpoint) => {
+      if (endpoint === '/admin/deployment/config') {
+        return {
+          general: [{ key: 'SMTP_PASSWORD', is_secret: true }],
+        };
+      }
+      if (endpoint === '/admin/deployment/config/SMTP_PASSWORD/reveal') {
+        return { key: 'SMTP_PASSWORD', value: 'smtp-secret-value' };
+      }
+      throw new Error(`unexpected fetch: ${endpoint}`);
+    });
+
+    const masked = await refreshAdminConfigRedactionMetadata({
+      shareSecrets: false,
+      fetchJson,
+    });
+    const revealed = await refreshAdminConfigRedactionMetadata({
+      shareSecrets: true,
+      fetchJson,
+    });
+
+    expect(masked.secretValues).toEqual([]);
+    expect(revealed.secretValues).toEqual(['smtp-secret-value']);
+    expect(revealed.deploymentSecretKeys).toEqual(new Set(['SMTP_PASSWORD']));
   });
 });

@@ -315,7 +315,7 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
-  it('sends scoped Config context by default in admin configuration conversations', async () => {
+  it('delegates scoped config to Sage and only sends bounded document context on send', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
       async ({ onEvent }) => {
@@ -356,24 +356,15 @@ describe('AdminConfigAssistant', () => {
       expect.objectContaining({
         content: 'Set up the theme from the uploaded guide.',
         tools: expect.arrayContaining(['admin-config']),
-        baseToolContext: expect.stringContaining('SCOPED CONFIG CONTEXT'),
       })
     );
     const context =
       vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
         .baseToolContext || '';
-    expect(context).toContain('scope: instance-settings');
-    expect(context).toContain('INSTANCE BRANDING, THEME, AND COPY SETTINGS');
+    expect(context).not.toContain('SCOPED CONFIG CONTEXT');
     expect(context).toContain('BOUNDED DOCUMENT CONTEXT');
     expect(context).toContain('brand-guide.pdf');
-    expect(context).toContain('choose reasonable defaults');
-    expect(context).toContain(
-      'group related settings into one executable change set'
-    );
-    expect(context).toContain(
-      'Never call prose-only bullets or recommendations a Change Confirmation'
-    );
-    expect(mockAdminFetch).toHaveBeenCalledWith(
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/scoped-config-context',
       expect.objectContaining({
         method: 'POST',
@@ -383,12 +374,12 @@ describe('AdminConfigAssistant', () => {
       '/ingest/admin/documents/context-preview',
       undefined
     );
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/ai-config',
+    expect(mockAdminFetch).toHaveBeenCalledWith(
+      '/admin/deployment/config',
       undefined
     );
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/deployment/config',
+      '/admin/ai-config',
       undefined
     );
   });
@@ -476,15 +467,6 @@ describe('AdminConfigAssistant', () => {
     });
 
     mockAdminFetch.mockImplementation((endpoint: string) => {
-      if (endpoint === '/admin/scoped-config-context') {
-        return Promise.resolve(
-          Response.json(
-            scopedConfigResponse({
-              context_text: `SCOPED CONFIG CONTEXT\nscope: instance-settings\n\nINSTANCE SETTINGS (/admin/settings)\n- brand_notes: ${oversizedAdminPadding}`,
-            })
-          )
-        );
-      }
       if (endpoint === '/ingest/admin/documents/context-preview') {
         return Promise.resolve(
           Response.json({
@@ -510,14 +492,14 @@ describe('AdminConfigAssistant', () => {
     });
     mockPlanAdminPromptBudget.mockReturnValueOnce({
       toolContext:
-        'PROMPT BUDGET NOTE\n- admin configuration context was reduced to fit the provider budget\n- document library context was reduced to fit the provider budget\n\nSCOPED CONFIG CONTEXT\nGenerated: 2026-05-24T00:00:00.000Z\nscope: overview\n\nINSTANCE OVERVIEW (/admin/settings)\n- instance_name: Enclave\n...[context truncated for provider budget]\n\nBOUNDED DOCUMENT CONTEXT\n- brand-guide.pdf\n...[context truncated for provider budget]',
+        'PROMPT BUDGET NOTE\n- document library context was reduced to fit the provider budget\n\nBOUNDED DOCUMENT CONTEXT\n- brand-guide.pdf\n...[context truncated for provider budget]',
       conversationHistory: [],
-      includedSections: ['admin-config', 'document-context'],
-      reducedSections: ['admin-config', 'document-context'],
-      omittedSections: [],
+      includedSections: ['document-context'],
+      reducedSections: ['document-context'],
+      omittedSections: ['admin-config'],
       estimatedChars: 600,
       warningNote:
-        'PROMPT BUDGET NOTE\n- admin configuration context was reduced to fit the provider budget\n- document library context was reduced to fit the provider budget',
+        'PROMPT BUDGET NOTE\n- document library context was reduced to fit the provider budget',
     });
 
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
@@ -554,17 +536,19 @@ describe('AdminConfigAssistant', () => {
     expect(context).not.toContain(oversizedDocumentPadding);
     expect(context).toContain('...[context truncated for provider budget]');
     expect(context.length).toBeLessThanOrEqual(
-      DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.adminConfigChars +
-        DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.documentContextChars +
-        500
+      DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.documentContextChars + 500
     );
-    expect(mockPlanAdminPromptBudget).toHaveBeenCalled();
+    expect(mockPlanAdminPromptBudget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adminConfigContext: '',
+      })
+    );
 
     const notice = await screen.findByRole('note', {
       name: 'Reduced context notice',
     });
-    expect(notice).toHaveTextContent(/admin configuration context/);
     expect(notice).toHaveTextContent(/document library context/);
+    expect(notice).not.toHaveTextContent(/admin configuration context/);
     expect(notice).not.toHaveTextContent('ADMIN-PAD-');
     expect(notice).not.toHaveTextContent('DOC-PAD-');
 
@@ -573,10 +557,7 @@ describe('AdminConfigAssistant', () => {
       kind: 'admin_context_plan',
       surface: 'admin_config_assistant',
       promptBudget: {
-        reducedSections: expect.arrayContaining([
-          'admin-config',
-          'document-context',
-        ]),
+        reducedSections: ['document-context'],
         hasWarningNote: true,
       },
     });
@@ -1064,7 +1045,7 @@ describe('AdminConfigAssistant', () => {
     ).toBeInTheDocument();
   });
 
-  it('does not reveal secret Deployment Setting values in default Config context', async () => {
+  it('does not prefetch scoped deployment config or reveal secrets on send', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
       async ({ onEvent }) => {
@@ -1095,21 +1076,13 @@ describe('AdminConfigAssistant', () => {
     await waitFor(() => {
       expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
     });
-    const context =
-      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
-        .baseToolContext || '';
-    expect(context).toContain('LLM_API_KEY');
-    expect(context).toContain('secret=true');
-    expect(context).toContain('Secret env vars are masked');
-    expect(context).not.toContain('super-secret-token');
-    expect(context).not.toContain('BOUNDED DOCUMENT CONTEXT');
-    expect(mockAdminFetch).toHaveBeenCalledWith(
+    const context = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0].baseToolContext;
+    expect(context || '').not.toContain('SCOPED CONFIG CONTEXT');
+    expect(context || '').not.toContain('super-secret-token');
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/scoped-config-context',
       expect.objectContaining({ method: 'POST' })
-    );
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/ingest/admin/documents/context-preview',
-      undefined
     );
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/deployment/config/LLM_API_KEY/reveal',
@@ -1519,5 +1492,43 @@ describe('AdminConfigAssistant', () => {
     });
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('defaults to config-only tools without web-search', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-1',
+          delta: 'This is the SMTP configuration.',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'What is the SMTP configuration?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce();
+    });
+
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toContain('admin-config');
+    expect(callArgs.tools).not.toContain('web-search');
   });
 });
