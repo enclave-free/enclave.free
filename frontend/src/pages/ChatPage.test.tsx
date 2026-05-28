@@ -1684,10 +1684,10 @@ describe('ChatPage', () => {
       );
     });
 
-    const webSearchButton = screen.queryByRole('button', {
-      name: 'Web Search',
-    });
-    expect(webSearchButton).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask anything...' }),

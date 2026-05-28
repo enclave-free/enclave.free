@@ -1,5 +1,6 @@
 # FastAPI and server
-fastapi>=0.109.0,<0.136.0
+# MAL-2026-4750 was a false positive for FastAPI; keep the upper bound open.
+fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 python-multipart>=0.0.27
 

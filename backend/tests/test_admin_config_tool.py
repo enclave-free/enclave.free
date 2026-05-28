@@ -140,6 +140,32 @@ class AdminConfigToolTest(unittest.TestCase):
         self.assertIsNotNone(result.error)
         self.assertIsInstance(result.data.get("available_scopes"), (list, tuple))
 
+    def test_scope_confidence_drops_for_multiple_matches(self) -> None:
+        from tools.admin_config_context import compute_scope_confidence
+
+        self.assertEqual(
+            compute_scope_confidence("what tools do you have?", ["overview"]),
+            0.9,
+        )
+        self.assertEqual(
+            compute_scope_confidence("update theme", ["instance-settings"]),
+            0.9,
+        )
+        self.assertLess(
+            compute_scope_confidence(
+                "tell me about configuration",
+                ["instance-settings", "deployment-settings"],
+            ),
+            0.7,
+        )
+        self.assertLess(
+            compute_scope_confidence(
+                "tell me about configuration",
+                ["instance-settings", "deployment-settings", "agent-settings"],
+            ),
+            0.7,
+        )
+
     def test_clear_queries_still_succeed(self) -> None:
         clear_queries = [
             "Show me SMTP settings",

@@ -404,10 +404,10 @@ def compute_scope_confidence(query: str, matched_scopes: list[str]) -> float:
     if match_count == 1:
         return 0.9
     if match_count == 2:
-        return 0.85
+        return 0.6
     if match_count == 3:
-        return 0.8
-    return 0.7
+        return 0.5
+    return 0.4
 
 
 def build_available_scopes_response() -> list[dict[str, str]]:
