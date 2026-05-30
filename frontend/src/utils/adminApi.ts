@@ -10,6 +10,21 @@ import { clearLogoutBrowserStorage } from './browserStoragePosture'
 export type AdminSessionValidationState = 'authenticated' | 'unauthenticated' | 'unavailable'
 
 /**
+ * Fired when the curated resource directory (or its help-type vocabulary) is
+ * mutated — e.g. when the admin applies a change set from the assistant panel.
+ * Open admin views (the Resource Directory table) listen for this to refresh
+ * without a manual reload.
+ */
+export const ADMIN_RESOURCES_CHANGED_EVENT = 'enclave:admin-resources-changed'
+
+/** Notify any open admin views that curated resources changed. */
+export function notifyAdminResourcesChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(ADMIN_RESOURCES_CHANGED_EVENT))
+  }
+}
+
+/**
  * Make an authenticated admin API request.
  * Uses secure session cookies.
  * Redirects to /admin on 401 (session expired).

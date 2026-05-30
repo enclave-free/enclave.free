@@ -14,7 +14,7 @@ import {
   TextField,
   Textarea,
 } from '../components/ui'
-import { adminFetch } from '../utils/adminApi'
+import { adminFetch, ADMIN_RESOURCES_CHANGED_EVENT } from '../utils/adminApi'
 
 const RESOURCE_TYPES = ['lawyer', 'ngo', 'un_body', 'clinic', 'shelter', 'financial', 'hotline', 'other'] as const
 const SCOPE_LEVELS = ['country', 'subregion', 'region', 'global'] as const
@@ -148,6 +148,17 @@ export function AdminResourcesDirectory() {
 
   useEffect(() => {
     void fetchData()
+  }, [fetchData])
+
+  // Refresh the table when the assistant applies a resource change set while
+  // this page is open, so chat-driven edits show up without a manual reload.
+  useEffect(() => {
+    const handleResourcesChanged = () => {
+      void fetchData()
+    }
+    window.addEventListener(ADMIN_RESOURCES_CHANGED_EVENT, handleResourcesChanged)
+    return () =>
+      window.removeEventListener(ADMIN_RESOURCES_CHANGED_EVENT, handleResourcesChanged)
   }, [fetchData])
 
   const helpTypeLabels = useMemo(() => {

@@ -15,7 +15,7 @@ import {
   Play,
   EyeOff,
 } from 'lucide-react';
-import { adminFetch } from '../../utils/adminApi';
+import { adminFetch, notifyAdminResourcesChanged } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
@@ -748,6 +748,16 @@ export function AdminConfigAssistant({
 
         const okCount = results.filter((r) => r.ok).length;
         const failCount = results.length - okCount;
+
+        // If any resource/help-type write succeeded, tell open admin views (the
+        // Resource Directory table) to refresh so they don't show stale data.
+        if (
+          results.some(
+            (r) => r.ok && /^\/admin\/(resources|help-types)\b/.test(r.path)
+          )
+        ) {
+          notifyAdminResourcesChanged();
+        }
         const baseSummary = failCount
           ? t('admin.configAssistant.applySummary.appliedCountsWithFailures', {
               ok: okCount,
