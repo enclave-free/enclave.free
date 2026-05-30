@@ -52,6 +52,11 @@ const AdminDocumentUpload = lazy(() =>
     default: module.AdminDocumentUpload,
   }))
 );
+const AdminResourcesDirectory = lazy(() =>
+  import('./pages/AdminResourcesDirectory').then((module) => ({
+    default: module.AdminResourcesDirectory,
+  }))
+);
 const AdminDatabaseExplorer = lazy(() =>
   import('./pages/AdminDatabaseExplorer').then((module) => ({
     default: module.AdminDatabaseExplorer,
@@ -226,6 +231,16 @@ function App() {
             <AdminRoute>
               <LazyPage>
                 <AdminDocumentUpload />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/resources"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminResourcesDirectory />
               </LazyPage>
             </AdminRoute>
           }

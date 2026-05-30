@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Paintbrush, Brain, Server, Upload, Database, ArrowRight, Users, ShieldCheck } from 'lucide-react'
+import { Paintbrush, Brain, Server, Upload, Database, ArrowRight, Users, ShieldCheck, LifeBuoy } from 'lucide-react'
 import { InstanceLogo } from '../components/shared/InstanceLogo'
 import { isAdminAuthenticated } from '../utils/adminApi'
 
@@ -282,6 +282,12 @@ export function AdminSetup() {
               icon={<Upload className="w-5 h-5" />}
               title={t('adminDashboard.upload', 'Document Upload')}
               description={t('adminDashboard.uploadDesc', 'Add documents to your knowledge base')}
+            />
+            <DashboardCard
+              to="/admin/resources"
+              icon={<LifeBuoy className="w-5 h-5" />}
+              title={t('adminDashboard.resources', 'Resource Directory')}
+              description={t('adminDashboard.resourcesDesc', 'Curate trusted lawyers, NGOs, and referral resources')}
             />
           </div>
         </section>

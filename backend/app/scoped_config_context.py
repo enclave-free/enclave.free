@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Literal, Optional
 
 import database
+from region_data import SUBREGION_NAMES
 from tools.admin_config_context import (
     ADMIN_VISIBLE_TOOLS,
     build_instance_settings_change_set_example,
@@ -38,6 +39,7 @@ ScopedConfigScope = Literal[
     "agent-settings",
     "user-types",
     "document-defaults",
+    "resources",
     "health",
 ]
 
@@ -474,6 +476,100 @@ def _build_document_defaults_section(*, warnings: list[str]) -> dict[str, Any]:
     }
 
 
+def _build_resources_write_contract_lines() -> list[str]:
+    create_example = {
+        "version": 1,
+        "summary": "Add a Spanish-speaking detention lawyer covering Central America.",
+        "requests": [
+            {
+                "method": "POST",
+                "path": "/admin/resources",
+                "body": {
+                    "name": "Central America Human Rights Counsel",
+                    "resource_type": "ngo",
+                    "description": "Spanish-speaking human-rights legal network.",
+                    "scope_level": "subregion",
+                    "scope_code": "013",
+                    "help_types": ["legal", "humanitarian"],
+                    "languages": ["es", "en"],
+                    "contact": {"email": "info@example.org", "url": "https://example.org"},
+                    "vetted_by": "Admin",
+                },
+            },
+        ],
+    }
+    return [
+        "",
+        "RESOURCE DIRECTORY WRITE CONTRACT",
+        "- Create a resource with POST /admin/resources; update with PUT /admin/resources/{resource_id}; "
+        "remove with DELETE /admin/resources/{resource_id}.",
+        "- Body keys: name, resource_type (lawyer|ngo|un_body|clinic|shelter|financial|hotline|other), "
+        "description, scope_level, scope_code, help_types (array), languages (array of ISO codes), "
+        "contact (object: phone, email, url, secure_channel, address, notes), verified (bool), "
+        "vetted_by, source_note, display_order, archived (bool).",
+        "- COVERAGE: scope_level is one of country|subregion|region|global. For 'country' use an ISO 3166-1 "
+        "alpha-2 code as scope_code (e.g. NI). For 'subregion'/'region' use the UN M49 code (e.g. 013 = "
+        "Central America, 002 = Africa). For 'global' omit scope_code. See the country/region reference below.",
+        "- help_types must reference existing help-type vocabulary keys. Add new vocabulary via "
+        "PUT /admin/help-types/{key} before using it.",
+        "- LIFECYCLE: a resource is created as 'pending' and auto-promotes to 'ready' only when ALL required "
+        "fields are present: name, resource_type, scope_level (+scope_code unless global), at least one "
+        "help_type, and at least one contact method. The response includes status and missing_fields — "
+        "keep asking the admin for missing_fields until status is 'ready'. Only 'ready' resources are shown "
+        "to end users.",
+        "Example create change set:",
+        json.dumps(create_example, indent=2, sort_keys=True),
+    ]
+
+
+def _build_resources_section(*, warnings: list[str]) -> dict[str, Any]:
+    try:
+        resources = database.list_resources()
+    except Exception as exc:
+        warnings.append(f"resources list failed: {exc}")
+        resources = []
+    try:
+        help_types = database.list_help_types()
+    except Exception as exc:
+        warnings.append(f"help-types list failed: {exc}")
+        help_types = []
+
+    # Compact view: enough for the agent to reason about coverage + completeness.
+    compact_resources = [
+        {
+            "resource_id": r["resource_id"],
+            "name": r["name"],
+            "resource_type": r["resource_type"],
+            "scope_level": r["scope_level"],
+            "scope_code": r["scope_code"],
+            "help_types": r["help_types"],
+            "languages": r["languages"],
+            "status": r["status"],
+            "missing_fields": r["missing_fields"],
+            "verified": bool(r["verified_at"]),
+        }
+        for r in resources
+    ]
+
+    lines = [
+        "RESOURCE DIRECTORY (/admin/resources)",
+        _compact_json({"resources": compact_resources}),
+        "",
+        "HELP TYPE VOCABULARY (/admin/help-types)",
+        _compact_json({"help_types": [{"key": h["key"], "label": h["label"]} for h in help_types]}),
+        "",
+        "COUNTRY / REGION REFERENCE (UN M49 subregion codes for scope_code)",
+        _compact_json(SUBREGION_NAMES),
+    ]
+    lines.extend(_build_resources_write_contract_lines())
+    return {
+        "scope": "resources",
+        "title": "Resource Directory",
+        "content": "\n".join(lines),
+        "fields": [],
+    }
+
+
 def _build_health_section(*, warnings: list[str]) -> dict[str, Any]:
     restart_keys = database.get_restart_required_keys()
     deployment_items = database.get_all_deployment_config()
@@ -579,6 +675,7 @@ def build_scoped_config_context(
         "agent-settings": lambda: _build_agent_settings_section(warnings=warnings),
         "user-types": lambda: _build_user_types_section(warnings=warnings),
         "document-defaults": lambda: _build_document_defaults_section(warnings=warnings),
+        "resources": lambda: _build_resources_section(warnings=warnings),
         "health": lambda: _build_health_section(warnings=warnings),
     }
 

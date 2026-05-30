@@ -383,8 +383,10 @@ export function validateAdminAssistantChangeSet(
       new RegExp(
         `^/ingest/admin/documents/[A-Za-z0-9_-]+/defaults/user-type/${userTypeSegment}$`
       ),
+      /^\/admin\/resources\/[A-Za-z0-9_-]+$/,
+      /^\/admin\/help-types\/[a-z0-9_]+$/i,
     ],
-    POST: [/^\/admin\/user-types$/, /^\/admin\/user-fields$/],
+    POST: [/^\/admin\/user-types$/, /^\/admin\/user-fields$/, /^\/admin\/resources$/],
     DELETE: [
       /^\/admin\/user-types\/\d+$/,
       /^\/admin\/user-fields\/\d+$/,
@@ -395,6 +397,8 @@ export function validateAdminAssistantChangeSet(
       new RegExp(
         `^/ingest/admin/documents/[A-Za-z0-9_-]+/defaults/user-type/${userTypeSegment}$`
       ),
+      /^\/admin\/resources\/[A-Za-z0-9_-]+$/,
+      /^\/admin\/help-types\/[a-z0-9_]+$/i,
     ],
   };
 

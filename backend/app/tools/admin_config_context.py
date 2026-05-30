@@ -226,6 +226,23 @@ HEALTH_KEYWORDS: frozenset[str] = frozenset({
     "validation",
 })
 
+RESOURCES_KEYWORDS: frozenset[str] = frozenset({
+    "resource",
+    "resources",
+    "referral",
+    "referrals",
+    "lawyer",
+    "lawyers",
+    "attorney",
+    "ngo",
+    "ngos",
+    "directory",
+    "clinic",
+    "shelter",
+    "helpline",
+    "hotline",
+})
+
 SCOPE_PRIORITY: tuple[str, ...] = (
     "overview",
     "health",
@@ -233,6 +250,7 @@ SCOPE_PRIORITY: tuple[str, ...] = (
     "user-types",
     "agent-settings",
     "document-defaults",
+    "resources",
     "deployment-settings",
 )
 
@@ -243,6 +261,7 @@ ALL_DOCUMENTED_SCOPES: tuple[str, ...] = (
     "agent-settings",
     "user-types",
     "document-defaults",
+    "resources",
     "health",
 )
 
@@ -328,6 +347,8 @@ def _matches_scope(query: str, scope: str) -> bool:
         return contains_keyword(query, AGENT_SETTINGS_KEYWORDS)
     if scope == "document-defaults":
         return contains_keyword(query, DOCUMENT_DEFAULTS_KEYWORDS)
+    if scope == "resources":
+        return contains_keyword(query, RESOURCES_KEYWORDS)
     if scope == "deployment-settings":
         return contains_keyword(query, DEPLOYMENT_KEYWORDS)
     return False
@@ -389,6 +410,7 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "agent-settings": "Sage agent behavior settings including prompts, max tokens, temperature, and personalization.",
     "user-types": "User type definitions and onboarding field configuration.",
     "document-defaults": "Document access defaults and ingestion policies per user type.",
+    "resources": "Curated directory of trusted real-world resources (lawyers, NGOs, UN bodies, clinics, shelters, financial aid) referrable by region and help type.",
     "health": "Service health, readiness, and restart-required deployment keys.",
 }
 

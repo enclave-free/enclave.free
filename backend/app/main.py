@@ -66,7 +66,11 @@ from models import (
     TestEmailRequest, TestEmailResponse,
     # Reachout
     ReachoutRequest, ReachoutResponse,
+    # Resource Referral Directory
+    ResourceCreate, ResourceUpdate, ResourceResponse, ResourceListResponse,
+    HelpTypeModel, HelpTypeUpsert, HelpTypeListResponse,
 )
+import region_data
 from nostr import verify_auth_event, get_pubkey_from_event
 import auth
 import lifecycle
@@ -1664,6 +1668,223 @@ async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admi
         _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="User type deleted")
     raise HTTPException(status_code=500, detail="Failed to delete user type")
+
+
+# --- Resource Referral Directory ---
+
+
+def _resource_slug(name: Optional[str]) -> str:
+    """Derive a stable resource_id slug from a name, falling back to a random id."""
+    base = re.sub(r"[^a-z0-9]+", "-", (name or "").strip().lower()).strip("-")
+    if not base:
+        return f"resource-{uuid.uuid4().hex[:12]}"
+    return base[:100]
+
+
+def _resource_audit_value(resource: dict | None) -> Optional[str]:
+    if resource is None:
+        return None
+    return json.dumps(
+        {
+            "resource_id": resource.get("resource_id"),
+            "name": resource.get("name"),
+            "resource_type": resource.get("resource_type"),
+            "scope_level": resource.get("scope_level"),
+            "scope_code": resource.get("scope_code"),
+            "help_types": resource.get("help_types"),
+            "status": resource.get("status"),
+            "verified_at": resource.get("verified_at"),
+        },
+        sort_keys=True,
+    )
+
+
+def _validate_resource_scope(scope_level: Optional[str], scope_code: Optional[str]) -> None:
+    if scope_level is None:
+        return
+    if not region_data.is_valid_scope(scope_level, scope_code):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid coverage scope for level '{scope_level}': unknown or missing scope_code",
+        )
+
+
+def _validate_help_type_keys(help_types: Optional[list[str]]) -> None:
+    if not help_types:
+        return
+    known = {ht["key"] for ht in database.list_help_types(include_inactive=True)}
+    unknown = [ht for ht in help_types if ht not in known]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown help_type(s): {', '.join(unknown)}. Add them to the vocabulary first.",
+        )
+
+
+@app.get("/admin/resources", response_model=ResourceListResponse)
+async def list_resources_admin(
+    status: Optional[str] = Query(None),
+    admin: dict = Depends(auth.require_admin),
+):
+    """List directory resources (requires admin auth)."""
+    resources = database.list_resources(status=status)
+    return ResourceListResponse(resources=[ResourceResponse(**r) for r in resources])
+
+
+@app.post("/admin/resources", response_model=ResourceResponse)
+async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(auth.require_admin)):
+    """Create a directory resource (requires admin auth). Status is auto-computed:
+    a resource stays `pending` until all required fields are present, then becomes `ready`."""
+    _validate_resource_scope(resource.scope_level, resource.scope_code)
+    _validate_help_type_keys(resource.help_types)
+
+    resource_id = resource.resource_id or _resource_slug(resource.name)
+    if database.get_resource(resource_id) is not None:
+        raise HTTPException(status_code=400, detail=f"Resource id already exists: {resource_id}")
+
+    verified_at = time.strftime("%Y-%m-%dT%H:%M:%SZ") if resource.verified else None
+
+    created = database.create_resource(
+        resource_id=resource_id,
+        name=resource.name,
+        resource_type=resource.resource_type,
+        description=resource.description,
+        contact=resource.contact,
+        languages=resource.languages,
+        scope_level=resource.scope_level,
+        scope_code=resource.scope_code,
+        help_types=resource.help_types,
+        verified_at=verified_at,
+        vetted_by=resource.vetted_by,
+        source_note=resource.source_note,
+        display_order=resource.display_order,
+        archived=resource.archived,
+    )
+    _best_effort_config_audit_event(
+        table_name="resources",
+        config_key=f"resource:{resource_id}:create",
+        old_value=None,
+        new_value=_resource_audit_value(created),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    _invalidate_scoped_config_context_cache()
+    return ResourceResponse(**created)
+
+
+@app.put("/admin/resources/{resource_id}", response_model=ResourceResponse)
+async def update_resource_admin(
+    resource_id: str,
+    resource: ResourceUpdate,
+    admin: dict = Depends(auth.require_admin),
+):
+    """Update a directory resource (requires admin auth). Status is recomputed."""
+    existing = database.get_resource(resource_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    provided = resource.model_dump(exclude_unset=True)
+    # Validate scope only if either part is being changed.
+    if "scope_level" in provided or "scope_code" in provided:
+        _validate_resource_scope(
+            provided.get("scope_level", existing["scope_level"]),
+            provided.get("scope_code", existing["scope_code"]),
+        )
+    if "help_types" in provided:
+        _validate_help_type_keys(provided.get("help_types"))
+
+    # Map the `verified` boolean onto a verified_at timestamp.
+    kwargs = {k: v for k, v in provided.items() if k != "verified"}
+    if "verified" in provided:
+        if provided["verified"]:
+            kwargs["verified_at"] = existing.get("verified_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        else:
+            kwargs["verified_at"] = None
+
+    updated = database.update_resource(resource_id, **kwargs)
+    _best_effort_config_audit_event(
+        table_name="resources",
+        config_key=f"resource:{resource_id}:update",
+        old_value=_resource_audit_value(existing),
+        new_value=_resource_audit_value(updated),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    _invalidate_scoped_config_context_cache()
+    return ResourceResponse(**updated)
+
+
+@app.delete("/admin/resources/{resource_id}", response_model=SuccessResponse)
+async def delete_resource_admin(resource_id: str, admin: dict = Depends(auth.require_admin)):
+    """Delete a directory resource (requires admin auth)."""
+    existing = database.get_resource(resource_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    if database.delete_resource(resource_id):
+        _best_effort_config_audit_event(
+            table_name="resources",
+            config_key=f"resource:{resource_id}:delete",
+            old_value=_resource_audit_value(existing),
+            new_value=None,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        _invalidate_scoped_config_context_cache()
+        return SuccessResponse(success=True, message="Resource deleted")
+    raise HTTPException(status_code=500, detail="Failed to delete resource")
+
+
+# --- Help-type vocabulary (operator-extensible) ---
+
+@app.get("/admin/help-types", response_model=HelpTypeListResponse)
+async def list_help_types_admin(admin: dict = Depends(auth.require_admin)):
+    """List the help-type vocabulary (requires admin auth)."""
+    return HelpTypeListResponse(help_types=[HelpTypeModel(**ht) for ht in database.list_help_types()])
+
+
+@app.put("/admin/help-types/{key}", response_model=HelpTypeModel)
+async def upsert_help_type_admin(
+    key: str,
+    payload: HelpTypeUpsert,
+    admin: dict = Depends(auth.require_admin),
+):
+    """Create or update a help-type vocabulary entry (requires admin auth)."""
+    normalized_key = re.sub(r"[^a-z0-9_]+", "_", key.strip().lower()).strip("_")
+    if not normalized_key:
+        raise HTTPException(status_code=400, detail="Invalid help-type key")
+    existing = database.get_help_type(normalized_key)
+    saved = database.upsert_help_type(
+        key=normalized_key,
+        label=payload.label,
+        description=payload.description,
+        display_order=payload.display_order,
+        is_active=payload.is_active,
+    )
+    _best_effort_config_audit_event(
+        table_name="help_types",
+        config_key=f"help_type:{normalized_key}:{'update' if existing else 'create'}",
+        old_value=json.dumps(existing, sort_keys=True) if existing else None,
+        new_value=json.dumps(saved, sort_keys=True),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    _invalidate_scoped_config_context_cache()
+    return HelpTypeModel(**saved)
+
+
+@app.delete("/admin/help-types/{key}", response_model=SuccessResponse)
+async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_admin)):
+    """Delete a help-type vocabulary entry (requires admin auth)."""
+    existing = database.get_help_type(key)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Help type not found")
+    if database.delete_help_type(key):
+        _best_effort_config_audit_event(
+            table_name="help_types",
+            config_key=f"help_type:{key}:delete",
+            old_value=json.dumps(existing, sort_keys=True),
+            new_value=None,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        _invalidate_scoped_config_context_cache()
+        return SuccessResponse(success=True, message="Help type deleted")
+    raise HTTPException(status_code=500, detail="Failed to delete help type")
 
 
 # --- User Field Definitions ---

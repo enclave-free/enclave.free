@@ -812,3 +812,161 @@ class ReachoutResponse(BaseModel):
 class PublicConfigResponse(BaseModel):
     """Response model for public unauthenticated configuration settings."""
     pass
+
+
+# --- Resource Referral Directory Models ---
+
+RESOURCE_SCOPE_LEVELS = {"country", "subregion", "region", "global"}
+RESOURCE_CONTACT_KEYS = {"phone", "email", "url", "secure_channel", "address", "notes"}
+
+
+def normalize_resource_languages(value: Optional[list[str]]) -> Optional[list[str]]:
+    if value is None:
+        return value
+    normalized = []
+    for lang in value:
+        clean = str(lang).strip()
+        if clean and clean not in SUPPORTED_DEFAULT_LANGUAGES:
+            allowed = ", ".join(sorted(SUPPORTED_DEFAULT_LANGUAGES))
+            raise ValueError(f"language '{clean}' is not supported; must be one of: {allowed}")
+        if clean:
+            normalized.append(clean)
+    return normalized
+
+
+def normalize_resource_contact(value: Optional[dict]) -> Optional[dict]:
+    if value is None:
+        return value
+    if not isinstance(value, dict):
+        raise ValueError("contact must be an object of contact methods")
+    cleaned: dict[str, str] = {}
+    for key, raw in value.items():
+        if key not in RESOURCE_CONTACT_KEYS:
+            raise ValueError(f"unknown contact key '{key}'; allowed: {', '.join(sorted(RESOURCE_CONTACT_KEYS))}")
+        text = str(raw).strip()
+        if text:
+            cleaned[key] = text
+    return cleaned
+
+
+class ResourceCreate(BaseModel):
+    """Request model for creating a directory resource.
+
+    Only `name` is strictly required to create a draft; the entry stays in `pending`
+    status until all required-for-ready fields are present (name, resource_type,
+    scope_level [+scope_code unless global], >=1 help_type, >=1 contact method).
+    """
+    resource_id: Optional[str] = Field(default=None, max_length=120)
+    name: Optional[str] = Field(default=None, max_length=240)
+    resource_type: Optional[str] = Field(default=None, max_length=60)
+    description: Optional[str] = Field(default=None, max_length=4000)
+    contact: Optional[dict] = None
+    languages: Optional[list[str]] = Field(default=None, max_length=40)
+    scope_level: Optional[str] = None
+    scope_code: Optional[str] = Field(default=None, max_length=12)
+    help_types: Optional[list[str]] = Field(default=None, max_length=40)
+    verified: Optional[bool] = None
+    vetted_by: Optional[str] = Field(default=None, max_length=240)
+    source_note: Optional[str] = Field(default=None, max_length=1000)
+    display_order: int = 0
+    archived: bool = False
+
+    @field_validator("scope_level")
+    @classmethod
+    def _validate_scope_level(cls, v):
+        if v is not None and v not in RESOURCE_SCOPE_LEVELS:
+            raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
+        return v
+
+    @field_validator("languages")
+    @classmethod
+    def _validate_languages(cls, v):
+        return normalize_resource_languages(v)
+
+    @field_validator("contact")
+    @classmethod
+    def _validate_contact(cls, v):
+        return normalize_resource_contact(v)
+
+
+class ResourceUpdate(BaseModel):
+    """Request model for updating a directory resource (all fields optional)."""
+    name: Optional[str] = Field(default=None, max_length=240)
+    resource_type: Optional[str] = Field(default=None, max_length=60)
+    description: Optional[str] = Field(default=None, max_length=4000)
+    contact: Optional[dict] = None
+    languages: Optional[list[str]] = Field(default=None, max_length=40)
+    scope_level: Optional[str] = None
+    scope_code: Optional[str] = Field(default=None, max_length=12)
+    help_types: Optional[list[str]] = Field(default=None, max_length=40)
+    verified: Optional[bool] = None
+    vetted_by: Optional[str] = Field(default=None, max_length=240)
+    source_note: Optional[str] = Field(default=None, max_length=1000)
+    display_order: Optional[int] = None
+    archived: Optional[bool] = None
+
+    @field_validator("scope_level")
+    @classmethod
+    def _validate_scope_level(cls, v):
+        if v is not None and v not in RESOURCE_SCOPE_LEVELS:
+            raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
+        return v
+
+    @field_validator("languages")
+    @classmethod
+    def _validate_languages(cls, v):
+        return normalize_resource_languages(v)
+
+    @field_validator("contact")
+    @classmethod
+    def _validate_contact(cls, v):
+        return normalize_resource_contact(v)
+
+
+class ResourceResponse(BaseModel):
+    """Response model for a directory resource, including computed lifecycle state."""
+    resource_id: str
+    name: Optional[str] = None
+    resource_type: Optional[str] = None
+    description: Optional[str] = None
+    contact: dict = {}
+    languages: list[str] = []
+    scope_level: Optional[str] = None
+    scope_code: Optional[str] = None
+    coverage: Optional[str] = None
+    help_types: list[str] = []
+    status: str
+    missing_fields: list[str] = []
+    verified_at: Optional[str] = None
+    vetted_by: Optional[str] = None
+    source_note: Optional[str] = None
+    display_order: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class ResourceListResponse(BaseModel):
+    """Response model for a list of directory resources."""
+    resources: list[ResourceResponse]
+
+
+class HelpTypeModel(BaseModel):
+    """A help-type vocabulary entry."""
+    key: str = Field(..., min_length=1, max_length=60)
+    label: str = Field(..., min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    display_order: int = 0
+    is_active: bool = True
+
+
+class HelpTypeUpsert(BaseModel):
+    """Request model for creating or updating a help-type vocabulary entry."""
+    label: str = Field(..., min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    display_order: int = 0
+    is_active: bool = True
+
+
+class HelpTypeListResponse(BaseModel):
+    """Response model for the help-type vocabulary."""
+    help_types: list[HelpTypeModel]

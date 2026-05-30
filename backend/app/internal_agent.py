@@ -79,6 +79,19 @@ class InternalDocumentSearchResponse(BaseModel):
     top_k: int
 
 
+class InternalResourceSearchRequest(BaseModel):
+    help_type: str
+    jurisdiction: Optional[str] = None
+    language: Optional[str] = None
+    limit: int = 5
+
+
+class InternalResourceSearchResponse(BaseModel):
+    resources: list[dict]
+    resolved_country_code: Optional[str] = None
+    help_type: str
+
+
 class InternalAdminDbQueryRequest(BaseModel):
     sql: str
 
@@ -379,6 +392,31 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
         context=context,
         search_query=search_query,
         top_k=payload.top_k,
+    )
+
+
+@router.post(
+    "/resources/search",
+    response_model=InternalResourceSearchResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def resources_search(payload: InternalResourceSearchRequest) -> InternalResourceSearchResponse:
+    """Faceted lookup of trusted real-world resources by region + help type.
+
+    Returns only `ready` resources whose coverage scope contains the user's country,
+    ranked by scope specificity (in-country first), then verified, then language match.
+    """
+    resolved = database.normalize_jurisdiction(payload.jurisdiction)
+    resources = database.search_resources(
+        jurisdiction=payload.jurisdiction,
+        help_type=payload.help_type,
+        language=payload.language,
+        limit=payload.limit,
+    )
+    return InternalResourceSearchResponse(
+        resources=resources,
+        resolved_country_code=resolved,
+        help_type=payload.help_type,
     )
 
 
