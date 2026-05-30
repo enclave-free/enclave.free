@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -20,6 +21,30 @@ const AdminConfigAssistant = lazy(() =>
     default: module.AdminConfigAssistant,
   }))
 );
+
+// Resizable admin assistant side panel.
+const ASSISTANT_WIDTH_STORAGE_KEY = 'admin-assistant-panel-width';
+const MIN_ASSISTANT_WIDTH = 320;
+const DEFAULT_ASSISTANT_WIDTH = 384; // matches the previous fixed w-96
+const ASSISTANT_KEYBOARD_STEP = 24;
+
+function maxAssistantWidth(): number {
+  if (typeof window === 'undefined') return DEFAULT_ASSISTANT_WIDTH;
+  // Cap at half the page width.
+  return Math.round(window.innerWidth / 2);
+}
+
+function clampAssistantWidth(width: number): number {
+  const max = Math.max(MIN_ASSISTANT_WIDTH, maxAssistantWidth());
+  return Math.min(Math.max(Math.round(width), MIN_ASSISTANT_WIDTH), max);
+}
+
+function readStoredAssistantWidth(): number {
+  if (typeof window === 'undefined') return DEFAULT_ASSISTANT_WIDTH;
+  const raw = window.localStorage.getItem(ASSISTANT_WIDTH_STORAGE_KEY);
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return clampAssistantWidth(Number.isFinite(parsed) ? parsed : DEFAULT_ASSISTANT_WIDTH);
+}
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -50,8 +75,58 @@ export function AdminRoute({ children }: AdminRouteProps) {
   const [retryNonce, setRetryNonce] = useState(0);
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
+  const [assistantWidth, setAssistantWidth] = useState(readStoredAssistantWidth);
+  const [isResizingAssistant, setIsResizingAssistant] = useState(false);
   const mobileDialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // Persist the chosen width and keep it within [min, half-page] on viewport resize.
+  useEffect(() => {
+    window.localStorage.setItem(ASSISTANT_WIDTH_STORAGE_KEY, String(assistantWidth));
+  }, [assistantWidth]);
+
+  useEffect(() => {
+    const handleResize = () =>
+      setAssistantWidth((width) => clampAssistantWidth(width));
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // While dragging the divider, track the pointer against the right-docked panel.
+  useEffect(() => {
+    if (!isResizingAssistant) return;
+    const handlePointerMove = (event: PointerEvent) => {
+      setAssistantWidth(clampAssistantWidth(window.innerWidth - event.clientX));
+    };
+    const stopResizing = () => setIsResizingAssistant(false);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResizing);
+    window.addEventListener('pointercancel', stopResizing);
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResizing);
+      window.removeEventListener('pointercancel', stopResizing);
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+    };
+  }, [isResizingAssistant]);
+
+  // Keyboard resize: the panel is docked right, so ArrowLeft widens it.
+  const handleAssistantResizeKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>
+  ) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setAssistantWidth((width) => clampAssistantWidth(width + ASSISTANT_KEYBOARD_STEP));
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setAssistantWidth((width) => clampAssistantWidth(width - ASSISTANT_KEYBOARD_STEP));
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -210,14 +285,40 @@ export function AdminRoute({ children }: AdminRouteProps) {
         </div>
 
         <aside
-          className={`hidden lg:flex border-l border-border bg-surface-raised shrink-0 transition-[width] duration-200 ease-in-out right-0 overflow-hidden ${
-            assistantCollapsed ? 'w-16' : 'w-96'
-          }`}
+          className={`hidden lg:flex border-l border-border bg-surface-raised shrink-0 right-0 overflow-hidden ${
+            assistantCollapsed ? 'w-16' : ''
+          } ${isResizingAssistant ? '' : 'transition-[width] duration-200 ease-in-out'}`}
+          style={assistantCollapsed ? undefined : { width: assistantWidth }}
           aria-label={t(
             'admin.configAssistant.title',
             'Admin Configuration Assistant'
           )}
         >
+          {!assistantCollapsed && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t(
+                'admin.configAssistant.resize',
+                'Resize admin assistant panel'
+              )}
+              aria-valuenow={assistantWidth}
+              aria-valuemin={MIN_ASSISTANT_WIDTH}
+              aria-valuemax={maxAssistantWidth()}
+              tabIndex={0}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                setIsResizingAssistant(true);
+              }}
+              onKeyDown={handleAssistantResizeKeyDown}
+              className="group relative flex w-1.5 shrink-0 cursor-col-resize items-stretch bg-transparent transition-colors hover:bg-accent/20 focus:bg-accent/30 focus:outline-none"
+            >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover:bg-accent/60 group-focus:bg-accent/70"
+              />
+            </div>
+          )}
           <div
             className={`${assistantCollapsed ? 'flex' : 'hidden'} w-16 shrink-0 justify-center`}
           >
@@ -237,7 +338,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
             </button>
           </div>
           <div
-            className={`${assistantCollapsed ? 'w-0 overflow-hidden' : 'w-96'} shrink-0 transition-[width] duration-200 ease-in-out`}
+            className={`${assistantCollapsed ? 'w-0 shrink-0 overflow-hidden' : 'min-w-0 flex-1'}`}
             aria-hidden={assistantCollapsed}
             hidden={assistantCollapsed}
           >

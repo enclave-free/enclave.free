@@ -239,6 +239,7 @@
       "refreshFailed": "Failed to refresh context",
       "collapseSidebar": "Collapse assistant sidebar",
       "expandSidebar": "Open admin assistant sidebar",
+      "resize": "Resize admin assistant panel",
       "railLabel": "Assistant",
       "switchToCompact": "Switch to compact size",
       "switchToExpanded": "Switch to expanded size",
