@@ -28,6 +28,7 @@ import {
 } from '../../utils/adminAssistant';
 import {
   buildFullAdminConfigContext,
+  fetchServerScopedConfigContext,
   loadDeploymentSecretKeysFromConfig,
   refreshAdminConfigRedactionMetadata,
 } from '../../utils/adminConfigContext';
@@ -61,12 +62,37 @@ type ApplyState =
 
 interface AdminConfigAssistantProps {
   variant?: 'sidebar' | 'drawer';
+  /**
+   * 'admin-config' (default) is the reactive config assistant.
+   * 'onboarding' drives a guided first-run setup: it seeds a welcome opener and,
+   * each turn, injects the server-built `onboarding` scoped context (checklist +
+   * persona + write contract) so the agent walks the operator through setup.
+   */
+  purpose?: 'admin-config' | 'onboarding';
   onCollapse?: () => void;
   onClose?: () => void;
   collapseIcon?: ReactNode;
 }
 
 const CONFIG_TOOL_ID = 'admin-config';
+
+// How often (in ms) streamed tokens are flushed to the message list while the
+// assistant is responding. ~30 fps reads as smooth to the eye while avoiding a
+// full re-render + syntax-highlight pass on every single token (which pegged the
+// CPU and locked the UI). Tune here if needed.
+const STREAM_FLUSH_INTERVAL_MS = 33;
+
+/** Authenticated JSON fetch for scoped-context calls. */
+async function adminFetchJson<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const res = await adminFetch(endpoint, options);
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`);
+  }
+  return (await res.json()) as T;
+}
 
 function generateMessageId() {
   return `admin-msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -121,13 +147,29 @@ async function readErrorDetail(res: Response): Promise<string> {
 
 export function AdminConfigAssistant({
   variant = 'sidebar',
+  purpose = 'admin-config',
   onCollapse,
   onClose,
   collapseIcon,
 }: AdminConfigAssistantProps) {
   const { t } = useTranslation();
+  const isOnboarding = purpose === 'onboarding';
   const [shareSecrets, setShareSecrets] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() =>
+    isOnboarding
+      ? [
+          {
+            id: generateMessageId(),
+            role: 'assistant',
+            content: t(
+              'admin.configAssistant.onboardingWelcome',
+              "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
+            ),
+            timestamp: new Date(),
+          },
+        ]
+      : []
+  );
   const [conversationSessionId, setConversationSessionId] = useState<
     string | null
   >(null);
@@ -151,6 +193,26 @@ export function AdminConfigAssistant({
   const handleApplyRef = useRef<
     (changeSet: AdminAssistantChangeSet) => Promise<void>
   >(async () => {});
+  // Lets handleApply trigger an onboarding auto-advance turn without a dep cycle.
+  const handleSendRef = useRef<
+    (content: string, options?: { hidden?: boolean }) => Promise<void>
+  >(async () => {});
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to the latest message. Always scroll when the operator just sent
+  // (the newest message is theirs); otherwise only follow the stream if they're
+  // already near the bottom, so scrolling up to read history isn't interrupted.
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    const last = messages[messages.length - 1];
+    const nearBottom = container
+      ? container.scrollHeight - container.scrollTop - container.clientHeight < 160
+      : true;
+    if (last?.role === 'user' || nearBottom) {
+      messagesEndRef.current?.scrollIntoView({ block: 'end' });
+    }
+  }, [messages, isLoading]);
 
   const availableTools = useMemo<Tool[]>(
     () => [
@@ -285,19 +347,23 @@ export function AdminConfigAssistant({
   }, []);
 
   const handleSend = useCallback(
-    async (content: string) => {
+    async (content: string, options?: { hidden?: boolean }) => {
       const hasPendingChangeSet = applyState.state === 'review';
       const applyIntent = hasConfigTool
         ? resolveAdminApplyIntent(content, hasPendingChangeSet)
         : { kind: 'none' as const };
 
-      const userMessage: Message = {
-        id: generateMessageId(),
-        role: 'user',
-        content,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
+      // `hidden` turns (used to auto-advance onboarding after an Apply) are sent
+      // to the model but not rendered as a user bubble.
+      if (!options?.hidden) {
+        const userMessage: Message = {
+          id: generateMessageId(),
+          role: 'user',
+          content,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+      }
       setIsLoading(true);
       setError(null);
       setRecoveryError(null);
@@ -338,8 +404,27 @@ export function AdminConfigAssistant({
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
+          // Onboarding mode: inject the server-built `onboarding` scoped context
+          // (live checklist + guided persona + write contract) each turn so the
+          // agent always sees what is still unset and drives the next step. This
+          // context includes the "SCOPED CONFIG CONTEXT" header, so the Sage
+          // runtime uses it verbatim instead of re-classifying scope.
+          let onboardingContext = '';
+          if (isOnboarding) {
+            try {
+              const onboardingResult = await fetchServerScopedConfigContext({
+                query: content,
+                requestedScopes: ['onboarding'],
+                fetchJson: adminFetchJson,
+              });
+              onboardingContext = onboardingResult.context_text || '';
+            } catch {
+              // Non-fatal: fall back to a contextless turn rather than blocking setup.
+            }
+          }
+
           const promptPlan = planAdminPromptBudget({
-            adminConfigContext: '',
+            adminConfigContext: onboardingContext,
             documentContext: '',
             conversationHistory: boundedConversationHistory,
           });
@@ -382,6 +467,15 @@ export function AdminConfigAssistant({
         let streamSessionId: string | null = null;
         let streamReportedError = false;
         let classifiedStreamError: ClassifiedProviderError | null = null;
+        let lastDeltaFlushAt = 0;
+
+        // Compute the display string from the accumulated stream so far.
+        const computeStreamDisplay = () => {
+          const redacted = redactAdminDeploymentSecretChangeSets(raw);
+          return shareSecrets
+            ? redactSecrets(redacted, secretsForRedactionRef.current)
+            : redacted;
+        };
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
@@ -425,19 +519,19 @@ export function AdminConfigAssistant({
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
                 raw += delta;
-                const redactedChangeSets =
-                  redactAdminDeploymentSecretChangeSets(raw);
-                const display = shareSecrets
-                  ? redactSecrets(
-                      redactedChangeSets,
-                      secretsForRedactionRef.current
-                    )
-                  : redactedChangeSets;
-                setMessages((prev) =>
-                  patchAssistantMessage(prev, streamMessageId!, {
-                    content: display,
-                  })
-                );
+                // Throttle re-renders: flush at most once per
+                // STREAM_FLUSH_INTERVAL_MS instead of on every token. The final
+                // flush after the stream ends renders any buffered remainder.
+                const now = performance.now();
+                if (now - lastDeltaFlushAt >= STREAM_FLUSH_INTERVAL_MS) {
+                  lastDeltaFlushAt = now;
+                  const display = computeStreamDisplay();
+                  setMessages((prev) =>
+                    patchAssistantMessage(prev, streamMessageId!, {
+                      content: display,
+                    })
+                  );
+                }
               } else if (event === 'trace_final' && streamMessageId) {
                 setMessages((prev) =>
                   patchAssistantMessage(prev, streamMessageId!, {
@@ -471,8 +565,12 @@ export function AdminConfigAssistant({
             setConversationSessionId(streamSessionId);
           }
           if (streamMessageId) {
+            // Final flush: render any tokens buffered since the last throttled
+            // update, and clear the streaming status.
+            const display = computeStreamDisplay();
             setMessages((prev) =>
               patchAssistantMessage(prev, streamMessageId!, {
+                content: display,
                 traceStatus: null,
               })
             );
@@ -482,8 +580,11 @@ export function AdminConfigAssistant({
           stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
 
           if (streamMessageId && raw.trim()) {
+            // Flush whatever streamed before the error so partial output isn't lost.
+            const display = computeStreamDisplay();
             setMessages((prev) =>
               patchAssistantMessage(prev, streamMessageId!, {
+                content: display,
                 traceStatus: null,
               })
             );
@@ -596,12 +697,14 @@ export function AdminConfigAssistant({
       applyState,
       conversationSessionId,
       hasConfigTool,
+      isOnboarding,
       messages,
       selectedTools,
       shareSecrets,
       t,
     ]
   );
+  handleSendRef.current = handleSend;
 
   const handleApply = useCallback(
     async (changeSet: AdminAssistantChangeSet) => {
@@ -874,6 +977,16 @@ export function AdminConfigAssistant({
             timestamp: new Date(),
           },
         ]);
+
+        // Onboarding: auto-advance. After a successful apply, send a hidden turn
+        // so the assistant confirms and moves to the next checklist item/group
+        // without the operator having to ask "what's next?".
+        if (isOnboarding && okCount > 0) {
+          void handleSendRef.current(
+            'The change set was applied successfully. Briefly confirm what was saved, then continue: ask the next checklist question, or if all chat-configurable baseline items are done, summarize and hand off to Deployment Settings.',
+            { hidden: true }
+          );
+        }
       } catch (e) {
         setApplyState({
           state: 'error',
@@ -881,7 +994,7 @@ export function AdminConfigAssistant({
         });
       }
     },
-    [fetchJson, t]
+    [fetchJson, isOnboarding, t]
   );
   handleApplyRef.current = handleApply;
 
@@ -1076,7 +1189,7 @@ export function AdminConfigAssistant({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-sm text-text-muted">
@@ -1197,6 +1310,7 @@ export function AdminConfigAssistant({
               {t('admin.configAssistant.applyingChanges')}
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 

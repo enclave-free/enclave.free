@@ -228,6 +228,7 @@
       "themeDark": "Dark"
     },
     "configAssistant": {
+      "onboardingWelcome": "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime.",
       "openAria": "Open admin assistant",
       "openTitle": "Admin assistant",
       "title": "Admin Configuration Assistant",
@@ -828,9 +829,18 @@
     "noNostrExtension": "No Nostr extension found",
     "exportFailed": "Export failed"
   },
+  "adminGuidedSetup": {
+    "title": "Set up your instance",
+    "subtitle": "Your assistant will walk you through it — one step at a time.",
+    "manual": "Configure manually instead",
+    "finish": "Finish & go to dashboard"
+  },
   "adminDashboard": {
     "title": "Admin Dashboard",
     "subtitle": "Manage your Enclave instance configuration",
+    "aiSetupTitle": "Set up with the AI assistant",
+    "aiSetupBody": "Let the assistant walk you through naming and configuring your instance, one step at a time. You can switch to manual setup anytime.",
+    "aiSetupAction": "Start guided setup",
     "configureTitle": "What you can configure",
     "configureSubtitle": "These sections control branding, user data collection, AI behavior, deployment security, and stored content.",
     "readinessTitle": "Deployment Readiness",

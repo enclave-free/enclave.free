@@ -12,7 +12,8 @@ export type AdminConfigScope =
   | 'agent-settings'
   | 'user-types'
   | 'document-defaults'
-  | 'health';
+  | 'health'
+  | 'onboarding';
 
 export type AdminConfigContextMode = 'scoped' | 'full';
 

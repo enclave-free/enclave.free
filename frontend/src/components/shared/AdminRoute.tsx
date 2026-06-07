@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MessageCircle, PanelRightClose } from 'lucide-react';
 import {
@@ -52,6 +52,11 @@ export function AdminRoute({ children }: AdminRouteProps) {
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const mobileDialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // The dedicated onboarding route renders its own full-width assistant, so the
+  // shared right-rail assistant is suppressed there to avoid a duplicate panel.
+  const location = useLocation();
+  const hideSharedAssistant = location.pathname === '/admin/onboarding';
 
   useEffect(() => {
     let active = true;
@@ -190,6 +195,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
 
   return (
     <div className="min-h-screen bg-surface lg:h-screen lg:overflow-hidden">
+      {!hideSharedAssistant && (
       <div className="lg:hidden fixed top-1/2 right-0 -translate-y-1/2 z-50">
         <button
           onClick={() => setMobileAssistantOpen(true)}
@@ -203,12 +209,14 @@ export function AdminRoute({ children }: AdminRouteProps) {
           <MessageCircle className="w-5 h-5" />
         </button>
       </div>
+      )}
 
       <div className="lg:flex lg:h-full">
         <div className="min-w-0 flex-1 lg:h-full lg:overflow-y-auto">
           {children}
         </div>
 
+        {!hideSharedAssistant && (
         <aside
           className={`hidden lg:flex border-l border-border bg-surface-raised shrink-0 transition-[width] duration-200 ease-in-out right-0 overflow-hidden ${
             assistantCollapsed ? 'w-16' : 'w-96'
@@ -250,9 +258,10 @@ export function AdminRoute({ children }: AdminRouteProps) {
             </Suspense>
           </div>
         </aside>
+        )}
       </div>
 
-      {mobileAssistantOpen && (
+      {!hideSharedAssistant && mobileAssistantOpen && (
         <div
           className="lg:hidden fixed inset-0 z-50 flex justify-end bg-black/30"
           onClick={() => setMobileAssistantOpen(false)}

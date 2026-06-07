@@ -1527,6 +1527,9 @@ async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth
     settings_dict = settings.model_dump(exclude_unset=True)
     existing_settings = database.get_all_settings()
     database.update_settings(settings_dict)
+    # Record which keys the operator explicitly set so guided onboarding can tell
+    # an intentional choice from an untouched default (even if they match).
+    database.mark_onboarding_configured_keys(settings_dict.keys())
     if "auto_approve_users" in settings_dict:
         updated_settings = database.get_all_settings()
         old_value = str(existing_settings.get("auto_approve_users", "true")).lower()

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Paintbrush, Brain, Server, Upload, Database, ArrowRight, Users, ShieldCheck } from 'lucide-react'
+import { Paintbrush, Brain, Server, Upload, Database, ArrowRight, Users, ShieldCheck, Sparkles } from 'lucide-react'
 import { InstanceLogo } from '../components/shared/InstanceLogo'
 import { isAdminAuthenticated } from '../utils/adminApi'
 
@@ -120,6 +120,31 @@ export function AdminSetup() {
             </div>
             <Link to="/admin/deployment" className="btn btn-sm btn-primary shrink-0">
               {t('adminDashboard.readinessPrimary', 'Open Readiness Review')}
+            </Link>
+          </div>
+        </section>
+
+        <section
+          aria-label={t('adminDashboard.aiSetupTitle', 'Set up with the AI assistant')}
+          className="mb-8 animate-fade-in-up rounded-lg border border-accent/30 bg-accent/5 p-4"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-accent" />
+                <h2 className="text-sm font-semibold text-text">
+                  {t('adminDashboard.aiSetupTitle', 'Set up with the AI assistant')}
+                </h2>
+              </div>
+              <p className="mt-1 text-sm text-text-secondary">
+                {t(
+                  'adminDashboard.aiSetupBody',
+                  'Let the assistant walk you through naming and configuring your instance, one step at a time. You can switch to manual setup anytime.'
+                )}
+              </p>
+            </div>
+            <Link to="/admin/onboarding" className="btn btn-sm btn-primary shrink-0">
+              {t('adminDashboard.aiSetupAction', 'Start guided setup')}
             </Link>
           </div>
         </section>

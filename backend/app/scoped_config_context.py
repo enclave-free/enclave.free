@@ -39,6 +39,7 @@ ScopedConfigScope = Literal[
     "user-types",
     "document-defaults",
     "health",
+    "onboarding",
 ]
 
 ScopedConfigMode = Literal["auto", "overview", "full"]
@@ -474,6 +475,253 @@ def _build_document_defaults_section(*, warnings: list[str]) -> dict[str, Any]:
     }
 
 
+# =============================================================================
+# Onboarding (guided first-run setup)
+# =============================================================================
+
+# Each item is one step the assistant walks the operator through. This list is the
+# extension point: add more groups (user-types, agent-settings, etc.) as additional
+# items to extend AI-guided onboarding to other config domains.
+#
+# `configurable`:
+#   - "chat": the assistant can set it via a change set (PUT /admin/settings)
+#   - "deployment": secret/restart-required; the assistant must NOT take it in chat,
+#     only guide the operator to the Deployment Settings page.
+ONBOARDING_BASELINE_ITEMS: tuple[dict[str, Any], ...] = (
+    {
+        "key": "instance_name",
+        "label": "Instance name",
+        "question": (
+            "What should we call this space? This name shows at the top of the app "
+            "and in the browser tab — for example, \"Acme Aid\" or \"Refugee Legal Help\"."
+        ),
+        "importance": "required",
+        "configurable": "chat",
+        "default": "Enclave",
+    },
+    {
+        "key": "description",
+        "label": "Short description",
+        "question": (
+            "In a sentence, what is this space for? This is just a private note for "
+            "your own reference (your users won't see it) — for example, \"Rapid legal "
+            "support for people who've been detained.\""
+        ),
+        "importance": "recommended",
+        "configurable": "chat",
+        "default": "A privacy-first RAG knowledge base",
+    },
+    {
+        "key": "assistant_name",
+        "label": "Assistant name",
+        "question": (
+            "What should we name the AI helper? Your users will see this name on every "
+            "message it sends — for example, \"Aria\", \"Sage\", or \"Companion\"."
+        ),
+        "importance": "recommended",
+        "configurable": "chat",
+        "default": "Enclave AI",
+    },
+    {
+        "key": "primary_color",
+        "label": "Accent color",
+        "question": (
+            "What accent color should the app use? This is the highlight color for things "
+            "like buttons and links (the light/dark background is set separately). You can "
+            "tell me a color name like blue, purple, green, orange, pink, or teal — or a "
+            "specific color code like #3B82F6."
+        ),
+        "importance": "recommended",
+        "configurable": "chat",
+        "default": "#3B82F6",
+    },
+    {
+        "key": "default_theme",
+        "label": "Light or dark",
+        "question": (
+            "Should the app open in light mode, dark mode, or just match whatever the "
+            "person's device is set to? (light, dark, or system)"
+        ),
+        "importance": "recommended",
+        "configurable": "chat",
+        "default": "system",
+    },
+    {
+        "key": "default_language",
+        "label": "Default language",
+        "question": (
+            "What language should the app start in for new people? For example, English "
+            "or Spanish. This is optional — if you skip it, the app follows each person's "
+            "browser language."
+        ),
+        "importance": "optional",
+        "configurable": "chat",
+        "default": "",
+    },
+    {
+        "key": "header_tagline",
+        "label": "Tagline",
+        "question": (
+            "Want a short tagline in the header, next to your space's name? For example, "
+            "\"Private answers, always.\" This is optional — feel free to skip it."
+        ),
+        "importance": "optional",
+        "configurable": "chat",
+        "default": "",
+    },
+    {
+        "key": "auto_approve_users",
+        "label": "Who can join",
+        "question": (
+            "When someone new signs up, should they get in right away, or wait for you to "
+            "approve them first? (\"right away\" or \"approve each person\")"
+        ),
+        "importance": "recommended",
+        "configurable": "chat",
+        "default": "true",
+    },
+)
+
+# Deployment/secret steps the assistant guides toward but never sets in chat.
+ONBOARDING_DEPLOYMENT_HANDOFFS: tuple[dict[str, str], ...] = (
+    {
+        "label": "Email / SMTP",
+        "why": "Required for real users to receive magic-link sign-in emails (or enable MOCK_EMAIL for testing).",
+    },
+    {
+        "label": "Model provider keys",
+        "why": "The assistant cannot run without the model/embedding API keys.",
+    },
+    {
+        "label": "Domains / CORS / SSL",
+        "why": "Needed for any non-localhost deployment.",
+    },
+)
+
+
+def _onboarding_item_status(current_value: str | None, default: str, configured: bool) -> str:
+    # An explicitly-configured key counts as 'set' even if its value equals the
+    # default (e.g. operator chose theme=system), so it burns down off the list.
+    if configured:
+        return "set"
+    value = (current_value or "").strip()
+    if not value:
+        return "unset"
+    if value == (default or "").strip():
+        return "default"
+    return "set"
+
+
+def _build_onboarding_section(*, settings: dict[str, Any], warnings: list[str]) -> dict[str, Any]:
+    try:
+        configured_keys = database.get_onboarding_configured_keys()
+    except Exception:
+        configured_keys = set()
+    checklist = []
+    for item in ONBOARDING_BASELINE_ITEMS:
+        current = settings.get(item["key"])
+        current_str = current if isinstance(current, str) else (None if current is None else str(current))
+        checklist.append({
+            "key": item["key"],
+            "label": item["label"],
+            "question": item["question"],
+            "importance": item["importance"],
+            "configurable": item["configurable"],
+            "current_value": current_str,
+            "status": _onboarding_item_status(
+                current_str, item.get("default", ""), item["key"] in configured_keys
+            ),
+        })
+
+    remaining = [c for c in checklist if c["status"] in ("unset", "default")]
+
+    lines = [
+        "ONBOARDING MODE — GUIDED FIRST-RUN SETUP",
+        "You are helping a brand-new operator set up their Enclave instance for the very first "
+        "time. This is their first impression — be warm, concise, and encouraging.",
+        "",
+        "HOW TO RUN THIS SESSION (ASK EVERYTHING AT ONCE):",
+        "- Present ALL chat-configurable items that still need a value (status 'unset' or 'default') as a "
+        "SINGLE numbered list in ONE message, each line: number, label, and the item's friendly 'question'. "
+        "Tell the operator they can answer as many as they like in one reply, number their answers, and "
+        "skip anything. Do NOT ask one question per turn.",
+        "- When they reply, parse their single message flexibly: they may number answers (\"1. ... 4. ...\"), "
+        "write prose, answer only some, and skip others. Only use values they actually provided — never "
+        "invent a value for something they skipped.",
+        "- Apply EVERYTHING they provided in ONE change set (PUT /admin/settings) — a single approval for "
+        "all of it. Translate plain answers to stored values per the value mapping in the write contract.",
+        "- The CHECKLIST you receive each turn is the source of truth for what is saved. After the Apply, "
+        "re-read it: confirm what saved, and if any value they gave still shows 'unset'/'default', it did "
+        "NOT save — re-apply it in another change set.",
+        "- BURN DOWN THE LIST: partial answers are fine. After applying what they gave, present a NEW, "
+        "SHORTER numbered list of ONLY the items that still show 'unset'/'default', and invite them to "
+        "answer any of those (or skip). Repeat this loop — each round the list gets shorter — until no "
+        "chat-configurable items remain or the operator says they're done. Never re-ask for items already "
+        "'set' unless the operator wants to change them.",
+        "- The operator can stop at any time with items still unanswered; that's OK. Optional items "
+        "(language, tagline) especially can be left as-is. Don't pressure them to finish every item.",
+        "- NEVER ask for secrets or API keys in chat. For the DEPLOYMENT HANDOFFS below, explain what "
+        "they are and direct the operator to the Deployment Settings page — never put them in a change set.",
+        "- When no items remain (or the operator is done), summarize what was set (read values from the "
+        "checklist, not memory), then tell them to use the 'Finish & go to dashboard' button and to visit "
+        "Deployment Settings for the handoff items.",
+        "",
+        f"PROGRESS: {len(checklist) - len(remaining)}/{len(checklist)} baseline items configured.",
+        "",
+        "REMAINING — present THESE as the numbered list this turn (if empty, the baseline is complete; "
+        "summarize and wrap up):",
+        _compact_json(
+            [{"key": c["key"], "label": c["label"], "question": c["question"]} for c in remaining]
+        ),
+        "",
+        "FULL CHECKLIST (with saved status, for reference):",
+        _compact_json(checklist),
+        "",
+        "DEPLOYMENT HANDOFFS (guide only — never set in chat):",
+        _compact_json(list(ONBOARDING_DEPLOYMENT_HANDOFFS)),
+        "",
+        "WRITE CONTRACT:",
+        "- Apply chat-configurable items with PUT /admin/settings and a JSON body containing ALL the "
+        "keys you have collected for the group, e.g. {\"instance_name\": \"...\", \"description\": \"...\"}.",
+        "- Batch related settings into a single change set (one Apply for the whole group), not one per field.",
+        "- The questions use plain language; translate the operator's plain answer into the stored value:",
+        "    * default_theme: one of \"light\", \"dark\", or \"system\".",
+        "    * default_language: a 2-letter language code (English -> \"en\", Spanish -> \"es\", "
+        "French -> \"fr\", Arabic -> \"ar\", etc.).",
+        "    * auto_approve_users: the string \"true\" (let people in right away) or \"false\" "
+        "(approve each person manually).",
+        "    * primary_color: a color name (blue, purple, green, orange, pink, teal) or a hex code "
+        "like \"#3B82F6\".",
+        "Example batched change set (after collecting a few branding answers):",
+        json.dumps(
+            {
+                "version": 1,
+                "summary": "Set the instance name, description, and assistant name.",
+                "requests": [
+                    {
+                        "method": "PUT",
+                        "path": "/admin/settings",
+                        "body": {
+                            "instance_name": "Acme Aid",
+                            "description": "Rapid legal support for detainees.",
+                            "assistant_name": "Aria",
+                        },
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+    ]
+
+    return {
+        "scope": "onboarding",
+        "title": "Guided Onboarding",
+        "content": "\n".join(lines),
+        "fields": [],
+    }
+
+
 def _build_health_section(*, warnings: list[str]) -> dict[str, Any]:
     restart_keys = database.get_restart_required_keys()
     deployment_items = database.get_all_deployment_config()
@@ -580,6 +828,7 @@ def build_scoped_config_context(
         "user-types": lambda: _build_user_types_section(warnings=warnings),
         "document-defaults": lambda: _build_document_defaults_section(warnings=warnings),
         "health": lambda: _build_health_section(warnings=warnings),
+        "onboarding": lambda: _build_onboarding_section(settings=settings, warnings=warnings),
     }
 
     for scope in included_scopes:
