@@ -39,9 +39,18 @@ function clampAssistantWidth(width: number): number {
   return Math.min(Math.max(Math.round(width), MIN_ASSISTANT_WIDTH), max);
 }
 
+function getAssistantStorage(): Storage | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 function readStoredAssistantWidth(): number {
-  if (typeof window === 'undefined') return DEFAULT_ASSISTANT_WIDTH;
-  const raw = window.localStorage.getItem(ASSISTANT_WIDTH_STORAGE_KEY);
+  const storage = getAssistantStorage();
+  const raw = storage?.getItem(ASSISTANT_WIDTH_STORAGE_KEY);
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
   return clampAssistantWidth(Number.isFinite(parsed) ? parsed : DEFAULT_ASSISTANT_WIDTH);
 }
@@ -82,7 +91,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
 
   // Persist the chosen width and keep it within [min, half-page] on viewport resize.
   useEffect(() => {
-    window.localStorage.setItem(ASSISTANT_WIDTH_STORAGE_KEY, String(assistantWidth));
+    getAssistantStorage()?.setItem(ASSISTANT_WIDTH_STORAGE_KEY, String(assistantWidth));
   }, [assistantWidth]);
 
   useEffect(() => {

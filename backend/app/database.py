@@ -4064,9 +4064,17 @@ def search_resources(
             help_types = _get_resource_help_types(cursor, row["resource_id"])
             results.append(_resource_row_to_dict(row, help_types))
 
-    # Optional language preference: stable-sort matches ahead of non-matches.
+    # Optional language preference should not outrank local coverage or verified status.
     if language:
-        results.sort(key=lambda r: 0 if language in (r.get("languages") or []) else 1)
+        scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
+        results.sort(
+            key=lambda r: (
+                scope_rank.get(r.get("scope_level"), 3),
+                0 if r.get("verified_at") else 1,
+                0 if language in (r.get("languages") or []) else 1,
+                r.get("display_order") or 0,
+            )
+        )
 
     return results[:limit]
 

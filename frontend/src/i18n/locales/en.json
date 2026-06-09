@@ -914,7 +914,7 @@
     "markVerified": "Mark as verified (ranks first)",
     "archive": "Archive (hide from end users)",
     "deleteTitle": "Delete resource?",
-    "deleteBody": "This permanently removes"
+    "deleteBody": "This removes the directory entry for"
   },
   "adminAI": {
     "title": "Agent Settings",

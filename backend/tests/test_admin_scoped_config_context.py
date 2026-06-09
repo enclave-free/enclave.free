@@ -145,11 +145,13 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
                 "agent-settings",
                 "user-types",
                 "document-defaults",
+                "resources",
                 "health",
             ],
         )
         self.assertIn("AGENT SETTINGS (/admin/ai-config)", body["context_text"])
         self.assertIn("USER TYPES (/admin/user-types)", body["context_text"])
+        self.assertIn("RESOURCE DIRECTORY (/admin/resources)", body["context_text"])
 
     def test_deployment_secret_keys_are_metadata_only(self) -> None:
         self.database.upsert_deployment_config(

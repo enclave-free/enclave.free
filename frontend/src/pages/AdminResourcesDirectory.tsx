@@ -519,7 +519,7 @@ export function AdminResourcesDirectory() {
           <Card className="w-full max-w-md p-5">
             <h2 className="text-base font-semibold text-text">{t('adminResources.deleteTitle', 'Delete resource?')}</h2>
             <p className="mt-2 text-sm text-text-secondary">
-              {t('adminResources.deleteBody', 'This permanently removes')}{' '}
+              {t('adminResources.deleteBody', 'This removes the directory entry for')}{' '}
               <span className="font-medium text-text">{deleteTarget.name || deleteTarget.resource_id}</span>.
             </p>
             <div className="mt-4 flex justify-end gap-2">

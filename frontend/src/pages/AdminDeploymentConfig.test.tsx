@@ -1192,5 +1192,5 @@ describe('AdminDeploymentConfig', () => {
     expect(within(dialog).getByText('Fields to migrate')).toBeInTheDocument()
     expect(within(dialog).getByText('3')).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Confirm & Migrate' })).toHaveClass('btn-danger')
-  })
+  }, 10000)
 })

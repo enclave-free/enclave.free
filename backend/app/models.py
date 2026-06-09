@@ -929,14 +929,14 @@ class ResourceResponse(BaseModel):
     name: Optional[str] = None
     resource_type: Optional[str] = None
     description: Optional[str] = None
-    contact: dict = {}
-    languages: list[str] = []
+    contact: dict = Field(default_factory=dict)
+    languages: list[str] = Field(default_factory=list)
     scope_level: Optional[str] = None
     scope_code: Optional[str] = None
     coverage: Optional[str] = None
-    help_types: list[str] = []
+    help_types: list[str] = Field(default_factory=list)
     status: str
-    missing_fields: list[str] = []
+    missing_fields: list[str] = Field(default_factory=list)
     verified_at: Optional[str] = None
     vetted_by: Optional[str] = None
     source_note: Optional[str] = None
