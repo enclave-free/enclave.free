@@ -341,15 +341,9 @@ curl -i -X POST http://localhost:8000/vector-search \
   -H 'Content-Type: application/json' \
   -d '{"query":"test","top_k":1}'
 
-# S4-3: Authenticated requests should succeed on owned query-session records
-curl -i -H 'Authorization: Bearer <token>' http://localhost:8000/query/session/test-session-id
-
-# S4-3: Unauthenticated query-session requests should fail
-curl -i http://localhost:8000/query/sessions
-curl -i http://localhost:8000/query/session/test-session-id
-curl -i -X PATCH http://localhost:8000/query/session/test-session-id \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"test"}'
+# S4-3: Public query-session routes are Sage-owned.
+# Verify session ownership through the Sage/Agent Runtime gateway flow;
+# Python-side evidence covers lifecycle deletion and tombstone reporting.
 
 # S4-4: CORS should reject disallowed origins
 curl -i -X OPTIONS http://localhost:8000/health \
@@ -427,9 +421,8 @@ Use these guardrails while security fixes are in progress:
 - Manual Section 7.1 checks:
   - `GET /ingest/pending` unauthenticated: `401`
   - `POST /vector-search` unauthenticated: `401`
-  - `GET /query/sessions` unauthenticated: `401`
-  - `GET /query/session/test-session-id` unauthenticated: `401`
-  - `PATCH /query/session/test-session-id` unauthenticated: `401`
+  - Public query-session ownership: verified through the Sage-owned Agent Runtime route set.
+  - Python lifecycle evidence: Sage-to-Python deletion/tombstone reporting covered by backend tests.
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
   - Published ports: `enclave-backend` and `enclave-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
   - Smoke endpoints: `GET /test` -> `200`, `GET /llm/test` -> `200`

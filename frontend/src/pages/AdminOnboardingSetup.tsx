@@ -1,13 +1,13 @@
-import { lazy, Suspense } from 'react'
-import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { ArrowRight, Settings2, Sparkles } from 'lucide-react'
+import { lazy, Suspense } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ArrowRight, Settings2, Sparkles } from 'lucide-react';
 
 const AdminConfigAssistant = lazy(() =>
   import('../components/admin/AdminConfigAssistant').then((module) => ({
     default: module.AdminConfigAssistant,
   }))
-)
+);
 
 /**
  * AI-facilitated first-run onboarding. Defaults to a chat-based setup that fills
@@ -16,7 +16,7 @@ const AdminConfigAssistant = lazy(() =>
  * so there is a single, primary assistant here.
  */
 export function AdminOnboardingSetup() {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-screen flex-col bg-surface">
@@ -30,7 +30,7 @@ export function AdminOnboardingSetup() {
             <p className="text-xs text-text-secondary">
               {t(
                 'adminGuidedSetup.subtitle',
-                'Your assistant will walk you through it — one step at a time.'
+                'Your assistant will collect the basics in one pass.'
               )}
             </p>
           </div>
@@ -65,5 +65,5 @@ export function AdminOnboardingSetup() {
         </Suspense>
       </div>
     </div>
-  )
+  );
 }

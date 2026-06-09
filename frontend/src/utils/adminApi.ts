@@ -4,10 +4,28 @@
  * Auth uses secure session cookies.
  */
 
-import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
-import { clearLogoutBrowserStorage } from './browserStoragePosture'
+import { API_BASE, STORAGE_KEYS } from '../types/onboarding';
+import { clearLogoutBrowserStorage } from './browserStoragePosture';
 
-export type AdminSessionValidationState = 'authenticated' | 'unauthenticated' | 'unavailable'
+export type AdminSessionValidationState =
+  | 'authenticated'
+  | 'unauthenticated'
+  | 'unavailable';
+
+/**
+ * Fired when the curated resource directory (or its help-type vocabulary) is
+ * mutated — e.g. when the admin applies a change set from the assistant panel.
+ * Open admin views (the Resource Directory table) listen for this to refresh
+ * without a manual reload.
+ */
+export const ADMIN_RESOURCES_CHANGED_EVENT = 'enclave:admin-resources-changed';
+
+/** Notify any open admin views that curated resources changed. */
+export function notifyAdminResourcesChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(ADMIN_RESOURCES_CHANGED_EVENT));
+  }
+}
 
 /**
  * Make an authenticated admin API request.
@@ -18,44 +36,44 @@ export async function adminFetch(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const headers = new Headers(options.headers)
+  const headers = new Headers(options.headers);
 
   if (
     options.body &&
     !headers.has('Content-Type') &&
     !(typeof FormData !== 'undefined' && options.body instanceof FormData)
   ) {
-    headers.set('Content-Type', 'application/json')
+    headers.set('Content-Type', 'application/json');
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers,
     credentials: 'include',
-  })
+  });
 
   // Handle 401 - redirect to admin login
   if (response.status === 401) {
-    clearAdminAuth()
-    window.location.href = '/admin'
-    throw new Error('errors.adminSessionExpired')
+    clearAdminAuth();
+    window.location.href = '/admin';
+    throw new Error('errors.adminSessionExpired');
   }
 
-  return response
+  return response;
 }
 
 /**
  * Check if current session has valid admin authentication.
  */
 export function isAdminAuthenticated(): boolean {
-  return !!localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY)
+  return !!localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY);
 }
 
 /**
  * Clear admin authentication state.
  */
 export function clearAdminAuth(): void {
-  clearLogoutBrowserStorage('admin')
+  clearLogoutBrowserStorage('admin');
 }
 
 /**
@@ -66,11 +84,11 @@ export async function clearAdminAuthWithServerLogout(): Promise<void> {
     await fetch(`${API_BASE}/admin/logout`, {
       method: 'POST',
       credentials: 'include',
-    })
+    });
   } catch {
     // Best-effort cleanup
   }
-  clearAdminAuth()
+  clearAdminAuth();
 }
 
 /**
@@ -82,25 +100,25 @@ export async function clearAdminAuthWithServerLogout(): Promise<void> {
  */
 export async function validateAdminSession(): Promise<AdminSessionValidationState> {
   if (!isAdminAuthenticated()) {
-    return 'unauthenticated'
+    return 'unauthenticated';
   }
 
   try {
     const response = await fetch(`${API_BASE}/admin/session`, {
       credentials: 'include',
-    })
+    });
 
     if (response.status === 401) {
-      clearAdminAuth()
-      return 'unauthenticated'
+      clearAdminAuth();
+      return 'unauthenticated';
     }
 
     if (response.ok) {
-      return 'authenticated'
+      return 'authenticated';
     }
 
-    return 'unavailable'
+    return 'unavailable';
   } catch {
-    return 'unavailable'
+    return 'unavailable';
   }
 }

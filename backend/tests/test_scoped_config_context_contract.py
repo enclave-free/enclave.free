@@ -5,6 +5,7 @@ Issues #312–#314: internal contract, instance-settings scope, and remaining sc
 """
 
 import importlib
+import json
 import os
 import sys
 import tempfile
@@ -454,6 +455,66 @@ class ScopedConfigContextContractTest(unittest.TestCase):
         context_text = body["context_text"]
         self.assertIn("AGENT SETTINGS (/admin/ai-config)", context_text)
         self.assertIn("DEPLOYMENT SETTINGS", context_text)
+
+    def test_requested_onboarding_scope_includes_guided_setup_context(self) -> None:
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": "continue first-run setup",
+                "mode": "auto",
+                "requested_scopes": ["onboarding"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["included_scopes"], ["overview", "onboarding"])
+        context_text = body["context_text"]
+        self.assertIn("ONBOARDING MODE", context_text)
+        self.assertIn("REMAINING", context_text)
+        self.assertIn("FULL CHECKLIST", context_text)
+        self.assertIn("DEPLOYMENT HANDOFFS", context_text)
+        self.assertIn("PUT /admin/settings", context_text)
+        section = next(item for item in body["sections"] if item["scope"] == "onboarding")
+        self.assertIn("Guided Onboarding", section["title"])
+
+    def test_onboarding_configured_keys_burn_down_default_values(self) -> None:
+        self.database.mark_onboarding_configured_keys(
+            ["default_theme", "auto_approve_users"]
+        )
+
+        response = self.client.post(
+            "/internal/agent/scoped-config-context",
+            headers=self.headers,
+            json={
+                **self.admin_payload,
+                "query": "continue first-run setup",
+                "mode": "auto",
+                "requested_scopes": ["onboarding"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+        self.assertIn("PROGRESS: 2/8 baseline items configured.", context_text)
+
+        remaining_region = context_text.split("REMAINING", 1)[1].split(
+            "FULL CHECKLIST", 1
+        )[0]
+        remaining = json.loads(remaining_region[remaining_region.index("[") :].strip())
+        remaining_keys = {item["key"] for item in remaining}
+        self.assertNotIn("default_theme", remaining_keys)
+        self.assertNotIn("auto_approve_users", remaining_keys)
+
+        checklist_region = context_text.split("FULL CHECKLIST", 1)[1].split(
+            "DEPLOYMENT HANDOFFS", 1
+        )[0]
+        checklist = json.loads(checklist_region[checklist_region.index("[") :].strip())
+        statuses = {item["key"]: item["status"] for item in checklist}
+        self.assertEqual(statuses["default_theme"], "set")
+        self.assertEqual(statuses["auto_approve_users"], "set")
 
     def test_partial_user_type_read_failure_returns_warning_without_failing(self) -> None:
         type_id = self.database.create_user_type(name="Broken Type", display_order=0)

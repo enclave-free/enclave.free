@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
@@ -20,6 +21,41 @@ const AdminConfigAssistant = lazy(() =>
     default: module.AdminConfigAssistant,
   }))
 );
+
+// Resizable admin assistant side panel.
+const ASSISTANT_WIDTH_STORAGE_KEY = 'admin-assistant-panel-width';
+const MIN_ASSISTANT_WIDTH = 320;
+const DEFAULT_ASSISTANT_WIDTH = 384; // matches the previous fixed w-96
+const ASSISTANT_KEYBOARD_STEP = 24;
+
+function maxAssistantWidth(): number {
+  if (typeof window === 'undefined') return DEFAULT_ASSISTANT_WIDTH;
+  // Cap at half the page width.
+  return Math.round(window.innerWidth / 2);
+}
+
+function clampAssistantWidth(width: number): number {
+  const max = Math.max(MIN_ASSISTANT_WIDTH, maxAssistantWidth());
+  return Math.min(Math.max(Math.round(width), MIN_ASSISTANT_WIDTH), max);
+}
+
+function getAssistantStorage(): Storage | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredAssistantWidth(): number {
+  const storage = getAssistantStorage();
+  const raw = storage?.getItem(ASSISTANT_WIDTH_STORAGE_KEY);
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return clampAssistantWidth(
+    Number.isFinite(parsed) ? parsed : DEFAULT_ASSISTANT_WIDTH
+  );
+}
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -50,6 +86,10 @@ export function AdminRoute({ children }: AdminRouteProps) {
   const [retryNonce, setRetryNonce] = useState(0);
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
+  const [assistantWidth, setAssistantWidth] = useState(
+    readStoredAssistantWidth
+  );
+  const [isResizingAssistant, setIsResizingAssistant] = useState(false);
   const mobileDialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -57,6 +97,61 @@ export function AdminRoute({ children }: AdminRouteProps) {
   // shared right-rail assistant is suppressed there to avoid a duplicate panel.
   const location = useLocation();
   const hideSharedAssistant = location.pathname === '/admin/onboarding';
+
+  // Persist the chosen width and keep it within [min, half-page] on viewport resize.
+  useEffect(() => {
+    getAssistantStorage()?.setItem(
+      ASSISTANT_WIDTH_STORAGE_KEY,
+      String(assistantWidth)
+    );
+  }, [assistantWidth]);
+
+  useEffect(() => {
+    const handleResize = () =>
+      setAssistantWidth((width) => clampAssistantWidth(width));
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // While dragging the divider, track the pointer against the right-docked panel.
+  useEffect(() => {
+    if (!isResizingAssistant) return;
+    const handlePointerMove = (event: PointerEvent) => {
+      setAssistantWidth(clampAssistantWidth(window.innerWidth - event.clientX));
+    };
+    const stopResizing = () => setIsResizingAssistant(false);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResizing);
+    window.addEventListener('pointercancel', stopResizing);
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResizing);
+      window.removeEventListener('pointercancel', stopResizing);
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+    };
+  }, [isResizingAssistant]);
+
+  // Keyboard resize: the panel is docked right, so ArrowLeft widens it.
+  const handleAssistantResizeKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>
+  ) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setAssistantWidth((width) =>
+        clampAssistantWidth(width + ASSISTANT_KEYBOARD_STEP)
+      );
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setAssistantWidth((width) =>
+        clampAssistantWidth(width - ASSISTANT_KEYBOARD_STEP)
+      );
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -196,19 +291,19 @@ export function AdminRoute({ children }: AdminRouteProps) {
   return (
     <div className="min-h-screen bg-surface lg:h-screen lg:overflow-hidden">
       {!hideSharedAssistant && (
-      <div className="lg:hidden fixed top-1/2 right-0 -translate-y-1/2 z-50">
-        <button
-          onClick={() => setMobileAssistantOpen(true)}
-          className="h-14 w-11 rounded-l-2xl bg-accent text-accent-text shadow-lg ring-1 ring-white/10 hover:bg-accent-hover hover:shadow-xl transition-all active:scale-95 flex items-center justify-center"
-          aria-label={t(
-            'admin.configAssistant.openAria',
-            'Open admin assistant'
-          )}
-          title={t('admin.configAssistant.openTitle', 'Admin assistant')}
-        >
-          <MessageCircle className="w-5 h-5" />
-        </button>
-      </div>
+        <div className="lg:hidden fixed top-1/2 right-0 -translate-y-1/2 z-50">
+          <button
+            onClick={() => setMobileAssistantOpen(true)}
+            className="h-14 w-11 rounded-l-2xl bg-accent text-accent-text shadow-lg ring-1 ring-white/10 hover:bg-accent-hover hover:shadow-xl transition-all active:scale-95 flex items-center justify-center"
+            aria-label={t(
+              'admin.configAssistant.openAria',
+              'Open admin assistant'
+            )}
+            title={t('admin.configAssistant.openTitle', 'Admin assistant')}
+          >
+            <MessageCircle className="w-5 h-5" />
+          </button>
+        </div>
       )}
 
       <div className="lg:flex lg:h-full">
@@ -217,47 +312,73 @@ export function AdminRoute({ children }: AdminRouteProps) {
         </div>
 
         {!hideSharedAssistant && (
-        <aside
-          className={`hidden lg:flex border-l border-border bg-surface-raised shrink-0 transition-[width] duration-200 ease-in-out right-0 overflow-hidden ${
-            assistantCollapsed ? 'w-16' : 'w-96'
-          }`}
-          aria-label={t(
-            'admin.configAssistant.title',
-            'Admin Configuration Assistant'
-          )}
-        >
-          <div
-            className={`${assistantCollapsed ? 'flex' : 'hidden'} w-16 shrink-0 justify-center`}
+          <aside
+            className={`hidden lg:flex border-l border-border bg-surface-raised shrink-0 right-0 overflow-hidden ${
+              assistantCollapsed ? 'w-16' : ''
+            } ${isResizingAssistant ? '' : 'transition-[width] duration-200 ease-in-out'}`}
+            style={assistantCollapsed ? undefined : { width: assistantWidth }}
+            aria-label={t(
+              'admin.configAssistant.title',
+              'Admin Configuration Assistant'
+            )}
           >
-            <button
-              onClick={() => setAssistantCollapsed(false)}
-              className="mt-4 flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-surface text-text-muted shadow-sm ring-1 ring-border/70 transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-surface-overlay hover:text-accent hover:shadow-md active:scale-[0.96]"
-              aria-label={t(
-                'admin.configAssistant.expandSidebar',
-                'Open admin assistant sidebar'
-              )}
-              title={t(
-                'admin.configAssistant.expandSidebar',
-                'Open admin assistant sidebar'
-              )}
+            {!assistantCollapsed && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={t(
+                  'admin.configAssistant.resize',
+                  'Resize admin assistant panel'
+                )}
+                aria-valuenow={assistantWidth}
+                aria-valuemin={MIN_ASSISTANT_WIDTH}
+                aria-valuemax={maxAssistantWidth()}
+                tabIndex={0}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  setIsResizingAssistant(true);
+                }}
+                onKeyDown={handleAssistantResizeKeyDown}
+                className="group relative flex w-1.5 shrink-0 cursor-col-resize items-stretch bg-transparent transition-colors hover:bg-accent/20 focus:bg-accent/30 focus:outline-none"
+              >
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover:bg-accent/60 group-focus:bg-accent/70"
+                />
+              </div>
+            )}
+            <div
+              className={`${assistantCollapsed ? 'flex' : 'hidden'} w-16 shrink-0 justify-center`}
             >
-              <MessageCircle className="w-5 h-5" />
-            </button>
-          </div>
-          <div
-            className={`${assistantCollapsed ? 'w-0 overflow-hidden' : 'w-96'} shrink-0 transition-[width] duration-200 ease-in-out`}
-            aria-hidden={assistantCollapsed}
-            hidden={assistantCollapsed}
-          >
-            <Suspense fallback={<AssistantLoadingFallback />}>
-              <AdminConfigAssistant
-                variant="sidebar"
-                onCollapse={() => setAssistantCollapsed(true)}
-                collapseIcon={<PanelRightClose className="w-4 h-4" />}
-              />
-            </Suspense>
-          </div>
-        </aside>
+              <button
+                onClick={() => setAssistantCollapsed(false)}
+                className="mt-4 flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-surface text-text-muted shadow-sm ring-1 ring-border/70 transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-surface-overlay hover:text-accent hover:shadow-md active:scale-[0.96]"
+                aria-label={t(
+                  'admin.configAssistant.expandSidebar',
+                  'Open admin assistant sidebar'
+                )}
+                title={t(
+                  'admin.configAssistant.expandSidebar',
+                  'Open admin assistant sidebar'
+                )}
+              >
+                <MessageCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div
+              className={`${assistantCollapsed ? 'w-0 shrink-0 overflow-hidden' : 'min-w-0 flex-1'}`}
+              aria-hidden={assistantCollapsed}
+              hidden={assistantCollapsed}
+            >
+              <Suspense fallback={<AssistantLoadingFallback />}>
+                <AdminConfigAssistant
+                  variant="sidebar"
+                  onCollapse={() => setAssistantCollapsed(true)}
+                  collapseIcon={<PanelRightClose className="w-4 h-4" />}
+                />
+              </Suspense>
+            </div>
+          </aside>
         )}
       </div>
 

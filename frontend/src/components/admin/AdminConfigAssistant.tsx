@@ -15,7 +15,7 @@ import {
   Play,
   EyeOff,
 } from 'lucide-react';
-import { adminFetch } from '../../utils/adminApi';
+import { adminFetch, notifyAdminResourcesChanged } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
@@ -207,7 +207,8 @@ export function AdminConfigAssistant({
     const container = messagesContainerRef.current;
     const last = messages[messages.length - 1];
     const nearBottom = container
-      ? container.scrollHeight - container.scrollTop - container.clientHeight < 160
+      ? container.scrollHeight - container.scrollTop - container.clientHeight <
+        160
       : true;
     if (last?.role === 'user' || nearBottom) {
       messagesEndRef.current?.scrollIntoView({ block: 'end' });
@@ -851,6 +852,16 @@ export function AdminConfigAssistant({
 
         const okCount = results.filter((r) => r.ok).length;
         const failCount = results.length - okCount;
+
+        // If any resource/help-type write succeeded, tell open admin views (the
+        // Resource Directory table) to refresh so they don't show stale data.
+        if (
+          results.some(
+            (r) => r.ok && /^\/admin\/(resources|help-types)\b/.test(r.path)
+          )
+        ) {
+          notifyAdminResourcesChanged();
+        }
         const baseSummary = failCount
           ? t('admin.configAssistant.applySummary.appliedCountsWithFailures', {
               ok: okCount,
@@ -1189,7 +1200,10 @@ export function AdminConfigAssistant({
         )}
       </div>
 
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-3 py-4"
+      >
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-sm text-text-muted">
