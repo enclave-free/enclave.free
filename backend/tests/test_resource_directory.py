@@ -207,6 +207,102 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["detail"], "Invalid internal agent token")
 
+    def test_resource_help_types_enforces_help_type_vocabulary_fk(self) -> None:
+        self._create_ready_resource(
+            "fk-resource",
+            scope_level="global",
+            scope_code=None,
+            languages=["en"],
+            verified=True,
+        )
+
+        with self.database.get_cursor() as cursor:
+            cursor.execute("PRAGMA foreign_key_list(resource_help_types)")
+            foreign_keys = cursor.fetchall()
+
+        self.assertTrue(
+            any(row["table"] == "help_types" and row["from"] == "help_type" for row in foreign_keys)
+        )
+        with self.assertRaises(self.database.sqlite3.IntegrityError):
+            with self.database.get_cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
+                    ("fk-resource", "not-in-vocabulary"),
+                )
+
+    def test_resource_help_types_migration_drops_unknown_help_types(self) -> None:
+        self._create_ready_resource(
+            "migration-resource",
+            scope_level="global",
+            scope_code=None,
+            languages=["en"],
+            verified=True,
+        )
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DROP TABLE resource_help_types")
+        cursor.execute("""
+            CREATE TABLE resource_help_types (
+                resource_id TEXT NOT NULL,
+                help_type TEXT NOT NULL,
+                PRIMARY KEY (resource_id, help_type),
+                FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute(
+            "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
+            ("migration-resource", "legal"),
+        )
+        cursor.execute(
+            "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
+            ("migration-resource", "ghost-help-type"),
+        )
+        conn.commit()
+        cursor.close()
+
+        self.database.init_schema()
+
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
+                ("migration-resource",),
+            )
+            help_types = [row["help_type"] for row in cursor.fetchall()]
+            cursor.execute("PRAGMA foreign_key_list(resource_help_types)")
+            foreign_keys = cursor.fetchall()
+
+        self.assertEqual(help_types, ["legal"])
+        self.assertTrue(any(row["table"] == "help_types" for row in foreign_keys))
+
+    def test_search_resources_applies_sql_level_limit(self) -> None:
+        for index in range(3):
+            self._create_ready_resource(
+                f"limited-resource-{index}",
+                scope_level="country",
+                scope_code="NI",
+                languages=["en"],
+                verified=True,
+                display_order=index,
+            )
+
+        statements: list[str] = []
+        conn = self.database.get_connection()
+        conn.set_trace_callback(statements.append)
+        try:
+            resources = self.database.search_resources("NI", "legal", limit=2)
+        finally:
+            conn.set_trace_callback(None)
+
+        self.assertEqual(len(resources), 2)
+        self.assertTrue(
+            any(
+                "FROM resources" in statement
+                and "JOIN resource_help_types" in statement
+                and "LIMIT 2" in statement
+                for statement in statements
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

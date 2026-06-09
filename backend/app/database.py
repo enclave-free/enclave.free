@@ -605,7 +605,8 @@ def init_schema():
             resource_id TEXT NOT NULL,
             help_type TEXT NOT NULL,
             PRIMARY KEY (resource_id, help_type),
-            FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
+            FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
+            FOREIGN KEY (help_type) REFERENCES help_types(key) ON DELETE CASCADE
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_resource_help_types_type ON resource_help_types(help_type)")
@@ -651,6 +652,43 @@ def init_schema():
     # Example resources are seeded separately (demo data) in seed.py.
     seed_country_regions()
     seed_help_types()
+    _migrate_resource_help_types_help_type_fk()  # Enforce resource help-type vocabulary membership
+
+
+def _migrate_resource_help_types_help_type_fk() -> None:
+    """Rebuild resource_help_types with a help_types foreign key when needed."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA foreign_key_list(resource_help_types)")
+    foreign_keys = cursor.fetchall()
+    if any(row["table"] == "help_types" for row in foreign_keys):
+        cursor.close()
+        return
+
+    cursor.execute("DROP TABLE IF EXISTS resource_help_types_new")
+    cursor.execute("""
+        CREATE TABLE resource_help_types_new (
+            resource_id TEXT NOT NULL,
+            help_type TEXT NOT NULL,
+            PRIMARY KEY (resource_id, help_type),
+            FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
+            FOREIGN KEY (help_type) REFERENCES help_types(key) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        INSERT OR IGNORE INTO resource_help_types_new (resource_id, help_type)
+        SELECT rht.resource_id, rht.help_type
+        FROM resource_help_types rht
+        JOIN resources r ON r.resource_id = rht.resource_id
+        JOIN help_types ht ON ht.key = rht.help_type
+    """)
+    cursor.execute("DROP TABLE resource_help_types")
+    cursor.execute("ALTER TABLE resource_help_types_new RENAME TO resource_help_types")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resource_help_types_type ON resource_help_types(help_type)")
+    conn.commit()
+    logger.info("Migration: Rebuilt resource_help_types with help_types foreign key")
+    cursor.close()
 
 
 def _migrate_add_approved_column() -> None:
@@ -4072,6 +4110,7 @@ def search_resources(
     then (optionally) language match, then display order."""
     import region_data
 
+    sql_limit = max(0, int(limit))
     country_code = region_data.resolve_country_code(jurisdiction)
     ancestors = region_data.region_ancestors(country_code)
 
@@ -4092,12 +4131,14 @@ def search_resources(
                 WHEN 'country' THEN 0 WHEN 'subregion' THEN 1 WHEN 'region' THEN 2 ELSE 3 END,
               CASE WHEN r.verified_at IS NOT NULL THEN 0 ELSE 1 END,
               r.display_order
+            LIMIT ?
             """,
             (
                 help_type,
                 ancestors["country_code"],
                 ancestors["subregion_code"],
                 ancestors["region_code"],
+                sql_limit,
             ),
         )
         rows = cursor.fetchall()
@@ -4118,7 +4159,7 @@ def search_resources(
             )
         )
 
-    return results[:limit]
+    return results[:sql_limit]
 
 
 # --- Help-type vocabulary (operator-extensible) ---

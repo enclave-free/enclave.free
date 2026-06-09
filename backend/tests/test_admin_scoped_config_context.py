@@ -190,6 +190,26 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
             {"auto_approve_users", "default_theme"},
         )
 
+    def test_onboarding_context_warns_when_configured_keys_read_fails(self) -> None:
+        import scoped_config_context
+
+        original = self.database.get_onboarding_configured_keys
+        self.database.get_onboarding_configured_keys = lambda: (_ for _ in ()).throw(
+            RuntimeError("configured key read failed")
+        )
+        try:
+            warnings: list[str] = []
+            section = scoped_config_context._build_onboarding_section(
+                settings={},
+                warnings=warnings,
+            )
+        finally:
+            self.database.get_onboarding_configured_keys = original
+
+        self.assertEqual(section["scope"], "onboarding")
+        self.assertIn("onboarding configured keys read failed", warnings[0])
+        self.assertIn("configured key read failed", warnings[0])
+
     def test_deployment_secret_keys_are_metadata_only(self) -> None:
         self.database.upsert_deployment_config(
             key="SMTP_PASSWORD",

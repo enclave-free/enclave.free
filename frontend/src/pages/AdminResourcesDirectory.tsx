@@ -423,10 +423,18 @@ export function AdminResourcesDirectory() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resource-dialog-title"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4"
+        >
           <Card className="my-8 w-full max-w-2xl">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
-              <h2 className="text-base font-semibold text-text">
+              <h2
+                id="resource-dialog-title"
+                className="text-base font-semibold text-text"
+              >
                 {editing
                   ? t('adminResources.editTitle', 'Edit resource')
                   : t('adminResources.addTitle', 'Add resource')}
@@ -626,9 +634,17 @@ export function AdminResourcesDirectory() {
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-resource-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        >
           <Card className="w-full max-w-md p-5">
-            <h2 className="text-base font-semibold text-text">
+            <h2
+              id="delete-resource-dialog-title"
+              className="text-base font-semibold text-text"
+            >
               {t('adminResources.deleteTitle', 'Delete resource?')}
             </h2>
             <p className="mt-2 text-sm text-text-secondary">

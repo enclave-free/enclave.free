@@ -625,7 +625,8 @@ def _onboarding_setting_value(value: Any) -> str | None:
 def _build_onboarding_section(*, settings: dict[str, Any], warnings: list[str]) -> dict[str, Any]:
     try:
         configured_keys = database.get_onboarding_configured_keys()
-    except Exception:
+    except Exception as e:
+        warnings.append(f"onboarding configured keys read failed: {e}")
         configured_keys = set()
     checklist = []
     for item in ONBOARDING_BASELINE_ITEMS:

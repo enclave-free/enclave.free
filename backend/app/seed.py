@@ -172,14 +172,24 @@ def seed_resource_directory():
     print("  Example resources seeded")
 
 
-def seed_sqlite():
+def _env_flag_enabled(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def seed_sqlite(seed_demo_resources: bool | None = None):
     """Initialize SQLite database and seed default settings"""
     print("\nInitializing SQLite database...")
     database.init_schema()
     print("  Schema initialized")
     database.seed_default_settings()
     print("  Default settings seeded")
-    seed_resource_directory()
+    should_seed_demo_resources = (
+        _env_flag_enabled("SEED_DEMO_RESOURCES")
+        if seed_demo_resources is None
+        else seed_demo_resources
+    )
+    if should_seed_demo_resources:
+        seed_resource_directory()
     print("SQLite initialization complete!")
 
 
