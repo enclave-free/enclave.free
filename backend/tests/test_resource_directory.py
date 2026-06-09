@@ -148,6 +148,37 @@ class ResourceDirectoryTest(unittest.TestCase):
             ],
         )
 
+    def test_resource_search_language_sort_uses_bounded_candidate_window(self) -> None:
+        self._create_ready_resource(
+            "nicaragua-english-one",
+            scope_level="country",
+            scope_code="NI",
+            languages=["en"],
+            verified=True,
+            display_order=0,
+        )
+        self._create_ready_resource(
+            "nicaragua-english-two",
+            scope_level="country",
+            scope_code="NI",
+            languages=["en"],
+            verified=True,
+            display_order=1,
+        )
+        self._create_ready_resource(
+            "nicaragua-spanish-three",
+            scope_level="country",
+            scope_code="NI",
+            languages=["es"],
+            verified=True,
+            display_order=2,
+        )
+
+        resources = self.database.search_resources("NI", "legal", language="es", limit=2)
+
+        self.assertEqual(resources[0]["resource_id"], "nicaragua-spanish-three")
+        self.assertEqual(len(resources), 2)
+
     def test_internal_resource_search_excludes_pending_resources(self) -> None:
         self.database.create_resource(
             resource_id="pending-legal",
@@ -206,6 +237,38 @@ class ResourceDirectoryTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["detail"], "Invalid internal agent token")
+
+    def test_internal_resource_search_rejects_blank_help_type(self) -> None:
+        response = self.client.post(
+            "/internal/agent/resources/search",
+            headers=self.headers,
+            json={"help_type": "   ", "jurisdiction": "NI"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "help_type is required")
+
+    def test_internal_resource_search_trims_help_type_and_bounds_limit(self) -> None:
+        original = self.database.search_resources
+        captured: dict[str, object] = {}
+
+        def fake_search_resources(**kwargs):
+            captured.update(kwargs)
+            return []
+
+        self.database.search_resources = fake_search_resources
+        try:
+            response = self.client.post(
+                "/internal/agent/resources/search",
+                headers=self.headers,
+                json={"help_type": " legal ", "jurisdiction": "NI", "limit": 999},
+            )
+        finally:
+            self.database.search_resources = original
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["help_type"], "legal")
+        self.assertEqual(captured["limit"], self.internal_agent.MAX_RESOURCE_SEARCH_LIMIT)
 
     def test_resource_help_types_enforces_help_type_vocabulary_fk(self) -> None:
         self._create_ready_resource(
@@ -301,6 +364,35 @@ class ResourceDirectoryTest(unittest.TestCase):
                 and "LIMIT 2" in statement
                 for statement in statements
             )
+        )
+
+    def test_delete_help_type_recomputes_resource_status_after_cascade(self) -> None:
+        self.database.upsert_help_type(
+            key="transport",
+            label="Transport",
+            description="Travel support",
+        )
+        created = self.database.create_resource(
+            resource_id="transport-ready",
+            name="Transport Ready",
+            resource_type="ngo",
+            scope_level="global",
+            contact={"url": "https://transport.example"},
+            help_types=["transport"],
+            verified_at="2026-01-01T00:00:00Z",
+        )
+        self.assertEqual(created["status"], "ready")
+
+        self.assertTrue(self.database.delete_help_type("transport"))
+
+        updated = self.database.get_resource("transport-ready")
+        self.assertEqual(updated["help_types"], [])
+        self.assertEqual(updated["status"], "pending")
+
+    def test_jurisdiction_prefix_accepts_iso_code(self) -> None:
+        self.assertEqual(
+            self.database.normalize_jurisdiction("jurisdiction:NI"),
+            "NI",
         )
 
 

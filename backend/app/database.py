@@ -1537,8 +1537,20 @@ def mark_onboarding_configured_keys(keys) -> None:
     incoming = {str(k) for k in keys if k and str(k) != ONBOARDING_CONFIGURED_KEYS_SETTING}
     if not incoming:
         return
-    updated = get_onboarding_configured_keys() | incoming
     with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT value FROM instance_settings WHERE key = ?",
+            (ONBOARDING_CONFIGURED_KEYS_SETTING,),
+        )
+        row = cursor.fetchone()
+        existing: set[str] = set()
+        if row and row["value"]:
+            try:
+                parsed = json.loads(row["value"])
+                existing = set(parsed) if isinstance(parsed, list) else set()
+            except (json.JSONDecodeError, TypeError):
+                existing = set()
+        updated = existing | incoming
         cursor.execute(
             """
             INSERT INTO instance_settings (key, value) VALUES (?, ?)
@@ -3865,6 +3877,30 @@ def compute_resource_status(merged: dict, help_types: list[str], archived: bool)
     return "ready" if not resource_missing_fields(merged, help_types) else "pending"
 
 
+def _recompute_resource_status(cursor: sqlite3.Cursor, resource_id: str) -> None:
+    cursor.execute("SELECT * FROM resources WHERE resource_id = ?", (resource_id,))
+    row = cursor.fetchone()
+    if not row:
+        return
+    contact = _json_loads_or({}, row["contact"])
+    help_types = _get_resource_help_types(cursor, resource_id)
+    status = compute_resource_status(
+        {
+            "name": row["name"],
+            "resource_type": row["resource_type"],
+            "scope_level": row["scope_level"],
+            "scope_code": row["scope_code"],
+            "contact": contact if isinstance(contact, dict) else {},
+        },
+        help_types,
+        archived=row["status"] == "archived",
+    )
+    cursor.execute(
+        "UPDATE resources SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE resource_id = ?",
+        (status, resource_id),
+    )
+
+
 def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
     import region_data
     contact = _json_loads_or({}, row["contact"])
@@ -4111,6 +4147,7 @@ def search_resources(
     import region_data
 
     sql_limit = max(0, int(limit))
+    fetch_limit = min(max(sql_limit * 4, sql_limit), 100) if language and sql_limit else sql_limit
     country_code = region_data.resolve_country_code(jurisdiction)
     ancestors = region_data.region_ancestors(country_code)
 
@@ -4138,7 +4175,7 @@ def search_resources(
                 ancestors["country_code"],
                 ancestors["subregion_code"],
                 ancestors["region_code"],
-                sql_limit,
+                fetch_limit,
             ),
         )
         rows = cursor.fetchall()
@@ -4223,8 +4260,17 @@ def upsert_help_type(
 
 def delete_help_type(key: str) -> bool:
     with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT resource_id FROM resource_help_types WHERE help_type = ?",
+            (key,),
+        )
+        affected_resource_ids = [row["resource_id"] for row in cursor.fetchall()]
         cursor.execute("DELETE FROM help_types WHERE key = ?", (key,))
-        return cursor.rowcount > 0
+        deleted = cursor.rowcount > 0
+        if deleted:
+            for resource_id in affected_resource_ids:
+                _recompute_resource_status(cursor, resource_id)
+        return deleted
 
 
 CORE_HELP_TYPES = [

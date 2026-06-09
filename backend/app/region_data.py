@@ -16,7 +16,7 @@ M49 region codes (continental):
 
 from __future__ import annotations
 
-from typing import Optional, TypedDict
+from typing import Iterator, Optional, TypedDict
 
 
 REGION_NAMES: dict[str, str] = {
@@ -366,6 +366,9 @@ def resolve_country_code(value: Optional[str]) -> Optional[str]:
     lowered = raw.lower()
     if lowered.startswith("jurisdiction:"):
         lowered = lowered.split(":", 1)[1].strip()
+        iso = lowered.upper()
+        if iso in COUNTRIES:
+            return iso
     return _name_index().get(lowered)
 
 
@@ -392,7 +395,7 @@ def region_ancestors(country_code: Optional[str]) -> RegionAncestors:
     }
 
 
-def iter_country_region_rows():
+def iter_country_region_rows() -> Iterator[tuple[str, str, Optional[str], Optional[str], Optional[str], Optional[str]]]:
     """Yield (country_code, country_name, subregion_code, subregion_name,
     region_code, region_name) tuples for seeding the country_regions table."""
     for code, entry in COUNTRIES.items():

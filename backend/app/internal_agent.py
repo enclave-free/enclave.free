@@ -36,6 +36,8 @@ router = APIRouter(prefix="/internal/agent", tags=["internal-agent"])
 INTERNAL_AGENT_TOKEN = os.getenv("INTERNAL_AGENT_TOKEN", "").strip()
 DOCUMENT_OVERVIEW_OPENING_CHUNKS_PER_DOCUMENT = 2
 MAX_OVERVIEW_DOCS = 5
+DEFAULT_RESOURCE_SEARCH_LIMIT = 5
+MAX_RESOURCE_SEARCH_LIMIT = 25
 READ_ONLY_SELECT_FORBIDDEN_KEYWORDS = (
     "ALTER",
     "ATTACH",
@@ -406,17 +408,24 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
     Returns only `ready` resources whose coverage scope contains the user's country,
     ranked by scope specificity (in-country first), then verified, then language match.
     """
+    help_type = payload.help_type.strip()
+    if not help_type:
+        raise HTTPException(status_code=400, detail="help_type is required")
+    effective_limit = max(
+        0,
+        min(payload.limit or DEFAULT_RESOURCE_SEARCH_LIMIT, MAX_RESOURCE_SEARCH_LIMIT),
+    )
     resolved = database.normalize_jurisdiction(payload.jurisdiction)
     resources = database.search_resources(
         jurisdiction=payload.jurisdiction,
-        help_type=payload.help_type,
+        help_type=help_type,
         language=payload.language,
-        limit=payload.limit,
+        limit=effective_limit,
     )
     return InternalResourceSearchResponse(
         resources=resources,
         resolved_country_code=resolved,
-        help_type=payload.help_type,
+        help_type=help_type,
     )
 
 

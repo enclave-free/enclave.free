@@ -3,7 +3,7 @@ Enclave Pydantic Models
 Request and response models for user/admin management.
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional
 from datetime import datetime
 
@@ -870,6 +870,12 @@ class ResourceCreate(BaseModel):
     source_note: Optional[str] = Field(default=None, max_length=1000)
     display_order: int = 0
     archived: bool = False
+
+    @model_validator(mode="after")
+    def _require_resource_id_or_name(self):
+        if not str(self.resource_id or "").strip() and not str(self.name or "").strip():
+            raise ValueError("resource_id or name is required")
+        return self
 
     @field_validator("scope_level")
     @classmethod

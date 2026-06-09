@@ -12,6 +12,7 @@ export type AdminConfigScope =
   | 'agent-settings'
   | 'user-types'
   | 'document-defaults'
+  | 'resources'
   | 'health'
   | 'onboarding';
 

@@ -175,6 +175,32 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
         parsed = datetime.fromisoformat(verified_at.replace("Z", "+00:00"))
         self.assertEqual(parsed.tzinfo, timezone.utc)
 
+    def test_admin_resource_create_requires_resource_id_or_name(self) -> None:
+        response = self.client.post(
+            "/admin/resources",
+            json={
+                "resource_type": "ngo",
+                "scope_level": "global",
+                "help_types": ["legal"],
+                "contact": {"url": "https://example.org/help"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("resource_id or name is required", response.text)
+
+    def test_admin_help_type_delete_normalizes_key(self) -> None:
+        create = self.client.put(
+            "/admin/help-types/Foo%20Bar",
+            json={"label": "Foo Bar", "description": "Custom help type"},
+        )
+        self.assertEqual(create.status_code, 200)
+
+        delete = self.client.delete("/admin/help-types/Foo%20Bar")
+
+        self.assertEqual(delete.status_code, 200)
+        self.assertIsNone(self.database.get_help_type("foo_bar"))
+
     def test_admin_settings_write_records_onboarding_configured_keys(self) -> None:
         update = self.client.put(
             "/admin/settings",

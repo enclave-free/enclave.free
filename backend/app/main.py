@@ -1874,13 +1874,16 @@ async def upsert_help_type_admin(
 @app.delete("/admin/help-types/{key}", response_model=SuccessResponse)
 async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_admin)):
     """Delete a help-type vocabulary entry (requires admin auth)."""
-    existing = database.get_help_type(key)
+    normalized_key = re.sub(r"[^a-z0-9_]+", "_", key.strip().lower()).strip("_")
+    if not normalized_key:
+        raise HTTPException(status_code=400, detail="Invalid help-type key")
+    existing = database.get_help_type(normalized_key)
     if not existing:
         raise HTTPException(status_code=404, detail="Help type not found")
-    if database.delete_help_type(key):
+    if database.delete_help_type(normalized_key):
         _best_effort_config_audit_event(
             table_name="help_types",
-            config_key=f"help_type:{key}:delete",
+            config_key=f"help_type:{normalized_key}:delete",
             old_value=json.dumps(existing, sort_keys=True),
             new_value=None,
             changed_by=admin.get("pubkey", "unknown"),

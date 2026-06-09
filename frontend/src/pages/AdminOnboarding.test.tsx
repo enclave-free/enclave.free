@@ -51,46 +51,49 @@ describe('AdminOnboarding', () => {
 
   it('clears the delayed redirect when unmounted after successful auth', async () => {
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
-    mockFetchInstanceStatus.mockResolvedValue({
-      initialized: true,
-      setup_complete: true,
-      ready_for_users: true,
-      settings: {},
-    });
-    mockAuthenticateWithNostr.mockResolvedValue({
-      admin: {
-        id: 1,
-        pubkey: 'admin-pubkey',
-        created_at: null,
-      },
-      is_new: true,
-      instance_initialized: true,
-      session_token: 'session-token',
-    });
+    try {
+      mockFetchInstanceStatus.mockResolvedValue({
+        initialized: true,
+        setup_complete: true,
+        ready_for_users: true,
+        settings: {},
+      });
+      mockAuthenticateWithNostr.mockResolvedValue({
+        admin: {
+          id: 1,
+          pubkey: 'admin-pubkey',
+          created_at: null,
+        },
+        is_new: true,
+        instance_initialized: true,
+        session_token: 'session-token',
+      });
 
-    const { unmount } = render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <Routes>
-          <Route path="/admin" element={<AdminOnboarding />} />
-          <Route
-            path="/admin/onboarding"
-            element={<div>guided setup route</div>}
-          />
-        </Routes>
-      </MemoryRouter>
-    );
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/admin']}>
+          <Routes>
+            <Route path="/admin" element={<AdminOnboarding />} />
+            <Route
+              path="/admin/onboarding"
+              element={<div>guided setup route</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      );
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Connect with Nostr' })
-    );
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Connect with Nostr' })
+      );
 
-    await waitFor(() => {
-      expect(mockAuthenticateWithNostr).toHaveBeenCalled();
-    });
+      await waitFor(() => {
+        expect(mockAuthenticateWithNostr).toHaveBeenCalled();
+      });
 
-    unmount();
+      unmount();
 
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-    clearTimeoutSpy.mockRestore();
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+    } finally {
+      clearTimeoutSpy.mockRestore();
+    }
   });
 });

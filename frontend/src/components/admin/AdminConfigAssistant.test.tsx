@@ -1327,6 +1327,50 @@ describe('AdminConfigAssistant', () => {
     });
   });
 
+  it('restores the onboarding starter when starting a fresh onboarding conversation', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('error', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+          detail:
+            'Token limit exceeded for this session. Please start a new session.',
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    expect(
+      screen.getByText(/Welcome — let's set up your space/)
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Continue setup.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Start new assistant conversation',
+      })
+    );
+
+    expect(
+      screen.getByText(/Welcome — let's set up your space/)
+    ).toBeInTheDocument();
+  });
+
   it('preserves a pending change set when starting a fresh assistant conversation', async () => {
     const user = userEvent.setup();
     const changeSet = {

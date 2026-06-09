@@ -317,7 +317,7 @@ export function AdminResourcesDirectory() {
       header={
         <div className="flex flex-col gap-4">
           <Link
-            to="/admin"
+            to="/admin/setup"
             className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -650,11 +650,9 @@ export function AdminResourcesDirectory() {
             <p className="mt-2 text-sm text-text-secondary">
               {t(
                 'adminResources.deleteBody',
-                'This removes the directory entry for'
-              )}{' '}
-              <span className="font-medium text-text">
-                {deleteTarget.name || deleteTarget.resource_id}
-              </span>
+                'This removes the directory entry for {{name}}',
+                { name: deleteTarget.name || deleteTarget.resource_id }
+              )}
               .
             </p>
             <div className="mt-4 flex justify-end gap-2">

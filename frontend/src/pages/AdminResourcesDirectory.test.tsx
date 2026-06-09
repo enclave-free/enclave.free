@@ -63,6 +63,10 @@ describe('AdminResourcesDirectory', () => {
       </MemoryRouter>
     );
 
+    expect(
+      await screen.findByRole('link', { name: 'Back to Admin' })
+    ).toHaveAttribute('href', '/admin/setup');
+
     fireEvent.click(
       await screen.findByRole('button', { name: 'Add resource' })
     );

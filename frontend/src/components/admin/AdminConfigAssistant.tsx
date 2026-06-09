@@ -98,6 +98,15 @@ function generateMessageId() {
   return `admin-msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function createOnboardingMessage(content: string): Message {
+  return {
+    id: generateMessageId(),
+    role: 'assistant',
+    content,
+    timestamp: new Date(),
+  };
+}
+
 function patchAssistantMessage(
   messages: Message[],
   id: string,
@@ -158,15 +167,12 @@ export function AdminConfigAssistant({
   const [messages, setMessages] = useState<Message[]>(() =>
     isOnboarding
       ? [
-          {
-            id: generateMessageId(),
-            role: 'assistant',
-            content: t(
+          createOnboardingMessage(
+            t(
               'admin.configAssistant.onboardingWelcome',
               "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
-            ),
-            timestamp: new Date(),
-          },
+            )
+          ),
         ]
       : []
   );
@@ -338,14 +344,25 @@ export function AdminConfigAssistant({
 
   const handleStartNewAssistantConversation = useCallback(() => {
     setConversationSessionId(null);
-    setMessages([]);
+    setMessages(
+      isOnboarding
+        ? [
+            createOnboardingMessage(
+              t(
+                'admin.configAssistant.onboardingWelcome',
+                "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
+              )
+            ),
+          ]
+        : []
+    );
     setError(null);
     setRecoveryError(null);
     setReducedContextNotice(null);
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
     deploymentSecretKeysRef.current = new Set();
-  }, []);
+  }, [isOnboarding, t]);
 
   const handleSend = useCallback(
     async (content: string, options?: { hidden?: boolean }) => {
