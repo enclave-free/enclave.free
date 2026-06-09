@@ -1742,7 +1742,7 @@ async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(
     if database.get_resource(resource_id) is not None:
         raise HTTPException(status_code=400, detail=f"Resource id already exists: {resource_id}")
 
-    verified_at = time.strftime("%Y-%m-%dT%H:%M:%SZ") if resource.verified else None
+    verified_at = database.utc_timestamp_z() if resource.verified else None
 
     created = database.create_resource(
         resource_id=resource_id,
@@ -1796,7 +1796,7 @@ async def update_resource_admin(
     kwargs = {k: v for k, v in provided.items() if k != "verified"}
     if "verified" in provided:
         if provided["verified"]:
-            kwargs["verified_at"] = existing.get("verified_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            kwargs["verified_at"] = existing.get("verified_at") or database.utc_timestamp_z()
         else:
             kwargs["verified_at"] = None
 

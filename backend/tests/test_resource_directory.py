@@ -6,6 +6,7 @@ import sys
 import tempfile
 import types
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -175,6 +176,27 @@ class ResourceDirectoryTest(unittest.TestCase):
             [resource["resource_id"] for resource in response.json()["resources"]],
             ["ready-legal"],
         )
+
+    def test_notes_contact_counts_as_ready_contact_method(self) -> None:
+        created = self.database.create_resource(
+            resource_id="notes-only-contact",
+            name="Notes Only Contact",
+            resource_type="ngo",
+            scope_level="global",
+            contact={"notes": "Contact through the encrypted intake desk."},
+            help_types=["legal"],
+            verified_at="2026-01-01T00:00:00Z",
+        )
+
+        self.assertEqual(created["status"], "ready")
+        self.assertEqual(created["missing_fields"], [])
+
+    def test_utc_timestamp_helper_returns_true_utc_z_timestamp(self) -> None:
+        timestamp = self.database.utc_timestamp_z()
+
+        self.assertTrue(timestamp.endswith("Z"))
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        self.assertEqual(parsed.tzinfo, timezone.utc)
 
     def test_internal_resource_search_requires_internal_token(self) -> None:
         response = self.client.post(

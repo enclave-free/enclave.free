@@ -26,6 +26,11 @@ logger = logging.getLogger("enclave.database")
 SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/enclave.db")
 
 
+def utc_timestamp_z() -> str:
+    """Return a second-precision UTC timestamp with an explicit Z suffix."""
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def _json_dumps_for_lifecycle(value: object) -> str:
     try:
         return json.dumps(value, sort_keys=True)
@@ -3740,7 +3745,7 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
 # --- Resource Referral Directory ---
 
 # Fields a resource must have before it can move from 'pending' to 'ready'.
-RESOURCE_CONTACT_KEYS = ("phone", "email", "url", "secure_channel", "address")
+RESOURCE_CONTACT_KEYS = ("phone", "email", "url", "secure_channel", "address", "notes")
 
 
 def _json_loads_or(default, raw):

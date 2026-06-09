@@ -168,7 +168,7 @@ def seed_resource_directory():
     """Seed example resources (region map + core help types are seeded by init_schema)."""
     for resource in EXAMPLE_RESOURCES:
         if database.get_resource(resource["resource_id"]) is None:
-            database.create_resource(verified_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"), **resource)
+            database.create_resource(verified_at=database.utc_timestamp_z(), **resource)
     print("  Example resources seeded")
 
 
