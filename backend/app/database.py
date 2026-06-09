@@ -26,6 +26,11 @@ logger = logging.getLogger("enclave.database")
 SQLITE_PATH = os.getenv("SQLITE_PATH", "/data/enclave.db")
 
 
+def utc_timestamp_z() -> str:
+    """Return a second-precision UTC timestamp with an explicit Z suffix."""
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def _json_dumps_for_lifecycle(value: object) -> str:
     try:
         return json.dumps(value, sort_keys=True)
@@ -551,6 +556,72 @@ def init_schema():
         ON user_memories(subject_user_id, status, importance DESC, updated_at DESC, id DESC)
     """)
 
+    # --- Resource Referral Directory ---
+    # Admin-curated directory of trusted real-world resources (lawyers, NGOs, UN bodies,
+    # clinics, shelters, financial aid) that the agent can surface when a conversation
+    # escalates from information to action. Retrieval is faceted on region + help-type,
+    # not semantic similarity. See region_data.py for the ISO 3166 / UN M49 taxonomy.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS resources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resource_id TEXT UNIQUE NOT NULL,
+            name TEXT,
+            resource_type TEXT,
+            description TEXT,
+            contact TEXT,
+            languages TEXT,
+            scope_level TEXT CHECK(scope_level IN ('country', 'subregion', 'region', 'global')),
+            scope_code TEXT,
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK(status IN ('pending', 'ready', 'archived')),
+            verified_at TIMESTAMP,
+            vetted_by TEXT,
+            source_note TEXT,
+            display_order INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resources_scope ON resources(scope_level, scope_code)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resources_status ON resources(status)")
+
+    # Operator-extensible vocabulary of help types (seeded with a core set).
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS help_types (
+            key TEXT PRIMARY KEY,
+            label TEXT NOT NULL,
+            description TEXT,
+            display_order INTEGER NOT NULL DEFAULT 0,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Many-to-many: which help types a resource provides (the facet we filter on).
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS resource_help_types (
+            resource_id TEXT NOT NULL,
+            help_type TEXT NOT NULL,
+            PRIMARY KEY (resource_id, help_type),
+            FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resource_help_types_type ON resource_help_types(help_type)")
+
+    # Static ISO 3166 + UN M49 region map, seeded from region_data.py for SQL joins.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS country_regions (
+            country_code TEXT PRIMARY KEY,
+            country_name TEXT NOT NULL,
+            subregion_code TEXT,
+            subregion_name TEXT,
+            region_code TEXT,
+            region_name TEXT
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_country_regions_name ON country_regions(country_name)")
+
     conn.commit()
     logger.info("SQLite schema initialized")
 
@@ -574,6 +645,11 @@ def init_schema():
     # Seed default Agent Settings values
     _seed_default_ai_config()
     seed_default_settings()
+
+    # Seed resource-directory infrastructure (region map + core help-type vocabulary).
+    # Example resources are seeded separately (demo data) in seed.py.
+    seed_country_regions()
+    seed_help_types()
 
 
 def _migrate_add_approved_column() -> None:
@@ -3664,3 +3740,453 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
         "first_invalid_id": None,
         "reason": None,
     }
+
+
+# --- Resource Referral Directory ---
+
+# Fields a resource must have before it can move from 'pending' to 'ready'.
+RESOURCE_CONTACT_KEYS = ("phone", "email", "url", "secure_channel", "address", "notes")
+
+
+def _json_loads_or(default, raw):
+    if not raw:
+        return default
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return default
+
+
+def _has_contact_method(contact: dict | None) -> bool:
+    if not isinstance(contact, dict):
+        return False
+    return any(str(contact.get(k, "")).strip() for k in RESOURCE_CONTACT_KEYS)
+
+
+def resource_missing_fields(merged: dict, help_types: list[str]) -> list[str]:
+    """Return the list of REQUIRED fields still missing for a resource to be 'ready'."""
+    missing: list[str] = []
+    if not str(merged.get("name") or "").strip():
+        missing.append("name")
+    if not str(merged.get("resource_type") or "").strip():
+        missing.append("resource_type")
+    scope_level = merged.get("scope_level")
+    if not scope_level:
+        missing.append("scope_level")
+    elif scope_level != "global" and not str(merged.get("scope_code") or "").strip():
+        missing.append("scope_code")
+    if not help_types:
+        missing.append("help_types")
+    if not _has_contact_method(merged.get("contact")):
+        missing.append("contact")
+    return missing
+
+
+def compute_resource_status(merged: dict, help_types: list[str], archived: bool) -> str:
+    """Auto-compute lifecycle status. 'archived' is explicit and wins; otherwise a
+    resource is 'ready' iff all required fields are present, else 'pending'."""
+    if archived:
+        return "archived"
+    return "ready" if not resource_missing_fields(merged, help_types) else "pending"
+
+
+def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
+    import region_data
+    contact = _json_loads_or({}, row["contact"])
+    languages = _json_loads_or([], row["languages"])
+    return {
+        "resource_id": row["resource_id"],
+        "name": row["name"],
+        "resource_type": row["resource_type"],
+        "description": row["description"],
+        "contact": contact if isinstance(contact, dict) else {},
+        "languages": languages if isinstance(languages, list) else [],
+        "scope_level": row["scope_level"],
+        "scope_code": row["scope_code"],
+        "coverage": region_data.describe_scope(row["scope_level"], row["scope_code"]),
+        "help_types": help_types,
+        "status": row["status"],
+        "missing_fields": resource_missing_fields(
+            {
+                "name": row["name"],
+                "resource_type": row["resource_type"],
+                "scope_level": row["scope_level"],
+                "scope_code": row["scope_code"],
+                "contact": contact if isinstance(contact, dict) else {},
+            },
+            help_types,
+        ),
+        "verified_at": row["verified_at"],
+        "vetted_by": row["vetted_by"],
+        "source_note": row["source_note"],
+        "display_order": row["display_order"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _get_resource_help_types(cursor: sqlite3.Cursor, resource_id: str) -> list[str]:
+    cursor.execute(
+        "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
+        (resource_id,),
+    )
+    return [r["help_type"] for r in cursor.fetchall()]
+
+
+def get_resource(resource_id: str) -> dict | None:
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM resources WHERE resource_id = ?", (resource_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        help_types = _get_resource_help_types(cursor, resource_id)
+        return _resource_row_to_dict(row, help_types)
+
+
+def list_resources(status: str | None = None) -> list[dict]:
+    with get_cursor() as cursor:
+        if status:
+            cursor.execute(
+                "SELECT * FROM resources WHERE status = ? ORDER BY display_order, name",
+                (status,),
+            )
+        else:
+            cursor.execute("SELECT * FROM resources ORDER BY display_order, name")
+        rows = cursor.fetchall()
+        result = []
+        for row in rows:
+            help_types = _get_resource_help_types(cursor, row["resource_id"])
+            result.append(_resource_row_to_dict(row, help_types))
+        return result
+
+
+def create_resource(
+    *,
+    resource_id: str,
+    name: str | None = None,
+    resource_type: str | None = None,
+    description: str | None = None,
+    contact: dict | None = None,
+    languages: list[str] | None = None,
+    scope_level: str | None = None,
+    scope_code: str | None = None,
+    help_types: list[str] | None = None,
+    verified_at: str | None = None,
+    vetted_by: str | None = None,
+    source_note: str | None = None,
+    display_order: int = 0,
+    archived: bool = False,
+) -> dict:
+    """Create a resource. Status is auto-computed from required-field completeness."""
+    help_types = sorted(set(help_types or []))
+    merged = {
+        "name": name,
+        "resource_type": resource_type,
+        "scope_level": scope_level,
+        "scope_code": scope_code,
+        "contact": contact or {},
+    }
+    status = compute_resource_status(merged, help_types, archived)
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO resources (
+                resource_id, name, resource_type, description, contact, languages,
+                scope_level, scope_code, status, verified_at, vetted_by, source_note,
+                display_order, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+            (
+                resource_id,
+                name,
+                resource_type,
+                description,
+                json.dumps(contact or {}),
+                json.dumps(languages or []),
+                scope_level,
+                scope_code,
+                status,
+                verified_at,
+                vetted_by,
+                source_note,
+                display_order,
+            ),
+        )
+        for ht in help_types:
+            cursor.execute(
+                "INSERT OR IGNORE INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
+                (resource_id, ht),
+            )
+    return get_resource(resource_id)
+
+
+_UNSET = object()
+
+
+def update_resource(
+    resource_id: str,
+    *,
+    name=_UNSET,
+    resource_type=_UNSET,
+    description=_UNSET,
+    contact=_UNSET,
+    languages=_UNSET,
+    scope_level=_UNSET,
+    scope_code=_UNSET,
+    help_types=_UNSET,
+    verified_at=_UNSET,
+    vetted_by=_UNSET,
+    source_note=_UNSET,
+    display_order=_UNSET,
+    archived=_UNSET,
+) -> dict | None:
+    """Partial update. Only provided fields change. Status is recomputed from the merged
+    state unless an explicit archive flag is set. Returns the updated resource or None."""
+    existing = get_resource(resource_id)
+    if not existing:
+        return None
+
+    def pick(value, current):
+        return current if value is _UNSET else value
+
+    final_name = pick(name, existing["name"])
+    final_type = pick(resource_type, existing["resource_type"])
+    final_desc = pick(description, existing["description"])
+    final_contact = pick(contact, existing["contact"])
+    final_languages = pick(languages, existing["languages"])
+    final_scope_level = pick(scope_level, existing["scope_level"])
+    final_scope_code = pick(scope_code, existing["scope_code"])
+    final_help_types = sorted(set(pick(help_types, existing["help_types"]) or []))
+    final_verified_at = pick(verified_at, existing["verified_at"])
+    final_vetted_by = pick(vetted_by, existing["vetted_by"])
+    final_source_note = pick(source_note, existing["source_note"])
+    final_display_order = pick(display_order, existing["display_order"])
+
+    # Determine archive intent: explicit archived flag, or already-archived and not cleared.
+    if archived is _UNSET:
+        is_archived = existing["status"] == "archived"
+    else:
+        is_archived = bool(archived)
+
+    merged = {
+        "name": final_name,
+        "resource_type": final_type,
+        "scope_level": final_scope_level,
+        "scope_code": final_scope_code,
+        "contact": final_contact or {},
+    }
+    final_status = compute_resource_status(merged, final_help_types, is_archived)
+
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE resources SET
+                name = ?, resource_type = ?, description = ?, contact = ?, languages = ?,
+                scope_level = ?, scope_code = ?, status = ?, verified_at = ?, vetted_by = ?,
+                source_note = ?, display_order = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE resource_id = ?
+            """,
+            (
+                final_name,
+                final_type,
+                final_desc,
+                json.dumps(final_contact or {}),
+                json.dumps(final_languages or []),
+                final_scope_level,
+                final_scope_code,
+                final_status,
+                final_verified_at,
+                final_vetted_by,
+                final_source_note,
+                final_display_order,
+                resource_id,
+            ),
+        )
+        if help_types is not _UNSET:
+            cursor.execute("DELETE FROM resource_help_types WHERE resource_id = ?", (resource_id,))
+            for ht in final_help_types:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
+                    (resource_id, ht),
+                )
+    return get_resource(resource_id)
+
+
+def delete_resource(resource_id: str) -> bool:
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM resources WHERE resource_id = ?", (resource_id,))
+        return cursor.rowcount > 0
+
+
+def normalize_jurisdiction(value: str | None) -> str | None:
+    """Resolve a free-text jurisdiction (country name/alias/ISO code) to an ISO code."""
+    import region_data
+    return region_data.resolve_country_code(value)
+
+
+def search_resources(
+    jurisdiction: str | None,
+    help_type: str,
+    language: str | None = None,
+    limit: int = 5,
+) -> list[dict]:
+    """Faceted lookup: ready resources whose coverage scope contains the user's country
+    and that provide the requested help type. Ranked by scope specificity, then verified,
+    then (optionally) language match, then display order."""
+    import region_data
+
+    country_code = region_data.resolve_country_code(jurisdiction)
+    ancestors = region_data.region_ancestors(country_code)
+
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT r.* FROM resources r
+            JOIN resource_help_types h ON h.resource_id = r.resource_id
+            WHERE r.status = 'ready' AND h.help_type = ?
+              AND (
+                   (r.scope_level = 'country'   AND r.scope_code = ?)
+                OR (r.scope_level = 'subregion' AND r.scope_code = ?)
+                OR (r.scope_level = 'region'    AND r.scope_code = ?)
+                OR (r.scope_level = 'global')
+              )
+            ORDER BY
+              CASE r.scope_level
+                WHEN 'country' THEN 0 WHEN 'subregion' THEN 1 WHEN 'region' THEN 2 ELSE 3 END,
+              CASE WHEN r.verified_at IS NOT NULL THEN 0 ELSE 1 END,
+              r.display_order
+            """,
+            (
+                help_type,
+                ancestors["country_code"],
+                ancestors["subregion_code"],
+                ancestors["region_code"],
+            ),
+        )
+        rows = cursor.fetchall()
+        results = []
+        for row in rows:
+            help_types = _get_resource_help_types(cursor, row["resource_id"])
+            results.append(_resource_row_to_dict(row, help_types))
+
+    # Optional language preference should not outrank local coverage or verified status.
+    if language:
+        scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
+        results.sort(
+            key=lambda r: (
+                scope_rank.get(r.get("scope_level"), 3),
+                0 if r.get("verified_at") else 1,
+                0 if language in (r.get("languages") or []) else 1,
+                r.get("display_order") or 0,
+            )
+        )
+
+    return results[:limit]
+
+
+# --- Help-type vocabulary (operator-extensible) ---
+
+def list_help_types(include_inactive: bool = True) -> list[dict]:
+    with get_cursor() as cursor:
+        if include_inactive:
+            cursor.execute("SELECT * FROM help_types ORDER BY display_order, key")
+        else:
+            cursor.execute("SELECT * FROM help_types WHERE is_active = 1 ORDER BY display_order, key")
+        return [
+            {
+                "key": r["key"],
+                "label": r["label"],
+                "description": r["description"],
+                "display_order": r["display_order"],
+                "is_active": bool(r["is_active"]),
+            }
+            for r in cursor.fetchall()
+        ]
+
+
+def get_help_type(key: str) -> dict | None:
+    with get_cursor() as cursor:
+        cursor.execute("SELECT * FROM help_types WHERE key = ?", (key,))
+        r = cursor.fetchone()
+        if not r:
+            return None
+        return {
+            "key": r["key"],
+            "label": r["label"],
+            "description": r["description"],
+            "display_order": r["display_order"],
+            "is_active": bool(r["is_active"]),
+        }
+
+
+def upsert_help_type(
+    key: str,
+    label: str,
+    description: str | None = None,
+    display_order: int = 0,
+    is_active: bool = True,
+) -> dict:
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO help_types (key, label, description, display_order, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                label = excluded.label,
+                description = excluded.description,
+                display_order = excluded.display_order,
+                is_active = excluded.is_active,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (key, label, description, display_order, 1 if is_active else 0),
+        )
+    return get_help_type(key)
+
+
+def delete_help_type(key: str) -> bool:
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM help_types WHERE key = ?", (key,))
+        return cursor.rowcount > 0
+
+
+CORE_HELP_TYPES = [
+    {"key": "legal", "label": "Legal", "description": "Lawyers, legal aid, representation, habeas filings."},
+    {"key": "humanitarian", "label": "Humanitarian", "description": "Human-rights orgs, UN bodies, advocacy and protection."},
+    {"key": "medical", "label": "Medical", "description": "Clinics, doctors, trauma and emergency care."},
+    {"key": "food", "label": "Food", "description": "Food assistance and nutrition support."},
+    {"key": "shelter", "label": "Shelter", "description": "Safe housing, refuge, relocation support."},
+    {"key": "financial", "label": "Financial", "description": "Financial aid, support for the debanked, emergency funds."},
+    {"key": "psychosocial", "label": "Psychosocial", "description": "Mental health, counseling, trauma support."},
+    {"key": "other", "label": "Other", "description": "Resources that do not fit the categories above."},
+]
+
+
+def seed_help_types(defaults: list[dict] | None = None) -> None:
+    """Idempotently seed the core help-type vocabulary (operators can extend/edit later)."""
+    defaults = defaults if defaults is not None else CORE_HELP_TYPES
+    with get_cursor() as cursor:
+        for i, ht in enumerate(defaults):
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO help_types (key, label, description, display_order, is_active)
+                VALUES (?, ?, ?, ?, 1)
+                """,
+                (ht["key"], ht["label"], ht.get("description"), ht.get("display_order", i)),
+            )
+    logger.info("Default help types seeded")
+
+
+def seed_country_regions() -> None:
+    """Idempotently seed the ISO 3166 / UN M49 region map from region_data.py."""
+    import region_data
+    with get_cursor() as cursor:
+        for row in region_data.iter_country_region_rows():
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO country_regions
+                    (country_code, country_name, subregion_code, subregion_name, region_code, region_name)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                row,
+            )
+    logger.info("Country/region map seeded")

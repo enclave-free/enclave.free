@@ -10,6 +10,7 @@ import sys
 import tempfile
 import types
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -145,11 +146,32 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
                 "agent-settings",
                 "user-types",
                 "document-defaults",
+                "resources",
                 "health",
             ],
         )
         self.assertIn("AGENT SETTINGS (/admin/ai-config)", body["context_text"])
         self.assertIn("USER TYPES (/admin/user-types)", body["context_text"])
+        self.assertIn("RESOURCE DIRECTORY (/admin/resources)", body["context_text"])
+
+    def test_admin_resource_create_uses_utc_verified_timestamp(self) -> None:
+        response = self.client.post(
+            "/admin/resources",
+            json={
+                "name": "UTC Verified Resource",
+                "resource_type": "ngo",
+                "scope_level": "global",
+                "help_types": ["legal"],
+                "contact": {"url": "https://example.org/help"},
+                "verified": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        verified_at = response.json()["verified_at"]
+        self.assertTrue(verified_at.endswith("Z"))
+        parsed = datetime.fromisoformat(verified_at.replace("Z", "+00:00"))
+        self.assertEqual(parsed.tzinfo, timezone.utc)
 
     def test_deployment_secret_keys_are_metadata_only(self) -> None:
         self.database.upsert_deployment_config(
