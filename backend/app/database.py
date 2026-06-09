@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from base64 import b64encode, b64decode
 from datetime import datetime, timedelta, timezone
 from Crypto.Cipher import AES
+from models import RESOURCE_CONTACT_KEYS
 
 # Configure logging
 logger = logging.getLogger("enclave.database")
@@ -1467,6 +1468,46 @@ def seed_default_settings():
             """, (key, value))
 
     logger.info("Default instance settings seeded")
+
+
+# Reserved instance_settings row holding the set of keys an operator has
+# explicitly configured (vs. untouched seed defaults). Used by guided onboarding
+# to tell "operator chose this value" from "this is still the default placeholder"
+# even when the chosen value happens to equal the default.
+ONBOARDING_CONFIGURED_KEYS_SETTING = "onboarding_configured_keys"
+
+
+def get_onboarding_configured_keys() -> set[str]:
+    """Return the set of instance-settings keys the operator has explicitly set."""
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT value FROM instance_settings WHERE key = ?",
+            (ONBOARDING_CONFIGURED_KEYS_SETTING,),
+        )
+        row = cursor.fetchone()
+    if not row or not row["value"]:
+        return set()
+    try:
+        parsed = json.loads(row["value"])
+        return set(parsed) if isinstance(parsed, list) else set()
+    except (json.JSONDecodeError, TypeError):
+        return set()
+
+
+def mark_onboarding_configured_keys(keys) -> None:
+    """Record that the operator explicitly set these instance-settings keys."""
+    incoming = {str(k) for k in keys if k and str(k) != ONBOARDING_CONFIGURED_KEYS_SETTING}
+    if not incoming:
+        return
+    updated = get_onboarding_configured_keys() | incoming
+    with get_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO instance_settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (ONBOARDING_CONFIGURED_KEYS_SETTING, json.dumps(sorted(updated))),
+        )
 
 
 # --- Admin Operations ---
@@ -3743,10 +3784,6 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
 
 
 # --- Resource Referral Directory ---
-
-# Fields a resource must have before it can move from 'pending' to 'ready'.
-RESOURCE_CONTACT_KEYS = ("phone", "email", "url", "secure_channel", "address", "notes")
-
 
 def _json_loads_or(default, raw):
     if not raw:

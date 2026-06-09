@@ -89,10 +89,31 @@ describe('AdminConfigAssistant', () => {
           'user-types',
           'document-defaults',
           'health',
+          'onboarding',
         ],
         context_text:
-          'SCOPED CONFIG CONTEXT\nscope: overview\n\nAGENT SETTINGS (/admin/ai-config)\nUSER TYPES (/admin/user-types)\nDEPLOYMENT SETTINGS (/admin/deployment/config)',
+          'SCOPED CONFIG CONTEXT\nscope: overview\n\nAGENT SETTINGS (/admin/ai-config)\nUSER TYPES (/admin/user-types)\nDEPLOYMENT SETTINGS (/admin/deployment/config)\nONBOARDING MODE',
         deployment_secret_keys: ['LLM_API_KEY'],
+      });
+    }
+
+    if (
+      Array.isArray(body.requested_scopes) &&
+      body.requested_scopes.includes('onboarding')
+    ) {
+      return scopedConfigResponse({
+        primary_scope: 'overview',
+        included_scopes: ['overview', 'onboarding'],
+        context_text: [
+          'SCOPED CONFIG CONTEXT',
+          'scope: onboarding',
+          '',
+          'ONBOARDING MODE — GUIDED FIRST-RUN SETUP',
+          'REMAINING',
+          '[{"key":"instance_name","label":"Instance name"}]',
+          'WRITE CONTRACT',
+          'PUT /admin/settings',
+        ].join('\n'),
       });
     }
 
@@ -1515,6 +1536,120 @@ describe('AdminConfigAssistant', () => {
     });
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('injects onboarding scoped context and auto-advances after applying settings', async () => {
+    const user = userEvent.setup();
+    const changeSet = [
+      '```json',
+      JSON.stringify({
+        version: 1,
+        summary: 'Set instance name',
+        requests: [
+          {
+            method: 'PUT',
+            path: '/admin/settings',
+            body: { instance_name: 'Acme Aid' },
+          },
+        ],
+      }),
+      '```',
+    ].join('\n');
+
+    vi.mocked(sendLlmChatStreamWithUnifiedTools)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'onboarding-msg-1',
+          session_id: 'onboarding-session',
+        });
+        onEvent('answer_delta', {
+          message_id: 'onboarding-msg-1',
+          delta: changeSet,
+        });
+        onEvent('done', {
+          message_id: 'onboarding-msg-1',
+          session_id: 'onboarding-session',
+        });
+      })
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'onboarding-msg-2',
+          session_id: 'onboarding-session',
+        });
+        onEvent('answer_delta', {
+          message_id: 'onboarding-msg-2',
+          delta: 'Saved. Here is the next setup item.',
+        });
+        onEvent('done', {
+          message_id: 'onboarding-msg-2',
+          session_id: 'onboarding-session',
+        });
+      });
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByText(/let's set up your space/i)).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      '1. Acme Aid'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Pending changes: Set instance name')
+    ).toBeInTheDocument();
+
+    const firstCall = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(firstCall.baseToolContext).toContain('ONBOARDING MODE');
+    expect(firstCall.baseToolContext).toContain('PUT /admin/settings');
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ instance_name: 'Acme Aid' }),
+        })
+      );
+    });
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+    });
+
+    const scopedContextCalls = mockAdminFetch.mock.calls.filter(
+      ([endpoint]) => endpoint === '/admin/scoped-config-context'
+    );
+    expect(scopedContextCalls).toEqual(
+      expect.arrayContaining([
+        [
+          '/admin/scoped-config-context',
+          expect.objectContaining({
+            method: 'POST',
+            body: expect.stringContaining('"requested_scopes":["onboarding"]'),
+          }),
+        ],
+      ])
+    );
+
+    const hiddenTurn = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[1][0];
+    expect(hiddenTurn.content).toContain(
+      'The change set was applied successfully'
+    );
+    expect(
+      screen.queryByText(/The change set was applied successfully/)
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText('Saved. Here is the next setup item.')
+    ).toBeInTheDocument();
   });
 
   it('defaults to config-only tools without web-search', async () => {

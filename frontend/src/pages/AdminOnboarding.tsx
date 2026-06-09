@@ -217,9 +217,10 @@ export function AdminOnboarding() {
 
       setState('success')
 
-      // Redirect after showing success
+      // Redirect after showing success. First-time admins land in the AI-guided
+      // onboarding; returning admins go straight to the dashboard.
       setTimeout(() => {
-        navigate('/admin/setup')
+        navigate(result.is_new ? '/admin/onboarding' : '/admin/setup')
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect')

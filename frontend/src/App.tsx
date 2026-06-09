@@ -27,6 +27,11 @@ const AdminSetup = lazy(() =>
     default: module.AdminSetup,
   }))
 );
+const AdminOnboardingSetup = lazy(() =>
+  import('./pages/AdminOnboardingSetup').then((module) => ({
+    default: module.AdminOnboardingSetup,
+  }))
+);
 const AdminInstanceConfig = lazy(() =>
   import('./pages/AdminInstanceConfig').then((module) => ({
     default: module.AdminInstanceConfig,
@@ -181,6 +186,16 @@ function App() {
             <AdminRoute>
               <LazyPage>
                 <AdminSetup />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/onboarding"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminOnboardingSetup />
               </LazyPage>
             </AdminRoute>
           }

@@ -386,7 +386,11 @@ export function validateAdminAssistantChangeSet(
       /^\/admin\/resources\/[A-Za-z0-9_-]+$/,
       /^\/admin\/help-types\/[a-z0-9_]+$/i,
     ],
-    POST: [/^\/admin\/user-types$/, /^\/admin\/user-fields$/, /^\/admin\/resources$/],
+    POST: [
+      /^\/admin\/user-types$/,
+      /^\/admin\/user-fields$/,
+      /^\/admin\/resources$/,
+    ],
     DELETE: [
       /^\/admin\/user-types\/\d+$/,
       /^\/admin\/user-fields\/\d+$/,

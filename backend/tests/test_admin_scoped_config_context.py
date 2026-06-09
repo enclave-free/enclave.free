@@ -148,11 +148,13 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
                 "document-defaults",
                 "resources",
                 "health",
+                "onboarding",
             ],
         )
         self.assertIn("AGENT SETTINGS (/admin/ai-config)", body["context_text"])
         self.assertIn("USER TYPES (/admin/user-types)", body["context_text"])
         self.assertIn("RESOURCE DIRECTORY (/admin/resources)", body["context_text"])
+        self.assertIn("ONBOARDING MODE", body["context_text"])
 
     def test_admin_resource_create_uses_utc_verified_timestamp(self) -> None:
         response = self.client.post(
@@ -172,6 +174,21 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
         self.assertTrue(verified_at.endswith("Z"))
         parsed = datetime.fromisoformat(verified_at.replace("Z", "+00:00"))
         self.assertEqual(parsed.tzinfo, timezone.utc)
+
+    def test_admin_settings_write_records_onboarding_configured_keys(self) -> None:
+        update = self.client.put(
+            "/admin/settings",
+            json={
+                "default_theme": "system",
+                "auto_approve_users": "true",
+            },
+        )
+
+        self.assertEqual(update.status_code, 200)
+        self.assertEqual(
+            self.database.get_onboarding_configured_keys(),
+            {"auto_approve_users", "default_theme"},
+        )
 
     def test_deployment_secret_keys_are_metadata_only(self) -> None:
         self.database.upsert_deployment_config(

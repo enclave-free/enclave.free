@@ -263,6 +263,7 @@ ALL_DOCUMENTED_SCOPES: tuple[str, ...] = (
     "document-defaults",
     "resources",
     "health",
+    "onboarding",
 )
 
 INSTANCE_VISUAL_IDENTITY_SETTINGS: tuple[dict[str, str], ...] = (
@@ -412,6 +413,7 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "document-defaults": "Document access defaults and ingestion policies per user type.",
     "resources": "Curated directory of trusted real-world resources (lawyers, NGOs, UN bodies, clinics, shelters, financial aid) referrable by region and help type.",
     "health": "Service health, readiness, and restart-required deployment keys.",
+    "onboarding": "Guided first-run Instance Initiation checklist and write contract.",
 }
 
 CONFIDENCE_THRESHOLD = 0.7

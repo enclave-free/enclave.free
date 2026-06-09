@@ -67,6 +67,29 @@ describe('AdminRoute', () => {
     expect(document.querySelector('.bottom-5.right-5')).not.toBeInTheDocument();
   });
 
+  it('suppresses the shared assistant on the dedicated onboarding route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/onboarding']}>
+        <AdminRoute>
+          <main>Guided setup content</main>
+        </AdminRoute>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Guided setup content')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole('complementary', {
+        name: 'Admin Configuration Assistant',
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Open admin assistant' })
+    ).not.toBeInTheDocument();
+  });
+
   it('keeps the assistant session mounted when the desktop sidebar is collapsed and reopened', async () => {
     const user = userEvent.setup();
 
