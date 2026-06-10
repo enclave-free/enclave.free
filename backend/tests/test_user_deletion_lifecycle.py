@@ -175,6 +175,21 @@ class UserDeletionLifecycleTest(unittest.TestCase):
         self.assertEqual(idempotent_event["workflow"], "delete_user")
         self.assertEqual(idempotent_event["counts"]["skipped"], 4)
 
+    def test_user_self_deletion_without_pubkey_still_writes_audit_event(self) -> None:
+        self.main.app.dependency_overrides[self.auth.require_admin_or_user] = lambda: {
+            "type": "user",
+            "id": self.user_id,
+            "pubkey": None,
+        }
+
+        response = self.client.delete(f"/users/{self.user_id}")
+
+        self.assertEqual(response.status_code, 200)
+        entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["config_key"], f"user:{self.user_id}:delete")
+        self.assertEqual(entries[0]["changed_by"], f"user:{self.user_id}")
+
     def test_user_deletion_reports_sage_owned_conversation_discovery(self) -> None:
         response = self.client.delete(f"/users/{self.user_id}")
 

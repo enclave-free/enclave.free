@@ -2263,6 +2263,19 @@ def _require_self_or_admin(target_user_id: int, actor: dict) -> None:
         raise HTTPException(status_code=403, detail="Forbidden: cannot access another user")
 
 
+def _audit_actor_for_requester(requester: dict) -> str:
+    pubkey = requester.get("pubkey")
+    if isinstance(pubkey, str) and pubkey.strip():
+        return pubkey
+
+    actor_type = requester.get("type") or "actor"
+    actor_id = requester.get("id")
+    if actor_id is not None:
+        return f"{actor_type}:{actor_id}"
+
+    return "unknown"
+
+
 @app.get("/users/me/onboarding-status", response_model=OnboardingStatusResponse)
 async def get_my_onboarding_status(
     requester: dict = Depends(auth.require_admin_or_user)
@@ -2516,7 +2529,7 @@ async def delete_user(
         ])
         _audit_user_data_deletion(
             config_key=f"user:{user_id}:delete",
-            changed_by=requester.get("pubkey", "unknown"),
+            changed_by=_audit_actor_for_requester(requester),
             workflow="delete_user",
             target_id=str(user_id),
             deletion=deletion,
@@ -2571,7 +2584,7 @@ async def delete_user(
     ])
     _audit_user_data_deletion(
         config_key=f"user:{user_id}:delete",
-        changed_by=requester.get("pubkey", "unknown"),
+        changed_by=_audit_actor_for_requester(requester),
         workflow="delete_user",
         target_id=str(user_id),
         deletion=deletion,
