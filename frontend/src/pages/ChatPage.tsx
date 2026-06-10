@@ -66,7 +66,6 @@ import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
-  sendQueryStream,
 } from '../utils/llmChat';
 import { Button, Callout, IconButton } from '../components/ui';
 import {
@@ -1311,118 +1310,6 @@ export function ChatPage() {
           job_ids: selectedDocuments,
           ...(conversationSessionId && { session_id: conversationSessionId }),
         };
-
-        let streamed = false;
-        let streamMessageId: string | null = null;
-        let streamContent = '';
-        let streamSessionId: string | null = null;
-        let streamSearchTerm: string | null = null;
-        try {
-          await sendQueryStream({
-            question: content,
-            tools: backendTools,
-            jobIds: selectedDocuments,
-            sessionId: conversationSessionId,
-            onEvent: (event, payload) => {
-              const data = payload as Record<string, unknown>;
-              if (event === 'assistant_message_started') {
-                if (typeof data.message_id !== 'string')
-                  data.message_id = generateMessageId();
-                const id = data.message_id as string;
-                streamMessageId = id;
-                streamSessionId =
-                  typeof data.session_id === 'string'
-                    ? data.session_id
-                    : streamSessionId;
-                dispatchConversation({
-                  type: 'assistantTurnStarted',
-                  id,
-                  sessionId: streamSessionId,
-                  traceStatus: t(
-                    'chat.trace.finalizing',
-                    'Finalizing response...'
-                  ),
-                });
-              } else if (event === 'answer_delta' && streamMessageId) {
-                const delta = typeof data.delta === 'string' ? data.delta : '';
-                streamContent += delta;
-                dispatchConversation({
-                  type: 'assistantContentReplaced',
-                  assistantTurnId: streamMessageId,
-                  content: prepareAssistantContentForDisplay(
-                    shareSecrets
-                      ? redactSecrets(streamContent, secretsForThisRequest)
-                      : streamContent,
-                    hasConfigTool
-                  ),
-                });
-              } else if (event === 'done') {
-                if (typeof data.session_id === 'string')
-                  streamSessionId = data.session_id;
-                if (typeof data.search_term === 'string')
-                  streamSearchTerm = data.search_term;
-                dispatchStreamEvent(event, data, streamMessageId);
-              } else if (event === 'error') {
-                throw new Error(
-                  formatProviderStreamError(
-                    data.detail,
-                    t('errors.failedToSendMessage')
-                  )
-                );
-              } else if (streamMessageId) {
-                dispatchStreamEvent(event, data, streamMessageId);
-              }
-            },
-          });
-          if (streamSessionId)
-            dispatchConversation({
-              type: 'conversationSessionChanged',
-              sessionId: streamSessionId,
-            });
-          if (streamMessageId)
-            dispatchConversation({
-              type: 'assistantTurnFinished',
-              sessionId: streamSessionId,
-            });
-          dispatchAdminApply({ type: 'dismissed' });
-          if (streamSearchTerm) {
-            await triggerAutoSearch(
-              streamSearchTerm,
-              streamSessionId ?? conversationSessionId
-            );
-          }
-          streamed = true;
-        } catch (streamError) {
-          if (streamMessageId && streamContent.trim()) {
-            dispatchConversation({
-              type: 'assistantTurnFailed',
-              assistantTurnId: streamMessageId,
-              message:
-                streamError instanceof Error
-                  ? streamError.message
-                  : t('errors.failedToSendMessage'),
-            });
-            return;
-          }
-          if (streamMessageId) {
-            dispatchConversation({
-              type: 'assistantTurnFailed',
-              assistantTurnId: streamMessageId,
-              message:
-                streamError instanceof Error
-                  ? streamError.message
-                  : t('errors.failedToSendMessage'),
-            });
-          }
-          console.warn(
-            'Streaming query failed; falling back to non-streaming query:',
-            streamError
-          );
-        }
-        if (streamed) {
-          await loadConversationHistory();
-          return;
-        }
 
         response = await fetch(`${API_BASE}/query`, {
           method: 'POST',

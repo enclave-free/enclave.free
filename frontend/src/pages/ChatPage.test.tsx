@@ -19,6 +19,7 @@ import {
 } from '../types/instance';
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import {
+  sendQueryStream,
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../utils/llmChat';
@@ -34,6 +35,7 @@ vi.mock('../utils/adminApi', () => ({
 }));
 
 vi.mock('../utils/llmChat', () => ({
+  sendQueryStream: vi.fn(),
   sendLlmChatStreamWithUnifiedTools: vi.fn(),
   sendLlmChatWithUnifiedTools: vi.fn(),
 }));
@@ -287,6 +289,97 @@ describe('ChatPage', () => {
     expect(screen.getByRole('button', { name: /user-faq/ })).toHaveAttribute(
       'aria-pressed',
       'false'
+    );
+  });
+
+  it('sends document-grounded chat through the supported query route', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockImplementation(
+      (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.endsWith('/settings/public')) {
+          return Promise.resolve(Response.json({ settings: {} }));
+        }
+
+        if (url.endsWith('/session-defaults')) {
+          return Promise.resolve(
+            Response.json({
+              web_search_enabled: true,
+              default_document_ids: ['doc-1'],
+            })
+          );
+        }
+
+        if (url.endsWith('/query/sessions')) {
+          return Promise.resolve(Response.json({ conversations: [] }));
+        }
+
+        if (url.endsWith('/ingest/jobs')) {
+          return Promise.resolve(
+            Response.json({
+              jobs: [
+                {
+                  job_id: 'doc-1',
+                  filename: 'operator-handbook.pdf',
+                  status: 'completed',
+                  total_chunks: 12,
+                },
+              ],
+            })
+          );
+        }
+
+        if (url.endsWith('/users/me/onboarding-status')) {
+          return Promise.resolve(
+            Response.json({
+              needs_user_type: false,
+              needs_onboarding: false,
+              effective_user_type_id: null,
+            })
+          );
+        }
+
+        if (url.endsWith('/query')) {
+          const body = JSON.parse(String(init?.body ?? '{}'));
+          expect(body).toMatchObject({
+            question: 'What does the handbook say?',
+            job_ids: ['doc-1'],
+            tools: ['web-search'],
+          });
+          return Promise.resolve(
+            Response.json({
+              answer: 'The handbook answer.',
+              session_id: 'session-1',
+              sources: [],
+            })
+          );
+        }
+
+        return Promise.resolve(Response.json({}));
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Docs 1' })
+      ).toBeInTheDocument();
+    });
+    await user.type(
+      screen.getByRole('textbox', {
+        name: 'Ask about your selected documents...',
+      }),
+      'What does the handbook say?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('The handbook answer.')).toBeInTheDocument();
+    expect(sendQueryStream).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringMatching(/\/query\/stream$/),
+      expect.anything()
     );
   });
 
