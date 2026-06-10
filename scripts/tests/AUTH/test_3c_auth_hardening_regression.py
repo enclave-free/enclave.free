@@ -46,6 +46,7 @@ COMPOSE_ARGS = [
 DEFAULT_DB_PATH = "/data/enclave.db"
 DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 ADMIN_SESSION_SALT = "admin-session"
+CORE_BACKEND_SERVICE = "core-backend"
 
 
 def load_config() -> dict:
@@ -76,12 +77,12 @@ def load_repo_env() -> dict[str, str]:
 
 def load_backend_container_env() -> dict[str, str]:
     """
-    Read backend container environment via `docker compose exec backend env`.
+    Read core backend container environment via `docker compose exec core-backend env`.
     Best-effort only; returns empty dict on failure.
     """
     try:
         result = subprocess.run(
-            [*COMPOSE_ARGS, "exec", "-T", "backend", "env"],
+            [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "env"],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
@@ -142,7 +143,7 @@ def resolve_runtime_secret_key(
                 *COMPOSE_ARGS,
                 "exec",
                 "-T",
-                "backend",
+                CORE_BACKEND_SERVICE,
                 "python",
                 "-c",
                 "import pathlib,sys; p=pathlib.Path(sys.argv[1]); print(p.read_text().strip() if p.exists() else '')",
@@ -174,11 +175,11 @@ def sql_quote(value: str) -> str:
 
 
 def run_sqlite(sql: str, db_path: str, *, readonly: bool = False, json_mode: bool = False) -> str:
-    """Execute SQL inside backend container."""
+    """Execute SQL inside core backend container."""
     if not db_path or db_path.startswith("-"):
         raise ValueError(f"Invalid db_path: {db_path!r}")
 
-    cmd = [*COMPOSE_ARGS, "exec", "-T", "backend", "sqlite3"]
+    cmd = [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3"]
     if readonly:
         cmd.append("-readonly")
     if json_mode:
@@ -472,22 +473,28 @@ def test_query_session_ownership(api_base: str, secret_key: str, db_path: str) -
     headers_a = {"Authorization": f"Bearer {token_a}"}
     headers_b = {"Authorization": f"Bearer {token_b}"}
 
-    session_id = f"ownership-{uuid.uuid4().hex[:12]}"
+    requested_session_id = str(uuid.uuid4())
+    session_id = requested_session_id
     print(f"  Seeded users: A(id={user_a['id']}), B(id={user_b['id']}); session_id={session_id}")
 
     try:
         create_response = requests.post(
-            f"{api_base}/query",
+            f"{api_base}/llm/chat",
             headers=headers_a,
-            json={"question": "session ownership bootstrap", "session_id": session_id, "top_k": 1},
+            json={"message": "session ownership bootstrap", "session_id": requested_session_id, "tools": []},
             timeout=30,
         )
     except requests.exceptions.RequestException as e:
-        print(f"  [FAIL] POST /query bootstrap request failed: {e}")
+        print(f"  [FAIL] POST /llm/chat bootstrap request failed: {e}")
         return False
 
     if create_response.status_code == 200:
-        print(f"  [OK] POST /query bootstrap: {create_response.status_code}")
+        print(f"  [OK] POST /llm/chat bootstrap: {create_response.status_code}")
+        created_session_id = create_response.json().get("session_id")
+        if not isinstance(created_session_id, str) or not created_session_id:
+            print(f"  [FAIL] POST /llm/chat bootstrap response did not include session_id: {create_response.text[:400]}")
+            return False
+        session_id = created_session_id
     elif create_response.status_code == 500:
         # Some backend paths can fail after session persistence; verify state exists before continuing.
         session_rows = run_sqlite_json(
@@ -497,11 +504,11 @@ def test_query_session_ownership(api_base: str, secret_key: str, db_path: str) -
         )
         session_count = int(session_rows[0]["count"]) if session_rows else 0
         if session_count <= 0:
-            print("  [FAIL] POST /query bootstrap returned 500 and no persisted session row was found")
+            print("  [FAIL] POST /llm/chat bootstrap returned 500 and no persisted session row was found")
             return False
-        print("  [WARN] POST /query bootstrap returned 500, but session row exists; continuing ownership checks")
+        print("  [WARN] POST /llm/chat bootstrap returned 500, but session row exists; continuing ownership checks")
     else:
-        print(f"  [FAIL] POST /query bootstrap: got {create_response.status_code}, expected 200")
+        print(f"  [FAIL] POST /llm/chat bootstrap: got {create_response.status_code}, expected 200")
         if create_response.status_code == 401:
             print("         Hint: generated user bearer token may not match backend SECRET_KEY.")
         return False
@@ -518,11 +525,11 @@ def test_query_session_ownership(api_base: str, secret_key: str, db_path: str) -
             {403},
         )
         passed &= check_status(
-            "POST /query with reused foreign session_id",
+            "POST /llm/chat with reused foreign session_id",
             requests.post(
-                f"{api_base}/query",
+                f"{api_base}/llm/chat",
                 headers=headers_b,
-                json={"question": "attempt hijack", "session_id": session_id, "top_k": 1},
+                json={"message": "attempt hijack", "session_id": session_id, "tools": []},
                 timeout=15,
             ),
             {403},

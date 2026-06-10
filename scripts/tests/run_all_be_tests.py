@@ -40,6 +40,7 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 COMPOSE_CMD = "docker compose -f docker-compose.infra.yml -f docker-compose.app.yml"
+CORE_BACKEND_SERVICE = "core-backend"
 
 # Paths
 DOCKER_DB_PATH = "/data/enclave.db"
@@ -68,7 +69,7 @@ def load_crm_config() -> dict:
 # HARNESS FUNCTIONS
 # =============================================================================
 
-def run_docker_cmd(cmd: str, container: str = "backend") -> Tuple[int, str]:
+def run_docker_cmd(cmd: str, container: str = CORE_BACKEND_SERVICE) -> Tuple[int, str]:
     """Run a command inside the Docker container."""
     full_cmd = f"{COMPOSE_CMD} exec -T {container} {cmd}"
     result = subprocess.run(
@@ -102,7 +103,7 @@ def backup_database() -> Optional[Path]:
     
     print(f"  [HARNESS] Backing up database...")
     
-    cmd = f"{COMPOSE_CMD} cp backend:{DOCKER_DB_PATH} {backup_path}"
+    cmd = f"{COMPOSE_CMD} cp {CORE_BACKEND_SERVICE}:{DOCKER_DB_PATH} {backup_path}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=REPO_ROOT)
     
     if result.returncode != 0:
@@ -121,7 +122,7 @@ def restore_database(backup_path: Path) -> bool:
     
     print(f"  [HARNESS] Restoring database...")
     
-    cmd = f"{COMPOSE_CMD} cp {backup_path} backend:{DOCKER_DB_PATH}"
+    cmd = f"{COMPOSE_CMD} cp {backup_path} {CORE_BACKEND_SERVICE}:{DOCKER_DB_PATH}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=REPO_ROOT)
     
     if result.returncode != 0:
@@ -245,11 +246,11 @@ def create_user_fields_from_config() -> bool:
 
 
 def restart_backend() -> bool:
-    """Restart the backend container to pick up database changes."""
-    print(f"  [HARNESS] Restarting backend to apply changes...")
+    """Restart the core backend container to pick up database changes."""
+    print(f"  [HARNESS] Restarting core backend to apply changes...")
     
     result = subprocess.run(
-        f"{COMPOSE_CMD} restart backend",
+        f"{COMPOSE_CMD} restart {CORE_BACKEND_SERVICE}",
         shell=True,
         capture_output=True,
         text=True,
@@ -265,7 +266,7 @@ def restart_backend() -> bool:
     for i in range(30):
         time.sleep(1)
         check = subprocess.run(
-            f"{COMPOSE_CMD} exec -T backend curl -sf http://localhost:8000/health",
+            f"{COMPOSE_CMD} exec -T {CORE_BACKEND_SERVICE} curl -sf http://localhost:8000/health",
             shell=True,
             capture_output=True,
             text=True,
