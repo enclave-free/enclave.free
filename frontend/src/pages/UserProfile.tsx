@@ -1,10 +1,10 @@
-import { useState, useEffect, FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { ArrowRight, Loader2 } from 'lucide-react'
-import { OnboardingCard } from '../components/onboarding/OnboardingCard'
-import { DynamicField } from '../components/onboarding/DynamicField'
-import { Button } from '../components/ui'
+import { useState, useEffect, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { OnboardingCard } from '../components/onboarding/OnboardingCard';
+import { DynamicField } from '../components/onboarding/DynamicField';
+import { Button } from '../components/ui';
 import {
   CustomField,
   UserProfile as UserProfileType,
@@ -12,111 +12,151 @@ import {
   getSelectedUserTypeId,
   STORAGE_KEYS,
   API_BASE,
-} from '../types/onboarding'
+} from '../types/onboarding';
 
 function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function validateUrl(url: string): boolean {
   try {
-    new URL(url)
-    return true
+    new URL(url);
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
 export function UserProfile() {
-  const navigate = useNavigate()
-  const { t } = useTranslation()
-  const [fields, setFields] = useState<CustomField[]>([])
-  const [values, setValues] = useState<Record<string, string | boolean>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [fields, setFields] = useState<CustomField[]>([]);
+  const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  async function persistProfile(
+    profileFields: Record<string, string | boolean>
+  ) {
+    const userTypeId = getSelectedUserTypeId();
+    const email = localStorage.getItem(STORAGE_KEYS.USER_EMAIL) || '';
+    const name = localStorage.getItem(STORAGE_KEYS.USER_NAME) || undefined;
+
+    const profile: UserProfileType = {
+      email,
+      name,
+      user_type_id: userTypeId,
+      completedAt: new Date().toISOString(),
+      fields: profileFields,
+    };
+    saveUserProfile(profile);
+
+    const response = await fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        email: email || undefined,
+        name,
+        user_type_id: userTypeId,
+        fields: profileFields,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to save profile: ${response.status}`);
+    }
+  }
 
   // Load fields from API and check user is logged in
   useEffect(() => {
-    const email = localStorage.getItem(STORAGE_KEYS.USER_EMAIL)
+    const email = localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
     if (!email) {
-      navigate('/login')
-      return
+      navigate('/login');
+      return;
     }
 
     async function fetchFields() {
       try {
-        const userTypeId = getSelectedUserTypeId()
+        const userTypeId = getSelectedUserTypeId();
         // Fetch fields - include global fields and type-specific if type selected
-        const url = userTypeId !== null
-          ? `${API_BASE}/user-fields?user_type_id=${userTypeId}&include_global=true`
-          : `${API_BASE}/user-fields`
+        const url =
+          userTypeId !== null
+            ? `${API_BASE}/user-fields?user_type_id=${userTypeId}&include_global=true`
+            : `${API_BASE}/user-fields`;
 
-        const response = await fetch(url)
-        if (!response.ok) throw new Error(t('errors.failedToFetchFields'))
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(t('errors.failedToFetchFields'));
 
-        const data = await response.json()
-        const fetchedFields: CustomField[] = (data.fields || []).map((f: any) => ({
-          id: String(f.id),
-          name: f.field_name,
-          type: f.field_type as any,
-          required: f.required,
-          placeholder: f.placeholder,
-          options: f.options,
-          user_type_id: f.user_type_id,
-        }))
+        const data = await response.json();
+        const fetchedFields: CustomField[] = (data.fields || []).map(
+          (f: any) => ({
+            id: String(f.id),
+            name: f.field_name,
+            type: f.field_type as any,
+            required: f.required,
+            placeholder: f.placeholder,
+            options: f.options,
+            user_type_id: f.user_type_id,
+          })
+        );
 
         if (fetchedFields.length === 0) {
-          // No fields to complete, go to chat
-          navigate('/chat')
-          return
+          await persistProfile({});
+          navigate('/chat');
+          return;
         }
 
-        setFields(fetchedFields)
+        setFields(fetchedFields);
 
         // Initialize values with empty strings or false for checkboxes
         // Use field.name as key since backend expects field names, not IDs
-        const initialValues: Record<string, string | boolean> = {}
+        const initialValues: Record<string, string | boolean> = {};
         fetchedFields.forEach((field) => {
-          initialValues[field.name] = field.type === 'checkbox' ? false : ''
-        })
-        setValues(initialValues)
+          initialValues[field.name] = field.type === 'checkbox' ? false : '';
+        });
+        setValues(initialValues);
       } catch (err) {
-        console.error(t('errors.errorFetchingFields'), err)
+        console.error(t('errors.errorFetchingFields'), err);
         // On error, proceed to chat (graceful degradation)
-        navigate('/chat')
+        navigate('/chat');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    fetchFields()
-  }, [navigate])
+    fetchFields();
+  }, [navigate]);
 
   const handleValueChange = (fieldId: string, value: string | boolean) => {
-    setValues((prev) => ({ ...prev, [fieldId]: value }))
+    setValues((prev) => ({ ...prev, [fieldId]: value }));
     if (errors[fieldId]) {
       setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[fieldId]
-        return newErrors
-      })
+        const newErrors = { ...prev };
+        delete newErrors[fieldId];
+        return newErrors;
+      });
     }
-  }
+  };
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
     fields.forEach((field) => {
-      const value = values[field.name]
+      const value = values[field.name];
 
       // Required check
       if (field.required) {
         if (field.type === 'checkbox') {
           // Checkbox doesn't need to be checked for required
         } else if (!value || (typeof value === 'string' && !value.trim())) {
-          newErrors[field.name] = t('onboarding.profile.fieldRequired', { field: field.name })
-          return
+          newErrors[field.name] = t('onboarding.profile.fieldRequired', {
+            field: field.name,
+          });
+          return;
         }
       }
 
@@ -125,85 +165,56 @@ export function UserProfile() {
         switch (field.type) {
           case 'email':
             if (!validateEmail(value)) {
-              newErrors[field.name] = t('onboarding.profile.invalidEmail')
+              newErrors[field.name] = t('onboarding.profile.invalidEmail');
             }
-            break
+            break;
           case 'url':
             if (!validateUrl(value)) {
-              newErrors[field.name] = t('onboarding.profile.invalidUrl')
+              newErrors[field.name] = t('onboarding.profile.invalidUrl');
             }
-            break
+            break;
           case 'number':
             if (isNaN(Number(value))) {
-              newErrors[field.name] = t('onboarding.profile.invalidNumber')
+              newErrors[field.name] = t('onboarding.profile.invalidNumber');
             }
-            break
+            break;
         }
       }
-    })
+    });
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validate()) return
+    if (!validate()) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      const userTypeId = getSelectedUserTypeId()
-
-      // Save profile locally
-      const profile: UserProfileType = {
-        email: localStorage.getItem(STORAGE_KEYS.USER_EMAIL) || '',
-        name: localStorage.getItem(STORAGE_KEYS.USER_NAME) || undefined,
-        user_type_id: userTypeId,
-        completedAt: new Date().toISOString(),
-        fields: values,
-      }
-      saveUserProfile(profile)
-
-      // Also save to backend
-      const response = await fetch(`${API_BASE}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: localStorage.getItem(STORAGE_KEYS.USER_EMAIL) || undefined,
-          name: localStorage.getItem(STORAGE_KEYS.USER_NAME) || undefined,
-          user_type_id: userTypeId,
-          fields: values,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to save profile: ${response.status}`)
-      }
+      await persistProfile(values);
 
       // Navigate to chat
-      navigate('/chat')
+      navigate('/chat');
     } catch (err) {
-      console.error('Error saving profile:', err)
+      console.error('Error saving profile:', err);
       // Still navigate on error (profile saved locally)
-      navigate('/chat')
+      navigate('/chat');
     }
-  }
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-accent animate-spin" />
       </div>
-    )
+    );
   }
 
   if (fields.length === 0) {
-    return null // Will redirect in useEffect
+    return null; // Will redirect in useEffect
   }
 
   return (
@@ -227,12 +238,22 @@ export function UserProfile() {
           disabled={isSubmitting}
           className="w-full mt-6"
           size="lg"
-          leadingIcon={isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : undefined}
-          trailingIcon={!isSubmitting ? <ArrowRight className="w-5 h-5" aria-hidden="true" /> : undefined}
+          leadingIcon={
+            isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+            ) : undefined
+          }
+          trailingIcon={
+            !isSubmitting ? (
+              <ArrowRight className="w-5 h-5" aria-hidden="true" />
+            ) : undefined
+          }
         >
-          {isSubmitting ? t('onboarding.profile.saving') : t('onboarding.profile.continue')}
+          {isSubmitting
+            ? t('onboarding.profile.saving')
+            : t('onboarding.profile.continue')}
         </Button>
       </form>
     </OnboardingCard>
-  )
+  );
 }
