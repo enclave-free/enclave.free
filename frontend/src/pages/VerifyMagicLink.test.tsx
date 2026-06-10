@@ -76,4 +76,54 @@ describe('VerifyMagicLink', () => {
 
     expect(localStorage.getItem(STORAGE_KEYS.USER_APPROVED)).toBe('false');
   });
+
+  it('clears stale selected user type when verified user has no type', async () => {
+    localStorage.setItem(STORAGE_KEYS.USER_TYPE_ID, '4');
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/verify') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json({
+            success: true,
+            user: {
+              id: 15,
+              email: 'new-user@example.test',
+              name: 'New User',
+              user_type_id: null,
+              approved: true,
+              created_at: '2026-06-10 15:01:00',
+              needs_onboarding: true,
+              needs_user_type: false,
+            },
+            session_token: 'session-token',
+          })
+        );
+      }
+
+      if (url.endsWith('/user-types')) {
+        return Promise.resolve(Response.json({ types: [] }));
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/verify?token=magic-token']}>
+        <Routes>
+          <Route path="/verify" element={<VerifyMagicLink />} />
+          <Route path="/profile" element={<div>Profile completion</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByText('new-user@example.test')
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(localStorage.getItem(STORAGE_KEYS.USER_TYPE_ID)).toBeNull();
+    });
+  });
 });

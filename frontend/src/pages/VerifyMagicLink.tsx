@@ -7,6 +7,7 @@ import {
   STORAGE_KEYS,
   API_BASE,
   saveSelectedUserTypeId,
+  clearSelectedUserTypeId,
 } from '../types/onboarding';
 
 type VerifyState = 'verifying' | 'success' | 'error';
@@ -152,6 +153,8 @@ export function VerifyMagicLink() {
           data.user?.user_type_id !== undefined
         ) {
           saveSelectedUserTypeId(data.user.user_type_id);
+        } else {
+          clearSelectedUserTypeId();
         }
 
         const onboardingFlag =
