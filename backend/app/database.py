@@ -637,6 +637,7 @@ def init_schema():
     _migrate_encrypt_deployment_config_secrets()  # Encrypt plaintext deployment secrets at rest
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
+    _migrate_enforce_single_admin()  # Enforce the single-admin product invariant at the DB layer
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
     _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
 
@@ -857,6 +858,36 @@ def _migrate_add_admin_session_nonce_column() -> None:
         cursor.execute("ALTER TABLE admins ADD COLUMN session_nonce INTEGER DEFAULT 0")
         logger.info("Migration: Added 'session_nonce' column to admins table (default: 0)")
         cursor.execute("UPDATE admins SET session_nonce = 0 WHERE session_nonce IS NULL")
+
+    conn.commit()
+    cursor.close()
+
+
+def _migrate_enforce_single_admin() -> None:
+    """Collapse legacy duplicate admins and prevent future direct inserts."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, pubkey FROM admins ORDER BY created_at, id")
+    admins = cursor.fetchall()
+    if len(admins) > 1:
+        keep_id = admins[0]["id"]
+        removed_pubkeys = [row["pubkey"] for row in admins[1:]]
+        cursor.execute("DELETE FROM admins WHERE id != ?", (keep_id,))
+        logger.warning(
+            "Migration: Removed %s duplicate admin row(s) to enforce single-admin invariant: %s",
+            len(removed_pubkeys),
+            ", ".join(pubkey[:16] + "..." for pubkey in removed_pubkeys),
+        )
+
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS trg_admins_singleton_insert
+        BEFORE INSERT ON admins
+        WHEN (SELECT COUNT(*) FROM admins) >= 1
+        BEGIN
+            SELECT RAISE(ABORT, 'Only one admin per instance is allowed.');
+        END
+    """)
 
     conn.commit()
     cursor.close()
