@@ -342,8 +342,25 @@ curl -i -X POST http://localhost:8000/vector-search \
   -d '{"query":"test","top_k":1}'
 
 # S4-3: Public query-session routes are Sage-owned.
-# Verify session ownership through the Sage/Agent Runtime gateway flow;
-# Python-side evidence covers lifecycle deletion and tombstone reporting.
+# Replace SESSION_ID with a Sage-owned query session created by OWNER_TOKEN
+# through POST /llm/chat. The public query-session resource is:
+#   /query/session/{SESSION_ID}
+curl -i -X DELETE "http://localhost:8000/query/session/${SESSION_ID}" \
+  -H "Authorization: Bearer ${OTHER_AGENT_TOKEN}"
+# Expected: 403 Forbidden. Body is the gateway auth error; no deletion summary.
+
+curl -i -X DELETE "http://localhost:8000/query/session/${SESSION_ID}" \
+  -H "Authorization: Bearer ${OWNER_TOKEN}"
+# Expected: 200 OK with {"status":"deleted","deletion":{"status":"succeeded",...}}
+# and sanitized lifecycle results including delete_session_record.
+
+python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base http://localhost:8000
+# Expected: owner delete succeeds; non-owner delete is forbidden; the deleted
+# session cannot be resumed and disappears from /query/sessions. Python-side
+# lifecycle evidence is reported through backend/app/lifecycle.py
+# post_sage_session_memory_delete(), which calls the Sage Agent Runtime
+# /internal/lifecycle/session-memory/delete endpoint used for deletion and
+# tombstone retry reporting.
 
 # S4-4: CORS should reject disallowed origins
 curl -i -X OPTIONS http://localhost:8000/health \
@@ -421,8 +438,11 @@ Use these guardrails while security fixes are in progress:
 - Manual Section 7.1 checks:
   - `GET /ingest/pending` unauthenticated: `401`
   - `POST /vector-search` unauthenticated: `401`
-  - Public query-session ownership: verified through the Sage-owned Agent Runtime route set.
-  - Python lifecycle evidence: Sage-to-Python deletion/tombstone reporting covered by backend tests.
+  - Public query-session ownership: replay against Sage-owned `/query/session/{SESSION_ID}`:
+    `DELETE /query/session/${SESSION_ID}` with `Authorization: Bearer ${OTHER_AGENT_TOKEN}` -> `403 Forbidden`, gateway auth error, no deletion summary.
+    `DELETE /query/session/${SESSION_ID}` with `Authorization: Bearer ${OWNER_TOKEN}` -> `200 OK`, `{"status":"deleted","deletion":{"status":"succeeded",...}}` with sanitized lifecycle results including `delete_session_record`.
+  - Python lifecycle evidence: run `python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base http://localhost:8000`.
+    Expected tombstone lifecycle outcome: owner delete succeeds, non-owner delete is forbidden, the deleted session cannot be resumed and disappears from `/query/sessions`; `backend/app/lifecycle.py::post_sage_session_memory_delete()` is the Agent Runtime gateway client used for Sage Session Memory deletion and tombstone retry reporting through `/internal/lifecycle/session-memory/delete`.
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
   - Published ports: `enclave-backend` and `enclave-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure
   - Smoke endpoints: `GET /test` -> `200`, `GET /llm/test` -> `200`

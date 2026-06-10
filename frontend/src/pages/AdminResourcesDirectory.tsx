@@ -544,6 +544,7 @@ export function AdminResourcesDirectory() {
                         key={helpType.key}
                         type="button"
                         onClick={() => toggleHelpType(helpType.key)}
+                        aria-pressed={active}
                         className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                           active
                             ? 'border-accent bg-accent/10 text-accent'

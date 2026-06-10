@@ -505,7 +505,7 @@ export function AdminOnboarding() {
                     <p className="text-xs text-text-secondary leading-relaxed">
                       {t(
                         'instanceInitiation.after.body',
-                        'You will land on the admin dashboard where you can configure branding, user onboarding, AI behavior, and more.'
+                        'First-time admins will continue into AI-guided onboarding. Returning admins will land in setup.'
                       )}
                     </p>
                     <p className="text-xs text-text-muted leading-relaxed mt-2">

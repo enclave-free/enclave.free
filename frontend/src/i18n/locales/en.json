@@ -1648,7 +1648,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Your Enclave instance is set up and ready. You can now configure settings, upload documents, and start querying your knowledge base.",
+      "body": "First-time admins will continue into AI-guided onboarding. Returning admins will land in setup.",
       "note": "Use a trusted device — your Nostr key is used to encrypt and decrypt sensitive instance data.",
       "title": "You're all set!"
     },
