@@ -36,6 +36,11 @@ try:
 except ImportError:
     PrivateKey = None
 
+try:
+    from itsdangerous import URLSafeTimedSerializer
+except ImportError:
+    URLSafeTimedSerializer = None
+
 
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -86,6 +91,18 @@ def run_sql(sql: str) -> Tuple[int, str]:
     """Run SQL against the SQLite database in Docker."""
     escaped_sql = sql.replace("'", "'\\''")
     return run_docker_cmd(f"sqlite3 {DOCKER_DB_PATH} '{escaped_sql}'")
+
+
+def container_env(service: str = CORE_BACKEND_SERVICE) -> dict:
+    code, output = run_docker_cmd("env", container=service)
+    if code != 0:
+        return {}
+    values = {}
+    for line in output.splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            values[key] = value
+    return values
 
 
 def check_docker_running() -> bool:
@@ -208,6 +225,53 @@ def create_test_admin(pubkey: str) -> bool:
 
     print(f"  [HARNESS] ✓ Test admin created ({pubkey[:16]}...)")
     return True
+
+
+def create_harness_admin_token(pubkey: Optional[str] = None) -> Optional[str]:
+    if URLSafeTimedSerializer is None:
+        print("  [HARNESS] ✗ itsdangerous is required for harness admin token creation")
+        return None
+
+    env_values = container_env()
+    secret_key = env_values.get("SECRET_KEY")
+    if not secret_key:
+        print("  [HARNESS] ✗ SECRET_KEY unavailable from core-backend")
+        return None
+
+    if pubkey:
+        escaped_pubkey = pubkey.replace("'", "''")
+        admin_filter = f"WHERE pubkey = '{escaped_pubkey}'"
+    else:
+        admin_filter = ""
+
+    rows_code, rows_output = run_docker_cmd(
+        f"sqlite3 -readonly -json {DOCKER_DB_PATH} "
+        f"\"SELECT id, pubkey, COALESCE(session_nonce, 0) AS session_nonce FROM admins {admin_filter} ORDER BY id LIMIT 1\""
+    )
+    if rows_code != 0:
+        print(f"  [HARNESS] ✗ Admin lookup failed: {rows_output}")
+        return None
+
+    try:
+        rows = json.loads(rows_output or "[]")
+    except json.JSONDecodeError:
+        rows = []
+    if not rows:
+        print("  [HARNESS] ✗ Admin row not found for token creation")
+        return None
+
+    admin = rows[0]
+    token = URLSafeTimedSerializer(secret_key).dumps(
+        {
+            "admin_id": int(admin["id"]),
+            "pubkey": admin["pubkey"],
+            "type": "admin",
+            "session_nonce": int(admin.get("session_nonce") or 0),
+        },
+        salt="admin-session",
+    )
+    print("  [HARNESS] ✓ Test admin token created")
+    return token
 
 
 def create_user_fields_from_config() -> bool:
@@ -433,6 +497,14 @@ def print_test_result(passed: bool, duration: float, output: str, verbose: bool)
     print()
 
 
+def script_accepts_token_argument(test_path: Path) -> bool:
+    try:
+        source = test_path.read_text()
+    except OSError:
+        return False
+    return '"--token"' in source or "'--token'" in source
+
+
 def print_summary(results: List[Tuple[dict, bool, float]]):
     """Print final summary."""
     total = len(results)
@@ -611,14 +683,18 @@ Examples:
     
     # Run tests
     results = []
-    extra_args = []
-    
-    if args.token:
-        extra_args.extend(["--token", args.token])
     
     try:
         for test_path in tests:
             info = parse_test_name(test_path)
+            test_extra_args = []
+            if script_accepts_token_argument(test_path):
+                if args.token:
+                    test_extra_args.extend(["--token", args.token])
+                elif use_harness:
+                    harness_token = create_harness_admin_token()
+                    if harness_token:
+                        test_extra_args.extend(["--token", harness_token])
             
             print_test_start(info, test_path)
             
@@ -626,7 +702,7 @@ Examples:
                 test_path, 
                 args.api_base, 
                 args.verbose,
-                extra_args
+                test_extra_args
             )
             
             print_test_result(passed, duration, output, args.verbose)

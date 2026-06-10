@@ -31,7 +31,7 @@ sys.path.insert(0, str(SCRIPT_DIR.parent.parent.parent / "backend" / "app"))
 
 from coincurve import PrivateKey
 
-from test_helpers import run_docker_sql, REPO_ROOT
+from test_helpers import COMPOSE_ARGS, CORE_BACKEND_SERVICE, run_docker_sql, REPO_ROOT
 
 
 def load_config() -> dict:
@@ -263,13 +263,36 @@ def compute_blind_index_in_docker(email: str) -> str | None:
 
     script = f"from encryption import compute_blind_index; print(compute_blind_index('{escaped_email}'))"
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "python", "-c", script],  # noqa: S607
+        [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "python", "-c", script],  # noqa: S607
         capture_output=True, text=True, cwd=REPO_ROOT, timeout=30
     )
 
     if result.returncode != 0:
         return None
     return result.stdout.strip()
+
+
+def first_id_from_sql_output(output: str) -> int | None:
+    if not output:
+        return None
+
+    try:
+        rows = json.loads(output)
+    except json.JSONDecodeError:
+        rows = None
+
+    if isinstance(rows, list):
+        if not rows:
+            return None
+        first_row = rows[0]
+        if isinstance(first_row, dict):
+            value = first_row.get("id")
+        else:
+            value = first_row
+    else:
+        value = output
+
+    return int(value) if value not in (None, "") else None
 
 
 def find_test_user(db_path: str, test_email: str) -> int | None:
@@ -292,7 +315,7 @@ def find_test_user(db_path: str, test_email: str) -> int | None:
     if not normalized_email:
         # If no email provided, fall back to most recent user
         output = run_docker_sql("SELECT id FROM users ORDER BY id DESC LIMIT 1", db_path)
-        return int(output) if output else None
+        return first_id_from_sql_output(output)
 
     # Compute blind index inside Docker where SECRET_KEY is available
     blind_index = compute_blind_index_in_docker(normalized_email)
@@ -304,11 +327,11 @@ def find_test_user(db_path: str, test_email: str) -> int | None:
             db_path
         )
         if output:
-            return int(output)
+            return first_id_from_sql_output(output)
 
     # Final fallback: most recent user
     output = run_docker_sql("SELECT id FROM users ORDER BY id DESC LIMIT 1", db_path)
-    return int(output) if output else None
+    return first_id_from_sql_output(output)
 
 
 def main():

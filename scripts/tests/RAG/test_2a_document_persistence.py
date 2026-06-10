@@ -10,7 +10,7 @@ Usage:
 
 Requirements:
     - Backend must be running
-    - reportlab package for PDF generation (pip install reportlab)
+    - reportlab package for nicer PDF generation (optional)
 """
 
 import os
@@ -38,6 +38,12 @@ except ImportError:
 
 
 SCRIPT_DIR = Path(__file__).parent
+COMPOSE_ARGS = [
+    "docker", "compose",
+    "-f", "docker-compose.infra.yml",
+    "-f", "docker-compose.app.yml",
+]
+CORE_BACKEND_SERVICE = "core-backend"
 
 
 def load_config() -> dict:
@@ -53,10 +59,31 @@ def generate_pdf_from_config(config: dict, output_path: str) -> str:
     
     Returns path to generated PDF.
     """
-    if not REPORTLAB_AVAILABLE:
-        raise RuntimeError("reportlab is required for PDF generation")
-    
     doc_config = config["test_document"]
+
+    if not REPORTLAB_AVAILABLE:
+        content = f"{doc_config['title']}\n\n{doc_config['content']}"
+        escaped = content.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        stream = f"BT /F1 12 Tf 72 720 Td 14 TL ({escaped}) Tj ET"
+        objects = [
+            "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+            "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
+            "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj",
+            "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
+            f"5 0 obj << /Length {len(stream.encode('latin-1', errors='replace'))} >> stream\n{stream}\nendstream endobj",
+        ]
+        pdf = "%PDF-1.4\n"
+        offsets = []
+        for obj in objects:
+            offsets.append(len(pdf.encode("latin-1")))
+            pdf += obj + "\n"
+        xref_offset = len(pdf.encode("latin-1"))
+        pdf += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n"
+        for offset in offsets:
+            pdf += f"{offset:010d} 00000 n \n"
+        pdf += f"trailer << /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+        Path(output_path).write_bytes(pdf.encode("latin-1", errors="replace"))
+        return output_path
     
     # Create PDF
     doc = SimpleDocTemplate(
@@ -132,12 +159,15 @@ def upload_document(api_base: str, file_path: str, token: str = None) -> dict:
     return response.json()
 
 
-def wait_for_job_completion(api_base: str, job_id: str, timeout: int = 300) -> dict:
+def wait_for_job_completion(api_base: str, job_id: str, timeout: int = 300, token: str = None) -> dict:
     """Poll job status until completion or timeout."""
     start_time = time.time()
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     
     while time.time() - start_time < timeout:
-        response = requests.get(f"{api_base}/ingest/status/{job_id}")
+        response = requests.get(f"{api_base}/ingest/status/{job_id}", headers=headers)
         
         if response.status_code != 200:
             print(f"[ERROR] Failed to get job status: {response.status_code}")
@@ -255,7 +285,7 @@ except Exception as e:
     print(f'Qdrant cleanup: {{e}}')
 """
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "python", "-c", qdrant_script],
+        [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "python", "-c", qdrant_script],
         capture_output=True, text=True, cwd=repo_root
     )
     if "Deleted" in result.stdout:
@@ -267,7 +297,7 @@ except Exception as e:
     # job_id is pre-validated to 16 hex chars only, safe for interpolation
     sql_delete = f"DELETE FROM ingest_jobs WHERE job_id = '{job_id}'"
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "sqlite3", "/data/enclave.db", sql_delete],
+        [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3", "/data/enclave.db", sql_delete],
         capture_output=True, text=True, cwd=repo_root
     )
     if result.returncode == 0:
@@ -279,7 +309,7 @@ except Exception as e:
     # Using argument list and validated job_id
     file_pattern = f"/uploads/{job_id}_*.pdf"
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "sh", "-c", f"rm -f {file_pattern}"],
+        [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sh", "-c", f"rm -f {file_pattern}"],
         capture_output=True, text=True, cwd=repo_root
     )
     if result.returncode == 0:
@@ -339,7 +369,7 @@ def test_c_document_persistence(api_base: str, config: dict, token: str = None) 
         
         # Step 3: Wait for processing
         print("\n[STEP 3] Waiting for processing...")
-        job_result = wait_for_job_completion(api_base, job_id, timeout=180)
+        job_result = wait_for_job_completion(api_base, job_id, timeout=180, token=token)
         
         if not job_result:
             print("  ✗ Job did not complete")
@@ -459,10 +489,6 @@ def main():
         passed = test_persistence_after_restart(args.api_base, args.verify_job, args.token)
     else:
         # Full test mode
-        if not REPORTLAB_AVAILABLE:
-            print("\n[ERROR] reportlab required. Install with: pip install reportlab")
-            sys.exit(1)
-        
         passed = test_c_document_persistence(args.api_base, config, args.token)
     
     # Summary
