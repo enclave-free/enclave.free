@@ -873,7 +873,9 @@ class ResourceCreate(BaseModel):
 
     @model_validator(mode="after")
     def _require_resource_id_or_name(self):
-        if not str(self.resource_id or "").strip() and not str(self.name or "").strip():
+        resource_id = str(self.resource_id or "").strip()
+        self.resource_id = resource_id or None
+        if not self.resource_id and not str(self.name or "").strip():
             raise ValueError("resource_id or name is required")
         return self
 

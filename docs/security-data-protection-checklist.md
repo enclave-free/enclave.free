@@ -343,7 +343,7 @@ curl -i -X POST http://localhost:8000/vector-search \
 
 # S4-3: Public query-session routes are Sage-owned.
 # Replace SESSION_ID with a Sage-owned query session created by OWNER_TOKEN
-# through POST /llm/chat. The public query-session resource is:
+# through POST /query. The public query-session resource is:
 #   /query/session/{SESSION_ID}
 curl -i -X DELETE "http://localhost:8000/query/session/${SESSION_ID}" \
   -H "Authorization: Bearer ${OTHER_AGENT_TOKEN}"

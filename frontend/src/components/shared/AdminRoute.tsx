@@ -40,7 +40,7 @@ function clampAssistantWidth(width: number): number {
 }
 
 function getAssistantStorage(): Storage | null {
-  if (typeof window === 'undefined' || !window.localStorage) return null;
+  if (typeof window === 'undefined') return null;
   try {
     return window.localStorage;
   } catch {
@@ -97,6 +97,12 @@ export function AdminRoute({ children }: AdminRouteProps) {
   // shared right-rail assistant is suppressed there to avoid a duplicate panel.
   const location = useLocation();
   const hideSharedAssistant = location.pathname === '/admin/onboarding';
+
+  useEffect(() => {
+    if (hideSharedAssistant) {
+      setMobileAssistantOpen(false);
+    }
+  }, [hideSharedAssistant]);
 
   // Persist the chosen width and keep it within [min, half-page] on viewport resize.
   useEffect(() => {

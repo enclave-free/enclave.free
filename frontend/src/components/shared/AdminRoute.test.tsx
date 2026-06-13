@@ -90,6 +90,37 @@ describe('AdminRoute', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('renders when localStorage access is denied by the browser', async () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      window,
+      'localStorage'
+    );
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new Error('localStorage unavailable');
+      },
+    });
+
+    try {
+      render(
+        <MemoryRouter initialEntries={['/admin/setup']}>
+          <AdminRoute>
+            <main>Admin dashboard content</main>
+          </AdminRoute>
+        </MemoryRouter>
+      );
+
+      await screen.findByText('Admin dashboard content');
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'localStorage', originalDescriptor);
+      } else {
+        Reflect.deleteProperty(window, 'localStorage');
+      }
+    }
+  });
+
   it('keeps the assistant session mounted when the desktop sidebar is collapsed and reopened', async () => {
     const user = userEvent.setup();
 

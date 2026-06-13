@@ -126,4 +126,50 @@ describe('VerifyMagicLink', () => {
       expect(localStorage.getItem(STORAGE_KEYS.USER_TYPE_ID)).toBeNull();
     });
   });
+
+  it('clears stale user name when verified user has no name', async () => {
+    localStorage.setItem(STORAGE_KEYS.USER_NAME, 'Previous User');
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/verify') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json({
+            success: true,
+            user: {
+              id: 16,
+              email: 'nameless@example.test',
+              name: null,
+              user_type_id: null,
+              approved: true,
+              created_at: '2026-06-10 15:03:00',
+              needs_onboarding: false,
+              needs_user_type: false,
+            },
+            session_token: 'session-token',
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/verify?token=magic-token']}>
+        <Routes>
+          <Route path="/verify" element={<VerifyMagicLink />} />
+          <Route path="/chat" element={<div>Chat</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByText('nameless@example.test')
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(localStorage.getItem(STORAGE_KEYS.USER_NAME)).toBeNull();
+    });
+  });
 });

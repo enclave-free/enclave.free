@@ -413,7 +413,10 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
         raise HTTPException(status_code=400, detail="help_type is required")
     effective_limit = max(
         0,
-        min(payload.limit or DEFAULT_RESOURCE_SEARCH_LIMIT, MAX_RESOURCE_SEARCH_LIMIT),
+        min(
+            payload.limit if payload.limit is not None else DEFAULT_RESOURCE_SEARCH_LIMIT,
+            MAX_RESOURCE_SEARCH_LIMIT,
+        ),
     )
     resolved = database.normalize_jurisdiction(payload.jurisdiction)
     resources = database.search_resources(

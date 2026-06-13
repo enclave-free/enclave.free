@@ -244,7 +244,9 @@ COUNTRIES: dict[str, CountryEntry] = {
     "BE": {"name": "Belgium", "subregion": "155"},
     "FR": {"name": "France", "subregion": "155"},
     "DE": {"name": "Germany", "subregion": "155"},
+    "LI": {"name": "Liechtenstein", "subregion": "155"},
     "LU": {"name": "Luxembourg", "subregion": "155"},
+    "MC": {"name": "Monaco", "subregion": "155"},
     "NL": {"name": "Netherlands", "subregion": "155"},
     "CH": {"name": "Switzerland", "subregion": "155"},
     # --- Eastern Europe (151) ---

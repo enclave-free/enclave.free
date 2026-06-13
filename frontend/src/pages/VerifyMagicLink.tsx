@@ -185,6 +185,8 @@ export function VerifyMagicLink() {
         localStorage.setItem(STORAGE_KEYS.USER_EMAIL, data.user.email);
         if (data.user.name) {
           localStorage.setItem(STORAGE_KEYS.USER_NAME, data.user.name);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.USER_NAME);
         }
 
         // Store approval status

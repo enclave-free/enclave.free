@@ -166,8 +166,16 @@ def wait_for_job_completion(api_base: str, job_id: str, timeout: int = 300, toke
     if token:
         headers["Authorization"] = f"Bearer {token}"
     
-    while time.time() - start_time < timeout:
-        response = requests.get(f"{api_base}/ingest/status/{job_id}", headers=headers)
+    while True:
+        remaining = timeout - (time.time() - start_time)
+        if remaining <= 0:
+            break
+
+        response = requests.get(
+            f"{api_base}/ingest/status/{job_id}",
+            headers=headers,
+            timeout=max(1, min(remaining, 30)),
+        )
         
         if response.status_code != 200:
             print(f"[ERROR] Failed to get job status: {response.status_code}")

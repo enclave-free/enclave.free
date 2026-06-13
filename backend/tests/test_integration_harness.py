@@ -51,7 +51,12 @@ class IntegrationHarnessTest(unittest.TestCase):
         commands: list[str] = []
 
         def fake_run(cmd, **kwargs):
-            commands.append(cmd)
+            rendered = (
+                " ".join(str(part) for part in cmd)
+                if isinstance(cmd, list)
+                else str(cmd)
+            )
+            commands.append(rendered)
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
         with tempfile.NamedTemporaryFile() as backup:

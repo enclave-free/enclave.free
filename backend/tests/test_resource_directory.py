@@ -270,6 +270,64 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertEqual(captured["help_type"], "legal")
         self.assertEqual(captured["limit"], self.internal_agent.MAX_RESOURCE_SEARCH_LIMIT)
 
+        self.database.search_resources = fake_search_resources
+        try:
+            response = self.client.post(
+                "/internal/agent/resources/search",
+                headers=self.headers,
+                json={"help_type": "legal", "jurisdiction": "NI", "limit": 0},
+            )
+        finally:
+            self.database.search_resources = original
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["limit"], 0)
+
+    def test_resource_scope_validation_rejects_unknown_country_on_create_and_update(self) -> None:
+        with self.assertRaises(ValueError):
+            self.database.create_resource(
+                resource_id="bad-country-create",
+                name="Bad Country Create",
+                resource_type="ngo",
+                scope_level="country",
+                scope_code="ZZ",
+                contact={"url": "https://bad-country-create.example"},
+                help_types=["legal"],
+            )
+
+        self._create_ready_resource(
+            "valid-country",
+            scope_level="global",
+            scope_code=None,
+            languages=["en"],
+            verified=True,
+        )
+
+        with self.assertRaises(ValueError):
+            self.database.update_resource(
+                "valid-country",
+                scope_level="country",
+                scope_code="ZZ",
+            )
+
+        self.assertEqual(
+            self.database.get_resource("valid-country")["scope_level"],
+            "global",
+        )
+
+    def test_resource_create_normalizes_blank_resource_id_to_name_only(self) -> None:
+        from models import ResourceCreate
+
+        resource = ResourceCreate(resource_id="   ", name="Named Resource")
+
+        self.assertIsNone(resource.resource_id)
+
+    def test_region_data_accepts_western_europe_microstates(self) -> None:
+        import region_data
+
+        self.assertTrue(region_data.is_valid_scope("country", "LI"))
+        self.assertTrue(region_data.is_valid_scope("country", "MC"))
+
     def test_resource_help_types_enforces_help_type_vocabulary_fk(self) -> None:
         self._create_ready_resource(
             "fk-resource",

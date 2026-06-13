@@ -19,6 +19,7 @@ from base64 import b64encode, b64decode
 from datetime import datetime, timedelta, timezone
 from Crypto.Cipher import AES
 from models import RESOURCE_CONTACT_KEYS
+from region_data import is_valid_scope
 
 # Configure logging
 logger = logging.getLogger("enclave.database")
@@ -4021,6 +4022,7 @@ def create_resource(
 ) -> dict:
     """Create a resource. Status is auto-computed from required-field completeness."""
     help_types = sorted(set(help_types or []))
+    _validate_resource_scope(scope_level, scope_code)
     merged = {
         "name": name,
         "resource_type": resource_type,
@@ -4065,6 +4067,11 @@ def create_resource(
 _UNSET = object()
 
 
+def _validate_resource_scope(scope_level: str | None, scope_code: str | None) -> None:
+    if scope_code and not is_valid_scope(scope_level, scope_code):
+        raise ValueError(f"invalid resource scope: {scope_level}/{scope_code}")
+
+
 def update_resource(
     resource_id: str,
     *,
@@ -4103,6 +4110,7 @@ def update_resource(
     final_vetted_by = pick(vetted_by, existing["vetted_by"])
     final_source_note = pick(source_note, existing["source_note"])
     final_display_order = pick(display_order, existing["display_order"])
+    _validate_resource_scope(final_scope_level, final_scope_code)
 
     # Determine archive intent: explicit archived flag, or already-archived and not cleared.
     if archived is _UNSET:
