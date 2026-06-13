@@ -14,6 +14,8 @@ Gateway routes public Agent Runtime requests to Sage. Public clients should call
 
 Python no longer owns or exposes these public Agent Runtime routes. Direct Python calls are unsupported because the routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches the request to Sage. Python remains the Enclave Control Plane behind private/internal contracts for facts and actions such as safe database reads, document search, user profile context, and lifecycle operations.
 
+The Conversation Tool Turn is the Sage-owned module for Tool preparation and context budgeting. It prepares selected tools before the final answer, deduplicates trusted/prepared context, reduces oversized context before prompt assembly, and emits trace-safe Activity metadata. Python exposes Enclave Control Plane facts/actions and admin-visible Tool catalog metadata through private contracts; it does not own public Agent Runtime Tool orchestration.
+
 Current rule of thumb:
 
 - Call public Agent Runtime routes through Gateway, not directly against Python.
@@ -47,6 +49,8 @@ Sage owns:
 
 Python contributes Control Plane facts and actions over active contracts, such as `POST /admin/db/query` and active `/internal/agent/*` endpoints.
 
+The Conversation Tool Turn sits inside Sage for assistant-style turns. It owns selected Tool preparation, prompt context budgeting, optional Tool degradation, and sanitized Activity/Trace metadata before the Model Provider call.
+
 ### Admin Trusted Context
 
 Admins can send trusted context to help the model reason over explicitly prepared client-side material such as:
@@ -70,6 +74,8 @@ Current frontend behavior is intentionally boring: `web-search`, `db-query`, and
 
 The turn is intentionally two-phase: Sage prepares explicitly selected tools and trusted context first, then streams the final answer directly from the configured Model Provider. This keeps `admin-config` and database-assisted Admin Conversations tool-aware without forcing token streaming through structured DSR/BAML parsing.
 
+The same Conversation Tool Turn preparation path is shared by `/llm/chat` and `/llm/chat/stream`; streaming changes the answer transport, not Tool ownership.
+
 ## Retrieval-First Turns
 
 Retrieval-first Sage turns cover document-grounded, session-continuous conversations.
@@ -83,6 +89,8 @@ Sage owns:
 - optional `web_search` and admin-only `db_query`
 
 Python contributes active retrieval facts through the private Sage-to-Python contract, including `POST /internal/agent/document-search`.
+
+Retrieval-first turns reuse the same context-budgeting rule when initial Document Library Retrieval context becomes large enough to crowd out the answer turn.
 
 ## Admin DB Query Safety
 

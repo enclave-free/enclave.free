@@ -156,6 +156,26 @@ class AdminScopedConfigContextEndpointTest(unittest.TestCase):
         self.assertIn("RESOURCE DIRECTORY (/admin/resources)", body["context_text"])
         self.assertIn("ONBOARDING MODE", body["context_text"])
 
+    def test_overview_context_preserves_tool_catalog_as_control_plane_metadata(self) -> None:
+        response = self.client.post(
+            "/admin/scoped-config-context",
+            json={
+                "query": "what tools do you have?",
+                "mode": "overview",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context_text = response.json()["context_text"]
+
+        self.assertIn("ADMIN-VISIBLE TOOL CAPABILITIES", context_text)
+        self.assertIn(
+            "Tool catalog metadata is Enclave Control Plane context, not Python public Tool orchestration.",
+            context_text,
+        )
+        for tool_id in ("admin-config", "db-query", "web-search"):
+            self.assertIn(f"- {tool_id} ", context_text)
+
     def test_admin_resource_create_uses_utc_verified_timestamp(self) -> None:
         response = self.client.post(
             "/admin/resources",

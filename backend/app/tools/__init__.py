@@ -1,4 +1,4 @@
-"""Tools module for AI chat tool calling."""
+"""CONTROL PLANE ONLY: Sage-owned public Agent Runtime routes must not import this module for Tool orchestration."""
 
 from .base import BaseTool, ToolCallInfo, ToolDefinition, ToolResult
 from .admin_config import AdminConfigTool

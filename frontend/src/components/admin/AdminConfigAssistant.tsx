@@ -422,11 +422,9 @@ export function AdminConfigAssistant({
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
-          // Onboarding mode: inject the server-built `onboarding` scoped context
-          // (live checklist + guided persona + write contract) each turn so the
-          // agent always sees what is still unset and drives the next step. This
-          // context includes the "SCOPED CONFIG CONTEXT" header, so the Sage
-          // runtime uses it verbatim instead of re-classifying scope.
+          // Onboarding mode: add the server-built `onboarding` scoped context
+          // (live checklist + guided persona + write contract). Sage still owns
+          // the selected tool execution for the turn.
           let onboardingContext = '';
           if (isOnboarding) {
             try {

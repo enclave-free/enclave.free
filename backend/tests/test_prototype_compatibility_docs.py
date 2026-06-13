@@ -16,6 +16,24 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("use `/llm/chat` for assistant-style turns", tools)
         self.assertNotIn("Current `/query` responses include", tools)
 
+    def test_tool_docs_name_conversation_tool_turn_and_context_budgeting(self) -> None:
+        tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
+        architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Conversation Tool Turn", tools)
+        self.assertIn(
+            "Sage-owned module for Tool preparation and context budgeting",
+            tools,
+        )
+        self.assertIn(
+            "Python exposes Enclave Control Plane facts/actions and admin-visible Tool catalog metadata through private contracts",
+            tools,
+        )
+        self.assertIn("Conversation Tool Turn", architecture)
+        self.assertIn("prompt/context budget", architecture)
+
     def test_current_architecture_names_absent_python_handlers_not_legacy_runtime(self) -> None:
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
 
@@ -24,6 +42,36 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("legacy Python handler remains", architecture)
         self.assertNotIn("legacy Python router still exists", architecture)
         self.assertNotIn("legacy AI route implementations", architecture)
+
+    def test_python_tool_package_is_fenced_from_public_agent_runtime_ownership(self) -> None:
+        fence = (
+            "CONTROL PLANE ONLY: Sage-owned public Agent Runtime routes must not "
+            "import this module for Tool orchestration."
+        )
+        checked_paths = [
+            REPO_ROOT / "backend/app/tools/__init__.py",
+            REPO_ROOT / "backend/app/tools/orchestrator.py",
+            REPO_ROOT / "backend/app/tools/registry.py",
+            REPO_ROOT / "backend/app/tools/sqlite_query.py",
+            REPO_ROOT / "backend/app/tools/web_search.py",
+        ]
+
+        missing = []
+        for path in checked_paths:
+            if fence not in path.read_text(encoding="utf-8"):
+                missing.append(str(path.relative_to(REPO_ROOT)))
+
+        self.assertEqual(missing, [])
+        self.assertNotIn(
+            "Tools module for AI chat tool calling",
+            (REPO_ROOT / "backend/app/tools/__init__.py").read_text(encoding="utf-8"),
+        )
+        self.assertNotIn(
+            "Tool orchestrator for executing tools and building context",
+            (REPO_ROOT / "backend/app/tools/orchestrator.py").read_text(
+                encoding="utf-8"
+            ),
+        )
 
     def test_current_architecture_names_chunk_retrieval_for_sage_context(self) -> None:
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
