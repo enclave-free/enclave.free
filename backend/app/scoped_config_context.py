@@ -128,6 +128,7 @@ def _build_control_contract_lines(
     lines.extend([
         "",
         "ADMIN-VISIBLE TOOL CAPABILITIES",
+        "Tool catalog metadata is Enclave Control Plane context, not Python public Tool orchestration.",
     ])
     for tool in ADMIN_VISIBLE_TOOLS:
         lines.append(

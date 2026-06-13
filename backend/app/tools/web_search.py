@@ -1,6 +1,6 @@
-from __future__ import annotations
+"""CONTROL PLANE ONLY: Sage-owned public Agent Runtime routes must not import this module for Tool orchestration."""
 
-"""Web search tool using SearXNG."""
+from __future__ import annotations
 
 import os
 from typing import List
@@ -11,7 +11,7 @@ from .base import BaseTool, ToolDefinition, ToolResult
 
 
 class WebSearchTool(BaseTool):
-    """SearXNG-powered web search tool."""
+    """Private SearXNG helper retained outside public Agent Runtime routes."""
 
     def __init__(self, searxng_url: str | None = None):
         self.searxng_url = searxng_url or os.getenv(

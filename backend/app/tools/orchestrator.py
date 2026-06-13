@@ -1,4 +1,4 @@
-"""Tool orchestrator for executing tools and building context."""
+"""CONTROL PLANE ONLY: Sage-owned public Agent Runtime routes must not import this module for Tool orchestration."""
 
 import asyncio
 from typing import List, Tuple
@@ -8,7 +8,7 @@ from .registry import ToolRegistry
 
 
 class ToolOrchestrator:
-    """Orchestrates tool execution and context building."""
+    """Private helper retained for old control-plane tests and internal-only flows."""
 
     def __init__(self, registry: ToolRegistry):
         self.registry = registry
@@ -19,7 +19,7 @@ class ToolOrchestrator:
         tool_ids: List[str]
     ) -> Tuple[str, List[ToolCallInfo]]:
         """
-        Execute selected tools and return formatted context.
+        Execute selected private helpers and return formatted context.
 
         Args:
             query: The user's query to use for tool execution

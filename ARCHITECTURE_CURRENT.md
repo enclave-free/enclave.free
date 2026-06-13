@@ -55,6 +55,12 @@ Routes forwarded to Sage by `gateway/nginx.conf`:
 
 Python does not expose public handlers for `/llm/chat`, `/query`, `/session-defaults`, or `/admin/tools/execute`. Public requests go through `gateway/nginx.conf` to Sage, with Python used only behind the private control-plane contract where needed.
 
+## Conversation Tool Turn Ownership
+
+The Conversation Tool Turn is the Sage-owned module for selected Tool preparation on assistant-style turns. It prepares Admin Config, Web Search, Database, and trusted context before the final Model Provider call; applies the prompt/context budget; emits sanitized Activity and Conversation Trace metadata; and shares that prepared context between `/llm/chat` and `/llm/chat/stream`.
+
+Python remains the Enclave Control Plane. It exposes private facts/actions and admin-visible Tool catalog metadata through Scoped Config Context and `/internal/agent/*` contracts, but it does not own public Agent Runtime Tool orchestration.
+
 ## Gateway Role
 
 The gateway now does only:

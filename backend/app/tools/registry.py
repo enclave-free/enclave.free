@@ -1,4 +1,4 @@
-"""Tool registry for managing available tools."""
+"""CONTROL PLANE ONLY: Sage-owned public Agent Runtime routes must not import this module for Tool orchestration."""
 
 from typing import Dict, List, Optional
 
@@ -6,7 +6,7 @@ from .base import BaseTool
 
 
 class ToolRegistry:
-    """Registry of available tools."""
+    """Registry for private control-plane helper metadata."""
 
     def __init__(self):
         self._tools: Dict[str, BaseTool] = {}
@@ -25,7 +25,7 @@ class ToolRegistry:
 
     def get_definitions(self, tool_ids: Optional[List[str]] = None) -> List[dict]:
         """
-        Get OpenAI-format definitions for specified tools.
+        Get legacy OpenAI-format definitions for specified private helpers.
         If tool_ids is None, returns definitions for all tools.
         """
         if tool_ids is None:
