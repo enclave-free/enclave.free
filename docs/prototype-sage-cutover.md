@@ -2,7 +2,7 @@
 
 This repo is the Enclave experiment that moved the public Agent Runtime from the old Python path to Sage while keeping the public API origin stable at `:8000`.
 
-On `proto/dumb-gateway-foundation`, the cutover is still the same hard cut, but the integration boundary is cleaner than the first prototype pass: the gateway only routes, and Sage owns public AI-route correctness itself.
+On the current `staging` snapshot, the cutover is still the same hard cut, but the integration boundary is cleaner than the first prototype pass: the gateway only routes, and Sage owns public AI-route correctness itself.
 
 ## What Changed
 
@@ -43,11 +43,11 @@ Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these
 
 Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /llm/chat/stream`, `POST /query`, `GET /query/sessions`, `GET /query/session/{session_id}`, `PATCH /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
 
-`POST /llm/chat/stream` is the assistant-style streaming route described by [ADR-0014](adr/0014-sage-owns-tool-aware-conversation-streaming-transport.md). It keeps `/llm/chat` available as the non-streaming companion path, emits assistant message, live trace-status, answer-delta, final sanitized trace, completion, and safe error events, and uses a two-phase turn: explicitly selected tools/context first, then final answer streaming from the configured Model Provider. Retrieval-first `/query/stream` is deliberately outside this first streaming slice.
+`POST /llm/chat/stream` is the streaming Conversation transport. ADR-0014 describes the earlier bounded two-phase streaming slice; [ADR-0023](adr/0023-unified-model-driven-tool-loop.md) is the current direction for unified model-driven Tool loop work across streaming and non-streaming Conversation transports.
 
 ## Sage To Python Private Control-Plane Contract
 
-Active private control-plane endpoints used by Sage:
+Active private control-plane endpoints used by Sage today:
 
 - `GET /internal/agent/users/{user_id}`
 - `GET /internal/agent/admins/by-pubkey/{pubkey}`
@@ -56,6 +56,10 @@ Active private control-plane endpoints used by Sage:
 - `GET /internal/agent/user-profile-context/{user_id}`
 - `POST /internal/agent/document-search`
 - `POST /internal/agent/admin-db-query`
+
+ADR-0023 adds this target endpoint family for the model-driven Tool loop hard cut:
+
+- `POST /internal/agent/admin-config/*`
 
 These endpoints are protected by `INTERNAL_AGENT_TOKEN` and are the real integration seam of the prototype.
 
@@ -86,7 +90,7 @@ If this prototype gets productized, the biggest architecture decision is no long
 - deployment/runtime config is still split across Python Deployment Settings, Sage env, and Gateway config
 - Python no longer exposes public Agent Runtime handlers; the supported path is Gateway to Sage
 - supported active Conversation deletion now removes the public `/query` session record and associated Sage Session Memory, but scheduled retention for all historical Session Memory/log surfaces is still future work
-- Obsolete internal compatibility endpoints are absent from Python; Sage should use only the active private control-plane contract listed above
+- Obsolete internal compatibility endpoints are not part of the accepted contract; Scoped Config Context is not a supported integration path
 
 ## Branch Note
 

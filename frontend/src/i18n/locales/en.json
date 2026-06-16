@@ -266,8 +266,6 @@
       "sessionMemoryNotice": "Older context was summarized to keep this conversation going.",
       "reducedContextNotice": "Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.",
       "reducedContextSections": {
-        "adminConfig": "admin configuration context",
-        "documentContext": "document library context",
         "recentConversation": "recent conversation history"
       },
       "applySummary": {
@@ -739,6 +737,8 @@
     },
     "tools": {
       "label": "Tools",
+      "knowledgeSearch": "Search uploaded documents and knowledge chunks",
+      "knowledgeSearchName": "Knowledge",
       "webSearch": "Search the web for current information",
       "webSearchName": "Web",
       "database": "Query the SQLite database",
@@ -749,7 +749,7 @@
     },
     "documentScope": {
       "title": "Knowledge Bases",
-      "description": "Select sources to include in context",
+      "description": "Select sources for the Knowledge tool",
       "noSources": "No sources available",
       "clearAll": "Clear all",
       "clearAllSelectedAria": "Clear all selected documents",
@@ -1183,10 +1183,10 @@
       "ariaLabel": "Sage runtime configuration help",
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "sageExtra": "Set LLM_API_KEY to your Tinfoil key from {{tinfoilSignupUrl}}. The stack maps it to Sage and the local Tinfoil proxy.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. LLM_API_KEY is the canonical Model Provider key.",
       "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure the Model Provider through LLM_* Deployment Settings; the stack maps them to Sage's Tinfoil runtime.",
       "overviewTitle": "Sage Runtime Overview",
       "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
@@ -1632,7 +1632,7 @@
     "LLM_API_KEY": {
       "label": "API Key",
       "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
+      "hint": "Leave empty to keep the current Deployment Settings secret."
     }
   },
   "colors": {

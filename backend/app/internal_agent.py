@@ -11,21 +11,16 @@ import os
 import re
 import time
 import logging
-from typing import Optional, Literal
+from datetime import datetime, timezone
+from typing import Any, Optional, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import database
 import ingest_db
 from query import _build_context, _build_search_query, _process_search_results
-from scoped_config_context import (
-    ScopedConfigAuthorizationError,
-    ScopedConfigMode,
-    ScopedConfigScope,
-    build_scoped_config_context,
-)
 from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
 
@@ -51,6 +46,71 @@ READ_ONLY_SELECT_FORBIDDEN_KEYWORDS = (
     "TRUNCATE",
     "UPDATE",
     "VACUUM",
+)
+INSTANCE_SETTINGS_INTERNAL_KEYS = {
+    database.ONBOARDING_CONFIGURED_KEYS_SETTING,
+}
+INSTANCE_SETTINGS_FIELD_ORDER = (
+    "instance_name",
+    "assistant_name",
+    "header_tagline",
+    "description",
+    "primary_color",
+    "default_theme",
+    "default_language",
+    "auto_approve_users",
+    "logo_url",
+    "favicon_url",
+    "apple_touch_icon_url",
+    "icon",
+    "assistant_icon",
+    "user_icon",
+    "user_label",
+    "header_layout",
+    "chat_bubble_style",
+    "chat_bubble_shadow",
+    "surface_style",
+    "status_icon_set",
+    "typography_preset",
+    "reachout_enabled",
+    "reachout_mode",
+    "reachout_title",
+    "reachout_description",
+    "reachout_button_label",
+    "reachout_success_message",
+    "reachout_to_email",
+    "reachout_subject_prefix",
+    "reachout_rate_limit_per_hour",
+    "reachout_rate_limit_per_day",
+    "reachout_include_ip",
+)
+INSTANCE_SETTINGS_SUPPORTED_VALUES = {
+    "auto_approve_users": ["true", "false"],
+    "chat_bubble_shadow": ["true", "false"],
+    "default_theme": ["light", "dark", "system"],
+    "header_layout": ["icon_name", "centered", "compact"],
+    "reachout_enabled": ["true", "false"],
+    "reachout_include_ip": ["true", "false"],
+    "reachout_mode": ["feedback", "help", "support"],
+}
+INSTANCE_SETTINGS_LABELS = {
+    "instance_name": "Instance name",
+    "assistant_name": "Assistant name",
+    "header_tagline": "Tagline",
+    "primary_color": "Primary color",
+    "default_theme": "Default theme",
+    "default_language": "Default language",
+    "auto_approve_users": "Auto-approve users",
+}
+GUIDED_BOOTSTRAP_SETTING_KEYS = (
+    "instance_name",
+    "assistant_name",
+    "header_tagline",
+    "description",
+    "primary_color",
+    "default_theme",
+    "default_language",
+    "auto_approve_users",
 )
 
 
@@ -98,33 +158,23 @@ class InternalAdminDbQueryRequest(BaseModel):
     sql: str
 
 
-class InternalScopedConfigContextRequest(BaseModel):
-    query: str
+class InternalAdminConfigToolRequest(BaseModel):
     actor: InternalActorContext
-    mode: ScopedConfigMode = "auto"
-    requested_scopes: Optional[list[ScopedConfigScope]] = None
 
 
-class InternalScopedConfigContextSection(BaseModel):
-    scope: str
-    title: str
-    content: str
-    fields: list[dict[str, str]] = []
-
-
-class InternalScopedConfigSecretPolicy(BaseModel):
+class InternalAdminConfigSecretPolicy(BaseModel):
     mode: Literal["masked"] = "masked"
 
 
-class InternalScopedConfigContextResponse(BaseModel):
-    version: int
-    primary_scope: ScopedConfigScope
-    included_scopes: list[ScopedConfigScope]
-    context_text: str
-    sections: list[InternalScopedConfigContextSection]
-    warnings: list[str]
+class InternalAdminConfigToolResponse(BaseModel):
+    version: int = 1
+    tool: str
+    data: dict[str, Any]
+    warnings: list[str] = Field(default_factory=list)
     generated_at: str
-    secret_policy: InternalScopedConfigSecretPolicy
+    secret_policy: InternalAdminConfigSecretPolicy = Field(
+        default_factory=InternalAdminConfigSecretPolicy
+    )
 
 
 class InternalUserRecordResponse(BaseModel):
@@ -296,6 +346,342 @@ def _execute_safe_select(sql: str) -> dict:
         }
 
 
+def _require_admin_actor(actor: InternalActorContext) -> None:
+    if actor.type != "admin" or not actor.approved or not actor.pubkey:
+        raise HTTPException(status_code=403, detail="Admin Config Tools require an approved admin actor")
+    admin = database.get_admin_by_pubkey(actor.pubkey)
+    if not admin or int(admin["id"]) != actor.id:
+        raise HTTPException(status_code=403, detail="Admin Config Tools require an approved admin actor")
+
+
+def _humanize_config_key(key: str) -> str:
+    return key.replace("_", " ").capitalize()
+
+
+def _instance_settings_tool_data() -> dict[str, Any]:
+    settings = {
+        key: value
+        for key, value in database.get_all_settings().items()
+        if key not in INSTANCE_SETTINGS_INTERNAL_KEYS
+    }
+    explicitly_set_keys = sorted(
+        key
+        for key in database.get_onboarding_configured_keys()
+        if key in settings
+    )
+    explicit_key_set = set(explicitly_set_keys)
+    ordered_keys = [
+        key for key in INSTANCE_SETTINGS_FIELD_ORDER if key in settings
+    ] + sorted(
+        key for key in settings if key not in INSTANCE_SETTINGS_FIELD_ORDER
+    )
+    fields = []
+    for key in ordered_keys:
+        field: dict[str, Any] = {
+            "key": key,
+            "label": INSTANCE_SETTINGS_LABELS.get(key, _humanize_config_key(key)),
+            "value": settings.get(key),
+            "source": "operator" if key in explicit_key_set else "default",
+            "editable": True,
+        }
+        supported_values = INSTANCE_SETTINGS_SUPPORTED_VALUES.get(key)
+        if supported_values:
+            field["supported_values"] = supported_values
+        fields.append(field)
+
+    return {
+        "settings": settings,
+        "explicitly_set_keys": explicitly_set_keys,
+        "fields": fields,
+    }
+
+
+def _deployment_settings_tool_data() -> dict[str, Any]:
+    settings: dict[str, dict[str, Any]] = {}
+    categories: dict[str, list[str]] = {}
+
+    for row in database.get_all_deployment_config():
+        key = str(row["key"])
+        category = str(row.get("category") or "general")
+        is_secret = bool(row.get("is_secret"))
+        value = row.get("value")
+        configured = bool(str(value or "").strip())
+        if is_secret and configured:
+            value = "********"
+        settings[key] = {
+            "value": value,
+            "configured": configured,
+            "secret": is_secret,
+            "requires_restart": bool(row.get("requires_restart")),
+            "source": "deployment_config",
+            "category": category,
+            "description": row.get("description"),
+            "updated_at": row.get("updated_at"),
+        }
+        categories.setdefault(category, []).append(key)
+
+    return {
+        "settings": settings,
+        "categories": {
+            category: sorted(keys)
+            for category, keys in sorted(categories.items())
+        },
+    }
+
+
+def _ai_config_item_data(row: dict[str, Any]) -> dict[str, Any]:
+    data = {
+        "key": row.get("key"),
+        "value": row.get("value"),
+        "value_type": row.get("value_type"),
+        "category": row.get("category"),
+        "description": row.get("description"),
+        "updated_at": row.get("updated_at"),
+    }
+    if "is_override" in row:
+        data["is_override"] = bool(row.get("is_override"))
+        data["override_user_type_id"] = row.get("override_user_type_id")
+    return data
+
+
+def _group_ai_config_rows(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    grouped = {
+        "prompt_sections": {},
+        "parameters": {},
+        "defaults": {},
+    }
+    category_map = {
+        "prompt_section": "prompt_sections",
+        "parameter": "parameters",
+        "default": "defaults",
+    }
+    for row in rows:
+        group_key = category_map.get(str(row.get("category") or ""))
+        key = row.get("key")
+        if not group_key or not key:
+            continue
+        grouped[group_key][str(key)] = _ai_config_item_data(row)
+    return grouped
+
+
+def _agent_settings_tool_data() -> dict[str, Any]:
+    user_types = database.list_user_types()
+    global_rows = database.get_effective_ai_config(None)
+    per_user_type = []
+    for user_type in user_types:
+        user_type_id = int(user_type["id"])
+        effective_rows = database.get_effective_ai_config(user_type_id)
+        overrides = {
+            str(row["key"]): _ai_config_item_data(row)
+            for row in effective_rows
+            if row.get("is_override")
+        }
+        per_user_type.append({
+            "user_type_id": user_type_id,
+            "user_type_name": user_type.get("name"),
+            "overrides": overrides,
+            "effective_values": _group_ai_config_rows(effective_rows),
+        })
+
+    return {
+        "global": _group_ai_config_rows(global_rows),
+        "per_user_type": per_user_type,
+        "limits": {
+            "user_types_returned": len(per_user_type),
+        },
+    }
+
+
+def _field_label(field_name: str) -> str:
+    return field_name.replace("_", " ").capitalize()
+
+
+def _onboarding_field_data(field: dict[str, Any]) -> dict[str, Any]:
+    field_name = str(field.get("field_name") or "")
+    return {
+        "id": field.get("id"),
+        "user_type_id": field.get("user_type_id"),
+        "name": field_name,
+        "label": _field_label(field_name),
+        "field_type": field.get("field_type"),
+        "required": bool(field.get("required")),
+        "display_order": field.get("display_order"),
+        "placeholder": field.get("placeholder"),
+        "options": field.get("options"),
+        "encryption_enabled": bool(field.get("encryption_enabled", True)),
+        "include_in_chat": bool(field.get("include_in_chat", False)),
+        "created_at": field.get("created_at"),
+    }
+
+
+def _user_types_tool_data() -> dict[str, Any]:
+    user_types = database.list_user_types()
+    user_type_items = []
+    onboarding_questions = []
+    for user_type in user_types:
+        user_type_id = int(user_type["id"])
+        fields = [
+            _onboarding_field_data(field)
+            for field in database.get_field_definitions(
+                user_type_id=user_type_id,
+                include_global=True,
+            )
+        ]
+        onboarding_questions.extend(fields)
+        user_type_items.append({
+            "id": user_type_id,
+            "name": user_type.get("name"),
+            "description": user_type.get("description"),
+            "icon": user_type.get("icon"),
+            "display_order": int(user_type.get("display_order", 0) or 0),
+            "created_at": user_type.get("created_at"),
+            "onboarding_fields": fields,
+        })
+
+    return {
+        "user_types": user_type_items,
+        "onboarding_questions": onboarding_questions,
+        "limits": {
+            "user_types_returned": len(user_type_items),
+            "onboarding_questions_returned": len(onboarding_questions),
+        },
+    }
+
+
+def _document_access_item_data(document: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "job_id": document.get("job_id"),
+        "filename": document.get("filename"),
+        "status": document.get("status"),
+        "total_chunks": int(document.get("total_chunks") or 0),
+        "is_available": bool(document.get("is_available")),
+        "is_default_active": bool(document.get("is_default_active")),
+        "display_order": int(document.get("display_order") or 0),
+        "updated_at": document.get("updated_at"),
+        "is_override": bool(document.get("is_override", False)),
+        "override_user_type_id": document.get("override_user_type_id"),
+        "override_updated_at": document.get("override_updated_at"),
+    }
+
+
+def _document_access_tool_data() -> dict[str, Any]:
+    global_documents = [
+        _document_access_item_data(document)
+        for document in database.get_effective_document_defaults(None)
+    ]
+    per_user_type = []
+    for user_type in database.list_user_types():
+        user_type_id = int(user_type["id"])
+        effective_documents = [
+            _document_access_item_data(document)
+            for document in database.get_effective_document_defaults(user_type_id)
+        ]
+        per_user_type.append({
+            "user_type_id": user_type_id,
+            "user_type_name": user_type.get("name"),
+            "available_document_ids": database.get_available_documents_for_user_type(user_type_id),
+            "default_document_ids": database.get_active_documents_for_user_type(user_type_id),
+            "documents": effective_documents,
+        })
+
+    return {
+        "global": {
+            "available_document_ids": database.get_available_documents_for_user_type(None),
+            "default_document_ids": database.get_active_documents_for_user_type(None),
+            "documents": global_documents,
+        },
+        "documents": global_documents,
+        "per_user_type": per_user_type,
+        "limits": {
+            "documents_returned": len(global_documents),
+            "user_types_returned": len(per_user_type),
+        },
+    }
+
+
+def _onboarding_status_tool_data() -> dict[str, Any]:
+    admins = database.list_admins()
+    configured_key_set = {
+        key
+        for key in database.get_onboarding_configured_keys()
+        if key in GUIDED_BOOTSTRAP_SETTING_KEYS
+    }
+    configured_keys = [
+        key for key in GUIDED_BOOTSTRAP_SETTING_KEYS
+        if key in configured_key_set
+    ]
+    missing_required_keys = [
+        key for key in GUIDED_BOOTSTRAP_SETTING_KEYS
+        if key not in configured_key_set
+    ]
+    user_type_data = _user_types_tool_data()
+
+    return {
+        "instance": {
+            "admin_exists": database.has_admin(),
+            "admin_initialized": database.get_instance_state("admin_initialized") == "true",
+            "setup_complete": database.get_instance_state("setup_complete") == "true",
+            "ready_for_users": database.is_instance_setup_complete(),
+            "admin_count": len(admins),
+        },
+        "guided_bootstrap": {
+            "required_keys": list(GUIDED_BOOTSTRAP_SETTING_KEYS),
+            "configured_keys": configured_keys,
+            "missing_required_keys": missing_required_keys,
+            "complete": not missing_required_keys,
+            "required_count": len(GUIDED_BOOTSTRAP_SETTING_KEYS),
+            "configured_required_count": len(configured_keys),
+        },
+        "user_types": user_type_data["user_types"],
+        "onboarding_questions": user_type_data["onboarding_questions"],
+        "limits": user_type_data["limits"],
+    }
+
+
+def _deployment_readiness_tool_data() -> tuple[dict[str, Any], list[str]]:
+    from deployment_config import (
+        _backup_restore_readiness_item,
+        _deployment_validation_readiness_items,
+        _inference_readiness_item,
+        _lifecycle_readiness_item,
+        _restart_readiness_item,
+    )
+
+    warnings: list[str] = []
+    items = [
+        *_deployment_validation_readiness_items(),
+        _inference_readiness_item(),
+    ]
+    try:
+        from lifecycle import get_lifecycle_status
+
+        items.append(_lifecycle_readiness_item(get_lifecycle_status()))
+    except Exception as exc:  # pragma: no cover - exact dependency failure varies by environment
+        logger.warning("admin config deployment readiness skipped lifecycle read: %s", exc)
+        warnings.append("lifecycle_readiness_unavailable")
+
+    items.extend([
+        _backup_restore_readiness_item(),
+        _restart_readiness_item(),
+    ])
+    blockers = sum(1 for item in items if item["severity"] == "blocker")
+    warnings_count = sum(1 for item in items if item["severity"] == "warning")
+    ready = sum(1 for item in items if item["severity"] == "ready")
+    return (
+        {
+            "status": "blocked" if blockers else ("warnings" if warnings_count else "ready"),
+            "summary": {
+                "blockers": blockers,
+                "warnings": warnings_count,
+                "ready": ready,
+                "total": len(items),
+            },
+            "items": items,
+        },
+        warnings,
+    )
+
+
 @router.get("/users/{user_id}", response_model=InternalUserRecordResponse, dependencies=[Depends(_require_internal_token)])
 async def get_user_record(user_id: int) -> InternalUserRecordResponse:
     user = database.get_user(user_id)
@@ -455,27 +841,127 @@ async def admin_db_query(request: InternalAdminDbQueryRequest):
     return _execute_safe_select(request.sql)
 
 
-@router.get("/health", dependencies=[Depends(_require_internal_token)])
-async def internal_agent_health():
-    return {"status": "healthy"}
+@router.post(
+    "/admin-config/instance-settings",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_instance_settings(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+
+    return InternalAdminConfigToolResponse(
+        tool="read_instance_settings",
+        data=_instance_settings_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
 
 
 @router.post(
-    "/scoped-config-context",
-    response_model=InternalScopedConfigContextResponse,
+    "/admin-config/deployment-settings",
+    response_model=InternalAdminConfigToolResponse,
     dependencies=[Depends(_require_internal_token)],
 )
-async def scoped_config_context(
-    payload: InternalScopedConfigContextRequest,
-) -> InternalScopedConfigContextResponse:
-    try:
-        result = build_scoped_config_context(
-            query=payload.query,
-            actor=payload.actor.model_dump(),
-            mode=payload.mode,
-            requested_scopes=payload.requested_scopes,
-        )
-    except ScopedConfigAuthorizationError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
+async def admin_config_deployment_settings(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
 
-    return InternalScopedConfigContextResponse(**result)
+    return InternalAdminConfigToolResponse(
+        tool="read_deployment_settings",
+        data=_deployment_settings_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/agent-settings",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_agent_settings(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+
+    return InternalAdminConfigToolResponse(
+        tool="read_agent_settings",
+        data=_agent_settings_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/user-types",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_user_types(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+
+    return InternalAdminConfigToolResponse(
+        tool="read_user_types",
+        data=_user_types_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/document-access",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_document_access(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+
+    return InternalAdminConfigToolResponse(
+        tool="read_document_access",
+        data=_document_access_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/onboarding-status",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_onboarding_status(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+
+    return InternalAdminConfigToolResponse(
+        tool="read_onboarding_status",
+        data=_onboarding_status_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/deployment-readiness",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_deployment_readiness(
+    payload: InternalAdminConfigToolRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    data, warnings = _deployment_readiness_tool_data()
+
+    return InternalAdminConfigToolResponse(
+        tool="read_deployment_readiness",
+        data=data,
+        warnings=warnings,
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.get("/health", dependencies=[Depends(_require_internal_token)])
+async def internal_agent_health() -> dict[str, str]:
+    return {"status": "healthy"}

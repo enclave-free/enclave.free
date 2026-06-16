@@ -1,8 +1,13 @@
 # enclave.free-prototype Current Architecture
 
-This document describes the active architecture on `proto/dumb-gateway-foundation`.
+This document describes the active architecture on `staging`.
 
 The hard cut to Sage is still in place, but the important refinement on this branch is that the gateway is no longer part of the application logic. nginx is now just the stable public entrypoint and path router.
+
+Status note: the sections below that describe the model-driven Tool loop and
+`admin-config` endpoint family are the accepted ADR-0023 target architecture.
+Scoped Config Context and prepared-tool context code are not supported fallback
+paths in this architecture.
 
 ## Service Map
 
@@ -28,13 +33,13 @@ frontend
 
 The public origin stays the same. The browser still talks to `:8000`. The difference is that nginx no longer compensates for auth or browser semantics on Sage-owned routes.
 
-## Current Retrieval Posture
+## Tool And Retrieval Posture
 
-The current Document Library Retrieval architecture is intentionally a half-RAG, half-agent path: chunk Retrieval for Sage context, not graph-first RAG.
+Document Library Retrieval is a Sage Tool capability over Enclave-owned Documents, not a hidden route mode.
 
 The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration. New Document writes chunk and embedding records into the Retrieval Index with minimized Qdrant payloads, while chunk text is hydrated from product-owned storage after access filtering.
 
-Sage owns Conversation behavior and consumes retrieved chunks as Agent Runtime context. In `/query`, Sage asks the Enclave Control Plane for available/default Documents and initial retrieved context, then may use `knowledge_search` for additional Document Library Retrieval during the turn.
+Sage owns Conversation behavior and the model-driven Tool loop. When `knowledge-search` is enabled, Sage exposes `knowledge_search` to the model with any selected Document constraints. The model decides when to call it, Sage executes the authorized Tool call through the Enclave Control Plane, and retrieved chunks return as Tool results with Activity/Trace metadata.
 
 Graph-first RAG remains deferred. Neo4j, Graphiti, ontology extraction, entity normalization, and graph export are future architecture options, not the current completeness bar for this prototype.
 
@@ -45,8 +50,8 @@ Routes forwarded to Sage by `gateway/nginx.conf`:
 | Route family | Current owner | Notes |
 | --- | --- | --- |
 | `/health` | core-backend | public stack health target |
-| `/llm/chat` | Sage public route | stateless assistant-style route; no Python public handler |
-| `/query` | Sage public route | stateful retrieval-first route; no Python public handler |
+| `/llm/chat` | Sage public route | Conversation transport; no Python public handler |
+| `/query` | Sage public route | stateful Conversation API compatibility shape; no Python public handler |
 | `/query/session/*` | Sage | session inspection and delete |
 | `/session-defaults` | Sage public route | local AI defaults + Python document access defaults; no Python public handler |
 | `/admin/tools/execute` | Sage public route | admin-only public route; Python executes the safe DB action privately |
@@ -55,11 +60,11 @@ Routes forwarded to Sage by `gateway/nginx.conf`:
 
 Python does not expose public handlers for `/llm/chat`, `/query`, `/session-defaults`, or `/admin/tools/execute`. Public requests go through `gateway/nginx.conf` to Sage, with Python used only behind the private control-plane contract where needed.
 
-## Conversation Tool Turn Ownership
+## Model-Driven Tool Loop Ownership
 
-The Conversation Tool Turn is the Sage-owned module for selected Tool preparation on assistant-style turns. It prepares Admin Config, Web Search, Database, and trusted context before the final Model Provider call; applies the prompt/context budget; emits sanitized Activity and Conversation Trace metadata; and shares that prepared context between `/llm/chat` and `/llm/chat/stream`.
+The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into explicit Tool contracts, gives those contracts to the model, executes model-chosen calls, injects Tool results, applies Tool output budgets, emits sanitized Activity and Conversation Trace metadata, and continues until the model can answer or produce an Executable Change Set.
 
-Python remains the Enclave Control Plane. It exposes private facts/actions and admin-visible Tool catalog metadata through Scoped Config Context and `/internal/agent/*` contracts, but it does not own public Agent Runtime Tool orchestration.
+Python remains the Enclave Control Plane. It exposes private facts/actions through `/internal/agent/*` contracts, enforces authorization and redaction for the data it owns, and does not own public Agent Runtime Tool orchestration or pre-classify turns into prompt-ready context blobs.
 
 ## Gateway Role
 
@@ -95,40 +100,39 @@ Active endpoints in the current Sage call graph:
 | `POST /internal/agent/document-search` | document retrieval with Enclave access control |
 | `POST /internal/agent/admin-db-query` | safe read-only Enclave Control Plane DB access |
 
-Obsolete compatibility endpoints are absent from Python and are not part of the Sage call graph.
+ADR-0023 target endpoint family:
+
+| Endpoint | Used for |
+| --- | --- |
+| `POST /internal/agent/admin-config/*` | admin configuration read Tool execution with Enclave Control Plane authorization/redaction |
+
+Obsolete compatibility endpoints are not part of the accepted Sage call graph.
+Scoped admin context is not a supported integration path.
 
 ## Request Flows
 
-### `/llm/chat`
+### Conversation Transport Target
 
 1. frontend calls `http://localhost:8000/llm/chat`
 2. `gateway/nginx.conf` forwards the public path to Sage; Python has no public handler for this route
 3. Sage verifies auth natively from bearer or cookie session state
 4. Sage enforces CSRF if the request is cookie-authenticated and unsafe
 5. Sage loads effective Agent Settings from Postgres
-6. Sage optionally runs server-side tools:
-   - `web_search` via SearXNG
-   - `db_query` via Python private endpoint, admin only
-7. Sage calls Tinfoil and returns the answer
+6. Sage expands enabled Tool Sets:
+   - `knowledge-search` into Document Library Retrieval Tools with selected Document constraints
+   - `web-search` into Web Search Tools
+   - `admin-config` into admin configuration read Tools plus proposal outputs, admin only
+   - `db-query` into read-only database inspection Tools, admin only
+7. Sage runs the model-driven Tool loop
+8. Sage returns the answer, Activity, trace metadata, sources, and any pending Executable Change Set
 
-This route is intentionally stateless. It uses `SageAgent::new_without_memory(...)`.
+The streaming transport uses the same Tool loop and emits live Activity/Trace events while the loop progresses.
 
-### `/query`
+### Stateful Conversation API Compatibility
 
-1. frontend calls `http://localhost:8000/query`
-2. `gateway/nginx.conf` forwards the public path to Sage; Python has no public handler for this route
-3. Sage verifies auth natively from bearer or cookie session state
-4. Sage loads effective Agent Settings from Postgres
-5. Sage loads or creates a durable public query-session record in Postgres
-6. Sage fetches document-access metadata and initial document context from Python
-7. Sage updates memory blocks, stores the user turn, and runs the agent
-8. Sage may call:
-   - `knowledge_search` for additional document retrieval
-   - `web_search` when enabled
-   - `db_query` when enabled by an admin
-9. Sage stores the assistant turn and returns `session_id`, `sources`, and the answer
+Existing `/query` routes continue to describe stateful Conversation/session API shapes until the public API is renamed or collapsed. They should not preserve a separate retrieval-first mental model.
 
-This route is Retrieval-first and backed by a public session record plus Sage Session Memory.
+Stateful Conversations load or create a durable `web_sessions` record, persist user and assistant turns in Sage Session Memory, and then run the same model-driven Tool loop. Document-grounded chat is represented by the `knowledge-search` Tool Set and document constraints.
 
 ## Data Ownership
 

@@ -2,6 +2,10 @@
 
 Issue: [#278](https://github.com/enclave-free/enclave.free-prototype/issues/278)
 
+This file is historical evidence for the bounded streaming/database investigation.
+[ADR-0023](adr/0023-unified-model-driven-tool-loop.md) supersedes the guarded
+natural-language database posture for future unified Tool-loop work.
+
 Initial evidence was captured on 2026-05-24 from the supported local Docker
 Compose topology. The PR evidence below was refreshed on 2026-06-13 from the
 same Compose gateway topology.

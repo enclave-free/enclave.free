@@ -137,4 +137,22 @@ describe('UserProfile', () => {
 
     expect(await screen.findByText('Chat ready')).toBeInTheDocument();
   });
+
+  it('sends unauthenticated users to auth instead of restarting language selection', async () => {
+    localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
+    vi.stubGlobal('fetch', vi.fn());
+
+    render(
+      <MemoryRouter initialEntries={['/profile']}>
+        <Routes>
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/auth" element={<div>Auth ready</div>} />
+          <Route path="/login" element={<div>Language selection</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Auth ready')).toBeInTheDocument();
+    expect(screen.queryByText('Language selection')).not.toBeInTheDocument();
+  });
 });

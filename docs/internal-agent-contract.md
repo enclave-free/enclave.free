@@ -323,54 +323,88 @@ Example unsafe SQL response:
 }
 ```
 
-### `POST /internal/agent/scoped-config-context`
+### Admin Config Tool Endpoints (ADR-0023 Target)
 
-Returns authoritative **Scoped Config Context** for config-enabled Admin
-Conversations. Sage calls this endpoint when the `admin-config` prepared-context
-tool is selected. The Enclave Control Plane owns scope classification and scoped
-reads; Sage budgets the returned prompt-ready text into the Admin Conversation.
+The `admin-config` Tool Set will be exposed to the model by Sage as concrete Tools.
+Python provides private execution endpoints for the Enclave Control Plane facts
+behind those Tools. For Admin Config Tool reads, Python does not classify the
+Admin's message, choose a scope, or return prompt-ready context text; it returns
+structured Tool data. This does not remove other active context endpoints such
+as `GET /internal/agent/user-profile-context/{user_id}`.
 
-Request:
+All Admin Config Tool endpoints require the private `X-Internal-Agent-Token`
+header plus an internal actor envelope, and only authorize approved admins:
 
 ```json
 {
-  "query": "what tools do you have?",
   "actor": {
     "id": 1,
     "type": "admin",
     "approved": true,
     "pubkey": "<hex-pubkey>"
-  },
-  "mode": "auto",
-  "requested_scopes": null
+  }
 }
 ```
 
-Request fields:
+Authorization behavior:
 
-- `query`: the Admin's configuration question
-- `actor`: internal actor context; only `type: "admin"` actors are authorized
-- `mode`: `auto` classifies the query, `overview` forces overview scope, or
-  `full` includes all readable scopes for manual refresh/debug flows
-- `requested_scopes`: optional explicit scope hints for multi-scope reads
+- If Python has no configured `INTERNAL_AGENT_TOKEN`, protected routes return
+  `503`. Missing or invalid `X-Internal-Agent-Token` returns `403` before the
+  body is trusted. The token authenticates Sage or another internal service
+  caller; it does not by itself identify the user/admin actor for these Tool
+  endpoints.
+- The `actor` envelope is required in every request body. Sage generates it from
+  the already-authenticated Conversation actor; browsers do not call these
+  private endpoints or provide this envelope directly.
+- After the token check succeeds, Python cross-checks the `actor` envelope
+  against the admin registry. `actor.type` must be `admin`, `actor.approved`
+  must be true, `actor.pubkey` must identify an existing admin, and `actor.id`
+  must match that admin row.
+- If a future internal token ever carries actor claims, any mismatch between
+  token claims and the body envelope must fail closed rather than allowing the
+  body to escalate privileges.
+- Non-admin or unapproved actors return `403`
+- Partial read failures after auth may return available structured data plus
+  `warnings`; authorization failures fail closed
 
-Response:
+Target private endpoints behind the Sage Tool contracts:
+
+| Endpoint | Sage Tool | Notes |
+| --- | --- | --- |
+| `POST /internal/agent/admin-config/instance-settings` | `read_instance_settings` | Instance branding, public behavior, visual identity, and other Instance Settings |
+| `POST /internal/agent/admin-config/deployment-settings` | `read_deployment_settings` | Deployment Settings with secret values masked by default |
+| `POST /internal/agent/admin-config/deployment-readiness` | `read_deployment_readiness` | Desired/generated/running deployment readiness, stale runtime posture, restart-required status, and validation status |
+| `POST /internal/agent/admin-config/agent-settings` | `read_agent_settings` | Agent Settings, prompt sections, runtime parameters, defaults, and effective per-user-type values when requested |
+| `POST /internal/agent/admin-config/user-types` | `read_user_types` | User Types and Onboarding Questions |
+| `POST /internal/agent/admin-config/document-access` | `read_document_access` | Global and per-user-type Document Access/defaults |
+| `POST /internal/agent/admin-config/onboarding-status` | `read_onboarding_status` | Instance initiation and guided onboarding bootstrap status |
+
+All seven endpoints use the same request body:
+
+```json
+{
+  "actor": {
+    "id": 1,
+    "type": "admin",
+    "approved": true,
+    "pubkey": "<hex-pubkey>"
+  }
+}
+```
+
+No Admin Config Tool request accepts a free-form user query, `mode`,
+`requested_scopes`, raw prompt text, or secret value reveal flag. If a future Tool
+needs filters, add them as explicit typed fields on that Tool's request contract.
+
+Common response shape:
 
 ```json
 {
   "version": 1,
-  "primary_scope": "overview",
-  "included_scopes": ["overview"],
-  "context_text": "SCOPED CONFIG CONTEXT\n...",
-  "sections": [
-    {
-      "scope": "overview",
-      "title": "Instance overview",
-      "content": "INSTANCE OVERVIEW (/admin/settings)\n- instance_name: Example"
-    }
-  ],
+  "tool": "read_deployment_readiness",
+  "data": {},
   "warnings": [],
-  "generated_at": "2026-05-25T12:00:00+00:00",
+  "generated_at": "2026-06-15T12:00:00+00:00",
   "secret_policy": {
     "mode": "masked"
   }
@@ -379,78 +413,91 @@ Response:
 
 Field contract:
 
-- `version`: contract version; currently `1`
-- `primary_scope`: classified or requested primary scope. Allowed values are
-  `overview`, `instance-settings`, `deployment-settings`, `agent-settings`,
-  `user-types`, `document-defaults`, and `health`
-- `included_scopes`: scopes represented in the response. May include multiple
-  scopes when a request crosses boundaries
-- `context_text`: prompt-ready scoped config context for Sage
-- `sections`: structured scope sections backing `context_text`
-- `warnings`: non-fatal scoped-read failures or not-yet-implemented scope notices
-- `generated_at`: ISO-8601 UTC timestamp for the assembled context
-- `secret_policy.mode`: currently `masked`; Deployment Setting secret values stay
-  masked unless a future secret-aware Admin Conversation extends the contract
+- `version`: required integer response contract version; currently constant `1`
+  for all Admin Config Tool responses. Future incompatible response-shape
+  changes must increment this value and update Sage and Python together.
+- `tool`: the Sage Tool contract the response satisfies
+- `data`: structured Tool-specific data, not prompt-ready prose
+- `warnings`: non-fatal read failures, reductions, or stale-data notes
+- `generated_at`: ISO-8601 UTC timestamp for the read
+- `secret_policy.mode`: `masked` unless a future explicit secret-sharing flow
+  extends the contract
 
-Authorization behavior:
+Tool-specific `data` contracts:
 
-- Missing or invalid `X-Internal-Agent-Token` returns `403`
-- Non-admin actors return `403` and do not receive scoped config context
-- Partial scoped-read failures after auth succeed return available context plus
-  `warnings` rather than failing the whole request
+- `read_instance_settings` returns:
+  - `settings`: object containing the current non-secret Instance Settings values
+    keyed by config name
+  - `explicitly_set_keys`: array of setting keys intentionally set by the
+    operator, when available
+  - `fields`: array of field descriptors with `key`, `label`, `value`,
+    `source`, `editable`, and optional `supported_values`
+- `read_deployment_settings` returns:
+  - `settings`: object keyed by Deployment Setting name. Each value includes
+    `value` for non-secret settings, `configured` for secret settings,
+    `secret`, `requires_restart`, `source`, and optional `generated_value`
+  - `categories`: object grouping setting keys by deployment category, such as
+    Model Provider, Email, Runtime, CORS, rate limiting, and storage
+  - `warnings`: non-fatal read or validation notes specific to deployment
+    settings
+- `read_deployment_readiness` returns:
+  - `status`: `ready`, `warnings`, or `blocked`
+  - `summary`: object with integer `blockers`, `warnings`, `ready`, and `total`
+    counts
+  - `items`: array of readiness items. Each item includes `key`, `label`,
+    `source`, `severity`, `status`, `summary`, `next_action`, and
+    `conversation_blocking`
+- `read_agent_settings` returns:
+  - `global`: object containing global Agent Settings, prompt sections,
+    parameters, defaults, and trace visibility settings
+  - `per_user_type`: array of effective override objects keyed by
+    `user_type_id`, each with `user_type_name`, `overrides`, and
+    `effective_values`
+  - `limits`: object describing any fan-out or prompt-budget reductions applied
+- `read_user_types` returns:
+  - `user_types`: array of user type objects with `id`, `name`, `description`,
+    `icon`, `display_order`, and onboarding field definitions
+  - `onboarding_questions`: array grouped by user type. Each question includes
+    `id`, `user_type_id`, `name`, `label`, `field_type`, `required`,
+    `placeholder`, `options`, and `include_in_chat`
+  - `limits`: object describing any fan-out reductions applied
+- `read_document_access` returns:
+  - `global_default_document_ids`: array of Document Library `job_id` values
+    active by default when no per-user-type override applies
+  - `per_user_type`: array keyed by `user_type_id`, with
+    `available_document_ids`, `default_document_ids`, and override metadata
+  - `documents`: array of document summaries with `job_id`, `filename`,
+    `status`, and access/default flags
+- `read_onboarding_status` returns:
+  - `initialized`: boolean indicating whether the instance has completed admin
+    bootstrap
+  - `admin_exists`: boolean indicating whether the singleton admin exists
+  - `required_steps`: array of setup step objects with `key`, `label`, `status`,
+    `summary`, and `next_action`
+  - `guided_questions`: array of remaining guided onboarding question metadata,
+    if any
 
-`overview` mode returns the bounded control contract (tool capabilities, rules,
-change-set format) plus a concise current-state summary for key Instance Settings
-such as `instance_name`, `description`, `assistant_name`, and `header_tagline`.
+Deployment Setting secret values stay masked (`********` or equivalent). Secret
+metadata such as configured/unconfigured status may be returned. Raw secret
+values are never returned from the default Admin Config Tool endpoints.
 
-`instance-settings` scope returns branding, theme, and copy fields with current
-values, supported values where known, and mutation guidance via a partial
-`PUT /admin/settings` request body. Structured `sections[].fields` mirrors the
-same field metadata for contract tests and Sage consumers.
+`propose_config_change_set` is a Sage/output contract, not a Python write
+endpoint. Sage may propose an Executable Change Set from Tool results, but the
+Conversation UI Surface must validate it and require Change Confirmation before
+ordinary admin endpoints are called.
 
-`deployment-settings` scope returns Deployment Settings for the classified or
-requested category, with secret values masked (`********` in structured reads and
-`[REDACTED]` in prompt text). Secret metadata (`secret=true`) is included; raw
-secret values are never returned while `secret_policy.mode` is `masked`.
+### Removed Admin Context Endpoints
 
-`agent-settings` scope returns global Agent Settings plus effective per-user-type
-values when user types exist. Large fan-out reads are bounded to the first 10
-user types and emit a warning when reduced.
-
-`user-types` scope returns user types and onboarding field definitions per user
-type, with the same fan-out bound and partial-read warnings when a per-type fetch
-fails after authorization.
-
-`document-defaults` scope returns global document defaults plus effective
-per-user-type defaults, with the same fan-out and partial-read warning behavior.
-
-`health` scope returns restart-required deployment keys, configured service
-endpoints from Deployment Settings, and guidance to use
-`GET /admin/deployment/health` for live service probes. Cross-boundary health
-queries (for example restart plus provider env) may include both `health` and
-`deployment-settings` in `included_scopes`.
-
-Multi-scope behavior:
-
-- `mode: auto` classifies a primary scope and may include additional scopes when
-  the query crosses keyword boundaries
-- `mode: full` includes all documented scopes for manual refresh/debug flows
-- `requested_scopes` merges explicit scope hints with the classified primary
-  scope
-- Partial scoped-read failures after auth succeed return available sections plus
-  `warnings`; authorization failures still fail closed
-
-### Admin UI route
-
-Authenticated admins call `POST /admin/scoped-config-context` with the same
-request shape (`query`, `mode`, optional `requested_scopes`). The response adds
-`deployment_secret_keys` for client-side redaction metadata while keeping secret
-values masked in `context_text`. Browser surfaces must not assemble scoped
-context locally.
+`POST /internal/agent/scoped-config-context` and public
+`POST /admin/scoped-config-context` are removed from the active internal agent
+contract. This removal applies to Admin Config scoped prompt-context generation,
+not to active non-admin-config context endpoints such as user profile context.
+They must not be preserved as compatibility shims or fallback Admin Config
+context sources.
 
 ## Removed Endpoints
 
-Obsolete compatibility-only endpoints are absent from Python. Do not add new
+Obsolete compatibility-only endpoints should be absent from Python. Do not add new
 Sage dependencies on removed endpoints without promoting them here as active
 contract endpoints.
 

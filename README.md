@@ -48,7 +48,7 @@ The short version is: Sage is the Agent Runtime, Python is still the Enclave Con
 
 ```bash
 cp .env.example .env
-# required: LLM_API_KEY and TINFOIL_API_KEY for Compose
+# required: LLM_API_KEY
 # required: INTERNAL_AGENT_TOKEN
 # required: SECRET_KEY
 # optional: SMTP_* and FRONTEND_URL for real email auth flows

@@ -29,17 +29,6 @@ logger = logging.getLogger("enclave.ai_config")
 router = APIRouter(prefix="/admin/ai-config", tags=["ai-config"])
 
 
-def _invalidate_scoped_config_context_cache() -> None:
-    try:
-        from scoped_config_context import invalidate_scoped_config_context_cache
-        invalidate_scoped_config_context_cache()
-    except Exception as exc:
-        logger.warning(
-            f"Failed to invalidate scoped config context cache: {exc}",
-            exc_info=True,
-        )
-
-
 def _config_to_item(config: dict) -> AIConfigItem:
     """Convert database row to AIConfigItem"""
     return AIConfigItem(
@@ -219,8 +208,6 @@ async def update_ai_config_value(
     success = database.update_ai_config(key, update.value, changed_by=admin_pubkey)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update config")
-    _invalidate_scoped_config_context_cache()
-
     # Return updated config
     updated = database.get_ai_config(key)
     if not updated:
@@ -344,8 +331,6 @@ async def set_ai_config_override(
     success = database.upsert_ai_config_override(key, user_type_id, update.value, changed_by=admin_pubkey)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to create/update override")
-    _invalidate_scoped_config_context_cache()
-
     # Return updated config item with inheritance info
     return AIConfigWithInheritance(
         key=key,
@@ -385,7 +370,6 @@ async def delete_ai_config_override(
     if not deleted:
         raise HTTPException(status_code=404, detail=f"No override found for key '{key}' and user type {user_type_id}")
 
-    _invalidate_scoped_config_context_cache()
     return {"success": True, "message": f"Override for '{key}' reverted to global default"}
 
 

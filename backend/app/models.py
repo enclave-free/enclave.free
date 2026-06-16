@@ -881,19 +881,19 @@ class ResourceCreate(BaseModel):
 
     @field_validator("scope_level")
     @classmethod
-    def _validate_scope_level(cls, v):
+    def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in RESOURCE_SCOPE_LEVELS:
             raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
         return v
 
     @field_validator("languages")
     @classmethod
-    def _validate_languages(cls, v):
+    def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_languages(v)
 
     @field_validator("contact")
     @classmethod
-    def _validate_contact(cls, v):
+    def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
         return normalize_resource_contact(v)
 
 
@@ -915,19 +915,19 @@ class ResourceUpdate(BaseModel):
 
     @field_validator("scope_level")
     @classmethod
-    def _validate_scope_level(cls, v):
+    def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in RESOURCE_SCOPE_LEVELS:
             raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
         return v
 
     @field_validator("languages")
     @classmethod
-    def _validate_languages(cls, v):
+    def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_languages(v)
 
     @field_validator("contact")
     @classmethod
-    def _validate_contact(cls, v):
+    def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
         return normalize_resource_contact(v)
 
 

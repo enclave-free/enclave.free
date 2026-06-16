@@ -257,8 +257,8 @@ The act of selecting relevant knowledge from the **Document Library** for use in
 _Avoid_: RAG
 
 **Required Context**:
-Operator- or route-mandated knowledge from the **Document Library** that must be included in an agent conversation.
-_Avoid_: forced RAG
+Operator- or policy-mandated knowledge that must be included in a **Conversation** outside ordinary model discretion.
+_Avoid_: forced RAG, selected document scope, hidden retrieval
 
 **User Type**:
 An operator-defined user segment that determines which onboarding questions are asked of a user.
@@ -289,7 +289,7 @@ The continuity-preserving summarization of older **Conversation Content** so an 
 _Avoid_: context loss, deletion, warning
 
 **Reduced Conversation Context**:
-A user-visible degradation where relevant **Conversation Content**, **Scoped Config Context**, **Document Library** context, or other expected context was omitted or materially reduced before inference.
+A user-visible degradation where relevant **Conversation Content**, **Tool** results, **Retrieval** results, **Required Context**, or other expected context was omitted or materially reduced before inference.
 _Avoid_: normal compaction, session memory summary
 
 **Session Memory Deletion**:
@@ -357,7 +357,7 @@ Client-owned state needed to operate the **Conversation UI Surface** for the cur
 _Avoid_: session memory, conversation owner, agent state
 
 **Conversation Control Snapshot**:
-The selected visible conversation controls captured when a **User** or **Admin** submits a turn, such as selected **Tools** or selected **Documents**.
+The selected visible conversation controls captured when a **User** or **Admin** submits a turn, such as enabled **Tool Sets** and **Tool** constraints.
 _Avoid_: current controls, session settings, agent settings
 
 **Trace Visibility Policy**:
@@ -365,8 +365,16 @@ The **Operator** configured **Instance Setting** or **Agent Setting** that deter
 _Avoid_: debug mode, logging level, provider trace setting
 
 **Tool**:
-An action or information source that **Sage** can invoke during a **Conversation**.
-_Avoid_: endpoint, function call
+A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
+_Avoid_: endpoint, fuzzy context category, hidden prompt blob
+
+**Tool Set**:
+A visible **Conversation UI Surface** control that enables a related set of **Tools** for the submitted turn.
+_Avoid_: route mode, hidden classifier, prompt context toggle
+
+**Model-Driven Tool Loop**:
+The Sage-owned loop where the model sees enabled **Tool** contracts, chooses calls, receives **Tool** results, and continues until it can answer or produce an **Executable Change Set**.
+_Avoid_: preselected context pipeline, provider-native function-calling dependency
 
 **Ordinary Product Flow**:
 A non-agent UI or API path where a **User** or **Admin** performs an action directly through the product.
@@ -404,9 +412,9 @@ _Avoid_: current user, target user
 An admin-only **Admin Conversation** surface for configuration questions and confirmed **Enclave Control Plane** changes.
 _Avoid_: support widget, floating chat bubble
 
-**Scoped Config Context**:
-A focused slice of admin configuration state provided to **Sage** during an **Admin Configuration Assistant** turn.
-_Avoid_: full snapshot, config dump
+**Admin Config Tool Set**:
+The admin-only **Tool Set** that exposes configuration read **Tools** and configuration proposal **Tools** to **Sage** during an **Admin Conversation**.
+_Avoid_: scoped config context, config dump, manual context switch
 
 ## Relationships
 
@@ -598,9 +606,10 @@ _Avoid_: full snapshot, config dump
 - **Document Replacement** applies consistently to single-document and batch-document admin workflows
 - Only current completed **Documents** are visible to **Users** for **Document Access** and **Retrieval**
 - **Document Access** determines which **Documents** are available before **Retrieval** or **Required Context** is applied
-- **Retrieval** is an **Agent Runtime** capability over the **Document Library**, even when the current implementation asks the **Enclave Control Plane** to execute the search
+- **Retrieval** is an **Agent Runtime** capability over the **Document Library**, even when the **Enclave Control Plane** executes the underlying search
 - Public **Conversation** session discovery and storage belong to **Sage**, not the **Enclave Control Plane**
-- **Required Context** is selected outside the agent's discretion and passed to **Sage** for use in the conversation
+- In ordinary chat, selected **Documents** are **Tool** constraints for the Knowledge **Tool Set**, not hidden **Required Context**
+- **Required Context** is reserved for policy-mandated context selected outside the agent's discretion
 - A **User Type** has zero or more **Onboarding Questions**
 - A user belongs to at most one **User Type**
 - A **User Type** may become an extension point for tailored product behavior, but its core meaning is onboarding segmentation
@@ -714,7 +723,7 @@ _Avoid_: full snapshot, config dump
 - Raw provider trace data, raw prompts, raw tool outputs, and raw reasoning should not be persisted as **Conversation Traces**
 - **Session Memory Deletion** should delete persisted **Conversation Traces** for the associated **Conversation**
 - Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
-- **Conversation Trace** should be exposed through a structured `trace` response object on both assistant-style and retrieval-first conversation routes
+- **Conversation Trace** should be exposed through a structured `trace` response object on Conversation transports when **Trace Visibility Policy** permits it
 - **Admin Conversations** and **User Conversations** should share the same **Conversation UI Surface** with role-specific controls
 - **Activity** should be the user-facing presentation for both live **Conversation Activity Steps** and final sanitized **Conversation Trace** metadata
 - **Activity** should be visible by default during the prototype phase, with a polished timeline that is verbose enough for debugging but does not expose raw payloads in ordinary chat
@@ -731,12 +740,11 @@ _Avoid_: full snapshot, config dump
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
 - The **Agent Runtime** should own **Conversation Trace** redaction before returning traces to clients
 - The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
-- The first **Conversation Streaming Transport** implementation should target assistant-style **Admin Conversations** and **User Conversations** before retrieval-first **Conversations**
-- Assistant-style **Conversation Streaming Transport** should remain tool-aware so admin configuration and database-assisted **Admin Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
-- Assistant-style **Conversation Streaming Transport** should use a two-phase turn: structured tool/context preparation first, then streamable final answer generation
-- The first assistant-style **Conversation Streaming Transport** implementation should execute explicitly selected **Tools** only, not introduce model-chosen tool planning
-- Assistant-style **Conversation Streaming Transport** should wait for explicitly selected **Tools** to finish before streaming final answer text, while exposing live trace status during tool execution
-- In the first assistant-style **Conversation Streaming Transport** implementation, the final answer phase should stream directly from the configured **Model Provider** rather than through structured DSR/BAML parsing
+- **Conversation Streaming Transport** should support the same **Model-Driven Tool Loop** as non-streaming **Conversations** rather than preserving separate assistant-style and retrieval-first tool paths
+- **Conversation Streaming Transport** should remain tool-aware so configuration, database, web, and knowledge-assisted **Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
+- **Sage** should expose enabled **Tool** contracts to the model, execute model-chosen calls, inject **Tool** results, and continue until the model can answer or produce an **Executable Change Set**
+- **Sage** should not pre-classify a user turn into a scoped prompt context before the model sees available **Tools**
+- The **Model-Driven Tool Loop** should stay provider-portable and should not depend on provider-native function-calling support
 - Individual **Tools** and retrieval steps should emit safe trace drafts for their own work, and the **Agent Runtime** should compose those drafts into the final policy-filtered **Conversation Trace**
 - Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
 - Changes to **Trace Visibility Policy** should create **Audit Log** events because they change operator-visible conversation behavior
@@ -768,7 +776,7 @@ _Avoid_: full snapshot, config dump
 - Pending **Change Confirmation** should not block ordinary follow-up turns in the **Admin Conversation**
 - The **Conversation UI Surface** should allow only one actionable pending **Change Confirmation** at a time; a later pending **Executable Change Set** should make the earlier card a **Superseded Change Confirmation**
 - **Change Confirmation** is the only approval artifact defined for **Conversations** in the current prototype and is scoped to **Admin Conversations**
-- The **Admin Configuration Assistant** uses **Scoped Config Context** so configuration reads can stay focused while preserving **Change Confirmation** for writes
+- The **Admin Configuration Assistant** uses the **Admin Config Tool Set** so the model can call explicit configuration read **Tools** while preserving **Change Confirmation** for writes
 - A **User Conversation** must not perform admin-only **Enclave Control Plane** actions
 - **User Conversations** are read/assistive in the current prototype and do not have general write-capable tool authority
 - **Ordinary Product Flows** may still let **Users** or **Admins** change data directly through the product outside a **Conversation**
@@ -920,7 +928,7 @@ _Avoid_: full snapshot, config dump
 > **Domain expert:** "No. **User Type** is onboarding segmentation. **Document Access** is the rule set that may use User Type as an input."
 
 > **Dev:** "Can the product include document context even if Sage did not ask for it?"
-> **Domain expert:** "Yes. That is **Required Context**: knowledge the product must pass into the conversation because policy or route behavior requires it."
+> **Domain expert:** "Only when product policy requires it. Ordinary selected Documents are Knowledge **Tool** constraints, so Sage should retrieve from them through the **Model-Driven Tool Loop** rather than receiving hidden document context."
 
 > **Dev:** "Are User Types permission roles?"
 > **Domain expert:** "No. A **User Type** is how the operator segments users so different **Onboarding Questions** can be asked."
@@ -953,7 +961,7 @@ _Avoid_: full snapshot, config dump
 > **Domain expert:** "Yes. Uploaded **Documents** are first-party **Instance** context. Sage may read **Document Library** and **Retrieval** context in an **Admin Conversation** to make better configuration decisions, while writes still require **Change Confirmation**."
 >
 > **Dev:** "Should the Admin have to manually enable config context before asking Sage to configure the Instance?"
-> **Domain expert:** "No. In admin configuration contexts, Sage should receive scoped configuration context by default. Configuration reads are part of the **Admin Conversation** authority, while any resulting writes still require **Change Confirmation**."
+> **Domain expert:** "No. In admin configuration contexts, the **Admin Config Tool Set** should be enabled by default. The model should call explicit configuration read **Tools** when useful, while any resulting writes still require **Change Confirmation**."
 >
 > **Dev:** "Should Sage ask the Admin to specify every missing preference before configuring the Instance?"
 > **Domain expert:** "No. When the Admin delegates a configuration task, Sage should inspect available first-party context, choose reasonable defaults for unspecified details, state important assumptions briefly, and present any writes for **Change Confirmation**."
@@ -971,7 +979,7 @@ _Avoid_: full snapshot, config dump
 > **Domain expert:** "No. For ordinary step-by-step guidance, Sage should keep actions focused. For delegated **Admin Conversation** configuration tasks, Sage should group related settings into one reviewable **Change Confirmation**."
 >
 > **Dev:** "Should Sage receive secret Deployment Setting values by default in Admin Conversations?"
-> **Domain expert:** "No. Sage should receive scoped configuration metadata and non-secret values by default in admin configuration contexts. Secret values require explicit Admin sharing and should remain redacted in chat."
+> **Domain expert:** "No. Admin configuration **Tools** may return non-secret values and secret status metadata by default, but secret values require explicit Admin sharing and should remain redacted in chat."
 
 > **Dev:** "Can users ask Sage to change things for them?"
 > **Domain expert:** "Not as a general tool authority model in the current prototype. **User Conversations** are read/assistive, except for user-owned actions handled by ordinary product flows."
@@ -1034,7 +1042,7 @@ _Avoid_: full snapshot, config dump
 - "folder upload" can imply the folder is a knowledge source; resolved: use **Document Batch Ingestion** for the admin workflow, while each supported file remains an independent **Document**.
 - "batch upload failed" can hide partial progress; resolved: **Document Batch Ingestion** reports accepted and rejected files separately.
 - "duplicate document" can mean identical bytes or same operator-facing source; resolved: **Document Replacement** is based on canonical document name, not content hash.
-- "forced RAG" was resolved as **Required Context** because the requirement comes from product policy or route behavior, not from the agent's tool choice.
+- "forced RAG" was resolved as **Required Context** only when product policy requires context outside agent discretion; ordinary document-grounded chat should use the explicit Knowledge **Tool Set**.
 - "User Type" currently appears in implementation surfaces for onboarding, document defaults, and AI config overrides; resolved: its domain meaning is onboarding segmentation, while other per-type behavior is an extension point rather than the definition.
 - "custom field" is an implementation phrase; resolved: use **Onboarding Question** for the admin-defined prompt and **User Profile** for the user's structured answers.
 - **User Profile** and **Session Memory** are distinct: profile information is Enclave-owned user data, while session memory is Sage-owned conversation state.
@@ -1043,16 +1051,16 @@ _Avoid_: full snapshot, config dump
 - "user message" is too narrow for privacy discussions; resolved: use **Conversation Content** for the full inference payload sent to a **Model Provider**.
 - "proposal-only admin assistant" is too weak; resolved: Sage may directly apply configuration or control-plane changes during an **Admin Conversation** after **Change Confirmation**.
 - "admin document access" can be mistaken for a write authority escalation; resolved: Sage may autonomously read uploaded **Documents** as first-party **Instance** context in an **Admin Conversation**, but changing **Instance Settings**, **Agent Settings**, **Deployment Settings**, or document governance still requires **Change Confirmation**.
-- "config tool access" should not require the Admin to pre-debug the right context switch in admin configuration flows; resolved: scoped configuration reads are default context for admin configuration **Conversations**.
+- "config tool access" should not require the Admin to pre-debug the right context switch in admin configuration flows; resolved: the **Admin Config Tool Set** is enabled by default in admin configuration **Conversations**, and the model chooses explicit read **Tools**.
 - "ask before choosing" is too timid for delegated admin configuration; resolved: Sage should choose reasonable defaults from first-party context and present writes for **Change Confirmation** rather than making the Admin supply every preference.
 - "sovereign Sage" can overreach if applied globally; resolved: stronger action bias is scoped to **Admin Conversations**, not normal **User Conversations**.
-- "uploaded document available" is too passive for admin configuration; resolved: when an **Admin Conversation** refers to uploaded materials, theming, copy, or content, Sage should automatically use relevant **Retrieval** over the **Document Library**.
+- "uploaded document available" is too passive for admin configuration; resolved: when an **Admin Conversation** refers to uploaded materials, theming, copy, or content, Sage should proactively call the Knowledge **Tool Set** when it is enabled and relevant.
 - "one action per response" should not force fragmented admin setup; resolved: a coherent delegated admin configuration task can be presented as one reviewable **Change Confirmation** containing multiple related writes.
 - "ONE action per response" is too broad when applied to delegated admin setup; resolved: ordinary guidance should stay focused, while related admin configuration writes can be grouped into one **Change Confirmation**.
 - "prose Change Confirmation" is not executable; resolved: Sage may explain proposed changes in prose, but only an **Executable Change Set** can enter **Change Confirmation**.
 - "no pending changes" is a poor recovery for apply language after prose-only guidance; resolved: treat it as a **Change Set Recovery Turn** so Sage can generate the missing **Executable Change Set**.
 - "compaction" is not inherently a failure; resolved: ordinary **Session Memory Compaction** should be quiet continuity machinery, while **Reduced Conversation Context** is the user-visible degradation.
-- "config access" should not imply secret exposure; resolved: non-secret scoped configuration is default admin context, while secret values require explicit Admin sharing and stay redacted in chat.
+- "config access" should not imply secret exposure; resolved: Admin Config **Tools** may expose non-secret configuration and secret status metadata by default, while secret values require explicit Admin sharing and stay redacted in chat.
 - User-agent write authority is not defined yet; resolved for now: **User Conversations** are read/assistive and should not receive general write-capable tools.
 - **Ordinary Product Flow** exists to distinguish direct product actions from Sage tool authority inside a **Conversation**.
 - Future control model may introduce delegated or multiple administrators; unresolved until that design is discussed.

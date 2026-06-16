@@ -7,8 +7,8 @@ import {
 interface SendLlmChatOptions {
   content: string;
   tools: string[];
-  baseToolContext?: string;
   sessionId?: string | null;
+  jobIds?: string[];
   conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
@@ -16,33 +16,23 @@ interface SendLlmChatStreamOptions extends SendLlmChatOptions {
   onEvent: (event: string, data: unknown) => void;
 }
 
-interface SendQueryStreamOptions {
-  question: string;
-  tools: string[];
-  jobIds: string[];
-  onEvent: (event: string, data: unknown) => void;
-  sessionId?: string | null;
-  topK?: number;
-}
-
 async function buildUnifiedChatBody({
   content,
   tools,
-  baseToolContext,
   sessionId,
+  jobIds,
   conversationHistory,
 }: SendLlmChatOptions): Promise<Record<string, unknown>> {
-  const toolContextParts: string[] = [];
-  if (baseToolContext && baseToolContext.trim()) {
-    toolContextParts.push(baseToolContext.trim());
-  }
-
   const body: Record<string, unknown> = {
     message: content,
     tools,
   };
   if (sessionId) {
     body.session_id = sessionId;
+  }
+  const constrainedJobIds = (jobIds || []).filter(Boolean);
+  if (constrainedJobIds.length > 0) {
+    body.job_ids = constrainedJobIds;
   }
   const sageOwnsAdminConfigHistory =
     Boolean(sessionId) && tools.includes('admin-config');
@@ -62,10 +52,6 @@ async function buildUnifiedChatBody({
     if (recentHistory.length > 0) {
       body.conversation_history = recentHistory;
     }
-  }
-
-  if (toolContextParts.length > 0) {
-    body.tool_context = toolContextParts.join('\n\n');
   }
 
   return body;
@@ -92,40 +78,6 @@ export async function sendLlmChatStreamWithUnifiedTools({
 }: SendLlmChatStreamOptions): Promise<void> {
   const body = await buildUnifiedChatBody(options);
   const response = await fetch(`${API_BASE}/llm/chat/stream`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-    },
-    credentials: 'include',
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(await responseErrorMessage(response));
-  }
-
-  await readSseResponse(response, onEvent);
-}
-
-export async function sendQueryStream({
-  question,
-  tools,
-  jobIds,
-  onEvent,
-  sessionId,
-  topK = 8,
-}: SendQueryStreamOptions): Promise<void> {
-  const body: Record<string, unknown> = {
-    question,
-    top_k: topK,
-    tools,
-    job_ids: jobIds,
-  };
-  if (sessionId) {
-    body.session_id = sessionId;
-  }
-
-  const response = await fetch(`${API_BASE}/query/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

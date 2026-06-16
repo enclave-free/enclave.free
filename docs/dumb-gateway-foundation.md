@@ -173,7 +173,7 @@ curl -i "$API/query" \
   --data '{"question":"Use only available documents and summarize the source context.","top_k":3,"tools":[]}'
 ```
 
-The expected result is that the untyped user gets no document-backed sources, while the typed user gets grounded `/query` sources from allowed docs. UI verification uses the frontend diagnostics dashboard at `http://localhost:5173/diagnostics/test-dashboard`.
+The expected result is that the untyped user gets no unauthorized document sources, while the typed user can receive Knowledge Search sources from allowed docs through the stateful Conversation path. UI verification uses the frontend diagnostics dashboard at `http://localhost:5173/diagnostics/test-dashboard`.
 
 That means the branch already demonstrates the intended long-term gateway model in practice, not just in code structure.
 

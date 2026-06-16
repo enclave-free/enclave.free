@@ -430,7 +430,7 @@ def describe_scope(scope_level: Optional[str], scope_code: Optional[str]) -> str
 def is_valid_scope(scope_level: Optional[str], scope_code: Optional[str]) -> bool:
     """Validate a (scope_level, scope_code) pair against the known taxonomy."""
     if scope_level == "global":
-        return True
+        return not scope_code
     if scope_level == "country":
         return bool(scope_code) and scope_code.upper() in COUNTRIES
     if scope_level == "subregion":

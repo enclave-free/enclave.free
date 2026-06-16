@@ -66,7 +66,11 @@ export async function adminFetch(
  * Check if current session has valid admin authentication.
  */
 export function isAdminAuthenticated(): boolean {
-  return !!localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY);
+  try {
+    return !!localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY);
+  } catch {
+    return false;
+  }
 }
 
 /**

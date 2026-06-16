@@ -1,5 +1,7 @@
 # Bound Admin Database Streaming and Turn Timing
 
+Status: Superseded for future Tool-loop work by [ADR-0023](0023-unified-model-driven-tool-loop.md). This ADR documents the earlier latency-bound streaming investigation.
+
 Streaming **Admin Conversations** may execute the Database tool only when the submitted admin message is already a direct read-only `SELECT` query that passes the existing safe database validation. Natural-language database questions in the streaming path should not trigger text-to-SQL or automatic database execution; Sage may draft a suggested `SELECT` in the assistant answer, but the **Admin** must review and submit it before execution. **Conversation Turn Timing** is transient admin-facing status for the current turn and should not be persisted as **Conversation Trace** or **Audit Log** evidence in this latency investigation.
 
 ## Considered Options

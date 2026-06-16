@@ -502,7 +502,12 @@ def script_accepts_token_argument(test_path: Path) -> bool:
         source = test_path.read_text()
     except OSError:
         return False
-    return '"--token"' in source or "'--token'" in source
+    return bool(
+        re.search(
+            r"\.add_argument\(\s*(?:['\"]--[A-Za-z0-9_-]+['\"]\s*,\s*)*['\"]--token['\"]",
+            source,
+        )
+    )
 
 
 def print_summary(results: List[Tuple[dict, bool, float]]):

@@ -96,7 +96,9 @@ export function AdminRoute({ children }: AdminRouteProps) {
   // The dedicated onboarding route renders its own full-width assistant, so the
   // shared right-rail assistant is suppressed there to avoid a duplicate panel.
   const location = useLocation();
-  const hideSharedAssistant = location.pathname === '/admin/onboarding';
+  const hideSharedAssistant =
+    location.pathname === '/admin/onboarding' ||
+    location.pathname.startsWith('/admin/onboarding/');
 
   useEffect(() => {
     if (hideSharedAssistant) {

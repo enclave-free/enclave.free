@@ -90,7 +90,6 @@ from ingest import load_jobs_and_resume, router as ingest_router
 from ai_config import router as ai_config_router
 from deployment_config import internal_router as deployment_config_internal_router
 from deployment_config import router as deployment_config_router
-from admin_scoped_config import router as admin_scoped_config_router
 import deployment_config
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
@@ -131,17 +130,6 @@ def _best_effort_config_audit_event(**kwargs) -> None:
             kwargs.get("table_name"),
             kwargs.get("config_key"),
             exc,
-            exc_info=True,
-        )
-
-
-def _invalidate_scoped_config_context_cache() -> None:
-    try:
-        from scoped_config_context import invalidate_scoped_config_context_cache
-        invalidate_scoped_config_context_cache()
-    except Exception as exc:
-        logger.warning(
-            f"Failed to invalidate scoped config context cache: {exc}",
             exc_info=True,
         )
 
@@ -314,7 +302,6 @@ app.include_router(ingest_router)
 app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(deployment_config_internal_router)
-app.include_router(admin_scoped_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
 app.include_router(lifecycle.router)
@@ -1546,7 +1533,6 @@ async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth
                 new_value=new_value,
                 changed_by=admin.get("pubkey", "unknown"),
             )
-    _invalidate_scoped_config_context_cache()
     return InstanceSettingsResponse(settings=database.get_all_settings())
 
 
@@ -1605,7 +1591,6 @@ async def create_user_type(user_type: UserTypeCreate, admin: dict = Depends(auth
             }),
             changed_by=admin.get("pubkey", "unknown"),
         )
-        _invalidate_scoped_config_context_cache()
         return UserTypeResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -1645,7 +1630,6 @@ async def update_user_type(type_id: int, user_type: UserTypeUpdate, admin: dict 
         }),
         changed_by=admin.get("pubkey", "unknown"),
     )
-    _invalidate_scoped_config_context_cache()
     return UserTypeResponse(**updated)
 
 
@@ -1668,7 +1652,6 @@ async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admi
             new_value=None,
             changed_by=admin.get("pubkey", "unknown"),
         )
-        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="User type deleted")
     raise HTTPException(status_code=500, detail="Failed to delete user type")
 
@@ -1728,14 +1711,14 @@ def _validate_help_type_keys(help_types: Optional[list[str]]) -> None:
 async def list_resources_admin(
     status: Optional[str] = Query(None),
     admin: dict = Depends(auth.require_admin),
-):
+) -> ResourceListResponse:
     """List directory resources (requires admin auth)."""
     resources = database.list_resources(status=status)
     return ResourceListResponse(resources=[ResourceResponse(**r) for r in resources])
 
 
 @app.post("/admin/resources", response_model=ResourceResponse)
-async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(auth.require_admin)):
+async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(auth.require_admin)) -> ResourceResponse:
     """Create a directory resource (requires admin auth). Status is auto-computed:
     a resource stays `pending` until all required fields are present, then becomes `ready`."""
     _validate_resource_scope(resource.scope_level, resource.scope_code)
@@ -1770,7 +1753,6 @@ async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(
         new_value=_resource_audit_value(created),
         changed_by=admin.get("pubkey", "unknown"),
     )
-    _invalidate_scoped_config_context_cache()
     return ResourceResponse(**created)
 
 
@@ -1779,7 +1761,7 @@ async def update_resource_admin(
     resource_id: str,
     resource: ResourceUpdate,
     admin: dict = Depends(auth.require_admin),
-):
+) -> ResourceResponse:
     """Update a directory resource (requires admin auth). Status is recomputed."""
     existing = database.get_resource(resource_id)
     if not existing:
@@ -1811,12 +1793,11 @@ async def update_resource_admin(
         new_value=_resource_audit_value(updated),
         changed_by=admin.get("pubkey", "unknown"),
     )
-    _invalidate_scoped_config_context_cache()
     return ResourceResponse(**updated)
 
 
 @app.delete("/admin/resources/{resource_id}", response_model=SuccessResponse)
-async def delete_resource_admin(resource_id: str, admin: dict = Depends(auth.require_admin)):
+async def delete_resource_admin(resource_id: str, admin: dict = Depends(auth.require_admin)) -> SuccessResponse:
     """Delete a directory resource (requires admin auth)."""
     existing = database.get_resource(resource_id)
     if not existing:
@@ -1829,7 +1810,6 @@ async def delete_resource_admin(resource_id: str, admin: dict = Depends(auth.req
             new_value=None,
             changed_by=admin.get("pubkey", "unknown"),
         )
-        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="Resource deleted")
     raise HTTPException(status_code=500, detail="Failed to delete resource")
 
@@ -1837,7 +1817,7 @@ async def delete_resource_admin(resource_id: str, admin: dict = Depends(auth.req
 # --- Help-type vocabulary (operator-extensible) ---
 
 @app.get("/admin/help-types", response_model=HelpTypeListResponse)
-async def list_help_types_admin(admin: dict = Depends(auth.require_admin)):
+async def list_help_types_admin(admin: dict = Depends(auth.require_admin)) -> HelpTypeListResponse:
     """List the help-type vocabulary (requires admin auth)."""
     return HelpTypeListResponse(help_types=[HelpTypeModel(**ht) for ht in database.list_help_types()])
 
@@ -1847,7 +1827,7 @@ async def upsert_help_type_admin(
     key: str,
     payload: HelpTypeUpsert,
     admin: dict = Depends(auth.require_admin),
-):
+) -> HelpTypeModel:
     """Create or update a help-type vocabulary entry (requires admin auth)."""
     normalized_key = re.sub(r"[^a-z0-9_]+", "_", key.strip().lower()).strip("_")
     if not normalized_key:
@@ -1867,12 +1847,11 @@ async def upsert_help_type_admin(
         new_value=json.dumps(saved, sort_keys=True),
         changed_by=admin.get("pubkey", "unknown"),
     )
-    _invalidate_scoped_config_context_cache()
     return HelpTypeModel(**saved)
 
 
 @app.delete("/admin/help-types/{key}", response_model=SuccessResponse)
-async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_admin)):
+async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_admin)) -> SuccessResponse:
     """Delete a help-type vocabulary entry (requires admin auth)."""
     normalized_key = re.sub(r"[^a-z0-9_]+", "_", key.strip().lower()).strip("_")
     if not normalized_key:
@@ -1888,7 +1867,6 @@ async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_ad
             new_value=None,
             changed_by=admin.get("pubkey", "unknown"),
         )
-        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="Help type deleted")
     raise HTTPException(status_code=500, detail="Failed to delete help type")
 
@@ -1936,7 +1914,6 @@ async def create_field_definition(field: FieldDefinitionCreate, admin: dict = De
             include_in_chat=field.include_in_chat
         )
         created = database.get_field_definition_by_id(field_id)
-        _invalidate_scoped_config_context_cache()
         return FieldDefinitionResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -1980,7 +1957,6 @@ async def update_field_definition(field_id: int, field: FieldDefinitionUpdate, a
         include_in_chat=field.include_in_chat
     )
     updated = database.get_field_definition_by_id(field_id)
-    _invalidate_scoped_config_context_cache()
     return FieldDefinitionResponse(**updated)
 
 
@@ -1988,7 +1964,6 @@ async def update_field_definition(field_id: int, field: FieldDefinitionUpdate, a
 async def delete_field_definition(field_id: int, admin: dict = Depends(auth.require_admin)):
     """Delete a user field definition (requires admin auth)"""
     if database.delete_field_definition(field_id):
-        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="Field definition deleted")
     raise HTTPException(status_code=404, detail="Field definition not found")
 
@@ -2054,7 +2029,6 @@ async def update_field_encryption(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update field encryption")
 
-    _invalidate_scoped_config_context_cache()
     return FieldEncryptionResponse(
         field_id=field_id,
         encryption_enabled=new_encryption,

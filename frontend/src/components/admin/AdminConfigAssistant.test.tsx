@@ -41,105 +41,6 @@ describe('AdminConfigAssistant', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
   const mockPlanAdminPromptBudget = vi.mocked(planAdminPromptBudget);
 
-  const scopedConfigResponse = (
-    overrides: Partial<{
-      primary_scope: string;
-      included_scopes: string[];
-      context_text: string;
-      warnings: string[];
-      deployment_secret_keys: string[];
-    }> = {}
-  ) => ({
-    version: 1,
-    primary_scope: 'instance-settings',
-    included_scopes: ['instance-settings'],
-    context_text: [
-      'SCOPED CONFIG CONTEXT',
-      'Generated: 2026-05-25T12:00:00+00:00',
-      'scope: instance-settings',
-      '',
-      'INSTANCE SETTINGS (/admin/settings)',
-      '- default_theme: dark',
-      '',
-      'INSTANCE BRANDING, THEME, AND COPY SETTINGS',
-      '- default_theme (Default theme): current value: dark',
-      '',
-      'RULES',
-      '- When the admin delegates a configuration task, inspect first-party context, choose reasonable defaults for unspecified details, and state important assumptions briefly.',
-      '- For a coherent delegated admin configuration task, group related settings into one executable change set instead of splitting every setting into separate proposals.',
-      '- Never call prose-only bullets or recommendations a Change Confirmation. A Change Confirmation requires exactly one valid JSON change set that the UI can validate and preview.',
-    ].join('\n'),
-    warnings: [],
-    generated_at: '2026-05-25T12:00:00+00:00',
-    secret_policy: { mode: 'masked' },
-    deployment_secret_keys: [],
-    ...overrides,
-  });
-
-  const scopedConfigResponseForRequest = (options?: RequestInit) => {
-    const body = options?.body ? JSON.parse(String(options.body)) : {};
-    if (body.mode === 'full') {
-      return scopedConfigResponse({
-        primary_scope: 'overview',
-        included_scopes: [
-          'overview',
-          'instance-settings',
-          'deployment-settings',
-          'agent-settings',
-          'user-types',
-          'document-defaults',
-          'health',
-          'onboarding',
-        ],
-        context_text:
-          'SCOPED CONFIG CONTEXT\nscope: overview\n\nAGENT SETTINGS (/admin/ai-config)\nUSER TYPES (/admin/user-types)\nDEPLOYMENT SETTINGS (/admin/deployment/config)\nONBOARDING MODE',
-        deployment_secret_keys: ['LLM_API_KEY'],
-      });
-    }
-
-    if (
-      Array.isArray(body.requested_scopes) &&
-      body.requested_scopes.includes('onboarding')
-    ) {
-      return scopedConfigResponse({
-        primary_scope: 'overview',
-        included_scopes: ['overview', 'onboarding'],
-        context_text: [
-          'SCOPED CONFIG CONTEXT',
-          'scope: onboarding',
-          '',
-          'ONBOARDING MODE — GUIDED FIRST-RUN SETUP',
-          'REMAINING',
-          '[{"key":"instance_name","label":"Instance name"}]',
-          'WRITE CONTRACT',
-          'PUT /admin/settings',
-        ].join('\n'),
-      });
-    }
-
-    const query = String(body.query ?? '').toLowerCase();
-    if (query.includes('deployment') || query.includes('model')) {
-      return scopedConfigResponse({
-        primary_scope: 'deployment-settings',
-        included_scopes: ['deployment-settings'],
-        context_text: [
-          'SCOPED CONFIG CONTEXT',
-          'scope: deployment-settings',
-          '',
-          'DEPLOYMENT SETTINGS (/admin/deployment/config)',
-          '- LLM_API_KEY = [REDACTED] requires_restart=true secret=true',
-          '',
-          'SECRETS',
-          'Secret env vars are masked in this context.',
-          '- LLM_API_KEY = [REDACTED]',
-        ].join('\n'),
-        deployment_secret_keys: ['LLM_API_KEY'],
-      });
-    }
-
-    return scopedConfigResponse();
-  };
-
   beforeEach(() => {
     resetAdminResilienceInstrumentationListeners();
     const store = new Map<string, string>();
@@ -174,85 +75,56 @@ describe('AdminConfigAssistant', () => {
       })
     );
     HTMLElement.prototype.scrollIntoView = vi.fn();
-    mockAdminFetch.mockImplementation(
-      (endpoint: string, options?: RequestInit) => {
-        if (endpoint === '/admin/scoped-config-context') {
-          return Promise.resolve(
-            Response.json(scopedConfigResponseForRequest(options))
-          );
-        }
-        if (endpoint === '/admin/settings') {
-          return Promise.resolve(
-            Response.json({ settings: { instance_name: 'Enclave' } })
-          );
-        }
-        if (endpoint === '/admin/deployment/config') {
-          return Promise.resolve(
-            Response.json({
-              llm: [],
-              embedding: [],
-              email: [],
-              storage: [],
-              security: [],
-              search: [],
-              domains: [],
-              ssl: [],
-              general: [
-                {
-                  key: 'LLM_API_KEY',
-                  value: '[CONFIGURED]',
-                  is_secret: true,
-                  requires_restart: true,
-                  description: 'Model Provider API key',
-                },
-              ],
-            })
-          );
-        }
-        if (endpoint === '/admin/deployment/config/LLM_API_KEY/reveal') {
-          return Promise.resolve(
-            Response.json({ key: 'LLM_API_KEY', value: 'super-secret-token' })
-          );
-        }
-        if (endpoint === '/admin/ai-config') {
-          return Promise.resolve(
-            Response.json({ prompt_sections: [], parameters: [], defaults: [] })
-          );
-        }
-        if (endpoint === '/admin/user-types') {
-          return Promise.resolve(Response.json({ types: [] }));
-        }
-        if (endpoint === '/ingest/admin/documents/defaults') {
-          return Promise.resolve(Response.json({ documents: [] }));
-        }
-        if (endpoint === '/ingest/admin/documents/context-preview') {
-          return Promise.resolve(
-            Response.json({
-              documents: [
-                {
-                  job_id: 'job-brand-guide',
-                  filename: 'brand-guide.pdf',
-                  preview_chunks: [
-                    {
-                      text: 'Use muted blue tones for the primary brand palette.',
-                    },
-                  ],
-                },
-              ],
-              limits: {
-                max_documents: 5,
-                max_chunks_per_document: 3,
-                max_chars_per_chunk: 1200,
-              },
-            })
-          );
-        }
-        if (endpoint === '/admin/deployment/health') {
-          return Promise.resolve(Response.json({ ok: true }));
-        }
-        return Promise.resolve(Response.json({}));
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/admin/settings') {
+        return Promise.resolve(
+          Response.json({ settings: { instance_name: 'Enclave' } })
+        );
       }
-    );
+      if (endpoint === '/admin/deployment/config') {
+        return Promise.resolve(
+          Response.json({
+            llm: [],
+            embedding: [],
+            email: [],
+            storage: [],
+            security: [],
+            search: [],
+            domains: [],
+            ssl: [],
+            general: [
+              {
+                key: 'LLM_API_KEY',
+                value: '[CONFIGURED]',
+                is_secret: true,
+                requires_restart: true,
+                description: 'Model Provider API key',
+              },
+            ],
+          })
+        );
+      }
+      if (endpoint === '/admin/deployment/config/LLM_API_KEY/reveal') {
+        return Promise.resolve(
+          Response.json({ key: 'LLM_API_KEY', value: 'super-secret-token' })
+        );
+      }
+      if (endpoint === '/admin/ai-config') {
+        return Promise.resolve(
+          Response.json({ prompt_sections: [], parameters: [], defaults: [] })
+        );
+      }
+      if (endpoint === '/admin/user-types') {
+        return Promise.resolve(Response.json({ types: [] }));
+      }
+      if (endpoint === '/ingest/admin/documents/defaults') {
+        return Promise.resolve(Response.json({ documents: [] }));
+      }
+      if (endpoint === '/admin/deployment/health') {
+        return Promise.resolve(Response.json({ ok: true }));
+      }
+      return Promise.resolve(Response.json({}));
+    });
   });
 
   afterEach(() => {
@@ -430,21 +302,6 @@ describe('AdminConfigAssistant', () => {
         tools: expect.arrayContaining(['admin-config']),
       })
     );
-    const context =
-      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
-        .baseToolContext || '';
-    expect(context).not.toContain('SCOPED CONFIG CONTEXT');
-    expect(context).not.toContain('BOUNDED DOCUMENT CONTEXT');
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/scoped-config-context',
-      expect.objectContaining({
-        method: 'POST',
-      })
-    );
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/ingest/admin/documents/context-preview',
-      undefined
-    );
     expect(mockAdminFetch).toHaveBeenCalledWith(
       '/admin/deployment/config',
       undefined
@@ -526,46 +383,26 @@ describe('AdminConfigAssistant', () => {
         compactedMessageCount: expect.any(Number),
       },
     });
-  }, 15_000);
+  }, 30_000);
 
   it('skips client-side document context fetching (Sage-only path)', async () => {
     const user = userEvent.setup();
-    const oversizedDocumentPadding = `DOC-PAD-${'D'.repeat(10_000)}`;
     const instrumentationEvents: AdminResilienceInstrumentationEvent[] = [];
     registerAdminResilienceInstrumentationListener((event) => {
       instrumentationEvents.push(event);
     });
 
     mockAdminFetch.mockImplementation((endpoint: string) => {
-      if (endpoint === '/ingest/admin/documents/context-preview') {
-        return Promise.resolve(
-          Response.json({
-            documents: [
-              {
-                job_id: 'job-brand-guide',
-                filename: 'brand-guide.pdf',
-                preview_chunks: [{ text: oversizedDocumentPadding }],
-              },
-            ],
-            limits: {
-              max_documents: 5,
-              max_chunks_per_document: 3,
-              max_chars_per_chunk: 12_000,
-            },
-          })
-        );
-      }
       if (endpoint === '/admin/deployment/health') {
         return Promise.resolve(Response.json({ ok: true }));
       }
       return Promise.resolve(Response.json({}));
     });
     mockPlanAdminPromptBudget.mockReturnValueOnce({
-      toolContext: 'No document context sent from client',
       conversationHistory: [],
       includedSections: [],
       reducedSections: [],
-      omittedSections: ['document-context'],
+      omittedSections: [],
       estimatedChars: 50,
       warningNote: null,
     });
@@ -596,21 +433,10 @@ describe('AdminConfigAssistant', () => {
       expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
     });
 
-    const providerCall = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
-      .calls[0][0];
-    const context = providerCall.baseToolContext || '';
-
-    expect(context).not.toContain(oversizedDocumentPadding);
-    expect(context).not.toContain('BOUNDED DOCUMENT CONTEXT');
     expect(mockPlanAdminPromptBudget).toHaveBeenCalledWith(
       expect.objectContaining({
-        adminConfigContext: '',
-        documentContext: '',
+        conversationHistory: expect.any(Array),
       })
-    );
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/ingest/admin/documents/context-preview',
-      undefined
     );
   });
 
@@ -680,14 +506,13 @@ describe('AdminConfigAssistant', () => {
   it('shows a reduced-context notice when prompt planning trims context', async () => {
     const user = userEvent.setup();
     mockPlanAdminPromptBudget.mockReturnValueOnce({
-      toolContext: 'SCOPED CONFIG CONTEXT\nsmall section',
       conversationHistory: [],
-      includedSections: ['admin-config', 'document-context'],
-      reducedSections: ['admin-config', 'document-context'],
-      omittedSections: ['recent-conversation'],
+      includedSections: ['recent-conversation'],
+      reducedSections: ['recent-conversation'],
+      omittedSections: [],
       estimatedChars: 500,
       warningNote:
-        'PROMPT BUDGET NOTE\n- admin-config was reduced to fit the provider budget',
+        'PROMPT BUDGET NOTE\n- recent-conversation was reduced to fit the provider budget',
     });
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
       async ({ onEvent }) => {
@@ -714,8 +539,7 @@ describe('AdminConfigAssistant', () => {
     const notice = await screen.findByRole('note', {
       name: 'Reduced context notice',
     });
-    expect(notice).toHaveTextContent(/admin configuration context/);
-    expect(notice).toHaveTextContent(/document library context/);
+    expect(notice).toHaveTextContent(/recent conversation history/);
     expect(notice).not.toHaveTextContent('PROMPT BUDGET NOTE');
   });
 
@@ -1120,14 +944,6 @@ describe('AdminConfigAssistant', () => {
     await waitFor(() => {
       expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
     });
-    const context = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
-      .calls[0][0].baseToolContext;
-    expect(context || '').not.toContain('SCOPED CONFIG CONTEXT');
-    expect(context || '').not.toContain('super-secret-token');
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/scoped-config-context',
-      expect.objectContaining({ method: 'POST' })
-    );
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/deployment/config/LLM_API_KEY/reveal',
       undefined
@@ -1138,7 +954,7 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
-  it('loads the full admin snapshot only when context is manually refreshed', async () => {
+  it('refreshes redaction metadata without loading prompt context', async () => {
     const user = userEvent.setup();
 
     render(
@@ -1151,16 +967,10 @@ describe('AdminConfigAssistant', () => {
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(
-        '/admin/scoped-config-context',
-        expect.objectContaining({ method: 'POST' })
+        '/admin/deployment/config',
+        undefined
       );
     });
-    const refreshCall = mockAdminFetch.mock.calls.find(
-      ([endpoint, options]) =>
-        endpoint === '/admin/scoped-config-context' &&
-        JSON.parse(String(options?.body ?? '{}')).mode === 'full'
-    );
-    expect(refreshCall).toBeTruthy();
   });
 
   it('surfaces early streamed provider errors without falling back to opaque HTTP errors', async () => {
@@ -1495,11 +1305,6 @@ describe('AdminConfigAssistant', () => {
 
     mockAdminFetch.mockImplementation(
       (endpoint: string, options?: RequestInit) => {
-        if (endpoint === '/admin/scoped-config-context') {
-          return Promise.resolve(
-            Response.json(scopedConfigResponseForRequest(options))
-          );
-        }
         if (endpoint === '/admin/settings' && options?.method === 'PUT') {
           return Promise.resolve(Response.json({ ok: true }));
         }
@@ -1648,11 +1453,6 @@ describe('AdminConfigAssistant', () => {
       await screen.findByText('Pending changes: Set instance name')
     ).toBeInTheDocument();
 
-    const firstCall = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
-      .calls[0][0];
-    expect(firstCall.baseToolContext).toContain('ONBOARDING MODE');
-    expect(firstCall.baseToolContext).toContain('PUT /admin/settings');
-
     await user.click(screen.getByRole('button', { name: 'Apply' }));
 
     await waitFor(() => {
@@ -1667,21 +1467,6 @@ describe('AdminConfigAssistant', () => {
     await waitFor(() => {
       expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
     });
-
-    const scopedContextCalls = mockAdminFetch.mock.calls.filter(
-      ([endpoint]) => endpoint === '/admin/scoped-config-context'
-    );
-    expect(scopedContextCalls).toEqual(
-      expect.arrayContaining([
-        [
-          '/admin/scoped-config-context',
-          expect.objectContaining({
-            method: 'POST',
-            body: expect.stringContaining('"requested_scopes":["onboarding"]'),
-          }),
-        ],
-      ])
-    );
 
     const hiddenTurn = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[1][0];

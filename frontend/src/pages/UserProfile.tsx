@@ -75,7 +75,7 @@ export function UserProfile() {
   useEffect(() => {
     const email = localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
     if (!email) {
-      navigate('/login');
+      navigate('/auth');
       return;
     }
 

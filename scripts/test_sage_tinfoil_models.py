@@ -9,16 +9,14 @@ import requests
 
 
 def main() -> None:
-    api_key = os.environ.get("LLM_API_KEY") or os.environ.get("TINFOIL_API_KEY")
+    api_key = os.environ.get("LLM_API_KEY")
 
     if not api_key:
-        print("LLM_API_KEY or TINFOIL_API_KEY not found in environment")
+        print("LLM_API_KEY not found in environment")
         print("Run: export LLM_API_KEY=your_key_here")
         sys.exit(1)
 
-    base_url = os.environ.get("LLM_API_URL") or os.environ.get(
-        "TINFOIL_API_URL", "http://localhost:8089/v1"
-    )
+    base_url = os.environ.get("LLM_API_URL") or "http://localhost:8089/v1"
     url = f"{base_url.rstrip('/')}/models"
     headers = {"Authorization": f"Bearer {api_key}"}
 

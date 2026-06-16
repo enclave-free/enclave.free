@@ -61,9 +61,9 @@ Visual polish evidence:
 
 Date: 2026-05-24
 
-Composer attachment semantics:
+Composer Knowledge semantics:
 
-- Composer attachments mean selecting already-ingested Document Library records as next-turn Required Context.
+- Composer Knowledge controls mean selecting constraints for the `knowledge-search` Tool Set.
 - The chat composer does not upload files, hold ephemeral browser-only file attachments, or expose assistant-ui attachment persistence as a product contract.
 - Document persistence, Retrieval availability, deletion, export, trace visibility, active-content handling, and authorization remain owned by the existing Document Library and Retrieval workflow.
 - Unsupported file attachment affordances should stay absent so the composer does not imply hidden upload, multimodal, or one-turn file semantics.
@@ -87,17 +87,17 @@ Do this review before the full Compose smoke so visual and workflow gaps are sep
 
 ## User Conversation browser flow
 
-Verify message sending, streaming, activity steps, document scope, reachout, export, and fallback/error states in the product UI.
+Verify message sending, streaming, activity steps, Knowledge Search controls, reachout, export, and fallback/error states in the product UI.
 
 Expected boundaries:
 
 - Sage owns Agent Runtime behavior, streaming semantics, tool execution, trace sanitization, memory, and inference.
-- Enclave-specific controls stay outside the shared ConversationSurface, including Document scope, reachout, export, and role-specific page chrome.
+- Enclave-specific controls stay outside the shared ConversationSurface, including Tool Set controls, Knowledge Search constraints, reachout, export, and role-specific page chrome.
 - Conversation Activity Steps appear before the clean assistant response when Sage emits them.
 
 ## Admin Conversation browser flow
 
-Verify selected tools, activity steps, Change Confirmation, secret redaction, final trace rendering, and fallback/error states in the product UI.
+Verify selected Tool Sets, activity steps, Change Confirmation, secret redaction, final trace rendering, and fallback/error states in the product UI.
 
 Expected boundaries:
 

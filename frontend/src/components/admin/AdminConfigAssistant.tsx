@@ -27,8 +27,6 @@ import {
   type AdminAssistantChangeSet,
 } from '../../utils/adminAssistant';
 import {
-  buildFullAdminConfigContext,
-  fetchServerScopedConfigContext,
   loadDeploymentSecretKeysFromConfig,
   refreshAdminConfigRedactionMetadata,
 } from '../../utils/adminConfigContext';
@@ -64,9 +62,8 @@ interface AdminConfigAssistantProps {
   variant?: 'sidebar' | 'drawer';
   /**
    * 'admin-config' (default) is the reactive config assistant.
-   * 'onboarding' drives a guided first-run setup: it seeds a welcome opener and,
-   * each turn, injects the server-built `onboarding` scoped context (checklist +
-   * persona + write contract) so the agent walks the operator through setup.
+   * 'onboarding' drives a guided first-run setup: it seeds a welcome opener while
+   * Sage uses the same Admin Config Tool Set available in normal admin chat.
    */
   purpose?: 'admin-config' | 'onboarding';
   onCollapse?: () => void;
@@ -81,18 +78,6 @@ const CONFIG_TOOL_ID = 'admin-config';
 // full re-render + syntax-highlight pass on every single token (which pegged the
 // CPU and locked the UI). Tune here if needed.
 const STREAM_FLUSH_INTERVAL_MS = 33;
-
-/** Authenticated JSON fetch for scoped-context calls. */
-async function adminFetchJson<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const res = await adminFetch(endpoint, options);
-  if (!res.ok) {
-    throw new Error(`Request failed: ${res.status}`);
-  }
-  return (await res.json()) as T;
-}
 
 function generateMessageId() {
   return `admin-msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -405,7 +390,6 @@ export function AdminConfigAssistant({
       }
 
       try {
-        let baseToolContext: string | undefined;
         let boundedConversationHistory = messages.map(
           ({ role, content: turnContent }) => ({
             role,
@@ -422,41 +406,13 @@ export function AdminConfigAssistant({
           });
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
-          // Onboarding mode: add the server-built `onboarding` scoped context
-          // (live checklist + guided persona + write contract). Sage still owns
-          // the selected tool execution for the turn.
-          let onboardingContext = '';
-          if (isOnboarding) {
-            try {
-              const onboardingResult = await fetchServerScopedConfigContext({
-                query: content,
-                requestedScopes: ['onboarding'],
-                fetchJson: adminFetchJson,
-              });
-              onboardingContext = onboardingResult.context_text || '';
-            } catch {
-              // Non-fatal: fall back to a contextless turn rather than blocking setup.
-            }
-          }
-
           const promptPlan = planAdminPromptBudget({
-            adminConfigContext: onboardingContext,
-            documentContext: '',
             conversationHistory: boundedConversationHistory,
           });
-          baseToolContext = promptPlan.toolContext || undefined;
           boundedConversationHistory = promptPlan.conversationHistory;
           setReducedContextNotice(
             formatAdminReducedContextNotice(promptPlan.reducedSections, {
               sectionLabels: {
-                'admin-config': t(
-                  'admin.configAssistant.reducedContextSections.adminConfig',
-                  'admin configuration context'
-                ),
-                'document-context': t(
-                  'admin.configAssistant.reducedContextSections.documentContext',
-                  'document library context'
-                ),
                 'recent-conversation': t(
                   'admin.configAssistant.reducedContextSections.recentConversation',
                   'recent conversation history'
@@ -496,7 +452,6 @@ export function AdminConfigAssistant({
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: selectedTools,
-            baseToolContext,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
             onEvent: (event, payload) => {
@@ -646,7 +601,6 @@ export function AdminConfigAssistant({
           const res = await sendLlmChatWithUnifiedTools({
             content,
             tools: selectedTools,
-            baseToolContext,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
           });
@@ -1112,13 +1066,13 @@ export function AdminConfigAssistant({
               setError(null);
               setIsLoading(true);
               try {
-                const snap = await buildFullAdminConfigContext({
+                const metadata = await refreshAdminConfigRedactionMetadata({
                   shareSecrets,
                   fetchJson,
                 });
-                setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
-                secretsForRedactionRef.current = snap.secretValues;
-                deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
+                setSnapshotInfo({ generatedAtIso: new Date().toISOString() });
+                secretsForRedactionRef.current = metadata.secretValues;
+                deploymentSecretKeysRef.current = metadata.deploymentSecretKeys;
               } catch (e) {
                 setError(
                   e instanceof Error
