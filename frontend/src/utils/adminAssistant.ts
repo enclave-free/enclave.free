@@ -18,6 +18,110 @@ export type ExtractChangeSetResult =
 
 const MAX_CHANGESET_REQUESTS = 50;
 
+const SUPPORTED_INSTANCE_SETTING_KEYS = new Set([
+  'instance_name',
+  'primary_color',
+  'description',
+  'logo_url',
+  'favicon_url',
+  'apple_touch_icon_url',
+  'icon',
+  'assistant_icon',
+  'user_icon',
+  'assistant_name',
+  'user_label',
+  'header_layout',
+  'header_tagline',
+  'chat_bubble_style',
+  'chat_bubble_shadow',
+  'surface_style',
+  'status_icon_set',
+  'typography_preset',
+  'default_language',
+  'default_theme',
+  'auto_approve_users',
+  'reachout_enabled',
+  'reachout_mode',
+  'reachout_title',
+  'reachout_description',
+  'reachout_button_label',
+  'reachout_success_message',
+  'reachout_to_email',
+  'reachout_subject_prefix',
+  'reachout_rate_limit_per_hour',
+  'reachout_rate_limit_per_day',
+  'reachout_include_ip',
+]);
+
+const SUPPORTED_DEFAULT_LANGUAGE_CODES = new Set([
+  'ar',
+  'bn',
+  'cs',
+  'da',
+  'de',
+  'el',
+  'en',
+  'es',
+  'fa',
+  'fi',
+  'fr',
+  'he',
+  'hi',
+  'hu',
+  'id',
+  'it',
+  'ja',
+  'ko',
+  'nl',
+  'no',
+  'pl',
+  'pt',
+  'ro',
+  'ru',
+  'sv',
+  'th',
+  'tr',
+  'uk',
+  'vi',
+  'zh-Hans',
+  'zh-Hant',
+]);
+
+const DEFAULT_LANGUAGE_LABEL_TO_CODE: Record<string, string> = {
+  arabic: 'ar',
+  bengali: 'bn',
+  czech: 'cs',
+  danish: 'da',
+  german: 'de',
+  greek: 'el',
+  english: 'en',
+  spanish: 'es',
+  persian: 'fa',
+  farsi: 'fa',
+  finnish: 'fi',
+  french: 'fr',
+  hebrew: 'he',
+  hindi: 'hi',
+  hungarian: 'hu',
+  indonesian: 'id',
+  italian: 'it',
+  japanese: 'ja',
+  korean: 'ko',
+  dutch: 'nl',
+  norwegian: 'no',
+  polish: 'pl',
+  portuguese: 'pt',
+  romanian: 'ro',
+  russian: 'ru',
+  swedish: 'sv',
+  thai: 'th',
+  turkish: 'tr',
+  ukrainian: 'uk',
+  vietnamese: 'vi',
+  'simplified chinese': 'zh-Hans',
+  'traditional chinese': 'zh-Hant',
+};
+
 function _isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -77,6 +181,32 @@ function _readTraceVisibility(value: unknown): string | undefined {
     : undefined;
 }
 
+function normalizeAdminAssistantPath(path: string): string {
+  return path.replace(/^\/admin\/user_types(?=\/|$)/, '/admin/user-types');
+}
+
+function normalizeDefaultLanguageValue(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (SUPPORTED_DEFAULT_LANGUAGE_CODES.has(trimmed)) return trimmed;
+  return DEFAULT_LANGUAGE_LABEL_TO_CODE[trimmed.toLowerCase()] ?? value;
+}
+
+function normalizeSettingsPatchBody(
+  body: Record<string, unknown>
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {};
+  for (const [rawKey, rawValue] of Object.entries(body)) {
+    const key = rawKey === 'tagline' ? 'header_tagline' : rawKey;
+    if (rawKey === 'tagline' && 'header_tagline' in body) continue;
+    normalized[key] =
+      key === 'default_language'
+        ? normalizeDefaultLanguageValue(rawValue)
+        : rawValue;
+  }
+  return normalized;
+}
+
 /**
  * Normalize supported request shapes into the exact backend schemas.
  *
@@ -100,39 +230,54 @@ function normalizeAdminAssistantChangeSet(
 
   for (const req of changeSet.requests) {
     if (!req || typeof req !== 'object') continue;
+    const path = normalizeAdminAssistantPath(req.path);
+    const normalizedReq =
+      path === req.path
+        ? req
+        : ({ ...req, path } satisfies AdminAssistantRequest);
 
     if (
-      req.method === 'PUT' &&
-      req.path === '/admin/settings' &&
-      _isPlainObject(req.body)
+      normalizedReq.method === 'PUT' &&
+      normalizedReq.path === '/admin/settings' &&
+      _isPlainObject(normalizedReq.body)
     ) {
-      Object.assign(settingsPatch, req.body);
+      Object.assign(
+        settingsPatch,
+        normalizeSettingsPatchBody(normalizedReq.body)
+      );
       sawSettingsPatch = true;
       continue;
     }
 
-    const m = req.method === 'PUT' ? perKeyRe.exec(req.path) : null;
+    const m =
+      normalizedReq.method === 'PUT' ? perKeyRe.exec(normalizedReq.path) : null;
     if (m) {
       const key = m[1];
       if (
-        _isPlainObject(req.body) &&
-        Object.keys(req.body).length === 1 &&
-        'value' in req.body
+        _isPlainObject(normalizedReq.body) &&
+        Object.keys(normalizedReq.body).length === 1 &&
+        'value' in normalizedReq.body
       ) {
-        settingsPatch[key] = (req.body as Record<string, unknown>).value;
+        const normalizedBody = normalizeSettingsPatchBody({
+          [key]: (normalizedReq.body as Record<string, unknown>).value,
+        });
+        Object.assign(settingsPatch, normalizedBody);
         sawSettingsPatch = true;
         continue;
       }
       // Keep the original request so validation can fail loudly if it's not in the supported shape.
-      out.push(req);
+      out.push(normalizedReq);
       continue;
     }
 
     // Normalize canonical LLM payload formats to match backend schemas.
-    if (req.method === 'POST' && _isPlainObject(req.body)) {
+    if (normalizedReq.method === 'POST' && _isPlainObject(normalizedReq.body)) {
       // /admin/user-types expects: { name, description?, icon?, display_order? }
-      if (req.method === 'POST' && req.path === '/admin/user-types') {
-        const b = req.body;
+      if (
+        normalizedReq.method === 'POST' &&
+        normalizedReq.path === '/admin/user-types'
+      ) {
+        const b = normalizedReq.body;
         const name = _readNonEmptyString(b.name);
         const description = _readString(b.description);
         const icon = _readString(b.icon);
@@ -143,13 +288,16 @@ function normalizeAdminAssistantChangeSet(
         if (icon !== undefined) normalizedBody.icon = icon;
         if (displayOrder !== undefined)
           normalizedBody.display_order = displayOrder;
-        out.push({ ...req, body: normalizedBody });
+        out.push({ ...normalizedReq, body: normalizedBody });
         continue;
       }
 
       // /admin/user-fields expects: { field_name, field_type, required?, display_order?, user_type_id?, placeholder?, options?, encryption_enabled?, include_in_chat? }
-      if (req.method === 'POST' && req.path === '/admin/user-fields') {
-        const b = req.body;
+      if (
+        normalizedReq.method === 'POST' &&
+        normalizedReq.path === '/admin/user-fields'
+      ) {
+        const b = normalizedReq.body;
         const fieldName = _readNonEmptyString(b.field_name);
         const fieldType = _readNonEmptyString(b.field_type);
         const displayOrder = _readInt(b.display_order);
@@ -180,12 +328,12 @@ function normalizeAdminAssistantChangeSet(
             normalizedBody.options = opts;
         }
 
-        out.push({ ...req, body: normalizedBody });
+        out.push({ ...normalizedReq, body: normalizedBody });
         continue;
       }
     }
 
-    out.push(req);
+    out.push(normalizedReq);
   }
 
   const requests = sawSettingsPatch
@@ -304,6 +452,20 @@ export function extractAdminAssistantChangeSetStrict(
     };
 
   const changeSet = normalizeAdminAssistantChangeSet(candidates[0]);
+  const validation = validateAdminAssistantChangeSet(changeSet);
+  if (!validation.ok)
+    return { ok: false, error: validation.error || 'Invalid change set' };
+
+  return { ok: true, changeSet };
+}
+
+export function coerceAdminAssistantChangeSetPayload(
+  payload: unknown
+): ExtractChangeSetResult {
+  const coerced = _coerceChangeSet(payload);
+  if (!coerced) return { ok: false, error: 'No valid change set found' };
+
+  const changeSet = normalizeAdminAssistantChangeSet(coerced);
   const validation = validateAdminAssistantChangeSet(changeSet);
   if (!validation.ok)
     return { ok: false, error: validation.error || 'Invalid change set' };
@@ -435,6 +597,52 @@ export function validateAdminAssistantChangeSet(
         ok: false,
         error: `Disallowed request: ${req.method} ${req.path}`,
       };
+
+    if (req.method === 'PUT' && req.path === '/admin/settings') {
+      if (!_isPlainObject(req.body)) {
+        return {
+          ok: false,
+          error: 'PUT /admin/settings requires an object body',
+        };
+      }
+      for (const [key, value] of Object.entries(req.body)) {
+        if (!SUPPORTED_INSTANCE_SETTING_KEYS.has(key)) {
+          return {
+            ok: false,
+            error: `Unsupported instance setting key: ${key}`,
+          };
+        }
+        if (
+          key === 'default_language' &&
+          (typeof value !== 'string' ||
+            !SUPPORTED_DEFAULT_LANGUAGE_CODES.has(value))
+        ) {
+          return {
+            ok: false,
+            error: `Unsupported default_language value: ${value}`,
+          };
+        }
+        if (
+          key === 'default_theme' &&
+          (typeof value !== 'string' ||
+            !['light', 'dark', 'system'].includes(value))
+        ) {
+          return {
+            ok: false,
+            error: `Unsupported default_theme value: ${value}`,
+          };
+        }
+      }
+    }
+
+    if (req.method === 'POST' && req.path === '/admin/user-types') {
+      if (!_isPlainObject(req.body) || !_readNonEmptyString(req.body.name)) {
+        return {
+          ok: false,
+          error: 'POST /admin/user-types requires body.name',
+        };
+      }
+    }
 
     if (
       req.method === 'PUT' &&

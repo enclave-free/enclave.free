@@ -12,11 +12,11 @@ Python no longer owns or exposes public Agent Runtime routes. Direct Python call
 
 The product mental model is one Conversation runtime. Existing public route names may remain while the hard cut is implemented:
 
-| Gateway route | Role |
-| --- | --- |
-| `/llm/chat` | non-streaming Conversation transport |
-| `/llm/chat/stream` | streaming Conversation transport |
-| `/query` | stateful Conversation API compatibility shape |
+| Gateway route      | Role                                                  |
+| ------------------ | ----------------------------------------------------- |
+| `/llm/chat`        | non-streaming Conversation transport                  |
+| `/llm/chat/stream` | streaming Conversation transport                      |
+| `/query`           | stateful Conversation API compatibility shape         |
 | `/query/session/*` | Conversation session inspection, rename, and deletion |
 
 Route names do not define separate tool systems. Document-grounded chat is Conversation plus the `knowledge-search` Tool Set. Admin chat is Conversation plus admin-authorized Tool Sets. Guided onboarding is Conversation plus guided UI prompts and the same `admin-config` Tool Set.
@@ -50,12 +50,12 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
 Visible Tool Sets are conversation controls and permission bundles:
 
-| Tool Set ID | Access | Exposes |
-| --- | --- | --- |
-| `knowledge-search` | users and admins, filtered by Document Access | `knowledge_search` over the Document Library |
-| `web-search` | users and admins when enabled | `web_search` through the configured SearXNG service |
-| `admin-config` | admins only | admin configuration read Tools and the Executable Change Set output contract |
-| `db-query` | admins only | read-only database inspection Tools |
+| Tool Set ID        | Access                                        | Exposes                                                                                       |
+| ------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `knowledge-search` | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                  |
+| `web-search`       | users and admins when enabled                 | `web_search` through the configured SearXNG service                                           |
+| `admin-config`     | admins only                                   | admin configuration read Tools and the non-mutating `propose_config_change_set` proposal Tool |
+| `db-query`         | admins only                                   | read-only database inspection Tools                                                           |
 
 Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
 
@@ -78,10 +78,21 @@ Required Context remains a separate product-policy term for future mandatory con
 - `read_user_types`
 - `read_document_access`
 - `read_onboarding_status`
+- `propose_config_change_set`
 
-Reads may happen directly within Admin Conversation authority. Write intent must become an Executable Change Set. Applying that change set still requires Change Confirmation in the Conversation UI Surface.
+Reads may happen directly within Admin Conversation authority. Write intent must become an Executable Change Set proposal through `propose_config_change_set`. Applying that change set still requires Change Confirmation in the Conversation UI Surface.
 
-`propose_config_change_set` is not a model-callable Tool in the initial contract. It is the structured assistant output format Sage expects when the model proposes admin writes from read Tool results. The UI validates that output and requires Change Confirmation before ordinary admin endpoints apply changes.
+`propose_config_change_set` is a model-callable, non-mutating Tool. It validates and stages a change set for review, but it never calls admin mutation endpoints. Confirmed **Apply** remains a UI/admin action, not a model-authorized Tool call.
+
+Admin Config proposals must stage canonical write shapes. Instance settings use
+`PUT /admin/settings` with stored setting keys such as `header_tagline`,
+`default_language`, `default_theme`, and `auto_approve_users`. User types use
+`POST /admin/user-types` with `{ "name", "description"?, "icon"?,
+"display_order"? }`. The proposal boundary may normalize only known small drift
+(`/admin/user_types`, `tagline`, and supported language labels such as
+`English`); staged `admin_change_set` payloads must contain canonical paths and
+keys after that. Unknown keys and unsupported values reject the proposal before
+review.
 
 Admin Config Tools may return non-secret configuration and secret status metadata by default. Raw Deployment Setting secret values require explicit Admin sharing and must remain redacted in messages, Activity, traces, and previews.
 

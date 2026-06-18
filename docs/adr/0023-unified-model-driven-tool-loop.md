@@ -10,10 +10,12 @@ Visible Tool Sets are permission and product controls, not hidden routing modes:
 
 - `knowledge-search` enables Document Library Retrieval Tools. Selected Documents are Tool constraints for `knowledge_search`, not silently injected Required Context for ordinary chat.
 - `web-search` enables current/external web search.
-- `admin-config` enables raw admin configuration read Tools. Configuration write intent is a proposal output contract, not a model-callable write Tool.
+- `admin-config` enables raw admin configuration read Tools plus `propose_config_change_set`, a non-mutating proposal Tool. Confirmed apply is not model-authorized and still requires Change Confirmation.
 - `db-query` enables admin-only read-only database inspection Tools.
 
-The first Admin Config Tool Set should expose concrete read Tools such as `read_instance_settings`, `read_deployment_settings`, `read_deployment_readiness`, `read_agent_settings`, `read_user_types`, `read_document_access`, and `read_onboarding_status`. Reads may happen directly within Admin Conversation authority. Writes must be expressed as an Executable Change Set proposal output and applied only after Change Confirmation.
+The first Admin Config Tool Set should expose concrete read Tools such as `read_instance_settings`, `read_deployment_settings`, `read_deployment_readiness`, `read_agent_settings`, `read_user_types`, `read_document_access`, and `read_onboarding_status`, plus `propose_config_change_set` for write intent. Reads may happen directly within Admin Conversation authority. Writes must be expressed as an Executable Change Set through the proposal Tool and applied only after Change Confirmation.
+
+`propose_config_change_set` owns the canonical proposal boundary. It accepts the exact admin write shapes the UI can later apply, normalizes only narrow observed drift such as `/admin/user_types`, `tagline`, and supported language labels, and rejects anything else before staging. The model can correct and retry through the same Tool loop; the browser should stage structured `admin_change_set` payloads rather than scrape assistant prose as the primary path.
 
 ## Route Direction
 

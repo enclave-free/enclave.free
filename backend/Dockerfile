@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ .
 
 # Expose port
-EXPOSE 8000
+EXPOSE 18000
 
 # Run the application with seed on startup
-CMD ["sh", "-c", "python seed.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
+CMD ["sh", "-c", "python seed.py && uvicorn main:app --host 0.0.0.0 --port 18000 --reload"]

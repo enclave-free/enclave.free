@@ -20,6 +20,7 @@ import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
 import {
+  coerceAdminAssistantChangeSetPayload,
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   redactSecrets,
@@ -116,6 +117,20 @@ function stagePendingAdminChangeSet(
   }
 }
 
+function stageStructuredAdminChangeSet(
+  payload: unknown,
+  setApplyState: (state: ApplyState) => void
+): AdminAssistantChangeSet | null {
+  if (payload === undefined || payload === null) return null;
+  const extracted = coerceAdminAssistantChangeSetPayload(payload);
+  if (extracted.ok) {
+    setApplyState({ state: 'review', changeSet: extracted.changeSet });
+    return extracted.changeSet;
+  }
+  setApplyState({ state: 'error', message: extracted.error });
+  return null;
+}
+
 function slugify(value: string): string {
   return String(value || '')
     .toLowerCase()
@@ -190,6 +205,20 @@ export function AdminConfigAssistant({
   >(async () => {});
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingApplyPanelRef = useRef<HTMLDivElement>(null);
+  const pendingApplyButtonRef = useRef<HTMLButtonElement>(null);
+
+  const focusPendingApplyPanel = useCallback(() => {
+    const focusPanel = () => {
+      pendingApplyPanelRef.current?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+      pendingApplyButtonRef.current?.focus();
+    };
+    focusPanel();
+    window.setTimeout(focusPanel, 0);
+  }, []);
 
   // Auto-scroll to the latest message. Always scroll when the operator just sent
   // (the newest message is theirs); otherwise only follow the stream if they're
@@ -373,6 +402,7 @@ export function AdminConfigAssistant({
       setReducedContextNotice(null);
 
       if (applyIntent.kind === 'needs-panel') {
+        focusPendingApplyPanel();
         setMessages((prev) => [
           ...prev,
           {
@@ -440,6 +470,8 @@ export function AdminConfigAssistant({
         let streamReportedError = false;
         let classifiedStreamError: ClassifiedProviderError | null = null;
         let lastDeltaFlushAt = 0;
+        let structuredChangeSet: AdminAssistantChangeSet | null = null;
+        let sawStructuredChangeSetPayload = false;
 
         // Compute the display string from the accumulated stream so far.
         const computeStreamDisplay = () => {
@@ -456,6 +488,12 @@ export function AdminConfigAssistant({
             conversationHistory: boundedConversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
+              if (
+                data.admin_change_set !== undefined &&
+                data.admin_change_set !== null
+              ) {
+                sawStructuredChangeSetPayload = true;
+              }
               if (event === 'assistant_message_started') {
                 const assistantId =
                   typeof data.message_id === 'string'
@@ -504,6 +542,13 @@ export function AdminConfigAssistant({
                   );
                 }
               } else if (event === 'trace_final' && streamMessageId) {
+                if (!structuredChangeSet) {
+                  structuredChangeSet =
+                    stageStructuredAdminChangeSet(
+                      data.admin_change_set,
+                      setApplyState
+                    ) ?? structuredChangeSet;
+                }
                 setMessages((prev) =>
                   patchAssistantMessage(prev, streamMessageId!, {
                     trace: data.trace as Message['trace'],
@@ -513,6 +558,13 @@ export function AdminConfigAssistant({
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
+                if (!structuredChangeSet) {
+                  structuredChangeSet =
+                    stageStructuredAdminChangeSet(
+                      data.admin_change_set,
+                      setApplyState
+                    ) ?? structuredChangeSet;
+                }
               } else if (event === 'error') {
                 streamReportedError = true;
                 const classified = classifyProviderError(
@@ -548,7 +600,9 @@ export function AdminConfigAssistant({
           }
           streamed = true;
         } catch (streamError) {
-          stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
+          if (!sawStructuredChangeSetPayload) {
+            stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
+          }
 
           if (streamMessageId && raw.trim()) {
             // Flush whatever streamed before the error so partial output isn't lost.
@@ -625,9 +679,16 @@ export function AdminConfigAssistant({
             message_id?: string;
             session_id?: string;
             trace?: Message['trace'];
+            admin_change_set?: unknown;
           };
           if (data.session_id) {
             setConversationSessionId(data.session_id);
+          }
+          if (
+            data.admin_change_set !== undefined &&
+            data.admin_change_set !== null
+          ) {
+            sawStructuredChangeSetPayload = true;
           }
           raw = String(data?.message || '');
 
@@ -646,9 +707,18 @@ export function AdminConfigAssistant({
             trace: data.trace ?? null,
           };
           setMessages((prev) => [...prev, assistantMessage]);
+
+          structuredChangeSet = stageStructuredAdminChangeSet(
+            data.admin_change_set,
+            setApplyState
+          );
         }
 
-        if (hasConfigTool) {
+        if (
+          hasConfigTool &&
+          !structuredChangeSet &&
+          !sawStructuredChangeSetPayload
+        ) {
           const extracted = extractAdminAssistantChangeSetStrict(raw);
           if (extracted.ok)
             setApplyState({ state: 'review', changeSet: extracted.changeSet });
@@ -666,6 +736,7 @@ export function AdminConfigAssistant({
     [
       applyState,
       conversationSessionId,
+      focusPendingApplyPanel,
       hasConfigTool,
       isOnboarding,
       messages,
@@ -1238,7 +1309,10 @@ export function AdminConfigAssistant({
           )}
 
           {hasConfigTool && applyState.state === 'review' && applyPreview && (
-            <div className="border border-border rounded-2xl bg-surface-raised overflow-hidden">
+            <div
+              ref={pendingApplyPanelRef}
+              className="border border-border rounded-2xl bg-surface-raised overflow-hidden"
+            >
               <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-text truncate">
                   {applyPreview.summary
@@ -1257,6 +1331,7 @@ export function AdminConfigAssistant({
                     <EyeOff className="w-4 h-4" />
                   </button>
                   <button
+                    ref={pendingApplyButtonRef}
                     onClick={() => handleApply(applyState.changeSet)}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent text-accent-text hover:bg-accent-hover transition-colors text-sm font-medium"
                   >

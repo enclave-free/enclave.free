@@ -63,7 +63,7 @@ def load_config() -> dict:
         with open(CONFIG_PATH) as f:
             return json.load(f)
     return {
-        "backend_url": "http://localhost:8000",
+        "backend_url": "http://localhost:18000",
         "top_k": 8,
         "enable_web_search": False,
         "enable_auto_search_followup": False,
@@ -83,7 +83,7 @@ def load_sessions() -> dict:
 load_dotenv()
 CONFIG = load_config()
 SESSIONS = load_sessions()
-BACKEND_URL = os.getenv("BACKEND_URL", CONFIG.get("backend_url", "http://localhost:8000"))
+BACKEND_URL = os.getenv("BACKEND_URL", CONFIG.get("backend_url", "http://localhost:18000"))
 BENCHMARK_GRADING_API_KEY = os.getenv("BENCHMARK_GRADING_API_KEY")
 BENCHMARK_AUTH_TOKEN = os.getenv("BENCHMARK_AUTH_TOKEN")
 

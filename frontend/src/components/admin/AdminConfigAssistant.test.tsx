@@ -842,6 +842,127 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
+  it('routes bare do-it language to the pending panel and focuses Apply', async () => {
+    const user = userEvent.setup();
+    const changeSet = {
+      version: 1,
+      summary: 'Update instance theme',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+          admin_change_set: changeSet,
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Pending changes: Update instance theme')
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'do it'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText(
+        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+      )
+    ).toBeInTheDocument();
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/admin/settings',
+      expect.objectContaining({ method: 'PUT' })
+    );
+    const applyButton = screen.getByRole('button', { name: 'Apply' });
+    expect(applyButton).toHaveFocus();
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('does not fall back to prose JSON when structured proposal payload is invalid', async () => {
+    const user = userEvent.setup();
+    const fallbackChangeSet = {
+      version: 1,
+      summary: 'Fallback theme update',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { primary_color: '#1E3A8A' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-1',
+          delta: `Here is a fallback.\n\n\`\`\`json\n${JSON.stringify(fallbackChangeSet)}\n\`\`\``,
+        });
+        onEvent('done', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+          admin_change_set: {
+            version: 1,
+            requests: [
+              {
+                method: 'PUT',
+                path: '/admin/settings',
+                body: { made_up_setting: 'nope' },
+              },
+            ],
+          },
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Propose the theme update.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText(/Unsupported instance setting key/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Pending changes:/)).not.toBeInTheDocument();
+  });
+
   it('lets non-apply confirm questions continue to Sage while a sidebar change set is pending', async () => {
     const user = userEvent.setup();
     const changeSet = {
@@ -1387,23 +1508,19 @@ describe('AdminConfigAssistant', () => {
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 
-  it('injects onboarding scoped context and auto-advances after applying settings', async () => {
+  it('uses the onboarding guide and auto-advances after applying structured settings', async () => {
     const user = userEvent.setup();
-    const changeSet = [
-      '```json',
-      JSON.stringify({
-        version: 1,
-        summary: 'Set instance name',
-        requests: [
-          {
-            method: 'PUT',
-            path: '/admin/settings',
-            body: { instance_name: 'Acme Aid' },
-          },
-        ],
-      }),
-      '```',
-    ].join('\n');
+    const changeSet = {
+      version: 1,
+      summary: 'Set instance name',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { instance_name: 'Acme Aid' },
+        },
+      ],
+    };
 
     vi.mocked(sendLlmChatStreamWithUnifiedTools)
       .mockImplementationOnce(async ({ onEvent }) => {
@@ -1413,11 +1530,12 @@ describe('AdminConfigAssistant', () => {
         });
         onEvent('answer_delta', {
           message_id: 'onboarding-msg-1',
-          delta: changeSet,
+          delta: 'I prepared these changes for review. Use Apply to confirm.',
         });
         onEvent('done', {
           message_id: 'onboarding-msg-1',
           session_id: 'onboarding-session',
+          admin_change_set: changeSet,
         });
       })
       .mockImplementationOnce(async ({ onEvent }) => {

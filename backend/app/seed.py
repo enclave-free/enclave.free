@@ -221,7 +221,7 @@ def main():
 
         print("\n" + "=" * 60)
         print("Seeding complete!")
-        print("Test with: curl http://localhost:8000/test")
+        print("Test with: curl http://localhost:18000/test")
         print("=" * 60)
 
     except Exception as e:

@@ -34,9 +34,9 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertIn("model-driven Tool loop", tools)
         self.assertIn("selected Tool Sets", tools)
-        self.assertIn("not a model-callable Tool", tools)
-        self.assertIn("proposal output contract", adr)
-        self.assertNotIn("proposal Tool", adr)
+        self.assertIn("model-callable, non-mutating Tool", tools)
+        self.assertIn("propose_config_change_set", adr)
+        self.assertIn("non-mutating proposal Tool", adr)
         self.assertIn(
             "are removed from the active internal agent contract",
             normalized_internal_contract,

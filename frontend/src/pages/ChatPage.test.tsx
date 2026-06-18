@@ -1856,9 +1856,14 @@ describe('ChatPage', () => {
         });
         onEvent('answer_delta', {
           message_id: 'admin-msg',
-          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+          delta:
+            'I prepared these configuration changes for review. Use Approve changes to confirm.',
         });
-        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+        onEvent('done', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+          admin_change_set: changeSet,
+        });
       }
     );
 
@@ -2382,7 +2387,7 @@ describe('ChatPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps admin chat apply language from executing a pending change set', async () => {
+  it('routes plain do-it language to the pending admin chat approval card', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -2441,17 +2446,24 @@ describe('ChatPage', () => {
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Apply them'
+      'do it'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
       screen.getByRole('group', { name: 'Admin Change Confirmation' })
     ).toHaveTextContent('Update instance theme');
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/settings',
       expect.objectContaining({ method: 'PUT' })
     );
+    await waitFor(() => {
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+      expect(
+        screen.getByRole('button', { name: 'Approve changes' })
+      ).toHaveFocus();
+    });
   });
 
   it('keeps imperative apply requests from executing a pending admin chat change set', async () => {

@@ -302,7 +302,7 @@ Response:
 {
   "success": true,
   "columns": ["count"],
-  "rows": [{"count": 0}],
+  "rows": [{ "count": 0 }],
   "executionTimeMs": 1,
   "error": null
 }
@@ -369,15 +369,15 @@ Authorization behavior:
 
 Target private endpoints behind the Sage Tool contracts:
 
-| Endpoint | Sage Tool | Notes |
-| --- | --- | --- |
-| `POST /internal/agent/admin-config/instance-settings` | `read_instance_settings` | Instance branding, public behavior, visual identity, and other Instance Settings |
-| `POST /internal/agent/admin-config/deployment-settings` | `read_deployment_settings` | Deployment Settings with secret values masked by default |
+| Endpoint                                                 | Sage Tool                   | Notes                                                                                                                 |
+| -------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `POST /internal/agent/admin-config/instance-settings`    | `read_instance_settings`    | Instance branding, public behavior, visual identity, and other Instance Settings                                      |
+| `POST /internal/agent/admin-config/deployment-settings`  | `read_deployment_settings`  | Deployment Settings with secret values masked by default                                                              |
 | `POST /internal/agent/admin-config/deployment-readiness` | `read_deployment_readiness` | Desired/generated/running deployment readiness, stale runtime posture, restart-required status, and validation status |
-| `POST /internal/agent/admin-config/agent-settings` | `read_agent_settings` | Agent Settings, prompt sections, runtime parameters, defaults, and effective per-user-type values when requested |
-| `POST /internal/agent/admin-config/user-types` | `read_user_types` | User Types and Onboarding Questions |
-| `POST /internal/agent/admin-config/document-access` | `read_document_access` | Global and per-user-type Document Access/defaults |
-| `POST /internal/agent/admin-config/onboarding-status` | `read_onboarding_status` | Instance initiation and guided onboarding bootstrap status |
+| `POST /internal/agent/admin-config/agent-settings`       | `read_agent_settings`       | Agent Settings, prompt sections, runtime parameters, defaults, and effective per-user-type values when requested      |
+| `POST /internal/agent/admin-config/user-types`           | `read_user_types`           | User Types and Onboarding Questions                                                                                   |
+| `POST /internal/agent/admin-config/document-access`      | `read_document_access`      | Global and per-user-type Document Access/defaults                                                                     |
+| `POST /internal/agent/admin-config/onboarding-status`    | `read_onboarding_status`    | Instance initiation and guided onboarding bootstrap status                                                            |
 
 All seven endpoints use the same request body:
 
@@ -481,10 +481,25 @@ Deployment Setting secret values stay masked (`********` or equivalent). Secret
 metadata such as configured/unconfigured status may be returned. Raw secret
 values are never returned from the default Admin Config Tool endpoints.
 
-`propose_config_change_set` is a Sage/output contract, not a Python write
-endpoint. Sage may propose an Executable Change Set from Tool results, but the
+`propose_config_change_set` is a Sage-local, model-callable, non-mutating
+proposal Tool. It is not a Python write endpoint and it must not apply changes.
+Sage may propose an Executable Change Set from Tool results, but the
 Conversation UI Surface must validate it and require Change Confirmation before
 ordinary admin endpoints are called.
+
+The proposal Tool stages canonical Admin Config write shapes:
+
+- `PUT /admin/settings` with stored setting keys such as `header_tagline`,
+  `default_language`, `default_theme`, and `auto_approve_users`.
+- `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
+  "display_order"? }`.
+
+Sage may normalize only the known small drift at the proposal boundary:
+`/admin/user_types` to `/admin/user-types`, `tagline` to `header_tagline`, and
+supported language labels such as `English` to language codes such as `en`.
+After normalization, the staged `admin_change_set` must contain canonical paths
+and keys. Unknown setting keys or unsupported values are validation errors, not
+partial proposals.
 
 ### Removed Admin Context Endpoints
 

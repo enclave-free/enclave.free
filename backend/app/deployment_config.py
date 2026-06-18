@@ -598,7 +598,7 @@ ENV_CONFIG_MAP = {
     # Domain & URLs Settings
     "BASE_DOMAIN": {"category": "domains", "description": "Root domain name", "requires_restart": False, "default": "localhost"},
     "INSTANCE_URL": {"category": "domains", "description": "Full application URL with protocol", "requires_restart": True, "default": "http://localhost:5173"},
-    "API_BASE_URL": {"category": "domains", "description": "API subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:8000"},
+    "API_BASE_URL": {"category": "domains", "description": "API subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:18000"},
     "ADMIN_BASE_URL": {"category": "domains", "description": "Admin panel subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:5173/admin"},
     "EMAIL_DOMAIN": {"category": "domains", "description": "Domain for email addresses", "requires_restart": False, "default": "localhost"},
     "DKIM_SELECTOR": {"category": "domains", "description": "DKIM DNS record selector", "requires_restart": False, "default": "enclave"},
@@ -607,14 +607,14 @@ ENV_CONFIG_MAP = {
     "CORS_ORIGINS": {"category": "domains", "description": "Comma-separated allowed CORS origins", "requires_restart": True, "default": "http://localhost:5173"},
     "CDN_DOMAINS": {"category": "domains", "description": "Content delivery domains", "requires_restart": False},
     "CUSTOM_SEARXNG_URL": {"category": "domains", "description": "Private SearXNG instance URL", "requires_restart": True},
-    "WEBHOOK_BASE_URL": {"category": "domains", "description": "Webhook callback base URL", "requires_restart": False, "default": "http://localhost:8000"},
+    "WEBHOOK_BASE_URL": {"category": "domains", "description": "Webhook callback base URL", "requires_restart": False, "default": "http://localhost:18000"},
     # SSL & Security Settings
     "TRUSTED_PROXIES": {"category": "ssl", "description": "Trusted reverse proxies (cloudflare, aws, custom)", "requires_restart": True},
     "SSL_CERT_PATH": {"category": "ssl", "description": "SSL certificate file path", "requires_restart": True},
     "SSL_KEY_PATH": {"category": "ssl", "description": "SSL private key file path", "requires_restart": True, "is_secret": True},
     "FORCE_HTTPS": {"category": "ssl", "description": "Redirect HTTP to HTTPS", "requires_restart": True, "default": "false"},
     "HSTS_MAX_AGE": {"category": "ssl", "description": "HSTS max-age in seconds", "requires_restart": False, "default": "31536000"},
-    "MONITORING_URL": {"category": "general", "description": "Health monitoring endpoint URL", "requires_restart": False, "default": "http://localhost:8000/health"},
+    "MONITORING_URL": {"category": "general", "description": "Health monitoring endpoint URL", "requires_restart": False, "default": "http://localhost:18000/health"},
 }
 
 # Keys that should never be exposed or editable

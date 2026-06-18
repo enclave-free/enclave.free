@@ -1,5 +1,5 @@
 {
-  "backend_url": "http://localhost:8000",
+  "backend_url": "http://localhost:18000",
   "top_k": 8,
   "enable_web_search": true,
   "enable_auto_search_followup": true,

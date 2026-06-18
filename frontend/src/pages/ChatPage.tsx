@@ -7,6 +7,7 @@ import {
   useRef,
   type Dispatch,
   type FormEvent,
+  type Ref,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -70,6 +71,7 @@ import {
 } from '../utils/llmChat';
 import { Button, Callout, IconButton } from '../components/ui';
 import {
+  coerceAdminAssistantChangeSetPayload,
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   redactSecrets,
@@ -340,6 +342,26 @@ function stagePendingAdminChangeSet(
   return null;
 }
 
+function stageStructuredAdminChangeSet(
+  payload: unknown,
+  dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
+): AdminAssistantChangeSet | null {
+  if (payload === undefined || payload === null) return null;
+  const extracted = coerceAdminAssistantChangeSetPayload(payload);
+  if (extracted.ok) {
+    dispatchAdminApply({
+      type: 'changeSetReadyForReview',
+      changeSet: extracted.changeSet,
+    });
+    return extracted.changeSet;
+  }
+  dispatchAdminApply({
+    type: 'parseFailed',
+    message: extracted.error,
+  });
+  return null;
+}
+
 function prepareAssistantContentForDisplay(
   content: string,
   hasConfigTool: boolean
@@ -354,6 +376,8 @@ function AdminChangeApprovalCard({
   message,
   onApprove,
   onReject,
+  cardRef,
+  approveButtonRef,
 }: {
   preview: ReturnType<typeof buildAdminChangePreview>;
   state:
@@ -366,6 +390,8 @@ function AdminChangeApprovalCard({
   message?: string;
   onApprove: () => void;
   onReject: () => void;
+  cardRef?: Ref<HTMLDivElement>;
+  approveButtonRef?: Ref<HTMLButtonElement>;
 }) {
   const { t } = useTranslation();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -378,6 +404,7 @@ function AdminChangeApprovalCard({
 
   return (
     <div
+      ref={cardRef}
       role="group"
       aria-label="Admin Change Confirmation"
       className="mb-4 ml-10 max-w-[min(100%,48rem)] overflow-hidden rounded-xl border border-warning/25 bg-surface-raised shadow-sm"
@@ -460,6 +487,7 @@ function AdminChangeApprovalCard({
             {t('admin.configAssistant.reject', 'Reject')}
           </Button>
           <Button
+            ref={approveButtonRef}
             onClick={onApprove}
             variant="primary"
             size="sm"
@@ -523,6 +551,8 @@ export function ChatPage() {
       changeSet: AdminAssistantChangeSet;
     }>
   >([]);
+  const adminApprovalCardRef = useRef<HTMLDivElement | null>(null);
+  const adminApprovalApproveButtonRef = useRef<HTMLButtonElement | null>(null);
   const [documents, setDocuments] = useState<DocumentSource[]>([]);
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false);
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([]);
@@ -1228,6 +1258,19 @@ export function ChatPage() {
     [adminApplyState, adminApprovalTurnId]
   );
 
+  const focusPendingAdminApproval = useCallback(() => {
+    const focusApproval = () => {
+      adminApprovalCardRef.current?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+      adminApprovalApproveButtonRef.current?.focus();
+    };
+
+    focusApproval();
+    window.setTimeout(focusApproval, 0);
+  }, []);
+
   const handleSend = async (content: string) => {
     const hasConfigTool = configToolEnabled;
     const hasPendingChangeSet = adminApplyState.state === 'review';
@@ -1242,6 +1285,7 @@ export function ChatPage() {
     });
 
     if (applyIntent.kind === 'needs-panel') {
+      focusPendingAdminApproval();
       dispatchConversation({
         type: 'assistantTurnAppended',
         id: generateMessageId(),
@@ -1326,6 +1370,22 @@ export function ChatPage() {
         let streamContent = '';
         let streamSessionId: string | null = null;
         let streamReportedError = false;
+        let sawStructuredChangeSetPayload = false;
+        let structuredChangeSet: AdminAssistantChangeSet | null = null;
+        const stageStructuredForCurrentTurn = (payload: unknown) => {
+          if (payload !== undefined && payload !== null) {
+            sawStructuredChangeSetPayload = true;
+          }
+          if (structuredChangeSet) return;
+          const staged = stageStructuredAdminChangeSet(
+            payload,
+            dispatchAdminApply
+          );
+          if (staged) {
+            structuredChangeSet = staged;
+            stageAdminChangeSetForTurn(streamMessageId);
+          }
+        };
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
@@ -1369,6 +1429,7 @@ export function ChatPage() {
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
+                stageStructuredForCurrentTurn(data.admin_change_set);
                 dispatchStreamEvent(event, data, streamMessageId);
               } else if (event === 'error') {
                 streamReportedError = true;
@@ -1380,6 +1441,7 @@ export function ChatPage() {
                   )
                 );
               } else if (streamMessageId) {
+                stageStructuredForCurrentTurn(data.admin_change_set);
                 dispatchStreamEvent(event, data, streamMessageId);
               }
             },
@@ -1394,7 +1456,7 @@ export function ChatPage() {
               type: 'assistantTurnFinished',
               sessionId: streamSessionId,
             });
-          if (hasConfigTool) {
+          if (hasConfigTool && !structuredChangeSet) {
             const extracted =
               extractAdminAssistantChangeSetStrict(streamContent);
             if (extracted.ok) {
@@ -1409,7 +1471,7 @@ export function ChatPage() {
                 message: extracted.error,
               });
             }
-          } else {
+          } else if (!hasConfigTool && !sawStructuredChangeSetPayload) {
             dispatchAdminApply({ type: 'dismissed' });
           }
           streamed = true;
@@ -1510,22 +1572,35 @@ export function ChatPage() {
         });
       }
 
-      if (hasConfigTool) {
-        const raw = String(data.message || '');
-        const extracted = extractAdminAssistantChangeSetStrict(raw);
-        if (extracted.ok) {
+      const hasStructuredChangeSetPayload =
+        data.admin_change_set !== undefined && data.admin_change_set !== null;
+      if (hasConfigTool || hasStructuredChangeSetPayload) {
+        const structuredChangeSet = stageStructuredAdminChangeSet(
+          data.admin_change_set,
+          dispatchAdminApply
+        );
+        if (structuredChangeSet) {
           stageAdminChangeSetForTurn(
             typeof data.message_id === 'string' ? data.message_id : null
           );
-          dispatchAdminApply({
-            type: 'changeSetReadyForReview',
-            changeSet: extracted.changeSet,
-          });
-        } else if (raw.includes('"requests"')) {
-          dispatchAdminApply({
-            type: 'parseFailed',
-            message: extracted.error,
-          });
+        }
+        const raw = String(data.message || '');
+        if (hasConfigTool && !structuredChangeSet) {
+          const extracted = extractAdminAssistantChangeSetStrict(raw);
+          if (extracted.ok) {
+            stageAdminChangeSetForTurn(
+              typeof data.message_id === 'string' ? data.message_id : null
+            );
+            dispatchAdminApply({
+              type: 'changeSetReadyForReview',
+              changeSet: extracted.changeSet,
+            });
+          } else if (raw.includes('"requests"')) {
+            dispatchAdminApply({
+              type: 'parseFailed',
+              message: extracted.error,
+            });
+          }
         }
       } else {
         dispatchAdminApply({ type: 'dismissed' });
@@ -2361,13 +2436,7 @@ export function ChatPage() {
       );
     }
 
-    if (
-      !isAdmin ||
-      !selectedTools.includes(CONFIG_TOOL_ID) ||
-      !changeSet ||
-      !cardTurnId ||
-      !isApprovalVisible
-    ) {
+    if (!isAdmin || !changeSet || !cardTurnId || !isApprovalVisible) {
       return Object.keys(accessories).length > 0 ? accessories : undefined;
     }
 
@@ -2384,6 +2453,8 @@ export function ChatPage() {
         }
         onApprove={() => handleAdminApply(changeSet)}
         onReject={() => dispatchAdminApply({ type: 'rejected' })}
+        cardRef={adminApprovalCardRef}
+        approveButtonRef={adminApprovalApproveButtonRef}
       />
     );
     return accessories;
@@ -2395,7 +2466,6 @@ export function ChatPage() {
     handleAdminApply,
     isAdmin,
     lastAssistantTurnId,
-    selectedTools,
     supersededAdminApprovals,
   ]);
   const threadNotices = (
@@ -2464,19 +2534,17 @@ export function ChatPage() {
             {reducedContextNotice}
           </div>
         )}
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        adminApplyState.state === 'error' && (
-          <Callout
-            label={t(
-              'admin.configAssistant.applyErrorLabel',
-              'Config apply error'
-            )}
-            tone="error"
-          >
-            {adminApplyState.message}
-          </Callout>
-        )}
+      {isAdmin && adminApplyState.state === 'error' && (
+        <Callout
+          label={t(
+            'admin.configAssistant.applyErrorLabel',
+            'Config apply error'
+          )}
+          tone="error"
+        >
+          {adminApplyState.message}
+        </Callout>
+      )}
     </div>
   );
 
