@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: enclave-core-backend
     expose:
-      - "8000"
+      - "18000"
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
@@ -13,12 +13,12 @@ services:
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-tinfoil}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
       - EMBEDDING_API_URL=${EMBEDDING_API_URL:-http://tinfoil-proxy:8089/v1}
-      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${TINFOIL_API_KEY:-}}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${LLM_API_KEY:-}}
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
       - TRANSFORMERS_OFFLINE=${TRANSFORMERS_OFFLINE:-0}
       - LLM_PROVIDER=${LLM_PROVIDER:-sage}
       - LLM_API_URL=${LLM_API_URL:-http://tinfoil-proxy:8089/v1}
-      - LLM_API_KEY=${TINFOIL_API_KEY:-}
+      - LLM_API_KEY=${LLM_API_KEY:?LLM_API_KEY is required}
       - LLM_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - SAGE_WEB_URL=http://sage:3000
       - SEARXNG_URL=${SEARXNG_URL:-http://searxng:8080}
@@ -44,7 +44,7 @@ services:
       - RATE_LIMIT_BACKEND=${RATE_LIMIT_BACKEND:-valkey}
       - RATE_LIMIT_VALKEY_URL=${RATE_LIMIT_VALKEY_URL:-redis://valkey:6379/0}
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:18000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,12 +82,12 @@ services:
       - DATABASE_URL=postgres://sage:sage@postgres:5432/sage
       - ENCLAVE_ENV=${ENCLAVE_ENV:-development}
       - TINFOIL_API_URL=${TINFOIL_API_URL:-http://tinfoil-proxy:8089/v1}
-      - TINFOIL_API_KEY=${TINFOIL_API_KEY}
+      - TINFOIL_API_KEY=${LLM_API_KEY:?LLM_API_KEY is required}
       - TINFOIL_MODEL=${TINFOIL_MODEL:-kimi-k2-6}
       - TINFOIL_EMBEDDING_MODEL=${TINFOIL_EMBEDDING_MODEL:-nomic-embed-text}
       - SAGE_WORKSPACE=/workspace
       - ENCLAVE_WEB_PORT=3000
-      - ENCLAVE_BACKEND_URL=http://core-backend:8000
+      - ENCLAVE_BACKEND_URL=http://core-backend:18000
       - INTERNAL_AGENT_TOKEN=${INTERNAL_AGENT_TOKEN:-dev-internal-agent-token}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
@@ -121,7 +121,7 @@ services:
     image: nginx:1.27-alpine
     container_name: enclave-api-gateway
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:18000:18000"
     depends_on:
       core-backend:
         condition: service_healthy
@@ -130,7 +130,7 @@ services:
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8000/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:18000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

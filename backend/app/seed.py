@@ -164,7 +164,7 @@ EXAMPLE_RESOURCES = [
 ]
 
 
-def seed_resource_directory():
+def seed_resource_directory() -> None:
     """Seed example resources (region map + core help types are seeded by init_schema)."""
     for resource in EXAMPLE_RESOURCES:
         if database.get_resource(resource["resource_id"]) is None:
@@ -176,7 +176,7 @@ def _env_flag_enabled(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def seed_sqlite(seed_demo_resources: bool | None = None):
+def seed_sqlite(seed_demo_resources: bool | None = None) -> None:
     """Initialize SQLite database and seed default settings"""
     print("\nInitializing SQLite database...")
     database.init_schema()
@@ -221,7 +221,7 @@ def main():
 
         print("\n" + "=" * 60)
         print("Seeding complete!")
-        print("Test with: curl http://localhost:8000/test")
+        print("Test with: curl http://localhost:18000/test")
         print("=" * 60)
 
     except Exception as e:

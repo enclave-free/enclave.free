@@ -12,7 +12,7 @@ const changeSet: AdminAssistantChangeSet = {
   requests: [
     {
       method: 'PUT',
-      path: '/admin/deployment/config/TINFOIL_API_KEY',
+      path: '/admin/deployment/config/LLM_API_KEY',
       body: { value: 'secret-value' },
     },
   ],
@@ -160,7 +160,7 @@ describe('Admin Change Confirmation State', () => {
         {
           idx: 1,
           method: 'PUT',
-          path: '/admin/deployment/config/TINFOIL_API_KEY',
+          path: '/admin/deployment/config/LLM_API_KEY',
           body: { value: '[REDACTED]' },
         },
       ],
@@ -169,7 +169,7 @@ describe('Admin Change Confirmation State', () => {
     expect(
       buildAdminChangePreview(changeSet, {
         deploymentSecretKeysLoaded: true,
-        deploymentSecretKeys: new Set(['TINFOIL_API_KEY']),
+        deploymentSecretKeys: new Set(['LLM_API_KEY']),
       }).requests[0].body
     ).toEqual({ value: '[REDACTED]' });
 

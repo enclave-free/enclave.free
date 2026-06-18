@@ -5,6 +5,7 @@ const runtimeFetch = globalThis.fetch;
 const runtimeHeaders = globalThis.Headers;
 const runtimeRequest = globalThis.Request;
 const runtimeResponse = globalThis.Response;
+const RuntimeTextEncoder = globalThis.TextEncoder;
 const jsdomWindow = globalThis.window as
   | (Window & typeof globalThis)
   | undefined;
@@ -20,6 +21,38 @@ if (!globalThis.ResizeObserver) {
     configurable: true,
     writable: true,
     value: TestResizeObserver,
+  });
+}
+
+if (RuntimeTextEncoder) {
+  class TestTextEncoder {
+    readonly encoding = 'utf-8';
+
+    private readonly encoder = new RuntimeTextEncoder();
+
+    encode(input = ''): Uint8Array {
+      return new Uint8Array(this.encoder.encode(input));
+    }
+
+    encodeInto(
+      input: string,
+      destination: Uint8Array
+    ): { read: number; written: number } {
+      if (typeof this.encoder.encodeInto === 'function') {
+        return this.encoder.encodeInto(input, destination);
+      }
+
+      const bytes = this.encode(input);
+      const writable = bytes.subarray(0, destination.byteLength);
+      destination.set(writable);
+      return { read: input.length, written: writable.byteLength };
+    }
+  }
+
+  Object.defineProperty(globalThis, 'TextEncoder', {
+    configurable: true,
+    writable: true,
+    value: TestTextEncoder,
   });
 }
 

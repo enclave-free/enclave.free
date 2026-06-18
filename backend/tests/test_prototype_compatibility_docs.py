@@ -9,30 +9,49 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
     def test_tool_docs_describe_sage_gateway_routes_not_python_fallbacks(self) -> None:
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
 
-        self.assertIn("Gateway routes public Agent Runtime requests to Sage", tools)
-        self.assertIn("Python no longer owns or exposes these public Agent Runtime routes", tools)
+        self.assertIn("Python no longer owns or exposes public Agent Runtime routes", tools)
+        self.assertIn(
+            "public callers use the Gateway path so nginx dispatches requests to Sage",
+            tools,
+        )
         self.assertIn("routes are absent from the Enclave Control Plane", tools)
         self.assertNotIn("sage_route_required", tools)
         self.assertNotIn("use `/llm/chat` for assistant-style turns", tools)
         self.assertNotIn("Current `/query` responses include", tools)
 
-    def test_tool_docs_name_conversation_tool_turn_and_context_budgeting(self) -> None:
+    def test_tool_docs_name_model_driven_tool_loop_and_context_budgeting(self) -> None:
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(
             encoding="utf-8"
         )
+        adr = (REPO_ROOT / "docs/adr/0023-unified-model-driven-tool-loop.md").read_text(
+            encoding="utf-8"
+        )
+        internal_contract = (REPO_ROOT / "docs/internal-agent-contract.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_internal_contract = " ".join(internal_contract.split())
 
-        self.assertIn("Conversation Tool Turn", tools)
+        self.assertIn("model-driven Tool loop", tools)
+        self.assertIn("selected Tool Sets", tools)
+        self.assertIn("model-callable, non-mutating Tool", tools)
+        self.assertIn("propose_config_change_set", adr)
+        self.assertIn("non-mutating proposal Tool", adr)
         self.assertIn(
-            "Sage-owned module for Tool preparation and context budgeting",
+            "are removed from the active internal agent contract",
+            normalized_internal_contract,
+        )
+        self.assertNotIn("must be removed by the unified Tool loop hard cut", internal_contract)
+        self.assertIn(
+            "max Tool-loop steps, timeouts, and output budgets",
             tools,
         )
         self.assertIn(
-            "Python exposes Enclave Control Plane facts/actions and admin-visible Tool catalog metadata through private contracts",
+            "Python serves authorized Enclave Control Plane facts/actions through private `/internal/agent/*` contracts",
             tools,
         )
-        self.assertIn("Conversation Tool Turn", architecture)
-        self.assertIn("prompt/context budget", architecture)
+        self.assertIn("Model-Driven Tool Loop", architecture)
+        self.assertIn("Tool output budgets", architecture)
 
     def test_current_architecture_names_absent_python_handlers_not_legacy_runtime(self) -> None:
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
@@ -73,15 +92,15 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
             ),
         )
 
-    def test_current_architecture_names_chunk_retrieval_for_sage_context(self) -> None:
+    def test_current_architecture_names_knowledge_search_tool_retrieval(self) -> None:
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(encoding="utf-8")
         planned = (REPO_ROOT / "ARCHITECTURE_PLANNED.md").read_text(encoding="utf-8")
         integration_tests = (REPO_ROOT / "docs/integration-tests.md").read_text(encoding="utf-8")
 
-        self.assertIn("chunk Retrieval for Sage context", architecture)
-        self.assertIn("The current Document Library Retrieval architecture is intentionally a half-RAG, half-agent path", architecture)
+        self.assertIn("Document Library Retrieval is a Sage Tool capability", architecture)
+        self.assertIn("Document Library Retrieval is a Sage Tool capability over Enclave-owned Documents", architecture)
         self.assertIn("The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration", architecture)
-        self.assertIn("Sage owns Conversation behavior and consumes retrieved chunks as Agent Runtime context", architecture)
+        self.assertIn("Sage owns Conversation behavior and the model-driven Tool loop", architecture)
         self.assertIn("Graph-first RAG remains deferred", architecture)
         self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
         self.assertIn("2B", integration_tests)
@@ -92,7 +111,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         cutover = (REPO_ROOT / "docs/prototype-sage-cutover.md").read_text(encoding="utf-8")
 
         self.assertIn("non-streaming companion path", root_readme)
-        self.assertIn("non-streaming companion path", cutover)
+        self.assertIn("streaming and non-streaming Conversation transports", cutover)
         self.assertNotIn("non-streaming compatibility path", root_readme)
         self.assertNotIn("non-streaming compatibility path", cutover)
 
@@ -101,24 +120,26 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertIn("Gateway routes this request to Sage", assistant)
         self.assertIn("Sage-owned session defaults", assistant)
-        self.assertIn("Config context is default-on for admin configuration conversations", assistant)
-        self.assertIn("automatically uses Document Library Retrieval", assistant)
+        self.assertIn("`admin-config` is default-on for admin configuration conversations", assistant)
+        self.assertIn("Sage should call Knowledge Search when enabled and relevant", assistant)
         self.assertIn("Secrets are not included by default", assistant)
         self.assertIn("Python does not expose public `/llm/chat` or `/session-defaults` handlers", assistant)
         self.assertNotIn("Transport: uses `POST /llm/chat`", assistant)
         self.assertNotIn("Reads `/session-defaults`", assistant)
+        self.assertIn("no admin configuration `tool_context` prefetch", assistant)
 
     def test_admin_assistant_docs_describe_visual_identity_scope(self) -> None:
         assistant = (REPO_ROOT / "docs/admin-config-assistant.md").read_text(encoding="utf-8")
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
 
-        self.assertIn("ADMIN-VISIBLE TOOL CAPABILITIES", assistant)
+        self.assertIn("Admin Config Tool Set", assistant)
         self.assertIn("Instance visual identity settings", assistant)
         self.assertIn("theme requests mean Instance visual identity settings", assistant)
         self.assertIn("not frontend CSS token or source-code theme edits", assistant)
         self.assertIn("partial `PUT /admin/settings`", assistant)
         self.assertIn("Admin Change Confirmation", assistant)
-        self.assertIn("Instance visual identity context", tools)
+        self.assertIn("Instance visual identity settings", tools)
+        self.assertNotIn("propose_config_change_set` is one of the initial Tools", assistant)
 
     def test_locale_provider_copy_does_not_teach_maple_aliases(self) -> None:
         locale_dir = REPO_ROOT / "frontend/src/i18n/locales"
@@ -158,7 +179,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         cutover = (REPO_ROOT / "docs/prototype-sage-cutover.md").read_text(encoding="utf-8")
 
         self.assertIn("Python no longer exposes public Agent Runtime handlers", cutover)
-        self.assertIn("Obsolete internal compatibility endpoints are absent from Python", cutover)
+        self.assertIn("Obsolete internal compatibility endpoints are not part of the accepted contract", cutover)
         self.assertNotIn("legacy Python `/llm/chat` and `/query` code still exists", cutover)
         self.assertNotIn("compatibility internal endpoints", cutover)
 
@@ -391,9 +412,9 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertIn("Full End-To-End Smoke Gate", checklist)
         self.assertIn("User Conversation browser flow", normalized)
-        self.assertIn("message sending, streaming, activity steps, document scope, reachout, export, and fallback/error states", normalized)
+        self.assertIn("message sending, streaming, activity steps, Knowledge Search controls, reachout, export, and fallback/error states", normalized)
         self.assertIn("Admin Conversation browser flow", normalized)
-        self.assertIn("selected tools, activity steps, Change Confirmation, secret redaction, final trace rendering, and fallback/error states", normalized)
+        self.assertIn("selected Tool Sets, activity steps, Change Confirmation, secret redaction, final trace rendering, and fallback/error states", normalized)
         self.assertIn("desktop and mobile layout checks", normalized)
         self.assertIn("human reviewer confirms the activity timeline is inspectable enough for the prototype", normalized)
         self.assertIn("file separate follow-up issues", normalized)

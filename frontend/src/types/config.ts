@@ -2,250 +2,252 @@
  * TypeScript types for Admin Configuration System
  */
 
-import type { TFunction } from 'i18next'
+import type { TFunction } from 'i18next';
 
-export const DEFAULT_TINFOIL_MODEL = 'kimi-k2-6'
-export const TINFOIL_SIGNUP_URL = 'https://tinfoil.sh'
+export const DEFAULT_TINFOIL_MODEL = 'kimi-k2-6';
+export const TINFOIL_SIGNUP_URL = 'https://tinfoil.sh';
 
 // --- Agent Settings Types ---
 
 export interface AIConfigItem {
-  key: string
-  value: string
-  value_type: 'string' | 'number' | 'boolean' | 'json'
-  category: 'prompt_section' | 'parameter' | 'default'
-  description?: string
-  updated_at?: string
+  key: string;
+  value: string;
+  value_type: 'string' | 'number' | 'boolean' | 'json';
+  category: 'prompt_section' | 'parameter' | 'default';
+  description?: string;
+  updated_at?: string;
 }
 
 export interface AIConfigResponse {
-  prompt_sections: AIConfigItem[]
-  parameters: AIConfigItem[]
-  defaults: AIConfigItem[]
+  prompt_sections: AIConfigItem[];
+  parameters: AIConfigItem[];
+  defaults: AIConfigItem[];
 }
 
 // Type that allows config items with optional inheritance metadata
 // Used when config may come from user-type endpoints that include is_override
-export type AIConfigItemWithOptionalInheritance = AIConfigItem | AIConfigWithInheritance
+export type AIConfigItemWithOptionalInheritance =
+  | AIConfigItem
+  | AIConfigWithInheritance;
 
 export interface AIConfigResponseWithInheritance {
-  prompt_sections: AIConfigItemWithOptionalInheritance[]
-  parameters: AIConfigItemWithOptionalInheritance[]
-  defaults: AIConfigItemWithOptionalInheritance[]
+  prompt_sections: AIConfigItemWithOptionalInheritance[];
+  parameters: AIConfigItemWithOptionalInheritance[];
+  defaults: AIConfigItemWithOptionalInheritance[];
 }
 
 export interface AIConfigUpdate {
-  value: string
+  value: string;
 }
 
 // --- Agent Settings User-Type Override Types ---
 
 export interface AIConfigWithInheritance {
-  key: string
-  value: string
-  value_type: 'string' | 'number' | 'boolean' | 'json'
-  category: 'prompt_section' | 'parameter' | 'default'
-  description?: string
-  updated_at?: string
-  is_override: boolean
-  override_user_type_id?: number
+  key: string;
+  value: string;
+  value_type: 'string' | 'number' | 'boolean' | 'json';
+  category: 'prompt_section' | 'parameter' | 'default';
+  description?: string;
+  updated_at?: string;
+  is_override: boolean;
+  override_user_type_id?: number;
 }
 
 export interface AIConfigOverrideItem {
-  key: string
-  value: string
-  user_type_id: number
-  updated_at?: string
+  key: string;
+  value: string;
+  user_type_id: number;
+  updated_at?: string;
 }
 
 export interface AIConfigUserTypeResponse {
-  user_type_id: number
-  user_type_name?: string
-  prompt_sections: AIConfigWithInheritance[]
-  parameters: AIConfigWithInheritance[]
-  defaults: AIConfigWithInheritance[]
+  user_type_id: number;
+  user_type_name?: string;
+  prompt_sections: AIConfigWithInheritance[];
+  parameters: AIConfigWithInheritance[];
+  defaults: AIConfigWithInheritance[];
 }
 
 export interface AIConfigOverrideUpdate {
-  value: string
+  value: string;
 }
 
 export interface PromptPreviewRequest {
-  sample_question?: string
-  sample_facts?: Record<string, string>
+  sample_question?: string;
+  sample_facts?: Record<string, string>;
 }
 
 export interface PromptPreviewResponse {
-  assembled_prompt: string
-  sections_used: string[]
+  assembled_prompt: string;
+  sections_used: string[];
 }
 
 // --- Document Defaults Types ---
 
 export interface DocumentDefaultItem {
-  job_id: string
-  filename?: string
-  status?: string
-  total_chunks?: number
-  is_available: boolean
-  is_default_active: boolean
-  display_order: number
-  updated_at?: string
+  job_id: string;
+  filename?: string;
+  status?: string;
+  total_chunks?: number;
+  is_available: boolean;
+  is_default_active: boolean;
+  display_order: number;
+  updated_at?: string;
 }
 
 export interface DocumentDefaultsResponse {
-  documents: DocumentDefaultItem[]
+  documents: DocumentDefaultItem[];
 }
 
 export interface DocumentDefaultUpdate {
-  is_available?: boolean
-  is_default_active?: boolean
-  display_order?: number
+  is_available?: boolean;
+  is_default_active?: boolean;
+  display_order?: number;
 }
 
 export interface DocumentDefaultsBatchUpdate {
   updates: Array<{
-    job_id: string
-    is_available?: boolean
-    is_default_active?: boolean
-    display_order?: number
-  }>
+    job_id: string;
+    is_available?: boolean;
+    is_default_active?: boolean;
+    display_order?: number;
+  }>;
 }
 
 // --- Document Defaults User-Type Override Types ---
 
 export interface DocumentDefaultWithInheritance {
-  job_id: string
-  filename?: string
-  status?: string
-  total_chunks?: number
-  is_available: boolean
-  is_default_active: boolean
-  display_order: number
-  updated_at?: string
-  is_override: boolean
-  override_user_type_id?: number
-  override_updated_at?: string
+  job_id: string;
+  filename?: string;
+  status?: string;
+  total_chunks?: number;
+  is_available: boolean;
+  is_default_active: boolean;
+  display_order: number;
+  updated_at?: string;
+  is_override: boolean;
+  override_user_type_id?: number;
+  override_updated_at?: string;
 }
 
 export interface DocumentDefaultsUserTypeResponse {
-  user_type_id: number
-  user_type_name?: string
-  documents: DocumentDefaultWithInheritance[]
+  user_type_id: number;
+  user_type_name?: string;
+  documents: DocumentDefaultWithInheritance[];
 }
 
 export interface DocumentDefaultOverrideUpdate {
-  is_available?: boolean
-  is_default_active?: boolean
+  is_available?: boolean;
+  is_default_active?: boolean;
 }
 
 // --- Deployment Configuration Types ---
 
 export interface DeploymentConfigItem {
-  key: string
-  value?: string
-  is_secret: boolean
-  requires_restart: boolean
-  category: string
-  description?: string
-  updated_at?: string
+  key: string;
+  value?: string;
+  is_secret: boolean;
+  requires_restart: boolean;
+  category: string;
+  description?: string;
+  updated_at?: string;
 }
 
 export interface DeploymentConfigResponse {
-  llm: DeploymentConfigItem[]
-  embedding: DeploymentConfigItem[]
-  email: DeploymentConfigItem[]
-  storage: DeploymentConfigItem[]
-  security: DeploymentConfigItem[]
-  search: DeploymentConfigItem[]
-  domains: DeploymentConfigItem[]
-  ssl: DeploymentConfigItem[]
-  general: DeploymentConfigItem[]
+  llm: DeploymentConfigItem[];
+  embedding: DeploymentConfigItem[];
+  email: DeploymentConfigItem[];
+  storage: DeploymentConfigItem[];
+  security: DeploymentConfigItem[];
+  search: DeploymentConfigItem[];
+  domains: DeploymentConfigItem[];
+  ssl: DeploymentConfigItem[];
+  general: DeploymentConfigItem[];
 }
 
 export interface DeploymentConfigUpdate {
-  value: string
+  value: string;
 }
 
 export interface ServiceHealthItem {
-  name: string
-  status: 'healthy' | 'unhealthy' | 'unknown'
-  response_time_ms?: number
-  last_checked?: string
-  error?: string
+  name: string;
+  status: 'healthy' | 'unhealthy' | 'unknown';
+  response_time_ms?: number;
+  last_checked?: string;
+  error?: string;
 }
 
 export interface ServiceHealthResponse {
-  services: ServiceHealthItem[]
-  restart_required: boolean
-  changed_keys_requiring_restart: string[]
+  services: ServiceHealthItem[];
+  restart_required: boolean;
+  changed_keys_requiring_restart: string[];
   runtime_env?: {
     sage?: {
       desired?: {
-        status: string
-        configured_keys: number
-        total_keys: number
-        fingerprint?: string
-      }
+        status: string;
+        configured_keys: number;
+        total_keys: number;
+        fingerprint?: string;
+      };
       generated?: {
-        status: string
-        latest_export_at?: string | null
-        latest_source_change_at?: string | null
-      }
+        status: string;
+        latest_export_at?: string | null;
+        latest_source_change_at?: string | null;
+      };
       running?: {
-        status: string
-        summary: string
-        changed_keys_requiring_restart?: string[]
-      }
-    }
+        status: string;
+        summary: string;
+        changed_keys_requiring_restart?: string[];
+      };
+    };
     core_backend?: {
       desired?: {
-        status: string
-        configured_keys: number
-        total_keys: number
-      }
+        status: string;
+        configured_keys: number;
+        total_keys: number;
+      };
       generated?: {
-        status: string
-        latest_export_at?: string | null
-        latest_source_change_at?: string | null
-      }
+        status: string;
+        latest_export_at?: string | null;
+        latest_source_change_at?: string | null;
+      };
       running?: {
-        status: string
-        summary: string
-        fingerprint?: string | null
-      }
-    }
-  }
+        status: string;
+        summary: string;
+        fingerprint?: string | null;
+      };
+    };
+  };
 }
 
 export interface DeploymentValidationResponse {
-  valid: boolean
-  errors: string[]
-  warnings: string[]
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
-export type DeploymentReadinessSeverity = 'blocker' | 'warning' | 'ready'
+export type DeploymentReadinessSeverity = 'blocker' | 'warning' | 'ready';
 
 export interface DeploymentReadinessItem {
-  key: string
-  label: string
-  source: string
-  severity: DeploymentReadinessSeverity
-  status: string
-  summary: string
-  next_action: string
-  conversation_blocking: boolean
+  key: string;
+  label: string;
+  source: string;
+  severity: DeploymentReadinessSeverity;
+  status: string;
+  summary: string;
+  next_action: string;
+  conversation_blocking: boolean;
 }
 
 export interface DeploymentReadinessResponse {
-  status: 'blocked' | 'warnings' | 'ready' | string
+  status: 'blocked' | 'warnings' | 'ready' | string;
   summary: {
-    blockers: number
-    warnings: number
-    ready: number
-    total: number
-  }
-  items: DeploymentReadinessItem[]
+    blockers: number;
+    warnings: number;
+    ready: number;
+    total: number;
+  };
+  items: DeploymentReadinessItem[];
 }
 
 // --- Data Lifecycle Types ---
@@ -259,447 +261,593 @@ export type LifecycleStatusValue =
   | 'mixed'
   | 'plaintext_by_operator_choice'
   | 'not_configured'
-  | 'configured'
+  | 'configured';
 
-export type ArtifactEncryptionPosture = 'required' | 'disabled'
+export type ArtifactEncryptionPosture = 'required' | 'disabled';
 
 export interface LifecyclePosture {
-  status: LifecycleStatusValue
-  summary: string
+  status: LifecycleStatusValue;
+  summary: string;
 }
 
 export interface LifecycleScope {
-  key: string
-  label: string
-  summary: string
-  excludes: string
+  key: string;
+  label: string;
+  summary: string;
+  excludes: string;
 }
 
 export interface ContentEncryptionStatus {
-  status: 'configured' | 'not_configured'
-  summary: string
+  status: 'configured' | 'not_configured';
+  summary: string;
 }
 
 export interface ArtifactEncryptionStatus extends LifecyclePosture {
-  posture: ArtifactEncryptionPosture
+  posture: ArtifactEncryptionPosture;
 }
 
 export interface RetentionSchedulerStatus {
-  status: string
-  summary: string
+  status: string;
+  summary: string;
   observation?: {
-    status: 'disabled' | 'never_observed' | 'healthy' | 'stale' | 'failing'
-    enabled_classes: string[]
+    status: 'disabled' | 'never_observed' | 'healthy' | 'stale' | 'failing';
+    enabled_classes: string[];
     last_run: null | {
-      id: number
-      status: string
-      trigger: 'manual' | 'machine'
-      actor: string
-      finished_at: string
-    }
-    summary: string
-  }
+      id: number;
+      status: string;
+      trigger: 'manual' | 'machine';
+      actor: string;
+      finished_at: string;
+    };
+    summary: string;
+  };
 }
 
 export interface LifecycleDataClass {
-  key: string
-  label: string
-  owner: string
-  storage_targets: string[]
-  deletion: LifecyclePosture
-  retention: LifecyclePosture
-  audit: LifecyclePosture
-  confidentiality?: LifecyclePosture
-  retention_policy?: RetentionPolicy
-  notes: string[]
+  key: string;
+  label: string;
+  owner: string;
+  storage_targets: string[];
+  deletion: LifecyclePosture;
+  retention: LifecyclePosture;
+  audit: LifecyclePosture;
+  confidentiality?: LifecyclePosture;
+  retention_policy?: RetentionPolicy;
+  notes: string[];
 }
 
 export interface RetentionPolicy {
-  lifecycle_data_class: string
-  enabled: boolean
-  retention_window_days: number
-  scheduled_enforcement_enabled: boolean
+  lifecycle_data_class: string;
+  enabled: boolean;
+  retention_window_days: number;
+  scheduled_enforcement_enabled: boolean;
 }
 
 export interface UnsupportedDeploymentSurface {
-  key: string
-  label: string
-  category: string
-  summary: string
-  status: 'unsupported'
-  acknowledged: boolean
+  key: string;
+  label: string;
+  category: string;
+  summary: string;
+  status: 'unsupported';
+  acknowledged: boolean;
 }
 
 export interface UnsupportedDeploymentSurfaceCategory {
-  category: string
-  label: string
-  status: 'unsupported'
-  guidance: string
-  acknowledged: boolean
-  acknowledged_by?: string | null
-  acknowledged_at?: string | null
-  posture_version?: string | null
-  surfaces: UnsupportedDeploymentSurface[]
+  category: string;
+  label: string;
+  status: 'unsupported';
+  guidance: string;
+  acknowledged: boolean;
+  acknowledged_by?: string | null;
+  acknowledged_at?: string | null;
+  posture_version?: string | null;
+  surfaces: UnsupportedDeploymentSurface[];
 }
 
 export interface DataClassificationItem {
-  key: string
-  label: string
-  classification: string
-  lifecycle_term: string
-  summary: string
+  key: string;
+  label: string;
+  classification: string;
+  lifecycle_term: string;
+  summary: string;
 }
 
 export interface LifecycleStatusResponse {
-  lifecycle_scope?: LifecycleScope
+  lifecycle_scope?: LifecycleScope;
   lifecycle_readiness?: {
-    status: 'needs_review' | 'reviewed' | 'stale' | string
-    reviewed: boolean
-    reviewed_at?: string | null
-    reviewed_by?: string | null
-    stale_reason?: string | null
-    summary: string
-    acknowledged_unsupported_surface_categories?: string[]
+    status: 'needs_review' | 'reviewed' | 'stale' | string;
+    reviewed: boolean;
+    reviewed_at?: string | null;
+    reviewed_by?: string | null;
+    stale_reason?: string | null;
+    summary: string;
+    acknowledged_unsupported_surface_categories?: string[];
     conversation_blocking_policy?: {
-      user_conversations: 'not_blocked' | string
-      admin_conversations: 'available_for_repair' | string
-      protected_inference_gate: 'independent' | string
-      summary: string
-    }
-  }
-  content_encryption?: ContentEncryptionStatus
-  artifact_encryption?: ArtifactEncryptionStatus
-  retention_scheduler?: RetentionSchedulerStatus
-  data_classes: LifecycleDataClass[]
-  secure_erase?: LifecyclePosture
-  unsupported_deployment_surfaces?: UnsupportedDeploymentSurface[]
-  unsupported_deployment_surface_categories?: UnsupportedDeploymentSurfaceCategory[]
+      user_conversations: 'not_blocked' | string;
+      admin_conversations: 'available_for_repair' | string;
+      protected_inference_gate: 'independent' | string;
+      summary: string;
+    };
+  };
+  content_encryption?: ContentEncryptionStatus;
+  artifact_encryption?: ArtifactEncryptionStatus;
+  retention_scheduler?: RetentionSchedulerStatus;
+  data_classes: LifecycleDataClass[];
+  secure_erase?: LifecyclePosture;
+  unsupported_deployment_surfaces?: UnsupportedDeploymentSurface[];
+  unsupported_deployment_surface_categories?: UnsupportedDeploymentSurfaceCategory[];
   scheduled_retention?: {
-    enabled_classes: string[]
-  }
+    enabled_classes: string[];
+  };
   audit_coverage?: {
     summary: {
-      total: number
-      audited: number
-      documented_exceptions: number
-      missing: number
-      guardrail_passed: boolean
-    }
-  }
+      total: number;
+      audited: number;
+      documented_exceptions: number;
+      missing: number;
+      guardrail_passed: boolean;
+    };
+  };
   data_classification?: {
-    items: DataClassificationItem[]
+    items: DataClassificationItem[];
     summary: {
-      total: number
-      sensitive: number
-      governance_evidence: number
-      deployment_surface: number
-    }
-  }
+      total: number;
+      sensitive: number;
+      governance_evidence: number;
+      deployment_surface: number;
+    };
+  };
   deletion_tombstones?: {
-    total: number
-    incomplete: number
-    completed: number
-    by_class: Record<string, {
-      total: number
-      incomplete: number
-      completed: number
-    }>
-  }
+    total: number;
+    incomplete: number;
+    completed: number;
+    by_class: Record<
+      string,
+      {
+        total: number;
+        incomplete: number;
+        completed: number;
+      }
+    >;
+  };
 }
 
 export interface LifecycleDeletionResult {
-  target_kind: string
-  target_id: string
-  action: string
-  status: string
-  retryable: boolean
-  detail: string
+  target_kind: string;
+  target_id: string;
+  action: string;
+  status: string;
+  retryable: boolean;
+  detail: string;
 }
 
 export interface LifecycleDeletionSummary {
-  status: string
-  retryable: boolean
+  status: string;
+  retryable: boolean;
   counts: {
-    succeeded: number
-    skipped: number
-    failed: number
-  }
-  results: LifecycleDeletionResult[]
+    succeeded: number;
+    skipped: number;
+    failed: number;
+  };
+  results: LifecycleDeletionResult[];
 }
 
 export interface DeletionTombstone {
-  id: number
-  lifecycle_data_class: string
-  conversation_id: string
-  former_subject_ref?: string | null
-  status: string
-  source: string
-  workflow: string
-  deletion: LifecycleDeletionSummary
-  retry_count: number
-  last_retry_at?: string | null
-  created_at?: string | null
-  updated_at?: string | null
+  id: number;
+  lifecycle_data_class: string;
+  conversation_id: string;
+  former_subject_ref?: string | null;
+  status: string;
+  source: string;
+  workflow: string;
+  deletion: LifecycleDeletionSummary;
+  retry_count: number;
+  last_retry_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface DeletionTombstonesResponse {
-  tombstones: DeletionTombstone[]
+  tombstones: DeletionTombstone[];
 }
 
-export type DeletionTombstoneStatusFilter = 'all' | 'incomplete' | 'completed'
+export type DeletionTombstoneStatusFilter = 'all' | 'incomplete' | 'completed';
 
 // --- Config Audit Log Types ---
 
 export interface ConfigAuditLogEntry {
-  id: number
-  table_name: string
-  config_key: string
-  old_value?: string
-  new_value?: string
-  changed_by: string
-  changed_at: string
+  id: number;
+  table_name: string;
+  config_key: string;
+  old_value?: string;
+  new_value?: string;
+  changed_by: string;
+  changed_at: string;
 }
 
 export interface ConfigAuditLogResponse {
-  entries: ConfigAuditLogEntry[]
+  entries: ConfigAuditLogEntry[];
 }
 
 // --- Key Migration Types ---
 
 export interface EncryptedUserData {
-  id: number
-  encrypted_email?: string
-  ephemeral_pubkey_email?: string
-  encrypted_name?: string
-  ephemeral_pubkey_name?: string
+  id: number;
+  encrypted_email?: string;
+  ephemeral_pubkey_email?: string;
+  encrypted_name?: string;
+  ephemeral_pubkey_name?: string;
 }
 
 export interface EncryptedFieldValue {
-  id: number
-  user_id: number
-  field_id: number
-  encrypted_value?: string
-  ephemeral_pubkey?: string
+  id: number;
+  user_id: number;
+  field_id: number;
+  encrypted_value?: string;
+  ephemeral_pubkey?: string;
 }
 
 export interface MigrationPrepareResponse {
-  admin_pubkey: string
-  users: EncryptedUserData[]
-  field_values: EncryptedFieldValue[]
-  user_count: number
-  field_value_count: number
+  admin_pubkey: string;
+  users: EncryptedUserData[];
+  field_values: EncryptedFieldValue[];
+  user_count: number;
+  field_value_count: number;
 }
 
 export interface DecryptedUserData {
-  id: number
-  email?: string
-  name?: string
+  id: number;
+  email?: string;
+  name?: string;
 }
 
 export interface DecryptedFieldValue {
-  id: number
-  value?: string
+  id: number;
+  value?: string;
 }
 
 export interface MigrationExecuteRequest {
-  new_admin_pubkey: string
-  users: DecryptedUserData[]
-  field_values: DecryptedFieldValue[]
-  signature_event: NostrEvent
+  new_admin_pubkey: string;
+  users: DecryptedUserData[];
+  field_values: DecryptedFieldValue[];
+  signature_event: NostrEvent;
 }
 
 export interface MigrationExecuteResponse {
-  success: boolean
-  message: string
-  users_migrated: number
-  field_values_migrated: number
+  success: boolean;
+  message: string;
+  users_migrated: number;
+  field_values_migrated: number;
 }
 
 // Nostr event for signing
 export interface NostrEvent {
-  id: string
-  pubkey: string
-  created_at: number
-  kind: number
-  tags: string[][]
-  content: string
-  sig: string
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+  sig: string;
 }
 
 // --- Config Categories for UI ---
 
 export interface ConfigCategoryMeta {
-  label: string
-  description: string
-  hint: string
+  label: string;
+  description: string;
+  hint: string;
 }
 
-export const CONFIG_CATEGORY_KEYS = ['llm', 'embedding', 'email', 'storage', 'security', 'search', 'domains', 'ssl', 'general'] as const
+export const CONFIG_CATEGORY_KEYS = [
+  'llm',
+  'embedding',
+  'email',
+  'storage',
+  'security',
+  'search',
+  'domains',
+  'ssl',
+  'general',
+] as const;
 
-export type ConfigCategory = typeof CONFIG_CATEGORY_KEYS[number]
+export type ConfigCategory = (typeof CONFIG_CATEGORY_KEYS)[number];
 
 /**
  * Returns translated config category metadata
  */
-export function getConfigCategories(t: TFunction): Record<ConfigCategory, ConfigCategoryMeta> {
+export function getConfigCategories(
+  t: TFunction
+): Record<ConfigCategory, ConfigCategoryMeta> {
   return {
     llm: {
       label: t('configCategories.llm.label', 'Sage Agent Runtime'),
-      description: t('configCategories.llm.description', 'Configure Sage + Tinfoil inference'),
-      hint: t('configCategories.llm.hint', 'This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Configure the shared LLM_* compatibility settings here. Changes require a service restart to take effect.'),
+      description: t(
+        'configCategories.llm.description',
+        'Configure Sage + Tinfoil inference'
+      ),
+      hint: t(
+        'configCategories.llm.hint',
+        'This prototype routes Agent Runtime traffic through Sage and uses Tinfoil as the Model Provider transport. Configure the shared LLM_* compatibility settings here. Changes require a service restart to take effect.'
+      ),
     },
     embedding: {
       label: t('configCategories.embedding.label', 'Text Processing'),
-      description: t('configCategories.embedding.description', 'Configure how documents are analyzed'),
-      hint: t('configCategories.embedding.hint', "These settings control how your documents are converted into searchable data. The defaults work well for most cases — only change if you're using a custom model."),
+      description: t(
+        'configCategories.embedding.description',
+        'Configure how documents are analyzed'
+      ),
+      hint: t(
+        'configCategories.embedding.hint',
+        "These settings control how your documents are converted into searchable data. The defaults work well for most cases — only change if you're using a custom model."
+      ),
     },
     email: {
       label: t('configCategories.email.label', 'Email Service'),
-      description: t('configCategories.email.description', 'Set up email for user authentication'),
-      hint: t('configCategories.email.hint', "Configure email for sending magic links to users during sign-in. You'll need SMTP credentials from an email service like SendGrid, Mailgun, or your own mail server."),
+      description: t(
+        'configCategories.email.description',
+        'Set up email for user authentication'
+      ),
+      hint: t(
+        'configCategories.email.hint',
+        "Configure email for sending magic links to users during sign-in. You'll need SMTP credentials from an email service like SendGrid, Mailgun, or your own mail server."
+      ),
     },
     storage: {
       label: t('configCategories.storage.label', 'Data Storage'),
-      description: t('configCategories.storage.description', 'Configure where data is stored'),
-      hint: t('configCategories.storage.hint', "Control file paths for the database and uploaded documents. These typically don't need to change unless you're customizing your deployment."),
+      description: t(
+        'configCategories.storage.description',
+        'Configure where data is stored'
+      ),
+      hint: t(
+        'configCategories.storage.hint',
+        "Control file paths for the database and uploaded documents. These typically don't need to change unless you're customizing your deployment."
+      ),
     },
     security: {
       label: t('configCategories.security.label', 'Security'),
-      description: t('configCategories.security.description', 'Configure access and security settings'),
-      hint: t('configCategories.security.hint', 'Configure security options like authentication simulation modes for development and testing.'),
+      description: t(
+        'configCategories.security.description',
+        'Configure access and security settings'
+      ),
+      hint: t(
+        'configCategories.security.hint',
+        'Configure security options like authentication simulation modes for development and testing.'
+      ),
     },
     search: {
       label: t('configCategories.search.label', 'Web Search'),
-      description: t('configCategories.search.description', 'Enable AI web search capabilities'),
-      hint: t('configCategories.search.hint', "Configure the search engine that powers the AI's web search feature. When enabled, the AI can look up current information online."),
+      description: t(
+        'configCategories.search.description',
+        'Enable AI web search capabilities'
+      ),
+      hint: t(
+        'configCategories.search.hint',
+        "Configure the search engine that powers the AI's web search feature. When enabled, the AI can look up current information online."
+      ),
     },
     domains: {
       label: t('configCategories.domains.label', 'Domain & URLs'),
-      description: t('configCategories.domains.description', 'Configure domain names, URLs, and DNS settings'),
-      hint: t('configCategories.domains.hint', 'Use these when moving to a custom domain. Defaults assume local development (localhost). Configure your root domain, public URLs, CORS origins, and email DNS records (DKIM/SPF/DMARC).'),
+      description: t(
+        'configCategories.domains.description',
+        'Configure domain names, URLs, and DNS settings'
+      ),
+      hint: t(
+        'configCategories.domains.hint',
+        'Use these when moving to a custom domain. Defaults assume local development (localhost). Configure your root domain, public URLs, CORS origins, and email DNS records (DKIM/SPF/DMARC).'
+      ),
     },
     ssl: {
       label: t('configCategories.ssl.label', 'SSL & Security'),
-      description: t('configCategories.ssl.description', 'Configure SSL certificates and HTTPS settings'),
-      hint: t('configCategories.ssl.hint', 'Configure TLS and proxy settings when serving over HTTPS. Defaults are safe for local dev; enable HTTPS only after certificates are mounted.'),
+      description: t(
+        'configCategories.ssl.description',
+        'Configure SSL certificates and HTTPS settings'
+      ),
+      hint: t(
+        'configCategories.ssl.hint',
+        'Configure TLS and proxy settings when serving over HTTPS. Defaults are safe for local dev; enable HTTPS only after certificates are mounted.'
+      ),
     },
     general: {
       label: t('configCategories.general.label', 'General'),
-      description: t('configCategories.general.description', 'Other configuration options'),
-      hint: t('configCategories.general.hint', "Miscellaneous settings that don't fit into other categories."),
+      description: t(
+        'configCategories.general.description',
+        'Other configuration options'
+      ),
+      hint: t(
+        'configCategories.general.hint',
+        "Miscellaneous settings that don't fit into other categories."
+      ),
     },
-  }
+  };
 }
 
 // --- Prompt Section Keys ---
 
 export interface PromptSectionMeta {
-  label: string
-  description: string
-  hint: string
-  placeholder: string
+  label: string;
+  description: string;
+  hint: string;
+  placeholder: string;
 }
 
-export const PROMPT_SECTION_KEY_LIST = ['prompt_system', 'prompt_tone', 'prompt_rules', 'prompt_forbidden', 'prompt_greeting'] as const
+export const PROMPT_SECTION_KEY_LIST = [
+  'prompt_system',
+  'prompt_tone',
+  'prompt_rules',
+  'prompt_forbidden',
+  'prompt_greeting',
+] as const;
 
-export type PromptSectionKey = typeof PROMPT_SECTION_KEY_LIST[number]
+export type PromptSectionKey = (typeof PROMPT_SECTION_KEY_LIST)[number];
 
 /**
  * Returns translated prompt section metadata
  */
-export function getPromptSectionMeta(t: TFunction): Record<PromptSectionKey, PromptSectionMeta> {
+export function getPromptSectionMeta(
+  t: TFunction
+): Record<PromptSectionKey, PromptSectionMeta> {
   return {
     prompt_system: {
       label: t('promptSections.prompt_system.label', 'System Prompt'),
-      description: t('promptSections.prompt_system.description', 'Core identity and operating instructions for the AI'),
-      hint: t('promptSections.prompt_system.hint', 'Use this for the assistant identity, mission, and top-level boundaries that should apply before tone, rules, tools, or document context. Changes affect new conversations.'),
-      placeholder: t('promptSections.prompt_system.placeholder', 'You are Sage, a private assistant for this instance...'),
+      description: t(
+        'promptSections.prompt_system.description',
+        'Core identity and operating instructions for the AI'
+      ),
+      hint: t(
+        'promptSections.prompt_system.hint',
+        'Use this for the assistant identity, mission, and top-level boundaries that should apply before tone, rules, tools, or document context. Changes affect new conversations.'
+      ),
+      placeholder: t(
+        'promptSections.prompt_system.placeholder',
+        'You are Sage, a private assistant for this instance...'
+      ),
     },
     prompt_tone: {
       label: t('promptSections.prompt_tone.label', 'Tone & Personality'),
-      description: t('promptSections.prompt_tone.description', 'How the AI should sound when responding'),
-      hint: t('promptSections.prompt_tone.hint', 'This sets the overall voice and manner of the AI. For example, you might want it to be "warm and supportive" for a counseling app, or "concise and professional" for a business tool. The AI will use this as guidance for every response.'),
-      placeholder: t('promptSections.prompt_tone.placeholder', 'Be helpful, concise, and professional...'),
+      description: t(
+        'promptSections.prompt_tone.description',
+        'How the AI should sound when responding'
+      ),
+      hint: t(
+        'promptSections.prompt_tone.hint',
+        'This sets the overall voice and manner of the AI. For example, you might want it to be "warm and supportive" for a counseling app, or "concise and professional" for a business tool. The AI will use this as guidance for every response.'
+      ),
+      placeholder: t(
+        'promptSections.prompt_tone.placeholder',
+        'Be helpful, concise, and professional...'
+      ),
     },
     prompt_rules: {
       label: t('promptSections.prompt_rules.label', 'Behavioral Rules'),
-      description: t('promptSections.prompt_rules.description', 'Specific instructions the AI must follow'),
-      hint: t('promptSections.prompt_rules.hint', 'Add rules as a JSON list like ["Always cite sources", "Keep responses under 200 words"]. These are firm guidelines the AI will try to follow in every conversation.'),
-      placeholder: t('promptSections.prompt_rules.placeholder', '["Rule 1", "Rule 2", ...]'),
+      description: t(
+        'promptSections.prompt_rules.description',
+        'Specific instructions the AI must follow'
+      ),
+      hint: t(
+        'promptSections.prompt_rules.hint',
+        'Add rules as a JSON list like ["Always cite sources", "Keep responses under 200 words"]. These are firm guidelines the AI will try to follow in every conversation.'
+      ),
+      placeholder: t(
+        'promptSections.prompt_rules.placeholder',
+        '["Rule 1", "Rule 2", ...]'
+      ),
     },
     prompt_forbidden: {
       label: t('promptSections.prompt_forbidden.label', 'Forbidden Topics'),
-      description: t('promptSections.prompt_forbidden.description', 'Topics the AI should decline to discuss'),
-      hint: t('promptSections.prompt_forbidden.hint', 'List topics you want the AI to politely redirect away from. For example, ["medical advice", "legal counsel"]. The AI will acknowledge these requests but explain it cannot help with them.'),
-      placeholder: t('promptSections.prompt_forbidden.placeholder', '["Topic 1", "Topic 2", ...]'),
+      description: t(
+        'promptSections.prompt_forbidden.description',
+        'Topics the AI should decline to discuss'
+      ),
+      hint: t(
+        'promptSections.prompt_forbidden.hint',
+        'List topics you want the AI to politely redirect away from. For example, ["medical advice", "legal counsel"]. The AI will acknowledge these requests but explain it cannot help with them.'
+      ),
+      placeholder: t(
+        'promptSections.prompt_forbidden.placeholder',
+        '["Topic 1", "Topic 2", ...]'
+      ),
     },
     prompt_greeting: {
       label: t('promptSections.prompt_greeting.label', 'Response Style'),
-      description: t('promptSections.prompt_greeting.description', 'How the AI structures its responses'),
-      hint: t('promptSections.prompt_greeting.hint', 'Controls formatting preferences like whether to use bullet points, headers, or conversational paragraphs. This affects how answers are visually presented.'),
-      placeholder: t('promptSections.prompt_greeting.placeholder', 'greeting_style'),
+      description: t(
+        'promptSections.prompt_greeting.description',
+        'How the AI structures its responses'
+      ),
+      hint: t(
+        'promptSections.prompt_greeting.hint',
+        'Controls formatting preferences like whether to use bullet points, headers, or conversational paragraphs. This affects how answers are visually presented.'
+      ),
+      placeholder: t(
+        'promptSections.prompt_greeting.placeholder',
+        'greeting_style'
+      ),
     },
-  }
+  };
 }
 
 // --- Parameter Keys ---
 
 export interface ParameterMeta {
-  label: string
-  description: string
-  hint: string
-  min: number
-  max: number
-  step: number
+  label: string;
+  description: string;
+  hint: string;
+  min: number;
+  max: number;
+  step: number;
 }
 
-export const PARAMETER_KEY_LIST = ['temperature', 'top_k', 'max_tokens'] as const
+export const PARAMETER_KEY_LIST = [
+  'temperature',
+  'top_k',
+  'max_tokens',
+] as const;
 
-export type ParameterKey = typeof PARAMETER_KEY_LIST[number]
+export type ParameterKey = (typeof PARAMETER_KEY_LIST)[number];
 
 /**
  * Returns translated parameter metadata
  */
-export function getParameterMeta(t: TFunction): Record<ParameterKey, ParameterMeta> {
+export function getParameterMeta(
+  t: TFunction
+): Record<ParameterKey, ParameterMeta> {
   return {
     temperature: {
       label: t('parameters.temperature.label', 'Creativity Level'),
-      description: t('parameters.temperature.description', 'How predictable vs. creative the AI responses are'),
-      hint: t('parameters.temperature.hint', 'Lower values (0.0-0.3) make responses more focused and consistent — good for factual Q&A. Higher values (0.7-1.0) make responses more varied and creative — better for brainstorming. Default: 0.7'),
+      description: t(
+        'parameters.temperature.description',
+        'How predictable vs. creative the AI responses are'
+      ),
+      hint: t(
+        'parameters.temperature.hint',
+        'Lower values (0.0-0.3) make responses more focused and consistent — good for factual Q&A. Higher values (0.7-1.0) make responses more varied and creative — better for brainstorming. Default: 0.7'
+      ),
       min: 0,
       max: 1,
       step: 0.1,
     },
     top_k: {
       label: t('parameters.top_k.label', 'Knowledge Depth'),
-      description: t('parameters.top_k.description', 'How many document sections to reference'),
-      hint: t('parameters.top_k.hint', 'When answering questions, the AI searches your uploaded documents and pulls in relevant sections. Higher numbers mean more context but slower responses. Lower numbers are faster but may miss relevant info. Default: 5'),
+      description: t(
+        'parameters.top_k.description',
+        'How many document sections to reference'
+      ),
+      hint: t(
+        'parameters.top_k.hint',
+        'When answering questions, the AI searches your uploaded documents and pulls in relevant sections. Higher numbers mean more context but slower responses. Lower numbers are faster but may miss relevant info. Default: 5'
+      ),
       min: 1,
       max: 100,
       step: 1,
     },
     max_tokens: {
       label: t('parameters.max_tokens.label', 'Max Tokens'),
-      description: t('parameters.max_tokens.description', 'Maximum length for each AI response'),
-      hint: t('parameters.max_tokens.hint', 'Caps how long a response can be. Lower values keep answers brief and reduce cost; higher values allow longer explanations. Default: 2048'),
+      description: t(
+        'parameters.max_tokens.description',
+        'Maximum length for each AI response'
+      ),
+      hint: t(
+        'parameters.max_tokens.hint',
+        'Caps how long a response can be. Lower values keep answers brief and reduce cost; higher values allow longer explanations. Default: 2048'
+      ),
       min: 256,
       max: 8192,
       step: 256,
     },
-  }
+  };
 }
 
 // --- Default Keys ---
 
 export interface DefaultMeta {
-  label: string
-  description: string
-  hint: string
+  label: string;
+  description: string;
+  hint: string;
 }
 
-export const DEFAULT_KEY_LIST = ['web_search_default'] as const
+export const DEFAULT_KEY_LIST = ['web_search_default'] as const;
 
-export type DefaultKey = typeof DEFAULT_KEY_LIST[number]
+export type DefaultKey = (typeof DEFAULT_KEY_LIST)[number];
 
 /**
  * Returns translated default toggle metadata
@@ -708,262 +856,582 @@ export function getDefaultMeta(t: TFunction): Record<DefaultKey, DefaultMeta> {
   return {
     web_search_default: {
       label: t('defaults.web_search_default.label', 'Web Search'),
-      description: t('defaults.web_search_default.description', 'Allow AI to search the internet'),
-      hint: t('defaults.web_search_default.hint', 'When enabled, the AI can search the web for current information not in your documents. Disable this if you want responses to only come from your uploaded knowledge base.'),
+      description: t(
+        'defaults.web_search_default.description',
+        'Allow AI to search the internet'
+      ),
+      hint: t(
+        'defaults.web_search_default.hint',
+        'When enabled, the AI can search the web for current information not in your documents. Disable this if you want responses to only come from your uploaded knowledge base.'
+      ),
     },
-  }
+  };
 }
 
 // --- Deployment Config Item Keys ---
 
 export interface DeploymentConfigItemMeta {
-  label: string
-  description: string
-  hint?: string
+  label: string;
+  description: string;
+  hint?: string;
 }
 
 export const DEPLOYMENT_CONFIG_KEY_LIST = [
   // LLM
-  'LLM_PROVIDER', 'LLM_MODEL', 'LLM_API_URL', 'LLM_API_KEY', 'RAG_TOP_K', 'PDF_EXTRACT_MODE',
+  'LLM_PROVIDER',
+  'LLM_MODEL',
+  'LLM_API_URL',
+  'LLM_API_KEY',
+  'RAG_TOP_K',
+  'PDF_EXTRACT_MODE',
   // Embedding
   'EMBEDDING_MODEL',
   // Email
-  'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'MOCK_EMAIL',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM',
+  'MOCK_EMAIL',
   // Storage
-  'SQLITE_PATH', 'UPLOADS_DIR', 'QDRANT_HOST', 'QDRANT_PORT',
+  'SQLITE_PATH',
+  'UPLOADS_DIR',
+  'QDRANT_HOST',
+  'QDRANT_PORT',
   // Search
   'SEARXNG_URL',
   // Security
   'FRONTEND_URL',
-  'RATE_LIMIT_CHAT_PER_MINUTE', 'RATE_LIMIT_QUERY_PER_MINUTE', 'RATE_LIMIT_UPLOAD_PER_MINUTE',
-  'RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE', 'RATE_LIMIT_CONFIG_EXPORT_PER_HOUR',
+  'RATE_LIMIT_CHAT_PER_MINUTE',
+  'RATE_LIMIT_QUERY_PER_MINUTE',
+  'RATE_LIMIT_UPLOAD_PER_MINUTE',
+  'RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE',
+  'RATE_LIMIT_CONFIG_EXPORT_PER_HOUR',
   // Domain & URLs
-  'BASE_DOMAIN', 'INSTANCE_URL', 'API_BASE_URL', 'ADMIN_BASE_URL',
-  'EMAIL_DOMAIN', 'DKIM_SELECTOR', 'SPF_INCLUDE', 'DMARC_POLICY',
-  'CORS_ORIGINS', 'CDN_DOMAINS', 'CUSTOM_SEARXNG_URL', 'WEBHOOK_BASE_URL',
+  'BASE_DOMAIN',
+  'INSTANCE_URL',
+  'API_BASE_URL',
+  'ADMIN_BASE_URL',
+  'EMAIL_DOMAIN',
+  'DKIM_SELECTOR',
+  'SPF_INCLUDE',
+  'DMARC_POLICY',
+  'CORS_ORIGINS',
+  'CDN_DOMAINS',
+  'CUSTOM_SEARXNG_URL',
+  'WEBHOOK_BASE_URL',
   // SSL & Security
-  'TRUSTED_PROXIES', 'SSL_CERT_PATH', 'SSL_KEY_PATH',
-  'FORCE_HTTPS', 'HSTS_MAX_AGE', 'MONITORING_URL',
-] as const
+  'TRUSTED_PROXIES',
+  'SSL_CERT_PATH',
+  'SSL_KEY_PATH',
+  'FORCE_HTTPS',
+  'HSTS_MAX_AGE',
+  'MONITORING_URL',
+] as const;
 
-export type DeploymentConfigItemKey = typeof DEPLOYMENT_CONFIG_KEY_LIST[number]
+export type DeploymentConfigItemKey =
+  (typeof DEPLOYMENT_CONFIG_KEY_LIST)[number];
 
 /**
  * Returns translated deployment config item metadata
  */
-export function getDeploymentConfigItemMeta(t: TFunction): Record<DeploymentConfigItemKey, DeploymentConfigItemMeta> {
+export function getDeploymentConfigItemMeta(
+  t: TFunction
+): Record<DeploymentConfigItemKey, DeploymentConfigItemMeta> {
   return {
     LLM_PROVIDER: {
       label: t('deploymentConfigItems.LLM_PROVIDER.label', 'Model Provider'),
-      description: t('deploymentConfigItems.LLM_PROVIDER.description', 'Python-side Model Provider label'),
-      hint: t('deploymentConfigItems.LLM_PROVIDER.hint', 'Use "sage" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata.'),
+      description: t(
+        'deploymentConfigItems.LLM_PROVIDER.description',
+        'Python-side Model Provider label'
+      ),
+      hint: t(
+        'deploymentConfigItems.LLM_PROVIDER.hint',
+        'Use "sage" for this prototype. This deployment setting supports Python-side diagnostics and verification metadata.'
+      ),
     },
     LLM_MODEL: {
       label: t('deploymentConfigItems.LLM_MODEL.label', 'Model Name'),
-      description: t('deploymentConfigItems.LLM_MODEL.description', 'Model name/identifier'),
-      hint: t('deploymentConfigItems.LLM_MODEL.hint', `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_TINFOIL_MODEL}").`),
+      description: t(
+        'deploymentConfigItems.LLM_MODEL.description',
+        'Model name/identifier'
+      ),
+      hint: t(
+        'deploymentConfigItems.LLM_MODEL.hint',
+        `The Tinfoil model identifier Sage should use (e.g., "${DEFAULT_TINFOIL_MODEL}").`
+      ),
     },
     LLM_API_URL: {
       label: t('deploymentConfigItems.LLM_API_URL.label', 'API Endpoint'),
-      description: t('deploymentConfigItems.LLM_API_URL.description', 'Model Provider API base URL'),
-      hint: t('deploymentConfigItems.LLM_API_URL.hint', 'The Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1.'),
+      description: t(
+        'deploymentConfigItems.LLM_API_URL.description',
+        'Model Provider API base URL'
+      ),
+      hint: t(
+        'deploymentConfigItems.LLM_API_URL.hint',
+        'The Tinfoil proxy base URL. Default: http://tinfoil-proxy:8089/v1.'
+      ),
     },
     LLM_API_KEY: {
       label: t('deploymentConfigItems.LLM_API_KEY.label', 'API Key'),
-      description: t('deploymentConfigItems.LLM_API_KEY.description', 'Tinfoil API key (secret)'),
-      hint: t('deploymentConfigItems.LLM_API_KEY.hint', 'Leave empty to keep the current Deployment Settings secret.'),
+      description: t(
+        'deploymentConfigItems.LLM_API_KEY.description',
+        'Tinfoil API key (secret)'
+      ),
+      hint: t(
+        'deploymentConfigItems.LLM_API_KEY.hint',
+        'Leave empty to keep the current Deployment Settings secret.'
+      ),
     },
     RAG_TOP_K: {
       label: t('deploymentConfigItems.RAG_TOP_K.label', 'Context Chunks'),
-      description: t('deploymentConfigItems.RAG_TOP_K.description', 'Number of chunks to retrieve'),
-      hint: t('deploymentConfigItems.RAG_TOP_K.hint', 'How many document chunks to retrieve for each query. Higher = more context but slower. Default: 8.'),
+      description: t(
+        'deploymentConfigItems.RAG_TOP_K.description',
+        'Number of chunks to retrieve'
+      ),
+      hint: t(
+        'deploymentConfigItems.RAG_TOP_K.hint',
+        'How many document chunks to retrieve for each query. Higher = more context but slower. Default: 8.'
+      ),
     },
     PDF_EXTRACT_MODE: {
-      label: t('deploymentConfigItems.PDF_EXTRACT_MODE.label', 'PDF Processing'),
-      description: t('deploymentConfigItems.PDF_EXTRACT_MODE.description', 'PDF extraction method'),
-      hint: t('deploymentConfigItems.PDF_EXTRACT_MODE.hint', '"fast" extracts text quickly. "quality" uses OCR for better accuracy with scanned documents but is slower.'),
+      label: t(
+        'deploymentConfigItems.PDF_EXTRACT_MODE.label',
+        'PDF Processing'
+      ),
+      description: t(
+        'deploymentConfigItems.PDF_EXTRACT_MODE.description',
+        'PDF extraction method'
+      ),
+      hint: t(
+        'deploymentConfigItems.PDF_EXTRACT_MODE.hint',
+        '"fast" extracts text quickly. "quality" uses OCR for better accuracy with scanned documents but is slower.'
+      ),
     },
     EMBEDDING_MODEL: {
-      label: t('deploymentConfigItems.EMBEDDING_MODEL.label', 'Embedding Model'),
-      description: t('deploymentConfigItems.EMBEDDING_MODEL.description', 'HuggingFace model for embeddings'),
-      hint: t('deploymentConfigItems.EMBEDDING_MODEL.hint', 'The HuggingFace model for converting text to vectors. Only change if you need a different language or domain.'),
+      label: t(
+        'deploymentConfigItems.EMBEDDING_MODEL.label',
+        'Embedding Model'
+      ),
+      description: t(
+        'deploymentConfigItems.EMBEDDING_MODEL.description',
+        'HuggingFace model for embeddings'
+      ),
+      hint: t(
+        'deploymentConfigItems.EMBEDDING_MODEL.hint',
+        'The HuggingFace model for converting text to vectors. Only change if you need a different language or domain.'
+      ),
     },
     SMTP_HOST: {
       label: t('deploymentConfigItems.SMTP_HOST.label', 'Mail Server'),
-      description: t('deploymentConfigItems.SMTP_HOST.description', 'SMTP server address'),
-      hint: t('deploymentConfigItems.SMTP_HOST.hint', 'Your SMTP server address (e.g., smtp.gmail.com, smtp.sendgrid.net).'),
+      description: t(
+        'deploymentConfigItems.SMTP_HOST.description',
+        'SMTP server address'
+      ),
+      hint: t(
+        'deploymentConfigItems.SMTP_HOST.hint',
+        'Your SMTP server address (e.g., smtp.gmail.com, smtp.sendgrid.net).'
+      ),
     },
     SMTP_PORT: {
       label: t('deploymentConfigItems.SMTP_PORT.label', 'Mail Port'),
-      description: t('deploymentConfigItems.SMTP_PORT.description', 'SMTP server port'),
-      hint: t('deploymentConfigItems.SMTP_PORT.hint', 'Usually 587 for TLS or 465 for SSL. Check your email provider\'s settings.'),
+      description: t(
+        'deploymentConfigItems.SMTP_PORT.description',
+        'SMTP server port'
+      ),
+      hint: t(
+        'deploymentConfigItems.SMTP_PORT.hint',
+        "Usually 587 for TLS or 465 for SSL. Check your email provider's settings."
+      ),
     },
     SMTP_USER: {
       label: t('deploymentConfigItems.SMTP_USER.label', 'SMTP Username'),
-      description: t('deploymentConfigItems.SMTP_USER.description', 'Email service username'),
-      hint: t('deploymentConfigItems.SMTP_USER.hint', 'Your email service username or API key.'),
+      description: t(
+        'deploymentConfigItems.SMTP_USER.description',
+        'Email service username'
+      ),
+      hint: t(
+        'deploymentConfigItems.SMTP_USER.hint',
+        'Your email service username or API key.'
+      ),
     },
     SMTP_PASS: {
       label: t('deploymentConfigItems.SMTP_PASS.label', 'SMTP Password'),
-      description: t('deploymentConfigItems.SMTP_PASS.description', 'Email service password'),
-      hint: t('deploymentConfigItems.SMTP_PASS.hint', 'Your email service password or API key secret.'),
+      description: t(
+        'deploymentConfigItems.SMTP_PASS.description',
+        'Email service password'
+      ),
+      hint: t(
+        'deploymentConfigItems.SMTP_PASS.hint',
+        'Your email service password or API key secret.'
+      ),
     },
     SMTP_FROM: {
       label: t('deploymentConfigItems.SMTP_FROM.label', 'Sender Address'),
-      description: t('deploymentConfigItems.SMTP_FROM.description', 'From address for emails'),
-      hint: t('deploymentConfigItems.SMTP_FROM.hint', 'The "from" address for outgoing emails (e.g., noreply@yourdomain.com).'),
+      description: t(
+        'deploymentConfigItems.SMTP_FROM.description',
+        'From address for emails'
+      ),
+      hint: t(
+        'deploymentConfigItems.SMTP_FROM.hint',
+        'The "from" address for outgoing emails (e.g., noreply@yourdomain.com).'
+      ),
     },
     MOCK_EMAIL: {
       label: t('deploymentConfigItems.MOCK_EMAIL.label', 'Test Mode'),
-      description: t('deploymentConfigItems.MOCK_EMAIL.description', 'Mock email sending'),
-      hint: t('deploymentConfigItems.MOCK_EMAIL.hint', 'When "true", emails are logged instead of sent. Useful for development.'),
+      description: t(
+        'deploymentConfigItems.MOCK_EMAIL.description',
+        'Mock email sending'
+      ),
+      hint: t(
+        'deploymentConfigItems.MOCK_EMAIL.hint',
+        'When "true", emails are logged instead of sent. Useful for development.'
+      ),
     },
     SQLITE_PATH: {
       label: t('deploymentConfigItems.SQLITE_PATH.label', 'Database File'),
-      description: t('deploymentConfigItems.SQLITE_PATH.description', 'Path to SQLite database'),
-      hint: t('deploymentConfigItems.SQLITE_PATH.hint', 'Path to the SQLite database file. Default: /data/enclave.db'),
+      description: t(
+        'deploymentConfigItems.SQLITE_PATH.description',
+        'Path to SQLite database'
+      ),
+      hint: t(
+        'deploymentConfigItems.SQLITE_PATH.hint',
+        'Path to the SQLite database file. Default: /data/enclave.db'
+      ),
     },
     UPLOADS_DIR: {
       label: t('deploymentConfigItems.UPLOADS_DIR.label', 'Uploads Folder'),
-      description: t('deploymentConfigItems.UPLOADS_DIR.description', 'Document uploads directory'),
-      hint: t('deploymentConfigItems.UPLOADS_DIR.hint', 'Directory where uploaded documents are stored. Default: /uploads'),
+      description: t(
+        'deploymentConfigItems.UPLOADS_DIR.description',
+        'Document uploads directory'
+      ),
+      hint: t(
+        'deploymentConfigItems.UPLOADS_DIR.hint',
+        'Directory where uploaded documents are stored. Default: /uploads'
+      ),
     },
     QDRANT_HOST: {
       label: t('deploymentConfigItems.QDRANT_HOST.label', 'Vector DB Host'),
-      description: t('deploymentConfigItems.QDRANT_HOST.description', 'Qdrant server hostname'),
-      hint: t('deploymentConfigItems.QDRANT_HOST.hint', 'Hostname for the Qdrant vector database. Default: qdrant'),
+      description: t(
+        'deploymentConfigItems.QDRANT_HOST.description',
+        'Qdrant server hostname'
+      ),
+      hint: t(
+        'deploymentConfigItems.QDRANT_HOST.hint',
+        'Hostname for the Qdrant vector database. Default: qdrant'
+      ),
     },
     QDRANT_PORT: {
       label: t('deploymentConfigItems.QDRANT_PORT.label', 'Vector DB Port'),
-      description: t('deploymentConfigItems.QDRANT_PORT.description', 'Qdrant REST API port'),
-      hint: t('deploymentConfigItems.QDRANT_PORT.hint', 'Port for Qdrant (REST API). Default: 6333'),
+      description: t(
+        'deploymentConfigItems.QDRANT_PORT.description',
+        'Qdrant REST API port'
+      ),
+      hint: t(
+        'deploymentConfigItems.QDRANT_PORT.hint',
+        'Port for Qdrant (REST API). Default: 6333'
+      ),
     },
     SEARXNG_URL: {
       label: t('deploymentConfigItems.SEARXNG_URL.label', 'Search Engine URL'),
-      description: t('deploymentConfigItems.SEARXNG_URL.description', 'SearXNG instance URL'),
-      hint: t('deploymentConfigItems.SEARXNG_URL.hint', 'URL of your SearXNG instance for web search functionality.'),
+      description: t(
+        'deploymentConfigItems.SEARXNG_URL.description',
+        'SearXNG instance URL'
+      ),
+      hint: t(
+        'deploymentConfigItems.SEARXNG_URL.hint',
+        'URL of your SearXNG instance for web search functionality.'
+      ),
     },
     FRONTEND_URL: {
       label: t('deploymentConfigItems.FRONTEND_URL.label', 'App URL'),
-      description: t('deploymentConfigItems.FRONTEND_URL.description', 'Public URL for the application'),
-      hint: t('deploymentConfigItems.FRONTEND_URL.hint', 'The public URL where users access the app. Used for generating magic links.'),
+      description: t(
+        'deploymentConfigItems.FRONTEND_URL.description',
+        'Public URL for the application'
+      ),
+      hint: t(
+        'deploymentConfigItems.FRONTEND_URL.hint',
+        'The public URL where users access the app. Used for generating magic links.'
+      ),
     },
     RATE_LIMIT_CHAT_PER_MINUTE: {
-      label: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.label', 'Chat Rate Limit'),
-      description: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.description', 'Chat requests per minute'),
-      hint: t('deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.hint', 'Maximum /llm/chat requests per minute per stable user, admin, token, or client IP. Requires restart. Default: 120.'),
+      label: t(
+        'deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.label',
+        'Chat Rate Limit'
+      ),
+      description: t(
+        'deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.description',
+        'Chat requests per minute'
+      ),
+      hint: t(
+        'deploymentConfigItems.RATE_LIMIT_CHAT_PER_MINUTE.hint',
+        'Maximum /llm/chat requests per minute per stable user, admin, token, or client IP. Requires restart. Default: 120.'
+      ),
     },
     RATE_LIMIT_QUERY_PER_MINUTE: {
-      label: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.label', 'Retrieval Query Rate Limit'),
-      description: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.description', 'Retrieval query requests per minute'),
-      hint: t('deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.hint', 'Maximum /query requests per minute per stable user, token, or client IP. Requires restart. Default: 90.'),
+      label: t(
+        'deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.label',
+        'Retrieval Query Rate Limit'
+      ),
+      description: t(
+        'deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.description',
+        'Retrieval query requests per minute'
+      ),
+      hint: t(
+        'deploymentConfigItems.RATE_LIMIT_QUERY_PER_MINUTE.hint',
+        'Maximum /query requests per minute per stable user, token, or client IP. Requires restart. Default: 90.'
+      ),
     },
     RATE_LIMIT_UPLOAD_PER_MINUTE: {
-      label: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.label', 'Upload Rate Limit'),
-      description: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.description', 'Document upload requests per minute'),
-      hint: t('deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.hint', 'Maximum document upload requests per minute per stable admin, token, or client IP. Requires restart. Default: 20.'),
+      label: t(
+        'deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.label',
+        'Upload Rate Limit'
+      ),
+      description: t(
+        'deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.description',
+        'Document upload requests per minute'
+      ),
+      hint: t(
+        'deploymentConfigItems.RATE_LIMIT_UPLOAD_PER_MINUTE.hint',
+        'Maximum document upload requests per minute per stable admin, token, or client IP. Requires restart. Default: 20.'
+      ),
     },
     RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE: {
-      label: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.label', 'Vector Search Rate Limit'),
-      description: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.description', 'Vector search requests per minute'),
-      hint: t('deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.hint', 'Maximum vector search requests per minute per stable user, token, or client IP. Requires restart. Default: 30.'),
+      label: t(
+        'deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.label',
+        'Vector Search Rate Limit'
+      ),
+      description: t(
+        'deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.description',
+        'Vector search requests per minute'
+      ),
+      hint: t(
+        'deploymentConfigItems.RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE.hint',
+        'Maximum vector search requests per minute per stable user, token, or client IP. Requires restart. Default: 30.'
+      ),
     },
     RATE_LIMIT_CONFIG_EXPORT_PER_HOUR: {
-      label: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.label', 'Config Export Rate Limit'),
-      description: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.description', 'Deployment config exports per hour'),
-      hint: t('deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.hint', 'Maximum .env exports per hour per admin session or client IP. Requires restart. Default: 5.'),
+      label: t(
+        'deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.label',
+        'Config Export Rate Limit'
+      ),
+      description: t(
+        'deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.description',
+        'Deployment config exports per hour'
+      ),
+      hint: t(
+        'deploymentConfigItems.RATE_LIMIT_CONFIG_EXPORT_PER_HOUR.hint',
+        'Maximum .env exports per hour per admin session or client IP. Requires restart. Default: 5.'
+      ),
     },
     // Domain & URLs
     BASE_DOMAIN: {
       label: t('deploymentConfigItems.BASE_DOMAIN.label', 'Root Domain'),
-      description: t('deploymentConfigItems.BASE_DOMAIN.description', 'Primary domain name'),
-      hint: t('deploymentConfigItems.BASE_DOMAIN.hint', 'Root domain without protocol. Example: example.com. Leave blank for local dev.'),
+      description: t(
+        'deploymentConfigItems.BASE_DOMAIN.description',
+        'Primary domain name'
+      ),
+      hint: t(
+        'deploymentConfigItems.BASE_DOMAIN.hint',
+        'Root domain without protocol. Example: example.com. Leave blank for local dev.'
+      ),
     },
     INSTANCE_URL: {
       label: t('deploymentConfigItems.INSTANCE_URL.label', 'Application URL'),
-      description: t('deploymentConfigItems.INSTANCE_URL.description', 'Full URL with protocol'),
-      hint: t('deploymentConfigItems.INSTANCE_URL.hint', 'Public app URL with protocol. Example: https://app.example.com. Default: http://localhost:5173.'),
+      description: t(
+        'deploymentConfigItems.INSTANCE_URL.description',
+        'Full URL with protocol'
+      ),
+      hint: t(
+        'deploymentConfigItems.INSTANCE_URL.hint',
+        'Public app URL with protocol. Example: https://app.example.com. Default: http://localhost:5173.'
+      ),
     },
     API_BASE_URL: {
       label: t('deploymentConfigItems.API_BASE_URL.label', 'API URL'),
-      description: t('deploymentConfigItems.API_BASE_URL.description', 'API subdomain URL (optional)'),
-      hint: t('deploymentConfigItems.API_BASE_URL.hint', 'Only set if API is on a separate domain. Example: https://api.example.com. Default: http://localhost:8000.'),
+      description: t(
+        'deploymentConfigItems.API_BASE_URL.description',
+        'API subdomain URL (optional)'
+      ),
+      hint: t(
+        'deploymentConfigItems.API_BASE_URL.hint',
+        'Only set if API is on a separate domain. Example: https://api.example.com. Default: http://localhost:18000.'
+      ),
     },
     ADMIN_BASE_URL: {
       label: t('deploymentConfigItems.ADMIN_BASE_URL.label', 'Admin URL'),
-      description: t('deploymentConfigItems.ADMIN_BASE_URL.description', 'Admin panel subdomain URL (optional)'),
-      hint: t('deploymentConfigItems.ADMIN_BASE_URL.hint', 'Only if admin UI is on a separate domain. Example: https://admin.example.com. Default: http://localhost:5173/admin.'),
+      description: t(
+        'deploymentConfigItems.ADMIN_BASE_URL.description',
+        'Admin panel subdomain URL (optional)'
+      ),
+      hint: t(
+        'deploymentConfigItems.ADMIN_BASE_URL.hint',
+        'Only if admin UI is on a separate domain. Example: https://admin.example.com. Default: http://localhost:5173/admin.'
+      ),
     },
     EMAIL_DOMAIN: {
       label: t('deploymentConfigItems.EMAIL_DOMAIN.label', 'Email Domain'),
-      description: t('deploymentConfigItems.EMAIL_DOMAIN.description', 'Domain for email addresses'),
-      hint: t('deploymentConfigItems.EMAIL_DOMAIN.hint', 'Domain used for From addresses and DNS records. Example: example.com or mail.example.com.'),
+      description: t(
+        'deploymentConfigItems.EMAIL_DOMAIN.description',
+        'Domain for email addresses'
+      ),
+      hint: t(
+        'deploymentConfigItems.EMAIL_DOMAIN.hint',
+        'Domain used for From addresses and DNS records. Example: example.com or mail.example.com.'
+      ),
     },
     DKIM_SELECTOR: {
       label: t('deploymentConfigItems.DKIM_SELECTOR.label', 'DKIM Selector'),
-      description: t('deploymentConfigItems.DKIM_SELECTOR.description', 'DKIM DNS record selector'),
-      hint: t('deploymentConfigItems.DKIM_SELECTOR.hint', 'Selector prefix for your DKIM TXT record. Default: enclave. Your provider may require a specific selector.'),
+      description: t(
+        'deploymentConfigItems.DKIM_SELECTOR.description',
+        'DKIM DNS record selector'
+      ),
+      hint: t(
+        'deploymentConfigItems.DKIM_SELECTOR.hint',
+        'Selector prefix for your DKIM TXT record. Default: enclave. Your provider may require a specific selector.'
+      ),
     },
     SPF_INCLUDE: {
       label: t('deploymentConfigItems.SPF_INCLUDE.label', 'SPF Include'),
-      description: t('deploymentConfigItems.SPF_INCLUDE.description', 'SPF DNS include directive'),
-      hint: t('deploymentConfigItems.SPF_INCLUDE.hint', 'Replace with your provider include value (e.g., include:sendgrid.net). Default: include:_spf.google.com.'),
+      description: t(
+        'deploymentConfigItems.SPF_INCLUDE.description',
+        'SPF DNS include directive'
+      ),
+      hint: t(
+        'deploymentConfigItems.SPF_INCLUDE.hint',
+        'Replace with your provider include value (e.g., include:sendgrid.net). Default: include:_spf.google.com.'
+      ),
     },
     DMARC_POLICY: {
       label: t('deploymentConfigItems.DMARC_POLICY.label', 'DMARC Policy'),
-      description: t('deploymentConfigItems.DMARC_POLICY.description', 'DMARC DNS policy record'),
-      hint: t('deploymentConfigItems.DMARC_POLICY.hint', 'Start with v=DMARC1; p=none; rua=mailto:dmarc@example.com and tighten later.'),
+      description: t(
+        'deploymentConfigItems.DMARC_POLICY.description',
+        'DMARC DNS policy record'
+      ),
+      hint: t(
+        'deploymentConfigItems.DMARC_POLICY.hint',
+        'Start with v=DMARC1; p=none; rua=mailto:dmarc@example.com and tighten later.'
+      ),
     },
     CORS_ORIGINS: {
       label: t('deploymentConfigItems.CORS_ORIGINS.label', 'CORS Origins'),
-      description: t('deploymentConfigItems.CORS_ORIGINS.description', 'Comma-separated allowed CORS origins'),
-      hint: t('deploymentConfigItems.CORS_ORIGINS.hint', 'Comma-separated full origins (scheme + host). Example: https://app.example.com,https://admin.example.com. Default: http://localhost:5173.'),
+      description: t(
+        'deploymentConfigItems.CORS_ORIGINS.description',
+        'Comma-separated allowed CORS origins'
+      ),
+      hint: t(
+        'deploymentConfigItems.CORS_ORIGINS.hint',
+        'Comma-separated full origins (scheme + host). Example: https://app.example.com,https://admin.example.com. Default: http://localhost:5173.'
+      ),
     },
     CDN_DOMAINS: {
       label: t('deploymentConfigItems.CDN_DOMAINS.label', 'CDN Domains'),
-      description: t('deploymentConfigItems.CDN_DOMAINS.description', 'Content delivery domains'),
-      hint: t('deploymentConfigItems.CDN_DOMAINS.hint', 'Comma-separated CDN hostnames for static assets (e.g., cdn.example.com). Leave blank if not using a CDN.'),
+      description: t(
+        'deploymentConfigItems.CDN_DOMAINS.description',
+        'Content delivery domains'
+      ),
+      hint: t(
+        'deploymentConfigItems.CDN_DOMAINS.hint',
+        'Comma-separated CDN hostnames for static assets (e.g., cdn.example.com). Leave blank if not using a CDN.'
+      ),
     },
     CUSTOM_SEARXNG_URL: {
-      label: t('deploymentConfigItems.CUSTOM_SEARXNG_URL.label', 'Custom SearXNG URL'),
-      description: t('deploymentConfigItems.CUSTOM_SEARXNG_URL.description', 'Private SearXNG instance URL'),
-      hint: t('deploymentConfigItems.CUSTOM_SEARXNG_URL.hint', 'Set only if using a separate SearXNG host. Example: https://search.example.com.'),
+      label: t(
+        'deploymentConfigItems.CUSTOM_SEARXNG_URL.label',
+        'Custom SearXNG URL'
+      ),
+      description: t(
+        'deploymentConfigItems.CUSTOM_SEARXNG_URL.description',
+        'Private SearXNG instance URL'
+      ),
+      hint: t(
+        'deploymentConfigItems.CUSTOM_SEARXNG_URL.hint',
+        'Set only if using a separate SearXNG host. Example: https://search.example.com.'
+      ),
     },
     WEBHOOK_BASE_URL: {
       label: t('deploymentConfigItems.WEBHOOK_BASE_URL.label', 'Webhook URL'),
-      description: t('deploymentConfigItems.WEBHOOK_BASE_URL.description', 'Webhook callback base URL'),
-      hint: t('deploymentConfigItems.WEBHOOK_BASE_URL.hint', 'Base URL used to construct webhook callbacks. Example: https://api.example.com/webhooks. Default: http://localhost:8000.'),
+      description: t(
+        'deploymentConfigItems.WEBHOOK_BASE_URL.description',
+        'Webhook callback base URL'
+      ),
+      hint: t(
+        'deploymentConfigItems.WEBHOOK_BASE_URL.hint',
+        'Base URL used to construct webhook callbacks. Example: https://api.example.com/webhooks. Default: http://localhost:18000.'
+      ),
     },
     // SSL & Security
     TRUSTED_PROXIES: {
-      label: t('deploymentConfigItems.TRUSTED_PROXIES.label', 'Trusted Proxies'),
-      description: t('deploymentConfigItems.TRUSTED_PROXIES.description', 'Trusted reverse proxies (cloudflare, aws, custom)'),
-      hint: t('deploymentConfigItems.TRUSTED_PROXIES.hint', 'Set to cloudflare, aws, or a comma-separated list of IP ranges. Leave blank if not behind a proxy.'),
+      label: t(
+        'deploymentConfigItems.TRUSTED_PROXIES.label',
+        'Trusted Proxies'
+      ),
+      description: t(
+        'deploymentConfigItems.TRUSTED_PROXIES.description',
+        'Trusted reverse proxies (cloudflare, aws, custom)'
+      ),
+      hint: t(
+        'deploymentConfigItems.TRUSTED_PROXIES.hint',
+        'Set to cloudflare, aws, or a comma-separated list of IP ranges. Leave blank if not behind a proxy.'
+      ),
     },
     SSL_CERT_PATH: {
-      label: t('deploymentConfigItems.SSL_CERT_PATH.label', 'SSL Certificate Path'),
-      description: t('deploymentConfigItems.SSL_CERT_PATH.description', 'SSL certificate file path'),
-      hint: t('deploymentConfigItems.SSL_CERT_PATH.hint', 'Absolute path to the certificate file. Example: /etc/ssl/certs/fullchain.pem.'),
+      label: t(
+        'deploymentConfigItems.SSL_CERT_PATH.label',
+        'SSL Certificate Path'
+      ),
+      description: t(
+        'deploymentConfigItems.SSL_CERT_PATH.description',
+        'SSL certificate file path'
+      ),
+      hint: t(
+        'deploymentConfigItems.SSL_CERT_PATH.hint',
+        'Absolute path to the certificate file. Example: /etc/ssl/certs/fullchain.pem.'
+      ),
     },
     SSL_KEY_PATH: {
       label: t('deploymentConfigItems.SSL_KEY_PATH.label', 'SSL Key Path'),
-      description: t('deploymentConfigItems.SSL_KEY_PATH.description', 'SSL private key file path'),
-      hint: t('deploymentConfigItems.SSL_KEY_PATH.hint', 'Absolute path to the private key file. Example: /etc/ssl/private/privkey.pem.'),
+      description: t(
+        'deploymentConfigItems.SSL_KEY_PATH.description',
+        'SSL private key file path'
+      ),
+      hint: t(
+        'deploymentConfigItems.SSL_KEY_PATH.hint',
+        'Absolute path to the private key file. Example: /etc/ssl/private/privkey.pem.'
+      ),
     },
     FORCE_HTTPS: {
       label: t('deploymentConfigItems.FORCE_HTTPS.label', 'Force HTTPS'),
-      description: t('deploymentConfigItems.FORCE_HTTPS.description', 'Redirect HTTP to HTTPS'),
-      hint: t('deploymentConfigItems.FORCE_HTTPS.hint', 'Set to true only after SSL_CERT_PATH and SSL_KEY_PATH are configured.'),
+      description: t(
+        'deploymentConfigItems.FORCE_HTTPS.description',
+        'Redirect HTTP to HTTPS'
+      ),
+      hint: t(
+        'deploymentConfigItems.FORCE_HTTPS.hint',
+        'Set to true only after SSL_CERT_PATH and SSL_KEY_PATH are configured.'
+      ),
     },
     HSTS_MAX_AGE: {
       label: t('deploymentConfigItems.HSTS_MAX_AGE.label', 'HSTS Max Age'),
-      description: t('deploymentConfigItems.HSTS_MAX_AGE.description', 'HSTS max-age in seconds'),
-      hint: t('deploymentConfigItems.HSTS_MAX_AGE.hint', 'Seconds browsers should enforce HTTPS. Default: 31536000 (1 year). Use 0 to disable.'),
+      description: t(
+        'deploymentConfigItems.HSTS_MAX_AGE.description',
+        'HSTS max-age in seconds'
+      ),
+      hint: t(
+        'deploymentConfigItems.HSTS_MAX_AGE.hint',
+        'Seconds browsers should enforce HTTPS. Default: 31536000 (1 year). Use 0 to disable.'
+      ),
     },
     MONITORING_URL: {
       label: t('deploymentConfigItems.MONITORING_URL.label', 'Monitoring URL'),
-      description: t('deploymentConfigItems.MONITORING_URL.description', 'Health monitoring endpoint URL'),
-      hint: t('deploymentConfigItems.MONITORING_URL.hint', 'Health check URL for external monitors. Default: http://localhost:8000/health.'),
+      description: t(
+        'deploymentConfigItems.MONITORING_URL.description',
+        'Health monitoring endpoint URL'
+      ),
+      hint: t(
+        'deploymentConfigItems.MONITORING_URL.hint',
+        'Health check URL for external monitors. Default: http://localhost:18000/health.'
+      ),
     },
-  }
+  };
 }

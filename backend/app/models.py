@@ -3,8 +3,8 @@ Enclave Pydantic Models
 Request and response models for user/admin management.
 """
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from typing import Optional, Union
 from datetime import datetime
 
 
@@ -176,6 +176,18 @@ class InstanceSettings(BaseModel):
     typography_preset: Optional[str] = None
     default_language: Optional[str] = None
     default_theme: Optional[str] = None
+    auto_approve_users: Optional[Union[str, bool]] = None
+    reachout_enabled: Optional[Union[str, bool]] = None
+    reachout_mode: Optional[str] = None
+    reachout_title: Optional[str] = None
+    reachout_description: Optional[str] = None
+    reachout_button_label: Optional[str] = None
+    reachout_success_message: Optional[str] = None
+    reachout_to_email: Optional[str] = None
+    reachout_subject_prefix: Optional[str] = None
+    reachout_rate_limit_per_hour: Optional[str] = None
+    reachout_rate_limit_per_day: Optional[str] = None
+    reachout_include_ip: Optional[Union[str, bool]] = None
 
     @field_validator("default_language")
     @classmethod
@@ -187,8 +199,7 @@ class InstanceSettings(BaseModel):
     def validate_default_theme(cls, value: Optional[str]) -> Optional[str]:
         return normalize_default_theme(value)
 
-    class Config:
-        extra = "allow"  # Allow arbitrary additional settings
+    model_config = ConfigDict(extra="forbid")
 
 
 class InstanceSettingsResponse(BaseModel):
@@ -881,19 +892,19 @@ class ResourceCreate(BaseModel):
 
     @field_validator("scope_level")
     @classmethod
-    def _validate_scope_level(cls, v):
+    def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in RESOURCE_SCOPE_LEVELS:
             raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
         return v
 
     @field_validator("languages")
     @classmethod
-    def _validate_languages(cls, v):
+    def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_languages(v)
 
     @field_validator("contact")
     @classmethod
-    def _validate_contact(cls, v):
+    def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
         return normalize_resource_contact(v)
 
 
@@ -915,19 +926,19 @@ class ResourceUpdate(BaseModel):
 
     @field_validator("scope_level")
     @classmethod
-    def _validate_scope_level(cls, v):
+    def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in RESOURCE_SCOPE_LEVELS:
             raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
         return v
 
     @field_validator("languages")
     @classmethod
-    def _validate_languages(cls, v):
+    def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_languages(v)
 
     @field_validator("contact")
     @classmethod
-    def _validate_contact(cls, v):
+    def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
         return normalize_resource_contact(v)
 
 

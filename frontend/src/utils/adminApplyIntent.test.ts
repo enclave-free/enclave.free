@@ -21,6 +21,9 @@ describe('resolveAdminApplyIntent', () => {
     expect(resolveAdminApplyIntent('yes do it', true)).toEqual({
       kind: 'needs-panel',
     });
+    expect(resolveAdminApplyIntent('do it', true)).toEqual({
+      kind: 'needs-panel',
+    });
     expect(
       resolveAdminApplyIntent(
         'Apply the theme changes we discussed earlier',

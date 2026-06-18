@@ -73,7 +73,7 @@ describe('AdminDeploymentConfig', () => {
   let artifactEncryptionPosture: 'required' | 'disabled';
   let verificationStatus = 'current';
   let verificationRecordDetailRequested = false;
-  let readinessStatus = 'blocked';
+  let readinessStatus = 'warnings';
   let sessionMemoryRetentionPolicy = {
     enabled: false,
     retention_window_days: 30,
@@ -90,7 +90,7 @@ describe('AdminDeploymentConfig', () => {
     artifactEncryptionPosture = 'required';
     verificationStatus = 'current';
     verificationRecordDetailRequested = false;
-    readinessStatus = 'blocked';
+    readinessStatus = 'warnings';
     sessionMemoryRetentionPolicy = {
       enabled: false,
       retention_window_days: 30,
@@ -213,60 +213,52 @@ describe('AdminDeploymentConfig', () => {
             Response.json({
               status: readinessStatus,
               summary: {
-                blockers: readinessStatus === 'blocked' ? 1 : 0,
+                blockers: 0,
                 warnings: 3,
-                ready: readinessStatus === 'blocked' ? 2 : 3,
-                total: 6,
+                ready: 2,
+                total: 5,
               },
               items: [
                 {
                   key: 'verifiable_inference',
                   label: 'Verifiable Inference',
                   source: 'inference_verification',
-                  severity: readinessStatus === 'blocked' ? 'blocker' : 'ready',
-                  status: readinessStatus === 'blocked' ? 'missing' : 'current',
+                  severity:
+                    readinessStatus === 'warnings' ? 'warning' : 'ready',
+                  status:
+                    readinessStatus === 'warnings'
+                      ? 'deferred_missing'
+                      : 'current',
                   summary:
-                    readinessStatus === 'blocked'
-                      ? 'Current Verifiable Inference is required before normal Conversations can run.'
+                    readinessStatus === 'warnings'
+                      ? 'Verifiable Inference is deferred for this prototype and is not required for normal Conversations.'
                       : 'Current Verifiable Inference evidence is available for normal Conversations.',
                   next_action:
-                    readinessStatus === 'blocked'
-                      ? 'Run Model Provider verification or repair provider configuration.'
+                    readinessStatus === 'warnings'
+                      ? 'Track Verifiable Inference as post-prototype hardening; verification can still be reviewed or run manually.'
                       : 'No action required.',
-                  conversation_blocking: readinessStatus === 'blocked',
+                  conversation_blocking: false,
                 },
                 {
                   key: 'lifecycle_readiness',
-                  label: 'Lifecycle Readiness',
+                  label: 'Data Lifecycle Review',
                   source: 'lifecycle_readiness',
                   severity: 'warning',
                   status: 'stale',
                   summary:
-                    'Lifecycle Readiness is stale and needs Admin review.',
+                    'Data Lifecycle Review needs Admin review and 15 unsupported Deployment Surface acknowledgements.',
                   next_action:
-                    'Review lifecycle status and unsupported Deployment Surfaces.',
+                    'Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces.',
                   conversation_blocking: false,
                 },
                 {
-                  key: 'deployment_validation',
-                  label: 'Deployment Validation',
+                  key: 'deployment_settings_validation',
+                  label: 'Deployment Settings Validation',
                   source: 'deployment_validation',
                   severity: 'ready',
                   status: 'valid',
                   summary: 'Deployment Settings are valid.',
                   next_action: 'No action required.',
-                  conversation_blocking: false,
-                },
-                {
-                  key: 'sage_runtime_env',
-                  label: 'Sage Runtime Env',
-                  source: 'runtime_env',
-                  severity: 'warning',
-                  status: 'drifted',
-                  summary:
-                    'Running Sage runtime config differs from desired Deployment Settings.',
-                  next_action:
-                    'Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage.',
                   conversation_blocking: false,
                 },
                 {
@@ -940,7 +932,7 @@ describe('AdminDeploymentConfig', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows Deployment Readiness blockers, warnings, and next actions', async () => {
+  it('shows Deployment Readiness warnings and next actions', async () => {
     render(
       <MemoryRouter initialEntries={['/admin/deployment']}>
         <Routes>
@@ -953,39 +945,35 @@ describe('AdminDeploymentConfig', () => {
       name: 'Deployment Readiness',
     });
     expect(
-      within(readiness).getByText('Deployment Readiness: Blocked')
+      within(readiness).getByText('Deployment Readiness: Warnings')
     ).toBeInTheDocument();
-    expect(within(readiness).getByText('1 blockers')).toBeInTheDocument();
+    expect(within(readiness).getByText('0 blockers')).toBeInTheDocument();
     expect(within(readiness).getByText('3 warnings')).toBeInTheDocument();
     expect(
       within(readiness).getByText('Verifiable Inference')
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Current Verifiable Inference is required before normal Conversations can run.'
+        'Verifiable Inference is deferred for this prototype and is not required for normal Conversations.'
       )
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Run Model Provider verification or repair provider configuration.'
-      )
-    ).toBeInTheDocument();
-    expect(within(readiness).getByText('Sage Runtime Env')).toBeInTheDocument();
-    expect(
-      within(readiness).getByText(
-        'Running Sage runtime config differs from desired Deployment Settings.'
+        'Track Verifiable Inference as post-prototype hardening; verification can still be reviewed or run manually.'
       )
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage.'
+        'Data Lifecycle Review needs Admin review and 15 unsupported Deployment Surface acknowledgements.'
       )
     ).toBeInTheDocument();
     expect(
-      within(readiness).getByRole('link', { name: 'Review Runtime Env Export' })
-    ).toHaveAttribute('href', '#runtime-config-alignment');
+      within(readiness).getByText(
+        'Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces.'
+      )
+    ).toBeInTheDocument();
     const lifecycleItem = within(readiness)
-      .getByText('Lifecycle Readiness')
+      .getByText('Data Lifecycle Review')
       .closest('.bg-surface');
     expect(lifecycleItem).not.toBeNull();
     expect(
@@ -1020,7 +1008,7 @@ describe('AdminDeploymentConfig', () => {
     const wizard = await screen.findByRole('dialog', {
       name: 'Deployment Wizard',
     });
-    expect(within(wizard).getByText('Step 1 of 6')).toBeInTheDocument();
+    expect(within(wizard).getByText('Step 1 of 5')).toBeInTheDocument();
     expect(
       within(wizard).getByText('Verifiable Inference')
     ).toBeInTheDocument();
@@ -1032,17 +1020,19 @@ describe('AdminDeploymentConfig', () => {
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }));
 
-    expect(within(wizard).getByText('Step 2 of 6')).toBeInTheDocument();
-    expect(within(wizard).getByText('Lifecycle Readiness')).toBeInTheDocument();
+    expect(within(wizard).getByText('Step 2 of 5')).toBeInTheDocument();
+    expect(
+      within(wizard).getByText('Data Lifecycle Review')
+    ).toBeInTheDocument();
     expect(
       within(wizard).getByRole('link', { name: 'Review Data Lifecycle Status' })
     ).toHaveAttribute('href', '#data-lifecycle-status');
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }));
 
-    expect(within(wizard).getByText('Step 3 of 6')).toBeInTheDocument();
+    expect(within(wizard).getByText('Step 3 of 5')).toBeInTheDocument();
     expect(
-      within(wizard).getByText('Deployment Validation')
+      within(wizard).getByText('Deployment Settings Validation')
     ).toBeInTheDocument();
     expect(
       within(wizard).getByRole('link', { name: 'Review Deployment Settings' })
@@ -1051,16 +1041,7 @@ describe('AdminDeploymentConfig', () => {
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }));
 
-    expect(within(wizard).getByText('Step 4 of 6')).toBeInTheDocument();
-    expect(within(wizard).getByText('Sage Runtime Env')).toBeInTheDocument();
-    expect(
-      within(wizard).getByRole('link', { name: 'Review Runtime Env Export' })
-    ).toHaveAttribute('href', '#runtime-config-alignment');
-    expect(document.getElementById('runtime-config-alignment')).not.toBeNull();
-
-    await user.click(within(wizard).getByRole('button', { name: 'Next' }));
-
-    expect(within(wizard).getByText('Step 5 of 6')).toBeInTheDocument();
+    expect(within(wizard).getByText('Step 4 of 5')).toBeInTheDocument();
     expect(
       within(wizard).getByText('Backup And Restore Drill')
     ).toBeInTheDocument();
@@ -1071,7 +1052,7 @@ describe('AdminDeploymentConfig', () => {
 
     await user.click(within(wizard).getByRole('button', { name: 'Next' }));
 
-    expect(within(wizard).getByText('Step 6 of 6')).toBeInTheDocument();
+    expect(within(wizard).getByText('Step 5 of 5')).toBeInTheDocument();
     expect(within(wizard).getByText('Restart Required')).toBeInTheDocument();
     expect(
       within(wizard).getByRole('link', { name: 'Review Restart Required' })

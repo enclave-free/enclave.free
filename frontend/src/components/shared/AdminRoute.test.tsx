@@ -69,7 +69,7 @@ describe('AdminRoute', () => {
 
   it('suppresses the shared assistant on the dedicated onboarding route', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/onboarding']}>
+      <MemoryRouter initialEntries={['/admin/onboarding/step-one']}>
         <AdminRoute>
           <main>Guided setup content</main>
         </AdminRoute>

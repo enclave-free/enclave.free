@@ -58,4 +58,4 @@ No automated test framework is configured yet. Validate changes via the smoke te
 Commit history favors short, action-oriented messages (often lowercase, e.g., “smoke test successful”). Keep messages concise; use `WIP` only for clearly unfinished work. PRs should include a brief summary, linked issues (if any), testing evidence, and screenshots for UI changes.
 
 ## Security & Configuration Tips
-Copy `.env.example` to `.env` and set `LLM_API_KEY` plus `TINFOIL_API_KEY` when using Compose; Compose maps `TINFOIL_API_KEY` into the backend's canonical `LLM_API_KEY`, but non-Compose runs read `LLM_API_KEY` directly and will miss provider authentication if it is unset. Never commit secrets. The embedding model cache is stored in a Docker volume, and `uploads/` contains local ingest data that should not be checked in.
+Copy `.env.example` to `.env` and set `LLM_API_KEY`; Compose maps that canonical operator-facing secret into Sage and the local Tinfoil proxy internally. Never commit secrets. The embedding model cache is stored in a Docker volume, and `uploads/` contains local ingest data that should not be checked in.

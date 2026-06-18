@@ -1,6 +1,6 @@
 # Use assistant-ui for the Conversation UI Surface
 
-The Enclave Free Prototype will use assistant-ui as the shared Conversation UI Surface for Admin Conversations and User Conversations, starting with a thin adapter around Sage-owned Conversation Streaming Transport. The first slice should replace the custom message thread and prompt input, render Sage-emitted Conversation Activity Steps as a progressive turn timeline before the final answer is complete, and preserve Enclave-specific controls such as tool selection, document scope, reachout, export, final Conversation Trace rendering, and Admin Change Confirmation. Because this is still a prototype, the live activity timeline should bias toward an inspectable agent-loop/debug experience while relying on Sage to sanitize what is safe to show. This favors a configurable open-source chat UI layer without moving Agent Runtime ownership, streaming semantics, tool behavior, memory, or inference boundaries out of Sage.
+The Enclave Free Prototype will use assistant-ui as the shared Conversation UI Surface for Admin Conversations and User Conversations, starting with a thin adapter around Sage-owned Conversation Streaming Transport. The first slice should replace the custom message thread and prompt input, render Sage-emitted Conversation Activity Steps as a progressive turn timeline before the final answer is complete, and preserve Enclave-specific controls such as Tool Set selection, Knowledge Search document constraints, reachout, export, final Conversation Trace rendering, and Admin Change Confirmation. Because this is still a prototype, the live activity timeline should bias toward an inspectable agent-loop/debug experience while relying on Sage to sanitize what is safe to show. This favors a configurable open-source chat UI layer without moving Agent Runtime ownership, streaming semantics, Tool behavior, memory, or inference boundaries out of Sage.
 
 ## Refined Product Direction
 
@@ -12,9 +12,9 @@ The core message layout should follow modern assistant defaults: assistant respo
 
 Admin Change Confirmation should become an inline approval card attached to the relevant assistant turn. The card should show a human-readable summary, affected settings, warnings, and masked secrets by default, with approve/reject actions and collapsed review details. Approvals should be non-blocking for normal conversation, with one clear pending admin-config approval at a time. Applying an approval should disable only that approval card, and historical cards should preserve their final state.
 
-The chat layout should include a session-sidebar shell now, even before persistent session history is implemented. The shell may be static or local-only in this slice, but it should establish the future ChatGPT-style layout: sidebar for new chat and session navigation, light top bar for current chat context, composer toolbar for next-turn tools and document context, and thread content for assistant output, visible traces, compaction notices, errors, and approvals.
+The chat layout should include a session-sidebar shell now, even before persistent session history is implemented. The shell may be static or local-only in this slice, but it should establish the future ChatGPT-style layout: sidebar for new chat and session navigation, light top bar for current chat context, composer toolbar for next-turn Tool Sets and Tool constraints, and thread content for assistant output, visible traces, compaction notices, errors, and approvals.
 
-Document scope and tool selection should be represented as compact composer context rather than as separate dashboard-like controls. They should use quiet chips, icon buttons, popovers, or menus near the composer so the selected Documents and Tools read as context for the next turn. True per-message file attachments, drag-and-drop upload, and assistant-ui attachment adapters are out of scope for this slice. Export should remain available but should move away from the primary path, such as into an overflow or secondary action area.
+Tool Set selection should be represented as compact composer context rather than as separate dashboard-like controls. Knowledge Search document scope should live under the Knowledge Tool Set control as Tool constraints, not as a separate hidden document mode. True per-message file attachments, drag-and-drop upload, and assistant-ui attachment adapters are out of scope for this slice. Export should remain available but should move away from the primary path, such as into an overflow or secondary action area.
 
 The chat should use Enclave theme tokens lightly for text, backgrounds, borders, accent, danger, and warning states, but should not preserve heavy legacy chat styling such as glow, strong gradients, oversized empty-state ornamentation, or bespoke bubble chrome. The Conversation UI Surface should become the best-designed part of the product and should be allowed to pull future theme work forward.
 
@@ -23,17 +23,17 @@ The current Sage stream contract emits safe, sanitized activity and trace events
 ## Implementation Boundaries
 
 - Use assistant-ui for the shared thread, composer, message layout, message actions, empty state, running state, and future-ready shell structure where practical.
-- Keep Sage-owned Conversation Streaming Transport and existing `/llm/chat/stream` and `/query/stream` contracts.
+- Keep Sage-owned Conversation Streaming Transport while moving route-specific tool behavior toward the unified model-driven Tool loop from ADR-0023.
 - Keep Conversation Activity Steps and Conversation Trace as sanitized product metadata from Sage.
 - Render traces before assistant answers when activity exists.
 - Keep trace details expandable with local UI state only; do not persist open/closed state.
 - Keep compaction notices as small system notices inside the thread rather than prominent warning blocks.
 - Do not add message edit, regenerate, or full stop/cancel generation unless the existing Sage transport can support the behavior truthfully without corrupting **Conversation UI State**, **Session Memory**, or later turns.
-- Preserve behavioral tests around stream adaptation, conversation state, trace visibility, Admin Change Confirmation, document context, and export, while rewriting brittle DOM or style assertions as needed.
+- Preserve behavioral tests around stream adaptation, conversation state, trace visibility, Admin Change Confirmation, Knowledge Search constraints, Tool Set selection, and export, while rewriting brittle DOM or style assertions as needed.
 
 ## Current Slice Status
 
-The current implementation establishes the assistant-ui-backed Conversation Surface for Admin and User Conversations with a session-sidebar shell, shared composer, visible Conversation Activity Steps, expandable Conversation Trace details, composer-scoped tools and Documents, secondary export placement, and inline Admin Change Confirmation approval cards.
+The current implementation establishes the assistant-ui-backed Conversation Surface for Admin and User Conversations with a session-sidebar shell, shared composer, visible Conversation Activity Steps, expandable Conversation Trace details, composer-scoped Tool controls, secondary export placement, and inline Admin Change Confirmation approval cards.
 
 Admin Change Confirmation cards are now UI-based rather than text-command-based. The assistant turn keeps human-readable prose, strips raw change-set JSON from the visible message after staging the approval, masks deployment secret values in review details, and preserves applied or rejected card state in the thread history. This keeps the prototype transparent without forcing operators to read or act on raw JSON.
 

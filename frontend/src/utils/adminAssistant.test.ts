@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as adminAssistant from './adminAssistant';
 import {
+  coerceAdminAssistantChangeSetPayload,
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   stripAdminAssistantChangeSetJson,
@@ -157,6 +158,138 @@ describe('extractAdminAssistantChangeSetStrict', () => {
     if (extracted.ok) {
       expect(extracted.changeSet.requests[0].body).toEqual({});
     }
+  });
+});
+
+describe('coerceAdminAssistantChangeSetPayload', () => {
+  it('accepts structured Sage proposal payloads without requiring message JSON', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      summary: 'Set instance name',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { instance_name: 'FreeThem' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(true);
+    if (extracted.ok) {
+      expect(extracted.changeSet.summary).toBe('Set instance name');
+      expect(extracted.changeSet.requests[0]).toEqual({
+        method: 'PUT',
+        path: '/admin/settings',
+        body: { instance_name: 'FreeThem' },
+      });
+    }
+  });
+
+  it('canonicalizes structured proposal payload drift before staging', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      summary: 'Complete setup',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: {
+            tagline: 'Support for political prisoners and their families',
+            default_language: 'English',
+          },
+        },
+        {
+          method: 'POST',
+          path: '/admin/user_types',
+          body: {
+            name: 'Current Support',
+            description: 'Family and friends of current political prisoners',
+          },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(true);
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0]).toEqual({
+        method: 'PUT',
+        path: '/admin/settings',
+        body: {
+          header_tagline: 'Support for political prisoners and their families',
+          default_language: 'en',
+        },
+      });
+      expect(extracted.changeSet.requests[1].path).toBe('/admin/user-types');
+    }
+  });
+
+  it('rejects unsupported instance setting keys before staging', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { made_up_setting: 'nope' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('Unsupported instance setting key');
+    }
+  });
+
+  it('rejects non-string language and theme setting values before staging', () => {
+    const invalidLanguage = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { default_language: true },
+        },
+      ],
+    });
+    expect(invalidLanguage.ok).toBe(false);
+    if (!invalidLanguage.ok) {
+      expect(invalidLanguage.error).toContain(
+        'Unsupported default_language value'
+      );
+    }
+
+    const invalidTheme = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { default_theme: false },
+        },
+      ],
+    });
+    expect(invalidTheme.ok).toBe(false);
+    if (!invalidTheme.ok) {
+      expect(invalidTheme.error).toContain('Unsupported default_theme value');
+    }
+  });
+
+  it('rejects structured payloads with disallowed requests', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/tools/execute',
+          body: { tool_id: 'db-query' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) expect(extracted.error).toContain('Disallowed');
   });
 });
 

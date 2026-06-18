@@ -2,34 +2,24 @@
  * Budget-aware prompt planning for Admin Configuration Assistant turns.
  */
 
-export type PromptBudgetSectionId =
-  | 'admin-config'
-  | 'document-context'
-  | 'recent-conversation';
+export type PromptBudgetSectionId = 'recent-conversation';
 
 export interface AdminPromptBudgetLimits {
-  adminConfigChars: number;
-  documentContextChars: number;
   conversationTurns: number;
   conversationCharsPerTurn: number;
 }
 
 export const DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS: AdminPromptBudgetLimits = {
-  adminConfigChars: 12_000,
-  documentContextChars: 6_000,
   conversationTurns: 8,
   conversationCharsPerTurn: 2_000,
 };
 
 export interface AdminPromptBudgetInput {
-  adminConfigContext: string;
-  documentContext?: string;
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
   limits?: Partial<AdminPromptBudgetLimits>;
 }
 
 export interface AdminPromptBudgetPlan {
-  toolContext: string;
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
   includedSections: PromptBudgetSectionId[];
   reducedSections: PromptBudgetSectionId[];
@@ -54,31 +44,6 @@ export function planAdminPromptBudget(
   const includedSections: PromptBudgetSectionId[] = [];
   const reducedSections: PromptBudgetSectionId[] = [];
   const omittedSections: PromptBudgetSectionId[] = [];
-  const toolContextParts: string[] = [];
-
-  const adminConfig = boundSectionText(
-    input.adminConfigContext,
-    limits.adminConfigChars
-  );
-  if (adminConfig.text) {
-    includedSections.push('admin-config');
-    if (adminConfig.reduced) reducedSections.push('admin-config');
-    toolContextParts.push(adminConfig.text);
-  } else {
-    omittedSections.push('admin-config');
-  }
-
-  const documentContext = boundSectionText(
-    input.documentContext || '',
-    limits.documentContextChars
-  );
-  if (documentContext.text) {
-    includedSections.push('document-context');
-    if (documentContext.reduced) reducedSections.push('document-context');
-    toolContextParts.push(documentContext.text);
-  } else if ((input.documentContext || '').trim()) {
-    omittedSections.push('document-context');
-  }
 
   const conversationHistory = planConversationHistory(
     input.conversationHistory,
@@ -89,17 +54,13 @@ export function planAdminPromptBudget(
   );
 
   const warningNote = buildWarningNote(reducedSections);
-  if (warningNote) {
-    toolContextParts.unshift(warningNote);
-  }
 
-  const toolContext = toolContextParts.join('\n\n').trim();
-  const estimatedChars =
-    toolContext.length +
-    conversationHistory.reduce((total, turn) => total + turn.content.length, 0);
+  const estimatedChars = conversationHistory.reduce(
+    (total, turn) => total + turn.content.length,
+    0
+  );
 
   return {
-    toolContext,
     conversationHistory,
     includedSections,
     reducedSections,
@@ -110,8 +71,6 @@ export function planAdminPromptBudget(
 }
 
 const REDUCED_SECTION_LABELS: Record<PromptBudgetSectionId, string> = {
-  'admin-config': 'admin configuration context',
-  'document-context': 'document library context',
   'recent-conversation': 'recent conversation history',
 };
 

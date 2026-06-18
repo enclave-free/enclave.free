@@ -68,10 +68,10 @@ test_{number}{letter}_{description}.py
 | 3B | `test_3b_key_migration_execute.py` | AUTH | Execute migration and verify re-encryption |
 | 3C | `test_3c_auth_hardening_regression.py` | AUTH | Validate ingest/vector auth, session ownership, and CSRF behavior |
 | 3D | `test_3d_phase3_config_integrity.py` | AUTH | Validate secret-at-rest encryption and audit hash-chain verification |
-| 4A | `test_4a_unified_chat_tools_parity.py` | TOOLS | Verify `/llm/chat` `tools_used` parity across full-chat and admin-bubble payload shapes |
+| 4A | `test_4a_unified_chat_tools_parity.py` | TOOLS | Verify unified Tool Set parity across full-chat and admin-bubble payload shapes |
 | 5B | `test_5b_sage_route_smoke.py` | TOOLS | Smoke-test Sage-owned public routes and auth/CSRF boundaries |
 | 5C | `test_5c_chat_streaming_transport.py` | TOOLS | Verify `/llm/chat/stream` assistant events, Admin Config streaming, and Database trace redaction through the Docker gateway |
-| 5D | `test_5d_chunk_retrieval_gateway_smoke.py` | TOOLS | Seed one Document Library chunk and verify selected Required Context flows through public `/query` with source metadata |
+| 5D | `test_5d_chunk_retrieval_gateway_smoke.py` | TOOLS | Seed one Document Library chunk and verify Knowledge Search can return authorized source metadata through the public Conversation path |
 | 5E | `test_5e_conversation_sidebar_history.py` | TOOLS | Verify `/query/sessions` returns role-scoped durable Conversation summaries through the Docker gateway |
 | 5F | `test_5f_conversation_resume_and_rename.py` | TOOLS | Verify saved Conversation resume metadata and authorized title-only rename through the Docker gateway |
 | 5G | `test_5g_conversation_delete_lifecycle.py` | TOOLS | Verify authorized saved Conversation deletion removes resume/history access through the Docker gateway |
@@ -299,9 +299,9 @@ python test_5d_chunk_retrieval_gateway_smoke.py --api-base http://localhost:8000
 ### Test 4A: Unified Chat Tool Parity
 
 ✅ **PASS** when:
-- Full-chat payload shape and admin-bubble payload shape return identical `tools_used` sets for the same selected tools.
-- `tool_context` without `client_executed_tools` still allows Sage-owned tool execution.
-- Prototype clients do not send `client_executed_tools: ["db-query"]`; `db-query` runs as a normal Sage-owned tool.
+- Full-chat payload shape, admin-bubble payload shape, and onboarding assistant payload shape enable the same Tool Sets for equivalent admin turns.
+- Prototype clients do not send `client_executed_tools`.
+- Tool calls are selected and executed by Sage's model-driven Tool loop.
 
 ---
 

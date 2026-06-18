@@ -9,13 +9,13 @@
 #   ./scripts/verify-admin-auth.sh [base_url]
 #
 # Examples:
-#   ./scripts/verify-admin-auth.sh                    # Uses http://localhost:8000
-#   ./scripts/verify-admin-auth.sh http://localhost:8000
+#   ./scripts/verify-admin-auth.sh                    # Uses http://localhost:18000
+#   ./scripts/verify-admin-auth.sh http://localhost:18000
 # =============================================================================
 
 set -e
 
-BASE_URL="${1:-http://localhost:8000}"
+BASE_URL="${1:-http://localhost:18000}"
 FAILED=0
 PASSED=0
 

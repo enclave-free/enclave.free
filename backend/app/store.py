@@ -30,7 +30,7 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "tinfoil").lower()
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 EMBEDDING_API_URL = os.getenv("EMBEDDING_API_URL") or os.getenv("LLM_API_URL", "http://tinfoil-proxy:8089/v1")
-EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY") or os.getenv("TINFOIL_API_KEY")
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY") or os.getenv("LLM_API_KEY")
 
 # Collection name for knowledge base
 COLLECTION_NAME = "enclave_knowledge"
@@ -67,7 +67,7 @@ def get_embedding_client():
     if _embedding_client is None:
         if not EMBEDDING_API_KEY:
             raise RuntimeError(
-                "EMBEDDING_API_KEY or TINFOIL_API_KEY is required for Tinfoil embeddings"
+                "LLM_API_KEY is required for Tinfoil embeddings"
             )
         from openai import OpenAI
 

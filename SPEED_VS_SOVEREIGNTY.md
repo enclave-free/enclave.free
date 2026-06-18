@@ -62,7 +62,6 @@ cp .env.example .env
 
 # Required for the current Docker Compose Sage + Tinfoil stack
 LLM_API_KEY=your-tinfoil-api-key
-TINFOIL_API_KEY=your-tinfoil-api-key
 
 # HACKATHON MODE (current default) — smaller model, faster PDF parsing
 LLM_PROVIDER=sage
@@ -75,7 +74,6 @@ PDF_EXTRACT_MODE=fast
 # LLM_PROVIDER=local-openai-compatible
 # LLM_API_URL=http://your-local-openai-compatible-endpoint/v1
 # LLM_API_KEY=your-local-provider-key-or-placeholder
-# TINFOIL_API_KEY=your-compose-tinfoil-key-if-still-using-tinfoil
 # EMBEDDING_MODEL=intfloat/multilingual-e5-large
 # PDF_EXTRACT_MODE=quality
 ```

@@ -19,7 +19,6 @@ import {
 } from '../types/instance';
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import {
-  sendQueryStream,
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../utils/llmChat';
@@ -35,7 +34,6 @@ vi.mock('../utils/adminApi', () => ({
 }));
 
 vi.mock('../utils/llmChat', () => ({
-  sendQueryStream: vi.fn(),
   sendLlmChatStreamWithUnifiedTools: vi.fn(),
   sendLlmChatWithUnifiedTools: vi.fn(),
 }));
@@ -58,97 +56,14 @@ describe('ChatPage', () => {
   const rawMockAdminFetchImplementation =
     mockAdminFetch.mockImplementation.bind(mockAdminFetch);
 
-  const scopedConfigResponse = (
-    overrides: Partial<{
-      primary_scope: string;
-      included_scopes: string[];
-      context_text: string;
-      warnings: string[];
-      deployment_secret_keys: string[];
-    }> = {}
-  ) => ({
-    version: 1,
-    primary_scope: 'instance-settings',
-    included_scopes: ['instance-settings'],
-    context_text: [
-      'SCOPED CONFIG CONTEXT',
-      'Generated: 2026-05-25T12:00:00+00:00',
-      'scope: instance-settings',
-      '',
-      'INSTANCE SETTINGS (/admin/settings)',
-      '- default_theme: dark',
-      '',
-      'INSTANCE BRANDING, THEME, AND COPY SETTINGS',
-      '- default_theme (Default theme): current value: dark',
-    ].join('\n'),
-    warnings: [],
-    generated_at: '2026-05-25T12:00:00+00:00',
-    secret_policy: { mode: 'masked' },
-    deployment_secret_keys: [],
-    ...overrides,
-  });
-
-  const scopedConfigResponseForRequest = (options?: RequestInit) => {
-    const body = options?.body ? JSON.parse(String(options.body)) : {};
-    const query = String(body.query ?? '').toLowerCase();
-    if (query.includes('deployment') || query.includes('model')) {
-      return scopedConfigResponse({
-        primary_scope: 'deployment-settings',
-        included_scopes: ['deployment-settings'],
-        context_text: [
-          'SCOPED CONFIG CONTEXT',
-          'scope: deployment-settings',
-          '',
-          'DEPLOYMENT SETTINGS (/admin/deployment/config)',
-          '- LLM_API_KEY = [REDACTED] requires_restart=true secret=true',
-          '',
-          'SECRETS',
-          'Secret env vars are masked in this context.',
-          '- LLM_API_KEY = [REDACTED]',
-        ].join('\n'),
-        deployment_secret_keys: ['LLM_API_KEY'],
-      });
-    }
-    return scopedConfigResponse();
-  };
-
-  const defaultAdminFetch = (endpoint: string, options?: RequestInit) => {
-    if (endpoint === '/admin/scoped-config-context') {
-      return Promise.resolve(
-        Response.json(scopedConfigResponseForRequest(options))
-      );
-    }
-    if (endpoint === '/ingest/admin/documents/context-preview') {
-      return Promise.resolve(
-        Response.json({
-          documents: [
-            {
-              job_id: 'job-brand-guide',
-              filename: 'brand-guide.pdf',
-              preview_chunks: [
-                {
-                  text: 'Use muted blue tones for the primary brand palette.',
-                },
-              ],
-            },
-          ],
-          limits: {
-            max_documents: 5,
-            max_chunks_per_document: 3,
-            max_chars_per_chunk: 1200,
-          },
-        })
-      );
-    }
-    return null;
-  };
+  const defaultAdminFetch = (_endpoint: string) => null;
 
   beforeEach(() => {
     resetAdminResilienceInstrumentationListeners();
     mockIsAdminAuthenticated.mockReturnValue(false);
     mockAdminFetch.mockImplementation = ((implementation) =>
       rawMockAdminFetchImplementation((endpoint, options) => {
-        const defaultResponse = defaultAdminFetch(endpoint, options);
+        const defaultResponse = defaultAdminFetch(endpoint);
         if (defaultResponse) return defaultResponse;
         return implementation(endpoint, options);
       })) as typeof mockAdminFetch.mockImplementation;
@@ -172,14 +87,9 @@ describe('ChatPage', () => {
     );
     localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'reader@example.com');
     vi.mocked(isAdminAuthenticated).mockReturnValue(false);
-    vi.mocked(adminFetch).mockImplementation(
-      (endpoint: string, options?: RequestInit) => {
-        return (
-          defaultAdminFetch(endpoint, options) ??
-          Promise.resolve(Response.json({}))
-        );
-      }
-    );
+    vi.mocked(adminFetch).mockImplementation((endpoint: string) => {
+      return defaultAdminFetch(endpoint) ?? Promise.resolve(Response.json({}));
+    });
 
     vi.stubGlobal(
       'fetch',
@@ -292,71 +202,66 @@ describe('ChatPage', () => {
     );
   });
 
-  it('sends document-grounded chat through the supported query route', async () => {
+  it('sends document-grounded chat through unified Knowledge Search tools', async () => {
     const user = userEvent.setup();
-    vi.mocked(fetch).mockImplementation(
-      (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
 
-        if (url.endsWith('/settings/public')) {
-          return Promise.resolve(Response.json({ settings: {} }));
-        }
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
 
-        if (url.endsWith('/session-defaults')) {
-          return Promise.resolve(
-            Response.json({
-              web_search_enabled: true,
-              default_document_ids: ['doc-1'],
-            })
-          );
-        }
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: true,
+            default_document_ids: ['doc-1'],
+          })
+        );
+      }
 
-        if (url.endsWith('/query/sessions')) {
-          return Promise.resolve(Response.json({ conversations: [] }));
-        }
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(Response.json({ conversations: [] }));
+      }
 
-        if (url.endsWith('/ingest/jobs')) {
-          return Promise.resolve(
-            Response.json({
-              jobs: [
-                {
-                  job_id: 'doc-1',
-                  filename: 'operator-handbook.pdf',
-                  status: 'completed',
-                  total_chunks: 12,
-                },
-              ],
-            })
-          );
-        }
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(
+          Response.json({
+            jobs: [
+              {
+                job_id: 'doc-1',
+                filename: 'operator-handbook.pdf',
+                status: 'completed',
+                total_chunks: 12,
+              },
+            ],
+          })
+        );
+      }
 
-        if (url.endsWith('/users/me/onboarding-status')) {
-          return Promise.resolve(
-            Response.json({
-              needs_user_type: false,
-              needs_onboarding: false,
-              effective_user_type_id: null,
-            })
-          );
-        }
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
 
-        if (url.endsWith('/query')) {
-          const body = JSON.parse(String(init?.body ?? '{}'));
-          expect(body).toMatchObject({
-            question: 'What does the handbook say?',
-            job_ids: ['doc-1'],
-            tools: ['web-search'],
-          });
-          return Promise.resolve(
-            Response.json({
-              answer: 'The handbook answer.',
-              session_id: 'session-1',
-              sources: [],
-            })
-          );
-        }
-
-        return Promise.resolve(Response.json({}));
+      return Promise.resolve(Response.json({}));
+    });
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-docs',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-docs',
+          delta: 'The handbook answer.',
+        });
+        onEvent('done', { message_id: 'msg-docs', session_id: 'session-1' });
       }
     );
 
@@ -376,7 +281,17 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('The handbook answer.')).toBeInTheDocument();
-    expect(sendQueryStream).not.toHaveBeenCalled();
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'What does the handbook say?',
+        tools: expect.arrayContaining(['web-search', 'knowledge-search']),
+        jobIds: ['doc-1'],
+      })
+    );
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringMatching(/\/query$/),
+      expect.anything()
+    );
     expect(fetch).not.toHaveBeenCalledWith(
       expect.stringMatching(/\/query\/stream$/),
       expect.anything()
@@ -1941,9 +1856,14 @@ describe('ChatPage', () => {
         });
         onEvent('answer_delta', {
           message_id: 'admin-msg',
-          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
+          delta:
+            'I prepared these configuration changes for review. Use Approve changes to confirm.',
         });
-        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+        onEvent('done', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+          admin_change_set: changeSet,
+        });
       }
     );
 
@@ -2467,7 +2387,7 @@ describe('ChatPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps admin chat apply language from executing a pending change set', async () => {
+  it('routes plain do-it language to the pending admin chat approval card', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -2526,17 +2446,24 @@ describe('ChatPage', () => {
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Apply them'
+      'do it'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
       screen.getByRole('group', { name: 'Admin Change Confirmation' })
     ).toHaveTextContent('Update instance theme');
+    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
     expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/settings',
       expect.objectContaining({ method: 'PUT' })
     );
+    await waitFor(() => {
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+      expect(
+        screen.getByRole('button', { name: 'Approve changes' })
+      ).toHaveFocus();
+    });
   });
 
   it('keeps imperative apply requests from executing a pending admin chat change set', async () => {
@@ -3251,7 +3178,7 @@ describe('ChatPage', () => {
     expect(JSON.stringify(lastContextPlanEvent)).not.toContain(
       'Theme question 0'
     );
-  });
+  }, 30_000);
 
   it('surfaces a reduced-context notice for oversized admin chat Config history', async () => {
     const user = userEvent.setup();

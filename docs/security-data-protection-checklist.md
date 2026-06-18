@@ -121,7 +121,7 @@ Use this checklist to:
 ### 2.2 Data confidentiality and privacy
 
 - [x] User PII fields are encrypted before DB write after admin initialization.
-- [x] User document access in `/query` is filtered by allowed `job_id`s for user type.
+- [x] User document access for Knowledge Search is filtered by allowed `job_id`s for user type.
 - [x] Eliminate unauthenticated ingest/chunk/vector endpoints that bypass user document controls.
 - [x] Prevent session data leakage across users (session ownership checks).
 - [x] Move user auth tokens from `localStorage` to secure, httpOnly cookies.

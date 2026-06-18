@@ -328,6 +328,13 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertTrue(region_data.is_valid_scope("country", "LI"))
         self.assertTrue(region_data.is_valid_scope("country", "MC"))
 
+    def test_global_scope_rejects_scope_code(self) -> None:
+        import region_data
+
+        self.assertTrue(region_data.is_valid_scope("global", None))
+        self.assertTrue(region_data.is_valid_scope("global", ""))
+        self.assertFalse(region_data.is_valid_scope("global", "US"))
+
     def test_resource_help_types_enforces_help_type_vocabulary_fk(self) -> None:
         self._create_ready_resource(
             "fk-resource",
