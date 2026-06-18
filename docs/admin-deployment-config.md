@@ -45,16 +45,16 @@ Recommended current values in admin deployment config:
 - `LLM_PROVIDER=sage`
 - `LLM_API_URL=http://tinfoil-proxy:8089/v1`
 - `LLM_MODEL=kimi-k2-6`
-- `LLM_API_KEY=<tinfoil key or matching override>`
+- `LLM_API_KEY=<tinfoil key>`
 
-These deployment keys keep existing environment names and UI labels stable while Sage runtime configuration remains env-driven. What they affect today:
+These deployment keys are the canonical operator-facing Model Provider configuration. What they affect today:
 
 | Key | Primary effect |
 | --- | --- |
 | `LLM_PROVIDER` | Python-side Model Provider labeling and validation |
 | `LLM_API_URL` | Python health checks against the configured Model Provider endpoint |
 | `LLM_MODEL` | Python-side model metadata and diagnostics |
-| `LLM_API_KEY` | Python-side Model Provider auth from Deployment Settings |
+| `LLM_API_KEY` | Canonical Model Provider auth for Python diagnostics, verification, Sage, and the local Tinfoil proxy |
 
 What actually drives Sage:
 
@@ -66,7 +66,7 @@ What actually drives Sage:
 - `ENCLAVE_BACKEND_URL`
 - `INTERNAL_AGENT_TOKEN`
 
-Those are supplied to the `sage` container through Compose environment interpolation. The admin deployment UI can export a Sage runtime env artifact that maps desired Deployment Settings onto the runtime keys Sage actually reads.
+Those are supplied to the `sage` container through Compose environment interpolation. Operators configure `LLM_API_KEY`; Compose maps it to Sage's internal `TINFOIL_API_KEY` env name because the Sage binary reads Tinfoil-native names. The admin deployment UI can export a Sage runtime env artifact that maps desired Deployment Settings onto the runtime keys Sage actually reads.
 
 ## Sage Runtime Env Export
 
@@ -243,7 +243,7 @@ Python deployment config still owns:
 - `CONTENT_ENCRYPTION_KEY`
 - `DOCUMENT_ARTIFACT_ENCRYPTION`
 
-Sage depends on Enclave Python for document retrieval, so mismatches here can break `/query` even when Sage itself is healthy.
+Sage depends on Enclave Python for Knowledge Search document retrieval, so mismatches here can break document-grounded Conversations even when Sage itself is healthy.
 
 `CONTENT_ENCRYPTION_KEY` enables backend-readable encryption for new Uploaded Document artifacts and Retrieval chunk text in active storage. `DOCUMENT_ARTIFACT_ENCRYPTION` defaults to `required`; set it to `disabled` only when the operator explicitly chooses plaintext Uploaded Document artifact storage. Retrieval chunk text still requires the Content Encryption Key even when uploaded artifacts are plaintext by operator choice.
 

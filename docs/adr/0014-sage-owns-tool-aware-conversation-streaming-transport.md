@@ -1,5 +1,7 @@
 # Sage Owns Tool-Aware Conversation Streaming Transport
 
+Status: Superseded for future Tool-loop work by [ADR-0023](0023-unified-model-driven-tool-loop.md). This ADR documents the earlier bounded streaming slice.
+
 The Enclave Free Prototype will implement assistant-style Conversation Streaming Transport in Sage's `enclave_web` runtime, using a two-phase turn: explicitly selected tools and trusted context are prepared first, then the final user-visible answer streams directly from the configured Model Provider. This preserves Sage ownership of public AI route behavior, keeps admin configuration and database-assisted conversations tool-aware, and avoids forcing token streaming through structured DSR/BAML parsing that only becomes useful after a full response is complete.
 
 ## Considered Options

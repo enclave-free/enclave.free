@@ -36,10 +36,16 @@ try:
 except ImportError:
     PrivateKey = None
 
+try:
+    from itsdangerous import URLSafeTimedSerializer
+except ImportError:
+    URLSafeTimedSerializer = None
+
 
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 COMPOSE_CMD = "docker compose -f docker-compose.infra.yml -f docker-compose.app.yml"
+CORE_BACKEND_SERVICE = "core-backend"
 
 # Paths
 DOCKER_DB_PATH = "/data/enclave.db"
@@ -68,7 +74,7 @@ def load_crm_config() -> dict:
 # HARNESS FUNCTIONS
 # =============================================================================
 
-def run_docker_cmd(cmd: str, container: str = "backend") -> Tuple[int, str]:
+def run_docker_cmd(cmd: str, container: str = CORE_BACKEND_SERVICE) -> Tuple[int, str]:
     """Run a command inside the Docker container."""
     full_cmd = f"{COMPOSE_CMD} exec -T {container} {cmd}"
     result = subprocess.run(
@@ -87,6 +93,18 @@ def run_sql(sql: str) -> Tuple[int, str]:
     return run_docker_cmd(f"sqlite3 {DOCKER_DB_PATH} '{escaped_sql}'")
 
 
+def container_env(service: str = CORE_BACKEND_SERVICE) -> dict:
+    code, output = run_docker_cmd("env", container=service)
+    if code != 0:
+        return {}
+    values = {}
+    for line in output.splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            values[key] = value
+    return values
+
+
 def check_docker_running() -> bool:
     """Check if Docker backend is accessible."""
     code, _ = run_docker_cmd("echo ok")
@@ -102,7 +120,7 @@ def backup_database() -> Optional[Path]:
     
     print(f"  [HARNESS] Backing up database...")
     
-    cmd = f"{COMPOSE_CMD} cp backend:{DOCKER_DB_PATH} {backup_path}"
+    cmd = f"{COMPOSE_CMD} cp {CORE_BACKEND_SERVICE}:{DOCKER_DB_PATH} {backup_path}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=REPO_ROOT)
     
     if result.returncode != 0:
@@ -121,7 +139,7 @@ def restore_database(backup_path: Path) -> bool:
     
     print(f"  [HARNESS] Restoring database...")
     
-    cmd = f"{COMPOSE_CMD} cp {backup_path} backend:{DOCKER_DB_PATH}"
+    cmd = f"{COMPOSE_CMD} cp {backup_path} {CORE_BACKEND_SERVICE}:{DOCKER_DB_PATH}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=REPO_ROOT)
     
     if result.returncode != 0:
@@ -209,6 +227,53 @@ def create_test_admin(pubkey: str) -> bool:
     return True
 
 
+def create_harness_admin_token(pubkey: Optional[str] = None) -> Optional[str]:
+    if URLSafeTimedSerializer is None:
+        print("  [HARNESS] ✗ itsdangerous is required for harness admin token creation")
+        return None
+
+    env_values = container_env()
+    secret_key = env_values.get("SECRET_KEY")
+    if not secret_key:
+        print("  [HARNESS] ✗ SECRET_KEY unavailable from core-backend")
+        return None
+
+    if pubkey:
+        escaped_pubkey = pubkey.replace("'", "''")
+        admin_filter = f"WHERE pubkey = '{escaped_pubkey}'"
+    else:
+        admin_filter = ""
+
+    rows_code, rows_output = run_docker_cmd(
+        f"sqlite3 -readonly -json {DOCKER_DB_PATH} "
+        f"\"SELECT id, pubkey, COALESCE(session_nonce, 0) AS session_nonce FROM admins {admin_filter} ORDER BY id LIMIT 1\""
+    )
+    if rows_code != 0:
+        print(f"  [HARNESS] ✗ Admin lookup failed: {rows_output}")
+        return None
+
+    try:
+        rows = json.loads(rows_output or "[]")
+    except json.JSONDecodeError:
+        rows = []
+    if not rows:
+        print("  [HARNESS] ✗ Admin row not found for token creation")
+        return None
+
+    admin = rows[0]
+    token = URLSafeTimedSerializer(secret_key).dumps(
+        {
+            "admin_id": int(admin["id"]),
+            "pubkey": admin["pubkey"],
+            "type": "admin",
+            "session_nonce": int(admin.get("session_nonce") or 0),
+        },
+        salt="admin-session",
+    )
+    print("  [HARNESS] ✓ Test admin token created")
+    return token
+
+
 def create_user_fields_from_config() -> bool:
     """Create user field definitions based on CRM test config."""
     print(f"  [HARNESS] Creating user fields from config...")
@@ -245,11 +310,11 @@ def create_user_fields_from_config() -> bool:
 
 
 def restart_backend() -> bool:
-    """Restart the backend container to pick up database changes."""
-    print(f"  [HARNESS] Restarting backend to apply changes...")
+    """Restart the core backend container to pick up database changes."""
+    print(f"  [HARNESS] Restarting core backend to apply changes...")
     
     result = subprocess.run(
-        f"{COMPOSE_CMD} restart backend",
+        f"{COMPOSE_CMD} restart {CORE_BACKEND_SERVICE}",
         shell=True,
         capture_output=True,
         text=True,
@@ -265,7 +330,7 @@ def restart_backend() -> bool:
     for i in range(30):
         time.sleep(1)
         check = subprocess.run(
-            f"{COMPOSE_CMD} exec -T backend curl -sf http://localhost:8000/health",
+            f"{COMPOSE_CMD} exec -T {CORE_BACKEND_SERVICE} curl -sf http://localhost:8000/health",
             shell=True,
             capture_output=True,
             text=True,
@@ -430,6 +495,19 @@ def print_test_result(passed: bool, duration: float, output: str, verbose: bool)
             print(f"    {line}")
     
     print()
+
+
+def script_accepts_token_argument(test_path: Path) -> bool:
+    try:
+        source = test_path.read_text()
+    except OSError:
+        return False
+    return bool(
+        re.search(
+            r"\.add_argument\(\s*(?:['\"]--[A-Za-z0-9_-]+['\"]\s*,\s*)*['\"]--token['\"]",
+            source,
+        )
+    )
 
 
 def print_summary(results: List[Tuple[dict, bool, float]]):
@@ -610,14 +688,18 @@ Examples:
     
     # Run tests
     results = []
-    extra_args = []
-    
-    if args.token:
-        extra_args.extend(["--token", args.token])
     
     try:
         for test_path in tests:
             info = parse_test_name(test_path)
+            test_extra_args = []
+            if script_accepts_token_argument(test_path):
+                if args.token:
+                    test_extra_args.extend(["--token", args.token])
+                elif use_harness:
+                    harness_token = create_harness_admin_token()
+                    if harness_token:
+                        test_extra_args.extend(["--token", harness_token])
             
             print_test_start(info, test_path)
             
@@ -625,7 +707,7 @@ Examples:
                 test_path, 
                 args.api_base, 
                 args.verbose,
-                extra_args
+                test_extra_args
             )
             
             print_test_result(passed, duration, output, args.verbose)

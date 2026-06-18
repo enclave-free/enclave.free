@@ -425,18 +425,14 @@ async def execute_migration(
         if cursor.rowcount == 0:
             raise HTTPException(status_code=500, detail="Failed to update admin pubkey")
 
-        # Log the migration in audit log
-        cursor.execute("""
-            INSERT INTO config_audit_log
-            (table_name, config_key, old_value, new_value, changed_by)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
+        database._insert_config_audit_log(
+            cursor,
             "admins",
             "admin_key_migration",
-            current_admin_pubkey[:16] + "...",  # Truncate for log
+            current_admin_pubkey[:16] + "...",
             new_pubkey[:16] + "...",
-            f"admin:{current_admin_pubkey[:16]}"
-        ))
+            f"admin:{current_admin_pubkey[:16]}",
+        )
 
         # Commit transaction
         conn.commit()

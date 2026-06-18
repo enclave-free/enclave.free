@@ -15,11 +15,12 @@ import {
   Play,
   EyeOff,
 } from 'lucide-react';
-import { adminFetch } from '../../utils/adminApi';
+import { adminFetch, notifyAdminResourcesChanged } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
 import { ChatMessage, type Message } from '../chat/ChatMessage';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
 import {
+  coerceAdminAssistantChangeSetPayload,
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   redactSecrets,
@@ -27,7 +28,6 @@ import {
   type AdminAssistantChangeSet,
 } from '../../utils/adminAssistant';
 import {
-  buildFullAdminConfigContext,
   loadDeploymentSecretKeysFromConfig,
   refreshAdminConfigRedactionMetadata,
 } from '../../utils/adminConfigContext';
@@ -61,6 +61,12 @@ type ApplyState =
 
 interface AdminConfigAssistantProps {
   variant?: 'sidebar' | 'drawer';
+  /**
+   * 'admin-config' (default) is the reactive config assistant.
+   * 'onboarding' drives a guided first-run setup: it seeds a welcome opener while
+   * Sage uses the same Admin Config Tool Set available in normal admin chat.
+   */
+  purpose?: 'admin-config' | 'onboarding';
   onCollapse?: () => void;
   onClose?: () => void;
   collapseIcon?: ReactNode;
@@ -68,8 +74,23 @@ interface AdminConfigAssistantProps {
 
 const CONFIG_TOOL_ID = 'admin-config';
 
+// How often (in ms) streamed tokens are flushed to the message list while the
+// assistant is responding. ~30 fps reads as smooth to the eye while avoiding a
+// full re-render + syntax-highlight pass on every single token (which pegged the
+// CPU and locked the UI). Tune here if needed.
+const STREAM_FLUSH_INTERVAL_MS = 33;
+
 function generateMessageId() {
   return `admin-msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createOnboardingMessage(content: string): Message {
+  return {
+    id: generateMessageId(),
+    role: 'assistant',
+    content,
+    timestamp: new Date(),
+  };
 }
 
 function patchAssistantMessage(
@@ -94,6 +115,20 @@ function stagePendingAdminChangeSet(
   if (extracted.ok) {
     setApplyState({ state: 'review', changeSet: extracted.changeSet });
   }
+}
+
+function stageStructuredAdminChangeSet(
+  payload: unknown,
+  setApplyState: (state: ApplyState) => void
+): AdminAssistantChangeSet | null {
+  if (payload === undefined || payload === null) return null;
+  const extracted = coerceAdminAssistantChangeSetPayload(payload);
+  if (extracted.ok) {
+    setApplyState({ state: 'review', changeSet: extracted.changeSet });
+    return extracted.changeSet;
+  }
+  setApplyState({ state: 'error', message: extracted.error });
+  return null;
 }
 
 function slugify(value: string): string {
@@ -121,13 +156,26 @@ async function readErrorDetail(res: Response): Promise<string> {
 
 export function AdminConfigAssistant({
   variant = 'sidebar',
+  purpose = 'admin-config',
   onCollapse,
   onClose,
   collapseIcon,
 }: AdminConfigAssistantProps) {
   const { t } = useTranslation();
+  const isOnboarding = purpose === 'onboarding';
   const [shareSecrets, setShareSecrets] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() =>
+    isOnboarding
+      ? [
+          createOnboardingMessage(
+            t(
+              'admin.configAssistant.onboardingWelcome',
+              "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
+            )
+          ),
+        ]
+      : []
+  );
   const [conversationSessionId, setConversationSessionId] = useState<
     string | null
   >(null);
@@ -151,6 +199,41 @@ export function AdminConfigAssistant({
   const handleApplyRef = useRef<
     (changeSet: AdminAssistantChangeSet) => Promise<void>
   >(async () => {});
+  // Lets handleApply trigger an onboarding auto-advance turn without a dep cycle.
+  const handleSendRef = useRef<
+    (content: string, options?: { hidden?: boolean }) => Promise<void>
+  >(async () => {});
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingApplyPanelRef = useRef<HTMLDivElement>(null);
+  const pendingApplyButtonRef = useRef<HTMLButtonElement>(null);
+
+  const focusPendingApplyPanel = useCallback(() => {
+    const focusPanel = () => {
+      pendingApplyPanelRef.current?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+      pendingApplyButtonRef.current?.focus();
+    };
+    focusPanel();
+    window.setTimeout(focusPanel, 0);
+  }, []);
+
+  // Auto-scroll to the latest message. Always scroll when the operator just sent
+  // (the newest message is theirs); otherwise only follow the stream if they're
+  // already near the bottom, so scrolling up to read history isn't interrupted.
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    const last = messages[messages.length - 1];
+    const nearBottom = container
+      ? container.scrollHeight - container.scrollTop - container.clientHeight <
+        160
+      : true;
+    if (last?.role === 'user' || nearBottom) {
+      messagesEndRef.current?.scrollIntoView({ block: 'end' });
+    }
+  }, [messages, isLoading]);
 
   const availableTools = useMemo<Tool[]>(
     () => [
@@ -275,35 +358,51 @@ export function AdminConfigAssistant({
 
   const handleStartNewAssistantConversation = useCallback(() => {
     setConversationSessionId(null);
-    setMessages([]);
+    setMessages(
+      isOnboarding
+        ? [
+            createOnboardingMessage(
+              t(
+                'admin.configAssistant.onboardingWelcome',
+                "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
+              )
+            ),
+          ]
+        : []
+    );
     setError(null);
     setRecoveryError(null);
     setReducedContextNotice(null);
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
     deploymentSecretKeysRef.current = new Set();
-  }, []);
+  }, [isOnboarding, t]);
 
   const handleSend = useCallback(
-    async (content: string) => {
+    async (content: string, options?: { hidden?: boolean }) => {
       const hasPendingChangeSet = applyState.state === 'review';
       const applyIntent = hasConfigTool
         ? resolveAdminApplyIntent(content, hasPendingChangeSet)
         : { kind: 'none' as const };
 
-      const userMessage: Message = {
-        id: generateMessageId(),
-        role: 'user',
-        content,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
+      // `hidden` turns (used to auto-advance onboarding after an Apply) are sent
+      // to the model but not rendered as a user bubble.
+      if (!options?.hidden) {
+        const userMessage: Message = {
+          id: generateMessageId(),
+          role: 'user',
+          content,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+      }
       setIsLoading(true);
       setError(null);
       setRecoveryError(null);
       setReducedContextNotice(null);
 
       if (applyIntent.kind === 'needs-panel') {
+        focusPendingApplyPanel();
         setMessages((prev) => [
           ...prev,
           {
@@ -321,7 +420,6 @@ export function AdminConfigAssistant({
       }
 
       try {
-        let baseToolContext: string | undefined;
         let boundedConversationHistory = messages.map(
           ({ role, content: turnContent }) => ({
             role,
@@ -339,23 +437,12 @@ export function AdminConfigAssistant({
           boundedConversationHistory = sessionMemoryPlan.conversationHistory;
 
           const promptPlan = planAdminPromptBudget({
-            adminConfigContext: '',
-            documentContext: '',
             conversationHistory: boundedConversationHistory,
           });
-          baseToolContext = promptPlan.toolContext || undefined;
           boundedConversationHistory = promptPlan.conversationHistory;
           setReducedContextNotice(
             formatAdminReducedContextNotice(promptPlan.reducedSections, {
               sectionLabels: {
-                'admin-config': t(
-                  'admin.configAssistant.reducedContextSections.adminConfig',
-                  'admin configuration context'
-                ),
-                'document-context': t(
-                  'admin.configAssistant.reducedContextSections.documentContext',
-                  'document library context'
-                ),
                 'recent-conversation': t(
                   'admin.configAssistant.reducedContextSections.recentConversation',
                   'recent conversation history'
@@ -382,15 +469,31 @@ export function AdminConfigAssistant({
         let streamSessionId: string | null = null;
         let streamReportedError = false;
         let classifiedStreamError: ClassifiedProviderError | null = null;
+        let lastDeltaFlushAt = 0;
+        let structuredChangeSet: AdminAssistantChangeSet | null = null;
+        let sawStructuredChangeSetPayload = false;
+
+        // Compute the display string from the accumulated stream so far.
+        const computeStreamDisplay = () => {
+          const redacted = redactAdminDeploymentSecretChangeSets(raw);
+          return shareSecrets
+            ? redactSecrets(redacted, secretsForRedactionRef.current)
+            : redacted;
+        };
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: selectedTools,
-            baseToolContext,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
+              if (
+                data.admin_change_set !== undefined &&
+                data.admin_change_set !== null
+              ) {
+                sawStructuredChangeSetPayload = true;
+              }
               if (event === 'assistant_message_started') {
                 const assistantId =
                   typeof data.message_id === 'string'
@@ -425,20 +528,27 @@ export function AdminConfigAssistant({
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
                 raw += delta;
-                const redactedChangeSets =
-                  redactAdminDeploymentSecretChangeSets(raw);
-                const display = shareSecrets
-                  ? redactSecrets(
-                      redactedChangeSets,
-                      secretsForRedactionRef.current
-                    )
-                  : redactedChangeSets;
-                setMessages((prev) =>
-                  patchAssistantMessage(prev, streamMessageId!, {
-                    content: display,
-                  })
-                );
+                // Throttle re-renders: flush at most once per
+                // STREAM_FLUSH_INTERVAL_MS instead of on every token. The final
+                // flush after the stream ends renders any buffered remainder.
+                const now = performance.now();
+                if (now - lastDeltaFlushAt >= STREAM_FLUSH_INTERVAL_MS) {
+                  lastDeltaFlushAt = now;
+                  const display = computeStreamDisplay();
+                  setMessages((prev) =>
+                    patchAssistantMessage(prev, streamMessageId!, {
+                      content: display,
+                    })
+                  );
+                }
               } else if (event === 'trace_final' && streamMessageId) {
+                if (!structuredChangeSet) {
+                  structuredChangeSet =
+                    stageStructuredAdminChangeSet(
+                      data.admin_change_set,
+                      setApplyState
+                    ) ?? structuredChangeSet;
+                }
                 setMessages((prev) =>
                   patchAssistantMessage(prev, streamMessageId!, {
                     trace: data.trace as Message['trace'],
@@ -448,6 +558,13 @@ export function AdminConfigAssistant({
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
+                if (!structuredChangeSet) {
+                  structuredChangeSet =
+                    stageStructuredAdminChangeSet(
+                      data.admin_change_set,
+                      setApplyState
+                    ) ?? structuredChangeSet;
+                }
               } else if (event === 'error') {
                 streamReportedError = true;
                 const classified = classifyProviderError(
@@ -471,19 +588,28 @@ export function AdminConfigAssistant({
             setConversationSessionId(streamSessionId);
           }
           if (streamMessageId) {
+            // Final flush: render any tokens buffered since the last throttled
+            // update, and clear the streaming status.
+            const display = computeStreamDisplay();
             setMessages((prev) =>
               patchAssistantMessage(prev, streamMessageId!, {
+                content: display,
                 traceStatus: null,
               })
             );
           }
           streamed = true;
         } catch (streamError) {
-          stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
+          if (!sawStructuredChangeSetPayload) {
+            stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
+          }
 
           if (streamMessageId && raw.trim()) {
+            // Flush whatever streamed before the error so partial output isn't lost.
+            const display = computeStreamDisplay();
             setMessages((prev) =>
               patchAssistantMessage(prev, streamMessageId!, {
+                content: display,
                 traceStatus: null,
               })
             );
@@ -529,7 +655,6 @@ export function AdminConfigAssistant({
           const res = await sendLlmChatWithUnifiedTools({
             content,
             tools: selectedTools,
-            baseToolContext,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
           });
@@ -554,9 +679,16 @@ export function AdminConfigAssistant({
             message_id?: string;
             session_id?: string;
             trace?: Message['trace'];
+            admin_change_set?: unknown;
           };
           if (data.session_id) {
             setConversationSessionId(data.session_id);
+          }
+          if (
+            data.admin_change_set !== undefined &&
+            data.admin_change_set !== null
+          ) {
+            sawStructuredChangeSetPayload = true;
           }
           raw = String(data?.message || '');
 
@@ -575,9 +707,18 @@ export function AdminConfigAssistant({
             trace: data.trace ?? null,
           };
           setMessages((prev) => [...prev, assistantMessage]);
+
+          structuredChangeSet = stageStructuredAdminChangeSet(
+            data.admin_change_set,
+            setApplyState
+          );
         }
 
-        if (hasConfigTool) {
+        if (
+          hasConfigTool &&
+          !structuredChangeSet &&
+          !sawStructuredChangeSetPayload
+        ) {
           const extracted = extractAdminAssistantChangeSetStrict(raw);
           if (extracted.ok)
             setApplyState({ state: 'review', changeSet: extracted.changeSet });
@@ -595,13 +736,16 @@ export function AdminConfigAssistant({
     [
       applyState,
       conversationSessionId,
+      focusPendingApplyPanel,
       hasConfigTool,
+      isOnboarding,
       messages,
       selectedTools,
       shareSecrets,
       t,
     ]
   );
+  handleSendRef.current = handleSend;
 
   const handleApply = useCallback(
     async (changeSet: AdminAssistantChangeSet) => {
@@ -748,6 +892,16 @@ export function AdminConfigAssistant({
 
         const okCount = results.filter((r) => r.ok).length;
         const failCount = results.length - okCount;
+
+        // If any resource/help-type write succeeded, tell open admin views (the
+        // Resource Directory table) to refresh so they don't show stale data.
+        if (
+          results.some(
+            (r) => r.ok && /^\/admin\/(resources|help-types)\b/.test(r.path)
+          )
+        ) {
+          notifyAdminResourcesChanged();
+        }
         const baseSummary = failCount
           ? t('admin.configAssistant.applySummary.appliedCountsWithFailures', {
               ok: okCount,
@@ -874,6 +1028,16 @@ export function AdminConfigAssistant({
             timestamp: new Date(),
           },
         ]);
+
+        // Onboarding: auto-advance. After a successful apply, send a hidden turn
+        // so the assistant confirms and moves to the next checklist item/group
+        // without the operator having to ask "what's next?".
+        if (isOnboarding && okCount > 0) {
+          void handleSendRef.current(
+            'The change set was applied successfully. Briefly confirm what was saved, then continue: ask the next checklist question, or if all chat-configurable baseline items are done, summarize and hand off to Deployment Settings.',
+            { hidden: true }
+          );
+        }
       } catch (e) {
         setApplyState({
           state: 'error',
@@ -881,7 +1045,7 @@ export function AdminConfigAssistant({
         });
       }
     },
-    [fetchJson, t]
+    [fetchJson, isOnboarding, t]
   );
   handleApplyRef.current = handleApply;
 
@@ -973,13 +1137,13 @@ export function AdminConfigAssistant({
               setError(null);
               setIsLoading(true);
               try {
-                const snap = await buildFullAdminConfigContext({
+                const metadata = await refreshAdminConfigRedactionMetadata({
                   shareSecrets,
                   fetchJson,
                 });
-                setSnapshotInfo({ generatedAtIso: snap.generatedAtIso });
-                secretsForRedactionRef.current = snap.secretValues;
-                deploymentSecretKeysRef.current = snap.deploymentSecretKeys;
+                setSnapshotInfo({ generatedAtIso: new Date().toISOString() });
+                secretsForRedactionRef.current = metadata.secretValues;
+                deploymentSecretKeysRef.current = metadata.deploymentSecretKeys;
               } catch (e) {
                 setError(
                   e instanceof Error
@@ -1076,7 +1240,10 @@ export function AdminConfigAssistant({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-3 py-4"
+      >
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-sm text-text-muted">
@@ -1142,7 +1309,10 @@ export function AdminConfigAssistant({
           )}
 
           {hasConfigTool && applyState.state === 'review' && applyPreview && (
-            <div className="border border-border rounded-2xl bg-surface-raised overflow-hidden">
+            <div
+              ref={pendingApplyPanelRef}
+              className="border border-border rounded-2xl bg-surface-raised overflow-hidden"
+            >
               <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-text truncate">
                   {applyPreview.summary
@@ -1161,6 +1331,7 @@ export function AdminConfigAssistant({
                     <EyeOff className="w-4 h-4" />
                   </button>
                   <button
+                    ref={pendingApplyButtonRef}
                     onClick={() => handleApply(applyState.changeSet)}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent text-accent-text hover:bg-accent-hover transition-colors text-sm font-medium"
                   >
@@ -1197,6 +1368,7 @@ export function AdminConfigAssistant({
               {t('admin.configAssistant.applyingChanges')}
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 

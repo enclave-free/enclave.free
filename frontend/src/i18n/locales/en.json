@@ -228,6 +228,7 @@
       "themeDark": "Dark"
     },
     "configAssistant": {
+      "onboardingWelcome": "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime.",
       "openAria": "Open admin assistant",
       "openTitle": "Admin assistant",
       "title": "Admin Configuration Assistant",
@@ -239,6 +240,7 @@
       "refreshFailed": "Failed to refresh context",
       "collapseSidebar": "Collapse assistant sidebar",
       "expandSidebar": "Open admin assistant sidebar",
+      "resize": "Resize admin assistant panel",
       "railLabel": "Assistant",
       "switchToCompact": "Switch to compact size",
       "switchToExpanded": "Switch to expanded size",
@@ -264,8 +266,6 @@
       "sessionMemoryNotice": "Older context was summarized to keep this conversation going.",
       "reducedContextNotice": "Some context was reduced to fit the Model Provider budget ({{sections}}). Answers may be less complete until you start a new assistant conversation.",
       "reducedContextSections": {
-        "adminConfig": "admin configuration context",
-        "documentContext": "document library context",
         "recentConversation": "recent conversation history"
       },
       "applySummary": {
@@ -737,6 +737,8 @@
     },
     "tools": {
       "label": "Tools",
+      "knowledgeSearch": "Search uploaded documents and knowledge chunks",
+      "knowledgeSearchName": "Knowledge",
       "webSearch": "Search the web for current information",
       "webSearchName": "Web",
       "database": "Query the SQLite database",
@@ -747,7 +749,7 @@
     },
     "documentScope": {
       "title": "Knowledge Bases",
-      "description": "Select sources to include in context",
+      "description": "Select sources for the Knowledge tool",
       "noSources": "No sources available",
       "clearAll": "Clear all",
       "clearAllSelectedAria": "Clear all selected documents",
@@ -828,9 +830,18 @@
     "noNostrExtension": "No Nostr extension found",
     "exportFailed": "Export failed"
   },
+  "adminGuidedSetup": {
+    "title": "Set up your instance",
+    "subtitle": "Your assistant will collect the basics in one pass.",
+    "manual": "Configure manually instead",
+    "finish": "Finish & go to dashboard"
+  },
   "adminDashboard": {
     "title": "Admin Dashboard",
     "subtitle": "Manage your Enclave instance configuration",
+    "aiSetupTitle": "Set up with the AI assistant",
+    "aiSetupBody": "Let the assistant collect the basics for naming and configuring your instance in one pass. You can switch to manual setup anytime.",
+    "aiSetupAction": "Start guided setup",
     "configureTitle": "What you can configure",
     "configureSubtitle": "These sections control branding, user data collection, AI behavior, deployment security, and stored content.",
     "readinessTitle": "Deployment Readiness",
@@ -872,6 +883,8 @@
     "deploymentDesc": "Manage runtime settings, service health, and readiness evidence",
     "upload": "Document Upload",
     "uploadDesc": "Add documents to your knowledge base",
+    "resources": "Resource Directory",
+    "resourcesDesc": "Curate trusted lawyers, NGOs, and referral resources",
     "database": "Database Explorer",
     "databaseDesc": "Browse and query the SQLite database",
     "diagnosticsSectionLabel": "Diagnostics",
@@ -886,6 +899,32 @@
     "settingsSectionLabel": "Admin Settings",
     "configSectionLabel": "Admin Settings",
     "dataSectionLabel": "Data & Content"
+  },
+  "adminResources": {
+    "title": "Resource Directory",
+    "subtitle": "Curated, trusted real-world resources the assistant can refer people to when a conversation escalates. Filtered by region and type of help. Only \"ready\" resources are shown to end users.",
+    "add": "Add resource",
+    "addTitle": "Add resource",
+    "editTitle": "Edit resource",
+    "empty": "No resources yet. Add one, or describe it to the admin assistant in chat.",
+    "verified": "verified",
+    "missing": "Missing to go live",
+    "name": "Name",
+    "type": "Resource type",
+    "languages": "Languages (comma-separated ISO codes)",
+    "description": "Description",
+    "descriptionHint": "What the assistant should tell the person about this resource.",
+    "scopeLevel": "Coverage level",
+    "scopeCode": "Coverage code",
+    "scopeCodeHint": "Country: ISO code (NI). Subregion/region: UN M49 code (013 = Central America). Global: leave blank.",
+    "helpTypes": "Types of help",
+    "contact": "Contact methods",
+    "vettedBy": "Vetted by",
+    "sourceNote": "Source note",
+    "markVerified": "Mark as verified (ranks first)",
+    "archive": "Archive (hide from end users)",
+    "deleteTitle": "Delete resource?",
+    "deleteBody": "This removes the directory entry for {{name}}"
   },
   "adminAI": {
     "title": "Agent Settings",
@@ -1144,10 +1183,10 @@
       "ariaLabel": "Sage runtime configuration help",
       "exampleConfig": "Example configuration",
       "goToPage": "Go to page",
-      "sageExtra": "Configure Sage with TINFOIL_* environment variables. Use TINFOIL_API_KEY for your key from {{tinfoilSignupUrl}}; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
-      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. Sage behavior is driven by TINFOIL_* env vars, while LLM_* keys support Python-side diagnostics and verification metadata.",
+      "sageExtra": "Set LLM_API_KEY to your Tinfoil key from {{tinfoilSignupUrl}}. The stack maps it to Sage and the local Tinfoil proxy.",
+      "sageHint": "This prototype routes Agent Runtime traffic through Sage and Tinfoil. LLM_API_KEY is the canonical Model Provider key.",
       "modelField": "TINFOIL_MODEL — Tinfoil model identifier Sage should use (for example: kimi-k2-6).",
-      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure Sage with TINFOIL_* env vars; LLM_* keys are Python-side deployment settings for diagnostics and verification metadata.",
+      "overviewDesc": "This prototype uses Sage as the public Agent Runtime and Tinfoil as the Model Provider transport. Configure the Model Provider through LLM_* Deployment Settings; the stack maps them to Sage's Tinfoil runtime.",
       "overviewTitle": "Sage Runtime Overview",
       "providerField": "LLM_PROVIDER — set to \"sage\" for this prototype."
     },
@@ -1593,7 +1632,7 @@
     "LLM_API_KEY": {
       "label": "API Key",
       "description": "Tinfoil API key (secret)",
-      "hint": "Leave empty to clear the override and use the .env TINFOIL_API_KEY fallback."
+      "hint": "Leave empty to keep the current Deployment Settings secret."
     }
   },
   "colors": {
@@ -1609,7 +1648,7 @@
   },
   "instanceInitiation": {
     "after": {
-      "body": "Your Enclave instance is set up and ready. You can now configure settings, upload documents, and start querying your knowledge base.",
+      "body": "First-time admins will continue into AI-guided onboarding. Returning admins will land in setup.",
       "note": "Use a trusted device — your Nostr key is used to encrypt and decrypt sensitive instance data.",
       "title": "You're all set!"
     },

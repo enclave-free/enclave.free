@@ -7,8 +7,7 @@ Usage:
 
 Requires:
     - Sage/Tinfoil proxy running (desktop app or docker)
-    - API key in .env: LLM_API_KEY is preferred, falling back to TINFOIL_API_KEY
-      (or desktop app handles it)
+    - API key in .env: LLM_API_KEY (or desktop app handles it)
 """
 
 import os
@@ -20,15 +19,13 @@ from openai import OpenAI
 load_dotenv()
 
 # Configuration
-TINFOIL_API_URL: str = (
-    os.getenv("LLM_API_URL") or os.getenv("TINFOIL_API_URL") or "http://localhost:8089/v1"
-).rstrip("/")
-TINFOIL_API_KEY: str = os.getenv("LLM_API_KEY") or os.getenv("TINFOIL_API_KEY") or "not-required"
+LLM_API_URL: str = (os.getenv("LLM_API_URL") or "http://localhost:8089/v1").rstrip("/")
+LLM_API_KEY: str = os.getenv("LLM_API_KEY") or "not-required"
 
 # Initialize client pointing to Sage/Tinfoil proxy (for listing models)
 client = OpenAI(
-    base_url=TINFOIL_API_URL,
-    api_key=TINFOIL_API_KEY
+    base_url=LLM_API_URL,
+    api_key=LLM_API_KEY
 )
 
 def list_models():
@@ -51,9 +48,9 @@ def test_embedding(model: str, text: str):
     
     try:
         response = httpx.post(
-            f"{TINFOIL_API_URL}/embeddings",
+            f"{LLM_API_URL}/embeddings",
             headers={
-                "Authorization": f"Bearer {TINFOIL_API_KEY}",
+                "Authorization": f"Bearer {LLM_API_KEY}",
                 "Content-Type": "application/json"
             },
             json={"model": model, "input": [text]},
@@ -82,9 +79,9 @@ def benchmark_embeddings(model: str, sentences: list[str]):
     for i, sentence in enumerate(sentences):
         try:
             response = httpx.post(
-                f"{TINFOIL_API_URL}/embeddings",
+                f"{LLM_API_URL}/embeddings",
                 headers={
-                    "Authorization": f"Bearer {TINFOIL_API_KEY}",
+                    "Authorization": f"Bearer {LLM_API_KEY}",
                     "Content-Type": "application/json"
                 },
                 json={"model": model, "input": [sentence]},
@@ -228,7 +225,7 @@ All you need is an internet connection and curiosity.
 """.strip().split('\n')
 
 if __name__ == "__main__":
-    print(f"Sage/Tinfoil proxy URL: {TINFOIL_API_URL}\n")
+    print(f"Sage/Tinfoil proxy URL: {LLM_API_URL}\n")
     
     # First, list available models
     available_models = list_models()

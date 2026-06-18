@@ -155,7 +155,7 @@ else
 fi
 
 if [[ "$SMOKE" == true ]]; then
-  run lsof -nP -iTCP:8000 -sTCP:LISTEN
-  run curl -fsS http://localhost:8000/test
-  run curl -fsS http://localhost:8000/llm/test
+  run lsof -nP -iTCP:18000 -sTCP:LISTEN
+  run curl -fsS http://localhost:18000/test
+  run curl -fsS http://localhost:18000/llm/test
 fi

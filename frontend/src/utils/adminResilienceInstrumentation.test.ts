@@ -26,15 +26,14 @@ describe('buildAdminContextPlanInstrumentation', () => {
       notice: 'Session Memory was compacted...',
     };
     const promptPlan: AdminPromptBudgetPlan = {
-      toolContext: 'PROMPT BUDGET NOTE\n- admin-config was reduced',
       conversationHistory: sessionMemoryPlan.conversationHistory,
-      includedSections: ['admin-config', 'recent-conversation'],
-      reducedSections: ['admin-config'],
-      omittedSections: ['document-context'],
+      includedSections: ['recent-conversation'],
+      reducedSections: ['recent-conversation'],
+      omittedSections: [],
       estimatedChars: 4_200,
-      warningNote: 'PROMPT BUDGET NOTE\n- admin-config was reduced',
+      warningNote: 'PROMPT BUDGET NOTE\n- recent-conversation was reduced',
     };
-    const secretPrompt = 'sk-live-secret-key-from-admin-config';
+    const secretPrompt = 'sk-live-secret-key-from-admin-turn';
 
     const event = buildAdminContextPlanInstrumentation({
       surface: 'admin_config_assistant',
@@ -51,9 +50,9 @@ describe('buildAdminContextPlanInstrumentation', () => {
         estimatedHistoryChars: 67,
       },
       promptBudget: {
-        includedSections: ['admin-config', 'recent-conversation'],
-        reducedSections: ['admin-config'],
-        omittedSections: ['document-context'],
+        includedSections: ['recent-conversation'],
+        reducedSections: ['recent-conversation'],
+        omittedSections: [],
         estimatedChars: 4_200,
         hasWarningNote: true,
       },

@@ -31,7 +31,7 @@ services:
       - -b
       - 0.0.0.0
     environment:
-      - TINFOIL_API_KEY=${TINFOIL_API_KEY}
+      - TINFOIL_API_KEY=${LLM_API_KEY:?LLM_API_KEY is required}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8089/v1/models >/dev/null || exit 1"]
       interval: 10s

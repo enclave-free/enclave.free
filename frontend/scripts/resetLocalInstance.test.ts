@@ -99,8 +99,8 @@ describe('local instance reset script', () => {
     expect(output).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d'
     );
-    expect(output).toContain('curl -fsS http://localhost:8000/test');
-    expect(output).toContain('curl -fsS http://localhost:8000/llm/test');
+    expect(output).toContain('curl -fsS http://localhost:18000/test');
+    expect(output).toContain('curl -fsS http://localhost:18000/llm/test');
   });
 
   it('executes the default reset and smoke check workflow', () => {
@@ -123,9 +123,9 @@ describe('local instance reset script', () => {
     expect(log).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d'
     );
-    expect(log).toContain('lsof -nP -iTCP:8000 -sTCP:LISTEN');
-    expect(log).toContain('curl -fsS http://localhost:8000/test');
-    expect(log).toContain('curl -fsS http://localhost:8000/llm/test');
+    expect(log).toContain('lsof -nP -iTCP:18000 -sTCP:LISTEN');
+    expect(log).toContain('curl -fsS http://localhost:18000/test');
+    expect(log).toContain('curl -fsS http://localhost:18000/llm/test');
   });
 
   it('can reset every local volume including the embedding cache', () => {
@@ -150,13 +150,13 @@ describe('local instance reset script', () => {
   it('can skip smoke checks', () => {
     const { log } = runWithFakes(['--skip-smoke']);
 
-    expect(log).not.toContain('curl -fsS http://localhost:8000/test');
-    expect(log).not.toContain('curl -fsS http://localhost:8000/llm/test');
+    expect(log).not.toContain('curl -fsS http://localhost:18000/test');
+    expect(log).not.toContain('curl -fsS http://localhost:18000/llm/test');
   });
 
   it('fails when a smoke check fails', () => {
     expect(() =>
-      runWithFakes([], { FAIL_CURL_URL: 'http://localhost:8000/llm/test' })
+      runWithFakes([], { FAIL_CURL_URL: 'http://localhost:18000/llm/test' })
     ).toThrow();
   });
 });

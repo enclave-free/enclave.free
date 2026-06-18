@@ -598,7 +598,7 @@ ENV_CONFIG_MAP = {
     # Domain & URLs Settings
     "BASE_DOMAIN": {"category": "domains", "description": "Root domain name", "requires_restart": False, "default": "localhost"},
     "INSTANCE_URL": {"category": "domains", "description": "Full application URL with protocol", "requires_restart": True, "default": "http://localhost:5173"},
-    "API_BASE_URL": {"category": "domains", "description": "API subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:8000"},
+    "API_BASE_URL": {"category": "domains", "description": "API subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:18000"},
     "ADMIN_BASE_URL": {"category": "domains", "description": "Admin panel subdomain URL (optional)", "requires_restart": True, "default": "http://localhost:5173/admin"},
     "EMAIL_DOMAIN": {"category": "domains", "description": "Domain for email addresses", "requires_restart": False, "default": "localhost"},
     "DKIM_SELECTOR": {"category": "domains", "description": "DKIM DNS record selector", "requires_restart": False, "default": "enclave"},
@@ -607,14 +607,14 @@ ENV_CONFIG_MAP = {
     "CORS_ORIGINS": {"category": "domains", "description": "Comma-separated allowed CORS origins", "requires_restart": True, "default": "http://localhost:5173"},
     "CDN_DOMAINS": {"category": "domains", "description": "Content delivery domains", "requires_restart": False},
     "CUSTOM_SEARXNG_URL": {"category": "domains", "description": "Private SearXNG instance URL", "requires_restart": True},
-    "WEBHOOK_BASE_URL": {"category": "domains", "description": "Webhook callback base URL", "requires_restart": False, "default": "http://localhost:8000"},
+    "WEBHOOK_BASE_URL": {"category": "domains", "description": "Webhook callback base URL", "requires_restart": False, "default": "http://localhost:18000"},
     # SSL & Security Settings
     "TRUSTED_PROXIES": {"category": "ssl", "description": "Trusted reverse proxies (cloudflare, aws, custom)", "requires_restart": True},
     "SSL_CERT_PATH": {"category": "ssl", "description": "SSL certificate file path", "requires_restart": True},
     "SSL_KEY_PATH": {"category": "ssl", "description": "SSL private key file path", "requires_restart": True, "is_secret": True},
     "FORCE_HTTPS": {"category": "ssl", "description": "Redirect HTTP to HTTPS", "requires_restart": True, "default": "false"},
     "HSTS_MAX_AGE": {"category": "ssl", "description": "HSTS max-age in seconds", "requires_restart": False, "default": "31536000"},
-    "MONITORING_URL": {"category": "general", "description": "Health monitoring endpoint URL", "requires_restart": False, "default": "http://localhost:8000/health"},
+    "MONITORING_URL": {"category": "general", "description": "Health monitoring endpoint URL", "requires_restart": False, "default": "http://localhost:18000/health"},
 }
 
 # Keys that should never be exposed or editable
@@ -780,8 +780,6 @@ def _deployment_config_value(config_dict: Mapping[str, str], key: str) -> Option
     value = config_dict.get(key)
     if value not in (None, ""):
         return value
-    if key == "LLM_API_KEY":
-        return None
     return os.getenv(key)
 
 
@@ -830,7 +828,7 @@ def _sync_env_to_db() -> None:
 
         existing = database.get_deployment_config(key)
         # Try to get value from env.
-        value = None if key == "LLM_API_KEY" else os.getenv(key)
+        value = os.getenv(key)
 
         if key == "LLM_PROVIDER":
             value = (value or meta.get("default", "sage") or "sage").strip().lower()
@@ -1352,17 +1350,6 @@ async def update_deployment_config_value(
     except ImportError as e:
         logger.debug(f"config_loader not available, skipping cache invalidation: {e}")
 
-    try:
-        from scoped_config_context import invalidate_scoped_config_context_cache
-        invalidate_scoped_config_context_cache()
-    except Exception as e:
-        logger.warning(
-            "invalidate_scoped_config_context_cache failed after updating %s: %s",
-            key,
-            e,
-            exc_info=True,
-        )
-
     # Return updated config
     updated = database.get_deployment_config(key)
     if not updated:
@@ -1578,39 +1565,14 @@ def _inference_readiness_item() -> dict:
         key="verifiable_inference",
         label="Verifiable Inference",
         source="inference_verification",
-        severity="blocker",
-        status=status_key,
-        summary="Current Verifiable Inference is required before normal Conversations can run.",
-        next_action="Run Model Provider verification or repair provider configuration.",
-        conversation_blocking=True,
-    )
-
-
-def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
-    readiness = lifecycle_status.get("lifecycle_readiness") or {}
-    status = readiness.get("status", "needs_review")
-    if status == "reviewed":
-        return _readiness_item(
-            key="lifecycle_readiness",
-            label="Lifecycle Readiness",
-            source="lifecycle_readiness",
-            severity="ready",
-            status=status,
-            summary=readiness.get("summary") or "Lifecycle Readiness has been reviewed.",
-            next_action="No action required.",
-        )
-    return _readiness_item(
-        key="lifecycle_readiness",
-        label="Lifecycle Readiness",
-        source="lifecycle_readiness",
         severity="warning",
-        status=status,
-        summary=readiness.get("summary") or "Lifecycle Readiness needs Admin review.",
-        next_action="Review lifecycle status and unsupported Deployment Surfaces.",
+        status=f"deferred_{status_key}",
+        summary="Verifiable Inference is deferred for this prototype and is not required for normal Conversations.",
+        next_action="Track Verifiable Inference as post-prototype hardening; verification can still be reviewed or run manually.",
     )
 
 
-def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
+def _unacknowledged_deployment_surface_labels(lifecycle_status: dict) -> list[str]:
     categories = lifecycle_status.get("unsupported_deployment_surface_categories") or []
     unacknowledged_categories = [
         category.get("label") or category.get("category") or "Unsupported Deployment Surface category"
@@ -1623,7 +1585,45 @@ def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
         for surface in surfaces
         if not surface.get("acknowledged")
     ]
-    unacknowledged = [*unacknowledged_categories, *unacknowledged_surfaces]
+    return [*unacknowledged_categories, *unacknowledged_surfaces]
+
+
+def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
+    readiness = lifecycle_status.get("lifecycle_readiness") or {}
+    status = readiness.get("status", "needs_review")
+    unacknowledged_surfaces = _unacknowledged_deployment_surface_labels(lifecycle_status)
+    if status == "reviewed" and not unacknowledged_surfaces:
+        return _readiness_item(
+            key="lifecycle_readiness",
+            label="Data Lifecycle Review",
+            source="lifecycle_readiness",
+            severity="ready",
+            status=status,
+            summary=readiness.get("summary") or "Data Lifecycle Review has been completed.",
+            next_action="No action required.",
+        )
+    if unacknowledged_surfaces:
+        summary = (
+            f"Data Lifecycle Review needs Admin review and "
+            f"{len(unacknowledged_surfaces)} unsupported Deployment Surface acknowledgements."
+        )
+        next_action = "Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces."
+    else:
+        summary = readiness.get("summary") or "Data Lifecycle Review needs Admin review."
+        next_action = "Review Data Lifecycle Status."
+    return _readiness_item(
+        key="lifecycle_readiness",
+        label="Data Lifecycle Review",
+        source="lifecycle_readiness",
+        severity="warning",
+        status=status,
+        summary=summary,
+        next_action=next_action,
+    )
+
+
+def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
+    unacknowledged = _unacknowledged_deployment_surface_labels(lifecycle_status)
     if not unacknowledged:
         return _readiness_item(
             key="deployment_surface_acknowledgements",
@@ -1790,7 +1790,7 @@ def _core_backend_runtime_env_readiness_item(
         key="core_backend_runtime_env",
         label="Core Backend Runtime Config",
         source="runtime_env",
-        severity="not_ready",
+        severity="warning",
         status="not_generated",
         summary="Core-backend runtime env has not been generated from Deployment Settings yet.",
         next_action="Export the core-backend runtime env before treating Deployment Settings as applied to core-backend.",
@@ -1818,10 +1818,7 @@ def _restart_required_status(audit_log: Optional[list[Mapping[str, Any]]] = None
     }
 
 
-def deployment_readiness_summary(
-    running_sage_config: Optional[Mapping[str, Any]] = None,
-    running_core_backend_config: Optional[Mapping[str, Any]] = None,
-) -> dict:
+def deployment_readiness_summary() -> dict:
     from lifecycle import get_lifecycle_status
 
     lifecycle_status = get_lifecycle_status()
@@ -1829,20 +1826,8 @@ def deployment_readiness_summary(
         *_deployment_validation_readiness_items(),
         _inference_readiness_item(),
         _lifecycle_readiness_item(lifecycle_status),
-        _unsupported_surface_readiness_item(lifecycle_status),
         _backup_restore_readiness_item(),
-        _runtime_env_readiness_item(running_sage_config),
-        _core_backend_runtime_env_readiness_item(running_core_backend_config),
         _restart_readiness_item(),
-        _readiness_item(
-            key="service_health",
-            label="Service Health",
-            source="service_health",
-            severity="warning",
-            status="check_required",
-            summary="Live service health checks should be reviewed before production use.",
-            next_action="Run service health checks from the Admin Deployment surface.",
-        ),
     ]
     blockers = sum(1 for item in items if item["severity"] == "blocker")
     warnings = sum(1 for item in items if item["severity"] == "warning")
@@ -1865,11 +1850,7 @@ async def get_deployment_readiness(admin: dict = Depends(auth.require_admin)) ->
     Summarize Deployment Readiness for a Single-Instance Deployment.
     Requires admin authentication.
     """
-    running_sage_config = await _fetch_sage_running_runtime_config()
-    return deployment_readiness_summary(
-        running_sage_config,
-        running_core_backend_config=fetch_running_core_backend_config(),
-    )
+    return deployment_readiness_summary()
 
 
 @router.get("/health", response_model=ServiceHealthResponse)

@@ -161,6 +161,7 @@ export function AdminOnboarding() {
   const [statusError, setStatusError] = useState<string | null>(null)
   const [instanceInitialized, setInstanceInitialized] = useState<boolean | null>(null)
   const [initStep, setInitStep] = useState<1 | 2 | 3>(1)
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Determine if this instance has been initiated (admin exists).
   useEffect(() => {
@@ -186,6 +187,14 @@ export function AdminOnboarding() {
 
     return () => {
       active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current)
+      }
     }
   }, [])
 
@@ -217,9 +226,14 @@ export function AdminOnboarding() {
 
       setState('success')
 
-      // Redirect after showing success
-      setTimeout(() => {
-        navigate('/admin/setup')
+      // Redirect after showing success. First-time admins land in the AI-guided
+      // onboarding; returning admins go straight to the dashboard.
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current)
+      }
+      redirectTimerRef.current = setTimeout(() => {
+        navigate(result.is_new ? '/admin/onboarding' : '/admin/setup')
+        redirectTimerRef.current = null
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect')
@@ -491,7 +505,7 @@ export function AdminOnboarding() {
                     <p className="text-xs text-text-secondary leading-relaxed">
                       {t(
                         'instanceInitiation.after.body',
-                        'You will land on the admin dashboard where you can configure branding, user onboarding, AI behavior, and more.'
+                        'First-time admins will continue into AI-guided onboarding. Returning admins will land in setup.'
                       )}
                     </p>
                     <p className="text-xs text-text-muted leading-relaxed mt-2">

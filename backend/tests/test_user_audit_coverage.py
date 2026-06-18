@@ -148,6 +148,55 @@ class UserAuditCoverageTest(unittest.TestCase):
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])
 
+    def test_admin_settings_accept_known_keys_and_reject_unknown_keys(self) -> None:
+        response = self.client.put(
+            "/admin/settings",
+            json={
+                "instance_name": "FreeThem",
+                "primary_color": "#2563EB",
+                "description": "Support resources",
+                "logo_url": "",
+                "favicon_url": "",
+                "apple_touch_icon_url": "",
+                "icon": "Sparkles",
+                "assistant_icon": "Sparkles",
+                "user_icon": "User",
+                "assistant_name": "Support Team",
+                "user_label": "You",
+                "header_layout": "icon_name",
+                "header_tagline": "Support team",
+                "chat_bubble_style": "soft",
+                "chat_bubble_shadow": "true",
+                "surface_style": "plain",
+                "status_icon_set": "classic",
+                "typography_preset": "modern",
+                "default_language": "en",
+                "default_theme": "dark",
+                "auto_approve_users": "true",
+                "reachout_enabled": "true",
+                "reachout_mode": "support",
+                "reachout_title": "Contact us",
+                "reachout_description": "Send the support team a private note.",
+                "reachout_button_label": "Request support",
+                "reachout_success_message": "Thanks, we received your note.",
+                "reachout_to_email": "ops@example.test",
+                "reachout_subject_prefix": "[FreeThem]",
+                "reachout_rate_limit_per_hour": "5",
+                "reachout_rate_limit_per_day": "20",
+                "reachout_include_ip": "false",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.database.get_setting("header_tagline"), "Support team")
+        self.assertEqual(self.database.get_setting("default_language"), "en")
+        self.assertEqual(self.database.get_setting("reachout_to_email"), "ops@example.test")
+
+        rejected = self.client.put("/admin/settings", json={"tagline": "Wrong key"})
+
+        self.assertEqual(rejected.status_code, 422)
+        self.assertIsNone(self.database.get_setting("tagline"))
+
     def test_user_type_crud_and_migration_actions_are_audited(self) -> None:
         created = self.client.post(
             "/admin/user-types",

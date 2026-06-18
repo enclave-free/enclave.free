@@ -16,6 +16,7 @@ COMPOSE_ARGS = [
     "-f", "docker-compose.infra.yml",
     "-f", "docker-compose.app.yml",
 ]
+CORE_BACKEND_SERVICE = "core-backend"
 
 
 def run_docker_sql(
@@ -65,11 +66,11 @@ def run_docker_sql(
     if csv_mode:
         # CSV mode: pass .mode csv pragma via stdin
         sql_input = f".mode csv\n{sql_normalized}"
-        cmd = [*COMPOSE_ARGS, "exec", "-T", "backend", "sqlite3", "-readonly", db_path]
+        cmd = [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3", "-readonly", db_path]
     else:
         # JSON mode: use -json flag
         sql_input = sql_normalized
-        cmd = [*COMPOSE_ARGS, "exec", "-T", "backend", "sqlite3", "-readonly", "-json", db_path]
+        cmd = [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3", "-readonly", "-json", db_path]
 
     # Use list argv with stdin for SQL (no shell=True, no escaping needed)
     try:

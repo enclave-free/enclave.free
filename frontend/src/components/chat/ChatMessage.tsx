@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -552,7 +552,7 @@ function isSafeMarkdownHref(href?: string) {
   }
 }
 
-export function ChatMessage({ message, onAction }: ChatMessageProps) {
+function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
   const { resolvedTheme } = useTheme();
   const { t } = useTranslation();
   const { config } = useInstanceConfig();
@@ -883,6 +883,11 @@ export function ChatMessage({ message, onAction }: ChatMessageProps) {
     </div>
   );
 }
+
+// Memoized so a streaming turn only re-renders the active message, not the whole
+// list. patchAssistantMessage keeps non-streaming messages by reference, so their
+// markdown + syntax highlighting is not recomputed on every token.
+export const ChatMessage = memo(ChatMessageComponent);
 
 function MessageActionIcon({
   actionId,

@@ -46,6 +46,13 @@ sys.path.insert(0, str(REPO_ROOT / "backend" / "app"))
 import requests
 from coincurve import PrivateKey
 
+COMPOSE_ARGS = [
+    "docker", "compose",
+    "-f", "docker-compose.infra.yml",
+    "-f", "docker-compose.app.yml",
+]
+CORE_BACKEND_SERVICE = "core-backend"
+
 
 def load_config() -> dict:
     """Load test configuration."""
@@ -175,7 +182,7 @@ def run_docker_sql(sql: str, db_path: str = "/data/enclave.db", timeout: int = 3
     # Safe subprocess invocation: argv list (no shell=True), SQL passed via stdin
     try:
         result = subprocess.run(
-            ["docker", "compose", "exec", "-T", "backend", "sqlite3", "-json", db_path],
+            [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3", "-json", db_path],
             input=sql_normalized,
             capture_output=True,
             text=True,

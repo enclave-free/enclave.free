@@ -1,20 +1,20 @@
 # Admin Configuration Assistant
 
 This document describes the admin configuration assistant workflow used by:
+
 - the admin-only configuration assistant sidebar on authenticated admin pages, and
 - the full chat page (`/chat`) when the caller is an authenticated admin.
 
 ## Goals
 
 - Provide an in-product, admin-only AI assistant for configuration questions.
-- Give the assistant full awareness of current configuration state:
-  - Always include the control contract needed to propose safe confirmed changes.
-  - Include current configuration state by scoped read, rather than by always fetching every admin surface.
+- Give Sage real configuration Tools it can call eagerly when the Admin asks about current Instance state.
 - Allow the assistant to propose and apply changes (with explicit confirmation).
 - Keep tool behavior unified with the full chat page (`/chat`) so admins get the same tool pipeline from either entry point.
 - Keep secret environment variables opt-in:
   - By default, secrets are not included in the assistant context.
   - An admin can explicitly toggle secret sharing per session.
+- Preserve guided onboarding while using the same underlying Admin Config Tool Set as normal Admin Conversations.
 
 ## Security Model
 
@@ -32,6 +32,7 @@ The admin's Nostr private key (`nsec`) is custodied by the browser extension via
   - Secrets are NOT fetched and NOT sent to the Agent Runtime unless the admin flips the "Share secret env vars" toggle.
 
 Defense-in-depth:
+
 - When secret sharing is enabled, the frontend keeps the revealed secret values locally and redacts any exact matches from rendered assistant messages (to prevent accidental echoing).
 
 ## Architecture
@@ -44,57 +45,53 @@ Defense-in-depth:
 - Shares the same chat send runtime as `ChatPage`:
   - `frontend/src/utils/llmChat.ts` (`sendLlmChatWithUnifiedTools`)
 - Transport: sends the normal public `POST /llm/chat` request to the Gateway-facing API base. Gateway routes this request to Sage; Python does not expose public `/llm/chat` or `/session-defaults` handlers in the hard-cut prototype.
-  - `tools` (same admin-visible tool IDs as full chat: `web-search`, `db-query`, `admin-config`)
-  - `admin-config` admin-only Sage runtime tool (enables scoped config context + change-set workflow)
-  - `tool_context` only for trusted precomputed context supplied by the client
-  - no `client_executed_tools`; selected tools still run in Sage when trusted context is present
+  - `tools` / Tool Sets (same admin-visible Tool Set IDs as full chat: `knowledge-search`, `web-search`, `admin-config`, `db-query`)
+  - `admin-config` admin-only Tool Set
+  - optional Tool constraints such as Knowledge Search document scope
+  - no `client_executed_tools`
+  - no admin configuration `tool_context` prefetch
 
 Tool defaults:
+
 - Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
-- Config context is default-on for admin configuration conversations, while web search still follows Sage-owned session defaults.
-- When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage automatically uses Document Library Retrieval as first-party Instance context before answering.
-- Admin `/chat` and the sidebar use the same server-side scoped configuration context pipeline: scoped context assembly, prompt budgeting, change-set review, and confirmed apply.
-- Admin `/chat` does not use document-scope RAG mode when the config tool is selected.
+- `admin-config` is default-on for admin configuration conversations, while `web-search` and `db-query` remain explicit unless enabled by defaults.
+- `knowledge-search` is a visible Tool Set. When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage should call Knowledge Search when enabled and relevant.
+- Admin `/chat`, the sidebar, and guided onboarding use the same Sage model-driven Tool loop.
+- The browser does not assemble or inject admin configuration snapshots for chat turns.
 
 Sidebar behavior:
+
 - On desktop admin pages, the assistant appears as a right sidebar by default.
 - Desktop supports open and collapsed states; collapse is a layout action only, so the current assistant conversation and session-local secret sharing persist.
 - Mobile/tablet dismissal closes the drawer and clears session-local secret sharing.
 - On smaller screens, the assistant is closed by default and opens as a right-side drawer.
 
-### Scoped Config Context
+### Admin Config Tool Set
 
-`admin-config` remains one visible tool toggle for admins. It is implemented as an admin-only Sage runtime tool that returns **Scoped Config Context**. This keeps admin turns responsive and prevents one slow or failing config area from blocking unrelated configuration questions.
+`admin-config` is one visible Tool Set for admins. It exposes concrete model-callable Tools, rather than a single scoped prompt blob chosen by deterministic classification.
 
-Every scoped config context includes:
+Initial Tools:
 
-- `ADMIN-VISIBLE TOOL CAPABILITIES` for the public Tool IDs an authenticated admin can select
-- Admin-assistant rules
-- Change-set format and mutation constraints
-- Secret-handling rules
-- Generation timestamp
+- `read_instance_settings`
+- `read_deployment_settings`
+- `read_deployment_readiness`
+- `read_agent_settings`
+- `read_user_types`
+- `read_document_access`
+- `read_onboarding_status`
+- `propose_config_change_set`
 
-When scope selection is unsure, the tool should return `overview` only. The assistant should ask a focused follow-up or name the missing config area if the provided context is insufficient.
+Tool descriptions should encourage Sage to inspect current Instance reality when it can answer the Admin's question. If the Admin asks what is configured, missing, ready, stale, stored, available, or still needing setup, Sage should call the relevant read Tool instead of asking the Admin to check manually.
 
-Available scopes:
+There is no `overview` fallback scope and no keyword category classifier. If one Tool result is not enough, Sage may call another enabled Tool in the same model-driven loop until it has enough evidence or hits deterministic limits.
 
-- `overview`: small summary suitable for ambiguous configuration questions
-- `instance-settings`: instance branding, public behavior, Instance visual identity settings, and other Instance Settings
-- `deployment-settings`: Deployment Settings, grouped by config category, with secrets masked by default
-- `agent-settings`: Agent Settings, including prompt sections, parameters, defaults, and per-user-type effective values when relevant
-- `user-types`: user types and onboarding field definitions
-- `document-defaults`: global and per-user-type document defaults
-- `health`: deployment health, validation, and restart-related context
+Admin write intent is represented through `propose_config_change_set`, a model-callable, non-mutating proposal Tool. The UI validates the staged change set and still requires Admin Change Confirmation before applying ordinary admin endpoints.
 
-Scope selection starts as deterministic runtime-tool classification:
+Canonical Admin Config proposal shapes:
 
-- Theme, appearance, branding, palette, color, typography, chat style, surface style, or status icon questions use `instance-settings`.
-- Email, SMTP, domains, SSL, provider, model, SearXNG, env, or restart questions use `deployment-settings`.
-- Prompt, temperature, max tokens, model behavior, user-type AI, or personalization questions use `agent-settings`.
-- User type, onboarding question, or field questions use `user-types`.
-- Document, default document, access, or ingestion-default questions use `document-defaults`.
-- Broken, validate, health, restart, or service-status questions use `health` plus the relevant config scope.
-- Ambiguous admin configuration questions use `overview`.
+- Instance settings: `PUT /admin/settings` with a patch body using stored setting keys such as `instance_name`, `assistant_name`, `header_tagline`, `description`, `primary_color`, `default_theme`, `default_language`, and `auto_approve_users`.
+- User types: `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
+- Guided onboarding bootstrap should propose the eight baseline settings plus any supplied user types in one change set when the admin has supplied them.
 
 For Admin Conversations, theme requests mean Instance visual identity settings:
 
@@ -108,17 +105,9 @@ For Admin Conversations, theme requests mean Instance visual identity settings:
 
 They mean Instance Settings, not frontend CSS token or source-code theme edits. Developer-facing theme implementation remains outside the Admin Configuration Assistant.
 
-Instance visual identity changes should be proposed as a confirmed change set using a partial `PUT /admin/settings` request body. They still require Admin Change Confirmation before any write is applied.
+Instance visual identity changes should be proposed through `propose_config_change_set` using a partial `PUT /admin/settings` request body. They still require Admin Change Confirmation before any write is applied.
 
-Both the sidebar assistant and full chat page (`/chat` with admin-config tool)
-use the same server-side scoped configuration context contract:
-`POST /admin/scoped-config-context`. Context assembly is owned by the Control
-Plane, not the browser.
-
-The browser may request `mode: full` through **Refresh context** for
-manual/debug refreshes, but the returned full context is still assembled by the
-server contract. Normal admin turns use server-side scope classification and
-assembly for both admin surfaces.
+The sidebar assistant, full chat page, and onboarding surface all use the same Tool Set. Onboarding may shape the guided prompt and proposed bootstrap setup, but it must not call a separate onboarding scope or inject an admin configuration snapshot.
 
 ### Model Provider Resilience
 
@@ -127,14 +116,13 @@ Long Admin Configuration Assistant conversations can hit Model Provider context 
 Resilience layering on admin sends (sidebar assistant):
 
 1. **Session Memory compaction** — older turns are summarized before the provider call (`frontend/src/utils/sessionMemoryCompaction.ts`).
-2. **Prompt budget planning** — admin config, document, and recent-conversation sections are capped separately (`frontend/src/utils/promptBudget.ts`).
+2. **Tool output budgeting** — Sage caps Tool results and summarizes or truncates oversized outputs before they re-enter the model loop.
 3. **Transport trim** — `llmChat` still bounds recent history as a final guard.
 
-Admin `/chat` with **Config** selected runs the same scoped context pipeline as
-the sidebar assistant: Session Memory compaction, server-side context assembly
-via `POST /admin/scoped-config-context`, prompt budget planning, change-set
-review, and confirmed apply. Both surfaces have identical context behavior and
-reduced-context notices.
+Admin `/chat` with **Config** selected runs the same model-driven Tool loop as
+the sidebar assistant: Session Memory compaction, explicit Tool contracts,
+Tool result budgeting, change-set review, and confirmed apply. Both surfaces
+have identical Tool behavior and reduced-context notices.
 
 Operator-facing notices (no raw prompts):
 
@@ -143,13 +131,13 @@ Operator-facing notices (no raw prompts):
 
 **Model Provider errors** are classified into safe categories (context limit, quota, timeout, unavailable, and others). Context-limit failures offer **Start new assistant conversation**, which clears the assistant session id and session-local secret sharing without deleting Instance, Deployment, Agent Settings, or Documents.
 
-**Direct apply:** When a valid pending change set is in review, **Apply** executes authorized admin endpoints without another Model Provider turn. Conversational shortcuts such as “apply them” route to the existing confirmation flow only when intent is unambiguous.
+**Direct apply:** When a valid pending change set is in review, **Apply** executes authorized admin endpoints without another Model Provider turn. Conversational shortcuts such as “do it” or “apply them” route to the existing confirmation flow only when intent is unambiguous; they never auto-apply and never start another Model Provider turn while a proposal is pending.
 
 **Sanitized instrumentation** (`frontend/src/utils/adminResilienceInstrumentation.ts`): maintainers can register listeners for structured metadata after compaction, prompt budgeting, and classified provider failures. Payloads include section names, estimated sizes, included/reduced/omitted scopes, provider category, and recovery action — never raw prompts, secrets, or provider traces.
 
-### Scoped Read Resilience
+### Tool Read Resilience
 
-Scoped config reads are best-effort. A slow or failing supporting endpoint should not block the admin assistant turn unless the failure means the admin is not authorized.
+Admin Config Tool reads are best-effort. A slow or failing supporting endpoint should not block the admin assistant turn unless the failure means the admin is not authorized.
 
 Blocking failures:
 
@@ -161,65 +149,68 @@ Non-blocking failures:
 - Timeout
 - Network failure
 - `5xx`
-- `404` for optional scope endpoints
+- `404` for optional supporting read endpoints
 
-When a non-blocking read fails, the runtime tool should still return the available context and include a warning section:
+When a non-blocking read fails, the Tool should still return available structured data and include a warning:
 
 ```text
-CONFIG CONTEXT WARNINGS
-- health scope failed: timed out after 2500ms
+TOOL WARNINGS
+- deployment_readiness failed: timed out after 2500ms
 ```
 
-If every requested scope fails, the runtime tool should still return the small control contract plus warnings. The assistant should ask a focused follow-up or explain which config area could not be inspected.
+If every relevant read fails, Sage should explain which Tool could not inspect reality and ask a focused follow-up only if no other enabled Tool can answer.
 
 Timeout budget:
 
-- Each individual scoped endpoint gets 2.5 seconds.
-- The full config-context builder gets a 4-second total budget.
-- Fan-out reads, such as per-user-type Agent Settings or document defaults, should stop once the total budget is exhausted.
+- Each individual Tool execution gets a bounded timeout.
+- The full model-driven Tool loop gets a bounded step/time budget.
+- Fan-out reads, such as per-user-type Agent Settings or document access, should stop once the Tool budget is exhausted.
 
-The chat request should proceed once the context budget is spent.
+The chat request should proceed once the Tool budget is spent.
 
-### Scoped Read Cache
+### Tool Result Cache
 
-Status: planned. Cache invalidation and scoped-read budgets are design
-requirements for the server-side scoped configuration context contract, not
-guarantees currently implemented by the Control Plane.
+Status: planned. Tool result caching is a latency optimization, not a context
+assembly contract.
 
-The runtime tool may cache successful scoped reads briefly during an admin assistant conversation:
+Sage may cache successful read Tool results briefly during an admin assistant conversation:
 
-- Cache successful scope reads for 30 seconds.
-- Do not cache failed scope reads.
-- Clear the cache when the admin manually refreshes assistant context.
-- Invalidate all cached scopes after a change set apply succeeds or partially succeeds.
-- Invalidate affected scopes after ordinary admin UI changes when the page knows which config area changed.
-- Keep revealed secret values session-local; do not store them in the general scoped-config cache.
+- Cache successful read Tool results for 30 seconds.
+- Do not cache failed Tool results.
+- Invalidate affected Tool results after a change set apply succeeds or partially succeeds.
+- Invalidate affected Tool results after ordinary admin UI changes when the page knows which config area changed.
+- Keep revealed secret values session-local; do not store them in a Tool result cache.
 
-This cache is a latency optimization only. It must not replace server-side authorization or validation.
+This cache must not replace server-side authorization or validation.
 
-### Change Application (Confirm-Then-Apply)
+### Change Application (Propose-Then-Confirm-Then-Apply)
 
-The assistant can propose changes by including exactly one JSON code block with this shape:
+The assistant proposes changes by calling `propose_config_change_set`.
+The tool arguments are:
+
+- `summary`: one sentence summary of what will change.
+- `requests_json`: a JSON array of request objects `{ "method", "path", "body"? }`.
+
+Example `requests_json`:
 
 ```json
-{
-  "version": 1,
-  "summary": "One sentence summary of what will change",
-  "requests": [
-    {
-      "method": "PUT",
-      "path": "/admin/deployment/config/LLM_PROVIDER",
-      "body": { "value": "sage" }
-    }
-  ]
-}
+[
+  {
+    "method": "PUT",
+    "path": "/admin/deployment/config/LLM_PROVIDER",
+    "body": { "value": "sage" }
+  }
+]
 ```
 
-The frontend validates the change set with an allowlist (methods + path prefixes), displays a masked preview for secret deployment keys, and only applies the changes if the admin clicks **Apply**.
+Sage validates the proposal with the same allowlist shape as the frontend, emits a sanitized staged payload, and records Activity/Trace metadata without secret values. The frontend validates the staged change set again, displays a masked preview for secret deployment keys, and only applies the changes if the admin clicks **Apply**.
+
+If a proposal is rejected by validation but the admin request is supported, Sage should correct the proposal and call `propose_config_change_set` again. It should not claim that supported Admin Config writes are unavailable.
 
 Additional safety rules:
 
-- Exactly one valid change set must be present. If the assistant outputs multiple code blocks that look like change sets, the UI treats it as ambiguous and refuses to apply.
+- The proposal Tool is non-mutating; it never calls admin write endpoints.
+- Confirmed Apply is an explicit admin UI action, not a model-callable Tool.
 - A change set may contain at most 50 requests.
 - Requests are applied sequentially, one HTTP call at a time (not as a single database transaction). Partial apply is possible.
 - Certain high-risk endpoints are always blocked (even if they match a prefix), including:
@@ -241,13 +232,18 @@ Note: Instance settings are updated via the single endpoint `PUT /admin/settings
 
 ### Normalization Rules (LLM Output Hardening)
 
-Before allowlist validation, the frontend normalizes common LLM output drift:
+Before allowlist validation, Sage and the frontend normalize only narrow, observed LLM output drift:
 
 - Coalesces `PUT /admin/settings/{key}` with body `{ "value": ... }` into a single `PUT /admin/settings` patch object.
+- Normalizes `/admin/user_types` to `/admin/user-types`.
+- Normalizes instance setting key `tagline` to `header_tagline`.
+- Normalizes supported language labels such as `English` to stored language codes such as `en`.
 - Normalizes `POST /admin/user-types` bodies using canonical keys only (`name`, `description`, `icon`, `display_order`).
 - Normalizes `POST /admin/user-fields` bodies using canonical keys only (`field_name`, `field_type`, `display_order`, `include_in_chat`, `user_type_id`, and related backend fields).
 - For `POST /admin/user-fields`, `options` must be a native JSON array (`["A","B"]`), not a JSON-encoded string (`"[\"A\",\"B\"]"`).
 - Parses boolean-like values (`true/false`, `1/0`, `yes/no`) and integer-like values where supported.
+
+After normalization, staged `admin_change_set` payloads must contain only canonical paths and keys. Unknown instance setting keys, unsupported language values, malformed user type bodies, unsafe paths, or any other unrecognized drift are rejected before staging and before Apply.
 
 ### User Type Placeholders (Single Change Set)
 
@@ -258,11 +254,13 @@ The admin assistant UI supports a placeholder token in paths and request bodies:
 - `@type:<slug>`
 
 Where `<slug>` is the slugified user type name, computed as:
+
 1. Convert to lowercase
 2. Replace each run of one or more non-alphanumeric characters with a single `_`
 3. Trim any leading/trailing `_`
 
 Examples:
+
 - `"Bitcoin Designer"` → `bitcoin_designer`
 - `"A & B Project"` → `a_b_project`
 - `"  Spaced  "` → `spaced`
@@ -276,31 +274,33 @@ The placeholder may appear in:
 
 Example:
 
+Call `propose_config_change_set` with summary `Add a new user type and attach one onboarding field` and this `requests_json`:
+
 ```json
-{
-  "version": 1,
-  "summary": "Add a new user type and attach one onboarding field",
-  "requests": [
-    {
-      "method": "POST",
-      "path": "/admin/user-types",
-      "body": { "name": "Bitcoin Designer", "description": "Design-focused users" }
-    },
-    {
-      "method": "POST",
-      "path": "/admin/user-fields",
-      "body": {
-        "field_name": "Portfolio URL",
-        "field_type": "url",
-        "user_type_id": "@type:bitcoin_designer",
-        "required": false
-      }
+[
+  {
+    "method": "POST",
+    "path": "/admin/user-types",
+    "body": {
+      "name": "Bitcoin Designer",
+      "description": "Design-focused users"
     }
-  ]
-}
+  },
+  {
+    "method": "POST",
+    "path": "/admin/user-fields",
+    "body": {
+      "field_name": "Portfolio URL",
+      "field_type": "url",
+      "user_type_id": "@type:bitcoin_designer",
+      "required": false
+    }
+  }
+]
 ```
 
 Explicitly blocked:
+
 - Secret reveal endpoints (`/reveal`)
 - Config export endpoints (`/export`)
 - Prompt preview endpoints (`/prompts/preview`)
@@ -314,7 +314,7 @@ Explicitly blocked:
 - After applying a change set, the UI runs:
   - `POST /admin/deployment/config/validate`
   - `GET /admin/deployment/restart-required`
-  and appends a short summary to the chat.
+    and appends a short summary to the chat.
 - Pending change sets are preserved through Model Provider failures so reviewed configuration work is not lost.
 - Streamed provider errors on the admin assistant path do not fall through to wasteful non-streaming retries when the failure category is known (for example context limit or quota exhaustion).
 
@@ -323,9 +323,11 @@ Explicitly blocked:
 ### User-Field Create Reports `options ... list_type`
 
 Error example:
+
 - `POST /admin/user-fields: ... options Input should be a valid list [type=list_type, input_type=str]`
 
 What to check:
+
 - Ensure the request body uses a real JSON array for `options`, not a quoted JSON string.
 - Confirm `field_type` is `select` when sending `options`.
 - If the payload is already correct but the error persists, verify the backend is running a build that returns parsed field `options` arrays in create/update responses.
@@ -333,14 +335,21 @@ What to check:
 ### Retry Then `Field name already exists for this type`
 
 If a retry fails with duplicate field name after an earlier failure:
+
 - Assume the earlier call may have persisted the row.
 - Verify current state with `GET /admin/user-fields` (optionally filtered by `user_type_id`).
 - Use `PUT /admin/user-fields/{field_id}` to correct metadata instead of re-POSTing the same field name.
 
 ## Quick Verification
 
-Run the parity script to confirm full-chat and bubble payloads produce matching `tools_used` behavior:
+Tool-loop verification should prove the sidebar assistant, full admin chat, and onboarding surface all send the same `admin-config` Tool Set and do not prefetch `/admin/scoped-config-context` or inject admin configuration snapshots:
 
 ```bash
-python scripts/tests/TOOLS/test_4a_unified_chat_tools_parity.py --admin-token <ADMIN_TOKEN>
+rg -n "scoped-config-context|requestedScopes|baseToolContext" frontend/src/components/admin frontend/src/pages/ChatPage.tsx frontend/src/utils/llmChat.ts
+```
+
+Proposal verification should prove both assistant surfaces stage pending review from structured `admin_change_set` payloads, with prose JSON extraction retained only as a temporary fallback:
+
+```bash
+rg -n "admin_change_set|extractAdminAssistantChangeSetStrict" frontend/src/components/admin frontend/src/pages/ChatPage.tsx
 ```

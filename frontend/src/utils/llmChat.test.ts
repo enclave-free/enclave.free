@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
-  sendQueryStream,
 } from './llmChat';
 import { adminFetch } from './adminApi';
 
@@ -72,18 +71,32 @@ describe('sendLlmChatWithUnifiedTools', () => {
     });
   });
 
-  it('sends trusted context without the removed client-executed tools contract', async () => {
+  it('sends Knowledge Search document constraints through unified chat', async () => {
     await sendLlmChatWithUnifiedTools({
-      content: 'Use this context',
-      tools: ['db-query'],
-      baseToolContext: 'Trusted context prepared outside tool execution',
+      content: 'Use the uploaded handbook',
+      tools: ['knowledge-search'],
+      jobIds: ['doc-handbook', 'doc-faq'],
     });
 
     const [, options] = vi.mocked(fetch).mock.calls[0];
     expect(JSON.parse(String(options?.body))).toEqual({
-      message: 'Use this context',
+      message: 'Use the uploaded handbook',
+      tools: ['knowledge-search'],
+      job_ids: ['doc-handbook', 'doc-faq'],
+    });
+  });
+
+  it('does not send frontend-prepared tool context fields', async () => {
+    await sendLlmChatWithUnifiedTools({
+      content: 'Use the database tool',
       tools: ['db-query'],
-      tool_context: 'Trusted context prepared outside tool execution',
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    const body = JSON.parse(String(options?.body));
+    expect(body).toEqual({
+      message: 'Use the database tool',
+      tools: ['db-query'],
     });
   });
 
@@ -454,127 +467,5 @@ describe('sendLlmChatWithUnifiedTools', () => {
     expect(events).toEqual([
       { event: 'answer_delta', data: { message_id: 'msg_1', delta: 'Hello' } },
     ]);
-  });
-
-  it('streams RAG answers from the query stream endpoint', async () => {
-    const encoder = new TextEncoder();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(
-          new ReadableStream({
-            start(controller) {
-              controller.enqueue(
-                encoder.encode(
-                  'event: assistant_message_started\ndata: {"message_id":"rag_1","session_id":"s1"}\n\n'
-                )
-              );
-              controller.enqueue(
-                encoder.encode(
-                  'event: trace_status\ndata: {"message_id":"rag_1","status":"Searching documents"}\n\n'
-                )
-              );
-              controller.enqueue(
-                encoder.encode(
-                  'event: answer_delta\ndata: {"message_id":"rag_1","delta":"Document answer"}\n\n'
-                )
-              );
-              controller.enqueue(
-                encoder.encode(
-                  'event: done\ndata: {"message_id":"rag_1","session_id":"s1","search_term":"housing advocate","inference_verification":{"record_id":42}}\n\n'
-                )
-              );
-              controller.close();
-            },
-          }),
-          { headers: { 'Content-Type': 'text/event-stream' } }
-        )
-      )
-    );
-    const events: Array<{ event: string; data: unknown }> = [];
-
-    await sendQueryStream({
-      question: 'What help is available?',
-      tools: ['web-search'],
-      jobIds: ['job-1'],
-      sessionId: 'session-123',
-      onEvent: (event, data) => events.push({ event, data }),
-    });
-
-    expect(fetch).toHaveBeenCalledWith(
-      '/api/query/stream',
-      expect.objectContaining({
-        method: 'POST',
-        credentials: 'include',
-        body: expect.any(String),
-      })
-    );
-    const [, options] = vi.mocked(fetch).mock.calls[0];
-    expect(JSON.parse(String(options?.body))).toEqual({
-      question: 'What help is available?',
-      top_k: 8,
-      tools: ['web-search'],
-      job_ids: ['job-1'],
-      session_id: 'session-123',
-    });
-    expect(events).toEqual([
-      {
-        event: 'assistant_message_started',
-        data: { message_id: 'rag_1', session_id: 's1' },
-      },
-      {
-        event: 'trace_status',
-        data: { message_id: 'rag_1', status: 'Searching documents' },
-      },
-      {
-        event: 'answer_delta',
-        data: { message_id: 'rag_1', delta: 'Document answer' },
-      },
-      {
-        event: 'done',
-        data: {
-          message_id: 'rag_1',
-          session_id: 's1',
-          search_term: 'housing advocate',
-          inference_verification: { record_id: 42 },
-        },
-      },
-    ]);
-  });
-
-  it('sends selected documents as Required Context for query stream turns', async () => {
-    const encoder = new TextEncoder();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(
-          new ReadableStream({
-            start(controller) {
-              controller.enqueue(
-                encoder.encode('event: done\ndata: {"message_id":"rag_1"}\n\n')
-              );
-              controller.close();
-            },
-          }),
-          { headers: { 'Content-Type': 'text/event-stream' } }
-        )
-      )
-    );
-
-    await sendQueryStream({
-      question: 'Answer from the selected policy',
-      tools: [],
-      jobIds: ['selected-policy', 'selected-handbook'],
-      topK: 4,
-      onEvent: vi.fn(),
-    });
-
-    const [, options] = vi.mocked(fetch).mock.calls[0];
-    expect(JSON.parse(String(options?.body))).toEqual({
-      question: 'Answer from the selected policy',
-      top_k: 4,
-      tools: [],
-      job_ids: ['selected-policy', 'selected-handbook'],
-    });
   });
 });

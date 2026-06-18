@@ -40,6 +40,7 @@ DEFAULT_DB_PATH = "/data/enclave.db"
 SECRET_PREFIX = "enc::v1::"
 DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 ADMIN_SESSION_SALT = "admin-session"
+CORE_BACKEND_SERVICE = "core-backend"
 
 
 def load_config() -> dict:
@@ -129,7 +130,7 @@ def load_repo_env() -> dict[str, str]:
 def load_backend_container_env() -> dict[str, str]:
     try:
         result = subprocess.run(
-            [*COMPOSE_ARGS, "exec", "-T", "backend", "env"],
+            [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "env"],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
@@ -162,7 +163,7 @@ def env_setting(
 def run_sqlite(sql: str, db_path: str) -> str:
     if not db_path or db_path.startswith("-"):
         raise ValueError("db_path must be non-empty and must not start with '-'")
-    cmd = [*COMPOSE_ARGS, "exec", "-T", "backend", "sqlite3", "-readonly", db_path]
+    cmd = [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3", "-readonly", db_path]
     result = subprocess.run(
         cmd,
         input=sql.strip(),
@@ -181,7 +182,7 @@ def run_sqlite(sql: str, db_path: str) -> str:
 def run_sqlite_json(sql: str, db_path: str) -> list[dict]:
     if not db_path or db_path.startswith("-"):
         raise ValueError("db_path must be non-empty and must not start with '-'")
-    cmd = [*COMPOSE_ARGS, "exec", "-T", "backend", "sqlite3", "-readonly", "-json", db_path]
+    cmd = [*COMPOSE_ARGS, "exec", "-T", CORE_BACKEND_SERVICE, "sqlite3", "-readonly", "-json", db_path]
     result = subprocess.run(
         cmd,
         input=sql.strip(),

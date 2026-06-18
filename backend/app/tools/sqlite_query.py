@@ -1,4 +1,4 @@
-"""SQLite query tool for admin database access."""
+"""CONTROL PLANE ONLY: Sage-owned public Agent Runtime routes must not import this module for Tool orchestration."""
 
 import re
 from typing import List, Dict, Any
@@ -88,7 +88,7 @@ SQL:"""
 
 
 class SQLiteQueryTool(BaseTool):
-    """Read-only SQLite query tool for database exploration."""
+    """Private read-only SQLite helper retained outside public Agent Runtime routes."""
 
     @property
     def definition(self) -> ToolDefinition:

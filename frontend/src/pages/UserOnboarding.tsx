@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { Search, Check, HelpCircle, ArrowRight } from 'lucide-react'
-import { OnboardingCard } from '../components/onboarding/OnboardingCard'
-import { Button } from '../components/ui'
-import { LANGUAGES, Language, STORAGE_KEY_LANGUAGE } from '../utils/languages'
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Search, Check, HelpCircle, ArrowRight } from 'lucide-react';
+import { OnboardingCard } from '../components/onboarding/OnboardingCard';
+import { Button } from '../components/ui';
+import { LANGUAGES, Language, STORAGE_KEY_LANGUAGE } from '../utils/languages';
 
 function SearchInput({
   value,
@@ -12,10 +12,10 @@ function SearchInput({
   placeholder,
   label,
 }: {
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  label: string
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  label: string;
 }) {
   return (
     <div className="relative mb-6">
@@ -35,7 +35,7 @@ function SearchInput({
         autoComplete="off"
       />
     </div>
-  )
+  );
 }
 
 function LanguageButton({
@@ -43,9 +43,9 @@ function LanguageButton({
   isSelected,
   onSelect,
 }: {
-  language: Language
-  isSelected: boolean
-  onSelect: () => void
+  language: Language;
+  isSelected: boolean;
+  onSelect: () => void;
 }) {
   return (
     <button
@@ -56,8 +56,8 @@ function LanguageButton({
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
+          e.preventDefault();
+          onSelect();
         }
       }}
       className={`relative flex flex-col items-start p-4 rounded-xl border-2 transition-all text-left cursor-pointer hover:-translate-y-0.5 ${
@@ -69,20 +69,36 @@ function LanguageButton({
       {isSelected && (
         <div className="absolute top-2 right-2">
           <div className="w-5 h-5 bg-accent rounded-full flex items-center justify-center">
-            <Check className="w-3 h-3 text-accent-text" strokeWidth={3} aria-hidden="true" />
+            <Check
+              className="w-3 h-3 text-accent-text"
+              strokeWidth={3}
+              aria-hidden="true"
+            />
           </div>
         </div>
       )}
-      <span className="text-2xl mb-1" role="img" aria-hidden="true">{language.flag}</span>
-      <span className="text-base font-medium text-text">{language.nativeName}</span>
-      <span className="text-sm text-text-muted mt-0.5">{language.englishName}</span>
+      <span className="text-2xl mb-1" role="img" aria-hidden="true">
+        {language.flag}
+      </span>
+      <span className="text-base font-medium text-text">
+        {language.nativeName}
+      </span>
+      <span className="text-sm text-text-muted mt-0.5">
+        {language.englishName}
+      </span>
     </button>
-  )
+  );
 }
 
-function NoResults({ searchQuery, message }: { searchQuery: string; message: string }) {
+function NoResults({
+  searchQuery,
+  message,
+}: {
+  searchQuery: string;
+  message: string;
+}) {
   // Replace {{query}} placeholder with actual query
-  const displayMessage = message.replace('{{query}}', searchQuery)
+  const displayMessage = message.replace('{{query}}', searchQuery);
 
   return (
     <div className="text-center py-8">
@@ -91,48 +107,66 @@ function NoResults({ searchQuery, message }: { searchQuery: string; message: str
       </div>
       <p className="text-sm text-text-muted">{displayMessage}</p>
     </div>
-  )
+  );
 }
 
 export function UserOnboarding() {
-  const navigate = useNavigate()
-  const { t, i18n } = useTranslation()
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const storedLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE);
+    if (
+      !storedLanguage ||
+      !LANGUAGES.some((lang) => lang.code === storedLanguage)
+    ) {
+      return;
+    }
+
+    if (i18n.language !== storedLanguage) {
+      void i18n.changeLanguage(storedLanguage);
+    }
+    navigate('/auth', { replace: true });
+  }, [i18n, navigate]);
 
   const filteredLanguages = useMemo(() => {
-    if (!searchQuery.trim()) return LANGUAGES
+    if (!searchQuery.trim()) return LANGUAGES;
 
-    const query = searchQuery.toLowerCase().trim()
+    const query = searchQuery.toLowerCase().trim();
     return LANGUAGES.filter(
       (lang) =>
         lang.nativeName.toLowerCase().includes(query) ||
         lang.englishName.toLowerCase().includes(query) ||
         lang.code.toLowerCase().includes(query)
-    )
-  }, [searchQuery])
+    );
+  }, [searchQuery]);
 
   const handleLanguageSelect = (code: string) => {
-    setSelectedLanguage(code)
+    setSelectedLanguage(code);
     // Change the UI language immediately when a language is selected
-    i18n.changeLanguage(code)
-  }
+    i18n.changeLanguage(code);
+  };
 
   const handleContinue = () => {
     if (selectedLanguage) {
-      localStorage.setItem(STORAGE_KEY_LANGUAGE, selectedLanguage)
-      navigate('/auth')
+      localStorage.setItem(STORAGE_KEY_LANGUAGE, selectedLanguage);
+      navigate('/auth');
     }
-  }
+  };
 
   const footer = (
     <>
       <span>{t('common.adminQuestion')} </span>
-      <Link to="/admin" className="text-accent hover:text-accent-hover font-medium transition-colors">
+      <Link
+        to="/admin"
+        className="text-accent hover:text-accent-hover font-medium transition-colors"
+      >
         {t('common.signInNostr')}
       </Link>
     </>
-  )
+  );
 
   return (
     <OnboardingCard
@@ -184,5 +218,5 @@ export function UserOnboarding() {
         {t('onboarding.language.changeInSettings')}
       </p>
     </OnboardingCard>
-  )
+  );
 }

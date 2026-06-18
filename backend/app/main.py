@@ -66,7 +66,11 @@ from models import (
     TestEmailRequest, TestEmailResponse,
     # Reachout
     ReachoutRequest, ReachoutResponse,
+    # Resource Referral Directory
+    ResourceCreate, ResourceUpdate, ResourceResponse, ResourceListResponse,
+    HelpTypeModel, HelpTypeUpsert, HelpTypeListResponse,
 )
+import region_data
 from nostr import verify_auth_event, get_pubkey_from_event
 import auth
 import lifecycle
@@ -86,7 +90,6 @@ from ingest import load_jobs_and_resume, router as ingest_router
 from ai_config import router as ai_config_router
 from deployment_config import internal_router as deployment_config_internal_router
 from deployment_config import router as deployment_config_router
-from admin_scoped_config import router as admin_scoped_config_router
 import deployment_config
 from key_migration import router as key_migration_router
 from internal_agent import router as internal_agent_router
@@ -127,17 +130,6 @@ def _best_effort_config_audit_event(**kwargs) -> None:
             kwargs.get("table_name"),
             kwargs.get("config_key"),
             exc,
-            exc_info=True,
-        )
-
-
-def _invalidate_scoped_config_context_cache() -> None:
-    try:
-        from scoped_config_context import invalidate_scoped_config_context_cache
-        invalidate_scoped_config_context_cache()
-    except Exception as exc:
-        logger.warning(
-            f"Failed to invalidate scoped config context cache: {exc}",
             exc_info=True,
         )
 
@@ -310,7 +302,6 @@ app.include_router(ingest_router)
 app.include_router(ai_config_router)
 app.include_router(deployment_config_router)
 app.include_router(deployment_config_internal_router)
-app.include_router(admin_scoped_config_router)
 app.include_router(key_migration_router)
 app.include_router(internal_agent_router)
 app.include_router(lifecycle.router)
@@ -1527,6 +1518,9 @@ async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth
     settings_dict = settings.model_dump(exclude_unset=True)
     existing_settings = database.get_all_settings()
     database.update_settings(settings_dict)
+    # Record which keys the operator explicitly set so guided onboarding can tell
+    # an intentional choice from an untouched default (even if they match).
+    database.mark_onboarding_configured_keys(settings_dict.keys())
     if "auto_approve_users" in settings_dict:
         updated_settings = database.get_all_settings()
         old_value = str(existing_settings.get("auto_approve_users", "true")).lower()
@@ -1539,7 +1533,6 @@ async def update_settings(settings: InstanceSettings, admin: dict = Depends(auth
                 new_value=new_value,
                 changed_by=admin.get("pubkey", "unknown"),
             )
-    _invalidate_scoped_config_context_cache()
     return InstanceSettingsResponse(settings=database.get_all_settings())
 
 
@@ -1598,7 +1591,6 @@ async def create_user_type(user_type: UserTypeCreate, admin: dict = Depends(auth
             }),
             changed_by=admin.get("pubkey", "unknown"),
         )
-        _invalidate_scoped_config_context_cache()
         return UserTypeResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -1638,7 +1630,6 @@ async def update_user_type(type_id: int, user_type: UserTypeUpdate, admin: dict 
         }),
         changed_by=admin.get("pubkey", "unknown"),
     )
-    _invalidate_scoped_config_context_cache()
     return UserTypeResponse(**updated)
 
 
@@ -1661,9 +1652,223 @@ async def delete_user_type(type_id: int, admin: dict = Depends(auth.require_admi
             new_value=None,
             changed_by=admin.get("pubkey", "unknown"),
         )
-        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="User type deleted")
     raise HTTPException(status_code=500, detail="Failed to delete user type")
+
+
+# --- Resource Referral Directory ---
+
+
+def _resource_slug(name: Optional[str]) -> str:
+    """Derive a stable resource_id slug from a name, falling back to a random id."""
+    base = re.sub(r"[^a-z0-9]+", "-", (name or "").strip().lower()).strip("-")
+    if not base:
+        return f"resource-{uuid.uuid4().hex[:12]}"
+    return base[:100]
+
+
+def _resource_audit_value(resource: dict | None) -> Optional[str]:
+    if resource is None:
+        return None
+    return json.dumps(
+        {
+            "resource_id": resource.get("resource_id"),
+            "name": resource.get("name"),
+            "resource_type": resource.get("resource_type"),
+            "scope_level": resource.get("scope_level"),
+            "scope_code": resource.get("scope_code"),
+            "help_types": resource.get("help_types"),
+            "status": resource.get("status"),
+            "verified_at": resource.get("verified_at"),
+        },
+        sort_keys=True,
+    )
+
+
+def _validate_resource_scope(scope_level: Optional[str], scope_code: Optional[str]) -> None:
+    if scope_level is None:
+        return
+    if not region_data.is_valid_scope(scope_level, scope_code):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid coverage scope for level '{scope_level}': unknown or missing scope_code",
+        )
+
+
+def _validate_help_type_keys(help_types: Optional[list[str]]) -> None:
+    if not help_types:
+        return
+    known = {ht["key"] for ht in database.list_help_types(include_inactive=True)}
+    unknown = [ht for ht in help_types if ht not in known]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown help_type(s): {', '.join(unknown)}. Add them to the vocabulary first.",
+        )
+
+
+@app.get("/admin/resources", response_model=ResourceListResponse)
+async def list_resources_admin(
+    status: Optional[str] = Query(None),
+    admin: dict = Depends(auth.require_admin),
+) -> ResourceListResponse:
+    """List directory resources (requires admin auth)."""
+    resources = database.list_resources(status=status)
+    return ResourceListResponse(resources=[ResourceResponse(**r) for r in resources])
+
+
+@app.post("/admin/resources", response_model=ResourceResponse)
+async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(auth.require_admin)) -> ResourceResponse:
+    """Create a directory resource (requires admin auth). Status is auto-computed:
+    a resource stays `pending` until all required fields are present, then becomes `ready`."""
+    _validate_resource_scope(resource.scope_level, resource.scope_code)
+    _validate_help_type_keys(resource.help_types)
+
+    resource_id = resource.resource_id or _resource_slug(resource.name)
+    if database.get_resource(resource_id) is not None:
+        raise HTTPException(status_code=400, detail=f"Resource id already exists: {resource_id}")
+
+    verified_at = database.utc_timestamp_z() if resource.verified else None
+
+    created = database.create_resource(
+        resource_id=resource_id,
+        name=resource.name,
+        resource_type=resource.resource_type,
+        description=resource.description,
+        contact=resource.contact,
+        languages=resource.languages,
+        scope_level=resource.scope_level,
+        scope_code=resource.scope_code,
+        help_types=resource.help_types,
+        verified_at=verified_at,
+        vetted_by=resource.vetted_by,
+        source_note=resource.source_note,
+        display_order=resource.display_order,
+        archived=resource.archived,
+    )
+    _best_effort_config_audit_event(
+        table_name="resources",
+        config_key=f"resource:{resource_id}:create",
+        old_value=None,
+        new_value=_resource_audit_value(created),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return ResourceResponse(**created)
+
+
+@app.put("/admin/resources/{resource_id}", response_model=ResourceResponse)
+async def update_resource_admin(
+    resource_id: str,
+    resource: ResourceUpdate,
+    admin: dict = Depends(auth.require_admin),
+) -> ResourceResponse:
+    """Update a directory resource (requires admin auth). Status is recomputed."""
+    existing = database.get_resource(resource_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    provided = resource.model_dump(exclude_unset=True)
+    # Validate scope only if either part is being changed.
+    if "scope_level" in provided or "scope_code" in provided:
+        _validate_resource_scope(
+            provided.get("scope_level", existing["scope_level"]),
+            provided.get("scope_code", existing["scope_code"]),
+        )
+    if "help_types" in provided:
+        _validate_help_type_keys(provided.get("help_types"))
+
+    # Map the `verified` boolean onto a verified_at timestamp.
+    kwargs = {k: v for k, v in provided.items() if k != "verified"}
+    if "verified" in provided:
+        if provided["verified"]:
+            kwargs["verified_at"] = existing.get("verified_at") or database.utc_timestamp_z()
+        else:
+            kwargs["verified_at"] = None
+
+    updated = database.update_resource(resource_id, **kwargs)
+    _best_effort_config_audit_event(
+        table_name="resources",
+        config_key=f"resource:{resource_id}:update",
+        old_value=_resource_audit_value(existing),
+        new_value=_resource_audit_value(updated),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return ResourceResponse(**updated)
+
+
+@app.delete("/admin/resources/{resource_id}", response_model=SuccessResponse)
+async def delete_resource_admin(resource_id: str, admin: dict = Depends(auth.require_admin)) -> SuccessResponse:
+    """Delete a directory resource (requires admin auth)."""
+    existing = database.get_resource(resource_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Resource not found")
+    if database.delete_resource(resource_id):
+        _best_effort_config_audit_event(
+            table_name="resources",
+            config_key=f"resource:{resource_id}:delete",
+            old_value=_resource_audit_value(existing),
+            new_value=None,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        return SuccessResponse(success=True, message="Resource deleted")
+    raise HTTPException(status_code=500, detail="Failed to delete resource")
+
+
+# --- Help-type vocabulary (operator-extensible) ---
+
+@app.get("/admin/help-types", response_model=HelpTypeListResponse)
+async def list_help_types_admin(admin: dict = Depends(auth.require_admin)) -> HelpTypeListResponse:
+    """List the help-type vocabulary (requires admin auth)."""
+    return HelpTypeListResponse(help_types=[HelpTypeModel(**ht) for ht in database.list_help_types()])
+
+
+@app.put("/admin/help-types/{key}", response_model=HelpTypeModel)
+async def upsert_help_type_admin(
+    key: str,
+    payload: HelpTypeUpsert,
+    admin: dict = Depends(auth.require_admin),
+) -> HelpTypeModel:
+    """Create or update a help-type vocabulary entry (requires admin auth)."""
+    normalized_key = re.sub(r"[^a-z0-9_]+", "_", key.strip().lower()).strip("_")
+    if not normalized_key:
+        raise HTTPException(status_code=400, detail="Invalid help-type key")
+    existing = database.get_help_type(normalized_key)
+    saved = database.upsert_help_type(
+        key=normalized_key,
+        label=payload.label,
+        description=payload.description,
+        display_order=payload.display_order,
+        is_active=payload.is_active,
+    )
+    _best_effort_config_audit_event(
+        table_name="help_types",
+        config_key=f"help_type:{normalized_key}:{'update' if existing else 'create'}",
+        old_value=json.dumps(existing, sort_keys=True) if existing else None,
+        new_value=json.dumps(saved, sort_keys=True),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return HelpTypeModel(**saved)
+
+
+@app.delete("/admin/help-types/{key}", response_model=SuccessResponse)
+async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_admin)) -> SuccessResponse:
+    """Delete a help-type vocabulary entry (requires admin auth)."""
+    normalized_key = re.sub(r"[^a-z0-9_]+", "_", key.strip().lower()).strip("_")
+    if not normalized_key:
+        raise HTTPException(status_code=400, detail="Invalid help-type key")
+    existing = database.get_help_type(normalized_key)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Help type not found")
+    if database.delete_help_type(normalized_key):
+        _best_effort_config_audit_event(
+            table_name="help_types",
+            config_key=f"help_type:{normalized_key}:delete",
+            old_value=json.dumps(existing, sort_keys=True),
+            new_value=None,
+            changed_by=admin.get("pubkey", "unknown"),
+        )
+        return SuccessResponse(success=True, message="Help type deleted")
+    raise HTTPException(status_code=500, detail="Failed to delete help type")
 
 
 # --- User Field Definitions ---
@@ -1709,7 +1914,6 @@ async def create_field_definition(field: FieldDefinitionCreate, admin: dict = De
             include_in_chat=field.include_in_chat
         )
         created = database.get_field_definition_by_id(field_id)
-        _invalidate_scoped_config_context_cache()
         return FieldDefinitionResponse(**created)
     except Exception as e:
         if "UNIQUE constraint" in str(e):
@@ -1753,7 +1957,6 @@ async def update_field_definition(field_id: int, field: FieldDefinitionUpdate, a
         include_in_chat=field.include_in_chat
     )
     updated = database.get_field_definition_by_id(field_id)
-    _invalidate_scoped_config_context_cache()
     return FieldDefinitionResponse(**updated)
 
 
@@ -1761,7 +1964,6 @@ async def update_field_definition(field_id: int, field: FieldDefinitionUpdate, a
 async def delete_field_definition(field_id: int, admin: dict = Depends(auth.require_admin)):
     """Delete a user field definition (requires admin auth)"""
     if database.delete_field_definition(field_id):
-        _invalidate_scoped_config_context_cache()
         return SuccessResponse(success=True, message="Field definition deleted")
     raise HTTPException(status_code=404, detail="Field definition not found")
 
@@ -1827,7 +2029,6 @@ async def update_field_encryption(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update field encryption")
 
-    _invalidate_scoped_config_context_cache()
     return FieldEncryptionResponse(
         field_id=field_id,
         encryption_enabled=new_encryption,
@@ -2034,6 +2235,19 @@ def _require_self_or_admin(target_user_id: int, actor: dict) -> None:
 
     if actor.get("id") != target_user_id:
         raise HTTPException(status_code=403, detail="Forbidden: cannot access another user")
+
+
+def _audit_actor_for_requester(requester: dict) -> str:
+    pubkey = requester.get("pubkey")
+    if isinstance(pubkey, str) and pubkey.strip():
+        return pubkey
+
+    actor_type = requester.get("type") or "actor"
+    actor_id = requester.get("id")
+    if actor_id is not None:
+        return f"{actor_type}:{actor_id}"
+
+    return "unknown"
 
 
 @app.get("/users/me/onboarding-status", response_model=OnboardingStatusResponse)
@@ -2289,7 +2503,7 @@ async def delete_user(
         ])
         _audit_user_data_deletion(
             config_key=f"user:{user_id}:delete",
-            changed_by=requester.get("pubkey", "unknown"),
+            changed_by=_audit_actor_for_requester(requester),
             workflow="delete_user",
             target_id=str(user_id),
             deletion=deletion,
@@ -2344,7 +2558,7 @@ async def delete_user(
     ])
     _audit_user_data_deletion(
         config_key=f"user:{user_id}:delete",
-        changed_by=requester.get("pubkey", "unknown"),
+        changed_by=_audit_actor_for_requester(requester),
         workflow="delete_user",
         target_id=str(user_id),
         deletion=deletion,

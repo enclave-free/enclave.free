@@ -6,47 +6,8 @@ import {
 } from './promptBudget';
 
 describe('planAdminPromptBudget', () => {
-  it('bounds oversized admin config context to its separate budget', () => {
-    const plan = planAdminPromptBudget({
-      adminConfigContext: `SCOPED CONFIG CONTEXT\n${'A'.repeat(20_000)}`,
-      conversationHistory: [],
-      limits: {
-        adminConfigChars: 1_000,
-      },
-    });
-
-    expect(plan.toolContext).toContain('SCOPED CONFIG CONTEXT');
-    expect(plan.toolContext).not.toContain('A'.repeat(2_000));
-    expect(
-      plan.toolContext.replace(/^PROMPT BUDGET NOTE[\s\S]*?\n\n/, '').length
-    ).toBeLessThanOrEqual(1_000);
-    expect(plan.reducedSections).toContain('admin-config');
-    expect(plan.warningNote).toMatch(/admin-config/i);
-    expect(plan.estimatedChars).toBeGreaterThan(0);
-  });
-
-  it('bounds document context separately from admin config', () => {
-    const plan = planAdminPromptBudget({
-      adminConfigContext: 'SCOPED CONFIG CONTEXT\nsmall admin section',
-      documentContext: `BOUNDED DOCUMENT CONTEXT\n${'D'.repeat(10_000)}`,
-      conversationHistory: [],
-      limits: {
-        adminConfigChars: 2_000,
-        documentContextChars: 800,
-      },
-    });
-
-    expect(plan.includedSections).toEqual(['admin-config', 'document-context']);
-    expect(plan.reducedSections).toContain('document-context');
-    expect(plan.reducedSections).not.toContain('admin-config');
-    expect(plan.toolContext).toContain('small admin section');
-    expect(plan.toolContext).toContain('BOUNDED DOCUMENT CONTEXT');
-    expect(plan.toolContext).not.toContain('D'.repeat(1_000));
-  });
-
   it('bounds recent conversation history on its own budget', () => {
     const plan = planAdminPromptBudget({
-      adminConfigContext: 'SCOPED CONFIG CONTEXT',
       conversationHistory: Array.from({ length: 12 }, (_, index) => ({
         role: index % 2 === 0 ? 'user' : 'assistant',
         content: `Turn ${index} ${'H'.repeat(3_000)}`,
@@ -63,31 +24,30 @@ describe('planAdminPromptBudget', () => {
       plan.conversationHistory[plan.conversationHistory.length - 1]?.content
     ).toContain('Turn 11');
     expect(plan.reducedSections).toContain('recent-conversation');
+    expect(plan.warningNote).toMatch(/recent-conversation/i);
     expect(
       plan.conversationHistory.every((turn) => turn.content.length <= 500)
     ).toBe(true);
+    expect(plan.estimatedChars).toBeGreaterThan(0);
   });
 
   it('uses default limits when none are provided', () => {
     const plan = planAdminPromptBudget({
-      adminConfigContext: 'SCOPED CONFIG CONTEXT',
       conversationHistory: [],
     });
 
     expect(plan.reducedSections).toEqual([]);
-    expect(plan.estimatedChars).toBeGreaterThan(0);
-    expect(DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.adminConfigChars).toBe(12_000);
+    expect(plan.omittedSections).toEqual(['recent-conversation']);
+    expect(plan.estimatedChars).toBe(0);
+    expect(DEFAULT_ADMIN_PROMPT_BUDGET_LIMITS.conversationTurns).toBe(8);
   });
 });
 
 describe('formatAdminReducedContextNotice', () => {
   it('returns operator-facing notice when sections were reduced', () => {
-    expect(
-      formatAdminReducedContextNotice(['admin-config', 'document-context'])
-    ).toMatch(/admin configuration context/);
-    expect(
-      formatAdminReducedContextNotice(['admin-config', 'document-context'])
-    ).toMatch(/document library context/);
+    expect(formatAdminReducedContextNotice(['recent-conversation'])).toMatch(
+      /recent conversation history/
+    );
     expect(formatAdminReducedContextNotice([])).toBeNull();
   });
 

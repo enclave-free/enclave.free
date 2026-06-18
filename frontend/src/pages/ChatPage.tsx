@@ -7,12 +7,14 @@ import {
   useRef,
   type Dispatch,
   type FormEvent,
+  type Ref,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
+  BookOpen,
   CheckCircle2,
   ChevronDown,
   Database,
@@ -66,10 +68,10 @@ import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
-  sendQueryStream,
 } from '../utils/llmChat';
 import { Button, Callout, IconButton } from '../components/ui';
 import {
+  coerceAdminAssistantChangeSetPayload,
   extractAdminAssistantChangeSetStrict,
   redactAdminDeploymentSecretChangeSets,
   redactSecrets,
@@ -95,6 +97,7 @@ import {
 import { refreshAdminConfigRedactionMetadata } from '../utils/adminConfigContext';
 
 const CONFIG_TOOL_ID = 'admin-config';
+const KNOWLEDGE_TOOL_ID = 'knowledge-search';
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
 
 function conversationTurnToMessage(turn: ConversationUiTurn): Message {
@@ -339,6 +342,26 @@ function stagePendingAdminChangeSet(
   return null;
 }
 
+function stageStructuredAdminChangeSet(
+  payload: unknown,
+  dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
+): AdminAssistantChangeSet | null {
+  if (payload === undefined || payload === null) return null;
+  const extracted = coerceAdminAssistantChangeSetPayload(payload);
+  if (extracted.ok) {
+    dispatchAdminApply({
+      type: 'changeSetReadyForReview',
+      changeSet: extracted.changeSet,
+    });
+    return extracted.changeSet;
+  }
+  dispatchAdminApply({
+    type: 'parseFailed',
+    message: extracted.error,
+  });
+  return null;
+}
+
 function prepareAssistantContentForDisplay(
   content: string,
   hasConfigTool: boolean
@@ -353,6 +376,8 @@ function AdminChangeApprovalCard({
   message,
   onApprove,
   onReject,
+  cardRef,
+  approveButtonRef,
 }: {
   preview: ReturnType<typeof buildAdminChangePreview>;
   state:
@@ -365,6 +390,8 @@ function AdminChangeApprovalCard({
   message?: string;
   onApprove: () => void;
   onReject: () => void;
+  cardRef?: Ref<HTMLDivElement>;
+  approveButtonRef?: Ref<HTMLButtonElement>;
 }) {
   const { t } = useTranslation();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -377,6 +404,7 @@ function AdminChangeApprovalCard({
 
   return (
     <div
+      ref={cardRef}
       role="group"
       aria-label="Admin Change Confirmation"
       className="mb-4 ml-10 max-w-[min(100%,48rem)] overflow-hidden rounded-xl border border-warning/25 bg-surface-raised shadow-sm"
@@ -459,6 +487,7 @@ function AdminChangeApprovalCard({
             {t('admin.configAssistant.reject', 'Reject')}
           </Button>
           <Button
+            ref={approveButtonRef}
             onClick={onApprove}
             variant="primary"
             size="sm"
@@ -522,6 +551,8 @@ export function ChatPage() {
       changeSet: AdminAssistantChangeSet;
     }>
   >([]);
+  const adminApprovalCardRef = useRef<HTMLDivElement | null>(null);
+  const adminApprovalApproveButtonRef = useRef<HTMLButtonElement | null>(null);
   const [documents, setDocuments] = useState<DocumentSource[]>([]);
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false);
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([]);
@@ -644,6 +675,15 @@ export function ChatPage() {
   // Build available tools list - db-query only visible to admins
   const availableTools = useMemo<Tool[]>(() => {
     const tools: Tool[] = [
+      {
+        id: KNOWLEDGE_TOOL_ID,
+        name: t('chat.tools.knowledgeSearchName', 'Knowledge'),
+        description: t(
+          'chat.tools.knowledgeSearch',
+          'Search uploaded documents and knowledge chunks'
+        ),
+        icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+      },
       {
         id: 'web-search',
         name: t('chat.tools.webSearchName'),
@@ -890,7 +930,13 @@ export function ChatPage() {
               selectedTools: [CONFIG_TOOL_ID],
             });
           } else {
-            const defaultTools = data.web_search_enabled ? ['web-search'] : [];
+            const hasDefaultDocuments =
+              Array.isArray(data.default_document_ids) &&
+              data.default_document_ids.length > 0;
+            const defaultTools = [
+              ...(hasDefaultDocuments ? [KNOWLEDGE_TOOL_ID] : []),
+              ...(data.web_search_enabled ? ['web-search'] : []),
+            ];
             dispatchConversation({
               type: 'selectedToolsChanged',
               selectedTools: defaultTools,
@@ -997,9 +1043,19 @@ export function ChatPage() {
     [selectedTools]
   );
 
-  const handleDocumentToggle = useCallback((docId: string) => {
-    dispatchConversation({ type: 'documentToggled', documentId: docId });
-  }, []);
+  const handleDocumentToggle = useCallback(
+    (docId: string) => {
+      const selectedAfterToggle = !selectedDocuments.includes(docId);
+      dispatchConversation({ type: 'documentToggled', documentId: docId });
+      if (selectedAfterToggle && !selectedTools.includes(KNOWLEDGE_TOOL_ID)) {
+        dispatchConversation({
+          type: 'toolToggled',
+          toolId: KNOWLEDGE_TOOL_ID,
+        });
+      }
+    },
+    [selectedDocuments, selectedTools]
+  );
 
   const handleConversationSelect = useCallback(
     async (conversation: ConversationHistorySummary) => {
@@ -1202,6 +1258,19 @@ export function ChatPage() {
     [adminApplyState, adminApprovalTurnId]
   );
 
+  const focusPendingAdminApproval = useCallback(() => {
+    const focusApproval = () => {
+      adminApprovalCardRef.current?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+      adminApprovalApproveButtonRef.current?.focus();
+    };
+
+    focusApproval();
+    window.setTimeout(focusApproval, 0);
+  }, []);
+
   const handleSend = async (content: string) => {
     const hasConfigTool = configToolEnabled;
     const hasPendingChangeSet = adminApplyState.state === 'review';
@@ -1216,6 +1285,7 @@ export function ChatPage() {
     });
 
     if (applyIntent.kind === 'needs-panel') {
+      focusPendingAdminApproval();
       dispatchConversation({
         type: 'assistantTurnAppended',
         id: generateMessageId(),
@@ -1229,15 +1299,17 @@ export function ChatPage() {
     }
 
     try {
-      const backendTools = selectedTools;
-      const useRag = !isAdmin && selectedDocuments.length > 0;
+      const backendTools =
+        selectedDocuments.length > 0 &&
+        !selectedTools.includes(KNOWLEDGE_TOOL_ID)
+          ? [...selectedTools, KNOWLEDGE_TOOL_ID]
+          : selectedTools;
       let conversationHistory = messages.map(
         ({ role, content: turnContent }) => ({
           role,
           content: turnContent,
         })
       );
-      let baseToolContext: string | undefined;
       let secretsForThisRequest = secretsForRedaction;
       if (hasConfigTool) {
         const sessionMemoryPlan = compactAdminSessionMemory({
@@ -1262,23 +1334,12 @@ export function ChatPage() {
         }
 
         const promptPlan = planAdminPromptBudget({
-          adminConfigContext: '',
-          documentContext: '',
           conversationHistory: sessionMemoryPlan.conversationHistory,
         });
         conversationHistory = promptPlan.conversationHistory;
-        baseToolContext = promptPlan.toolContext || undefined;
         setReducedContextNotice(
           formatAdminReducedContextNotice(promptPlan.reducedSections, {
             sectionLabels: {
-              'admin-config': t(
-                'admin.configAssistant.reducedContextSections.adminConfig',
-                'admin configuration context'
-              ),
-              'document-context': t(
-                'admin.configAssistant.reducedContextSections.documentContext',
-                'document library context'
-              ),
               'recent-conversation': t(
                 'admin.configAssistant.reducedContextSections.recentConversation',
                 'recent conversation history'
@@ -1303,147 +1364,34 @@ export function ChatPage() {
       }
 
       let response: Response;
-      if (useRag) {
-        const body = {
-          question: content,
-          top_k: 8,
-          tools: backendTools,
-          job_ids: selectedDocuments,
-          ...(conversationSessionId && { session_id: conversationSessionId }),
-        };
-
-        let streamed = false;
-        let streamMessageId: string | null = null;
-        let streamContent = '';
-        let streamSessionId: string | null = null;
-        let streamSearchTerm: string | null = null;
-        try {
-          await sendQueryStream({
-            question: content,
-            tools: backendTools,
-            jobIds: selectedDocuments,
-            sessionId: conversationSessionId,
-            onEvent: (event, payload) => {
-              const data = payload as Record<string, unknown>;
-              if (event === 'assistant_message_started') {
-                if (typeof data.message_id !== 'string')
-                  data.message_id = generateMessageId();
-                const id = data.message_id as string;
-                streamMessageId = id;
-                streamSessionId =
-                  typeof data.session_id === 'string'
-                    ? data.session_id
-                    : streamSessionId;
-                dispatchConversation({
-                  type: 'assistantTurnStarted',
-                  id,
-                  sessionId: streamSessionId,
-                  traceStatus: t(
-                    'chat.trace.finalizing',
-                    'Finalizing response...'
-                  ),
-                });
-              } else if (event === 'answer_delta' && streamMessageId) {
-                const delta = typeof data.delta === 'string' ? data.delta : '';
-                streamContent += delta;
-                dispatchConversation({
-                  type: 'assistantContentReplaced',
-                  assistantTurnId: streamMessageId,
-                  content: prepareAssistantContentForDisplay(
-                    shareSecrets
-                      ? redactSecrets(streamContent, secretsForThisRequest)
-                      : streamContent,
-                    hasConfigTool
-                  ),
-                });
-              } else if (event === 'done') {
-                if (typeof data.session_id === 'string')
-                  streamSessionId = data.session_id;
-                if (typeof data.search_term === 'string')
-                  streamSearchTerm = data.search_term;
-                dispatchStreamEvent(event, data, streamMessageId);
-              } else if (event === 'error') {
-                throw new Error(
-                  formatProviderStreamError(
-                    data.detail,
-                    t('errors.failedToSendMessage')
-                  )
-                );
-              } else if (streamMessageId) {
-                dispatchStreamEvent(event, data, streamMessageId);
-              }
-            },
-          });
-          if (streamSessionId)
-            dispatchConversation({
-              type: 'conversationSessionChanged',
-              sessionId: streamSessionId,
-            });
-          if (streamMessageId)
-            dispatchConversation({
-              type: 'assistantTurnFinished',
-              sessionId: streamSessionId,
-            });
-          dispatchAdminApply({ type: 'dismissed' });
-          if (streamSearchTerm) {
-            await triggerAutoSearch(
-              streamSearchTerm,
-              streamSessionId ?? conversationSessionId
-            );
-          }
-          streamed = true;
-        } catch (streamError) {
-          if (streamMessageId && streamContent.trim()) {
-            dispatchConversation({
-              type: 'assistantTurnFailed',
-              assistantTurnId: streamMessageId,
-              message:
-                streamError instanceof Error
-                  ? streamError.message
-                  : t('errors.failedToSendMessage'),
-            });
-            return;
-          }
-          if (streamMessageId) {
-            dispatchConversation({
-              type: 'assistantTurnFailed',
-              assistantTurnId: streamMessageId,
-              message:
-                streamError instanceof Error
-                  ? streamError.message
-                  : t('errors.failedToSendMessage'),
-            });
-          }
-          console.warn(
-            'Streaming query failed; falling back to non-streaming query:',
-            streamError
-          );
-        }
-        if (streamed) {
-          await loadConversationHistory();
-          return;
-        }
-
-        response = await fetch(`${API_BASE}/query`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(body),
-        });
-      } else {
+      {
         let streamed = false;
         let streamMessageId: string | null = null;
         let streamContent = '';
         let streamSessionId: string | null = null;
         let streamReportedError = false;
+        let sawStructuredChangeSetPayload = false;
+        let structuredChangeSet: AdminAssistantChangeSet | null = null;
+        const stageStructuredForCurrentTurn = (payload: unknown) => {
+          if (payload !== undefined && payload !== null) {
+            sawStructuredChangeSetPayload = true;
+          }
+          if (structuredChangeSet) return;
+          const staged = stageStructuredAdminChangeSet(
+            payload,
+            dispatchAdminApply
+          );
+          if (staged) {
+            structuredChangeSet = staged;
+            stageAdminChangeSetForTurn(streamMessageId);
+          }
+        };
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: backendTools,
-            baseToolContext: hasConfigTool ? baseToolContext : undefined,
             sessionId: conversationSessionId,
+            jobIds: selectedDocuments,
             conversationHistory,
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
@@ -1481,6 +1429,7 @@ export function ChatPage() {
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
+                stageStructuredForCurrentTurn(data.admin_change_set);
                 dispatchStreamEvent(event, data, streamMessageId);
               } else if (event === 'error') {
                 streamReportedError = true;
@@ -1492,6 +1441,7 @@ export function ChatPage() {
                   )
                 );
               } else if (streamMessageId) {
+                stageStructuredForCurrentTurn(data.admin_change_set);
                 dispatchStreamEvent(event, data, streamMessageId);
               }
             },
@@ -1506,7 +1456,7 @@ export function ChatPage() {
               type: 'assistantTurnFinished',
               sessionId: streamSessionId,
             });
-          if (hasConfigTool) {
+          if (hasConfigTool && !structuredChangeSet) {
             const extracted =
               extractAdminAssistantChangeSetStrict(streamContent);
             if (extracted.ok) {
@@ -1521,7 +1471,7 @@ export function ChatPage() {
                 message: extracted.error,
               });
             }
-          } else {
+          } else if (!hasConfigTool && !sawStructuredChangeSetPayload) {
             dispatchAdminApply({ type: 'dismissed' });
           }
           streamed = true;
@@ -1584,13 +1534,11 @@ export function ChatPage() {
         response = await sendLlmChatWithUnifiedTools({
           content,
           tools: backendTools,
-          baseToolContext: hasConfigTool ? baseToolContext : undefined,
           sessionId: conversationSessionId,
+          jobIds: selectedDocuments,
           conversationHistory,
         });
       }
-
-      const responseIsRag = useRag;
 
       // Handle auth errors
       if (response.status === 401) {
@@ -1616,28 +1564,28 @@ export function ChatPage() {
 
       const data = await response.json();
 
-      let responseContent: string;
-      if (responseIsRag) {
-        responseContent = data.answer;
+      const responseContent = data.message;
+      if (data.session_id) {
+        dispatchConversation({
+          type: 'conversationSessionChanged',
+          sessionId: data.session_id,
+        });
+      }
 
-        // Save session_id for conversation continuity
-        if (data.session_id) {
-          dispatchConversation({
-            type: 'conversationSessionChanged',
-            sessionId: data.session_id,
-          });
+      const hasStructuredChangeSetPayload =
+        data.admin_change_set !== undefined && data.admin_change_set !== null;
+      if (hasConfigTool || hasStructuredChangeSetPayload) {
+        const structuredChangeSet = stageStructuredAdminChangeSet(
+          data.admin_change_set,
+          dispatchAdminApply
+        );
+        if (structuredChangeSet) {
+          stageAdminChangeSetForTurn(
+            typeof data.message_id === 'string' ? data.message_id : null
+          );
         }
-      } else {
-        responseContent = data.message;
-        if (data.session_id) {
-          dispatchConversation({
-            type: 'conversationSessionChanged',
-            sessionId: data.session_id,
-          });
-        }
-
-        if (hasConfigTool) {
-          const raw = String(data.message || '');
+        const raw = String(data.message || '');
+        if (hasConfigTool && !structuredChangeSet) {
           const extracted = extractAdminAssistantChangeSetStrict(raw);
           if (extracted.ok) {
             stageAdminChangeSetForTurn(
@@ -1653,9 +1601,9 @@ export function ChatPage() {
               message: extracted.error,
             });
           }
-        } else {
-          dispatchAdminApply({ type: 'dismissed' });
         }
+      } else {
+        dispatchAdminApply({ type: 'dismissed' });
       }
 
       dispatchConversation({
@@ -1675,13 +1623,6 @@ export function ChatPage() {
           typeof data.session_id === 'string' ? data.session_id : undefined,
       });
 
-      // Handle auto-search if backend returned a search term
-      if (responseIsRag && data.search_term) {
-        await triggerAutoSearch(
-          data.search_term,
-          data.session_id ?? conversationSessionId
-        );
-      }
       await loadConversationHistory();
     } catch (e) {
       dispatchConversation({
@@ -1957,105 +1898,6 @@ export function ChatPage() {
     },
     [fetchJson, t]
   );
-
-  // Auto-search triggered by backend - injects results back into RAG session
-  const triggerAutoSearch = async (
-    searchTerm: string,
-    sessionId?: string | null
-  ) => {
-    try {
-      // Show searching indicator
-      const searchingMessage: Message = {
-        id: generateMessageId(),
-        role: 'assistant',
-        content: t('chat.messages.searching', { term: searchTerm }),
-        timestamp: new Date(),
-      };
-      dispatchConversation({
-        type: 'assistantTurnAppended',
-        id: searchingMessage.id,
-        content: searchingMessage.content,
-      });
-
-      // Build context-aware search prompt with condensing instructions
-      const searchPrompt = `Search for: ${searchTerm}
-
-IMPORTANT: Return a CONDENSED response:
-- A brief table (3-5 rows max) with Name, Contact, and Notes columns
-- 2-3 sentences of practical advice
-- NO lengthy explanations or backgrounds
-- Focus on actionable contacts and next steps`;
-
-      // Call the same shared chat path used by the main chat send flow.
-      const searchRes = await sendLlmChatWithUnifiedTools({
-        content: searchPrompt,
-        tools: ['web-search'],
-        sessionId,
-      });
-
-      if (!searchRes.ok) {
-        throw new Error(t('errors.searchFailed', { status: searchRes.status }));
-      }
-
-      const searchData = await searchRes.json();
-      if (searchData.session_id) {
-        dispatchConversation({
-          type: 'conversationSessionChanged',
-          sessionId: searchData.session_id,
-        });
-      }
-      const searchResults = searchData.message;
-
-      // Replace searching message with condensed results
-      const searchResultMessage: Message = {
-        id: generateMessageId(),
-        role: 'assistant',
-        content: `${t('chat.messages.searchResults', { term: searchTerm })}\n\n${searchResults}`,
-        timestamp: new Date(),
-      };
-
-      // Remove the "Searching..." message and add results
-      const searchingPrefix = `🔍 ${t('chat.messages.searchingPrefix')}`;
-      dispatchConversation({
-        type: 'assistantTurnsRemovedByContentPrefix',
-        prefix: searchingPrefix,
-      });
-      dispatchConversation({
-        type: 'assistantTurnAppended',
-        id: searchResultMessage.id,
-        content: searchResultMessage.content,
-      });
-
-      // Inject search results back into RAG session for context continuity
-      const injectionSessionId = searchData.session_id ?? sessionId;
-      if (injectionSessionId && selectedDocuments.length > 0) {
-        // Send a silent update to the RAG session with search results
-        await fetch(`${API_BASE}/query`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            question: `[SYSTEM: Search results for "${searchTerm}" have been provided to the user. The results included: ${searchResults.slice(0, 500)}...]`,
-            session_id: injectionSessionId,
-            top_k: 1, // Minimal retrieval since this is just context injection
-            tools: [], // No tools for this update
-          }),
-        }).catch(() => {
-          // Silent failure - session update is best-effort
-        });
-      }
-    } catch (e) {
-      console.error('Auto-search failed:', e);
-      // Remove searching message on error
-      const searchingPrefix = `🔍 ${t('chat.messages.searchingPrefix')}`;
-      dispatchConversation({
-        type: 'assistantTurnsRemovedByContentPrefix',
-        prefix: searchingPrefix,
-      });
-    }
-  };
 
   const handleNewChat = () => {
     dispatchConversation({ type: 'newConversationStarted' });
@@ -2426,8 +2268,8 @@ IMPORTANT: Return a CONDENSED response:
     </div>
   );
 
-  // Admin chat intentionally excludes DocumentScope. Admin tools are Sage-owned
-  // assistant tools, while document-grounded retrieval remains a user chat mode.
+  // Tool Sets stay visible in the composer; admin-only capabilities are gated
+  // through the available tool list.
   const inputToolbar = isAdmin ? (
     <section
       aria-label={t('chat.composerContextAria', 'Composer context')}
@@ -2467,6 +2309,20 @@ IMPORTANT: Return a CONDENSED response:
                 )}
               </span>
             </label>
+          </>
+        )}
+        {selectedTools.includes(KNOWLEDGE_TOOL_ID) && (
+          <>
+            <div className="h-4 w-px bg-border" />
+            <span className="text-[11px] font-medium text-text-muted">
+              {t('chat.documentsContextTitle', 'Documents')}
+            </span>
+            <DocumentScope
+              selectedDocuments={selectedDocuments}
+              onToggle={handleDocumentToggle}
+              documents={documents}
+              compact
+            />
           </>
         )}
       </div>
@@ -2580,13 +2436,7 @@ IMPORTANT: Return a CONDENSED response:
       );
     }
 
-    if (
-      !isAdmin ||
-      !selectedTools.includes(CONFIG_TOOL_ID) ||
-      !changeSet ||
-      !cardTurnId ||
-      !isApprovalVisible
-    ) {
+    if (!isAdmin || !changeSet || !cardTurnId || !isApprovalVisible) {
       return Object.keys(accessories).length > 0 ? accessories : undefined;
     }
 
@@ -2603,6 +2453,8 @@ IMPORTANT: Return a CONDENSED response:
         }
         onApprove={() => handleAdminApply(changeSet)}
         onReject={() => dispatchAdminApply({ type: 'rejected' })}
+        cardRef={adminApprovalCardRef}
+        approveButtonRef={adminApprovalApproveButtonRef}
       />
     );
     return accessories;
@@ -2614,7 +2466,6 @@ IMPORTANT: Return a CONDENSED response:
     handleAdminApply,
     isAdmin,
     lastAssistantTurnId,
-    selectedTools,
     supersededAdminApprovals,
   ]);
   const threadNotices = (
@@ -2683,19 +2534,17 @@ IMPORTANT: Return a CONDENSED response:
             {reducedContextNotice}
           </div>
         )}
-      {isAdmin &&
-        selectedTools.includes(CONFIG_TOOL_ID) &&
-        adminApplyState.state === 'error' && (
-          <Callout
-            label={t(
-              'admin.configAssistant.applyErrorLabel',
-              'Config apply error'
-            )}
-            tone="error"
-          >
-            {adminApplyState.message}
-          </Callout>
-        )}
+      {isAdmin && adminApplyState.state === 'error' && (
+        <Callout
+          label={t(
+            'admin.configAssistant.applyErrorLabel',
+            'Config apply error'
+          )}
+          tone="error"
+        >
+          {adminApplyState.message}
+        </Callout>
+      )}
     </div>
   );
 

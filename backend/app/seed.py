@@ -119,13 +119,77 @@ def seed_qdrant(client):
     print("Qdrant seeding complete!")
 
 
-def seed_sqlite():
+# A few example resources so the path is demonstrable end-to-end. These intentionally span
+# the scope hierarchy (country -> subregion -> global) to show specificity ranking.
+EXAMPLE_RESOURCES = [
+    {
+        "resource_id": "example-ni-detention-lawyer",
+        "name": "Nicaragua Detention Defense (example)",
+        "resource_type": "lawyer",
+        "description": "In-country lawyer handling arbitrary-detention and habeas cases.",
+        "contact": {"email": "contact@example.org", "secure_channel": "Signal: +505-000-0000"},
+        "languages": ["es"],
+        "scope_level": "country",
+        "scope_code": "NI",
+        "help_types": ["legal"],
+        "vetted_by": "seed",
+        "source_note": "Example seed data — replace with vetted entries.",
+    },
+    {
+        "resource_id": "example-centralamerica-hr-lawyer",
+        "name": "Central America Human Rights Counsel (example)",
+        "resource_type": "ngo",
+        "description": "Spanish-speaking human-rights legal network across Central America.",
+        "contact": {"url": "https://example.org", "email": "info@example.org"},
+        "languages": ["es", "en"],
+        "scope_level": "subregion",
+        "scope_code": "013",
+        "help_types": ["legal", "humanitarian"],
+        "vetted_by": "seed",
+        "source_note": "Example seed data — replace with vetted entries.",
+    },
+    {
+        "resource_id": "example-un-enforced-disappearances",
+        "name": "UN Committee on Enforced Disappearances (example)",
+        "resource_type": "un_body",
+        "description": "UN mechanism receiving urgent actions on disappeared and forcibly conscripted persons.",
+        "contact": {"url": "https://www.ohchr.org"},
+        "languages": ["en", "fr", "es", "ar"],
+        "scope_level": "global",
+        "scope_code": None,
+        "help_types": ["humanitarian"],
+        "vetted_by": "seed",
+        "source_note": "Example seed data — replace with vetted entries.",
+    },
+]
+
+
+def seed_resource_directory() -> None:
+    """Seed example resources (region map + core help types are seeded by init_schema)."""
+    for resource in EXAMPLE_RESOURCES:
+        if database.get_resource(resource["resource_id"]) is None:
+            database.create_resource(verified_at=database.utc_timestamp_z(), **resource)
+    print("  Example resources seeded")
+
+
+def _env_flag_enabled(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def seed_sqlite(seed_demo_resources: bool | None = None) -> None:
     """Initialize SQLite database and seed default settings"""
     print("\nInitializing SQLite database...")
     database.init_schema()
     print("  Schema initialized")
     database.seed_default_settings()
     print("  Default settings seeded")
+    should_seed_demo_resources = (
+        _env_flag_enabled("SEED_DEMO_RESOURCES")
+        if seed_demo_resources is None
+        else seed_demo_resources
+    )
+    if should_seed_demo_resources:
+        seed_resource_directory()
     print("SQLite initialization complete!")
 
 
@@ -157,7 +221,7 @@ def main():
 
         print("\n" + "=" * 60)
         print("Seeding complete!")
-        print("Test with: curl http://localhost:8000/test")
+        print("Test with: curl http://localhost:18000/test")
         print("=" * 60)
 
     except Exception as e:

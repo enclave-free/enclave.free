@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1
+
 WORKDIR /app
 
 # Install system dependencies
@@ -14,11 +16,17 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN adduser --system --group --home /home/enclave enclave \
+    && mkdir -p /data /uploads /home/enclave/.cache/huggingface \
+    && chown -R enclave:enclave /app /data /uploads /home/enclave
+
 # Copy application code
-COPY app/ .
+COPY --chown=enclave:enclave app/ .
+
+USER enclave
 
 # Expose port
-EXPOSE 8000
+EXPOSE 18000
 
 # Run the application with seed on startup
-CMD ["sh", "-c", "python seed.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
+CMD ["sh", "-c", "python seed.py && uvicorn main:app --host 0.0.0.0 --port 18000 --reload"]

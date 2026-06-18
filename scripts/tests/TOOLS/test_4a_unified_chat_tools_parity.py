@@ -194,9 +194,9 @@ def main() -> int:
     if not preexec_res.ok:
         failures += 1
     else:
-        expected = ["db-query", "web-search"]
+        expected = ["db-query"]
         if preexec_res.tool_ids == expected:
-            print("[PASS] client-executed db-query reporting (no missing tools)")
+            print("[PASS] client-executed db-query reporting")
         else:
             failures += 1
             print("[FAIL] client-executed db-query reporting")

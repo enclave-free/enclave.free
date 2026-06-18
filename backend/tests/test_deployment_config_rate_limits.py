@@ -304,30 +304,38 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertIn("docs/admin-key-recovery-runbook.md", body["incident_response"]["runbooks"]["key_recovery"])
         self.assertIn("checklist", body["drill_evidence"])
 
-    def test_deployment_readiness_distinguishes_privacy_blockers_from_advisory_warnings(self) -> None:
+    def test_deployment_readiness_treats_verifiable_inference_as_deferred_warning(self) -> None:
         response = self.client.get("/admin/deployment/readiness")
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["status"], "blocked")
-        self.assertGreaterEqual(body["summary"]["blockers"], 1)
+        self.assertEqual(body["status"], "warnings")
+        self.assertEqual(body["summary"]["blockers"], 0)
         self.assertGreaterEqual(body["summary"]["warnings"], 1)
 
         items_by_key = {item["key"]: item for item in body["items"]}
-        self.assertEqual(items_by_key["verifiable_inference"]["severity"], "blocker")
+        self.assertEqual(items_by_key["verifiable_inference"]["severity"], "warning")
         self.assertEqual(items_by_key["verifiable_inference"]["source"], "inference_verification")
-        self.assertIn("normal Conversations", items_by_key["verifiable_inference"]["summary"])
+        self.assertEqual(items_by_key["verifiable_inference"]["status"], "deferred_missing")
+        self.assertIn("deferred for this prototype", items_by_key["verifiable_inference"]["summary"])
+        self.assertFalse(items_by_key["verifiable_inference"]["conversation_blocking"])
 
         self.assertEqual(items_by_key["lifecycle_readiness"]["severity"], "warning")
         self.assertEqual(items_by_key["lifecycle_readiness"]["source"], "lifecycle_readiness")
+        self.assertIn("unsupported Deployment Surface", items_by_key["lifecycle_readiness"]["summary"])
         self.assertFalse(items_by_key["lifecycle_readiness"]["conversation_blocking"])
 
         self.assertEqual(items_by_key["backup_restore_drill"]["severity"], "warning")
         self.assertEqual(items_by_key["backup_restore_drill"]["source"], "operational_readiness")
         self.assertIn("restore drill", items_by_key["backup_restore_drill"]["summary"])
+        self.assertNotIn("deployment_surface_acknowledgements", items_by_key)
+        self.assertNotIn("sage_runtime_env", items_by_key)
+        self.assertNotIn("core_backend_runtime_env", items_by_key)
+        self.assertNotIn("service_health", items_by_key)
 
     def test_deployment_readiness_counts_unacknowledged_unsupported_surfaces(self) -> None:
-        item = self.deployment_config._unsupported_surface_readiness_item({
+        lifecycle_status = {
+            "lifecycle_readiness": {"status": "reviewed"},
             "unsupported_deployment_surface_categories": [
                 {
                     "category": "runtime",
@@ -342,11 +350,18 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
                     "acknowledged": False,
                 },
             ],
-        })
+        }
+        item = self.deployment_config._unsupported_surface_readiness_item(lifecycle_status)
 
         self.assertEqual(item["severity"], "warning")
         self.assertEqual(item["status"], "needs_acknowledgement")
         self.assertIn("1 unsupported Deployment Surface entries", item["summary"])
+
+        lifecycle_item = self.deployment_config._lifecycle_readiness_item(lifecycle_status)
+        self.assertEqual(lifecycle_item["key"], "lifecycle_readiness")
+        self.assertEqual(lifecycle_item["label"], "Data Lifecycle Review")
+        self.assertEqual(lifecycle_item["severity"], "warning")
+        self.assertIn("1 unsupported Deployment Surface", lifecycle_item["summary"])
 
     def test_deployment_readiness_reports_current_verifiable_inference_as_ready(self) -> None:
         from datetime import datetime, timezone
@@ -454,20 +469,24 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.database.get_deployment_config_value("LLM_API_KEY"), "configured-secret")
 
-    def test_llm_api_key_read_does_not_fall_back_to_environment(self) -> None:
+    def test_llm_api_key_reveal_returns_startup_synced_runtime_secret(self) -> None:
         os.environ["LLM_API_KEY"] = "env-only-key"
 
-        response = self.client.get("/admin/deployment/config/LLM_API_KEY/reveal")
+        with TestClient(self.client.app) as client:
+            response = client.get("/admin/deployment/config/LLM_API_KEY/reveal")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"key": "LLM_API_KEY", "value": ""})
+        self.assertEqual(response.json(), {"key": "LLM_API_KEY", "value": "env-only-key"})
 
-    def test_startup_sync_does_not_persist_llm_api_key_from_environment(self) -> None:
+    def test_startup_sync_exposes_runtime_llm_api_key_in_admin_config(self) -> None:
         os.environ["LLM_API_KEY"] = "env-only-key"
 
-        self.deployment_config._sync_env_to_db()
+        with TestClient(self.client.app) as client:
+            response = client.get("/admin/deployment/config")
 
-        self.assertEqual(self.database.get_deployment_config_value("LLM_API_KEY"), "")
+        self.assertEqual(response.status_code, 200)
+        llm_items = {item["key"]: item for item in response.json()["llm"]}
+        self.assertEqual(llm_items["LLM_API_KEY"]["value"], "********")
 
     def test_sage_runtime_env_export_maps_desired_deployment_settings_and_audits_export(self) -> None:
         for key, value in (
@@ -733,6 +752,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
     def test_deployment_readiness_reports_stale_core_backend_runtime_env_after_source_change(self) -> None:
         item = self.deployment_config._core_backend_runtime_env_readiness_item()
         self.assertEqual(item["status"], "not_generated")
+        self.assertEqual(item["severity"], "warning")
         self.assertIn("core-backend runtime env", item["next_action"])
 
         export_response = self.client.get("/admin/deployment/config/runtime-env/core-backend")
@@ -749,7 +769,7 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(item["severity"], "warning")
         self.assertIn("fresh core-backend runtime env", item["next_action"])
 
-    def test_deployment_readiness_endpoint_reports_sage_runtime_config_drift(self) -> None:
+    def test_deployment_readiness_endpoint_excludes_runtime_env_artifacts(self) -> None:
         for key, value in (
             ("LLM_API_URL", "http://tinfoil-proxy:8089/v1"),
             ("LLM_API_KEY", "configured-secret"),
@@ -789,10 +809,8 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         items_by_key = {item["key"]: item for item in response.json()["items"]}
-        self.assertEqual(items_by_key["sage_runtime_env"]["status"], "drifted")
-        self.assertEqual(items_by_key["sage_runtime_env"]["severity"], "warning")
-        self.assertEqual(items_by_key["core_backend_runtime_env"]["status"], "not_generated")
-        self.assertEqual(items_by_key["core_backend_runtime_env"]["severity"], "not_ready")
+        self.assertNotIn("sage_runtime_env", items_by_key)
+        self.assertNotIn("core_backend_runtime_env", items_by_key)
 
     def test_service_health_includes_runtime_env_alignment_summary(self) -> None:
         comparison = self.deployment_config._runtime_env_comparison_status()

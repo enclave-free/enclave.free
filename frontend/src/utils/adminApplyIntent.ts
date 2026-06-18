@@ -16,6 +16,7 @@ const APPLY_COMMAND_WHEN_PENDING = [
   /^go\s+ahead(?:\s+and\s+apply(?:\s+(them|it|changes))?)?\.?$/i,
   /^yes,?\s*apply(?:\s+(them|it|changes))?\s*\.?$/i,
   /^yes,?\s*(do\s+it|please)\.?$/i,
+  /^do\s+it\.?$/i,
   /^i\s+confirm\.?$/i,
   /^confirm(?:\s+and\s+apply)?\.?$/i,
 ];

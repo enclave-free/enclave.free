@@ -8,6 +8,7 @@ import { DynamicIcon } from './DynamicIcon';
 import { SettingsDrawer } from './SettingsDrawer';
 import { isAdminAuthenticated } from '../../utils/adminApi';
 import { IconButton } from '../ui';
+import { STORAGE_KEYS } from '../../types/onboarding';
 
 interface AppHeaderProps {
   showBackButton?: boolean;
@@ -53,6 +54,8 @@ export function AppHeader({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const isAdmin = isAdminAuthenticated();
+  const hasUserSession = Boolean(localStorage.getItem(STORAGE_KEYS.USER_EMAIL));
+  const canOpenSettings = isAdmin || hasUserSession;
   const showIcon = config.headerLayout !== 'name_only';
   const showName = config.headerLayout !== 'icon_only';
   const showTagline = showName && Boolean(config.headerTagline?.trim());
@@ -122,8 +125,8 @@ export function AppHeader({
         <div className="flex items-center gap-1">
           {rightActions}
 
-          {/* Settings gear - only visible to admins */}
-          {showSettings && isAdmin && (
+          {/* Settings gear - visible to signed-in users and admins */}
+          {showSettings && canOpenSettings && (
             <IconButton
               label={t('common.settings')}
               onClick={() => setSettingsOpen(true)}

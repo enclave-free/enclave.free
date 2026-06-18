@@ -1,15 +1,26 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { Paintbrush, Brain, Server, Upload, Database, ArrowRight, Users, ShieldCheck } from 'lucide-react'
-import { InstanceLogo } from '../components/shared/InstanceLogo'
-import { isAdminAuthenticated } from '../utils/adminApi'
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  Paintbrush,
+  Brain,
+  Server,
+  Upload,
+  Database,
+  ArrowRight,
+  Users,
+  ShieldCheck,
+  Sparkles,
+  LifeBuoy,
+} from 'lucide-react';
+import { InstanceLogo } from '../components/shared/InstanceLogo';
+import { isAdminAuthenticated } from '../utils/adminApi';
 
 interface DashboardCardProps {
-  to: string
-  icon: React.ReactNode
-  title: string
-  description: string
+  to: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
 }
 
 function DashboardCard({ to, icon, title, description }: DashboardCardProps) {
@@ -19,9 +30,7 @@ function DashboardCard({ to, icon, title, description }: DashboardCardProps) {
       className="card card-sm bg-surface-raised card-interactive group flex items-center gap-4"
     >
       <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
-        <div className="text-accent transition-colors">
-          {icon}
-        </div>
+        <div className="text-accent transition-colors">{icon}</div>
       </div>
       <div className="flex-1 min-w-0">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
@@ -29,17 +38,17 @@ function DashboardCard({ to, icon, title, description }: DashboardCardProps) {
       </div>
       <ArrowRight className="w-4 h-4 text-text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all shrink-0" />
     </Link>
-  )
+  );
 }
 
 interface SecurityStepCardProps {
-  step: number
-  title: string
-  description: string
-  primaryActionTo: string
-  primaryActionLabel: string
-  secondaryActionTo?: string
-  secondaryActionLabel?: string
+  step: number;
+  title: string;
+  description: string;
+  primaryActionTo: string;
+  primaryActionLabel: string;
+  secondaryActionTo?: string;
+  secondaryActionLabel?: string;
 }
 
 function SecurityStepCard({
@@ -59,35 +68,40 @@ function SecurityStepCard({
         </div>
         <h3 className="text-sm font-semibold text-text">{title}</h3>
       </div>
-      <p className="text-sm text-text-secondary leading-relaxed">{description}</p>
+      <p className="text-sm text-text-secondary leading-relaxed">
+        {description}
+      </p>
       <div className="flex items-center gap-3 mt-3">
         <Link to={primaryActionTo} className="btn btn-sm btn-secondary">
           {primaryActionLabel}
         </Link>
         {secondaryActionTo && secondaryActionLabel && (
-          <Link to={secondaryActionTo} className="text-xs font-medium text-text-muted hover:text-text transition-colors">
+          <Link
+            to={secondaryActionTo}
+            className="text-xs font-medium text-text-muted hover:text-text transition-colors"
+          >
             {secondaryActionLabel}
           </Link>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function AdminSetup() {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [authChecked, setAuthChecked] = useState(false)
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     if (!isAdminAuthenticated()) {
-      navigate('/')
+      navigate('/');
     } else {
-      setAuthChecked(true)
+      setAuthChecked(true);
     }
-  }, [navigate])
+  }, [navigate]);
 
-  if (!authChecked) return null
+  if (!authChecked) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center p-6 md:p-10">
@@ -96,12 +110,22 @@ export function AdminSetup() {
 
         {/* Header */}
         <div className="text-center mb-10 animate-fade-in-up">
-          <h1 className="heading-xl">{t('adminDashboard.title', 'Admin Dashboard')}</h1>
-          <p className="text-sm text-text-muted mt-2">{t('adminDashboard.subtitle', 'Manage your Enclave instance configuration')}</p>
+          <h1 className="heading-xl">
+            {t('adminDashboard.title', 'Admin Dashboard')}
+          </h1>
+          <p className="text-sm text-text-muted mt-2">
+            {t(
+              'adminDashboard.subtitle',
+              'Manage your Enclave instance configuration'
+            )}
+          </p>
         </div>
 
         <section
-          aria-label={t('adminDashboard.readinessTitle', 'Deployment Readiness')}
+          aria-label={t(
+            'adminDashboard.readinessTitle',
+            'Deployment Readiness'
+          )}
           className="mb-8 rounded-lg border border-accent/20 bg-accent/10 p-4 animate-fade-in-up"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -114,61 +138,142 @@ export function AdminSetup() {
                   {t('adminDashboard.readinessTitle', 'Deployment Readiness')}
                 </h2>
                 <p className="mt-1 text-sm text-text-secondary">
-                  {t('adminDashboard.readinessDesc', 'Review readiness before inviting users. Check blockers, warnings, restart-required changes, and recovery posture in one place.')}
+                  {t(
+                    'adminDashboard.readinessDesc',
+                    'Review readiness before inviting users. Check blockers, warnings, restart-required changes, and recovery posture in one place.'
+                  )}
                 </p>
               </div>
             </div>
-            <Link to="/admin/deployment" className="btn btn-sm btn-primary shrink-0">
+            <Link
+              to="/admin/deployment"
+              className="btn btn-sm btn-primary shrink-0"
+            >
               {t('adminDashboard.readinessPrimary', 'Open Readiness Review')}
             </Link>
           </div>
         </section>
 
         <section
-          aria-label={t('adminDashboard.firstRunPathTitle', 'Admin first-run path')}
+          aria-label={t(
+            'adminDashboard.aiSetupTitle',
+            'Set up with the AI assistant'
+          )}
+          className="mb-8 animate-fade-in-up rounded-lg border border-accent/30 bg-accent/5 p-4"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-accent" />
+                <h2 className="text-sm font-semibold text-text">
+                  {t(
+                    'adminDashboard.aiSetupTitle',
+                    'Set up with the AI assistant'
+                  )}
+                </h2>
+              </div>
+              <p className="mt-1 text-sm text-text-secondary">
+                {t(
+                  'adminDashboard.aiSetupBody',
+                  'Let the assistant collect the basics for naming and configuring your instance in one pass. You can switch to manual setup anytime.'
+                )}
+              </p>
+            </div>
+            <Link
+              to="/admin/onboarding"
+              className="btn btn-sm btn-primary shrink-0"
+            >
+              {t('adminDashboard.aiSetupAction', 'Start guided setup')}
+            </Link>
+          </div>
+        </section>
+
+        <section
+          aria-label={t(
+            'adminDashboard.firstRunPathTitle',
+            'Admin first-run path'
+          )}
           className="mb-8 animate-fade-in-up"
         >
-          <div className="label mb-3">{t('adminDashboard.firstRunPathTitle', 'Admin first-run path')}</div>
+          <div className="label mb-3">
+            {t('adminDashboard.firstRunPathTitle', 'Admin first-run path')}
+          </div>
           <ol className="grid gap-4 md:grid-cols-3">
             <li className="rounded-lg border border-border bg-surface-raised p-4">
               <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">1</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+                  1
+                </span>
                 <h3 className="text-sm font-semibold text-text">
-                  {t('adminDashboard.firstRunStep1Title', 'Configure the Instance baseline')}
+                  {t(
+                    'adminDashboard.firstRunStep1Title',
+                    'Configure the Instance baseline'
+                  )}
                 </h3>
               </div>
               <p className="mb-3 text-sm text-text-secondary">
-                {t('adminDashboard.firstRunStep1Body', 'Set branding, language, theme, user fields, and Agent Settings before review.')}
+                {t(
+                  'adminDashboard.firstRunStep1Body',
+                  'Set branding, language, theme, user fields, and Agent Settings before review.'
+                )}
               </p>
               <Link to="/admin/instance" className="btn btn-sm btn-secondary">
-                {t('adminDashboard.firstRunStep1Action', 'Open Instance Settings')}
+                {t(
+                  'adminDashboard.firstRunStep1Action',
+                  'Open Instance Settings'
+                )}
               </Link>
             </li>
             <li className="rounded-lg border border-border bg-surface-raised p-4">
               <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">2</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+                  2
+                </span>
                 <h3 className="text-sm font-semibold text-text">
-                  {t('adminDashboard.firstRunStep2Title', 'Review Deployment Readiness')}
+                  {t(
+                    'adminDashboard.firstRunStep2Title',
+                    'Review Deployment Readiness'
+                  )}
                 </h3>
               </div>
               <p className="mb-3 text-sm text-text-secondary">
-                {t('adminDashboard.firstRunStep2Body', 'Check blockers, warnings, restart-required changes, and recovery posture before inviting users.')}
+                {t(
+                  'adminDashboard.firstRunStep2Body',
+                  'Check blockers, warnings, restart-required changes, and recovery posture before inviting users.'
+                )}
               </p>
-              <Link to="/admin/deployment#wizard" className="btn btn-sm btn-secondary">
-                {t('adminDashboard.firstRunStep2Action', 'Open Deployment Wizard')}
+              <Link
+                to="/admin/deployment#wizard"
+                className="btn btn-sm btn-secondary"
+              >
+                {t(
+                  'adminDashboard.firstRunStep2Action',
+                  'Open Deployment Wizard'
+                )}
               </Link>
             </li>
             <li className="rounded-lg border border-border bg-surface-raised p-4">
               <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">3</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+                  3
+                </span>
                 <h3 className="text-sm font-semibold text-text">
-                  {t('adminDashboard.firstRunStep3Title', 'Use diagnostics only when investigating')}
+                  {t(
+                    'adminDashboard.firstRunStep3Title',
+                    'Use diagnostics only when investigating'
+                  )}
                 </h3>
               </div>
               <p className="mb-3 text-sm text-text-secondary">
-                {t('adminDashboard.firstRunStep3Body', 'Keep smoke tests and diagnostics reachable without making them the primary product path.')}
+                {t(
+                  'adminDashboard.firstRunStep3Body',
+                  'Keep smoke tests and diagnostics reachable without making them the primary product path.'
+                )}
               </p>
-              <Link to="/diagnostics/test-dashboard" className="btn btn-sm btn-secondary">
+              <Link
+                to="/diagnostics/test-dashboard"
+                className="btn btn-sm btn-secondary"
+              >
                 {t('adminDashboard.firstRunStep3Action', 'Open Diagnostics')}
               </Link>
             </li>
@@ -179,7 +284,9 @@ export function AdminSetup() {
         <div className="mb-8 animate-fade-in-up">
           <div className="flex items-center gap-2 mb-4">
             <ShieldCheck className="w-5 h-5 text-accent" />
-            <h2 className="heading-sm">{t('adminDashboard.securityBreadcrumbTitle')}</h2>
+            <h2 className="heading-sm">
+              {t('adminDashboard.securityBreadcrumbTitle')}
+            </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3 stagger-children">
             <SecurityStepCard
@@ -213,93 +320,169 @@ export function AdminSetup() {
         </div>
 
         {/* Admin Settings section */}
-        <section aria-label={t('adminDashboard.settingsSectionLabel', 'Admin Settings')} className="mb-8">
-          <div className="label mb-3">{t('adminDashboard.settingsSectionLabel', 'Admin Settings')}</div>
+        <section
+          aria-label={t(
+            'adminDashboard.settingsSectionLabel',
+            'Admin Settings'
+          )}
+          className="mb-8"
+        >
+          <div className="label mb-3">
+            {t('adminDashboard.settingsSectionLabel', 'Admin Settings')}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 stagger-children">
             <DashboardCard
               to="/admin/instance"
               icon={<Paintbrush className="w-5 h-5" />}
               title={t('adminDashboard.instance', 'Instance Settings')}
-              description={t('adminDashboard.instanceDesc', 'Branding, language, theme, and visual identity')}
+              description={t(
+                'adminDashboard.instanceDesc',
+                'Branding, language, theme, and visual identity'
+              )}
             />
             <DashboardCard
               to="/admin/users"
               icon={<Users className="w-5 h-5" />}
               title={t('adminDashboard.user', 'User Settings')}
-              description={t('adminDashboard.userDesc', 'Define user types and onboarding questions')}
+              description={t(
+                'adminDashboard.userDesc',
+                'Define user types and onboarding questions'
+              )}
             />
             <DashboardCard
               to="/admin/ai"
               icon={<Brain className="w-5 h-5" />}
               title={t('adminDashboard.ai', 'Agent Settings')}
-              description={t('adminDashboard.aiDesc', 'Configure prompts, Model Provider parameters, and document defaults')}
+              description={t(
+                'adminDashboard.aiDesc',
+                'Configure prompts, Model Provider parameters, and document defaults'
+              )}
             />
             <DashboardCard
               to="/admin/deployment"
               icon={<Server className="w-5 h-5" />}
               title={t('adminDashboard.deployment', 'Deployment Settings')}
-              description={t('adminDashboard.deploymentDesc', 'Manage runtime settings, service health, and readiness evidence')}
+              description={t(
+                'adminDashboard.deploymentDesc',
+                'Manage runtime settings, service health, and readiness evidence'
+              )}
             />
           </div>
         </section>
 
         <section
-          aria-label={t('adminDashboard.iaChecklistTitle', 'Admin IA review checklist')}
+          aria-label={t(
+            'adminDashboard.iaChecklistTitle',
+            'Admin IA review checklist'
+          )}
           className="mb-8 rounded-lg border border-border bg-surface-raised/70 p-4"
         >
-          <div className="label mb-3">{t('adminDashboard.iaChecklistTitle', 'Admin IA review checklist')}</div>
+          <div className="label mb-3">
+            {t('adminDashboard.iaChecklistTitle', 'Admin IA review checklist')}
+          </div>
           <p className="text-sm text-text-secondary">
-            {t('adminDashboard.iaChecklistBody', 'Keep Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness, and diagnostic surfaces distinct during human review.')}
+            {t(
+              'adminDashboard.iaChecklistBody',
+              'Keep Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness, and diagnostic surfaces distinct during human review.'
+            )}
           </p>
         </section>
 
         <section
-          aria-label={t('adminDashboard.humanReviewTitle', 'Human review handoff')}
+          aria-label={t(
+            'adminDashboard.humanReviewTitle',
+            'Human review handoff'
+          )}
           className="mb-8 rounded-lg border border-warning/30 bg-warning/10 p-4"
         >
-          <div className="label mb-2">{t('adminDashboard.humanReviewTitle', 'Human review handoff')}</div>
+          <div className="label mb-2">
+            {t('adminDashboard.humanReviewTitle', 'Human review handoff')}
+          </div>
           <p className="text-sm font-medium text-text">
-            {t('adminDashboard.humanReviewStatus', 'White-glove deployment support required')}
+            {t(
+              'adminDashboard.humanReviewStatus',
+              'White-glove deployment support required'
+            )}
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            {t('adminDashboard.humanReviewBody', 'Runtime env apply stays explicit: export artifacts, apply them with operator support, restart affected services, and verify readiness evidence.')}
+            {t(
+              'adminDashboard.humanReviewBody',
+              'Runtime env apply stays explicit: export artifacts, apply them with operator support, restart affected services, and verify readiness evidence.'
+            )}
           </p>
           <div className="mt-3 flex flex-wrap gap-4">
             <Link
               to="/admin/deployment"
               className="inline-flex text-sm font-medium text-accent hover:text-accent-hover transition-colors"
             >
-              {t('adminDashboard.humanReviewAction', 'Review Deployment Readiness')}
+              {t(
+                'adminDashboard.humanReviewAction',
+                'Review Deployment Readiness'
+              )}
             </Link>
           </div>
         </section>
 
-        <section aria-label={t('adminDashboard.dataSectionLabel', 'Data & Content')} className="mb-8">
-          <div className="label mb-3">{t('adminDashboard.dataSectionLabel', 'Data & Content')}</div>
+        <section
+          aria-label={t('adminDashboard.dataSectionLabel', 'Data & Content')}
+          className="mb-8"
+        >
+          <div className="label mb-3">
+            {t('adminDashboard.dataSectionLabel', 'Data & Content')}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 stagger-children">
             <DashboardCard
               to="/admin/upload"
               icon={<Upload className="w-5 h-5" />}
               title={t('adminDashboard.upload', 'Document Upload')}
-              description={t('adminDashboard.uploadDesc', 'Add documents to your knowledge base')}
+              description={t(
+                'adminDashboard.uploadDesc',
+                'Add documents to your knowledge base'
+              )}
+            />
+            <DashboardCard
+              to="/admin/resources"
+              icon={<LifeBuoy className="w-5 h-5" />}
+              title={t('adminDashboard.resources', 'Resource Directory')}
+              description={t(
+                'adminDashboard.resourcesDesc',
+                'Curate trusted lawyers, NGOs, and referral resources'
+              )}
             />
           </div>
         </section>
 
-        <section aria-label={t('adminDashboard.diagnosticsSectionLabel', 'Diagnostics')} className="mb-8">
-          <div className="label mb-3">{t('adminDashboard.diagnosticsSectionLabel', 'Diagnostics')}</div>
+        <section
+          aria-label={t(
+            'adminDashboard.diagnosticsSectionLabel',
+            'Diagnostics'
+          )}
+          className="mb-8"
+        >
+          <div className="label mb-3">
+            {t('adminDashboard.diagnosticsSectionLabel', 'Diagnostics')}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 stagger-children">
             <DashboardCard
               to="/admin/database"
               icon={<Database className="w-5 h-5" />}
               title={t('adminDashboard.database', 'Database Explorer')}
-              description={t('adminDashboard.databaseDesc', 'Browse and query the SQLite database')}
+              description={t(
+                'adminDashboard.databaseDesc',
+                'Browse and query the SQLite database'
+              )}
             />
             <DashboardCard
               to="/diagnostics/test-dashboard"
               icon={<Server className="w-5 h-5" />}
-              title={t('adminDashboard.testDashboard', 'Diagnostics Test Dashboard')}
-              description={t('adminDashboard.testDashboardDesc', 'Run development smoke checks and inspect diagnostic modules')}
+              title={t(
+                'adminDashboard.testDashboard',
+                'Diagnostics Test Dashboard'
+              )}
+              description={t(
+                'adminDashboard.testDashboardDesc',
+                'Run development smoke checks and inspect diagnostic modules'
+              )}
             />
           </div>
         </section>
@@ -315,5 +498,5 @@ export function AdminSetup() {
         </div>
       </div>
     </div>
-  )
+  );
 }
