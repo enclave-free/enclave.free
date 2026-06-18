@@ -402,6 +402,14 @@ def admin_deployment_readiness_checks(
             "hard",
         ),
         check(
+            "admin_change_set_not_staged",
+            not any(
+                tool_evidence_matches(evidence, "admin_change_set")
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
             "does_not_ask_admin_to_manually_check_available_settings",
             not any(phrase in answer_lower for phrase in manual_check_phrases),
             "hard",
@@ -854,21 +862,30 @@ print(json.dumps({"job_ids": [job_id], "sources": [source_file], "chunk_id": chu
         deadline = time.time() + 180
         last_error = ""
         while time.time() < deadline:
-            result = subprocess.run(
-                [
-                    *COMPOSE_ARGS,
-                    "exec",
-                    "-T",
-                    "sage",
-                    "curl",
-                    "-fsS",
-                    "http://127.0.0.1:3000/health",
-                ],
-                capture_output=True,
-                text=True,
-                cwd=REPO_ROOT,
-                timeout=10,
-            )
+            try:
+                result = subprocess.run(
+                    [
+                        *COMPOSE_ARGS,
+                        "exec",
+                        "-T",
+                        "sage",
+                        "curl",
+                        "-fsS",
+                        "http://127.0.0.1:3000/health",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                last_error = "health probe timed out"
+                time.sleep(2)
+                continue
+            except Exception as exc:
+                last_error = f"health probe failed: {exc}"
+                time.sleep(2)
+                continue
             if result.returncode == 0:
                 return
             last_error = result.stderr.strip() or result.stdout.strip()
@@ -1029,19 +1046,55 @@ def run_backend_python(script: str, timeout: int = 120) -> str:
 
 
 def run_command(cmd: list[str], timeout: int, env: dict[str, str] | None = None) -> str:
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=REPO_ROOT,
-        timeout=timeout,
-        env=env,
-    )
+    redacted_command = " ".join(redact_command(cmd))
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f"command timed out ({redacted_command}) after {timeout}s"
+        ) from None
     if result.returncode != 0:
         raise RuntimeError(
-            f"command failed ({' '.join(cmd)}): {result.stderr.strip() or result.stdout.strip()}"
+            f"command failed ({redacted_command}): "
+            f"{result.stderr.strip() or result.stdout.strip()}"
         )
     return result.stdout
+
+
+def redact_command(cmd: list[str]) -> list[str]:
+    redacted: list[str] = []
+    redact_next = False
+    for arg in cmd:
+        if redact_next:
+            redacted.append("<redacted>")
+            redact_next = False
+            continue
+        sanitized, redact_next = redact_command_arg(arg)
+        redacted.append(sanitized)
+    return redacted
+
+
+def redact_command_arg(arg: str) -> tuple[str, bool]:
+    lower_arg = arg.lower()
+    if "x-internal-agent-token" not in lower_arg:
+        return arg, False
+
+    for separator in (":", "="):
+        prefix, found, suffix = arg.partition(separator)
+        if found:
+            if separator == ":":
+                redacted = f"{prefix}{separator} <redacted>"
+            else:
+                redacted = f"{prefix}=<redacted>"
+            return redacted, not bool(suffix.strip())
+    return arg, True
 
 
 def write_artifact(artifact: dict[str, Any], output: str | None) -> Path:
