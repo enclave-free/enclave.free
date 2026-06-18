@@ -1,0 +1,263 @@
+# Conversation Model Bench
+
+The Conversation Model Bench is an internal, opt-in evaluation for real Sage conversation behavior across live Model Provider candidates.
+
+It exists to compare how models behave inside the actual Enclave Free conversation runtime: tool use, proposal quality, retrieval behavior, timing, trace/activity shape, and final answer usefulness. It is not a raw LLM benchmark and is not a required red/green CI gate in its first version.
+
+## Current Decisions
+
+- The canonical term is **Conversation Model Bench**.
+- The bench is evidence-producing and opt-in.
+- The bench exercises real Sage conversation paths, not raw provider prompts.
+- The first bench layer runs at the Sage/API conversation boundary rather than through the browser UI.
+- Browser/UI coverage should be a later thin smoke for rendering and routing behavior, not the primary model comparison surface.
+
+## Purpose
+
+- Capture comparable evidence for model/provider candidates under realistic product conditions.
+- Surface regressions in model-driven tool use, especially Admin Config proposal behavior.
+- Preserve enough timing and activity detail to explain slow or incomplete turns.
+- Make model recommendations from observed Sage behavior instead of vibes from isolated prompts.
+
+## Non-Goals
+
+- Do not make live model quality a required PR check in the first version.
+- Do not grade raw provider completions outside Sage.
+- Do not store bench artifacts as product Conversation Trace or Audit Log evidence.
+- Do not replace ordinary integration tests for route contracts, auth boundaries, or Apply mutations.
+
+## Boundary
+
+The bench should submit real Admin Conversation and User Conversation turns through the same gateway/Sage route surfaces used by the product. It should record the structured response, visible activity, final trace metadata, timing, and any staged Executable Change Set.
+
+The bench may reuse helper patterns from existing integration tests, but it should be operationally separate from the required backend integration runner because live provider latency and availability are intentionally variable.
+
+## Repository Placement
+
+The v0 runner should live under `scripts/benches/`, separate from `scripts/tests/`.
+
+- `scripts/tests/` is for required or mostly deterministic red/green integration coverage.
+- `scripts/benches/` is for opt-in live model/provider evidence runs.
+- Bench scenario fixtures should live beside the bench runner unless they become shared product fixtures.
+- Existing older benchmark scripts should remain untouched until there is a deliberate migration or retirement plan.
+
+## Fixture And State Ownership
+
+The v0 bench should own its local setup path instead of depending on `scripts/tests/run_all_be_tests.py`.
+
+It may borrow helper patterns from integration tests, but it should be able to run as a self-contained internal bench:
+
+- optionally reset local Instance state before a run
+- create or discover deterministic Admin auth
+- create or discover deterministic approved User auth
+- optionally seed a tiny Knowledge Search fixture for the user scenario
+- write artifacts to an explicit output path
+- leave or clean up state based on runner flags
+
+The bench should not mutate production-like data unless the operator explicitly points it at that environment and accepts the risk. The default posture should assume local Compose smoke/evaluation use.
+
+## Initial Flow Shape
+
+1. Prepare a clean local test instance with deterministic admin and user auth.
+2. Select one or more live Model Provider candidates.
+3. Run a fixed set of conversation scenarios through Sage.
+4. Capture structured artifacts for each model and scenario.
+5. Summarize timing, tool-use, proposal, retrieval, and answer-quality observations.
+6. Report issues for remediation without treating every model variance as a product failure.
+
+## V0 Scenarios
+
+### Admin Config Bootstrap Proposal
+
+The Admin gives the guided FreeThem onboarding answers in one message. Sage should read current configuration and user-type state, then prepare one canonical Executable Change Set for review.
+
+Expected evidence:
+
+- Admin Config read Tools are used before proposing changes.
+- A staged Executable Change Set is present.
+- The proposal includes the eight guided baseline settings supplied or delegated by the Admin.
+- The proposal includes both requested user types.
+- Canonical Admin Config paths and setting keys are used.
+- Sage does not claim it lacks proposal/write authority.
+
+### Admin Deployment Readiness Check
+
+The Admin asks what remains to be set up for the specific local Instance. Sage should inspect available Admin Config context and report the remaining setup state without asking the Admin to manually check the same settings.
+
+Expected evidence:
+
+- Admin Config read Tools are used.
+- The answer distinguishes visible configured state from redacted or unavailable secret values.
+- The answer is specific to the current Instance.
+- The answer does not fall back to generic setup instructions when tool evidence is available.
+
+### User Knowledge Assistance
+
+A User asks for first-day support guidance after release from political imprisonment. Sage should use Knowledge Search if relevant material exists, and should answer carefully when the Document Library does not contain enough specific guidance.
+
+Expected evidence:
+
+- Knowledge Search behavior is recorded, including whether it ran and what sanitized sources were available.
+- The answer is calm, practical, and avoids inventing organizations or unsupported facts.
+- The answer surfaces urgent safety considerations without pretending to provide legal or medical certainty.
+
+## Artifact Expectations
+
+Each bench run should produce a JSON artifact with enough sanitized detail to compare runs:
+
+- run metadata: timestamp, git revisions, API base, provider, candidate model ids
+- scenario metadata: scenario id, actor, enabled Tool Sets, prompt
+- timing: first event, first visible answer token, completion, Sage timing phases when available
+- tool evidence: called Tools, statuses, warnings, rejection reasons, duplicate calls
+- Admin Config proposal evidence: staged change-set presence, canonical paths and keys, validation errors
+- retrieval evidence: whether Knowledge Search ran, source count, sanitized source labels
+- final answer evidence: concise answer text or truncated answer preview
+- evaluator notes: human notes first, automated scoring later
+
+The v0 artifact should be one schema-versioned JSON file per run:
+
+```json
+{
+  "schema_version": 1,
+  "run": {},
+  "candidates": [
+    {
+      "model": "gpt-oss-120b",
+      "runtime_config": {},
+      "scenarios": [
+        {
+          "id": "admin_config_bootstrap",
+          "actor": "admin",
+          "request": {},
+          "response": {},
+          "checks": [],
+          "timing": {},
+          "tool_evidence": [],
+          "retrieval_evidence": [],
+          "summary": {},
+          "notes": []
+        }
+      ],
+      "summary": {}
+    }
+  ],
+  "summary": {}
+}
+```
+
+The shape should stay boring and stable: raw enough to inspect, structured enough to diff across runs.
+
+The implemented v0 runner writes per-scenario, per-candidate, and run-level summaries. Each summary separates hard failures from evidence-only warnings so the terminal result stays crisp while the artifact remains useful for diagnosis.
+
+## V0 Evaluation Style
+
+The first bench should use deterministic checks plus artifact capture. It should not use an LLM judge yet.
+
+Deterministic checks should cover observable contract behavior:
+
+- required Tool calls occurred when expected
+- unsafe or drifted tool paths did not appear
+- an `admin_change_set` was staged when expected
+- Admin Config proposals used canonical paths and setting keys
+- answer text avoided known failure phrases such as asking the Admin to manually check settings after tools were available
+- Knowledge Search behavior was recorded for the user scenario
+- timing fields were captured
+
+The bench output should make room for human notes and later rubric expansion, but v0 pass/fail signals should come from stable structured evidence.
+
+### Hard failures
+
+V0 fails the run only on contract or harness failures:
+
+- route, auth, or setup failed
+- configured model could not be verified
+- expected response event or payload was missing
+- the visible answer is a generic generation-failure apology
+- expected Admin Config proposal was missing in the bootstrap scenario
+- an Admin Config proposal contained non-canonical paths or setting keys
+- an unsafe proposal path appeared
+- a scenario errored before producing an artifact
+
+### Evidence-only warnings
+
+V0 records these as evidence-only warnings rather than hard failures:
+
+- slow first token or completion time
+- verbose answer
+- duplicate retrieval or tool calls
+- thin or mediocre answer
+- awkward model style that still satisfies the observable contract
+
+## Browser Apply-Panel Smoke Follow-Up
+
+Browser automation should not be part of the first Conversation Model Bench runner.
+
+The browser path should be a separate follow-up smoke that verifies UI-specific behavior:
+
+- structured Admin Config proposals render as a pending Apply panel
+- conversational apply intent such as "do it" routes to the confirmation surface
+- Apply remains an explicit UI action
+- the rendered Activity and final answer stay understandable to the Admin
+
+Keeping this separate lets the first bench compare live model/provider behavior without inheriting browser automation flake.
+
+## Model Selection
+
+The v0 bench should run the currently configured Sage model by default. Candidate comparison should be explicit.
+
+Example commands:
+
+```bash
+python scripts/benches/conversation_model_bench.py
+python scripts/benches/conversation_model_bench.py --models gpt-oss-120b,kimi-k2-6,gemma4-31b
+```
+
+The bench should not automatically run every available Tinfoil model by default. Full-provider sweeps are slower, noisier, and easier to trigger accidentally. Each scenario artifact should record the provider and model identity used for that turn.
+
+Explicit model comparison is local-Compose-only in v0:
+
+- `--models` should not edit `.env`, Deployment Settings, or Agent Settings.
+- For each candidate, the runner should force-recreate the local `sage` service with `TINFOIL_MODEL=<candidate>`.
+- The runner should wait for Sage health before running scenarios.
+- The runner should verify the active model through Sage's runtime-config fingerprint endpoint before recording results.
+- The runner should restore the original configured model at the end of the run.
+
+## Runner CLI
+
+The v0 command supports a simple local default:
+
+```bash
+python scripts/benches/conversation_model_bench.py \
+  --api-base http://127.0.0.1:18000 \
+  --output /tmp/conversation-model-bench.json
+```
+
+Default behavior:
+
+- use `http://127.0.0.1:18000` as the API base
+- run the currently configured Sage model
+- run all v0 scenarios
+- do not reset local state unless requested
+- write to `/tmp/conversation-model-bench-<timestamp>.json` when `--output` is omitted
+
+Optional flags:
+
+- `--models gpt-oss-120b,kimi-k2-6`
+- `--reset`
+- `--seed-knowledge`
+- `--no-restore-model`
+- `--scenario admin_config_bootstrap`
+- `--verbose`
+
+`--reset` runs the local reset script with its own smoke checks skipped; the bench scenarios become the verification pass after the reset.
+
+The default scenario set is all three v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
+
+Focused examples:
+
+```bash
+python scripts/benches/conversation_model_bench.py --scenario admin_deployment_readiness
+python scripts/benches/conversation_model_bench.py --scenario admin_config_bootstrap
+python scripts/benches/conversation_model_bench.py --scenario user_knowledge_assistance --seed-knowledge
+python scripts/benches/conversation_model_bench.py --models gpt-oss-120b,kimi-k2-6
+```

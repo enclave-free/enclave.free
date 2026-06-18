@@ -336,6 +336,10 @@ _Avoid_: trace UI, raw debug panel, hidden tool-call UI
 Transient user-visible timing information about meaningful phases within one **Conversation** turn, used to make slow turns understandable without becoming durable **Conversation Trace** or **Audit Log** evidence.
 _Avoid_: phase timing, performance log, provider trace
 
+**Conversation Model Bench**:
+An internal evaluation that exercises real **Sage** **Conversation** paths against one or more **Model Provider** candidates and records timing, tool-use, and answer-quality evidence for comparison.
+_Avoid_: CI test, unit test, provider smoke test, raw LLM benchmark
+
 **Conversation Streaming Transport**:
 A conversation response path that sends assistant turn, live trace status, answer deltas, and completion events to the client as they become available.
 _Avoid_: streaming-shaped response, fake streaming, delayed batch response
@@ -711,6 +715,8 @@ _Avoid_: scoped config context, config dump, manual context switch
 - A **Conversation** may have **Session Memory**
 - A **Conversation** may include **Retrieval**, **Required Context**, and **User Profile** context
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
+- A **Conversation Model Bench** exercises real **User Conversations** or **Admin Conversations** rather than raw **Model Provider** prompts
+- **Conversation Model Bench** evidence is internal comparison material, not product **Conversation Trace** or **Audit Log** evidence
 - A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, and **Reasoning Summary** details
 - A **Conversation Activity Step** is a user-visible rendering unit derived from sanitized **Conversation Trace** metadata
 - A **Conversation Trace** must not expose raw hidden chain of thought, raw provider trace blobs, full prompts, full unredacted tool outputs, decrypted database rows, secrets, or hidden system/developer instructions in ordinary chat surfaces
