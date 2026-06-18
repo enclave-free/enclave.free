@@ -261,3 +261,45 @@ python scripts/benches/conversation_model_bench.py --scenario admin_config_boots
 python scripts/benches/conversation_model_bench.py --scenario user_knowledge_assistance --seed-knowledge
 python scripts/benches/conversation_model_bench.py --models gpt-oss-120b,kimi-k2-6
 ```
+
+## Candidate Sweep Notes
+
+### 2026-06-18 Local All-Model Sweep
+
+Command:
+
+```bash
+python scripts/benches/conversation_model_bench.py \
+  --api-base http://127.0.0.1:18000 \
+  --reset \
+  --seed-knowledge \
+  --models kimi-k2-6,glm-5-1,deepseek-v4-pro,gemma4-31b,qwen3-vl-30b,llama3-3-70b,gpt-oss-120b \
+  --output /tmp/conversation-model-bench-all-models.json \
+  --timeout 300
+```
+
+Overall result: failed because `gpt-oss-120b` had hard failures. The original local Sage model was restored to `kimi-k2-6` after the sweep.
+
+Current product decision: keep `kimi-k2-6` as the configured Sage default for now. The sweep produced a strong challenger, but not enough evidence to change the default in this slice.
+
+| Model | Result | Warnings | Total scenario time | Notes |
+| --- | --- | ---: | ---: | --- |
+| `gemma4-31b` | Passed | 0 | ~24.5s | Best balanced challenger. Correct Admin Config proposal, no hard failures, no warnings. |
+| `llama3-3-70b` | Passed | 0 | ~19.6s | Stable and fast, but readiness coverage was thinner than `gemma4-31b`. |
+| `qwen3-vl-30b` | Passed | 0 | ~10.0s | Fastest, but manual review found an unsolicited Admin Config proposal during the readiness-check scenario. |
+| `kimi-k2-6` | Passed | 2 | ~127.2s | Current default. Strong tool behavior, but slow first visible answers on Admin scenarios. |
+| `glm-5-1` | Passed | 3 | ~115.4s | Thorough answers and good tool use, but slow. |
+| `deepseek-v4-pro` | Passed | 4 | ~215.8s | Correct but too slow for this experience. |
+| `gpt-oss-120b` | Failed | 0 | ~23.9s | Failed Admin Config bootstrap proposal and readiness tool-use checks. |
+
+Interpretation:
+
+- `gemma4-31b` is the best next candidate to retest if we decide to move away from Kimi.
+- `qwen3-vl-30b` should not be promoted from this sweep despite excellent latency, because it crossed from read-only readiness inspection into proposing generic configuration changes.
+- `gpt-oss-120b` is not currently suitable for Sage Admin Config work.
+- Kimi remains viable and reliable, but latency is the main concern.
+
+Follow-up bench hardening:
+
+- Add an explicit check that read-only readiness scenarios must not stage an `admin_change_set`.
+- Consider repeated runs before changing the default model, because live provider latency and model variance can swing single-run rankings.
