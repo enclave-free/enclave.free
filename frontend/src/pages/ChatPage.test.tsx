@@ -206,6 +206,48 @@ describe('ChatPage', () => {
     );
   });
 
+  it('activates Curated Resources by default for user chat turns', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-resources',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-resources',
+          delta: 'Try these vetted resources.',
+        });
+        onEvent('done', {
+          message_id: 'msg-resources',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    await user.type(getComposerTextbox(), 'Who can help in Nicaragua?');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
+    });
+
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toContain('curated-resources');
+    expect(callArgs.tools).not.toContain('admin-config');
+    expect(callArgs.tools).not.toContain('db-query');
+  });
+
   it('selects documents that are active by default for new conversations', async () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
@@ -308,7 +350,11 @@ describe('ChatPage', () => {
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
       expect.objectContaining({
         content: 'What does the handbook say?',
-        tools: expect.arrayContaining(['web-search', 'knowledge-search']),
+        tools: expect.arrayContaining([
+          'web-search',
+          'knowledge-search',
+          'curated-resources',
+        ]),
         jobIds: ['doc-1'],
       })
     );
@@ -1669,6 +1715,12 @@ describe('ChatPage', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Web' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
 
     await user.type(getComposerTextbox(), 'I need user help.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -1678,6 +1730,7 @@ describe('ChatPage', () => {
     });
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
+    expect(callArgs.tools).toContain('curated-resources');
     expect(callArgs.tools).not.toContain('admin-config');
     expect(callArgs.tools).not.toContain('db-query');
   });

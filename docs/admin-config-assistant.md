@@ -45,7 +45,7 @@ Defense-in-depth:
 - Shares the same chat send runtime as `ChatPage`:
   - `frontend/src/utils/llmChat.ts` (`sendLlmChatWithUnifiedTools`)
 - Transport: sends the normal public `POST /llm/chat` request to the Gateway-facing API base. Gateway routes this request to Sage; Python does not expose public `/llm/chat` or `/session-defaults` handlers in the hard-cut prototype.
-  - `tools` / Tool Sets (same admin-visible Tool Set IDs as full chat: `knowledge-search`, `web-search`, `admin-config`, `db-query`)
+  - `tools` / Tool Sets (same admin-visible Tool Set IDs as full chat: `knowledge-search`, `curated-resources`, `web-search`, `admin-config`, `db-query`)
   - `admin-config` admin-only Tool Set
   - optional Tool constraints such as Knowledge Search document scope
   - no `client_executed_tools`
@@ -56,6 +56,7 @@ Tool defaults:
 - Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
 - `admin-config` is default-on for admin configuration conversations, while `web-search` and `db-query` remain explicit unless enabled by defaults.
 - `knowledge-search` is a visible Tool Set. When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage should call Knowledge Search when enabled and relevant.
+- `curated-resources` is a visible Tool Set for the admin-curated Resource Directory. It is separate from Knowledge Search and should be used for vetted referral/resource suggestions, not uploaded document retrieval.
 - Admin `/chat`, the sidebar, and guided onboarding use the same Sage model-driven Tool loop.
 - The browser does not assemble or inject admin configuration snapshots for chat turns.
 
