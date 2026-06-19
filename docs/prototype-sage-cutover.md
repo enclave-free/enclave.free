@@ -16,15 +16,15 @@ On the current `staging` snapshot, the cutover is still the same hard cut, but t
 
 ## Runtime Ownership
 
-| Component | Current role |
-| --- | --- |
-| `frontend` | UI entrypoint |
-| `backend` | boring gateway and route splitter |
-| `core-backend` | Enclave Control Plane for auth issuance, admin/product APIs, ingest, and private control-plane endpoints |
-| `sage` | Agent Runtime for AI orchestration, auth/CORS/CSRF, Tool execution, Conversation continuity, Agent Settings, and Session Memory |
-| `tinfoil-proxy` | Tinfoil transport for Model Provider calls |
-| `postgres` | Sage runtime state |
-| `qdrant` | Enclave document retrieval |
+| Component       | Current role                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `frontend`      | UI entrypoint                                                                                                                   |
+| `backend`       | boring gateway and route splitter                                                                                               |
+| `core-backend`  | Enclave Control Plane for auth issuance, admin/product APIs, ingest, and private control-plane endpoints                        |
+| `sage`          | Agent Runtime for AI orchestration, auth/CORS/CSRF, Tool execution, Conversation continuity, Agent Settings, and Session Memory |
+| `tinfoil-proxy` | Tinfoil transport for Model Provider calls                                                                                      |
+| `postgres`      | Sage runtime state                                                                                                              |
+| `qdrant`        | Enclave document retrieval                                                                                                      |
 
 ## Public Routes (Sage-owned)
 
@@ -55,6 +55,7 @@ Active private control-plane endpoints used by Sage today:
 - `GET /internal/agent/document-access`
 - `GET /internal/agent/user-profile-context/{user_id}`
 - `POST /internal/agent/document-search`
+- `POST /internal/agent/resources/search`
 - `POST /internal/agent/admin-db-query`
 
 ADR-0023 adds this target endpoint family for the model-driven Tool loop hard cut:

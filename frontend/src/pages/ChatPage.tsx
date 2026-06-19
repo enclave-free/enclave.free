@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Database,
   EyeOff,
+  LifeBuoy,
   Mail,
   Pencil,
   Plus,
@@ -102,6 +103,7 @@ import { refreshAdminConfigRedactionMetadata } from '../utils/adminConfigContext
 
 const CONFIG_TOOL_ID = 'admin-config';
 const KNOWLEDGE_TOOL_ID = 'knowledge-search';
+const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
 const ADMIN_ONLY_TOOL_IDS = new Set([CONFIG_TOOL_ID, 'db-query']);
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
 
@@ -744,6 +746,15 @@ export function ChatPage() {
         icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
       },
       {
+        id: CURATED_RESOURCES_TOOL_ID,
+        name: t('chat.tools.curatedResourcesName', 'Resources'),
+        description: t(
+          'chat.tools.curatedResources',
+          'Find admin-vetted referral resources and trusted organizations'
+        ),
+        icon: <LifeBuoy className="h-3.5 w-3.5" aria-hidden="true" />,
+      },
+      {
         id: 'web-search',
         name: t('chat.tools.webSearchName'),
         description: t('chat.tools.webSearch'),
@@ -995,6 +1006,7 @@ export function ChatPage() {
               Array.isArray(data.default_document_ids) &&
               data.default_document_ids.length > 0;
             const defaultTools = [
+              CURATED_RESOURCES_TOOL_ID,
               ...(hasDefaultDocuments ? [KNOWLEDGE_TOOL_ID] : []),
               ...(data.web_search_enabled ? ['web-search'] : []),
             ];
@@ -1015,7 +1027,9 @@ export function ChatPage() {
           console.warn('Failed to fetch session defaults:', res.status);
           dispatchConversation({
             type: 'selectedToolsChanged',
-            selectedTools: isAdmin ? [CONFIG_TOOL_ID] : ['web-search'],
+            selectedTools: isAdmin
+              ? [CONFIG_TOOL_ID]
+              : [CURATED_RESOURCES_TOOL_ID, 'web-search'],
           });
         }
       } catch (err) {
@@ -1023,7 +1037,9 @@ export function ChatPage() {
         // Fall back to web search enabled by default on error (non-admin only)
         dispatchConversation({
           type: 'selectedToolsChanged',
-          selectedTools: isAdmin ? [CONFIG_TOOL_ID] : ['web-search'],
+          selectedTools: isAdmin
+            ? [CONFIG_TOOL_ID]
+            : [CURATED_RESOURCES_TOOL_ID, 'web-search'],
         });
       } finally {
         setSessionDefaultsLoaded(true);

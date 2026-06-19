@@ -284,6 +284,50 @@ Malformed JSON, missing `query` or `user`, invalid field types, or invalid
 `user`, `top_k`, `job_ids`, `jurisdiction`, `situation_details`, and
 `user.user_type_id`.
 
+### `POST /internal/agent/resources/search`
+
+Runs admin-curated Resource Directory lookup for Sage's `find_resources` Tool.
+This is separate from document retrieval: resources are structured SQLite rows
+entered by admins, not uploaded document chunks.
+
+Request:
+
+```json
+{
+  "help_type": "legal",
+  "jurisdiction": "Nicaragua",
+  "language": "es",
+  "limit": 5
+}
+```
+
+Response:
+
+```json
+{
+  "resources": [
+    {
+      "resource_id": "example-ni-detention-lawyer",
+      "name": "Example Nicaragua Detention Counsel",
+      "resource_type": "lawyer",
+      "description": "Legal support for detention cases.",
+      "contact": { "email": "help@example.org" },
+      "languages": ["es"],
+      "scope_level": "country",
+      "scope_code": "NI",
+      "help_types": ["legal"],
+      "verified_at": "2026-06-01T00:00:00Z"
+    }
+  ],
+  "resolved_country_code": "NI",
+  "help_type": "legal"
+}
+```
+
+Only `ready` resources are returned. Ranking prefers most-local coverage, then
+verified resources, then optional language match. Blank `help_type` returns
+`400`; invalid payload shapes return `422`.
+
 ### `POST /internal/agent/admin-db-query`
 
 Executes Python-owned safe read-only admin SQL.
@@ -491,8 +535,7 @@ The proposal Tool stages canonical Admin Config write shapes:
 
 - `PUT /admin/settings` with stored setting keys such as `header_tagline`,
   `default_language`, `default_theme`, and `auto_approve_users`.
-- `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
-  "display_order"? }`.
+- `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
 
 Sage may normalize only the known small drift at the proposal boundary:
 `/admin/user_types` to `/admin/user-types`, `tagline` to `header_tagline`, and

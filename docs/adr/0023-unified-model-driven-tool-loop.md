@@ -9,6 +9,7 @@ This replaces preselected context pipelines such as Scoped Config Context, route
 Visible Tool Sets are permission and product controls, not hidden routing modes:
 
 - `knowledge-search` enables Document Library Retrieval Tools. Selected Documents are Tool constraints for `knowledge_search`, not silently injected Required Context for ordinary chat.
+- `curated-resources` enables the admin-curated Resource Directory Tool, exposed as `find_resources`. It is separate from Knowledge Search because it searches structured SQLite resource records, not uploaded document embeddings.
 - `web-search` enables current/external web search.
 - `admin-config` enables raw admin configuration read Tools plus `propose_config_change_set`, a non-mutating proposal Tool. Confirmed apply is not model-authorized and still requires Change Confirmation.
 - `db-query` enables admin-only read-only database inspection Tools.
@@ -19,7 +20,7 @@ The first Admin Config Tool Set should expose concrete read Tools such as `read_
 
 ## Route Direction
 
-Product and runtime language should converge on one Conversation runtime. Existing public route names such as `/llm/chat`, `/llm/chat/stream`, `/query`, and `/query/session/*` may remain as transport/API compatibility shapes while the implementation is rewired, but they should not define separate assistant-style versus retrieval-first mental models. Document-grounded chat is Conversation plus the `knowledge-search` Tool Set and document constraints. Admin chat is Conversation plus admin-authorized Tool Sets. Guided onboarding is Conversation plus guided UI prompts and the same `admin-config` Tool Set.
+Product and runtime language should converge on one Conversation runtime. Existing public route names such as `/llm/chat`, `/llm/chat/stream`, `/query`, and `/query/session/*` may remain as transport/API compatibility shapes while the implementation is rewired, but they should not define separate assistant-style versus retrieval-first mental models. Document-grounded chat is Conversation plus the `knowledge-search` Tool Set and document constraints. Curated referral/resource lookup is Conversation plus the `curated-resources` Tool Set. Admin chat is Conversation plus admin-authorized Tool Sets. Guided onboarding is Conversation plus guided UI prompts and the same `admin-config` Tool Set.
 
 ## Considered Options
 
@@ -32,6 +33,6 @@ Product and runtime language should converge on one Conversation runtime. Existi
 
 Sage owns intent interpretation and Tool choice. Python remains the Enclave Control Plane: it serves private authorized facts/actions, enforces redaction and read-only rules where it owns the data, and never pre-classifies a Conversation into a prompt-ready context blob. The frontend sends the user message, selected Tool Sets, and Tool constraints; it does not prefetch admin configuration context for chat turns.
 
-The UI should make Knowledge, Web, Config, and Database explicit Tool controls. Knowledge Search document scope belongs under the Knowledge Tool Set control. Enabled does not mean forced: it means Sage may call the Tool when useful. Tool calls and meaningful Tool results should be visible through Activity and sanitized Conversation Trace according to Trace Visibility Policy.
+The UI should make Knowledge, Resources, Web, Config, and Database explicit Tool controls. Knowledge Search document scope belongs under the Knowledge Tool Set control. Resources should be default-on for user chat so Sage can surface admin-vetted referrals. Config and Database remain admin-only and must only render for server-validated admins. Enabled does not mean forced: it means Sage may call the Tool when useful. Tool calls and meaningful Tool results should be visible through Activity and sanitized Conversation Trace according to Trace Visibility Policy.
 
 ADR-0014 and ADR-0022 describe earlier bounded streaming slices and are superseded for future tool-loop work by this decision. ADR-0017's no-compatibility posture applies: obsolete Scoped Config Context routes, client helpers, cache invalidation hooks, and docs should be removed rather than preserved as fallback behavior.

@@ -19,7 +19,7 @@ The product mental model is one Conversation runtime. Existing public route name
 | `/query`           | stateful Conversation API compatibility shape         |
 | `/query/session/*` | Conversation session inspection, rename, and deletion |
 
-Route names do not define separate tool systems. Document-grounded chat is Conversation plus the `knowledge-search` Tool Set. Admin chat is Conversation plus admin-authorized Tool Sets. Guided onboarding is Conversation plus guided UI prompts and the same `admin-config` Tool Set.
+Route names do not define separate tool systems. Document-grounded chat is Conversation plus the `knowledge-search` Tool Set. Curated referral/resource lookup is Conversation plus the `curated-resources` Tool Set. Admin chat is Conversation plus admin-authorized Tool Sets. Guided onboarding is Conversation plus guided UI prompts and the same `admin-config` Tool Set.
 
 ## Browser To Sage Request Contract
 
@@ -31,7 +31,7 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 {
   "message": "What does the handbook say?",
   "session_id": "optional-session-id",
-  "tools": ["knowledge-search", "web-search"],
+  "tools": ["knowledge-search", "curated-resources", "web-search"],
   "job_ids": ["doc-handbook", "doc-faq"],
   "conversation_history": [
     { "role": "user", "content": "Earlier user turn" },
@@ -50,12 +50,13 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
 Visible Tool Sets are conversation controls and permission bundles:
 
-| Tool Set ID        | Access                                        | Exposes                                                                                       |
-| ------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `knowledge-search` | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                  |
-| `web-search`       | users and admins when enabled                 | `web_search` through the configured SearXNG service                                           |
-| `admin-config`     | admins only                                   | admin configuration read Tools and the non-mutating `propose_config_change_set` proposal Tool |
-| `db-query`         | admins only                                   | read-only database inspection Tools                                                           |
+| Tool Set ID         | Access                                        | Exposes                                                                                       |
+| ------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                  |
+| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory                                    |
+| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service                                           |
+| `admin-config`      | admins only                                   | admin configuration read Tools and the non-mutating `propose_config_change_set` proposal Tool |
+| `db-query`          | admins only                                   | read-only database inspection Tools                                                           |
 
 Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
 
@@ -66,6 +67,12 @@ Enabled does not mean forced. Enabled means the model is allowed and encouraged 
 Sage passes allowed document constraints to the Knowledge Tool. Python enforces Document Access and hydrates retrieved chunks from product-owned storage after vector search. Retrieved chunks enter the Conversation as Tool results and sanitized Activity/Trace metadata.
 
 Required Context remains a separate product-policy term for future mandatory context that must be included outside ordinary model discretion. It is not the default document-chat path.
+
+## Curated Resources
+
+`curated-resources` is a first-class visible Tool Set for the admin-curated Resource Directory. It is separate from `knowledge-search`: Resources are structured, priority referrals stored in SQLite by admins; Knowledge is uploaded document retrieval through embeddings and document access policy.
+
+Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns vetted organizations, contacts, coverage, help types, and languages. The Tool should be enabled by default for user chat so Sage can recommend known priority resources before guessing, searching the web, or asking the user to check manually.
 
 ## Admin Config
 
@@ -110,7 +117,7 @@ Theme requests in Admin Conversations mean Instance visual identity settings, su
 
 The frontend chooses visible Tool Sets and Tool constraints. It must not prefetch admin configuration context for chat, run hidden document retrieval for ordinary turns, or send `client_executed_tools` as a compatibility path.
 
-The composer should make Knowledge, Web, Config, and Database explicit controls. Knowledge document scope belongs under the Knowledge Tool Set control.
+The composer should make Knowledge, Resources, Web, Config, and Database explicit controls. Knowledge document scope belongs under the Knowledge Tool Set control. Resources is enabled by default for user chat; Config and Database must only render for server-validated admins.
 
 ## Sage Duties
 
