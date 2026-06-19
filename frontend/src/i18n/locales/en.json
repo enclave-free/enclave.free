@@ -228,7 +228,7 @@
       "themeDark": "Dark"
     },
     "configAssistant": {
-      "onboardingWelcome": "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime.",
+      "onboardingWelcome": "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime.",
       "openAria": "Open admin assistant",
       "openTitle": "Admin assistant",
       "title": "Admin Configuration Assistant",
@@ -834,7 +834,35 @@
     "title": "Set up your instance",
     "subtitle": "Your assistant will collect the basics in one pass.",
     "manual": "Configure manually instead",
-    "finish": "Finish & go to dashboard"
+    "finish": "Finish & go to dashboard",
+    "comingSoon": "This phase is coming soon and is being built separately.",
+    "steps": {
+      "initialize": {
+        "label": "Initialize",
+        "title": "Initialize",
+        "subtitle": "Let's cover the basics of your space so your agent starts with the right foundation."
+      },
+      "docs": {
+        "label": "Upload Docs",
+        "title": "Upload your field guide",
+        "subtitle": "Add the source material your agent answers from — books, guides, and reference documents."
+      },
+      "resources": {
+        "label": "Curated Resources",
+        "title": "Curated resources",
+        "subtitle": "Add trusted real-world resources — key contacts, lawyers, educational and mental-health support — the agent can refer people to."
+      },
+      "test": {
+        "label": "Test as User",
+        "title": "Test as a user",
+        "subtitle": "Coming soon — try the assistant as one of your user types and rate the answers."
+      },
+      "feedback": {
+        "label": "Feedback",
+        "title": "Feedback loop",
+        "subtitle": "Coming soon — review answer quality and iterate on your setup."
+      }
+    }
   },
   "adminDashboard": {
     "title": "Admin Dashboard",

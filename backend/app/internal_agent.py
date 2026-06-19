@@ -615,6 +615,11 @@ def _onboarding_status_tool_data() -> dict[str, Any]:
         if key not in configured_key_set
     ]
     user_type_data = _user_types_tool_data()
+    user_types = user_type_data["user_types"]
+    # The 9th guided question: the operator must define at least one non-admin
+    # user type (e.g. Teacher, Student). Created live via the POST /admin/user-types
+    # change-set path, so "done" simply means one or more user types now exist.
+    user_types_complete = len(user_types) >= 1
 
     return {
         "instance": {
@@ -632,7 +637,13 @@ def _onboarding_status_tool_data() -> dict[str, Any]:
             "required_count": len(GUIDED_BOOTSTRAP_SETTING_KEYS),
             "configured_required_count": len(configured_keys),
         },
-        "user_types": user_type_data["user_types"],
+        "user_types_setup": {
+            "required_minimum": 1,
+            "count": len(user_types),
+            "names": [ut.get("name") for ut in user_types],
+            "complete": user_types_complete,
+        },
+        "user_types": user_types,
         "onboarding_questions": user_type_data["onboarding_questions"],
         "limits": user_type_data["limits"],
     }

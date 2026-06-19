@@ -170,7 +170,7 @@ export function AdminConfigAssistant({
           createOnboardingMessage(
             t(
               'admin.configAssistant.onboardingWelcome',
-              "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
+              "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime."
             )
           ),
         ]
@@ -340,6 +340,12 @@ export function AdminConfigAssistant({
 
   const handleToolToggle = useCallback(
     (toolId: string) => {
+      // During onboarding the toolset is a locked, injected dependency: the
+      // assistant must stay in config-only mode (no web/database). Ignore any
+      // toggle attempts so web/database can never be enabled mid-onboarding.
+      if (isOnboarding) {
+        return;
+      }
       if (toolId === CONFIG_TOOL_ID && selectedTools.includes(CONFIG_TOOL_ID)) {
         setApplyState({ state: 'idle' });
         setSnapshotInfo(null);
@@ -353,7 +359,7 @@ export function AdminConfigAssistant({
           : [...prev, toolId]
       );
     },
-    [selectedTools]
+    [selectedTools, isOnboarding]
   );
 
   const handleStartNewAssistantConversation = useCallback(() => {
@@ -364,7 +370,7 @@ export function AdminConfigAssistant({
             createOnboardingMessage(
               t(
                 'admin.configAssistant.onboardingWelcome',
-                "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime."
+                "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime."
               )
             ),
           ]
@@ -1376,7 +1382,7 @@ export function AdminConfigAssistant({
         onSend={(msg) => void handleSend(msg)}
         disabled={isLoading}
         placeholder={t('admin.configAssistant.inputPlaceholder')}
-        toolbar={inputToolbar}
+        toolbar={isOnboarding ? undefined : inputToolbar}
       />
     </div>
   );
