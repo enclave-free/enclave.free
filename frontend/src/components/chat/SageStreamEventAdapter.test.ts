@@ -72,6 +72,38 @@ describe('Sage Stream Event Adapter', () => {
 
     expect(
       adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'trace-admin-config-call',
+            kind: 'tool_call',
+            title: 'Admin Config',
+            content: 'Calling read_instance_settings.',
+            tool_name: 'read_instance_settings',
+            status: 'running',
+            metadata: { phase: 'tool_loop' },
+            created_at: '2026-06-18T12:00:00Z',
+          },
+        },
+        'assistant-1'
+      )
+    ).toEqual({
+      type: 'assistantTraceDeltaReceived',
+      assistantTurnId: 'assistant-1',
+      traceDelta: {
+        id: 'trace-admin-config-call',
+        kind: 'tool_call',
+        title: 'Admin Config',
+        content: 'Calling read_instance_settings.',
+        tool_name: 'read_instance_settings',
+        status: 'running',
+        metadata: { phase: 'tool_loop' },
+        created_at: '2026-06-18T12:00:00Z',
+      },
+    });
+
+    expect(
+      adaptSageStreamEvent(
         'answer_delta',
         {
           delta: 'Hello',

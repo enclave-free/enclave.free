@@ -149,6 +149,7 @@ class FakeConversationClient:
                 admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
+                    "first_trace_or_tool_feedback_ms": 20.0,
                     "first_visible_assistant_token_ms": 80.0,
                     "done_ms": 100.0,
                 },
@@ -243,6 +244,7 @@ class FakeConversationClient:
                 },
                 timings={
                     "first_event_ms": 10.0,
+                    "first_trace_or_tool_feedback_ms": 10.0,
                     "first_visible_assistant_token_ms": 90.0,
                     "done_ms": 110.0,
                 },
@@ -305,6 +307,7 @@ class FakeConversationClient:
             admin_change_set=None,
             timings={
                 "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 25.0,
                 "first_visible_assistant_token_ms": 100.0,
                 "done_ms": 120.0,
             },
@@ -332,6 +335,7 @@ class FakeWarningOnlyClient:
             admin_change_set=None,
             timings={
                 "first_event_ms": 80.0,
+                "first_trace_or_tool_feedback_ms": None,
                 "first_visible_assistant_token_ms": 80.0,
                 "done_ms": 100.0,
             },
@@ -362,8 +366,25 @@ class FakeSlowFirstAnswerClient(FakeConversationClient):
             admin_change_set=result.admin_change_set,
             timings={
                 "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 10.0,
                 "first_visible_assistant_token_ms": 45_000.0,
                 "done_ms": 50_000.0,
+            },
+        )
+
+
+class FakeSlowTraceFeedbackClient(FakeConversationClient):
+    def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+        result = super().stream_chat(token, payload, timeout)
+        return StreamResult(
+            answer=result.answer,
+            events=result.events,
+            done=result.done,
+            trace=result.trace,
+            admin_change_set=result.admin_change_set,
+            timings={
+                **result.timings,
+                "first_trace_or_tool_feedback_ms": 15_000.0,
             },
         )
 
@@ -556,6 +577,34 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(result.answer, "Get safe — today.")
         self.assertIsNone(result.error)
 
+    def test_stream_client_records_first_trace_or_tool_feedback_latency(self) -> None:
+        body = (
+            b'event: trace_delta\ndata: {"trace_delta":{"id":"trace-1","kind":"tool_call","title":"Admin Config","status":"running"}}\n\n'
+            b'event: answer_delta\ndata: {"delta":"Ready"}\n\n'
+            b'event: done\ndata: {"model":"kimi-k2-6","provider":"sage"}\n\n'
+        )
+
+        with (
+            patch(
+                "urllib.request.urlopen",
+                return_value=IncompleteStreamResponse(body),
+            ),
+            patch(
+                "scripts.benches.conversation_model_bench.time.perf_counter",
+                side_effect=[100.0, 100.015, 100.055, 100.090],
+            ),
+        ):
+            result = HttpConversationClient("http://example.test").stream_chat(
+                "token",
+                {"message": "hello"},
+                timeout=1,
+            )
+
+        self.assertEqual(result.timings["first_event_ms"], 15.0)
+        self.assertEqual(result.timings["first_trace_or_tool_feedback_ms"], 15.0)
+        self.assertEqual(result.timings["first_visible_assistant_token_ms"], 55.0)
+        self.assertEqual(result.timings["done_ms"], 90.0)
+
     def test_reset_option_invokes_local_state_reset_before_scenarios(self) -> None:
         env = FakeEnvironment()
 
@@ -603,6 +652,12 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(env.verified_models, ["kimi-k2-6"])
         self.assertEqual(client.last_token, "admin-token")
         self.assertEqual(client.last_payload["tools"], ["admin-config"])
+        self.assertEqual(
+            artifact["candidates"][0]["scenarios"][0]["timing"][
+                "first_trace_or_tool_feedback_ms"
+            ],
+            25.0,
+        )
 
     def test_admin_readiness_fails_when_change_set_tool_is_staged(self) -> None:
         class FakeStagedChangeSetClient(FakeConversationClient):
@@ -712,6 +767,7 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             {warning["name"] for warning in artifact["summary"]["warnings"]},
             {
+                "first_trace_or_tool_feedback_present",
                 "knowledge_search_behavior_recorded",
                 "retrieval_evidence_recorded",
                 "answer_present_with_practical_guidance",
@@ -761,6 +817,21 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             {warning["name"] for warning in scenario["summary"]["warnings"]},
             {"first_answer_under_30s"},
+        )
+
+    def test_slow_trace_feedback_is_warning_only(self) -> None:
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=FakeSlowTraceFeedbackClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+
+        self.assertEqual(artifact["summary"]["status"], "passed")
+        self.assertEqual(
+            {warning["name"] for warning in scenario["summary"]["warnings"]},
+            {"first_trace_or_tool_feedback_under_10s"},
         )
 
     def test_explicit_model_candidates_switch_verify_and_restore_local_sage(self) -> None:

@@ -173,14 +173,6 @@ function _readUserTypeId(value: unknown): number | string | undefined {
   return undefined;
 }
 
-function _readTraceVisibility(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim().toLowerCase();
-  return ['off', 'minimal', 'summary', 'detailed'].includes(normalized)
-    ? normalized
-    : undefined;
-}
-
 function _readAgentSettingsKey(path: string): string | undefined {
   const match =
     /^\/admin\/ai-config\/(?:user-type\/[^/]+\/)?([a-z0-9_]+)$/i.exec(path);
@@ -200,6 +192,16 @@ function _isJsonStringArray(value: string): boolean {
 
 function normalizeAdminAssistantPath(path: string): string {
   return path.replace(/^\/admin\/user_types(?=\/|$)/, '/admin/user-types');
+}
+
+function isLegacyTraceVisibilityPath(pathLower: string): boolean {
+  return (
+    pathLower === '/admin/ai-config/admin_trace_visibility' ||
+    pathLower === '/admin/ai-config/user_trace_visibility' ||
+    /^\/admin\/ai-config\/user-type\/(?:\d+|@type:[a-z0-9_]+)\/(?:admin_trace_visibility|user_trace_visibility)$/.test(
+      pathLower
+    )
+  );
 }
 
 function normalizeDefaultLanguageValue(value: unknown): unknown {
@@ -605,6 +607,12 @@ export function validateAdminAssistantChangeSet(
     ) {
       return { ok: false, error: `Disallowed request path: ${req.path}` };
     }
+    if (isLegacyTraceVisibilityPath(pathLower)) {
+      return {
+        ok: false,
+        error: `Disallowed legacy trace visibility setting: ${req.path}`,
+      };
+    }
 
     const allowed = allowedPathByMethod[req.method].some((re) =>
       re.test(req.path)
@@ -678,21 +686,6 @@ export function validateAdminAssistantChangeSet(
         return {
           ok: false,
           error: `${req.path} body.value must be a JSON array of strings`,
-        };
-      }
-    }
-
-    if (
-      req.method === 'PUT' &&
-      pathLower === '/admin/ai-config/user_trace_visibility'
-    ) {
-      const value = _isPlainObject(req.body)
-        ? _readTraceVisibility(req.body.value)
-        : undefined;
-      if (value === 'detailed') {
-        return {
-          ok: false,
-          error: 'User Conversation trace visibility cannot be detailed',
         };
       }
     }

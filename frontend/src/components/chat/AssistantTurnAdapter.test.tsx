@@ -13,6 +13,7 @@ describe('AssistantTurnAdapter', () => {
         role: 'user',
         content: 'Show session memory',
         activitySteps: [],
+        traceDeltas: [],
         trace: null,
         traceStatus: null,
       },
@@ -24,6 +25,14 @@ describe('AssistantTurnAdapter', () => {
           {
             id: 'tool-1',
             kind: 'tool',
+            title: 'Memory Lookup',
+            status: 'succeeded',
+          },
+        ],
+        traceDeltas: [
+          {
+            id: 'trace-tool-1',
+            kind: 'tool_result',
             title: 'Memory Lookup',
             status: 'succeeded',
           },
@@ -67,6 +76,7 @@ describe('AssistantTurnAdapter', () => {
     expect(state.messages[1].metadata.custom).toMatchObject({
       traceStatus: 'Reading memory...',
       activitySteps: [{ title: 'Memory Lookup' }],
+      traceDeltas: [{ title: 'Memory Lookup' }],
       trace: { tools: [{ output_summary: 'Queried memory' }] },
     });
     expect(state.turnItems).toHaveLength(2);
@@ -91,6 +101,7 @@ describe('AssistantTurnAdapter', () => {
         role: 'assistant',
         content: 'Ready.',
         activitySteps: [],
+        traceDeltas: [],
         trace: null,
         traceStatus: null,
       },
@@ -117,6 +128,7 @@ describe('AssistantTurnAdapter', () => {
         role: 'user',
         content: 'Draft this again.',
         activitySteps: [],
+        traceDeltas: [],
         trace: null,
         traceStatus: null,
       },

@@ -209,6 +209,169 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
+  it('renders live Trace Deltas from the admin assistant stream', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('trace_delta', {
+          message_id: 'msg-1',
+          trace_delta: {
+            id: 'tool-call-admin-config-1',
+            kind: 'tool_call',
+            title: 'Admin Config',
+            tool_name: 'read_instance_settings',
+            status: 'running',
+            content: 'Reading instance settings.',
+          },
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-1',
+          delta: 'I checked the settings.',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Check the current instance settings.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Admin Config')).toBeInTheDocument();
+    expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
+    expect(screen.getByText('Reading instance settings.')).toBeInTheDocument();
+    expect(screen.getByText('I checked the settings.')).toBeInTheDocument();
+  });
+
+  it('renders live Trace Deltas during onboarding before the final answer completes', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('trace_delta', {
+          message_id: 'msg-1',
+          trace_delta: {
+            id: 'tool-call-admin-config-onboarding',
+            kind: 'tool_call',
+            title: 'Admin Config',
+            tool_name: 'read_onboarding_status',
+            status: 'running',
+            content: 'Checking onboarding status.',
+          },
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-1',
+          delta: 'I prepared the setup draft.',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    expect(
+      screen.getByText(/Welcome — let's set up your space/)
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      '1. FreeThem, 5. dark, 8. let them in right away'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Admin Config')).toBeInTheDocument();
+    expect(screen.getByText('read_onboarding_status')).toBeInTheDocument();
+    expect(screen.getByText('Checking onboarding status.')).toBeInTheDocument();
+    expect(screen.getByText('I prepared the setup draft.')).toBeInTheDocument();
+  });
+
+  it('shows Trace Deltas beside a structured Change Confirmation without applying automatically', async () => {
+    const user = userEvent.setup();
+    const changeSet = {
+      version: 1,
+      summary: 'Bootstrap FreeThem',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/settings',
+          body: { instance_name: 'FreeThem' },
+        },
+      ],
+    };
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('trace_delta', {
+          message_id: 'msg-1',
+          trace_delta: {
+            id: 'tool-result-propose-config',
+            kind: 'tool_result',
+            title: 'Admin Config',
+            tool_name: 'propose_config_change_set',
+            status: 'succeeded',
+            content: 'Prepared a non-mutating configuration proposal.',
+          },
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-1',
+          delta: 'I prepared these changes for review. Use Apply to confirm.',
+        });
+        onEvent('done', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+          admin_change_set: changeSet,
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Set up FreeThem.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Admin Config')).toBeInTheDocument();
+    expect(screen.getByText('propose_config_change_set')).toBeInTheDocument();
+    expect(
+      screen.getByText('Prepared a non-mutating configuration proposal.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Pending changes: Bootstrap FreeThem')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
+      '/admin/settings',
+      expect.objectContaining({ method: 'PUT' })
+    );
+  });
+
   it('ignores public web-search defaults for admin config sends', async () => {
     const user = userEvent.setup();
     vi.stubGlobal(

@@ -1,5 +1,6 @@
 import type {
   ConversationActivityStep,
+  ConversationTraceDelta,
   ConversationTrace,
 } from './ChatMessage';
 
@@ -13,6 +14,7 @@ export interface ConversationUiTurn {
   role: 'user' | 'assistant';
   content: string;
   activitySteps: ConversationActivityStep[];
+  traceDeltas: ConversationTraceDelta[];
   trace: ConversationTrace | null;
   traceStatus: string | null;
   controlSnapshot?: ConversationControlSnapshot;
@@ -43,6 +45,11 @@ export type ConversationUiAction =
       type: 'assistantActivityStepReceived';
       assistantTurnId: string;
       step: ConversationActivityStep;
+    }
+  | {
+      type: 'assistantTraceDeltaReceived';
+      assistantTurnId: string;
+      traceDelta: ConversationTraceDelta;
     }
   | {
       type: 'assistantTraceStatusChanged';
@@ -158,6 +165,7 @@ export function reduceConversationUiState(
             role: 'user',
             content: action.content,
             activitySteps: [],
+            traceDeltas: [],
             trace: null,
             traceStatus: null,
             controlSnapshot: {
@@ -179,6 +187,7 @@ export function reduceConversationUiState(
             role: 'assistant',
             content: '',
             activitySteps: [],
+            traceDeltas: [],
             trace: null,
             traceStatus: action.traceStatus ?? null,
           },
@@ -191,6 +200,11 @@ export function reduceConversationUiState(
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
         ...turn,
         activitySteps: mergeActivitySteps(turn.activitySteps, [action.step]),
+      }));
+    case 'assistantTraceDeltaReceived':
+      return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
+        ...turn,
+        traceDeltas: mergeTraceDeltas(turn.traceDeltas, [action.traceDelta]),
       }));
     case 'assistantTraceStatusChanged':
       return updateAssistantTurn(state, action.assistantTurnId, (turn) => ({
@@ -215,6 +229,10 @@ export function reduceConversationUiState(
         activitySteps: mergeActivitySteps(
           turn.activitySteps,
           action.trace.activity_steps ?? []
+        ),
+        traceDeltas: mergeTraceDeltas(
+          turn.traceDeltas,
+          action.trace.trace_deltas ?? []
         ),
       }));
     case 'assistantTurnFinished':
@@ -243,6 +261,7 @@ export function reduceConversationUiState(
               turn.role !== 'assistant' ||
               turn.content.trim() ||
               turn.activitySteps.length > 0 ||
+              turn.traceDeltas.length > 0 ||
               turn.trace
           ),
       };
@@ -311,6 +330,7 @@ export function reduceConversationUiState(
             role: 'assistant',
             content: action.content,
             activitySteps: [],
+            traceDeltas: action.trace?.trace_deltas ?? [],
             trace: action.trace ?? null,
             traceStatus: null,
           },
@@ -328,6 +348,7 @@ export function reduceConversationUiState(
             role: 'assistant',
             content: action.content,
             activitySteps: [],
+            traceDeltas: [],
             trace: null,
             traceStatus: null,
           },
@@ -366,6 +387,16 @@ function mergeActivitySteps(
   const merged = new Map<string, ConversationActivityStep>();
   for (const step of existing) merged.set(step.id, step);
   for (const step of incoming) merged.set(step.id, step);
+  return Array.from(merged.values());
+}
+
+function mergeTraceDeltas(
+  existing: ConversationTraceDelta[],
+  incoming: ConversationTraceDelta[]
+): ConversationTraceDelta[] {
+  const merged = new Map<string, ConversationTraceDelta>();
+  for (const delta of existing) merged.set(delta.id, delta);
+  for (const delta of incoming) merged.set(delta.id, delta);
   return Array.from(merged.values());
 }
 

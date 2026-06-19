@@ -68,7 +68,7 @@ describe('extractAdminAssistantChangeSetStrict', () => {
     }
   });
 
-  it('allows confirmed Trace Visibility Policy changes through Agent Settings', () => {
+  it('rejects legacy trace visibility setting changes', () => {
     const raw = JSON.stringify({
       version: 1,
       summary: 'Show summary traces to users',
@@ -83,18 +83,21 @@ describe('extractAdminAssistantChangeSetStrict', () => {
 
     const extracted = extractAdminAssistantChangeSetStrict(raw);
 
-    expect(extracted.ok).toBe(true);
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('legacy trace visibility');
+    }
   });
 
-  it('rejects detailed Trace Visibility Policy for User Conversations', () => {
+  it('rejects legacy admin trace visibility setting changes', () => {
     const raw = JSON.stringify({
       version: 1,
-      summary: 'Show detailed traces to users',
+      summary: 'Hide admin traces',
       requests: [
         {
           method: 'PUT',
-          path: '/admin/ai-config/user_trace_visibility',
-          body: { value: 'detailed' },
+          path: '/admin/ai-config/admin_trace_visibility',
+          body: { value: 'off' },
         },
       ],
     });
@@ -103,7 +106,28 @@ describe('extractAdminAssistantChangeSetStrict', () => {
 
     expect(extracted.ok).toBe(false);
     if (!extracted.ok) {
-      expect(extracted.error).toContain('User Conversation');
+      expect(extracted.error).toContain('legacy trace visibility');
+    }
+  });
+
+  it('rejects legacy user-type trace visibility override changes', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      summary: 'Hide traces for a user type',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/user-type/12/user_trace_visibility',
+          body: { value: 'off' },
+        },
+      ],
+    });
+
+    const extracted = extractAdminAssistantChangeSetStrict(raw);
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('legacy trace visibility');
     }
   });
 

@@ -107,7 +107,7 @@ Each bench run should produce a JSON artifact with enough sanitized detail to co
 
 - run metadata: timestamp, git revisions, API base, provider, candidate model ids
 - scenario metadata: scenario id, actor, enabled Tool Sets, prompt
-- timing: first event, first visible answer token, completion, Sage timing phases when available
+- timing: first event, first trace/tool feedback, first visible answer token, completion, Sage timing phases when available
 - tool evidence: called Tools, statuses, warnings, rejection reasons, duplicate calls
 - Admin Config proposal evidence: staged change-set presence, canonical paths and keys, validation errors
 - retrieval evidence: whether Knowledge Search ran, source count, sanitized source labels
@@ -161,7 +161,7 @@ Deterministic checks should cover observable contract behavior:
 - Admin Config proposals used canonical paths and setting keys
 - answer text avoided known failure phrases such as asking the Admin to manually check settings after tools were available
 - Knowledge Search behavior was recorded for the user scenario
-- timing fields were captured
+- timing fields were captured, including first trace/tool feedback latency for Tool-using scenarios
 
 The bench output should make room for human notes and later rubric expansion, but v0 pass/fail signals should come from stable structured evidence.
 
@@ -183,6 +183,7 @@ V0 fails the run only on contract or harness failures:
 V0 records these as evidence-only warnings rather than hard failures:
 
 - slow first token or completion time
+- missing or slow first trace/tool feedback for Tool-using scenarios
 - verbose answer
 - duplicate retrieval or tool calls
 - thin or mediocre answer

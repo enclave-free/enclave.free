@@ -17,7 +17,12 @@ import {
 } from 'lucide-react';
 import { adminFetch, notifyAdminResourcesChanged } from '../../utils/adminApi';
 import { ChatInput } from '../chat/ChatInput';
-import { ChatMessage, type Message } from '../chat/ChatMessage';
+import {
+  ChatMessage,
+  type ConversationTraceDelta,
+  type Message,
+} from '../chat/ChatMessage';
+import { readTraceDelta } from '../chat/SageStreamEventAdapter';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
 import {
   coerceAdminAssistantChangeSetPayload,
@@ -103,6 +108,29 @@ function patchAssistantMessage(
   return messages.map((message) =>
     message.id === id ? { ...message, ...patch } : message
   );
+}
+
+function appendAssistantTraceDelta(
+  messages: Message[],
+  id: string,
+  traceDelta: ConversationTraceDelta
+): Message[] {
+  return messages.map((message) => {
+    if (message.id !== id) return message;
+
+    const traceDeltas = message.traceDeltas ?? [];
+    const existingIndex = traceDeltas.findIndex(
+      (existing) => existing.id === traceDelta.id
+    );
+    const nextTraceDeltas =
+      existingIndex >= 0
+        ? traceDeltas.map((existing, index) =>
+            index === existingIndex ? traceDelta : existing
+          )
+        : [...traceDeltas, traceDelta];
+
+    return { ...message, traceDeltas: nextTraceDeltas };
+  });
 }
 
 function stagePendingAdminChangeSet(
@@ -550,6 +578,17 @@ export function AdminConfigAssistant({
                     traceStatus: status,
                   })
                 );
+              } else if (event === 'trace_delta' && streamMessageId) {
+                const traceDelta = readTraceDelta(data);
+                if (traceDelta) {
+                  setMessages((prev) =>
+                    appendAssistantTraceDelta(
+                      prev,
+                      streamMessageId!,
+                      traceDelta
+                    )
+                  );
+                }
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
                 raw += delta;

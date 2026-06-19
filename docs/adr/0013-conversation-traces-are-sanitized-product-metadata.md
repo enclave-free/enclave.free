@@ -1,5 +1,7 @@
 # Conversation Traces Are Sanitized Product Metadata
 
+Status: Superseded by [ADR-0024](0024-transparent-reasoning-and-tool-trace-posture.md).
+
 The Enclave Free Prototype will expose Conversation Traces as structured, sanitized product metadata attached to assistant turns, not as raw model reasoning, provider trace blobs, full prompts, or full tool outputs. This gives Admins and Users operator-configured transparency into how Sage produced a response while preserving privacy boundaries, keeping trace visibility actor-specific through Agent Settings, and making persisted traces subject to Session Memory Deletion.
 
 ## Considered Options

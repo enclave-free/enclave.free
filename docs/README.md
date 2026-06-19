@@ -14,6 +14,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [internal-agent-contract.md](internal-agent-contract.md): private Sage-to-Python contract used by the prototype.
 - [adr/README.md](adr/README.md): ADR review ledger and current decision index.
 - [adr/0023-unified-model-driven-tool-loop.md](adr/0023-unified-model-driven-tool-loop.md): current anchor for Conversation Tool orchestration.
+- [adr/0024-transparent-reasoning-and-tool-trace-posture.md](adr/0024-transparent-reasoning-and-tool-trace-posture.md): current anchor for live and persisted reasoning/tool traces.
 
 ## Core Product Docs
 

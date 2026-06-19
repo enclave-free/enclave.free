@@ -62,7 +62,7 @@ Python does not expose public handlers for `/llm/chat`, `/query`, `/session-defa
 
 ## Model-Driven Tool Loop Ownership
 
-The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into explicit Tool contracts, gives those contracts to the model, executes model-chosen calls, injects Tool results, applies Tool output budgets, emits sanitized Activity and Conversation Trace metadata, and continues until the model can answer or produce an Executable Change Set.
+The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into explicit Tool contracts, gives those contracts to the model, executes model-chosen calls, injects Tool results, applies Tool output budgets, emits transparent Activity and Conversation Trace metadata with minimal blocklist protection, and continues until the model can answer or produce an Executable Change Set.
 
 Python remains the Enclave Control Plane. It exposes private facts/actions through `/internal/agent/*` contracts, enforces authorization and redaction for the data it owns, and does not own public Agent Runtime Tool orchestration or pre-classify turns into prompt-ready context blobs.
 
