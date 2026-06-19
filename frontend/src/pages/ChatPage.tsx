@@ -64,7 +64,11 @@ import {
   getSelectedUserTypeId,
   saveSelectedUserTypeId,
 } from '../types/onboarding';
-import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
+import {
+  adminFetch,
+  isAdminAuthenticated,
+  validateAdminSession,
+} from '../utils/adminApi';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -98,7 +102,15 @@ import { refreshAdminConfigRedactionMetadata } from '../utils/adminConfigContext
 
 const CONFIG_TOOL_ID = 'admin-config';
 const KNOWLEDGE_TOOL_ID = 'knowledge-search';
+const ADMIN_ONLY_TOOL_IDS = new Set([CONFIG_TOOL_ID, 'db-query']);
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
+
+type ChatAdminSessionState = 'checking' | 'authenticated' | 'unauthenticated';
+
+function filterToolsForActor(tools: string[], isAdmin: boolean): string[] {
+  if (isAdmin) return tools;
+  return tools.filter((tool) => !ADMIN_ONLY_TOOL_IDS.has(tool));
+}
 
 function conversationTurnToMessage(turn: ConversationUiTurn): Message {
   return {
@@ -528,13 +540,18 @@ function AdminChangeApprovalCard({
 export function ChatPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const isAdmin = isAdminAuthenticated();
+  const [adminSessionState, setAdminSessionState] =
+    useState<ChatAdminSessionState>(() =>
+      isAdminAuthenticated() ? 'checking' : 'unauthenticated'
+    );
+  const isAdmin = adminSessionState === 'authenticated';
+  const adminSessionChecking = adminSessionState === 'checking';
   const [conversationState, dispatchConversation] = useReducer(
     reduceConversationUiState,
     undefined,
     () =>
       createConversationUiState({
-        selectedTools: isAdmin ? [CONFIG_TOOL_ID] : [],
+        selectedTools: [],
       })
   );
   const [adminApplyState, dispatchAdminApply] = useReducer(
@@ -568,6 +585,10 @@ export function ChatPage() {
     [conversationState.turns]
   );
   const selectedTools = conversationState.selectedTools;
+  const actorScopedSelectedTools = useMemo(
+    () => filterToolsForActor(selectedTools, isAdmin),
+    [isAdmin, selectedTools]
+  );
   const selectedDocuments = conversationState.selectedDocuments;
   const conversationSessionId = conversationState.conversationSessionId;
   const configToolEnabled = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
@@ -583,6 +604,44 @@ export function ChatPage() {
         .filter((document): document is DocumentSource => Boolean(document)),
     [documents, selectedDocuments]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isAdminAuthenticated()) {
+      setAdminSessionState('unauthenticated');
+      return;
+    }
+
+    setAdminSessionState('checking');
+    validateAdminSession()
+      .then((state) => {
+        if (cancelled) return;
+        setAdminSessionState(
+          state === 'authenticated' ? 'authenticated' : 'unauthenticated'
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setAdminSessionState('unauthenticated');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (adminSessionChecking || isAdmin) return;
+    const filteredTools = filterToolsForActor(selectedTools, false);
+    if (filteredTools.length !== selectedTools.length) {
+      dispatchConversation({
+        type: 'selectedToolsChanged',
+        selectedTools: filteredTools,
+      });
+    }
+    setShareSecrets(false);
+    setSecretsForRedaction([]);
+  }, [adminSessionChecking, isAdmin, selectedTools]);
 
   useEffect(() => {
     const previousSessionId = prevConversationSessionIdRef.current;
@@ -843,6 +902,8 @@ export function ChatPage() {
 
   // Check auth and approval status on mount
   useEffect(() => {
+    if (adminSessionChecking) return;
+
     let isCancelled = false;
     const userEmail = localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
 
@@ -907,11 +968,11 @@ export function ChatPage() {
     return () => {
       isCancelled = true;
     };
-  }, [isAdmin, navigate]);
+  }, [adminSessionChecking, isAdmin, navigate]);
 
   // Fetch session defaults from admin config
   useEffect(() => {
-    if (sessionDefaultsLoaded) return;
+    if (sessionDefaultsLoaded || adminSessionChecking) return;
 
     const fetchSessionDefaults = async () => {
       try {
@@ -970,7 +1031,7 @@ export function ChatPage() {
     };
 
     fetchSessionDefaults();
-  }, [isAdmin, sessionDefaultsLoaded]);
+  }, [adminSessionChecking, isAdmin, sessionDefaultsLoaded]);
 
   // Fetch available documents from ingest jobs
   useEffect(() => {
@@ -1027,6 +1088,8 @@ export function ChatPage() {
 
   const handleToolToggle = useCallback(
     (toolId: string) => {
+      if (!isAdmin && ADMIN_ONLY_TOOL_IDS.has(toolId)) return;
+
       const selectedAfterToggle = !selectedTools.includes(toolId);
       if (toolId === CONFIG_TOOL_ID) {
         dispatchAdminApply({
@@ -1040,7 +1103,7 @@ export function ChatPage() {
       }
       dispatchConversation({ type: 'toolToggled', toolId });
     },
-    [selectedTools]
+    [isAdmin, selectedTools]
   );
 
   const handleDocumentToggle = useCallback(
@@ -1301,9 +1364,9 @@ export function ChatPage() {
     try {
       const backendTools =
         selectedDocuments.length > 0 &&
-        !selectedTools.includes(KNOWLEDGE_TOOL_ID)
-          ? [...selectedTools, KNOWLEDGE_TOOL_ID]
-          : selectedTools;
+        !actorScopedSelectedTools.includes(KNOWLEDGE_TOOL_ID)
+          ? [...actorScopedSelectedTools, KNOWLEDGE_TOOL_ID]
+          : actorScopedSelectedTools;
       let conversationHistory = messages.map(
         ({ role, content: turnContent }) => ({
           role,
