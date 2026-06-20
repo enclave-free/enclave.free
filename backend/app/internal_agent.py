@@ -154,6 +154,28 @@ class InternalResourceSearchResponse(BaseModel):
     help_type: str
 
 
+class InternalSessionLogTurn(BaseModel):
+    role: str
+    content: str
+    ts: Optional[str] = None
+
+
+class InternalSessionLogRequest(BaseModel):
+    """Log a real user's chat session for admin review. The transcript is NIP-04
+    encrypted to the admin pubkey at rest — see session_logs.save_transcript."""
+    actor: InternalActorContext
+    turns: list[InternalSessionLogTurn]
+    sage_session_id: Optional[str] = None
+    user_type_id: Optional[int] = None
+    title: Optional[str] = None
+
+
+class InternalSessionLogResponse(BaseModel):
+    log_id: str
+    status: str
+    turn_count: int
+
+
 class InternalAdminDbQueryRequest(BaseModel):
     sql: str
 
@@ -826,6 +848,43 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
         resources=resources,
         resolved_country_code=resolved,
         help_type=help_type,
+    )
+
+
+@router.post(
+    "/session-logs",
+    response_model=InternalSessionLogResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessionLogResponse:
+    """Pathway for logging a real (non-admin) user's chat session for admin review.
+
+    Mirrors the admin-test logging path but is callable by the runtime over the
+    internal token. The transcript is NIP-04 encrypted to the admin pubkey; fails
+    closed (409) if no admin is configured, so nothing is stored in plaintext.
+    """
+    import session_logs
+
+    subject_user_id = payload.actor.id if payload.actor.type == "user" else None
+    try:
+        log = session_logs.create_session_log(
+            source="user",
+            title=payload.title,
+            subject_user_id=subject_user_id,
+            user_type_id=payload.user_type_id or payload.actor.user_type_id,
+            sage_session_id=payload.sage_session_id,
+            created_by=f"user:{subject_user_id}" if subject_user_id else "system",
+        )
+        saved = session_logs.save_transcript(
+            log["log_id"],
+            [turn.model_dump() for turn in payload.turns],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return InternalSessionLogResponse(
+        log_id=saved["log_id"],
+        status=saved["status"],
+        turn_count=saved["turn_count"],
     )
 
 

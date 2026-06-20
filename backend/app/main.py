@@ -69,7 +69,13 @@ from models import (
     # Resource Referral Directory
     ResourceCreate, ResourceUpdate, ResourceResponse, ResourceListResponse,
     HelpTypeModel, HelpTypeUpsert, HelpTypeListResponse,
+    # Session Logs (Test & Feedback)
+    SessionLogCreate, SessionLogSaveTranscript, SessionLogMetadata,
+    SessionLogListResponse, SessionLogDetail, SessionTurnFeedbackRequest,
+    SessionLogTurnFeedback, TestUserProvisionResponse,
 )
+import session_logs
+import impersonation
 import region_data
 from nostr import verify_auth_event, get_pubkey_from_event
 import auth
@@ -1869,6 +1875,208 @@ async def delete_help_type_admin(key: str, admin: dict = Depends(auth.require_ad
         )
         return SuccessResponse(success=True, message="Help type deleted")
     raise HTTPException(status_code=500, detail="Failed to delete help type")
+
+
+# --- Session Logs (Test & Feedback) ---
+# Captured chat transcripts the admin can review and rate. Transcripts are NIP-04
+# encrypted to the admin pubkey at rest (see session_logs.py); the backend only
+# ever returns ciphertext, which the admin decrypts client-side via NIP-07.
+
+@app.get("/admin/session-logs", response_model=SessionLogListResponse)
+async def list_session_logs_admin(
+    source: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    admin: dict = Depends(auth.require_admin),
+) -> SessionLogListResponse:
+    """List session-log metadata (no transcript content), newest first."""
+    logs = session_logs.list_session_logs(source=source, status=status)
+    return SessionLogListResponse(
+        session_logs=[SessionLogMetadata(**log) for log in logs]
+    )
+
+
+@app.post("/admin/session-logs", response_model=SessionLogMetadata)
+async def create_session_log_admin(
+    payload: SessionLogCreate,
+    admin: dict = Depends(auth.require_admin),
+) -> SessionLogMetadata:
+    """Open a new (active) session log; the transcript is saved on completion."""
+    try:
+        created = session_logs.create_session_log(
+            source=payload.source,
+            title=payload.title,
+            subject_user_id=payload.subject_user_id,
+            user_type_id=payload.user_type_id,
+            sage_session_id=payload.sage_session_id,
+            created_by=admin.get("pubkey"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return SessionLogMetadata(**created)
+
+
+@app.post("/admin/session-logs/{log_id}/transcript", response_model=SessionLogMetadata)
+async def save_session_log_transcript_admin(
+    log_id: str,
+    payload: SessionLogSaveTranscript,
+    admin: dict = Depends(auth.require_admin),
+) -> SessionLogMetadata:
+    """Encrypt + persist the transcript and mark the log completed.
+
+    Fails closed with 409 if no admin pubkey is configured to encrypt to, so a
+    transcript is never written in plaintext.
+    """
+    turns = [turn.model_dump() for turn in payload.turns]
+    try:
+        updated = session_logs.save_transcript(
+            log_id, turns, created_by=admin.get("pubkey")
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session log not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return SessionLogMetadata(**updated)
+
+
+@app.get("/admin/session-logs/{log_id}", response_model=SessionLogDetail)
+async def get_session_log_admin(
+    log_id: str,
+    admin: dict = Depends(auth.require_admin),
+) -> SessionLogDetail:
+    """Full log for review: metadata + encrypted transcript + per-turn feedback."""
+    detail = session_logs.get_session_log(log_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Session log not found")
+    detail["feedback"] = [SessionLogTurnFeedback(**fb) for fb in detail["feedback"]]
+    return SessionLogDetail(**detail)
+
+
+@app.put(
+    "/admin/session-logs/{log_id}/turns/{turn_index}/feedback",
+    response_model=SessionLogTurnFeedback,
+)
+async def set_session_log_feedback_admin(
+    log_id: str,
+    turn_index: int,
+    payload: SessionTurnFeedbackRequest,
+    admin: dict = Depends(auth.require_admin),
+) -> SessionLogTurnFeedback:
+    """Set a turn's thumbs up/down + optional (encrypted) comment."""
+    try:
+        feedback = session_logs.set_turn_feedback(
+            log_id,
+            turn_index,
+            payload.rating,
+            comment=payload.comment,
+            created_by=admin.get("pubkey"),
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session log not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return SessionLogTurnFeedback(**feedback)
+
+
+@app.delete("/admin/session-logs/{log_id}", response_model=SuccessResponse)
+async def delete_session_log_admin(
+    log_id: str,
+    admin: dict = Depends(auth.require_admin),
+) -> SuccessResponse:
+    """Delete a session log, its feedback, and its transcript file."""
+    if session_logs.delete_session_log(log_id):
+        return SuccessResponse(success=True, message="Session log deleted")
+    raise HTTPException(status_code=404, detail="Session log not found")
+
+
+# --- Test users + impersonation seam (Test as User) ---
+
+def _test_user_email(user_type_id: Optional[int]) -> str:
+    """Deterministic, reserved address so provisioning is idempotent per persona."""
+    return (
+        f"test-user+type{user_type_id}@enclave.test"
+        if user_type_id is not None
+        else "test-user@enclave.test"
+    )
+
+
+@app.post("/admin/test-users/provision", response_model=TestUserProvisionResponse)
+async def provision_test_user_admin(
+    user_type_id: Optional[int] = Query(None),
+    admin: dict = Depends(auth.require_admin),
+) -> TestUserProvisionResponse:
+    """Ensure an approved, non-admin test user exists for the given persona
+    (user type) so an admin can impersonate and chat as them. Idempotent.
+
+    The test user is given a deterministic, instance-owned Nostr subkey derived
+    from the admin pubkey + persona, so it transparently belongs to this admin
+    and impersonation can mint a real, scoped session for it.
+    """
+    admin_pubkey = admin.get("pubkey")
+    derived_pubkey = impersonation.derive_test_user_pubkey(admin_pubkey, user_type_id)
+    email = _test_user_email(user_type_id)
+
+    existing = database.get_user_by_email(email)
+    if existing:
+        if not existing.get("approved"):
+            database.update_user_approval(existing["id"], True)
+        # Backfill / correct the derived subkey (e.g. for users created before this).
+        if (existing.get("pubkey") or "") != derived_pubkey:
+            database.set_user_pubkey(existing["id"], derived_pubkey)
+        return TestUserProvisionResponse(
+            user_id=existing["id"], user_type_id=user_type_id, created=False
+        )
+    try:
+        user_id = database.create_user(
+            pubkey=derived_pubkey,
+            email=email,
+            name="Test User",
+            user_type_id=user_type_id,
+        )
+    except ValueError as exc:
+        # create_user encrypts to the admin pubkey; fail closed if none exists.
+        raise HTTPException(status_code=409, detail=str(exc))
+    database.update_user_approval(user_id, True)
+    return TestUserProvisionResponse(
+        user_id=user_id, user_type_id=user_type_id, created=True
+    )
+
+
+@app.get("/admin/impersonation/status")
+async def impersonation_status_admin(
+    admin: dict = Depends(auth.require_admin),
+) -> dict:
+    """Whether admin-as-test-user impersonation is wired in this deployment.
+
+    Lets the UI gate cleanly instead of probing the token endpoint and getting a
+    501 on every session start.
+    """
+    return {"available": impersonation.is_available()}
+
+
+@app.post("/admin/test-users/{user_id}/impersonation-token")
+async def issue_impersonation_token_admin(
+    user_id: int,
+    admin: dict = Depends(auth.require_admin),
+) -> dict:
+    """Mint a scoped session handle to chat AS the given test user.
+
+    Delegates to the impersonation seam; returns 501 until the impersonation
+    script is wired in (see impersonation.py).
+    """
+    user = database.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Test user not found")
+    if not impersonation.is_available():
+        raise HTTPException(
+            status_code=501,
+            detail="Impersonation is not configured on this deployment yet.",
+        )
+    try:
+        return impersonation.issue_session_token(
+            user_id=user_id, issued_by_pubkey=admin.get("pubkey")
+        )
+    except impersonation.ImpersonationUnavailable as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
 
 
 # --- User Field Definitions ---

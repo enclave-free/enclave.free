@@ -93,12 +93,19 @@ export function AdminRoute({ children }: AdminRouteProps) {
   const mobileDialogRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // The dedicated onboarding route renders its own full-width assistant, so the
-  // shared right-rail assistant is suppressed there to avoid a duplicate panel.
+  // The dedicated onboarding and test-and-feedback routes are full-screen,
+  // focused experiences (onboarding renders its own assistant; test-and-feedback
+  // runs an impersonated user chat), so the shared right-rail assistant is
+  // suppressed there to avoid a competing/duplicate panel.
   const location = useLocation();
-  const hideSharedAssistant =
-    location.pathname === '/admin/onboarding' ||
-    location.pathname.startsWith('/admin/onboarding/');
+  const suppressedAssistantRoutes = [
+    '/admin/onboarding',
+    '/admin/test-and-feedback',
+  ];
+  const hideSharedAssistant = suppressedAssistantRoutes.some(
+    (route) =>
+      location.pathname === route || location.pathname.startsWith(`${route}/`)
+  );
 
   useEffect(() => {
     if (hideSharedAssistant) {

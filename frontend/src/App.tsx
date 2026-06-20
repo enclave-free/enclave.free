@@ -62,6 +62,11 @@ const AdminResourcesDirectory = lazy(() =>
     default: module.AdminResourcesDirectory,
   }))
 );
+const AdminTestAndFeedback = lazy(() =>
+  import('./pages/AdminTestAndFeedback').then((module) => ({
+    default: module.AdminTestAndFeedback,
+  }))
+);
 const AdminDatabaseExplorer = lazy(() =>
   import('./pages/AdminDatabaseExplorer').then((module) => ({
     default: module.AdminDatabaseExplorer,
@@ -256,6 +261,16 @@ function App() {
             <AdminRoute>
               <LazyPage>
                 <AdminResourcesDirectory />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/test-and-feedback"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminTestAndFeedback />
               </LazyPage>
             </AdminRoute>
           }

@@ -989,3 +989,84 @@ class HelpTypeUpsert(BaseModel):
 class HelpTypeListResponse(BaseModel):
     """Response model for the help-type vocabulary."""
     help_types: list[HelpTypeModel]
+
+
+# --- Session Logs (Test & Feedback) ---
+
+class SessionLogTurn(BaseModel):
+    """One turn of a captured transcript (admin-supplied on save)."""
+    role: str = Field(..., max_length=32)        # 'user' | 'assistant' | 'system'
+    content: str
+    ts: Optional[str] = None
+
+
+class SessionLogCreate(BaseModel):
+    """Open a new session log (transcript saved later)."""
+    source: str = Field(default="admin_test")    # 'admin_test' | 'user'
+    title: Optional[str] = Field(default=None, max_length=200)
+    subject_user_id: Optional[int] = None
+    user_type_id: Optional[int] = None
+    sage_session_id: Optional[str] = Field(default=None, max_length=200)
+
+
+class SessionLogSaveTranscript(BaseModel):
+    """Save (and encrypt) the transcript for a session log, marking it complete."""
+    turns: list[SessionLogTurn]
+    title: Optional[str] = Field(default=None, max_length=200)
+
+
+class SessionLogMetadata(BaseModel):
+    """Public metadata for a session log — never includes transcript content."""
+    log_id: str
+    source: str
+    title: Optional[str] = None
+    subject_user_id: Optional[int] = None
+    user_type_id: Optional[int] = None
+    sage_session_id: Optional[str] = None
+    turn_count: int = 0
+    status: str = "active"
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    has_transcript: bool = False
+
+
+class SessionLogListResponse(BaseModel):
+    session_logs: list[SessionLogMetadata]
+
+
+class SessionLogTurnFeedback(BaseModel):
+    """Per-turn feedback. The comment is returned as NIP-04 ciphertext."""
+    turn_index: int
+    rating: str                                  # 'up' | 'down'
+    comment_ciphertext: Optional[str] = None
+    comment_ephemeral_pubkey: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class SessionLogDetail(SessionLogMetadata):
+    """Full log for admin review: metadata + encrypted transcript + feedback.
+
+    The transcript is NIP-04 ciphertext; the admin decrypts it client-side via
+    NIP-07 using transcript_ephemeral_pubkey. The backend never decrypts it.
+    """
+    transcript_ciphertext: Optional[str] = None
+    transcript_ephemeral_pubkey: Optional[str] = None
+    encrypted_to_pubkey: Optional[str] = None
+    feedback: list[SessionLogTurnFeedback] = []
+
+
+class SessionTurnFeedbackRequest(BaseModel):
+    """Set a turn's thumbs up/down with an optional qualitative comment."""
+    rating: str = Field(..., pattern="^(up|down)$")
+    comment: Optional[str] = Field(default=None, max_length=5000)
+
+
+class TestUserProvisionResponse(BaseModel):
+    """A provisioned test user for a given persona (user type)."""
+    user_id: int
+    user_type_id: Optional[int] = None
+    created: bool

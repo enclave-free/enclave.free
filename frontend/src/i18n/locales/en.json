@@ -5,6 +5,7 @@
     "save": "Save",
     "saving": "Saving...",
     "saved": "Saved",
+    "send": "Send",
     "sending": "Sending...",
     "saveChanges": "Save Changes",
     "edit": "Edit",
@@ -834,7 +835,7 @@
     "title": "Set up your instance",
     "subtitle": "Your assistant will collect the basics in one pass.",
     "manual": "Configure manually instead",
-    "finish": "Finish & go to dashboard",
+    "finish": "Finish & start testing",
     "comingSoon": "This phase is coming soon and is being built separately.",
     "steps": {
       "initialize": {
@@ -862,6 +863,40 @@
         "title": "Feedback loop",
         "subtitle": "Coming soon — review answer quality and iterate on your setup."
       }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Test & Feedback",
+    "subtitle": "Try the assistant as one of your user types, then review the transcript and rate each answer to refine your setup.",
+    "tabs": {
+      "test": "Test as User",
+      "feedback": "Feedback"
+    },
+    "test": {
+      "pickPersona": "Pick a persona to test",
+      "pickPersonaBody": "Provision a test user for one of your user types, then chat as them. The session is saved as an encrypted trial you can rate under Feedback.",
+      "userType": "User type",
+      "genericUser": "Generic user (no type)",
+      "start": "Start session",
+      "admin": "Admin",
+      "testUserId": "Test user",
+      "endSave": "End & save trial",
+      "previewNotice": "Preview mode — true impersonation is not wired in yet, so this chat runs under your admin session. The transcript still saves for review.",
+      "chatEmpty": "Send a message as this user to begin the trial.",
+      "inputPlaceholder": "Message the assistant as this user…",
+      "saved": "Trial saved (encrypted). Review it under Feedback."
+    },
+    "feedback": {
+      "trials": "Trials",
+      "untitled": "Untitled trial",
+      "turns": "turns",
+      "turn": "Turn",
+      "empty": "No saved trials yet. Run a session under Test as User.",
+      "selectPrompt": "Select a trial to review its transcript and rate each turn.",
+      "noNip04": "Connect a Nostr extension (Alby, nos2x) to decrypt transcripts — they are encrypted to your admin key.",
+      "thumbUp": "Good answer",
+      "thumbDown": "Needs work",
+      "notePlaceholder": "Optional note (saved encrypted)…"
     }
   },
   "adminDashboard": {
@@ -913,6 +948,8 @@
     "uploadDesc": "Add documents to your knowledge base",
     "resources": "Resource Directory",
     "resourcesDesc": "Curate trusted lawyers, NGOs, and referral resources",
+    "testFeedback": "Test & Feedback",
+    "testFeedbackDesc": "Chat as a test user and rate answers to refine your setup",
     "database": "Database Explorer",
     "databaseDesc": "Browse and query the SQLite database",
     "diagnosticsSectionLabel": "Diagnostics",

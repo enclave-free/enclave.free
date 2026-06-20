@@ -6,10 +6,8 @@ import {
   ArrowRight,
   FileText,
   Globe,
-  MessageSquare,
   Settings2,
   Sparkles,
-  User,
   Wand2,
   type LucideIcon,
 } from 'lucide-react';
@@ -33,13 +31,11 @@ const AdminResourcesDirectory = lazy(() =>
 );
 
 interface WizardStep {
-  id: 'initialize' | 'docs' | 'resources' | 'test' | 'feedback';
+  id: 'initialize' | 'docs' | 'resources';
   label: string;
   icon: LucideIcon;
   title: string;
   subtitle: string;
-  /** Not-yet-built phases: shown in the path, but not navigable. */
-  stub?: boolean;
 }
 
 /**
@@ -48,8 +44,9 @@ interface WizardStep {
  * operator always sees where they are; each phase presents a single clear task
  * with its own title, icon, and subtitle.
  *
- * Built phases: Initialize (guided chat), Upload Docs, Curated Resources.
- * Test-as-User and Feedback are stubbed in the path (owned by another track).
+ * Phases: Initialize (guided chat), Upload Docs, Curated Resources. Finishing
+ * hands off to the Test & Feedback module (/admin/test-and-feedback), the
+ * ongoing refinement loop that lives outside first-run setup.
  */
 export function AdminOnboardingSetup() {
   const { t } = useTranslation();
@@ -86,39 +83,14 @@ export function AdminOnboardingSetup() {
         'Add trusted real-world resources — key contacts, lawyers, educational and mental-health support — the agent can refer people to.'
       ),
     },
-    {
-      id: 'test',
-      label: t('adminGuidedSetup.steps.test.label', 'Test as User'),
-      icon: User,
-      title: t('adminGuidedSetup.steps.test.title', 'Test as a user'),
-      subtitle: t(
-        'adminGuidedSetup.steps.test.subtitle',
-        'Coming soon — try the assistant as one of your user types and rate the answers.'
-      ),
-      stub: true,
-    },
-    {
-      id: 'feedback',
-      label: t('adminGuidedSetup.steps.feedback.label', 'Feedback'),
-      icon: MessageSquare,
-      title: t('adminGuidedSetup.steps.feedback.title', 'Feedback loop'),
-      subtitle: t(
-        'adminGuidedSetup.steps.feedback.subtitle',
-        'Coming soon — review answer quality and iterate on your setup.'
-      ),
-      stub: true,
-    },
   ];
 
-  // Index of the last built (navigable) step. Everything past it is locked.
-  const lastBuilt = steps.reduce(
-    (acc, step, index) => (step.stub ? acc : index),
-    0
-  );
+  const lastIndex = steps.length - 1;
   const step = steps[current];
   const StepIcon = step.icon;
-  const isEnabled = (index: number) => !steps[index].stub;
-  const onLastBuilt = current >= lastBuilt;
+  // Every step is navigable (free click-back across the path).
+  const isEnabled = () => true;
+  const onLastStep = current >= lastIndex;
 
   return (
     <div className="flex h-screen flex-col bg-surface">
@@ -174,20 +146,6 @@ export function AdminOnboardingSetup() {
                 {step.id === 'resources' && (
                   <AdminResourcesDirectory embedded />
                 )}
-                {step.stub && (
-                  <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface-raised px-6 py-16 text-center">
-                    <StepIcon className="h-8 w-8 text-text-muted" />
-                    <div className="text-base font-semibold text-text">
-                      {step.title}
-                    </div>
-                    <p className="max-w-md text-sm text-text-secondary">
-                      {t(
-                        'adminGuidedSetup.comingSoon',
-                        'This phase is coming soon and is being built separately.'
-                      )}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -215,19 +173,19 @@ export function AdminOnboardingSetup() {
                 {t('common.back', 'Back')}
               </Button>
             )}
-            {onLastBuilt ? (
+            {onLastStep ? (
               <Link
-                to="/admin/setup"
+                to="/admin/test-and-feedback"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-text shadow-sm transition-colors hover:bg-accent-hover"
               >
                 <Sparkles className="h-4 w-4" />
-                {t('adminGuidedSetup.finish', 'Finish & go to dashboard')}
+                {t('adminGuidedSetup.finish', 'Finish & start testing')}
               </Link>
             ) : (
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => setCurrent((c) => Math.min(lastBuilt, c + 1))}
+                onClick={() => setCurrent((c) => Math.min(lastIndex, c + 1))}
                 trailingIcon={<ArrowRight className="h-4 w-4" />}
               >
                 {t('common.continue', 'Continue')}

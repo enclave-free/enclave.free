@@ -10,6 +10,12 @@ interface SendLlmChatOptions {
   sessionId?: string | null;
   jobIds?: string[];
   conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /**
+   * Optional bearer token to authenticate AS a specific user (impersonation).
+   * Sage prefers the Authorization bearer over the session cookie, so this scopes
+   * just this request to the token's user without touching the admin cookie.
+   */
+  authToken?: string | null;
 }
 
 interface SendLlmChatStreamOptions extends SendLlmChatOptions {
@@ -62,11 +68,16 @@ export async function sendLlmChatWithUnifiedTools(
 ): Promise<Response> {
   const body = await buildUnifiedChatBody(options);
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (options.authToken) {
+    headers.Authorization = `Bearer ${options.authToken}`;
+  }
+
   return fetch(`${API_BASE}/llm/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     credentials: 'include',
     body: JSON.stringify(body),
   });
