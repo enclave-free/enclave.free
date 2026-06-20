@@ -1951,6 +1951,28 @@ async def get_session_log_admin(
     return SessionLogDetail(**detail)
 
 
+@app.get("/admin/session-logs/{log_id}/export")
+async def export_session_log_admin(
+    log_id: str,
+    admin: dict = Depends(auth.require_admin),
+) -> Response:
+    """Download an encrypted evidence bundle for one Test & Feedback session."""
+    try:
+        filename, payload = session_logs.export_session_log_zip(
+            log_id,
+            changed_by=admin.get("pubkey"),
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session log not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return Response(
+        content=payload,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.put(
     "/admin/session-logs/{log_id}/turns/{turn_index}/feedback",
     response_model=SessionLogTurnFeedback,

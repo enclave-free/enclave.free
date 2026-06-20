@@ -7,11 +7,13 @@ import {
   Trash2,
   ShieldAlert,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 import { Button, Callout, Card } from '../../ui';
 import { decryptField, hasNip04Support } from '../../../utils/encryption';
 import {
   deleteSessionLog,
+  exportSessionLog,
   getSessionLog,
   listSessionLogs,
   setTurnFeedback,
@@ -26,6 +28,17 @@ interface TurnDraft {
   comment: string;
   saving?: boolean;
   saved?: boolean;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(href);
 }
 
 /**
@@ -45,6 +58,9 @@ export function FeedbackView() {
   const [drafts, setDrafts] = useState<Record<number, TurnDraft>>({});
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const nip04 = useMemo(() => hasNip04Support(), []);
 
@@ -70,6 +86,8 @@ export function FeedbackView() {
     setSelectedId(logId);
     setLoadingDetail(true);
     setDetailError(null);
+    setFeedbackError(null);
+    setExportError(null);
     setTurns(null);
     setDrafts({});
     try {
@@ -136,6 +154,7 @@ export function FeedbackView() {
     async (turnIndex: number, rating: FeedbackRating) => {
       if (!selectedId) return;
       const draft = drafts[turnIndex];
+      setFeedbackError(null);
       updateDraft(turnIndex, { rating, saving: true });
       try {
         await setTurnFeedback(
@@ -156,7 +175,10 @@ export function FeedbackView() {
             },
           };
         });
-      } catch {
+      } catch (err) {
+        setFeedbackError(
+          err instanceof Error ? err.message : 'Feedback could not be saved'
+        );
         updateDraft(turnIndex, { saving: false });
       }
     },
@@ -175,6 +197,22 @@ export function FeedbackView() {
     },
     [selectedId, loadList]
   );
+
+  const handleExport = useCallback(async () => {
+    if (!selectedId) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const blob = await exportSessionLog(selectedId);
+      downloadBlob(blob, `test-feedback-${selectedId}.zip`);
+    } catch (err) {
+      setExportError(
+        err instanceof Error ? err.message : 'Session export failed'
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedId]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
@@ -280,16 +318,36 @@ export function FeedbackView() {
                   t('adminTestFeedback.feedback.untitled', 'Untitled trial')}
               </div>
               {selectedId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void handleDelete(selectedId)}
-                  leadingIcon={<Trash2 className="h-4 w-4" />}
-                >
-                  {t('common.delete', 'Delete')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void handleExport()}
+                    disabled={exporting}
+                    leadingIcon={
+                      exporting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )
+                    }
+                  >
+                    {t('common.export', 'Export')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void handleDelete(selectedId)}
+                    leadingIcon={<Trash2 className="h-4 w-4" />}
+                  >
+                    {t('common.delete', 'Delete')}
+                  </Button>
+                </div>
               )}
             </div>
+
+            {feedbackError && <Callout tone="error">{feedbackError}</Callout>}
+            {exportError && <Callout tone="error">{exportError}</Callout>}
 
             {(turns ?? []).map((turn, index) => {
               const draft = drafts[index];

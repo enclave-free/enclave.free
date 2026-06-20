@@ -88,12 +88,17 @@ export async function sendLlmChatStreamWithUnifiedTools({
   ...options
 }: SendLlmChatStreamOptions): Promise<void> {
   const body = await buildUnifiedChatBody(options);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
+  };
+  if (options.authToken) {
+    headers.Authorization = `Bearer ${options.authToken}`;
+  }
+
   const response = await fetch(`${API_BASE}/llm/chat/stream`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-    },
+    headers,
     credentials: 'include',
     body: JSON.stringify(body),
   });

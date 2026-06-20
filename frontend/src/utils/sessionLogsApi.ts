@@ -105,6 +105,25 @@ export async function getSessionLog(logId: string): Promise<SessionLogDetail> {
   );
 }
 
+export async function exportSessionLog(logId: string): Promise<Blob> {
+  const res = await adminFetch(
+    `/admin/session-logs/${encodeURIComponent(logId)}/export`
+  );
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = (await res.json()) as { detail?: string };
+      if (body?.detail) detail = body.detail;
+    } catch {
+      // keep status fallback
+    }
+    const error = new Error(detail) as Error & { status?: number };
+    error.status = res.status;
+    throw error;
+  }
+  return res.blob();
+}
+
 export async function createSessionLog(body: {
   source?: SessionLogSource;
   title?: string | null;

@@ -646,6 +646,7 @@ def init_schema():
             transcript_path TEXT,
             transcript_ephemeral_pubkey TEXT,
             encrypted_to_pubkey TEXT,
+            turn_metadata_json TEXT,
             turn_count INTEGER NOT NULL DEFAULT 0,
             status TEXT NOT NULL DEFAULT 'active'
                 CHECK(status IN ('active', 'completed', 'archived')),
@@ -697,6 +698,7 @@ def init_schema():
     _migrate_enforce_single_admin()  # Enforce the single-admin product invariant at the DB layer
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
     _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
+    _migrate_add_session_log_turn_metadata()  # Store safe turn role metadata for feedback validation
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -1089,6 +1091,21 @@ def _migrate_add_user_memory_retention_class() -> None:
         )
         conn.commit()
         logger.info("Migration: Added 'retention_class' column to user_memories table")
+
+    cursor.close()
+
+
+def _migrate_add_session_log_turn_metadata() -> None:
+    """Add safe turn role metadata for Test & Feedback validation."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(session_logs)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "turn_metadata_json" not in columns:
+        cursor.execute("ALTER TABLE session_logs ADD COLUMN turn_metadata_json TEXT")
+        conn.commit()
+        logger.info("Migration: Added 'turn_metadata_json' column to session_logs table")
 
     cursor.close()
 

@@ -170,6 +170,42 @@ describe('sendLlmChatWithUnifiedTools', () => {
     expect(events[2].data).toEqual({ message_id: 'msg_1', delta: 'Hello' });
   });
 
+  it('sends impersonation bearer auth on streamed chat turns', async () => {
+    const encoder = new TextEncoder();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                encoder.encode('event: done\ndata: {"message_id":"msg_1"}\n\n')
+              );
+              controller.close();
+            },
+          }),
+          { headers: { 'Content-Type': 'text/event-stream' } }
+        )
+      )
+    );
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'Hello as synthetic user',
+      tools: [],
+      authToken: 'synthetic-user-token',
+      onEvent: vi.fn(),
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/llm/chat/stream',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer synthetic-user-token',
+        }),
+      })
+    );
+  });
+
   it('streams Conversation Activity Step events from the chat stream endpoint', async () => {
     const encoder = new TextEncoder();
     vi.stubGlobal(

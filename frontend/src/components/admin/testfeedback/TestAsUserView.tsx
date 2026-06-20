@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Loader2,
+  LogOut,
   Play,
+  RotateCcw,
   Save,
   Send,
-  ShieldCheck,
   UserCog,
-  Sparkles,
 } from 'lucide-react';
 import { Button, Callout, Card } from '../../ui';
 import { sendLlmChatWithUnifiedTools } from '../../../utils/llmChat';
@@ -22,14 +22,11 @@ import {
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
 
-type Identity = 'admin' | 'user';
-
 interface ActiveSession {
   testUserId: number;
   userTypeId: number | null;
   personaName: string;
-  impersonation: boolean; // true once a real impersonation token is issued
-  token: string | null; // bearer token used to chat AS the test user
+  token: string; // bearer token used to chat AS the test user
 }
 
 /**
@@ -37,9 +34,9 @@ interface ActiveSession {
  * and chat as a non-admin would. The session is captured and saved as a trial
  * (encrypted) for review under Feedback.
  *
- * The live impersonated identity depends on the impersonation seam; until that
- * script is wired in, the chat runs under the admin session (clearly flagged)
- * so the end-to-end capture/save/review loop is still usable today.
+ * The Admin remains authenticated for page controls, but the chat itself always
+ * uses the synthetic user's bearer token. A Sage session should have one actor
+ * identity for its lifetime.
  */
 export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const { t } = useTranslation();
@@ -49,7 +46,6 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const [startError, setStartError] = useState<string | null>(null);
 
   const [session, setSession] = useState<ActiveSession | null>(null);
-  const [identity, setIdentity] = useState<Identity>('user');
 
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
   const [input, setInput] = useState('');
@@ -75,21 +71,21 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setStartError(null);
     setSavedNotice(null);
     try {
-      const provisioned = await provisionTestUser(selectedTypeId);
-      // Only request a token when impersonation is actually wired in — avoids a
-      // noisy 501 on every session start while the seam is unimplemented.
       const available = await getImpersonationStatus();
-      const token = available
-        ? await requestImpersonationToken(provisioned.user_id)
-        : null;
+      if (!available) {
+        throw new Error('Test-user impersonation is not available yet');
+      }
+      const provisioned = await provisionTestUser(selectedTypeId);
+      const token = await requestImpersonationToken(provisioned.user_id);
+      if (!token?.token) {
+        throw new Error('Could not create a synthetic user session token');
+      }
       setSession({
         testUserId: provisioned.user_id,
         userTypeId: selectedTypeId,
         personaName: personaName(selectedTypeId),
-        impersonation: token != null,
-        token: token?.token ?? null,
+        token: token.token,
       });
-      setIdentity('user');
       setTurns([]);
       sessionIdRef.current = null;
     } catch (err) {
@@ -116,13 +112,11 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     try {
       // When acting as the test user, send the impersonation bearer so Sage
       // authenticates the chat as them (not the admin).
-      const authToken =
-        identity === 'user' ? (session?.token ?? undefined) : undefined;
       const res = await sendLlmChatWithUnifiedTools({
         content,
         tools: [],
         sessionId: sessionIdRef.current,
-        authToken,
+        authToken: session?.token,
       });
       const data = (await res.json()) as {
         message?: string;
@@ -148,7 +142,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     } finally {
       setSending(false);
     }
-  }, [input, sending, identity, session]);
+  }, [input, sending, session]);
 
   const endAndSave = useCallback(async () => {
     if (!session || turns.length === 0) return;
@@ -180,6 +174,22 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       setSaving(false);
     }
   }, [session, turns, onSaved, t]);
+
+  const resetConversation = useCallback(() => {
+    setTurns([]);
+    setInput('');
+    setChatError(null);
+    sessionIdRef.current = null;
+  }, []);
+
+  const exitSession = useCallback(() => {
+    setSession(null);
+    setTurns([]);
+    setInput('');
+    setChatError(null);
+    setSavedNotice(null);
+    sessionIdRef.current = null;
+  }, []);
 
   // --- Persona picker (no active session) ---
   if (!session) {
@@ -246,69 +256,58 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     );
   }
 
-  // --- Active session: identity switch + chat ---
+  // --- Active session: synthetic user chat ---
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="inline-flex rounded-xl border border-border bg-surface-raised p-1">
-            <button
-              onClick={() => setIdentity('user')}
-              className={[
-                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                identity === 'user'
-                  ? 'bg-accent text-accent-text'
-                  : 'text-text-secondary hover:text-text',
-              ].join(' ')}
-            >
-              <UserCog className="h-4 w-4" />
-              {session.personaName}
-            </button>
-            <button
-              onClick={() => setIdentity('admin')}
-              className={[
-                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                identity === 'admin'
-                  ? 'bg-accent text-accent-text'
-                  : 'text-text-secondary hover:text-text',
-              ].join(' ')}
-            >
-              <ShieldCheck className="h-4 w-4" />
-              {t('adminTestFeedback.test.admin', 'Admin')}
-            </button>
+          <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-text">
+            <UserCog className="h-4 w-4 text-accent" />
+            <span className="font-medium">
+              {t('adminTestFeedback.test.testingAs', 'Testing as {{persona}}', {
+                persona: session.personaName,
+              })}
+            </span>
           </div>
           <span className="text-xs text-text-muted">
             {t('adminTestFeedback.test.testUserId', 'Test user')} #
             {session.testUserId}
           </span>
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => void endAndSave()}
-          disabled={saving || turns.length === 0}
-          leadingIcon={
-            saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )
-          }
-        >
-          {t('adminTestFeedback.test.endSave', 'End & save trial')}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={resetConversation}
+            disabled={saving || sending || turns.length === 0}
+            leadingIcon={<RotateCcw className="h-4 w-4" />}
+          >
+            {t('common.reset', 'Reset')}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={exitSession}
+            disabled={saving || sending}
+            leadingIcon={<LogOut className="h-4 w-4" />}
+          >
+            {t('common.exit', 'Exit')}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => void endAndSave()}
+            disabled={saving || turns.length === 0}
+            leadingIcon={
+              saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )
+            }
+          >
+            {t('adminTestFeedback.test.endSave', 'End & save trial')}
+          </Button>
+        </div>
       </Card>
 
-      {!session.impersonation && identity === 'user' && (
-        <Callout tone="warning">
-          <span className="inline-flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            {t(
-              'adminTestFeedback.test.previewNotice',
-              'Preview mode — true impersonation is not wired in yet, so this chat runs under your admin session. The transcript still saves for review.'
-            )}
-          </span>
-        </Callout>
-      )}
       {chatError && <Callout tone="error">{chatError}</Callout>}
 
       <Card className="flex min-h-[24rem] flex-col gap-3">
