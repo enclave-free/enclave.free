@@ -83,6 +83,7 @@ Active internal endpoints used by Sage on this branch:
 - `GET /internal/agent/document-access`
 - `GET /internal/agent/user-profile-context/{user_id}`
 - `POST /internal/agent/document-search`
+- `POST /internal/agent/resources/search`
 - `POST /internal/agent/admin-db-query`
 
 The endpoint shapes are documented in [internal-agent-contract.md](internal-agent-contract.md).

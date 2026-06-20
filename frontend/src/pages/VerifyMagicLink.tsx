@@ -9,6 +9,7 @@ import {
   saveSelectedUserTypeId,
   clearSelectedUserTypeId,
 } from '../types/onboarding';
+import { clearLogoutBrowserStorage } from '../utils/browserStoragePosture';
 
 type VerifyState = 'verifying' | 'success' | 'error';
 
@@ -180,6 +181,10 @@ export function VerifyMagicLink() {
             await hydrateSingleUserType();
           }
         }
+
+        // A user session must not inherit stale admin routing markers from a
+        // previous browser session. The server cookie remains authoritative.
+        clearLogoutBrowserStorage('admin');
 
         // Store user info (session is maintained in secure cookie)
         localStorage.setItem(STORAGE_KEYS.USER_EMAIL, data.user.email);

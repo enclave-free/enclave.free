@@ -740,6 +740,8 @@
       "label": "Tools",
       "knowledgeSearch": "Search uploaded documents and knowledge chunks",
       "knowledgeSearchName": "Knowledge",
+      "curatedResources": "Find admin-vetted referral resources and trusted organizations",
+      "curatedResourcesName": "Resources",
       "webSearch": "Search the web for current information",
       "webSearchName": "Web",
       "database": "Query the SQLite database",

@@ -17,7 +17,11 @@ import {
   DEFAULT_INSTANCE_CONFIG,
   INSTANCE_CONFIG_KEY,
 } from '../types/instance';
-import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
+import {
+  adminFetch,
+  isAdminAuthenticated,
+  validateAdminSession,
+} from '../utils/adminApi';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -31,6 +35,7 @@ import {
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
   isAdminAuthenticated: vi.fn(() => false),
+  validateAdminSession: vi.fn(() => Promise.resolve('unauthenticated')),
 }));
 
 vi.mock('../utils/llmChat', () => ({
@@ -53,14 +58,33 @@ function ChatPageTestWrapper({ children }: { children: ReactNode }) {
 describe('ChatPage', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
   const mockIsAdminAuthenticated = vi.mocked(isAdminAuthenticated);
+  const mockValidateAdminSession = vi.mocked(validateAdminSession);
   const rawMockAdminFetchImplementation =
     mockAdminFetch.mockImplementation.bind(mockAdminFetch);
 
   const defaultAdminFetch = (_endpoint: string) => null;
 
+  async function waitForValidatedAdminConfig() {
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+  }
+
+  function getComposerTextbox() {
+    return screen.getByRole('textbox');
+  }
+
   beforeEach(() => {
     resetAdminResilienceInstrumentationListeners();
     mockIsAdminAuthenticated.mockReturnValue(false);
+    mockValidateAdminSession.mockImplementation(() =>
+      Promise.resolve(
+        mockIsAdminAuthenticated() ? 'authenticated' : 'unauthenticated'
+      )
+    );
     mockAdminFetch.mockImplementation = ((implementation) =>
       rawMockAdminFetchImplementation((endpoint, options) => {
         const defaultResponse = defaultAdminFetch(endpoint);
@@ -182,6 +206,48 @@ describe('ChatPage', () => {
     );
   });
 
+  it('activates Curated Resources by default for user chat turns', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-resources',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-resources',
+          delta: 'Try these vetted resources.',
+        });
+        onEvent('done', {
+          message_id: 'msg-resources',
+          session_id: 'session-1',
+        });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    await user.type(getComposerTextbox(), 'Who can help in Nicaragua?');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
+    });
+
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toContain('curated-resources');
+    expect(callArgs.tools).not.toContain('admin-config');
+    expect(callArgs.tools).not.toContain('db-query');
+  });
+
   it('selects documents that are active by default for new conversations', async () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
@@ -284,7 +350,11 @@ describe('ChatPage', () => {
     expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
       expect.objectContaining({
         content: 'What does the handbook say?',
-        tools: expect.arrayContaining(['web-search', 'knowledge-search']),
+        tools: expect.arrayContaining([
+          'web-search',
+          'knowledge-search',
+          'curated-resources',
+        ]),
         jobIds: ['doc-1'],
       })
     );
@@ -444,10 +514,7 @@ describe('ChatPage', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Docs 1' }));
     await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Hello'
-    );
+    await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(await screen.findByText('First answer.')).toBeInTheDocument();
     expect(
@@ -617,10 +684,7 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Keep this local thread'
-    );
+    await user.type(getComposerTextbox(), 'Keep this local thread');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('Local answer remains.')
@@ -784,10 +848,7 @@ describe('ChatPage', () => {
       screen.getByRole('region', { name: 'Current chat' })
     ).toHaveTextContent('Draft membership policy');
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'What comes next?'
-    );
+    await user.type(getComposerTextbox(), 'What comes next?');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -911,10 +972,7 @@ describe('ChatPage', () => {
       await screen.findByText('Existing answer with malformed trace.')
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Continue'
-    );
+    await user.type(getComposerTextbox(), 'Continue');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -1056,10 +1114,7 @@ describe('ChatPage', () => {
       screen.getByRole('button', { name: 'Current chat Empty' })
     ).toHaveAttribute('aria-current', 'page');
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Start separate thread'
-    );
+    await user.type(getComposerTextbox(), 'Start separate thread');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('Fresh answer')).toBeInTheDocument();
@@ -1378,10 +1433,7 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Docs 1' }));
     await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Hello'
-    );
+    await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     const errorNote = await screen.findByRole('note', {
@@ -1425,10 +1477,7 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Docs 1' }));
     await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Hello'
-    );
+    await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('Streamed hello.')).toBeInTheDocument();
@@ -1476,10 +1525,7 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Docs 1' }));
     await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Hello'
-    );
+    await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     const activity = await screen.findByText('Web Search');
@@ -1520,11 +1566,7 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Config' })
-      ).toBeInTheDocument();
-    });
+    await waitForValidatedAdminConfig();
     expect(
       screen.getByRole('region', { name: 'Conversation surface' })
     ).toBeInTheDocument();
@@ -1532,10 +1574,7 @@ describe('ChatPage', () => {
       screen.queryByRole('button', { name: /Docs/ })
     ).not.toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Check config'
-    );
+    await user.type(getComposerTextbox(), 'Check config');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('Admin Config')).toBeInTheDocument();
@@ -1571,10 +1610,7 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Docs 1' }));
     await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Hello'
-    );
+    await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('Partial answer.')).toBeInTheDocument();
@@ -1629,10 +1665,7 @@ describe('ChatPage', () => {
       );
     });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Review instance config.'
-    );
+    await user.type(getComposerTextbox(), 'Review instance config.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
@@ -1646,6 +1679,60 @@ describe('ChatPage', () => {
         tools: expect.arrayContaining(['admin-config']),
       })
     );
+  });
+
+  it('does not expose admin-only tools when a stale admin marker fails server validation', async () => {
+    const user = userEvent.setup();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockValidateAdminSession.mockResolvedValue('unauthenticated');
+    localStorage.setItem('enclave_admin_pubkey', 'stale-admin-pubkey');
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'user-msg',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', {
+          message_id: 'user-msg',
+          delta: 'User answer.',
+        });
+        onEvent('done', { message_id: 'user-msg', session_id: 'session-1' });
+      }
+    );
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await waitFor(() => {
+      expect(mockValidateAdminSession).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Config' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Database' })
+      ).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Web' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    await user.type(getComposerTextbox(), 'I need user help.');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalled();
+    });
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toContain('curated-resources');
+    expect(callArgs.tools).not.toContain('admin-config');
+    expect(callArgs.tools).not.toContain('db-query');
   });
 
   it('admin config defaults to config-only tools without web-search', async () => {
@@ -1697,10 +1784,7 @@ describe('ChatPage', () => {
       'false'
     );
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'What is the SMTP host?'
-    );
+    await user.type(getComposerTextbox(), 'What is the SMTP host?');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
@@ -1776,10 +1860,7 @@ describe('ChatPage', () => {
     await user.click(screen.getByLabelText('Share secret env vars'));
     expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Review instance config.'
-    );
+    await user.type(getComposerTextbox(), 'Review instance config.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('Admin answer.')).toBeInTheDocument();
@@ -1869,10 +1950,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Set up the theme in one pass.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Set up the theme in one pass.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -1952,10 +2032,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     const approvalCard = await screen.findByRole('group', {
@@ -2060,19 +2139,15 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Actually propose the voice update.'
-    );
+    await user.type(getComposerTextbox(), 'Actually propose the voice update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -2141,10 +2216,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     await screen.findByRole('group', {
       name: 'Admin Change Confirmation',
@@ -2213,19 +2287,15 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Style my instance.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Style my instance.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText(/reviewable Change Confirmation/)
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'I confirm'
-    );
+    await user.type(getComposerTextbox(), 'I confirm');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
@@ -2287,19 +2357,15 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Style my instance.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Style my instance.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText(/reviewable Change Confirmation/)
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'yes do it'
-    );
+    await user.type(getComposerTextbox(), 'yes do it');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
@@ -2361,17 +2427,16 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Style my instance.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Style my instance.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText(/reviewable Change Confirmation/)
     ).toBeInTheDocument();
 
     await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      getComposerTextbox(),
       'I confirm: "Greeting: update greeting. Tone: update tone."'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -2435,19 +2500,15 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'do it'
-    );
+    await user.type(getComposerTextbox(), 'do it');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -2514,17 +2575,16 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      getComposerTextbox(),
       'Apply the theme changes we discussed earlier'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -2586,19 +2646,15 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'yes do it'
-    );
+    await user.type(getComposerTextbox(), 'yes do it');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -2668,17 +2724,16 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('Update instance theme')
     ).toBeInTheDocument();
 
     await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      getComposerTextbox(),
       'Can you confirm the current primary color?'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -2733,16 +2788,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Config' })
-      ).toBeInTheDocument();
-    });
+    await waitForValidatedAdminConfig();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Continue this long session.'
-    );
+    await user.type(getComposerTextbox(), 'Continue this long session.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     const errorNote = await screen.findByRole('note', {
@@ -2804,16 +2852,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Config' })
-      ).toBeInTheDocument();
-    });
+    await waitForValidatedAdminConfig();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Continue this long session.'
-    );
+    await user.type(getComposerTextbox(), 'Continue this long session.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await user.click(
@@ -2822,10 +2863,7 @@ describe('ChatPage', () => {
       })
     );
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Try again after reset.'
-    );
+    await user.type(getComposerTextbox(), 'Try again after reset.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
@@ -2869,16 +2907,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Config' })
-      ).toBeInTheDocument();
-    });
+    await waitForValidatedAdminConfig();
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Check model availability.'
-    );
+    await user.type(getComposerTextbox(), 'Check model availability.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     const errorNote = await screen.findByRole('note', {
@@ -2944,10 +2975,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Rotate the model secret.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Rotate the model secret.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -3037,10 +3067,9 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
-      'Propose the theme update.'
-    );
+    await waitForValidatedAdminConfig();
+
+    await user.type(getComposerTextbox(), 'Propose the theme update.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
@@ -3048,7 +3077,7 @@ describe('ChatPage', () => {
     ).toBeInTheDocument();
 
     await user.type(
-      screen.getByRole('textbox', { name: 'Ask anything...' }),
+      getComposerTextbox(),
       'Continue reviewing deployment config.'
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -3127,14 +3156,11 @@ describe('ChatPage', () => {
     });
 
     for (let index = 0; index < 17; index += 1) {
-      fireEvent.change(
-        screen.getByRole('textbox', { name: 'Ask anything...' }),
-        {
-          target: {
-            value: `Theme question ${index} about palette and typography.`,
-          },
-        }
-      );
+      fireEvent.change(getComposerTextbox(), {
+        target: {
+          value: `Theme question ${index} about palette and typography.`,
+        },
+      });
       await user.click(screen.getByRole('button', { name: 'Send message' }));
       await waitFor(() => {
         expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(
@@ -3227,7 +3253,7 @@ describe('ChatPage', () => {
       );
     });
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything...' }), {
+    fireEvent.change(getComposerTextbox(), {
       target: {
         value: `Summarize this admin context ${'SAFE_PADDING '.repeat(220)}`,
       },
@@ -3238,7 +3264,7 @@ describe('ChatPage', () => {
       expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything...' }), {
+    fireEvent.change(getComposerTextbox(), {
       target: { value: 'Continue with config advice.' },
     });
     await user.click(screen.getByRole('button', { name: 'Send message' }));

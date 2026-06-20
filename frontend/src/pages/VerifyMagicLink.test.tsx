@@ -172,4 +172,50 @@ describe('VerifyMagicLink', () => {
       expect(localStorage.getItem(STORAGE_KEYS.USER_NAME)).toBeNull();
     });
   });
+
+  it('clears stale admin markers when a user magic link is verified', async () => {
+    localStorage.setItem(STORAGE_KEYS.ADMIN_PUBKEY, 'stale-admin-pubkey');
+    localStorage.setItem(STORAGE_KEYS.ADMIN_SESSION_TOKEN, 'legacy-token');
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/verify') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json({
+            success: true,
+            user: {
+              id: 17,
+              email: 'reader@example.test',
+              name: 'Reader',
+              user_type_id: null,
+              approved: true,
+              created_at: '2026-06-10 15:05:00',
+              needs_onboarding: false,
+              needs_user_type: false,
+            },
+            session_token: 'session-token',
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/verify?token=magic-token']}>
+        <Routes>
+          <Route path="/verify" element={<VerifyMagicLink />} />
+          <Route path="/chat" element={<div>Chat</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('reader@example.test')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY)).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.ADMIN_SESSION_TOKEN)).toBeNull();
+    });
+  });
 });
