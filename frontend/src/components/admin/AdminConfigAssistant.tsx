@@ -425,6 +425,23 @@ export function AdminConfigAssistant({
         return;
       }
 
+      if (applyIntent.kind === 'no-pending') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            role: 'assistant',
+            content: t(
+              'admin.configAssistant.applyIntentNoPending',
+              'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
+            ),
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         let boundedConversationHistory = messages.map(
           ({ role, content: turnContent }) => ({

@@ -1377,6 +1377,19 @@ export function ChatPage() {
       return;
     }
 
+    if (applyIntent.kind === 'no-pending') {
+      dispatchConversation({
+        type: 'assistantTurnAppended',
+        id: generateMessageId(),
+        content: t(
+          'admin.configAssistant.applyIntentNoPending',
+          'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
+        ),
+      });
+      dispatchConversation({ type: 'assistantTurnFinished' });
+      return;
+    }
+
     try {
       const backendTools =
         selectedDocuments.length > 0 &&

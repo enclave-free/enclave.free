@@ -2239,7 +2239,7 @@ describe('ChatPage', () => {
     );
   });
 
-  it('sends confirm language back to Sage when admin chat has no executable change set', async () => {
+  it('shows no-pending guidance for confirm language when admin chat has no executable change set', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -2260,8 +2260,8 @@ describe('ChatPage', () => {
       }
       return Promise.resolve(Response.json({}));
     });
-    vi.mocked(sendLlmChatStreamWithUnifiedTools)
-      .mockImplementationOnce(async ({ onEvent }) => {
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
         onEvent('assistant_message_started', {
           message_id: 'admin-msg-1',
           session_id: 'session-1',
@@ -2272,18 +2272,8 @@ describe('ChatPage', () => {
             'Here is the reviewable Change Confirmation: update greeting and tone.',
         });
         onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
-      })
-      .mockImplementationOnce(async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'admin-msg-2',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'admin-msg-2',
-          delta: 'I need to generate an executable JSON change set first.',
-        });
-        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-1' });
-      });
+      }
+    );
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
@@ -2299,17 +2289,14 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
     });
     expect(
-      screen.queryByText(/There are no pending configuration changes/)
-    ).not.toBeInTheDocument();
-    expect(
-      await screen.findByText(/executable JSON change set/)
+      await screen.findByText(/There are no pending configuration changes/)
     ).toBeInTheDocument();
   });
 
-  it('sends yes-do-it language back to Sage when admin chat has no executable change set', async () => {
+  it('shows no-pending guidance for yes-do-it language when admin chat has no executable change set', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -2330,8 +2317,8 @@ describe('ChatPage', () => {
       }
       return Promise.resolve(Response.json({}));
     });
-    vi.mocked(sendLlmChatStreamWithUnifiedTools)
-      .mockImplementationOnce(async ({ onEvent }) => {
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
         onEvent('assistant_message_started', {
           message_id: 'admin-msg-1',
           session_id: 'session-1',
@@ -2342,18 +2329,8 @@ describe('ChatPage', () => {
             'Here is the reviewable Change Confirmation: update greeting and tone.',
         });
         onEvent('done', { message_id: 'admin-msg-1', session_id: 'session-1' });
-      })
-      .mockImplementationOnce(async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'admin-msg-2',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'admin-msg-2',
-          delta: 'I need to generate an executable JSON change set first.',
-        });
-        onEvent('done', { message_id: 'admin-msg-2', session_id: 'session-1' });
-      });
+      }
+    );
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
@@ -2369,13 +2346,10 @@ describe('ChatPage', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
     });
     expect(
-      screen.queryByText(/There are no pending configuration changes/)
-    ).not.toBeInTheDocument();
-    expect(
-      await screen.findByText(/executable JSON change set/)
+      await screen.findByText(/There are no pending configuration changes/)
     ).toBeInTheDocument();
   });
 

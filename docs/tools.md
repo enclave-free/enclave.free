@@ -93,8 +93,11 @@ Reads may happen directly within Admin Conversation authority. Write intent must
 
 Admin Config proposals must stage canonical write shapes. Instance settings use
 `PUT /admin/settings` with stored setting keys such as `header_tagline`,
-`default_language`, `default_theme`, and `auto_approve_users`. User types use
-`POST /admin/user-types` with `{ "name", "description"?, "icon"?,
+`default_language`, `default_theme`, and `auto_approve_users`. Agent Settings use
+`PUT /admin/ai-config/{key}` with `{ "value": "..." }`; behavior rules use
+`PUT /admin/ai-config/prompt_rules` with `value` set to a JSON string array, such
+as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
+User types use `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
 "display_order"? }`. The proposal boundary may normalize only known small drift
 (`/admin/user_types`, `tagline`, and supported language labels such as
 `English`); staged `admin_change_set` payloads must contain canonical paths and

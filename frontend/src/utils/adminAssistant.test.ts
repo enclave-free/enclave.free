@@ -242,6 +242,50 @@ describe('coerceAdminAssistantChangeSetPayload', () => {
     }
   });
 
+  it('accepts behavior rules through Agent Settings before staging', () => {
+    const rules = JSON.stringify([
+      'Ask users where they are from before giving location-specific guidance.',
+    ]);
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      summary: 'Ask where users are from',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_rules',
+          body: { value: rules },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(true);
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0]).toEqual({
+        method: 'PUT',
+        path: '/admin/ai-config/prompt_rules',
+        body: { value: rules },
+      });
+    }
+  });
+
+  it('rejects malformed behavior rule Agent Settings payloads before staging', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_rules',
+          body: { value: 'Ask users where they are from.' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('JSON array of strings');
+    }
+  });
+
   it('rejects non-string language and theme setting values before staging', () => {
     const invalidLanguage = coerceAdminAssistantChangeSetPayload({
       version: 1,
