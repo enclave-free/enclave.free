@@ -108,6 +108,20 @@ const ADMIN_ONLY_TOOL_IDS = new Set([CONFIG_TOOL_ID, 'db-query']);
 export const ENCLAVE_USER_EMAIL_KEY = STORAGE_KEYS.USER_EMAIL;
 
 type ChatAdminSessionState = 'checking' | 'authenticated' | 'unauthenticated';
+const ADMIN_SESSION_VALIDATION_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error('Admin session validation timed out')),
+      timeoutMs
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  });
+}
 
 function filterToolsForActor(tools: string[], isAdmin: boolean): string[] {
   if (isAdmin) return tools;
@@ -616,7 +630,7 @@ export function ChatPage() {
     }
 
     setAdminSessionState('checking');
-    validateAdminSession()
+    withTimeout(validateAdminSession(), ADMIN_SESSION_VALIDATION_TIMEOUT_MS)
       .then((state) => {
         if (cancelled) return;
         setAdminSessionState(

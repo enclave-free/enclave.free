@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestAsUserView } from './TestAsUserView';
 import { sendLlmChatWithUnifiedTools } from '../../../utils/llmChat';
 import {
+  createSessionLog,
   getImpersonationStatus,
   listUserTypes,
   provisionTestUser,
   requestImpersonationToken,
+  saveTranscript,
 } from '../../../utils/sessionLogsApi';
 
 vi.mock('../../../utils/llmChat', () => ({
@@ -24,18 +26,22 @@ vi.mock('../../../utils/sessionLogsApi', () => ({
 }));
 
 const mockSendLlmChatWithUnifiedTools = vi.mocked(sendLlmChatWithUnifiedTools);
+const mockCreateSessionLog = vi.mocked(createSessionLog);
 const mockGetImpersonationStatus = vi.mocked(getImpersonationStatus);
 const mockListUserTypes = vi.mocked(listUserTypes);
 const mockProvisionTestUser = vi.mocked(provisionTestUser);
 const mockRequestImpersonationToken = vi.mocked(requestImpersonationToken);
+const mockSaveTranscript = vi.mocked(saveTranscript);
 
 describe('TestAsUserView', () => {
   beforeEach(() => {
     mockSendLlmChatWithUnifiedTools.mockReset();
+    mockCreateSessionLog.mockReset();
     mockGetImpersonationStatus.mockReset();
     mockListUserTypes.mockReset();
     mockProvisionTestUser.mockReset();
     mockRequestImpersonationToken.mockReset();
+    mockSaveTranscript.mockReset();
 
     mockListUserTypes.mockResolvedValue([
       { id: 1, name: 'Student', description: null },
@@ -48,6 +54,36 @@ describe('TestAsUserView', () => {
     mockGetImpersonationStatus.mockResolvedValue(true);
     mockRequestImpersonationToken.mockResolvedValue({
       token: 'synthetic-user-token',
+    });
+    mockCreateSessionLog.mockResolvedValue({
+      log_id: 'log-1',
+      source: 'admin_test',
+      title: 'Student trial',
+      subject_user_id: 42,
+      user_type_id: 1,
+      sage_session_id: 'sage-1',
+      turn_count: 0,
+      status: 'active',
+      created_by: 'admin',
+      created_at: null,
+      updated_at: null,
+      completed_at: null,
+      has_transcript: false,
+    });
+    mockSaveTranscript.mockResolvedValue({
+      log_id: 'log-1',
+      source: 'admin_test',
+      title: 'Student trial',
+      subject_user_id: 42,
+      user_type_id: 1,
+      sage_session_id: 'sage-1',
+      turn_count: 2,
+      status: 'completed',
+      created_by: 'admin',
+      created_at: null,
+      updated_at: null,
+      completed_at: null,
+      has_transcript: true,
     });
     mockSendLlmChatWithUnifiedTools.mockResolvedValue(
       Response.json({ message: 'Hello from Sage', session_id: 'sage-1' })
@@ -134,7 +170,9 @@ describe('TestAsUserView', () => {
     await user.click(screen.getByRole('button', { name: 'Reset' }));
 
     expect(screen.queryByText('First answer')).not.toBeInTheDocument();
-    expect(screen.getByText('Send a message as this user to begin the trial.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Send a message as this user to begin the trial.')
+    ).toBeInTheDocument();
 
     await user.type(
       screen.getByPlaceholderText('Message the assistant as this user…'),
@@ -163,6 +201,36 @@ describe('TestAsUserView', () => {
 
     expect(screen.getByText('Pick a persona to test')).toBeInTheDocument();
     expect(screen.queryByText('Testing as Student')).not.toBeInTheDocument();
-    expect(screen.queryByText('Send a message as this user to begin the trial.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Send a message as this user to begin the trial.')
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not save a transcript while a chat response is still pending', async () => {
+    let resolveChat!: (value: Response) => void;
+    mockSendLlmChatWithUnifiedTools.mockReturnValue(
+      new Promise((resolve) => {
+        resolveChat = resolve;
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Hold this save until Sage replies'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    const saveButton = screen.getByRole('button', { name: 'End & save trial' });
+    await waitFor(() => {
+      expect(saveButton).toBeDisabled();
+    });
+    await user.click(saveButton);
+    expect(mockCreateSessionLog).not.toHaveBeenCalled();
+    expect(mockSaveTranscript).not.toHaveBeenCalled();
+
+    resolveChat(Response.json({ message: 'Done', session_id: 'sage-1' }));
+    expect(await screen.findByText('Done')).toBeInTheDocument();
+    expect(saveButton).not.toBeDisabled();
   });
 });

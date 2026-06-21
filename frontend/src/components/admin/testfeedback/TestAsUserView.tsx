@@ -145,7 +145,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   }, [input, sending, session]);
 
   const endAndSave = useCallback(async () => {
-    if (!session || turns.length === 0) return;
+    if (!session || turns.length === 0 || sending) return;
     setSaving(true);
     setSavedNotice(null);
     try {
@@ -173,7 +173,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     } finally {
       setSaving(false);
     }
-  }, [session, turns, onSaved, t]);
+  }, [session, turns, sending, onSaved, t]);
 
   const resetConversation = useCallback(() => {
     setTurns([]);
@@ -294,7 +294,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
           <Button
             variant="secondary"
             onClick={() => void endAndSave()}
-            disabled={saving || turns.length === 0}
+            disabled={saving || sending || turns.length === 0}
             leadingIcon={
               saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

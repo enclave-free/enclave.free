@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -188,6 +189,7 @@ describe('ChatPage', () => {
     vi.unstubAllGlobals();
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     vi.clearAllMocks();
+    vi.useRealTimers();
     document.documentElement.classList.remove('dark');
   });
 
@@ -450,7 +452,9 @@ describe('ChatPage', () => {
       await screen.findByRole('region', { name: 'Conversation surface' })
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Web' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Docs 1' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Docs 1' })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Get help' })
     ).toBeInTheDocument();
@@ -1733,6 +1737,31 @@ describe('ChatPage', () => {
     expect(callArgs.tools).toContain('curated-resources');
     expect(callArgs.tools).not.toContain('admin-config');
     expect(callArgs.tools).not.toContain('db-query');
+  });
+
+  it('falls back to user mode when admin session validation hangs', async () => {
+    vi.useFakeTimers();
+    mockIsAdminAuthenticated.mockReturnValue(true);
+    mockValidateAdminSession.mockReturnValue(new Promise(() => {}));
+    localStorage.setItem('enclave_admin_pubkey', 'stale-admin-pubkey');
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    expect(mockValidateAdminSession).toHaveBeenCalled();
+
+    await act(async () => {
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(8000);
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'Config' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('admin config defaults to config-only tools without web-search', async () => {

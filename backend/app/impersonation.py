@@ -56,7 +56,7 @@ def derive_test_user_keypair(
         )
         try:
             priv = PrivateKey(candidate)
-        except Exception:
+        except ValueError:
             continue
         pub_x_only = priv.public_key.format(compressed=True)[1:].hex()
         return priv.secret, pub_x_only
@@ -69,6 +69,14 @@ def derive_test_user_pubkey(admin_pubkey: str, user_type_id: Optional[int]) -> s
 
 def is_available() -> bool:
     return True
+
+
+def _test_user_email(user_type_id: Optional[int]) -> str:
+    return (
+        f"test-user+type{user_type_id}@enclave.test"
+        if user_type_id is not None
+        else "test-user@enclave.test"
+    )
 
 
 def issue_session_token(*, user_id: int, issued_by_pubkey: str) -> dict[str, Any]:
@@ -92,7 +100,8 @@ def issue_session_token(*, user_id: int, issued_by_pubkey: str) -> dict[str, Any
             "Refusing to impersonate a user that is not an instance-derived test user"
         )
 
-    token = auth.create_session_token(user_id, f"test-user-{user_id}@enclave.test")
+    email = user.get("email") or _test_user_email(user.get("user_type_id"))
+    token = auth.create_session_token(user_id, email)
     expires_at = (
         datetime.now(timezone.utc) + timedelta(seconds=auth.SESSION_MAX_AGE)
     ).isoformat()

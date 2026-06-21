@@ -270,6 +270,7 @@ def delete_session_log(log_id: str) -> bool:
             os.remove(row["transcript_path"])
         except OSError:
             logger.warning("Could not remove transcript file for %s", log_id, exc_info=True)
+            raise
     with database.get_cursor() as cursor:
         cursor.execute("DELETE FROM session_logs WHERE log_id = ?", (log_id,))
         return cursor.rowcount > 0

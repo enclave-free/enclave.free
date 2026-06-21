@@ -28,12 +28,14 @@ class InstanceStatusTest(unittest.TestCase):
 
         import database
         import inference_repair
-        import main
         import auth
+        import deployment_config
+        import main
 
         self.database = importlib.reload(database)
         self.inference_repair = importlib.reload(inference_repair)
         self.auth = importlib.reload(auth)
+        self.deployment_config = importlib.reload(deployment_config)
         self.main = importlib.reload(main)
         self.database.init_schema()
         self.database.upsert_deployment_config("LLM_PROVIDER", "sage", category="llm")
