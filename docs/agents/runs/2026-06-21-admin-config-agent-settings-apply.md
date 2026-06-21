@@ -9,7 +9,7 @@
 - Feature branch: feature/admin-config-agent-settings-apply
 - Human owner: Austin
 - Started: 2026-06-21T17:03:32Z
-- Current status: implementation and focused verification complete for #402/#403; #404 partially verified with model-backed proposal smoke blocked by upstream Kimi readiness.
+- Current status: implementation and focused verification complete for #402/#403/#404; follow-up CodeRabbit symmetry docs/tests addressed.
 - Skill setup status: present; repo has AGENTS.md plus docs/agents issue tracker, triage labels, and domain docs.
 
 ## Goal
@@ -22,11 +22,11 @@ Fix the Admin Configuration Assistant failure where a behavior-rule request is t
 - ADRs: not needed yet; existing ADR-0004 and ADR-0023 already define the boundary.
 - PRD issue: #401
 - Slice issues: #402, #403, #404
-- Issue sessions: current orchestrator thread implemented #402/#403; #404 smoke evidence recorded with external blocker.
+- Issue sessions: current orchestrator thread implemented #402/#403/#404.
 - Agent briefs: GitHub issues #402, #403, and #404.
-- Review packets: self-review against #401-#404 completed in current orchestrator thread; no code findings. #404 model-generated panel acceptance remains blocked by Tinfoil Kimi 503.
-- Local CodeRabbit report: passed; `coderabbit review --agent --type all --base jc/dev` completed with 0 findings.
-- PR URL: pending.
+- Review packets: self-review against #401-#404 completed in current orchestrator thread; CodeRabbit follow-up docs/tests for `prompt_forbidden` and scoped `prompt_rules` covered.
+- Local CodeRabbit report: passed; `coderabbit review --agent --type all --base jc/dev` completed with 0 findings before push.
+- PR URL: https://github.com/enclave-free/enclave.free-prototype/pull/405
 
 ## Commands
 
@@ -38,25 +38,25 @@ Fix the Admin Configuration Assistant failure where a behavior-rule request is t
 
 ## Slice Ledger
 
-| Issue | Type | Status | Review thread | Fixes needed | Verified |
-| --- | --- | --- | --- | --- | --- |
-| #402 Stage Agent Settings behavior-rule changes from Admin Config | AFK | implemented | self-review | none | Sage unit tests, frontend change-set tests, docs updated |
-| #403 Stop false Apply handoffs after rejected Admin Config proposals | AFK | implemented | self-review | none | Sage unit tests, frontend no-pending tests, Chromium no-pending smoke |
-| #404 Smoke test Admin Config behavior-rule Apply end to end | AFK | partial / external blocker | self-review | Kimi upstream chat readiness | Compose `/test` passes; direct Agent Settings apply path verified; model-generated proposal blocked by Tinfoil 503 |
+| Issue                                                                | Type | Status      | Review thread | Fixes needed | Verified                                                                                                                                                         |
+| -------------------------------------------------------------------- | ---- | ----------- | ------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #402 Stage Agent Settings behavior-rule changes from Admin Config    | AFK  | implemented | self-review   | none         | Sage unit tests, frontend change-set tests, docs updated                                                                                                         |
+| #403 Stop false Apply handoffs after rejected Admin Config proposals | AFK  | implemented | self-review   | none         | Sage unit tests, frontend no-pending tests, Chromium no-pending smoke                                                                                            |
+| #404 Smoke test Admin Config behavior-rule Apply end to end          | AFK  | implemented | self-review   | none         | Compose `/test` and `/llm/test` pass; browser smoke shows pending Apply panel for `PUT /admin/ai-config/prompt_rules`; direct Agent Settings apply path verified |
 
 ## Parked HITL Slices
 
 | Issue | Why parked | Blocks | Required human action | Final PR decision |
-| --- | --- | --- | --- | --- |
-| None | n/a | n/a | n/a | n/a |
+| ----- | ---------- | ------ | --------------------- | ----------------- |
+| None  | n/a        | n/a    | n/a                   | n/a               |
 
 ## Issue Session Ledger
 
-| Issue | Fixed point | Worker session | Commit | Review result | Checks |
-| --- | --- | --- | --- | --- | --- |
-| #402 | 883c34f42b57cb384d9ecff8381d0e2459bdbcbb | current orchestrator thread | current parent feature commit; Sage 12e1b41 | pass | `cargo test -p sage-core --lib`; focused Vitest; Prettier; frontend build |
-| #403 | 883c34f42b57cb384d9ecff8381d0e2459bdbcbb | current orchestrator thread | current parent feature commit; Sage 12e1b41 | pass | `cargo test -p sage-core --lib`; focused Vitest; Chromium no-pending smoke |
-| #404 | 883c34f42b57cb384d9ecff8381d0e2459bdbcbb | current orchestrator thread | pending | partial | `/test` pass; `/llm/test` fails with upstream Kimi 503 container healthy pending |
+| Issue | Fixed point                              | Worker session              | Commit                                      | Review result | Checks                                                                                                              |
+| ----- | ---------------------------------------- | --------------------------- | ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| #402  | 883c34f42b57cb384d9ecff8381d0e2459bdbcbb | current orchestrator thread | current parent feature commit; Sage 12e1b41 | pass          | `cargo test -p sage-core --lib`; focused Vitest; Prettier; frontend build                                           |
+| #403  | 883c34f42b57cb384d9ecff8381d0e2459bdbcbb | current orchestrator thread | current parent feature commit; Sage 12e1b41 | pass          | `cargo test -p sage-core --lib`; focused Vitest; Chromium no-pending smoke                                          |
+| #404  | 883c34f42b57cb384d9ecff8381d0e2459bdbcbb | current orchestrator thread | current parent feature commit; Sage 12e1b41 | pass          | `/test` pass; `/llm/test` pass; Chromium sidebar smoke shows Apply panel for model-generated behavior-rule proposal |
 
 ## Open Questions
 
@@ -64,4 +64,4 @@ Fix the Admin Configuration Assistant failure where a behavior-rule request is t
 
 ## Escalations
 
-- Kimi is configured (`TINFOIL_MODEL=kimi-k2-6`) but local `/llm/test` and direct Tinfoil chat-completion probes return HTTP 503 with `kimi-k2-6` container `healthy` pending. App stack `/test` passes; model-backed proposal-panel smoke cannot complete until upstream Tinfoil readiness recovers.
+- None.

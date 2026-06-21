@@ -91,7 +91,7 @@ Admin write intent is represented through `propose_config_change_set`, a model-c
 Canonical Admin Config proposal shapes:
 
 - Instance settings: `PUT /admin/settings` with a patch body using stored setting keys such as `instance_name`, `assistant_name`, `header_tagline`, `description`, `primary_color`, `default_theme`, `default_language`, and `auto_approve_users`.
-- Agent Settings: `PUT /admin/ai-config/{key}` with `{ "value": "..." }`. Behavior rules use `PUT /admin/ai-config/prompt_rules` with `value` set to a JSON string array, such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
+- Agent Settings: `PUT /admin/ai-config/{key}` with `{ "value": "..." }`. Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules` and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string array, such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - User types: `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
 - Guided onboarding bootstrap should propose the eight baseline settings plus any supplied user types in one change set when the admin has supplied them.
 
@@ -205,7 +205,7 @@ Example `requests_json`:
 ]
 ```
 
-Behavior-rule example:
+Behavior-rule and forbidden-topic examples:
 
 ```json
 [
@@ -214,6 +214,13 @@ Behavior-rule example:
     "path": "/admin/ai-config/prompt_rules",
     "body": {
       "value": "[\"Ask users where they are from before giving location-specific guidance.\"]"
+    }
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/ai-config/prompt_forbidden",
+    "body": {
+      "value": "[\"Do not provide legal advice.\"]"
     }
   }
 ]
