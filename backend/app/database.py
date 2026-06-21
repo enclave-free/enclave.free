@@ -625,6 +625,63 @@ def init_schema():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_country_regions_name ON country_regions(country_name)")
 
+    # --- Session Logs (Test & Feedback) ---
+    # Captured chat transcripts for admin review / refinement. `source` keeps this
+    # general so we are not boxed into admin-only testing: 'admin_test' = an admin
+    # chatting as a user persona; 'user' = a real user's session logged for review.
+    # Transcript content is NIP-04 encrypted to the admin pubkey AT REST — the file
+    # at transcript_path holds only ciphertext, and transcript_ephemeral_pubkey is
+    # the ephemeral pubkey the admin needs to decrypt client-side via NIP-07. The
+    # control plane can never read it back. See encryption.encrypt_for_admin.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            log_id TEXT UNIQUE NOT NULL,
+            source TEXT NOT NULL DEFAULT 'admin_test'
+                CHECK(source IN ('admin_test', 'user')),
+            title TEXT,
+            subject_user_id INTEGER,
+            user_type_id INTEGER,
+            sage_session_id TEXT,
+            transcript_path TEXT,
+            transcript_ephemeral_pubkey TEXT,
+            encrypted_to_pubkey TEXT,
+            turn_metadata_json TEXT,
+            turn_count INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'active'
+                CHECK(status IN ('active', 'completed', 'archived')),
+            created_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP,
+            FOREIGN KEY (subject_user_id) REFERENCES users(id),
+            FOREIGN KEY (user_type_id) REFERENCES user_types(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_status ON session_logs(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_source ON session_logs(source)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_user_type ON session_logs(user_type_id)")
+
+    # Per-turn feedback on a logged session. The rating stays plaintext so it can
+    # be queried/aggregated; the optional qualitative comment is NIP-04 encrypted
+    # to the admin pubkey because it may quote sensitive transcript content.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_log_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            log_id TEXT NOT NULL,
+            turn_index INTEGER NOT NULL,
+            rating TEXT NOT NULL CHECK(rating IN ('up', 'down')),
+            comment_ciphertext TEXT,
+            comment_ephemeral_pubkey TEXT,
+            created_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(log_id, turn_index),
+            FOREIGN KEY (log_id) REFERENCES session_logs(log_id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_log_feedback_log ON session_log_feedback(log_id)")
+
     conn.commit()
     logger.info("SQLite schema initialized")
 
@@ -641,6 +698,7 @@ def init_schema():
     _migrate_enforce_single_admin()  # Enforce the single-admin product invariant at the DB layer
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
     _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
+    _migrate_add_session_log_turn_metadata()  # Store safe turn role metadata for feedback validation
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -1033,6 +1091,21 @@ def _migrate_add_user_memory_retention_class() -> None:
         )
         conn.commit()
         logger.info("Migration: Added 'retention_class' column to user_memories table")
+
+    cursor.close()
+
+
+def _migrate_add_session_log_turn_metadata() -> None:
+    """Add safe turn role metadata for Test & Feedback validation."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(session_logs)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "turn_metadata_json" not in columns:
+        cursor.execute("ALTER TABLE session_logs ADD COLUMN turn_metadata_json TEXT")
+        conn.commit()
+        logger.info("Migration: Added 'turn_metadata_json' column to session_logs table")
 
     cursor.close()
 
@@ -2255,6 +2328,19 @@ def get_user_by_pubkey(pubkey: str) -> dict | None:
         if row:
             return get_user(row["id"])
         return None
+
+
+def set_user_pubkey(user_id: int, pubkey: str) -> bool:
+    """Assign/replace a user's Nostr pubkey. Returns True if updated."""
+    from nostr_keys import normalize_pubkey
+
+    normalized = normalize_pubkey(pubkey)
+    with get_cursor() as cursor:
+        cursor.execute(
+            "UPDATE users SET pubkey = ? WHERE id = ?",
+            (normalized, user_id),
+        )
+        return cursor.rowcount > 0
 
 
 def get_user_by_email(email: str) -> dict | None:

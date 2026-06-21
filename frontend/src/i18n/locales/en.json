@@ -5,6 +5,7 @@
     "save": "Save",
     "saving": "Saving...",
     "saved": "Saved",
+    "send": "Send",
     "sending": "Sending...",
     "saveChanges": "Save Changes",
     "edit": "Edit",
@@ -228,7 +229,7 @@
       "themeDark": "Dark"
     },
     "configAssistant": {
-      "onboardingWelcome": "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n\nExample: \"1. The Vibe Check, 4. orange, 5. system, 8. right away\". I'll save everything in one step — and you can switch to manual setup anytime.",
+      "onboardingWelcome": "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime.",
       "openAria": "Open admin assistant",
       "openTitle": "Admin assistant",
       "title": "Admin Configuration Assistant",
@@ -739,6 +740,8 @@
       "label": "Tools",
       "knowledgeSearch": "Search uploaded documents and knowledge chunks",
       "knowledgeSearchName": "Knowledge",
+      "curatedResources": "Find admin-vetted referral resources and trusted organizations",
+      "curatedResourcesName": "Resources",
       "webSearch": "Search the web for current information",
       "webSearchName": "Web",
       "database": "Query the SQLite database",
@@ -834,7 +837,69 @@
     "title": "Set up your instance",
     "subtitle": "Your assistant will collect the basics in one pass.",
     "manual": "Configure manually instead",
-    "finish": "Finish & go to dashboard"
+    "finish": "Finish & start testing",
+    "comingSoon": "This phase is coming soon and is being built separately.",
+    "steps": {
+      "initialize": {
+        "label": "Initialize",
+        "title": "Initialize",
+        "subtitle": "Let's cover the basics of your space so your agent starts with the right foundation."
+      },
+      "docs": {
+        "label": "Upload Docs",
+        "title": "Upload your field guide",
+        "subtitle": "Add the source material your agent answers from — books, guides, and reference documents."
+      },
+      "resources": {
+        "label": "Curated Resources",
+        "title": "Curated resources",
+        "subtitle": "Add trusted real-world resources — key contacts, lawyers, educational and mental-health support — the agent can refer people to."
+      },
+      "test": {
+        "label": "Test as User",
+        "title": "Test as a user",
+        "subtitle": "Coming soon — try the assistant as one of your user types and rate the answers."
+      },
+      "feedback": {
+        "label": "Feedback",
+        "title": "Feedback loop",
+        "subtitle": "Coming soon — review answer quality and iterate on your setup."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Test & Feedback",
+    "subtitle": "Try the assistant as one of your user types, then review the transcript and rate each answer to refine your setup.",
+    "tabs": {
+      "test": "Test as User",
+      "feedback": "Feedback"
+    },
+    "test": {
+      "pickPersona": "Pick a persona to test",
+      "pickPersonaBody": "Provision a test user for one of your user types, then chat as them. The session is saved as an encrypted trial you can rate under Feedback.",
+      "userType": "User type",
+      "genericUser": "Generic user (no type)",
+      "start": "Start session",
+      "admin": "Admin",
+      "testUserId": "Test user",
+      "endSave": "End & save trial",
+      "previewNotice": "Preview mode — true impersonation is not wired in yet, so this chat runs under your admin session. The transcript still saves for review.",
+      "chatEmpty": "Send a message as this user to begin the trial.",
+      "inputPlaceholder": "Message the assistant as this user…",
+      "saved": "Trial saved (encrypted). Review it under Feedback."
+    },
+    "feedback": {
+      "trials": "Trials",
+      "untitled": "Untitled trial",
+      "turns": "turns",
+      "turn": "Turn",
+      "empty": "No saved trials yet. Run a session under Test as User.",
+      "selectPrompt": "Select a trial to review its transcript and rate each turn.",
+      "noNip04": "Connect a Nostr extension (Alby, nos2x) to decrypt transcripts — they are encrypted to your admin key.",
+      "thumbUp": "Good answer",
+      "thumbDown": "Needs work",
+      "notePlaceholder": "Optional note (saved encrypted)…"
+    }
   },
   "adminDashboard": {
     "title": "Admin Dashboard",
@@ -885,6 +950,8 @@
     "uploadDesc": "Add documents to your knowledge base",
     "resources": "Resource Directory",
     "resourcesDesc": "Curate trusted lawyers, NGOs, and referral resources",
+    "testFeedback": "Test & Feedback",
+    "testFeedbackDesc": "Chat as a test user and rate answers to refine your setup",
     "database": "Database Explorer",
     "databaseDesc": "Browse and query the SQLite database",
     "diagnosticsSectionLabel": "Diagnostics",

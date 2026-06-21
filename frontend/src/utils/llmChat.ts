@@ -10,7 +10,17 @@ interface SendLlmChatOptions {
   sessionId?: string | null;
   jobIds?: string[];
   conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /**
+   * Optional bearer token to authenticate AS a specific user (impersonation).
+   * Sage prefers the Authorization bearer over the session cookie, so this scopes
+   * just this request to the token's user without touching the admin cookie.
+   */
+  authToken?: string | null;
 }
+
+type ConversationHistoryMessage = NonNullable<
+  SendLlmChatOptions['conversationHistory']
+>[number];
 
 interface SendLlmChatStreamOptions extends SendLlmChatOptions {
   onEvent: (event: string, data: unknown) => void;
@@ -36,25 +46,45 @@ async function buildUnifiedChatBody({
   }
   const sageOwnsAdminConfigHistory =
     Boolean(sessionId) && tools.includes('admin-config');
-  if (!sageOwnsAdminConfigHistory) {
-    const recentHistory = (conversationHistory || [])
-      .filter(
-        (message) =>
-          (message.role === 'user' || message.role === 'assistant') &&
-          typeof message.content === 'string' &&
-          message.content.trim()
-      )
-      .slice(-8)
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, 2000),
-      }));
-    if (recentHistory.length > 0) {
-      body.conversation_history = recentHistory;
+  const recentHistory = normalizedConversationHistory(conversationHistory);
+  if (sageOwnsAdminConfigHistory) {
+    const confirmationHistory = recentHistory
+      .filter(isAdminConfigApplySummary)
+      .slice(-3);
+    if (confirmationHistory.length > 0) {
+      body.conversation_history = confirmationHistory;
     }
+  } else if (recentHistory.length > 0) {
+    body.conversation_history = recentHistory.slice(-8);
   }
 
   return body;
+}
+
+function normalizedConversationHistory(
+  conversationHistory: SendLlmChatOptions['conversationHistory']
+): ConversationHistoryMessage[] {
+  return (conversationHistory || [])
+    .filter(
+      (message) =>
+        (message.role === 'user' || message.role === 'assistant') &&
+        typeof message.content === 'string' &&
+        message.content.trim()
+    )
+    .map((message) => ({
+      role: message.role,
+      content: message.content.slice(0, 2000),
+    }));
+}
+
+function isAdminConfigApplySummary(message: ConversationHistoryMessage): boolean {
+  if (message.role !== 'assistant') return false;
+
+  const content = message.content.trim();
+  return (
+    (content.startsWith('Applied ') && content.includes('change(s)')) ||
+    content.startsWith('The change set was applied successfully')
+  );
 }
 
 export async function sendLlmChatWithUnifiedTools(
@@ -62,11 +92,16 @@ export async function sendLlmChatWithUnifiedTools(
 ): Promise<Response> {
   const body = await buildUnifiedChatBody(options);
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (options.authToken) {
+    headers.Authorization = `Bearer ${options.authToken}`;
+  }
+
   return fetch(`${API_BASE}/llm/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     credentials: 'include',
     body: JSON.stringify(body),
   });
@@ -77,12 +112,17 @@ export async function sendLlmChatStreamWithUnifiedTools({
   ...options
 }: SendLlmChatStreamOptions): Promise<void> {
   const body = await buildUnifiedChatBody(options);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
+  };
+  if (options.authToken) {
+    headers.Authorization = `Bearer ${options.authToken}`;
+  }
+
   const response = await fetch(`${API_BASE}/llm/chat/stream`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-    },
+    headers,
     credentials: 'include',
     body: JSON.stringify(body),
   });

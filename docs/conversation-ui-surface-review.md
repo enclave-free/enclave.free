@@ -64,6 +64,7 @@ Date: 2026-05-24
 Composer Knowledge semantics:
 
 - Composer Knowledge controls mean selecting constraints for the `knowledge-search` Tool Set.
+- Composer Resources controls mean enabling the admin-curated Resource Directory Tool Set; it is not document retrieval.
 - The chat composer does not upload files, hold ephemeral browser-only file attachments, or expose assistant-ui attachment persistence as a product contract.
 - Document persistence, Retrieval availability, deletion, export, trace visibility, active-content handling, and authorization remain owned by the existing Document Library and Retrieval workflow.
 - Unsupported file attachment affordances should stay absent so the composer does not imply hidden upload, multimodal, or one-turn file semantics.

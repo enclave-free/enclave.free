@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
   LifeBuoy,
+  UserCheck,
 } from 'lucide-react';
 import { InstanceLogo } from '../components/shared/InstanceLogo';
 import { isAdminAuthenticated } from '../utils/adminApi';
@@ -447,6 +448,15 @@ export function AdminSetup() {
               description={t(
                 'adminDashboard.resourcesDesc',
                 'Curate trusted lawyers, NGOs, and referral resources'
+              )}
+            />
+            <DashboardCard
+              to="/admin/test-and-feedback"
+              icon={<UserCheck className="w-5 h-5" />}
+              title={t('adminDashboard.testFeedback', 'Test & Feedback')}
+              description={t(
+                'adminDashboard.testFeedbackDesc',
+                'Chat as a test user and rate answers to refine your setup'
               )}
             />
           </div>

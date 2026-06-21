@@ -45,7 +45,7 @@ Defense-in-depth:
 - Shares the same chat send runtime as `ChatPage`:
   - `frontend/src/utils/llmChat.ts` (`sendLlmChatWithUnifiedTools`)
 - Transport: sends the normal public `POST /llm/chat` request to the Gateway-facing API base. Gateway routes this request to Sage; Python does not expose public `/llm/chat` or `/session-defaults` handlers in the hard-cut prototype.
-  - `tools` / Tool Sets (same admin-visible Tool Set IDs as full chat: `knowledge-search`, `web-search`, `admin-config`, `db-query`)
+  - `tools` / Tool Sets (same admin-visible Tool Set IDs as full chat: `knowledge-search`, `curated-resources`, `web-search`, `admin-config`, `db-query`)
   - `admin-config` admin-only Tool Set
   - optional Tool constraints such as Knowledge Search document scope
   - no `client_executed_tools`
@@ -56,6 +56,7 @@ Tool defaults:
 - Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
 - `admin-config` is default-on for admin configuration conversations, while `web-search` and `db-query` remain explicit unless enabled by defaults.
 - `knowledge-search` is a visible Tool Set. When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage should call Knowledge Search when enabled and relevant.
+- `curated-resources` is a visible Tool Set for the admin-curated Resource Directory. It is separate from Knowledge Search and should be used for vetted referral/resource suggestions, not uploaded document retrieval.
 - Admin `/chat`, the sidebar, and guided onboarding use the same Sage model-driven Tool loop.
 - The browser does not assemble or inject admin configuration snapshots for chat turns.
 
@@ -90,6 +91,7 @@ Admin write intent is represented through `propose_config_change_set`, a model-c
 Canonical Admin Config proposal shapes:
 
 - Instance settings: `PUT /admin/settings` with a patch body using stored setting keys such as `instance_name`, `assistant_name`, `header_tagline`, `description`, `primary_color`, `default_theme`, `default_language`, and `auto_approve_users`.
+- Agent Settings: `PUT /admin/ai-config/{key}` with `{ "value": "..." }`. Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules` and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string array, such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - User types: `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
 - Guided onboarding bootstrap should propose the eight baseline settings plus any supplied user types in one change set when the admin has supplied them.
 
@@ -199,6 +201,27 @@ Example `requests_json`:
     "method": "PUT",
     "path": "/admin/deployment/config/LLM_PROVIDER",
     "body": { "value": "sage" }
+  }
+]
+```
+
+Behavior-rule and forbidden-topic examples:
+
+```json
+[
+  {
+    "method": "PUT",
+    "path": "/admin/ai-config/prompt_rules",
+    "body": {
+      "value": "[\"Ask users where they are from before giving location-specific guidance.\"]"
+    }
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/ai-config/prompt_forbidden",
+    "body": {
+      "value": "[\"Do not provide legal advice.\"]"
+    }
   }
 ]
 ```

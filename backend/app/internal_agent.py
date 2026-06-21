@@ -154,6 +154,28 @@ class InternalResourceSearchResponse(BaseModel):
     help_type: str
 
 
+class InternalSessionLogTurn(BaseModel):
+    role: str
+    content: str
+    ts: Optional[str] = None
+
+
+class InternalSessionLogRequest(BaseModel):
+    """Log a real user's chat session for admin review. The transcript is NIP-04
+    encrypted to the admin pubkey at rest — see session_logs.save_transcript."""
+    actor: InternalActorContext
+    turns: list[InternalSessionLogTurn]
+    sage_session_id: Optional[str] = None
+    user_type_id: Optional[int] = None
+    title: Optional[str] = None
+
+
+class InternalSessionLogResponse(BaseModel):
+    log_id: str
+    status: str
+    turn_count: int
+
+
 class InternalAdminDbQueryRequest(BaseModel):
     sql: str
 
@@ -615,6 +637,11 @@ def _onboarding_status_tool_data() -> dict[str, Any]:
         if key not in configured_key_set
     ]
     user_type_data = _user_types_tool_data()
+    user_types = user_type_data["user_types"]
+    # The 9th guided question: the operator must define at least one non-admin
+    # user type (e.g. Teacher, Student). Created live via the POST /admin/user-types
+    # change-set path, so "done" simply means one or more user types now exist.
+    user_types_complete = len(user_types) >= 1
 
     return {
         "instance": {
@@ -632,7 +659,13 @@ def _onboarding_status_tool_data() -> dict[str, Any]:
             "required_count": len(GUIDED_BOOTSTRAP_SETTING_KEYS),
             "configured_required_count": len(configured_keys),
         },
-        "user_types": user_type_data["user_types"],
+        "user_types_setup": {
+            "required_minimum": 1,
+            "count": len(user_types),
+            "names": [ut.get("name") for ut in user_types],
+            "complete": user_types_complete,
+        },
+        "user_types": user_types,
         "onboarding_questions": user_type_data["onboarding_questions"],
         "limits": user_type_data["limits"],
     }
@@ -815,6 +848,59 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
         resources=resources,
         resolved_country_code=resolved,
         help_type=help_type,
+    )
+
+
+@router.post(
+    "/session-logs",
+    response_model=InternalSessionLogResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessionLogResponse:
+    """Pathway for logging a real (non-admin) user's chat session for admin review.
+
+    Mirrors the admin-test logging path but is callable by the runtime over the
+    internal token. The transcript is NIP-04 encrypted to the admin pubkey; fails
+    closed (409) if no admin is configured, so nothing is stored in plaintext.
+    """
+    import session_logs
+
+    if payload.actor.type != "user":
+        raise HTTPException(
+            status_code=403,
+            detail="User session logs require a user actor",
+        )
+
+    log = None
+    subject_user_id = payload.actor.id
+    try:
+        log = session_logs.create_session_log(
+            source="user",
+            title=payload.title,
+            subject_user_id=subject_user_id,
+            user_type_id=payload.user_type_id or payload.actor.user_type_id,
+            sage_session_id=payload.sage_session_id,
+            created_by=f"user:{subject_user_id}" if subject_user_id else "system",
+        )
+        saved = session_logs.save_transcript(
+            log["log_id"],
+            [turn.model_dump() for turn in payload.turns],
+        )
+    except ValueError as exc:
+        if log is not None:
+            try:
+                session_logs.delete_session_log(log["log_id"])
+            except OSError:
+                logger.warning(
+                    "Could not clean up failed internal session log %s",
+                    log["log_id"],
+                    exc_info=True,
+                )
+        raise HTTPException(status_code=409, detail=str(exc))
+    return InternalSessionLogResponse(
+        log_id=saved["log_id"],
+        status=saved["status"],
+        turn_count=saved["turn_count"],
     )
 
 
