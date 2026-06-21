@@ -42,16 +42,22 @@ describe('resolveAdminApplyIntent', () => {
     });
   });
 
-  it('lets apply language continue to Sage when no change set exists', () => {
+  it('routes direct apply language to no-pending guidance when no change set exists', () => {
     expect(resolveAdminApplyIntent('Apply them', false)).toEqual({
-      kind: 'none',
+      kind: 'no-pending',
     });
+    expect(resolveAdminApplyIntent('I confirm', false)).toEqual({
+      kind: 'no-pending',
+    });
+    expect(resolveAdminApplyIntent('yes do it', false)).toEqual({
+      kind: 'no-pending',
+    });
+  });
+
+  it('lets broader apply or confirm prose continue to Sage when no change set exists', () => {
     expect(
       resolveAdminApplyIntent('Please apply the new settings', false)
     ).toEqual({
-      kind: 'none',
-    });
-    expect(resolveAdminApplyIntent('I confirm', false)).toEqual({
       kind: 'none',
     });
     expect(

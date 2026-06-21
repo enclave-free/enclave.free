@@ -181,6 +181,23 @@ function _readTraceVisibility(value: unknown): string | undefined {
     : undefined;
 }
 
+function _readAgentSettingsKey(path: string): string | undefined {
+  const match =
+    /^\/admin\/ai-config\/(?:user-type\/[^/]+\/)?([a-z0-9_]+)$/i.exec(path);
+  return match?.[1]?.toLowerCase();
+}
+
+function _isJsonStringArray(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value);
+    return (
+      Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')
+    );
+  } catch {
+    return false;
+  }
+}
+
 function normalizeAdminAssistantPath(path: string): string {
   return path.replace(/^\/admin\/user_types(?=\/|$)/, '/admin/user-types');
 }
@@ -640,6 +657,27 @@ export function validateAdminAssistantChangeSet(
         return {
           ok: false,
           error: 'POST /admin/user-types requires body.name',
+        };
+      }
+    }
+
+    if (req.method === 'PUT' && pathLower.startsWith('/admin/ai-config/')) {
+      const value = _isPlainObject(req.body) ? req.body.value : undefined;
+      if (typeof value !== 'string') {
+        return {
+          ok: false,
+          error: `${req.path} body.value must be a string`,
+        };
+      }
+
+      const key = _readAgentSettingsKey(req.path);
+      if (
+        (key === 'prompt_rules' || key === 'prompt_forbidden') &&
+        !_isJsonStringArray(value)
+      ) {
+        return {
+          ok: false,
+          error: `${req.path} body.value must be a JSON array of strings`,
         };
       }
     }

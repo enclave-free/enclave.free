@@ -139,7 +139,11 @@ function resourceToForm(resource: Resource): FormState {
   };
 }
 
-export function AdminResourcesDirectory() {
+export function AdminResourcesDirectory({
+  embedded = false,
+}: {
+  embedded?: boolean;
+} = {}) {
   const { t } = useTranslation();
   const [resources, setResources] = useState<Resource[]>([]);
   const [helpTypes, setHelpTypes] = useState<HelpType[]>([]);
@@ -311,39 +315,19 @@ export function AdminResourcesDirectory() {
     }
   };
 
-  return (
-    <PageShell
-      width="lg"
-      header={
-        <div className="flex flex-col gap-4">
-          <Link
-            to="/admin/setup"
-            className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t('common.backToAdmin', 'Back to Admin')}
-          </Link>
-          <SectionHeader
-            title={
-              <span className="inline-flex items-center gap-2">
-                <LifeBuoy className="h-5 w-5" />
-                {t('adminResources.title', 'Resource Directory')}
-              </span>
-            }
-            description={t(
-              'adminResources.subtitle',
-              'Curated, trusted real-world resources the assistant can refer people to when a conversation escalates. Filtered by region and type of help. Only "ready" resources are shown to end users.'
-            )}
-            actions={
-              <Button variant="primary" size="sm" onClick={openCreate}>
-                <Plus className="h-4 w-4" />
-                {t('adminResources.add', 'Add resource')}
-              </Button>
-            }
-          />
-        </div>
-      }
+  const addButton = (
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={openCreate}
+      leadingIcon={<Plus className="h-4 w-4" />}
     >
+      {t('adminResources.add', 'Add resource')}
+    </Button>
+  );
+
+  const body = (
+    <>
       {error && <Callout tone="error">{error}</Callout>}
 
       {loading ? (
@@ -672,6 +656,47 @@ export function AdminResourcesDirectory() {
           </Card>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex w-full flex-col gap-6">
+        <div className="flex items-center justify-end">{addButton}</div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <PageShell
+      width="lg"
+      header={
+        <div className="flex flex-col gap-4">
+          <Link
+            to="/admin/setup"
+            className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t('common.backToAdmin', 'Back to Admin')}
+          </Link>
+          <SectionHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                <LifeBuoy className="h-5 w-5" />
+                {t('adminResources.title', 'Resource Directory')}
+              </span>
+            }
+            description={t(
+              'adminResources.subtitle',
+              'Curated, trusted real-world resources the assistant can refer people to when a conversation escalates. Filtered by region and type of help. Only "ready" resources are shown to end users.'
+            )}
+            actions={addButton}
+          />
+        </div>
+      }
+    >
+      {body}
     </PageShell>
   );
 }

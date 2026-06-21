@@ -2,6 +2,11 @@
 
 This document describes the integration test suite located in `scripts/tests/`.
 
+Live model/provider evidence runs live separately in `scripts/benches/`. See
+[Conversation Model Bench](conversation-model-bench.md) for the opt-in bench
+that exercises real Sage conversation paths and records timing, tool-use, and
+answer-quality evidence without becoming a required red/green integration test.
+
 ---
 
 ## Directory Structure

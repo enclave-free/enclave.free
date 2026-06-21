@@ -535,6 +535,11 @@ The proposal Tool stages canonical Admin Config write shapes:
 
 - `PUT /admin/settings` with stored setting keys such as `header_tagline`,
   `default_language`, `default_theme`, and `auto_approve_users`.
+- `PUT /admin/ai-config/{key}` with `{ "value": "..." }` for Agent Settings.
+  Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules`
+  and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string
+  array, such as
+  `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
 
 Sage may normalize only the known small drift at the proposal boundary:
