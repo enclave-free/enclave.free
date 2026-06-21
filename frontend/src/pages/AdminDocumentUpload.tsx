@@ -1089,15 +1089,17 @@ export function AdminDocumentUpload({
       </div>
 
       {/* Navigation */}
-      <div className="flex gap-3">
-        <Link
-          to="/admin/setup"
-          className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-xl px-4 py-3 text-sm font-medium transition-all hover:bg-surface"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t('upload.backToSetup')}
-        </Link>
-      </div>
+      {!embedded && (
+        <div className="flex gap-3">
+          <Link
+            to="/admin/setup"
+            className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-xl px-4 py-3 text-sm font-medium transition-all hover:bg-surface"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t('upload.backToSetup')}
+          </Link>
+        </div>
+      )}
 
       {/* Pipeline Help Modal */}
       {showPipelineHelpModal && (

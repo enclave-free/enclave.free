@@ -865,7 +865,14 @@ async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessio
     """
     import session_logs
 
-    subject_user_id = payload.actor.id if payload.actor.type == "user" else None
+    if payload.actor.type != "user":
+        raise HTTPException(
+            status_code=403,
+            detail="User session logs require a user actor",
+        )
+
+    log = None
+    subject_user_id = payload.actor.id
     try:
         log = session_logs.create_session_log(
             source="user",
@@ -880,6 +887,15 @@ async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessio
             [turn.model_dump() for turn in payload.turns],
         )
     except ValueError as exc:
+        if log is not None:
+            try:
+                session_logs.delete_session_log(log["log_id"])
+            except OSError:
+                logger.warning(
+                    "Could not clean up failed internal session log %s",
+                    log["log_id"],
+                    exc_info=True,
+                )
         raise HTTPException(status_code=409, detail=str(exc))
     return InternalSessionLogResponse(
         log_id=saved["log_id"],

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Loader2,
@@ -61,6 +61,8 @@ export function FeedbackView() {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const openLogRequestIdRef = useRef(0);
 
   const nip04 = useMemo(() => hasNip04Support(), []);
 
@@ -83,15 +85,21 @@ export function FeedbackView() {
   }, [loadList]);
 
   const openLog = useCallback(async (logId: string) => {
+    const requestId = openLogRequestIdRef.current + 1;
+    openLogRequestIdRef.current = requestId;
+    const isCurrentRequest = () => openLogRequestIdRef.current === requestId;
+
     setSelectedId(logId);
     setLoadingDetail(true);
     setDetailError(null);
     setFeedbackError(null);
     setExportError(null);
+    setDeleteError(null);
     setTurns(null);
     setDrafts({});
     try {
       const full = await getSessionLog(logId);
+      if (!isCurrentRequest()) return;
       setDetail(full);
 
       // Decrypt the transcript ciphertext via NIP-07.
@@ -101,6 +109,7 @@ export function FeedbackView() {
           ciphertext: full.transcript_ciphertext,
           ephemeral_pubkey: full.transcript_ephemeral_pubkey,
         });
+        if (!isCurrentRequest()) return;
         if (plaintext == null) {
           throw new Error(
             'Could not decrypt the transcript. Approve the decryption request in your Nostr extension.'
@@ -109,6 +118,7 @@ export function FeedbackView() {
         const parsed = JSON.parse(plaintext) as { turns?: TranscriptTurn[] };
         parsedTurns = parsed.turns ?? [];
       }
+      if (!isCurrentRequest()) return;
       setTurns(parsedTurns);
 
       // Hydrate per-turn drafts from existing (decrypted) feedback.
@@ -130,13 +140,18 @@ export function FeedbackView() {
           };
         })
       );
+      if (!isCurrentRequest()) return;
       setDrafts(nextDrafts);
     } catch (err) {
-      setDetailError(
-        err instanceof Error ? err.message : 'Failed to load transcript'
-      );
+      if (isCurrentRequest()) {
+        setDetailError(
+          err instanceof Error ? err.message : 'Failed to load transcript'
+        );
+      }
     } finally {
-      setLoadingDetail(false);
+      if (isCurrentRequest()) {
+        setLoadingDetail(false);
+      }
     }
   }, []);
 
@@ -187,13 +202,22 @@ export function FeedbackView() {
 
   const handleDelete = useCallback(
     async (logId: string) => {
-      await deleteSessionLog(logId);
-      if (selectedId === logId) {
-        setSelectedId(null);
-        setDetail(null);
-        setTurns(null);
+      setDeleteError(null);
+      try {
+        await deleteSessionLog(logId);
+        if (selectedId === logId) {
+          setSelectedId(null);
+          setDetail(null);
+          setTurns(null);
+        }
+        await loadList();
+      } catch (err) {
+        setDeleteError(
+          err instanceof Error
+            ? err.message
+            : 'Session log could not be deleted'
+        );
       }
-      void loadList();
     },
     [selectedId, loadList]
   );
@@ -348,6 +372,7 @@ export function FeedbackView() {
 
             {feedbackError && <Callout tone="error">{feedbackError}</Callout>}
             {exportError && <Callout tone="error">{exportError}</Callout>}
+            {deleteError && <Callout tone="error">{deleteError}</Callout>}
 
             {(turns ?? []).map((turn, index) => {
               const draft = drafts[index];

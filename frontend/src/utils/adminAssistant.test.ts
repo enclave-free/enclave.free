@@ -242,6 +242,132 @@ describe('coerceAdminAssistantChangeSetPayload', () => {
     }
   });
 
+  it('accepts behavior rules through Agent Settings before staging', () => {
+    const rules = JSON.stringify([
+      'Ask users where they are from before giving location-specific guidance.',
+    ]);
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      summary: 'Ask where users are from',
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_rules',
+          body: { value: rules },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(true);
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0]).toEqual({
+        method: 'PUT',
+        path: '/admin/ai-config/prompt_rules',
+        body: { value: rules },
+      });
+    }
+  });
+
+  it('rejects malformed behavior rule Agent Settings payloads before staging', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_rules',
+          body: { value: 'Ask users where they are from.' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('JSON array of strings');
+    }
+  });
+
+  it('accepts forbidden topics through Agent Settings before staging', () => {
+    const forbidden = JSON.stringify(['Do not provide legal advice.']);
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_forbidden',
+          body: { value: forbidden },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(true);
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0]).toEqual({
+        method: 'PUT',
+        path: '/admin/ai-config/prompt_forbidden',
+        body: { value: forbidden },
+      });
+    }
+  });
+
+  it('rejects malformed forbidden topics Agent Settings payloads before staging', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/prompt_forbidden',
+          body: { value: 'Do not provide legal advice.' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('JSON array of strings');
+    }
+  });
+
+  it('accepts user-type scoped behavior rules before staging', () => {
+    const rules = JSON.stringify(['Ask for region before recommendations.']);
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/user-type/1/prompt_rules',
+          body: { value: rules },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(true);
+    if (extracted.ok) {
+      expect(extracted.changeSet.requests[0]).toEqual({
+        method: 'PUT',
+        path: '/admin/ai-config/user-type/1/prompt_rules',
+        body: { value: rules },
+      });
+    }
+  });
+
+  it('rejects malformed user-type scoped behavior rules before staging', () => {
+    const extracted = coerceAdminAssistantChangeSetPayload({
+      version: 1,
+      requests: [
+        {
+          method: 'PUT',
+          path: '/admin/ai-config/user-type/1/prompt_rules',
+          body: { value: 'Ask for region before recommendations.' },
+        },
+      ],
+    });
+
+    expect(extracted.ok).toBe(false);
+    if (!extracted.ok) {
+      expect(extracted.error).toContain('JSON array of strings');
+    }
+  });
+
   it('rejects non-string language and theme setting values before staging', () => {
     const invalidLanguage = coerceAdminAssistantChangeSetPayload({
       version: 1,

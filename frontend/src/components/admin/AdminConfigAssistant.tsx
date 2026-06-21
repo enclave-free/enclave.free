@@ -73,6 +73,8 @@ interface AdminConfigAssistantProps {
 }
 
 const CONFIG_TOOL_ID = 'admin-config';
+const ONBOARDING_WELCOME_MESSAGE =
+  "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime.";
 
 // How often (in ms) streamed tokens are flushed to the message list while the
 // assistant is responding. ~30 fps reads as smooth to the eye while avoiding a
@@ -170,7 +172,7 @@ export function AdminConfigAssistant({
           createOnboardingMessage(
             t(
               'admin.configAssistant.onboardingWelcome',
-              "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime."
+              ONBOARDING_WELCOME_MESSAGE
             )
           ),
         ]
@@ -370,7 +372,7 @@ export function AdminConfigAssistant({
             createOnboardingMessage(
               t(
                 'admin.configAssistant.onboardingWelcome',
-                "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime."
+                ONBOARDING_WELCOME_MESSAGE
               )
             ),
           ]
@@ -417,6 +419,23 @@ export function AdminConfigAssistant({
             content: t(
               'admin.configAssistant.applyIntentUsePanel',
               'Use the pending changes panel below and click Apply to confirm these configuration updates.'
+            ),
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (applyIntent.kind === 'no-pending') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            role: 'assistant',
+            content: t(
+              'admin.configAssistant.applyIntentNoPending',
+              'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
             ),
             timestamp: new Date(),
           },

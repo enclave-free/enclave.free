@@ -18,6 +18,10 @@ interface SendLlmChatOptions {
   authToken?: string | null;
 }
 
+type ConversationHistoryMessage = NonNullable<
+  SendLlmChatOptions['conversationHistory']
+>[number];
+
 interface SendLlmChatStreamOptions extends SendLlmChatOptions {
   onEvent: (event: string, data: unknown) => void;
 }
@@ -42,25 +46,45 @@ async function buildUnifiedChatBody({
   }
   const sageOwnsAdminConfigHistory =
     Boolean(sessionId) && tools.includes('admin-config');
-  if (!sageOwnsAdminConfigHistory) {
-    const recentHistory = (conversationHistory || [])
-      .filter(
-        (message) =>
-          (message.role === 'user' || message.role === 'assistant') &&
-          typeof message.content === 'string' &&
-          message.content.trim()
-      )
-      .slice(-8)
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, 2000),
-      }));
-    if (recentHistory.length > 0) {
-      body.conversation_history = recentHistory;
+  const recentHistory = normalizedConversationHistory(conversationHistory);
+  if (sageOwnsAdminConfigHistory) {
+    const confirmationHistory = recentHistory
+      .filter(isAdminConfigApplySummary)
+      .slice(-3);
+    if (confirmationHistory.length > 0) {
+      body.conversation_history = confirmationHistory;
     }
+  } else if (recentHistory.length > 0) {
+    body.conversation_history = recentHistory.slice(-8);
   }
 
   return body;
+}
+
+function normalizedConversationHistory(
+  conversationHistory: SendLlmChatOptions['conversationHistory']
+): ConversationHistoryMessage[] {
+  return (conversationHistory || [])
+    .filter(
+      (message) =>
+        (message.role === 'user' || message.role === 'assistant') &&
+        typeof message.content === 'string' &&
+        message.content.trim()
+    )
+    .map((message) => ({
+      role: message.role,
+      content: message.content.slice(0, 2000),
+    }));
+}
+
+function isAdminConfigApplySummary(message: ConversationHistoryMessage): boolean {
+  if (message.role !== 'assistant') return false;
+
+  const content = message.content.trim();
+  return (
+    (content.startsWith('Applied ') && content.includes('change(s)')) ||
+    content.startsWith('The change set was applied successfully')
+  );
 }
 
 export async function sendLlmChatWithUnifiedTools(

@@ -2034,6 +2034,9 @@ async def provision_test_user_admin(
     and impersonation can mint a real, scoped session for it.
     """
     admin_pubkey = admin.get("pubkey")
+    if user_type_id is not None and not database.get_user_type(user_type_id):
+        raise HTTPException(status_code=404, detail="User type not found")
+
     derived_pubkey = impersonation.derive_test_user_pubkey(admin_pubkey, user_type_id)
     email = _test_user_email(user_type_id)
 
@@ -2098,7 +2101,7 @@ async def issue_impersonation_token_admin(
             user_id=user_id, issued_by_pubkey=admin.get("pubkey")
         )
     except impersonation.ImpersonationUnavailable as exc:
-        raise HTTPException(status_code=501, detail=str(exc))
+        raise HTTPException(status_code=403, detail=str(exc))
 
 
 # --- User Field Definitions ---

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackView } from './FeedbackView';
@@ -34,9 +34,37 @@ const mockSetTurnFeedback = vi.mocked(setTurnFeedback);
 const mockCreateObjectURL = vi.fn(() => 'blob:test-feedback-log-1');
 const mockRevokeObjectURL = vi.fn();
 const mockAnchorClick = vi.fn();
+let originalCreateObjectURLDescriptor: PropertyDescriptor | undefined;
+let originalRevokeObjectURLDescriptor: PropertyDescriptor | undefined;
+let originalAnchorClickDescriptor: PropertyDescriptor | undefined;
+
+function restoreProperty(
+  target: object,
+  property: PropertyKey,
+  descriptor: PropertyDescriptor | undefined
+) {
+  if (descriptor) {
+    Object.defineProperty(target, property, descriptor);
+  } else {
+    Reflect.deleteProperty(target, property);
+  }
+}
 
 describe('FeedbackView', () => {
   beforeEach(() => {
+    originalCreateObjectURLDescriptor = Object.getOwnPropertyDescriptor(
+      URL,
+      'createObjectURL'
+    );
+    originalRevokeObjectURLDescriptor = Object.getOwnPropertyDescriptor(
+      URL,
+      'revokeObjectURL'
+    );
+    originalAnchorClickDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLAnchorElement.prototype,
+      'click'
+    );
+
     mockDecryptField.mockReset();
     mockHasNip04Support.mockReset();
     mockDeleteSessionLog.mockReset();
@@ -113,6 +141,13 @@ describe('FeedbackView', () => {
 
   afterEach(() => {
     cleanup();
+    restoreProperty(URL, 'createObjectURL', originalCreateObjectURLDescriptor);
+    restoreProperty(URL, 'revokeObjectURL', originalRevokeObjectURLDescriptor);
+    restoreProperty(
+      HTMLAnchorElement.prototype,
+      'click',
+      originalAnchorClickDescriptor
+    );
   });
 
   it('shows a clear error when rating feedback is rejected', async () => {
@@ -161,5 +196,122 @@ describe('FeedbackView', () => {
       'blob:test-feedback-log-1'
     );
     expect(mockAnchorClick).toHaveBeenCalled();
+  });
+
+  it('ignores stale transcript loads after a newer log is selected', async () => {
+    const user = userEvent.setup();
+    let resolveFirstLog!: (
+      value: Awaited<ReturnType<typeof getSessionLog>>
+    ) => void;
+    mockListSessionLogs.mockResolvedValue([
+      {
+        log_id: 'log-1',
+        source: 'admin_test',
+        title: 'First trial',
+        subject_user_id: 42,
+        user_type_id: 1,
+        sage_session_id: 'sage-1',
+        turn_count: 0,
+        status: 'completed',
+        created_by: 'admin',
+        created_at: null,
+        updated_at: null,
+        completed_at: null,
+        has_transcript: false,
+      },
+      {
+        log_id: 'log-2',
+        source: 'admin_test',
+        title: 'Second trial',
+        subject_user_id: 43,
+        user_type_id: 1,
+        sage_session_id: 'sage-2',
+        turn_count: 0,
+        status: 'completed',
+        created_by: 'admin',
+        created_at: null,
+        updated_at: null,
+        completed_at: null,
+        has_transcript: false,
+      },
+    ]);
+    mockGetSessionLog.mockImplementation((logId) => {
+      if (logId === 'log-1') {
+        return new Promise((resolve) => {
+          resolveFirstLog = resolve;
+        });
+      }
+      return Promise.resolve({
+        log_id: 'log-2',
+        source: 'admin_test',
+        title: 'Loaded second trial',
+        subject_user_id: 43,
+        user_type_id: 1,
+        sage_session_id: 'sage-2',
+        turn_count: 0,
+        status: 'completed',
+        created_by: 'admin',
+        created_at: null,
+        updated_at: null,
+        completed_at: null,
+        has_transcript: false,
+        transcript_ciphertext: null,
+        transcript_ephemeral_pubkey: null,
+        encrypted_to_pubkey: 'admin-pubkey',
+        feedback: [],
+      });
+    });
+
+    render(<FeedbackView />);
+
+    await user.click(await screen.findByText('First trial'));
+    await user.click(await screen.findByText('Second trial'));
+    expect(await screen.findByText('Loaded second trial')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveFirstLog({
+        log_id: 'log-1',
+        source: 'admin_test',
+        title: 'Loaded first trial',
+        subject_user_id: 42,
+        user_type_id: 1,
+        sage_session_id: 'sage-1',
+        turn_count: 0,
+        status: 'completed',
+        created_by: 'admin',
+        created_at: null,
+        updated_at: null,
+        completed_at: null,
+        has_transcript: false,
+        transcript_ciphertext: null,
+        transcript_ephemeral_pubkey: null,
+        encrypted_to_pubkey: 'admin-pubkey',
+        feedback: [],
+      });
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Loaded second trial')).toBeInTheDocument();
+    expect(screen.queryByText('Loaded first trial')).not.toBeInTheDocument();
+  });
+
+  it('keeps the selected log visible when delete fails', async () => {
+    const user = userEvent.setup();
+    mockDeleteSessionLog.mockRejectedValue(new Error('Delete failed'));
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    expect(trialButton).toBeInstanceOf(HTMLButtonElement);
+    await user.click(trialButton as HTMLButtonElement);
+    await screen.findByText('Yes, here is a plan.');
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Delete failed')).toBeInTheDocument();
+    expect(screen.getByText('Yes, here is a plan.')).toBeInTheDocument();
+    expect(mockListSessionLogs).toHaveBeenCalledTimes(1);
   });
 });

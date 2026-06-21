@@ -2,7 +2,7 @@
  * Resolve conversational admin apply intent against a pending change set.
  */
 
-export type AdminApplyIntentKind = 'none' | 'needs-panel';
+export type AdminApplyIntentKind = 'none' | 'needs-panel' | 'no-pending';
 
 export interface AdminApplyIntent {
   kind: AdminApplyIntentKind;
@@ -33,12 +33,11 @@ export function resolveAdminApplyIntent(
     return { kind: 'none' };
   }
 
-  if (hasPendingChangeSet) {
-    if (
-      APPLY_COMMAND_WHEN_PENDING.some((pattern) => pattern.test(normalized))
-    ) {
-      return { kind: 'needs-panel' };
-    }
+  const isApplyIntent = APPLY_COMMAND_WHEN_PENDING.some((pattern) =>
+    pattern.test(normalized)
+  );
+  if (isApplyIntent) {
+    return { kind: hasPendingChangeSet ? 'needs-panel' : 'no-pending' };
   }
 
   return { kind: 'none' };
