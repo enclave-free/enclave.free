@@ -52,13 +52,21 @@ class ImpersonationTest(unittest.TestCase):
             self.admin_pubkey,
             user_type_id,
         )
-        expected_email = f"test-user+type{user_type_id}@enclave.test"
+        fallback_email = f"test-user+type{user_type_id}@enclave.test"
+        expected_email = "provisioned-user@enclave.test"
+        self.assertNotEqual(expected_email, fallback_email)
         user_id = self.database.create_user(
             pubkey=derived_pubkey,
-            email=expected_email,
+            email=fallback_email,
             name="Test User",
             user_type_id=user_type_id,
         )
+        # Seed a legacy plaintext email to make the precedence branch observable.
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET email = ? WHERE id = ?",
+                (expected_email, user_id),
+            )
 
         with patch.object(self.auth, "create_session_token", return_value="token") as create_token:
             result = self.impersonation.issue_session_token(
