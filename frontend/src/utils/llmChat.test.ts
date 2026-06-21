@@ -386,7 +386,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
     });
   });
 
-  it('omits redundant admin-config conversation history once Sage owns the session', async () => {
+  it('bridges admin-config apply summaries once Sage owns the session', async () => {
     const encoder = new TextEncoder();
     vi.stubGlobal(
       'fetch',
@@ -416,6 +416,11 @@ describe('sendLlmChatWithUnifiedTools', () => {
           content:
             'Here is the change.\n```json\n{"version":1,"requests":[]}\n```',
         },
+        {
+          role: 'assistant',
+          content:
+            'Applied 1/1 change(s). Config validation: valid. Restart required: no.',
+        },
       ],
       onEvent: vi.fn(),
     });
@@ -425,6 +430,13 @@ describe('sendLlmChatWithUnifiedTools', () => {
       message: 'continue',
       tools: ['admin-config'],
       session_id: 'session-123',
+      conversation_history: [
+        {
+          role: 'assistant',
+          content:
+            'Applied 1/1 change(s). Config validation: valid. Restart required: no.',
+        },
+      ],
     });
   });
 
