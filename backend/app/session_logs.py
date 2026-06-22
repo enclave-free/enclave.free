@@ -232,16 +232,17 @@ def get_session_log_metadata_by_sage_session_id(
     *,
     source: str,
     sage_session_id: str,
+    subject_user_id: int,
 ) -> Optional[dict[str, Any]]:
     if source not in VALID_SOURCES:
         raise ValueError(f"Invalid session log source: {source}")
     with database.get_cursor() as cursor:
         cursor.execute(
             """SELECT * FROM session_logs
-               WHERE source = ? AND sage_session_id = ?
+               WHERE source = ? AND sage_session_id = ? AND subject_user_id = ?
                ORDER BY datetime(updated_at) DESC, id DESC
                LIMIT 1""",
-            (source, sage_session_id),
+            (source, sage_session_id, subject_user_id),
         )
         row = cursor.fetchone()
     return _row_to_metadata(row) if row else None

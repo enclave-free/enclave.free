@@ -9,6 +9,7 @@ reads without reimplementing those product rules in Rust.
 
 import os
 import re
+import sqlite3
 import time
 import logging
 from datetime import datetime, timezone
@@ -881,17 +882,29 @@ async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessio
             log = session_logs.get_session_log_metadata_by_sage_session_id(
                 source="user",
                 sage_session_id=payload.sage_session_id,
+                subject_user_id=subject_user_id,
             )
         if log is None:
-            log = session_logs.create_session_log(
-                source="user",
-                title=payload.title,
-                subject_user_id=subject_user_id,
-                user_type_id=payload.user_type_id or payload.actor.user_type_id,
-                sage_session_id=payload.sage_session_id,
-                created_by=f"user:{subject_user_id}" if subject_user_id else "system",
-            )
-            created_log = True
+            try:
+                log = session_logs.create_session_log(
+                    source="user",
+                    title=payload.title,
+                    subject_user_id=subject_user_id,
+                    user_type_id=payload.user_type_id or payload.actor.user_type_id,
+                    sage_session_id=payload.sage_session_id,
+                    created_by=f"user:{subject_user_id}",
+                )
+                created_log = True
+            except sqlite3.IntegrityError:
+                if not payload.sage_session_id:
+                    raise
+                log = session_logs.get_session_log_metadata_by_sage_session_id(
+                    source="user",
+                    sage_session_id=payload.sage_session_id,
+                    subject_user_id=subject_user_id,
+                )
+                if log is None:
+                    raise
         saved = session_logs.save_transcript(
             log["log_id"],
             [turn.model_dump() for turn in payload.turns],

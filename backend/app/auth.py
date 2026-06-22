@@ -568,9 +568,8 @@ def send_magic_link_email(to_email: str, token: str) -> bool:
         logger.info("=" * 60)
         return True
 
-    msg = build_magic_link_email(to_email, token)
-
     try:
+        msg = build_magic_link_email(to_email, token)
         if smtp["port"] == 465:
             # Port 465 uses implicit SSL (connection starts encrypted)
             with smtplib.SMTP_SSL(smtp["host"], smtp["port"], timeout=smtp["timeout"]) as server:

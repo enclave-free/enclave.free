@@ -107,7 +107,7 @@ review.
 
 Admin Config Tools may return non-secret configuration and secret status metadata by default. Raw Deployment Setting secret values require explicit Admin sharing and remain inside the trace blocklist unless they are intentionally shared by the Admin for the current turn; secret previews must stay masked in Change Confirmation.
 
-Theme requests in Admin Conversations mean Instance visual identity settings, such as theme, primary color, chat bubble style, surface style, icon set, and typography preset. They should become Instance Settings change-set proposals, not frontend CSS or source-code theme edits.
+Theme requests in Admin Conversations mean Instance visual identity settings, such as default theme and `primary_color`. They should become Instance Settings change-set proposals, not frontend CSS or source-code theme edits.
 
 ## Database
 

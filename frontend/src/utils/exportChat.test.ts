@@ -428,4 +428,52 @@ describe('generateExport', () => {
       'Matched \\[section\\]\\(https://example\\.com\\)'
     );
   });
+
+  it('prefers live trace deltas over settled trace deltas with duplicate ids', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        traceDeltas: [
+          {
+            id: 'trace-model-step',
+            kind: 'model_step',
+            title: 'Live model step',
+            status: 'running',
+            content: 'Live trace is current.',
+            metadata: {},
+          },
+        ],
+        trace: {
+          visibility: 'detailed',
+          trace_deltas: [
+            {
+              id: 'trace-model-step',
+              kind: 'model_step',
+              title: 'Settled model step',
+              status: 'succeeded',
+              content: 'Settled trace is stale.',
+              metadata: {},
+            },
+          ],
+          tools: [],
+          retrieval: [],
+          activity_steps: [],
+          suppressed: false,
+        },
+      },
+    ];
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    });
+
+    expect(exported).toContain('Live model step [model\\_step]');
+    expect(exported).toContain('Live trace is current\\.');
+    expect(exported).not.toContain('Settled model step');
+    expect(exported).not.toContain('Settled trace is stale');
+  });
 });

@@ -77,7 +77,7 @@ Transport-backed chat commands:
 
 Tool-call lifecycle:
 
-- Enclave should move from the current Activity-only adapter toward assistant-ui-style reasoning and tool-call parts driven by Sage Trace Deltas.
+- The Sage stream adapter now branches on `trace_delta` events, so Enclave can map Sage Trace Deltas into assistant-ui-style reasoning and tool-call parts as those surfaces mature.
 - Sage remains the authority for Activity, Trace Deltas, Conversation Trace assembly, minimal blocklist protection, persistence, resume, and export boundaries.
 - Raw reasoning, tool inputs/outputs, retrieval details, and timing should map into frontend trace parts when available, while credentials, hidden system/developer instructions, raw secret reveal results, infrastructure/runtime dumps, and other authority-bearing internals remain blocklisted.
 - Admin Change Confirmation remains separate from Activity and still requires explicit approval.

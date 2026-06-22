@@ -91,8 +91,8 @@ function mergeTraceDeltas(
   settledDeltas: ConversationTraceDelta[] = []
 ): ConversationTraceDelta[] {
   const merged = new Map<string, ConversationTraceDelta>();
-  for (const delta of liveDeltas) merged.set(delta.id, delta);
   for (const delta of settledDeltas) merged.set(delta.id, delta);
+  for (const delta of liveDeltas) merged.set(delta.id, delta);
   return Array.from(merged.values());
 }
 

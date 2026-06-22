@@ -42,6 +42,7 @@ export function AdminInstanceConfig() {
   const [instanceName, setInstanceName] = useState(config.name)
   const [publicEmailDisplayName, setPublicEmailDisplayName] = useState('')
   const publicEmailDisplayNameTouchedRef = useRef(false)
+  const publicEmailDisplayNameLoadedRef = useRef(false)
   // Preview state - only applies on save, not immediately
   const [previewAccentColor, setPreviewAccentColor] = useState<AccentColor>(config.accentColor)
   const [previewIcon, setPreviewIcon] = useState(config.icon)
@@ -81,11 +82,12 @@ export function AdminInstanceConfig() {
         const response = await adminFetch('/admin/settings')
         if (!response.ok) return
         const data = await response.json()
+        publicEmailDisplayNameLoadedRef.current = true
         if (!cancelled && !publicEmailDisplayNameTouchedRef.current) {
           setPublicEmailDisplayName(data.settings?.public_email_display_name ?? '')
         }
       } catch {
-        // Non-blocking: saving still sends the current field value.
+        // Non-blocking: save will not overwrite this server value unless loaded or edited.
       }
     }
 
@@ -223,30 +225,34 @@ export function AdminInstanceConfig() {
 
     // Persist to backend API
     try {
+      const settingsPayload: Record<string, string> = {
+        instance_name: name,
+        primary_color: previewAccentColor,
+        icon: previewIcon,
+        logo_url: previewLogoUrl.trim(),
+        favicon_url: previewFaviconUrl.trim(),
+        apple_touch_icon_url: previewAppleTouchIconUrl.trim(),
+        assistant_icon: previewAssistantIcon,
+        user_icon: previewUserIcon,
+        assistant_name: previewAssistantName.trim(),
+        user_label: previewUserLabel.trim(),
+        header_layout: previewHeaderLayout,
+        header_tagline: previewHeaderTagline.trim(),
+        chat_bubble_style: previewChatBubbleStyle,
+        chat_bubble_shadow: String(previewChatBubbleShadow),
+        surface_style: previewSurfaceStyle,
+        status_icon_set: previewStatusIconSet,
+        typography_preset: previewTypographyPreset,
+        default_language: previewDefaultLanguage,
+        default_theme: previewDefaultTheme,
+      }
+      if (publicEmailDisplayNameLoadedRef.current || publicEmailDisplayNameTouchedRef.current) {
+        settingsPayload.public_email_display_name = publicEmailDisplayName.trim()
+      }
+
       const response = await adminFetch('/admin/settings', {
         method: 'PUT',
-        body: JSON.stringify({
-          instance_name: name,
-          public_email_display_name: publicEmailDisplayName.trim(),
-          primary_color: previewAccentColor,
-          icon: previewIcon,
-          logo_url: previewLogoUrl.trim(),
-          favicon_url: previewFaviconUrl.trim(),
-          apple_touch_icon_url: previewAppleTouchIconUrl.trim(),
-          assistant_icon: previewAssistantIcon,
-          user_icon: previewUserIcon,
-          assistant_name: previewAssistantName.trim(),
-          user_label: previewUserLabel.trim(),
-          header_layout: previewHeaderLayout,
-          header_tagline: previewHeaderTagline.trim(),
-          chat_bubble_style: previewChatBubbleStyle,
-          chat_bubble_shadow: String(previewChatBubbleShadow),
-          surface_style: previewSurfaceStyle,
-          status_icon_set: previewStatusIconSet,
-          typography_preset: previewTypographyPreset,
-          default_language: previewDefaultLanguage,
-          default_theme: previewDefaultTheme,
-        }),
+        body: JSON.stringify(settingsPayload),
       })
 
       if (response.ok) {

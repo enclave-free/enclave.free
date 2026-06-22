@@ -226,7 +226,7 @@ Behavior-rule and forbidden-topic examples:
 ]
 ```
 
-Sage validates the proposal with the same allowlist shape as the frontend, emits the staged payload, and records Activity/Trace metadata without leaking secret values, blocklisted credentials, or hidden authority-bearing internals. The frontend validates the staged change set again, displays a masked preview for secret deployment keys, and only applies the changes if the admin clicks **Apply**.
+Sage validates the proposal against the backend's canonical allowlist and validation rules, emits the staged payload, and records Activity/Trace metadata without leaking secret values, blocklisted credentials, or hidden authority-bearing internals. The frontend mirrors those backend rules only for preview display and secret masking, then applies the changes only if the admin clicks **Apply**.
 
 If a proposal is rejected by validation but the admin request is supported, Sage should correct the proposal and call `propose_config_change_set` again. It should not claim that supported Admin Config writes are unavailable.
 

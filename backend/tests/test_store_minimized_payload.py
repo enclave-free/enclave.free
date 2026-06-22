@@ -84,7 +84,8 @@ class StoreMinimizedPayloadTest(unittest.TestCase):
             content = b'{"status":{"error":"Collection `enclave_knowledge` already exists!"}}'
 
         class CollectionList:
-            collections = []
+            def __init__(self) -> None:
+                self.collections: list[object] = []
 
         class RacingQdrantClient:
             def get_collections(inner_self) -> CollectionList:

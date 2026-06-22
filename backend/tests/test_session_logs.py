@@ -108,6 +108,44 @@ class SessionLogsTest(unittest.TestCase):
 
         self.assertEqual(self.session_logs.list_feedback(feedback_log["log_id"]), [])
 
+    def test_sage_session_lookup_is_scoped_to_subject_user(self) -> None:
+        first_user_id = self.database.create_user()
+        second_user_id = self.database.create_user()
+
+        first_log = self.session_logs.create_session_log(
+            source="user",
+            title="First user",
+            subject_user_id=first_user_id,
+            sage_session_id="shared-sage-session",
+        )
+        second_log = self.session_logs.create_session_log(
+            source="user",
+            title="Second user",
+            subject_user_id=second_user_id,
+            sage_session_id="shared-sage-session",
+        )
+
+        first_lookup = self.session_logs.get_session_log_metadata_by_sage_session_id(
+            source="user",
+            sage_session_id="shared-sage-session",
+            subject_user_id=first_user_id,
+        )
+        second_lookup = self.session_logs.get_session_log_metadata_by_sage_session_id(
+            source="user",
+            sage_session_id="shared-sage-session",
+            subject_user_id=second_user_id,
+        )
+
+        self.assertEqual(first_lookup["log_id"], first_log["log_id"])
+        self.assertEqual(second_lookup["log_id"], second_log["log_id"])
+        with self.assertRaises(self.database.sqlite3.IntegrityError):
+            self.session_logs.create_session_log(
+                source="user",
+                title="Duplicate first user",
+                subject_user_id=first_user_id,
+                sage_session_id="shared-sage-session",
+            )
+
     def test_feedback_rejects_user_turns(self) -> None:
         log = self.session_logs.create_session_log(title="Synthetic User test")
         self.session_logs.save_transcript(

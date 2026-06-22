@@ -661,6 +661,16 @@ def init_schema():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_status ON session_logs(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_source ON session_logs(source)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_user_type ON session_logs(user_type_id)")
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_session_logs_source_sage_session
+        ON session_logs(source, sage_session_id, updated_at DESC, id DESC)
+        WHERE sage_session_id IS NOT NULL
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_session_logs_source_sage_session_subject
+        ON session_logs(source, sage_session_id, subject_user_id)
+        WHERE sage_session_id IS NOT NULL AND subject_user_id IS NOT NULL
+    """)
 
     # Per-turn feedback on a logged session. The rating stays plaintext so it can
     # be queried/aggregated; the optional qualitative comment is NIP-04 encrypted
@@ -700,6 +710,7 @@ def init_schema():
     _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
     _migrate_add_session_log_turn_metadata()  # Store safe turn role metadata for feedback validation
     _migrate_add_session_log_transcript_ciphertext()  # Store encrypted beta logs in SQLite
+    _migrate_add_session_log_source_sage_session_index()  # Optimize and enforce Sage session reuse
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -1123,6 +1134,26 @@ def _migrate_add_session_log_transcript_ciphertext() -> None:
         conn.commit()
         logger.info("Migration: Added 'transcript_ciphertext' column to session_logs table")
 
+    cursor.close()
+
+
+def _migrate_add_session_log_source_sage_session_index() -> None:
+    """Index Sage session reuse and enforce per-user idempotency."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_session_logs_source_sage_session
+        ON session_logs(source, sage_session_id, updated_at DESC, id DESC)
+        WHERE sage_session_id IS NOT NULL
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_session_logs_source_sage_session_subject
+        ON session_logs(source, sage_session_id, subject_user_id)
+        WHERE sage_session_id IS NOT NULL AND subject_user_id IS NOT NULL
+    """)
+    conn.commit()
+    logger.info("Migration: Added session log Sage session reuse indexes")
     cursor.close()
 
 

@@ -107,11 +107,13 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
     };
     if (open) {
       // Delay to prevent immediate close from the button click
-      setTimeout(() => {
+      const attachOutsideClick = window.setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside);
       }, 0);
-      return () =>
+      return () => {
+        window.clearTimeout(attachOutsideClick);
         document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
   }, [open, onClose]);
 

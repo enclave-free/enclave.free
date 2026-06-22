@@ -151,6 +151,42 @@ class InternalSessionLogsTest(unittest.TestCase):
         self.assertIsNotNone(ciphertext)
         self.assertNotIn("second answer", ciphertext)
 
+    def test_internal_user_session_log_reuse_is_scoped_to_subject_user(self) -> None:
+        admin_key = PrivateKey()
+        self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())
+        first_user_id = self.database.create_user()
+        second_user_id = self.database.create_user()
+
+        first = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": first_user_id, "type": "user", "approved": True},
+                "sage_session_id": "shared-sage-session",
+                "turns": [
+                    {"role": "user", "content": "first user question"},
+                    {"role": "assistant", "content": "first user answer"},
+                ],
+            },
+        )
+        second = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": second_user_id, "type": "user", "approved": True},
+                "sage_session_id": "shared-sage-session",
+                "turns": [
+                    {"role": "user", "content": "second user question"},
+                    {"role": "assistant", "content": "second user answer"},
+                ],
+            },
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertNotEqual(second.json()["log_id"], first.json()["log_id"])
+        self.assertEqual(self._session_log_count(), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
