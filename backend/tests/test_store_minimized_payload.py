@@ -87,10 +87,10 @@ class StoreMinimizedPayloadTest(unittest.TestCase):
             collections = []
 
         class RacingQdrantClient:
-            def get_collections(inner_self):
+            def get_collections(inner_self) -> CollectionList:
                 return CollectionList()
 
-            def create_collection(inner_self, **_kwargs):
+            def create_collection(inner_self, **_kwargs: object) -> None:
                 raise AlreadyExists("already exists")
 
         self.store.get_qdrant_client = lambda: RacingQdrantClient()

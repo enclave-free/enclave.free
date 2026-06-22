@@ -113,7 +113,7 @@ def _is_qdrant_collection_already_exists_error(error: Exception) -> bool:
     return status_code == 409 and "already exists" in message
 
 
-def ensure_qdrant_collection():
+def ensure_qdrant_collection() -> None:
     """Ensure the knowledge collection exists in Qdrant"""
     client = get_qdrant_client()
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -41,6 +41,7 @@ export function AdminInstanceConfig() {
 
   const [instanceName, setInstanceName] = useState(config.name)
   const [publicEmailDisplayName, setPublicEmailDisplayName] = useState('')
+  const publicEmailDisplayNameTouchedRef = useRef(false)
   // Preview state - only applies on save, not immediately
   const [previewAccentColor, setPreviewAccentColor] = useState<AccentColor>(config.accentColor)
   const [previewIcon, setPreviewIcon] = useState(config.icon)
@@ -80,7 +81,7 @@ export function AdminInstanceConfig() {
         const response = await adminFetch('/admin/settings')
         if (!response.ok) return
         const data = await response.json()
-        if (!cancelled) {
+        if (!cancelled && !publicEmailDisplayNameTouchedRef.current) {
           setPublicEmailDisplayName(data.settings?.public_email_display_name ?? '')
         }
       } catch {
@@ -441,6 +442,7 @@ export function AdminInstanceConfig() {
               )}
               value={publicEmailDisplayName}
               onChange={(e) => {
+                publicEmailDisplayNameTouchedRef.current = true
                 setPublicEmailDisplayName(e.target.value)
                 setIsDirty(true)
               }}

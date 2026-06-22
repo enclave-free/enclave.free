@@ -4,7 +4,7 @@
 
 - Run ID: 2026-06-21-austin-staging-polish
 - Loop: plebdev feature-dev
-- Target repo: /Users/plebdev/Desktop/Projects/enclave-free/enclave.free-prototype
+- Target repo: enclave-free/enclave.free-prototype
 - Base branch: staging
 - Feature branch: feature/austin-staging-polish
 - Human owner: Austin

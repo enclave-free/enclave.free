@@ -243,7 +243,7 @@ export function FeedbackView() {
       if (source === 'user') {
         return t('adminTestFeedback.feedback.sourceUser', 'User Conversation');
       }
-      if (source === 'test' || source === 'admin_test') {
+      if (source === 'admin_test') {
         return t('adminTestFeedback.feedback.sourceTest', 'Test User Session');
       }
       return source;
