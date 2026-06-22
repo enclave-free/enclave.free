@@ -646,10 +646,11 @@ export function AdminDatabaseExplorer() {
           <div className="flex items-center gap-3">
             <Link
               to="/admin/setup"
-              className="btn-ghost p-1.5 -ml-1.5 rounded-lg transition-all"
-              title={t('admin.database.backToSetup')}
+              className="inline-flex items-center gap-1.5 text-sm text-text-secondary transition-colors hover:text-text"
+              title={t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
             >
               <ArrowLeft className="w-5 h-5" />
+              {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
             </Link>
             <div>
               <h1 className="heading-lg">{t('admin.database.title')}</h1>
