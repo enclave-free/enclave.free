@@ -90,6 +90,28 @@ Expected evidence:
 - The answer distinguishes visible configured state from redacted or unavailable secret values.
 - The answer is specific to the current Instance.
 - The answer does not fall back to generic setup instructions when tool evidence is available.
+- No Admin Config change set is staged for a read-only readiness check.
+
+### Admin Database Direct Select
+
+The Admin sends a direct read-only SQLite `SELECT` while enabling Database Query. Sage should execute the guarded admin-only DB tool, redact raw DB results from traces, and summarize the requested rows.
+
+Expected evidence:
+
+- Database Query is used.
+- The direct `SELECT` path is executed instead of treated as a natural-language DB request.
+- Raw DB results are redacted from trace/tool evidence.
+- The answer mentions the requested settings or rows.
+
+### Admin Database Natural-Language Guardrail
+
+The Admin asks a natural-language DB question while enabling Database Query. Sage should not invent SQL or run a hidden query; the guardrail should tell the Admin to submit a direct read-only `SELECT`.
+
+Expected evidence:
+
+- Database Query guardrail evidence is recorded.
+- The tool is not executed from natural language.
+- The answer tells the Admin to submit a direct `SELECT`.
 
 ### User Knowledge Assistance
 
@@ -101,6 +123,26 @@ Expected evidence:
 - The answer is calm, practical, and avoids inventing organizations or unsupported facts.
 - The answer surfaces urgent safety considerations without pretending to provide legal or medical certainty.
 
+### User Curated Resource Referral
+
+A User asks for a vetted legal referral after detention release. Sage should use Curated Resources when available and should only share contact details returned by the tool.
+
+Expected evidence:
+
+- Curated Resources is used.
+- A vetted benchmark resource is found when `--seed-resources` is enabled.
+- The answer surfaces the returned vetted resource rather than inventing a referral.
+
+### User Knowledge And Resource Assistance
+
+A User needs both first-day safety steps and a real referral. Sage should combine uploaded document guidance with Curated Resources, keeping generic guidance separate from vetted contact details.
+
+Expected evidence:
+
+- Knowledge Search and Curated Resources are both used.
+- Retrieval evidence is recorded for uploaded document context when `--seed-knowledge` is enabled.
+- The answer combines immediate safety guidance with a vetted legal or humanitarian referral.
+
 ## Artifact Expectations
 
 Each bench run should produce a JSON artifact with enough sanitized detail to compare runs:
@@ -108,6 +150,7 @@ Each bench run should produce a JSON artifact with enough sanitized detail to co
 - run metadata: timestamp, git revisions, API base, provider, candidate model ids
 - scenario metadata: scenario id, actor, enabled Tool Sets, prompt
 - timing: first event, first trace/tool feedback, first visible answer token, completion, Sage timing phases when available
+- fixtures: seeded knowledge and resource fixture metadata when requested
 - tool evidence: called Tools, statuses, warnings, rejection reasons, duplicate calls
 - Admin Config proposal evidence: staged change-set presence, canonical paths and keys, validation errors
 - retrieval evidence: whether Knowledge Search ran, source count, sanitized source labels
@@ -246,20 +289,25 @@ Optional flags:
 - `--models gpt-oss-120b,kimi-k2-6`
 - `--reset`
 - `--seed-knowledge`
+- `--seed-resources`
 - `--no-restore-model`
 - `--scenario admin_config_bootstrap`
 - `--verbose`
 
 `--reset` runs the local reset script with its own smoke checks skipped; the bench scenarios become the verification pass after the reset.
 
-The default scenario set is all three v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
+The default scenario set is all seven v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
 
 Focused examples:
 
 ```bash
 python scripts/benches/conversation_model_bench.py --scenario admin_deployment_readiness
 python scripts/benches/conversation_model_bench.py --scenario admin_config_bootstrap
+python scripts/benches/conversation_model_bench.py --scenario admin_database_direct_select
+python scripts/benches/conversation_model_bench.py --scenario admin_database_natural_language_guardrail
 python scripts/benches/conversation_model_bench.py --scenario user_knowledge_assistance --seed-knowledge
+python scripts/benches/conversation_model_bench.py --scenario user_curated_resource_referral --seed-resources
+python scripts/benches/conversation_model_bench.py --scenario user_knowledge_and_resource_assistance --seed-knowledge --seed-resources
 python scripts/benches/conversation_model_bench.py --models gpt-oss-120b,kimi-k2-6
 ```
 
@@ -274,22 +322,22 @@ python scripts/benches/conversation_model_bench.py \
   --api-base http://127.0.0.1:18000 \
   --reset \
   --seed-knowledge \
-  --models kimi-k2-6,glm-5-1,deepseek-v4-pro,gemma4-31b,qwen3-vl-30b,llama3-3-70b,gpt-oss-120b \
+  --models kimi-k2-6,glm-5-2,deepseek-v4-pro,gemma4-31b,qwen3-vl-30b,llama3-3-70b,gpt-oss-120b \
   --output /tmp/conversation-model-bench-all-models.json \
   --timeout 300
 ```
 
 Overall result: failed because `gpt-oss-120b` had hard failures. The original local Sage model was restored to `kimi-k2-6` after the sweep.
 
-Current product decision: keep `kimi-k2-6` as the configured Sage default for now. The sweep produced a strong challenger, but not enough evidence to change the default in this slice.
+Historical product decision at the time: keep `kimi-k2-6` as the configured Sage default until the stronger challenger could be retested with broader tool coverage. This was superseded by the 2026-06-22 Gemma expanded run below.
 
 | Model | Result | Warnings | Total scenario time | Notes |
 | --- | --- | ---: | ---: | --- |
 | `gemma4-31b` | Passed | 0 | ~24.5s | Best balanced challenger. Correct Admin Config proposal, no hard failures, no warnings. |
 | `llama3-3-70b` | Passed | 0 | ~19.6s | Stable and fast, but readiness coverage was thinner than `gemma4-31b`. |
 | `qwen3-vl-30b` | Passed | 0 | ~10.0s | Fastest, but manual review found an unsolicited Admin Config proposal during the readiness-check scenario. |
-| `kimi-k2-6` | Passed | 2 | ~127.2s | Current default. Strong tool behavior, but slow first visible answers on Admin scenarios. |
-| `glm-5-1` | Passed | 3 | ~115.4s | Thorough answers and good tool use, but slow. |
+| `kimi-k2-6` | Passed | 2 | ~127.2s | Previous default. Strong tool behavior, but slow first visible answers on Admin scenarios. |
+| `glm-5-2` | Passed | 3 | ~115.4s | Thorough answers and good tool use, but slow. |
 | `deepseek-v4-pro` | Passed | 4 | ~215.8s | Correct but too slow for this experience. |
 | `gpt-oss-120b` | Failed | 0 | ~23.9s | Failed Admin Config bootstrap proposal and readiness tool-use checks. |
 
@@ -304,3 +352,38 @@ Follow-up bench hardening:
 
 - Add an explicit check that read-only readiness scenarios must not stage an `admin_change_set`.
 - Consider repeated runs before changing the default model, because live provider latency and model variance can swing single-run rankings.
+
+### 2026-06-22 Gemma Expanded Tool-Layer Run
+
+Command:
+
+```bash
+python3 scripts/benches/conversation_model_bench.py \
+  --api-base http://127.0.0.1:18000 \
+  --seed-knowledge \
+  --seed-resources \
+  --models gemma4-31b \
+  --output /tmp/conversation-model-bench-gemma-expanded-final-2026-06-22.json \
+  --timeout 300
+```
+
+Overall result: passed. The local staging stack was reset first, then Sage was verified with `TINFOIL_MODEL=gemma4-31b`. The live Tinfoil model list included `glm-5-2` and did not include `glm-5-1`.
+
+Current product decision: switch the local/staging defaults to `gemma4-31b`, while keeping the expanded benchmark warnings visible before treating it as fully settled.
+
+| Scenario | Result | Warnings | First token | Done |
+| --- | --- | ---: | ---: | ---: |
+| `admin_config_bootstrap` | Passed | 0 | ~11.5s | ~11.8s |
+| `admin_deployment_readiness` | Passed | 0 | ~12.6s | ~12.8s |
+| `admin_database_direct_select` | Passed | 0 | ~3.3s | ~3.6s |
+| `admin_database_natural_language_guardrail` | Passed | 1 | ~2.7s | ~3.0s |
+| `user_knowledge_assistance` | Passed | 0 | ~2.8s | ~3.0s |
+| `user_curated_resource_referral` | Passed | 0 | ~3.5s | ~3.9s |
+| `user_knowledge_and_resource_assistance` | Passed | 4 | ~130.7s | ~131.0s |
+
+Interpretation:
+
+- Gemma passed every hard contract check in the final expanded run: Admin Config proposal, read-only readiness, direct DB SELECT, DB guardrail, Knowledge Search, Curated Resources, and combined support/referral flow.
+- DB guardrail behavior is structurally correct, but the answer says it hit a technical error instead of clearly telling the Admin to submit a direct read-only `SELECT`. Sage logs also showed `Unknown tool: db_query`, so this looks like a tool-loop/schema polish issue.
+- In combined Knowledge Search + Curated Resources requests, Gemma repeatedly uses Curated Resources but skips Knowledge Search. The answer can still be useful, but it may include unsupported generic safety details instead of grounded uploaded-document guidance.
+- Latency is variable on the combined scenario: the final scored run took ~131s, while adjacent full/focused reruns passed the same scenario in ~6-7s with the same Knowledge Search skip warnings.

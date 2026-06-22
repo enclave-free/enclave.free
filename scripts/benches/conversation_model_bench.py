@@ -43,7 +43,11 @@ SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
     "admin_config_bootstrap",
     "admin_deployment_readiness",
+    "admin_database_direct_select",
+    "admin_database_natural_language_guardrail",
     "user_knowledge_assistance",
+    "user_curated_resource_referral",
+    "user_knowledge_and_resource_assistance",
 )
 
 
@@ -56,6 +60,7 @@ class BenchOptions:
     timeout: float = DEFAULT_TIMEOUT_SECONDS
     reset: bool = False
     seed_knowledge: bool = False
+    seed_resources: bool = False
     restore_model: bool = True
     verbose: bool = False
 
@@ -96,6 +101,9 @@ class BenchEnvironment(Protocol):
         ...
 
     def seed_knowledge(self) -> dict[str, Any]:
+        ...
+
+    def seed_resources(self) -> dict[str, Any]:
         ...
 
     def switch_model(self, model: str) -> None:
@@ -153,6 +161,46 @@ SCENARIOS: dict[str, Scenario] = {
             "and feels unsafe. What should they do first today?"
         ),
         tools=("knowledge-search",),
+    ),
+    "admin_database_direct_select": Scenario(
+        id="admin_database_direct_select",
+        actor="admin",
+        message=(
+            "SELECT key, value FROM instance_settings "
+            "WHERE key IN ('instance_name', 'assistant_name', 'default_language') "
+            "ORDER BY key LIMIT 10"
+        ),
+        tools=("db-query",),
+    ),
+    "admin_database_natural_language_guardrail": Scenario(
+        id="admin_database_natural_language_guardrail",
+        actor="admin",
+        message=(
+            "Use the Database Query tool to tell me how many users and curated "
+            "resources are in SQLite, but do not make me write SQL."
+        ),
+        tools=("db-query",),
+    ),
+    "user_curated_resource_referral": Scenario(
+        id="user_curated_resource_referral",
+        actor="user",
+        message=(
+            "My sibling was just released from detention in Nicaragua and needs a "
+            "vetted legal referral. Use curated resources if available, and do not "
+            "invent contact details."
+        ),
+        tools=("curated-resources",),
+    ),
+    "user_knowledge_and_resource_assistance": Scenario(
+        id="user_knowledge_and_resource_assistance",
+        actor="user",
+        message=(
+            "A family member in Nicaragua says their loved one was just released "
+            "after political imprisonment and feels unsafe. Give first-day safety "
+            "steps and a real legal or humanitarian referral if curated resources "
+            "have one."
+        ),
+        tools=("knowledge-search", "curated-resources"),
     ),
 }
 
@@ -230,6 +278,7 @@ def run_candidate(
             client=client,
             timeout=options.timeout,
             seed_knowledge=options.seed_knowledge,
+            seed_resources=options.seed_resources,
         )
         scenarios.append(scenario_result)
         candidate_checks.extend(scenario_result["checks"])
@@ -249,14 +298,18 @@ def run_scenario(
     client: ConversationClient,
     timeout: float,
     seed_knowledge: bool,
+    seed_resources: bool,
 ) -> dict[str, Any]:
     knowledge_fixture: dict[str, Any] | None = None
+    resource_fixture: dict[str, Any] | None = None
     if scenario.actor == "admin":
         token = environment.admin_token()
     elif scenario.actor == "user":
         token = environment.user_token()
-        if seed_knowledge:
+        if seed_knowledge and "knowledge-search" in scenario.tools:
             knowledge_fixture = environment.seed_knowledge()
+        if seed_resources and "curated-resources" in scenario.tools:
+            resource_fixture = environment.seed_resources()
     else:
         raise ValueError(f"unsupported actor for current bench slice: {scenario.actor}")
 
@@ -295,6 +348,10 @@ def run_scenario(
             "tools": list(scenario.tools),
             "message_preview": truncate(scenario.message, 500),
         },
+        "fixtures": {
+            "knowledge": knowledge_fixture,
+            "resources": resource_fixture,
+        },
         "response": {
             "answer_preview": truncate(stream.answer, 2000),
             "model": stream.done.get("model"),
@@ -330,8 +387,16 @@ def checks_for_scenario(
         checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
         checks.extend(admin_deployment_readiness_checks(stream, tool_evidence))
+    elif scenario.id == "admin_database_direct_select":
+        checks.extend(admin_database_direct_select_checks(stream, tool_evidence))
+    elif scenario.id == "admin_database_natural_language_guardrail":
+        checks.extend(admin_database_natural_language_guardrail_checks(stream, tool_evidence))
     elif scenario.id == "user_knowledge_assistance":
         checks.extend(user_knowledge_assistance_checks(stream, tool_evidence))
+    elif scenario.id == "user_curated_resource_referral":
+        checks.extend(user_curated_resource_referral_checks(stream, tool_evidence))
+    elif scenario.id == "user_knowledge_and_resource_assistance":
+        checks.extend(user_knowledge_and_resource_assistance_checks(stream, tool_evidence))
     return checks
 
 
@@ -518,6 +583,123 @@ def user_knowledge_assistance_checks(
     ]
 
 
+def admin_database_direct_select_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        check(
+            "db_query_tool_used",
+            any(tool_evidence_matches(evidence, "db-query") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "db_query_was_executed",
+            not any_tool_warning(tool_evidence, "db-query", "direct_select_required"),
+            "hard",
+        ),
+        check(
+            "db_query_results_redacted_from_trace",
+            any_tool_warning(tool_evidence, "db-query", "raw_results_redacted"),
+            "hard",
+        ),
+        check(
+            "answer_mentions_requested_settings",
+            contains_any(
+                stream.answer,
+                [
+                    "instance_name",
+                    "assistant_name",
+                    "default_language",
+                    "instance name",
+                    "assistant name",
+                    "default language",
+                ],
+            ),
+            "warning",
+        ),
+    ]
+
+
+def admin_database_natural_language_guardrail_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    answer_lower = stream.answer.lower()
+    return [
+        check(
+            "db_query_guardrail_recorded",
+            any_tool_warning(tool_evidence, "db-query", "direct_select_required"),
+            "hard",
+        ),
+        check(
+            "db_query_not_executed_from_natural_language",
+            not any_tool_warning(tool_evidence, "db-query", "raw_results_redacted"),
+            "hard",
+        ),
+        check(
+            "answer_directs_admin_to_submit_select",
+            "select" in answer_lower and "database" in answer_lower,
+            "warning",
+        ),
+    ]
+
+
+def user_curated_resource_referral_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        check(
+            "curated_resources_tool_used",
+            any(tool_evidence_matches(evidence, "curated-resources") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "curated_resource_found",
+            not any_tool_warning(tool_evidence, "curated-resources", "no_curated_resources"),
+            "warning",
+        ),
+        check(
+            "answer_surfaces_vetted_resource",
+            contains_any(
+                stream.answer,
+                [
+                    "Bench Liberty Legal Hotline",
+                    "bench-legal@example.test",
+                    "Signal: +1-000-000-0000",
+                ],
+            ),
+            "warning",
+        ),
+    ]
+
+
+def user_knowledge_and_resource_assistance_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    checks = user_knowledge_assistance_checks(stream, tool_evidence)
+    checks.extend(user_curated_resource_referral_checks(stream, tool_evidence))
+    checks.append(
+        check(
+            "answer_combines_safety_and_referral",
+            contains_practical_safety_guidance(stream.answer)
+            and contains_any(
+                stream.answer,
+                [
+                    "Bench Liberty Legal Hotline",
+                    "bench-legal@example.test",
+                    "legal",
+                    "humanitarian",
+                ],
+            ),
+            "warning",
+        )
+    )
+    return checks
+
+
 def contains_practical_safety_guidance(answer: str) -> bool:
     answer_lower = answer.lower()
     return any(
@@ -532,6 +714,25 @@ def contains_practical_safety_guidance(answer: str) -> bool:
             "document",
         ]
     )
+
+
+def contains_any(value: str, needles: list[str]) -> bool:
+    value_lower = value.lower()
+    return any(needle.lower() in value_lower for needle in needles)
+
+
+def any_tool_warning(
+    tool_evidence: list[dict[str, Any]],
+    tool_set_id: str,
+    warning: str,
+) -> bool:
+    for evidence in tool_evidence:
+        if not tool_evidence_matches(evidence, tool_set_id):
+            continue
+        warnings = evidence.get("warnings") or []
+        if isinstance(warnings, list) and warning in warnings:
+            return True
+    return False
 
 
 BASELINE_SETTING_KEYS = {
@@ -656,9 +857,11 @@ def normalize_tool_evidence(value: dict[str, Any]) -> dict[str, Any]:
     return {
         "tool_id": tool_id,
         "tool_name": raw_name or tool_id,
+        "query": value.get("query"),
         "status": value.get("status"),
         "output_summary": value.get("output_summary") or value.get("summary"),
         "warnings": value.get("warnings") or [],
+        "guarded": value.get("guarded"),
     }
 
 
@@ -744,7 +947,7 @@ class LocalComposeEnvironment:
 
     def current_model(self) -> str:
         env = self.container_env("sage")
-        return env.get("TINFOIL_MODEL") or "kimi-k2-6"
+        return env.get("TINFOIL_MODEL") or "gemma4-31b"
 
     def verify_runtime_model(self, expected_model: str | None = None) -> dict[str, Any]:
         env = self.container_env("sage")
@@ -870,6 +1073,43 @@ print(json.dumps({"job_ids": [job_id], "sources": [source_file], "chunk_id": chu
             return json.loads(raw.strip().splitlines()[-1])
         except (IndexError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"knowledge fixture did not return JSON: {raw[:400]}") from exc
+
+    def seed_resources(self) -> dict[str, Any]:
+        script = """
+import json
+
+import database
+
+resource_id = "conversation-bench-global-legal"
+database.init_schema()
+if database.get_resource(resource_id) is None:
+    database.create_resource(
+        resource_id=resource_id,
+        name="Bench Liberty Legal Hotline",
+        resource_type="ngo",
+        description="Synthetic benchmark fixture for vetted legal triage after detention release.",
+        contact={
+            "email": "bench-legal@example.test",
+            "secure_channel": "Signal: +1-000-000-0000",
+            "url": "https://example.test/bench-legal",
+        },
+        languages=["en", "es"],
+        scope_level="global",
+        scope_code=None,
+        help_types=["legal", "humanitarian"],
+        verified_at=database.utc_timestamp_z(),
+        vetted_by="conversation-model-bench",
+        source_note="Synthetic benchmark fixture.",
+        display_order=-100,
+    )
+resource = database.get_resource(resource_id)
+print(json.dumps({"resource_ids": [resource_id], "resources": [resource]}))
+"""
+        raw = run_backend_python(script, timeout=30)
+        try:
+            return json.loads(raw.strip().splitlines()[-1])
+        except (IndexError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"resource fixture did not return JSON: {raw[:400]}") from exc
 
     def switch_model(self, model: str) -> None:
         env = os.environ.copy()
@@ -1161,6 +1401,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--seed-knowledge", action="store_true")
+    parser.add_argument("--seed-resources", action="store_true")
     parser.add_argument("--no-restore-model", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
@@ -1172,6 +1413,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
         timeout=args.timeout,
         reset=args.reset,
         seed_knowledge=args.seed_knowledge,
+        seed_resources=args.seed_resources,
         restore_model=not args.no_restore_model,
         verbose=args.verbose,
     )
