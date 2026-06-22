@@ -3,6 +3,7 @@ import type {
   ConversationTraceDelta,
   ConversationTrace,
 } from './ChatMessage';
+import { mergeTraceDeltas } from '../../utils/conversationTraceDeltas';
 
 export interface ConversationControlSnapshot {
   selectedTools: string[];
@@ -387,16 +388,6 @@ function mergeActivitySteps(
   const merged = new Map<string, ConversationActivityStep>();
   for (const step of existing) merged.set(step.id, step);
   for (const step of incoming) merged.set(step.id, step);
-  return Array.from(merged.values());
-}
-
-function mergeTraceDeltas(
-  existing: ConversationTraceDelta[],
-  incoming: ConversationTraceDelta[]
-): ConversationTraceDelta[] {
-  const merged = new Map<string, ConversationTraceDelta>();
-  for (const delta of existing) merged.set(delta.id, delta);
-  for (const delta of incoming) merged.set(delta.id, delta);
   return Array.from(merged.values());
 }
 

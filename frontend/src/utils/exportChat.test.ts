@@ -264,6 +264,52 @@ describe('generateExport', () => {
     expect(exportedText).toContain('Tool completed.');
   });
 
+  it('prefers live activity steps over settled activity steps with duplicate ids', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        activitySteps: [
+          {
+            id: 'tool-admin-config',
+            kind: 'tool',
+            title: 'Live Admin Config',
+            status: 'running',
+            summary: 'Live step is current.',
+            warnings: [],
+          },
+        ],
+        trace: {
+          visibility: 'detailed',
+          tools: [],
+          retrieval: [],
+          activity_steps: [
+            {
+              id: 'tool-admin-config',
+              kind: 'tool',
+              title: 'Settled Admin Config',
+              status: 'succeeded',
+              summary: 'Settled step is stale.',
+              warnings: [],
+            },
+          ],
+        },
+      },
+    ];
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    });
+
+    expect(exported).toContain('Live Admin Config');
+    expect(exported).toContain('Live step is current\\.');
+    expect(exported).not.toContain('Settled Admin Config');
+    expect(exported).not.toContain('Settled step is stale');
+  });
+
   it('exports submitted-turn Conversation Control Snapshots without browser state details', () => {
     const messages: TestMessage[] = [
       {

@@ -657,6 +657,17 @@ describe('ChatPage', () => {
                 id: 'msg-assistant',
                 role: 'assistant',
                 content: 'Settings are ready.',
+                trace_deltas: [
+                  {
+                    id: 'trace-toplevel-config',
+                    kind: 'tool_result',
+                    title: 'Top Level Admin Config',
+                    tool_name: 'read_instance_settings',
+                    status: 'succeeded',
+                    content: 'Top-level tool completed.',
+                    metadata: { duration_ms: 42 },
+                  },
+                ],
                 trace: {
                   visibility: 'detailed',
                   reasoning: {
@@ -664,12 +675,12 @@ describe('ChatPage', () => {
                   },
                   trace_deltas: [
                     {
-                      id: 'trace-admin-config-result',
+                      id: 'trace-nested-config',
                       kind: 'tool_result',
-                      title: 'Admin Config',
-                      tool_name: 'read_instance_settings',
+                      title: 'Nested Admin Config',
+                      tool_name: 'read_nested_settings',
                       status: 'succeeded',
-                      content: 'Tool completed.',
+                      content: 'Nested tool completed.',
                       metadata: { duration_ms: 42 },
                     },
                   ],
@@ -710,9 +721,11 @@ describe('ChatPage', () => {
     );
 
     expect(await screen.findByText('Settings are ready.')).toBeInTheDocument();
-    expect(screen.getByText('Admin Config')).toBeInTheDocument();
+    expect(screen.getByText('Top Level Admin Config')).toBeInTheDocument();
     expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
-    expect(screen.getByText('Tool completed.')).toBeInTheDocument();
+    expect(screen.getByText('Top-level tool completed.')).toBeInTheDocument();
+    expect(screen.queryByText('Nested Admin Config')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nested tool completed.')).not.toBeInTheDocument();
   });
 
   it('rejects malformed resumed Conversations instead of clearing the thread', async () => {

@@ -1016,6 +1016,71 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["admin_change_set_not_staged"]["severity"], "hard")
         self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
 
+    def test_admin_readiness_fails_when_stream_change_set_payload_is_staged(self) -> None:
+        class FakeStagedChangeSetClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set={"requests": [{"path": "/admin/settings"}]},
+                    timings=result.timings,
+                    error=result.error,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_deployment_readiness",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeStagedChangeSetClient(),
+        )
+
+        checks = {
+            check["name"]: check
+            for check in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
+
+    def test_admin_readiness_fails_when_done_change_set_payload_is_staged(self) -> None:
+        class FakeStagedChangeSetClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done={
+                        **result.done,
+                        "admin_change_set": {"requests": [{"path": "/admin/settings"}]},
+                    },
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                    error=result.error,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_deployment_readiness",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeStagedChangeSetClient(),
+        )
+
+        checks = {
+            check["name"]: check
+            for check in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
+
     def test_admin_config_bootstrap_scenario_requires_canonical_change_set(self) -> None:
         artifact = run_bench(
             BenchOptions(

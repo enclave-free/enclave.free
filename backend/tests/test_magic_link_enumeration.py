@@ -121,6 +121,18 @@ class MagicLinkEnumerationTest(unittest.TestCase):
         self.assertIn("Sign in to World Liberty Congress", html)
         self.assertNotIn("Sign in to FreeThem", html)
 
+    def test_magic_link_email_escapes_public_display_name_html(self) -> None:
+        self.database.update_settings({
+            "instance_name": "FreeThem",
+            "public_email_display_name": "<script>alert('x')</script>",
+        })
+
+        message = self.auth.build_magic_link_email("known@example.com", "token-123")
+        html = message.get_payload()[0].get_payload()
+
+        self.assertIn("&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;", html)
+        self.assertNotIn("<script>alert('x')</script>", html)
+
 
 if __name__ == "__main__":
     unittest.main()

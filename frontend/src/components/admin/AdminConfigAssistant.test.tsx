@@ -254,6 +254,60 @@ describe('AdminConfigAssistant', () => {
     expect(screen.getByText('I checked the settings.')).toBeInTheDocument();
   });
 
+  it('merges repeated Trace Delta updates without dropping previous fields', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('trace_delta', {
+          message_id: 'msg-1',
+          trace_delta: {
+            id: 'tool-call-admin-config-1',
+            kind: 'tool_call',
+            title: 'Admin Config',
+            tool_name: 'read_instance_settings',
+            status: 'running',
+            content: 'Reading instance settings.',
+          },
+        });
+        onEvent('trace_delta', {
+          message_id: 'msg-1',
+          trace_delta: {
+            id: 'tool-call-admin-config-1',
+            kind: 'tool_call',
+            status: 'succeeded',
+          },
+        });
+        onEvent('answer_delta', {
+          message_id: 'msg-1',
+          delta: 'I checked the settings.',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Check the current instance settings.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Admin Config')).toBeInTheDocument();
+    expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
+    expect(screen.getByText('Reading instance settings.')).toBeInTheDocument();
+    expect(screen.getByText('succeeded')).toBeInTheDocument();
+    expect(screen.getAllByText('Admin Config')).toHaveLength(1);
+  });
+
   it('renders live Trace Deltas during onboarding before the final answer completes', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(

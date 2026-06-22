@@ -4,6 +4,7 @@ import type {
   ConversationTrace,
 } from './ChatMessage';
 import type { ConversationUiAction } from './ConversationUiState';
+import { isConversationTraceDeltaKind } from '../../utils/conversationTraceDeltas';
 
 export function adaptSageStreamEvent(
   event: string,
@@ -99,10 +100,15 @@ export function readTraceDelta(
   if (typeof delta.id !== 'string' || typeof delta.kind !== 'string') {
     return null;
   }
+  const id = delta.id.trim();
+  const kind = delta.kind.trim();
+  if (!id || !isConversationTraceDeltaKind(kind)) {
+    return null;
+  }
 
   const result: ConversationTraceDelta = {
-    id: delta.id,
-    kind: delta.kind as ConversationTraceDelta['kind'],
+    id,
+    kind,
   };
   if (typeof delta.title === 'string') result.title = delta.title;
   if (typeof delta.content === 'string') result.content = delta.content;

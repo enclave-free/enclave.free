@@ -4,6 +4,7 @@ import {
   ConversationTrace,
   Message,
 } from '../components/chat/ChatMessage';
+import { mergeTraceDeltas } from './conversationTraceDeltas';
 
 export type ExportFormat = 'md' | 'txt';
 
@@ -81,18 +82,8 @@ function mergeActivitySteps(
   settledSteps: ConversationActivityStep[] = []
 ): ConversationActivityStep[] {
   const merged = new Map<string, ConversationActivityStep>();
-  for (const step of liveSteps) merged.set(step.id, step);
   for (const step of settledSteps) merged.set(step.id, step);
-  return Array.from(merged.values());
-}
-
-function mergeTraceDeltas(
-  liveDeltas: ConversationTraceDelta[] = [],
-  settledDeltas: ConversationTraceDelta[] = []
-): ConversationTraceDelta[] {
-  const merged = new Map<string, ConversationTraceDelta>();
-  for (const delta of settledDeltas) merged.set(delta.id, delta);
-  for (const delta of liveDeltas) merged.set(delta.id, delta);
+  for (const step of liveSteps) merged.set(step.id, step);
   return Array.from(merged.values());
 }
 
@@ -106,8 +97,8 @@ function formatTraceMarkdown(
     trace?.activity_steps ?? []
   );
   const traceDeltas = mergeTraceDeltas(
-    liveTraceDeltas,
-    trace?.trace_deltas ?? []
+    trace?.trace_deltas ?? [],
+    liveTraceDeltas
   );
   if (
     (!trace || trace.visibility === 'off') &&
@@ -199,8 +190,8 @@ function formatTraceText(
     trace?.activity_steps ?? []
   );
   const traceDeltas = mergeTraceDeltas(
-    liveTraceDeltas,
-    trace?.trace_deltas ?? []
+    trace?.trace_deltas ?? [],
+    liveTraceDeltas
   );
   if (
     (!trace || trace.visibility === 'off') &&

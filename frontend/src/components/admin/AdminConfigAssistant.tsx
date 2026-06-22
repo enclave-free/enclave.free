@@ -45,6 +45,7 @@ import {
   recordAdminContextPlanInstrumentation,
   recordProviderFailureInstrumentation,
 } from '../../utils/adminResilienceInstrumentation';
+import { mergeTraceDeltas } from '../../utils/conversationTraceDeltas';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
@@ -118,18 +119,10 @@ function appendAssistantTraceDelta(
   return messages.map((message) => {
     if (message.id !== id) return message;
 
-    const traceDeltas = message.traceDeltas ?? [];
-    const existingIndex = traceDeltas.findIndex(
-      (existing) => existing.id === traceDelta.id
-    );
-    const nextTraceDeltas =
-      existingIndex >= 0
-        ? traceDeltas.map((existing, index) =>
-            index === existingIndex ? traceDelta : existing
-          )
-        : [...traceDeltas, traceDelta];
-
-    return { ...message, traceDeltas: nextTraceDeltas };
+    return {
+      ...message,
+      traceDeltas: mergeTraceDeltas(message.traceDeltas ?? [], [traceDelta]),
+    };
   });
 }
 
@@ -210,6 +203,7 @@ export function AdminConfigAssistant({
     string | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshLoading, setIsRefreshLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recoveryError, setRecoveryError] =
     useState<ClassifiedProviderError | null>(null);
@@ -1210,7 +1204,7 @@ export function AdminConfigAssistant({
               onClick={async () => {
                 if (!hasConfigTool) return;
                 setError(null);
-                setIsLoading(true);
+                setIsRefreshLoading(true);
                 try {
                   const metadata = await refreshAdminConfigRedactionMetadata({
                     shareSecrets,
@@ -1227,16 +1221,16 @@ export function AdminConfigAssistant({
                       : t('admin.configAssistant.refreshFailed')
                   );
                 } finally {
-                  setIsLoading(false);
+                  setIsRefreshLoading(false);
                 }
               }}
               className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={t('admin.configAssistant.refreshContext')}
               aria-label={t('admin.configAssistant.refreshContext')}
-              disabled={!hasConfigTool}
+              disabled={!hasConfigTool || isRefreshLoading}
             >
               <RefreshCw
-                className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+                className={`w-4 h-4 ${isRefreshLoading ? 'animate-spin' : ''}`}
               />
             </button>
           )}

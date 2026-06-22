@@ -666,6 +666,7 @@ def init_schema():
         ON session_logs(source, sage_session_id, updated_at DESC, id DESC)
         WHERE sage_session_id IS NOT NULL
     """)
+    _dedupe_session_log_source_sage_session_subject(cursor)
     cursor.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_session_logs_source_sage_session_subject
         ON session_logs(source, sage_session_id, subject_user_id)
@@ -1147,6 +1148,7 @@ def _migrate_add_session_log_source_sage_session_index() -> None:
         ON session_logs(source, sage_session_id, updated_at DESC, id DESC)
         WHERE sage_session_id IS NOT NULL
     """)
+    _dedupe_session_log_source_sage_session_subject(cursor)
     cursor.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_session_logs_source_sage_session_subject
         ON session_logs(source, sage_session_id, subject_user_id)
@@ -1155,6 +1157,45 @@ def _migrate_add_session_log_source_sage_session_index() -> None:
     conn.commit()
     logger.info("Migration: Added session log Sage session reuse indexes")
     cursor.close()
+
+
+def _dedupe_session_log_source_sage_session_subject(cursor: sqlite3.Cursor) -> None:
+    """Keep the newest duplicate Sage session log before adding the unique index."""
+    cursor.execute("""
+        SELECT source, sage_session_id, subject_user_id, COUNT(*) AS count
+        FROM session_logs
+        WHERE sage_session_id IS NOT NULL
+          AND subject_user_id IS NOT NULL
+        GROUP BY source, sage_session_id, subject_user_id
+        HAVING COUNT(*) > 1
+    """)
+    duplicate_groups = cursor.fetchall()
+    removed = 0
+    for group in duplicate_groups:
+        cursor.execute(
+            """SELECT id
+               FROM session_logs
+               WHERE source = ?
+                 AND sage_session_id = ?
+                 AND subject_user_id = ?
+               ORDER BY updated_at DESC, id DESC""",
+            (group["source"], group["sage_session_id"], group["subject_user_id"]),
+        )
+        ids = [row["id"] for row in cursor.fetchall()]
+        duplicate_ids = ids[1:]
+        if not duplicate_ids:
+            continue
+        placeholders = ",".join("?" for _ in duplicate_ids)
+        cursor.execute(
+            f"DELETE FROM session_logs WHERE id IN ({placeholders})",
+            duplicate_ids,
+        )
+        removed += len(duplicate_ids)
+    if removed:
+        logger.warning(
+            "Migration: Removed %d duplicate session_logs rows before Sage session unique index",
+            removed,
+        )
 
 
 def _migrate_encrypt_deployment_config_secrets() -> None:

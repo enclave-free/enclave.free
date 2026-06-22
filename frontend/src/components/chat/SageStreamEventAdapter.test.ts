@@ -104,6 +104,32 @@ describe('Sage Stream Event Adapter', () => {
 
     expect(
       adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: '   ',
+            kind: 'tool_call',
+          },
+        },
+        'assistant-1'
+      )
+    ).toBeNull();
+
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'trace-unknown-kind',
+            kind: 'unknown_kind',
+          },
+        },
+        'assistant-1'
+      )
+    ).toBeNull();
+
+    expect(
+      adaptSageStreamEvent(
         'answer_delta',
         {
           delta: 'Hello',

@@ -481,6 +481,14 @@ def admin_deployment_readiness_checks(
     tool_evidence: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     answer_lower = stream.answer.lower()
+    has_staged_admin_change_set = (
+        any(
+            tool_evidence_matches(evidence, "admin_change_set")
+            for evidence in tool_evidence
+        )
+        or bool(stream.admin_change_set)
+        or bool(stream.done.get("admin_change_set"))
+    )
     manual_check_phrases = [
         "please double-check",
         "you'll need to check",
@@ -497,10 +505,7 @@ def admin_deployment_readiness_checks(
         ),
         check(
             "admin_change_set_not_staged",
-            not any(
-                tool_evidence_matches(evidence, "admin_change_set")
-                for evidence in tool_evidence
-            ),
+            not has_staged_admin_change_set,
             "hard",
         ),
         check(
