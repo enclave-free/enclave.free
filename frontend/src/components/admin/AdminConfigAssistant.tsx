@@ -1073,7 +1073,7 @@ export function AdminConfigAssistant({
         const needsPageRefresh = results.some(
           (r) => r.ok && r.path === '/admin/settings'
         );
-        if (needsPageRefresh) {
+        if (needsPageRefresh && !isOnboarding) {
           postApplyNotes.push(
             t('admin.configAssistant.applySummary.pageRefreshRecommended')
           );
@@ -1179,54 +1179,67 @@ export function AdminConfigAssistant({
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-accent" />
             <div className="font-semibold text-text truncate">
-              {t('admin.configAssistant.title')}
+              {isOnboarding
+                ? t(
+                    'admin.configAssistant.onboardingTitle',
+                    'Guided Setup Chat'
+                  )
+                : t('admin.configAssistant.title')}
             </div>
           </div>
           <div className="text-xs text-text-muted mt-0.5">
-            {!hasConfigTool
-              ? t('admin.configAssistant.contextToolOff')
-              : snapshotInfo?.generatedAtIso
-                ? t('admin.configAssistant.contextReady', {
-                    timestamp: new Date(
-                      snapshotInfo.generatedAtIso
-                    ).toLocaleString(),
-                  })
-                : t('admin.configAssistant.contextNotLoaded')}
+            {isOnboarding
+              ? t(
+                  'admin.configAssistant.onboardingContext',
+                  'Focused setup conversation'
+                )
+              : !hasConfigTool
+                ? t('admin.configAssistant.contextToolOff')
+                : snapshotInfo?.generatedAtIso
+                  ? t('admin.configAssistant.contextReady', {
+                      timestamp: new Date(
+                        snapshotInfo.generatedAtIso
+                      ).toLocaleString(),
+                    })
+                  : t('admin.configAssistant.contextNotLoaded')}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={async () => {
-              if (!hasConfigTool) return;
-              setError(null);
-              setIsLoading(true);
-              try {
-                const metadata = await refreshAdminConfigRedactionMetadata({
-                  shareSecrets,
-                  fetchJson,
-                });
-                setSnapshotInfo({ generatedAtIso: new Date().toISOString() });
-                secretsForRedactionRef.current = metadata.secretValues;
-                deploymentSecretKeysRef.current = metadata.deploymentSecretKeys;
-              } catch (e) {
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : t('admin.configAssistant.refreshFailed')
-                );
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={t('admin.configAssistant.refreshContext')}
-            aria-label={t('admin.configAssistant.refreshContext')}
-            disabled={!hasConfigTool}
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
-            />
-          </button>
+          {!isOnboarding && (
+            <button
+              onClick={async () => {
+                if (!hasConfigTool) return;
+                setError(null);
+                setIsLoading(true);
+                try {
+                  const metadata = await refreshAdminConfigRedactionMetadata({
+                    shareSecrets,
+                    fetchJson,
+                  });
+                  setSnapshotInfo({ generatedAtIso: new Date().toISOString() });
+                  secretsForRedactionRef.current = metadata.secretValues;
+                  deploymentSecretKeysRef.current =
+                    metadata.deploymentSecretKeys;
+                } catch (e) {
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : t('admin.configAssistant.refreshFailed')
+                  );
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={t('admin.configAssistant.refreshContext')}
+              aria-label={t('admin.configAssistant.refreshContext')}
+              disabled={!hasConfigTool}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
+            </button>
+          )}
           {variant === 'sidebar' && onCollapse && (
             <button
               onClick={onCollapse}
@@ -1256,53 +1269,56 @@ export function AdminConfigAssistant({
         </div>
       </div>
 
-      <div className="px-4 py-3 border-b border-border bg-surface flex items-start justify-between gap-3">
-        <label
-          className={`flex items-start gap-3 select-none ${hasConfigTool ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
-          aria-disabled={!hasConfigTool}
-        >
-          <input
-            type="checkbox"
-            checked={shareSecrets}
-            disabled={!hasConfigTool}
-            onChange={async (e) => {
-              const checked = e.target.checked;
-              setShareSecrets(checked);
-              if (!checked) {
-                secretsForRedactionRef.current = [];
-                return;
-              }
-              try {
-                const metadata = await refreshAdminConfigRedactionMetadata({
-                  shareSecrets: true,
-                  fetchJson,
-                });
-                secretsForRedactionRef.current = metadata.secretValues;
-                deploymentSecretKeysRef.current = metadata.deploymentSecretKeys;
-              } catch {
-                secretsForRedactionRef.current = [];
-              }
-            }}
-            className="mt-1 disabled:cursor-not-allowed"
-          />
-          <div>
-            <div className="text-sm font-medium text-text">
-              {t('admin.configAssistant.shareSecretsTitle')}
+      {!isOnboarding && (
+        <div className="px-4 py-3 border-b border-border bg-surface flex items-start justify-between gap-3">
+          <label
+            className={`flex items-start gap-3 select-none ${hasConfigTool ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+            aria-disabled={!hasConfigTool}
+          >
+            <input
+              type="checkbox"
+              checked={shareSecrets}
+              disabled={!hasConfigTool}
+              onChange={async (e) => {
+                const checked = e.target.checked;
+                setShareSecrets(checked);
+                if (!checked) {
+                  secretsForRedactionRef.current = [];
+                  return;
+                }
+                try {
+                  const metadata = await refreshAdminConfigRedactionMetadata({
+                    shareSecrets: true,
+                    fetchJson,
+                  });
+                  secretsForRedactionRef.current = metadata.secretValues;
+                  deploymentSecretKeysRef.current =
+                    metadata.deploymentSecretKeys;
+                } catch {
+                  secretsForRedactionRef.current = [];
+                }
+              }}
+              className="mt-1 disabled:cursor-not-allowed"
+            />
+            <div>
+              <div className="text-sm font-medium text-text">
+                {t('admin.configAssistant.shareSecretsTitle')}
+              </div>
+              <div className="text-xs text-text-muted">
+                {t('admin.configAssistant.shareSecretsHint')}
+              </div>
             </div>
-            <div className="text-xs text-text-muted">
-              {t('admin.configAssistant.shareSecretsHint')}
+          </label>
+          {hasConfigTool && shareSecrets && (
+            <div className="flex items-center gap-2 text-xs text-warning shrink-0">
+              <ShieldAlert className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                {t('admin.configAssistant.sensitive')}
+              </span>
             </div>
-          </div>
-        </label>
-        {hasConfigTool && shareSecrets && (
-          <div className="flex items-center gap-2 text-xs text-warning shrink-0">
-            <ShieldAlert className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {t('admin.configAssistant.sensitive')}
-            </span>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <div
         ref={messagesContainerRef}

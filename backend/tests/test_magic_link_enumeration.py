@@ -98,6 +98,29 @@ class MagicLinkEnumerationTest(unittest.TestCase):
         self.assertEqual(unknown.json(), expected_body)
         self.assertEqual(self.sent_to, ["known@example.com", "new-person@example.com"])
 
+    def test_magic_link_email_uses_instance_name_by_default(self) -> None:
+        self.database.update_settings({"instance_name": "FreeThem"})
+
+        message = self.auth.build_magic_link_email("known@example.com", "token-123")
+        html = message.get_payload()[0].get_payload()
+
+        self.assertEqual(message["Subject"], "Sign in to FreeThem")
+        self.assertIn("Sign in to FreeThem", html)
+        self.assertIn("token-123", html)
+
+    def test_magic_link_email_uses_public_email_display_name_override(self) -> None:
+        self.database.update_settings({
+            "instance_name": "FreeThem",
+            "public_email_display_name": "World Liberty Congress",
+        })
+
+        message = self.auth.build_magic_link_email("known@example.com", "token-123")
+        html = message.get_payload()[0].get_payload()
+
+        self.assertEqual(message["Subject"], "Sign in to World Liberty Congress")
+        self.assertIn("Sign in to World Liberty Congress", html)
+        self.assertNotIn("Sign in to FreeThem", html)
+
 
 if __name__ == "__main__":
     unittest.main()

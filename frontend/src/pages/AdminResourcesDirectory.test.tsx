@@ -64,7 +64,7 @@ describe('AdminResourcesDirectory', () => {
     );
 
     expect(
-      await screen.findByRole('link', { name: 'Back to Admin' })
+      await screen.findByRole('link', { name: 'Back to Admin Dashboard' })
     ).toHaveAttribute('href', '/admin/setup');
 
     fireEvent.click(

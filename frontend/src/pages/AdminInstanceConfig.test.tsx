@@ -72,6 +72,14 @@ describe('AdminInstanceConfig', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Display Name' }), {
       target: { value: 'Operator Desk' },
     })
+    fireEvent.change(
+      screen.getByRole('textbox', {
+        name: 'Public email display name (optional)',
+      }),
+      {
+        target: { value: 'World Liberty Congress' },
+      }
+    )
     fireEvent.change(screen.getByRole('textbox', { name: 'Logo URL' }), {
       target: { value: 'https://example.com/logo.png' },
     })
@@ -89,6 +97,7 @@ describe('AdminInstanceConfig', () => {
         method: 'PUT',
         body: JSON.stringify({
           instance_name: 'Operator Desk',
+          public_email_display_name: 'World Liberty Congress',
           primary_color: DEFAULT_INSTANCE_CONFIG.accentColor,
           icon: DEFAULT_INSTANCE_CONFIG.icon,
           logo_url: 'https://example.com/logo.png',
@@ -145,6 +154,9 @@ describe('AdminInstanceConfig', () => {
       }))
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({
         body: expect.stringContaining('"default_theme":"dark"'),
+      }))
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({
+        body: expect.stringContaining('"public_email_display_name":""'),
       }))
     })
 

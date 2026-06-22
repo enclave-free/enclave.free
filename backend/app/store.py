@@ -9,6 +9,7 @@ import os
 import uuid
 import logging
 import asyncio
+import threading
 from typing import Any
 
 from qdrant_client import QdrantClient
@@ -39,6 +40,7 @@ COLLECTION_NAME = "enclave_knowledge"
 _qdrant_client = None
 _embedding_model = None
 _embedding_client = None
+_qdrant_collection_lock = threading.Lock()
 
 
 def get_qdrant_client():
@@ -104,23 +106,42 @@ def get_embedding_dimension() -> int:
     return get_embedding_model().get_sentence_embedding_dimension()
 
 
+def _is_qdrant_collection_already_exists_error(error: Exception) -> bool:
+    status_code = getattr(error, "status_code", None)
+    content = getattr(error, "content", "")
+    message = f"{content!r} {error}".lower()
+    return status_code == 409 and "already exists" in message
+
+
 def ensure_qdrant_collection():
     """Ensure the knowledge collection exists in Qdrant"""
     client = get_qdrant_client()
-    
-    collections = client.get_collections().collections
-    collection_exists = any(c.name == COLLECTION_NAME for c in collections)
-    
-    if not collection_exists:
-        vector_dim = get_embedding_dimension()
-        client.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(
-                size=vector_dim,
-                distance=Distance.COSINE
+
+    with _qdrant_collection_lock:
+        collections = client.get_collections().collections
+        collection_exists = any(c.name == COLLECTION_NAME for c in collections)
+
+        if not collection_exists:
+            vector_dim = get_embedding_dimension()
+            try:
+                client.create_collection(
+                    collection_name=COLLECTION_NAME,
+                    vectors_config=VectorParams(
+                        size=vector_dim,
+                        distance=Distance.COSINE
+                    )
+                )
+            except Exception as error:
+                if _is_qdrant_collection_already_exists_error(error):
+                    logger.info(
+                        "Qdrant collection already exists after concurrent create: %s",
+                        COLLECTION_NAME,
+                    )
+                    return
+                raise
+            logger.info(
+                f"Created Qdrant collection: {COLLECTION_NAME} (dim={vector_dim})"
             )
-        )
-        logger.info(f"Created Qdrant collection: {COLLECTION_NAME} (dim={vector_dim})")
 
 
 def _store_chunk_sync(

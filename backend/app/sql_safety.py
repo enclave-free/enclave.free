@@ -13,6 +13,8 @@ ALLOWED_TABLES = {
     "user_field_definitions",
     "users",
     "user_field_values",
+    "session_logs",
+    "session_log_feedback",
 }
 
 

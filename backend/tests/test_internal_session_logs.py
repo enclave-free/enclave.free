@@ -10,6 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from coincurve import PrivateKey
 
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
@@ -106,6 +107,49 @@ class InternalSessionLogsTest(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertIn("No admin configured", response.json()["detail"])
         self.assertEqual(self._session_log_count(), 0)
+
+    def test_internal_user_session_log_updates_existing_sage_session_record(self) -> None:
+        admin_key = PrivateKey()
+        self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())
+        user_id = self.database.create_user()
+
+        first = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": user_id, "type": "user", "approved": True},
+                "sage_session_id": "sage-session-1",
+                "turns": [
+                    {"role": "user", "content": "first question"},
+                    {"role": "assistant", "content": "first answer"},
+                ],
+            },
+        )
+        second = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": user_id, "type": "user", "approved": True},
+                "sage_session_id": "sage-session-1",
+                "turns": [
+                    {"role": "user", "content": "first question"},
+                    {"role": "assistant", "content": "first answer"},
+                    {"role": "user", "content": "second question"},
+                    {"role": "assistant", "content": "second answer"},
+                ],
+            },
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(self._session_log_count(), 1)
+        self.assertEqual(second.json()["log_id"], first.json()["log_id"])
+        self.assertEqual(second.json()["turn_count"], 4)
+        with self.database.get_cursor() as cursor:
+            cursor.execute("SELECT transcript_ciphertext FROM session_logs")
+            ciphertext = cursor.fetchone()["transcript_ciphertext"]
+        self.assertIsNotNone(ciphertext)
+        self.assertNotIn("second answer", ciphertext)
 
 
 if __name__ == "__main__":

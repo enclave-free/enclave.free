@@ -47,6 +47,20 @@ class SqlSafetyTest(unittest.TestCase):
         self.assertEqual(referenced_sql_tables(sql), {"users", "user_types"})
         self.assertEqual(validate_sql_allowed_tables(sql), (True, ""))
 
+    def test_encrypted_session_log_tables_are_readable_for_database_explorer(self) -> None:
+        self.assertEqual(
+            validate_sql_allowed_tables(
+                "SELECT log_id, source, transcript_ciphertext FROM session_logs"
+            ),
+            (True, ""),
+        )
+        self.assertEqual(
+            validate_sql_allowed_tables(
+                "SELECT rating FROM session_log_feedback WHERE log_id = 'abc'"
+            ),
+            (True, ""),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -476,7 +476,7 @@ export function AdminAIConfig() {
 
   const footer = (
     <Link to="/admin/setup" className="text-text-muted hover:text-text transition-colors">
-      {t('admin.setup.backToChat')}
+      {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
     </Link>
   )
 
@@ -777,7 +777,7 @@ export function AdminAIConfig() {
             className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-xl px-4 py-3 text-sm font-medium transition-all hover:bg-surface"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t('common.back', 'Back')}
+            {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
           </Link>
         </div>
       </div>
