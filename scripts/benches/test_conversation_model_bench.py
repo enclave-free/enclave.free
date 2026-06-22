@@ -5,6 +5,7 @@ from __future__ import annotations
 import http.client
 import inspect
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -22,6 +23,7 @@ from scripts.benches.conversation_model_bench import (
     StreamResult,
     parse_args,
     run_bench,
+    run_command,
     runtime_config_fingerprint_command,
 )
 
@@ -34,6 +36,7 @@ class FakeEnvironment:
         self.restored_models: list[str] = []
         self.health_waits = 0
         self.reset_count = 0
+        self.operations: list[str] = []
 
     def run_metadata(self) -> dict:
         return {"repo": "test-repo", "git": {"prototype": "abc123"}}
@@ -74,6 +77,7 @@ class FakeEnvironment:
         self.restored_models.append(model)
 
     def reset_state(self) -> None:
+        self.operations.append("reset_state")
         self.reset_count += 1
 
 
@@ -145,6 +149,7 @@ class FakeConversationClient:
                 admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
+                    "first_trace_or_tool_feedback_ms": 20.0,
                     "first_visible_assistant_token_ms": 80.0,
                     "done_ms": 100.0,
                 },
@@ -239,6 +244,7 @@ class FakeConversationClient:
                 },
                 timings={
                     "first_event_ms": 10.0,
+                    "first_trace_or_tool_feedback_ms": 10.0,
                     "first_visible_assistant_token_ms": 90.0,
                     "done_ms": 110.0,
                 },
@@ -301,6 +307,7 @@ class FakeConversationClient:
             admin_change_set=None,
             timings={
                 "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 25.0,
                 "first_visible_assistant_token_ms": 100.0,
                 "done_ms": 120.0,
             },
@@ -328,6 +335,7 @@ class FakeWarningOnlyClient:
             admin_change_set=None,
             timings={
                 "first_event_ms": 80.0,
+                "first_trace_or_tool_feedback_ms": None,
                 "first_visible_assistant_token_ms": 80.0,
                 "done_ms": 100.0,
             },
@@ -358,8 +366,25 @@ class FakeSlowFirstAnswerClient(FakeConversationClient):
             admin_change_set=result.admin_change_set,
             timings={
                 "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 10.0,
                 "first_visible_assistant_token_ms": 45_000.0,
                 "done_ms": 50_000.0,
+            },
+        )
+
+
+class FakeSlowTraceFeedbackClient(FakeConversationClient):
+    def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+        result = super().stream_chat(token, payload, timeout)
+        return StreamResult(
+            answer=result.answer,
+            events=result.events,
+            done=result.done,
+            trace=result.trace,
+            admin_change_set=result.admin_change_set,
+            timings={
+                **result.timings,
+                "first_trace_or_tool_feedback_ms": 15_000.0,
             },
         )
 
@@ -426,11 +451,84 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertIn("X-Internal-Agent-Token: test-token", command)
         self.assertNotIn("Authorization: Bearer test-token", command)
 
+    def test_run_command_redacts_internal_agent_token_on_failure(self) -> None:
+        with patch(
+            "scripts.benches.conversation_model_bench.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                returncode=1,
+                stdout="",
+                stderr="request failed",
+            ),
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                run_command(
+                    [
+                        "curl",
+                        "-H",
+                        "X-Internal-Agent-Token: secret-token",
+                        "http://example.test",
+                    ],
+                    timeout=1,
+                )
+
+        message = str(raised.exception)
+        self.assertIn("X-Internal-Agent-Token: <redacted>", message)
+        self.assertNotIn("secret-token", message)
+
+    def test_run_command_redacts_internal_agent_token_on_timeout(self) -> None:
+        with patch(
+            "scripts.benches.conversation_model_bench.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(
+                cmd=["curl", "-H", "X-Internal-Agent-Token: secret-token"],
+                timeout=1,
+            ),
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                run_command(
+                    [
+                        "curl",
+                        "-H",
+                        "X-Internal-Agent-Token: secret-token",
+                        "http://example.test",
+                    ],
+                    timeout=1,
+                )
+
+        message = str(raised.exception)
+        self.assertIn("X-Internal-Agent-Token: <redacted>", message)
+        self.assertNotIn("secret-token", message)
+
     def test_fresh_reset_admin_helper_uses_existing_admin_creation_api(self) -> None:
         source = inspect.getsource(LocalComposeEnvironment.admin_token)
 
         self.assertIn("database.add_admin", source)
         self.assertNotIn("database.create_admin", source)
+
+    def test_wait_for_health_retries_after_probe_timeout(self) -> None:
+        with (
+            patch(
+                "scripts.benches.conversation_model_bench.subprocess.run",
+                side_effect=[
+                    subprocess.TimeoutExpired(cmd="curl", timeout=10),
+                    subprocess.CompletedProcess(
+                        args=[],
+                        returncode=0,
+                        stdout="",
+                        stderr="",
+                    ),
+                ],
+            ) as run_probe,
+            patch(
+                "scripts.benches.conversation_model_bench.time.time",
+                side_effect=[0, 1, 2],
+            ),
+            patch("scripts.benches.conversation_model_bench.time.sleep") as sleep,
+        ):
+            LocalComposeEnvironment().wait_for_health()
+
+        self.assertEqual(run_probe.call_count, 2)
+        sleep.assert_called_once_with(2)
 
     def test_stream_client_artifacts_incomplete_stream_before_done(self) -> None:
         body = (
@@ -479,8 +577,41 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(result.answer, "Get safe — today.")
         self.assertIsNone(result.error)
 
+    def test_stream_client_records_first_trace_or_tool_feedback_latency(self) -> None:
+        body = (
+            b'event: trace_delta\ndata: {"trace_delta":{"id":"trace-1","kind":"tool_call","title":"Admin Config","status":"running"}}\n\n'
+            b'event: answer_delta\ndata: {"delta":"Ready"}\n\n'
+            b'event: done\ndata: {"model":"kimi-k2-6","provider":"sage"}\n\n'
+        )
+
+        with (
+            patch(
+                "urllib.request.urlopen",
+                return_value=IncompleteStreamResponse(body),
+            ),
+            patch(
+                "scripts.benches.conversation_model_bench.time.perf_counter",
+                side_effect=[100.0, 100.015, 100.055, 100.090],
+            ),
+        ):
+            result = HttpConversationClient("http://example.test").stream_chat(
+                "token",
+                {"message": "hello"},
+                timeout=1,
+            )
+
+        self.assertEqual(result.timings["first_event_ms"], 15.0)
+        self.assertEqual(result.timings["first_trace_or_tool_feedback_ms"], 15.0)
+        self.assertEqual(result.timings["first_visible_assistant_token_ms"], 55.0)
+        self.assertEqual(result.timings["done_ms"], 90.0)
+
     def test_reset_option_invokes_local_state_reset_before_scenarios(self) -> None:
         env = FakeEnvironment()
+
+        class RecordingScenarioClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                env.operations.append("scenario_started")
+                return super().stream_chat(token, payload, timeout)
 
         run_bench(
             BenchOptions(
@@ -488,11 +619,15 @@ class ConversationModelBenchTest(unittest.TestCase):
                 reset=True,
             ),
             environment=env,
-            client=FakeConversationClient(),
+            client=RecordingScenarioClient(),
         )
 
         self.assertEqual(env.reset_count, 1)
         self.assertEqual(env.verified_models, ["kimi-k2-6"])
+        self.assertLess(
+            env.operations.index("reset_state"),
+            env.operations.index("scenario_started"),
+        )
 
     def test_current_model_admin_readiness_bench_produces_passing_artifact(self) -> None:
         env = FakeEnvironment()
@@ -517,6 +652,51 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(env.verified_models, ["kimi-k2-6"])
         self.assertEqual(client.last_token, "admin-token")
         self.assertEqual(client.last_payload["tools"], ["admin-config"])
+        self.assertEqual(
+            artifact["candidates"][0]["scenarios"][0]["timing"][
+                "first_trace_or_tool_feedback_ms"
+            ],
+            25.0,
+        )
+
+    def test_admin_readiness_fails_when_change_set_tool_is_staged(self) -> None:
+        class FakeStagedChangeSetClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done={
+                        **result.done,
+                        "tools_used": [
+                            *result.done.get("tools_used", []),
+                            {
+                                "tool_id": "admin_change_set",
+                                "tool_name": "Admin Change Set",
+                            },
+                        ],
+                    },
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                    error=result.error,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_deployment_readiness",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeStagedChangeSetClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["admin_change_set_not_staged"]["severity"], "hard")
+        self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
 
     def test_admin_config_bootstrap_scenario_requires_canonical_change_set(self) -> None:
         artifact = run_bench(
@@ -587,6 +767,7 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             {warning["name"] for warning in artifact["summary"]["warnings"]},
             {
+                "first_trace_or_tool_feedback_present",
                 "knowledge_search_behavior_recorded",
                 "retrieval_evidence_recorded",
                 "answer_present_with_practical_guidance",
@@ -636,6 +817,21 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             {warning["name"] for warning in scenario["summary"]["warnings"]},
             {"first_answer_under_30s"},
+        )
+
+    def test_slow_trace_feedback_is_warning_only(self) -> None:
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=FakeSlowTraceFeedbackClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+
+        self.assertEqual(artifact["summary"]["status"], "passed")
+        self.assertEqual(
+            {warning["name"] for warning in scenario["summary"]["warnings"]},
+            {"first_trace_or_tool_feedback_under_10s"},
         )
 
     def test_explicit_model_candidates_switch_verify_and_restore_local_sage(self) -> None:

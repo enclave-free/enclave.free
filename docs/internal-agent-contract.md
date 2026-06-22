@@ -493,7 +493,7 @@ Tool-specific `data` contracts:
     `conversation_blocking`
 - `read_agent_settings` returns:
   - `global`: object containing global Agent Settings, prompt sections,
-    parameters, defaults, and trace visibility settings
+    parameters, defaults, and transparent trace posture metadata
   - `per_user_type`: array of effective override objects keyed by
     `user_type_id`, each with `user_type_name`, `overrides`, and
     `effective_values`

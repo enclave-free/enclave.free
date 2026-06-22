@@ -1,5 +1,6 @@
 import {
   ConversationActivityStep,
+  ConversationTraceDelta,
   ConversationTrace,
   Message,
 } from '../components/chat/ChatMessage';
@@ -30,6 +31,7 @@ type ConversationExportMessage = Pick<
   | 'timestamp'
   | 'trace'
   | 'activitySteps'
+  | 'traceDeltas'
   | 'controlSnapshot'
 >;
 
@@ -42,12 +44,21 @@ function toConversationExportMessages(
   messages: Message[]
 ): ConversationExportMessage[] {
   return messages.map(
-    ({ role, content, timestamp, trace, activitySteps, controlSnapshot }) => ({
+    ({
       role,
       content,
       timestamp,
       trace,
       activitySteps,
+      traceDeltas,
+      controlSnapshot,
+    }) => ({
+      role,
+      content,
+      timestamp,
+      trace,
+      activitySteps,
+      traceDeltas,
       controlSnapshot,
     })
   );
@@ -75,18 +86,48 @@ function mergeActivitySteps(
   return Array.from(merged.values());
 }
 
+function mergeTraceDeltas(
+  liveDeltas: ConversationTraceDelta[] = [],
+  settledDeltas: ConversationTraceDelta[] = []
+): ConversationTraceDelta[] {
+  const merged = new Map<string, ConversationTraceDelta>();
+  for (const delta of liveDeltas) merged.set(delta.id, delta);
+  for (const delta of settledDeltas) merged.set(delta.id, delta);
+  return Array.from(merged.values());
+}
+
 function formatTraceMarkdown(
   trace?: ConversationTrace | null,
-  liveActivitySteps: ConversationActivityStep[] = []
+  liveActivitySteps: ConversationActivityStep[] = [],
+  liveTraceDeltas: ConversationTraceDelta[] = []
 ): string {
   const activitySteps = mergeActivitySteps(
     liveActivitySteps,
     trace?.activity_steps ?? []
   );
-  if ((!trace || trace.visibility === 'off') && activitySteps.length === 0)
+  const traceDeltas = mergeTraceDeltas(
+    liveTraceDeltas,
+    trace?.trace_deltas ?? []
+  );
+  if (
+    (!trace || trace.visibility === 'off') &&
+    activitySteps.length === 0 &&
+    traceDeltas.length === 0
+  )
     return '';
   const lines: string[] = ['**Conversation Trace**'];
   const compactOnly = trace?.visibility === 'minimal';
+  if (traceDeltas.length > 0) {
+    lines.push('- Trace Deltas');
+    for (const delta of traceDeltas) {
+      const title = delta.title || delta.tool_name || delta.kind;
+      const status = delta.status ? ` (${escapeMarkdown(delta.status)})` : '';
+      const content = delta.content ? `: ${escapeMarkdown(delta.content)}` : '';
+      lines.push(
+        `  - ${escapeMarkdown(title)} [${escapeMarkdown(delta.kind)}]${status}${content}`
+      );
+    }
+  }
   if (activitySteps.length > 0) {
     lines.push('- Conversation Activity');
     for (const step of activitySteps) {
@@ -150,16 +191,34 @@ function formatControlSnapshotText(
 
 function formatTraceText(
   trace?: ConversationTrace | null,
-  liveActivitySteps: ConversationActivityStep[] = []
+  liveActivitySteps: ConversationActivityStep[] = [],
+  liveTraceDeltas: ConversationTraceDelta[] = []
 ): string {
   const activitySteps = mergeActivitySteps(
     liveActivitySteps,
     trace?.activity_steps ?? []
   );
-  if ((!trace || trace.visibility === 'off') && activitySteps.length === 0)
+  const traceDeltas = mergeTraceDeltas(
+    liveTraceDeltas,
+    trace?.trace_deltas ?? []
+  );
+  if (
+    (!trace || trace.visibility === 'off') &&
+    activitySteps.length === 0 &&
+    traceDeltas.length === 0
+  )
     return '';
   const lines: string[] = ['Conversation Trace'];
   const compactOnly = trace?.visibility === 'minimal';
+  if (traceDeltas.length > 0) {
+    lines.push('- Trace Deltas');
+    for (const delta of traceDeltas) {
+      const title = delta.title || delta.tool_name || delta.kind;
+      const status = delta.status ? ` (${delta.status})` : '';
+      const content = delta.content ? `: ${delta.content}` : '';
+      lines.push(`  - ${title} [${delta.kind}]${status}${content}`);
+    }
+  }
   if (activitySteps.length > 0) {
     lines.push('- Conversation Activity');
     for (const step of activitySteps) {
@@ -227,7 +286,11 @@ export function generateExport({
       } else {
         // Assistant messages may contain markdown, preserve as-is
         content += `${message.content}\n\n`;
-        content += formatTraceMarkdown(message.trace, message.activitySteps);
+        content += formatTraceMarkdown(
+          message.trace,
+          message.activitySteps,
+          message.traceDeltas
+        );
       }
 
       content += `---\n\n`;
@@ -260,7 +323,11 @@ export function generateExport({
       content += formatControlSnapshotText(message.controlSnapshot);
     }
     if (message.role === 'assistant') {
-      content += formatTraceText(message.trace, message.activitySteps);
+      content += formatTraceText(
+        message.trace,
+        message.activitySteps,
+        message.traceDeltas
+      );
     }
     content += `${'─'.repeat(40)}\n\n`;
   });

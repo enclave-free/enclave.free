@@ -40,5 +40,5 @@ export {
 } from './ConversationUiState';
 export { DocumentScope, type DocumentSource } from './DocumentScope';
 export { ExportButton } from './ExportButton';
-export { adaptSageStreamEvent } from './SageStreamEventAdapter';
+export { adaptSageStreamEvent, readTraceDelta } from './SageStreamEventAdapter';
 export { ToolSelector, type Tool } from './ToolSelector';

@@ -50,6 +50,7 @@ export function AssistantConversationThread({
                           trace: turn.trace,
                           traceStatus: turn.traceStatus,
                           activitySteps: turn.activitySteps,
+                          traceDeltas: turn.traceDeltas,
                           actions,
                         }}
                         onAction={onMessageAction}

@@ -321,16 +321,24 @@ The messages, prompts, retrieved document excerpts, required context, user profi
 _Avoid_: user message, prompt text
 
 **Conversation Trace**:
-Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and safe reasoning summaries when available.
-_Avoid_: chain of thought, debug log, audit log, provider trace
+Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and reasoning traces when available.
+_Avoid_: audit log, server log
 
 **Conversation Activity Step**:
 A sanitized user-visible step in a **Conversation** that shows meaningful **Sage** activity during an assistant turn, such as using a tool, retrieving context, checking configuration, or preparing a response.
 _Avoid_: trace blob, debug event, raw tool call
 
+**Trace Delta**:
+An append-only live **Conversation Streaming Transport** event that carries raw or near-raw trace detail for the current assistant turn, such as reasoning content, model step boundaries, tool calls, tool results, retries, and timing.
+_Avoid_: hidden debug event, separate log stream
+
 **Activity**:
-The user-facing presentation of live **Conversation Activity Steps** and final sanitized **Conversation Trace** metadata for an assistant turn. It is one visible concept even when the **Conversation Streaming Transport** delivers live steps and final trace metadata separately, and it should remain transparent enough for prototype debugging without presenting itself as a raw debug panel.
-_Avoid_: trace UI, raw debug panel, hidden tool-call UI
+The user-facing presentation of live **Conversation Activity Steps** and final **Conversation Trace** metadata for an assistant turn. It is one visible concept even when the **Conversation Streaming Transport** delivers live steps and final trace metadata separately, and it should remain transparent enough for prototype debugging and auditability.
+_Avoid_: hidden tool-call UI
+
+**Reasoning Trace**:
+Visible model reasoning captured during a **Conversation** turn, including raw provider reasoning content when available. A **Reasoning Trace** is not a post-hoc narration invented by **Sage** when the **Model Provider** does not expose reasoning content. A **Reasoning Trace** is conversation transparency metadata, not **Audit Log** evidence or a source of product authority.
+_Avoid_: reasoning summary, server log, audit log
 
 **Conversation Turn Timing**:
 Transient user-visible timing information about meaningful phases within one **Conversation** turn, used to make slow turns understandable without becoming durable **Conversation Trace** or **Audit Log** evidence.
@@ -364,9 +372,9 @@ _Avoid_: session memory, conversation owner, agent state
 The selected visible conversation controls captured when a **User** or **Admin** submits a turn, such as enabled **Tool Sets** and **Tool** constraints.
 _Avoid_: current controls, session settings, agent settings
 
-**Trace Visibility Policy**:
-The **Operator** configured **Instance Setting** or **Agent Setting** that determines which **Conversation Trace** details are visible for **Admin Conversations** and **User Conversations**.
-_Avoid_: debug mode, logging level, provider trace setting
+**Trace Visibility Posture**:
+The prototype product stance that **Conversation Trace** details are visible by default for both **Admin Conversations** and **User Conversations**. It is not a per-actor policy surface in the current transparent prototype phase.
+_Avoid_: debug mode, logging level, actor-specific trace policy
 
 **Tool**:
 A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
@@ -717,59 +725,57 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
 - A **Conversation Model Bench** exercises real **User Conversations** or **Admin Conversations** rather than raw **Model Provider** prompts
 - **Conversation Model Bench** evidence is internal comparison material, not product **Conversation Trace** or **Audit Log** evidence
-- A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, and **Reasoning Summary** details
-- A **Conversation Activity Step** is a user-visible rendering unit derived from sanitized **Conversation Trace** metadata
-- A **Conversation Trace** must not expose raw hidden chain of thought, raw provider trace blobs, full prompts, full unredacted tool outputs, decrypted database rows, secrets, or hidden system/developer instructions in ordinary chat surfaces
-- A **Reasoning Summary** is a safe summary of how **Sage** approached a response, not hidden chain of thought
-- The first **Reasoning Summary** implementation should be authored by **Sage** from orchestration events rather than relying on provider-specific raw reasoning APIs
-- Sanitized **Conversation Traces** should be persisted with the assistant turns they describe so refreshed conversations, exports, and admin troubleshooting remain coherent
+- A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, **Reasoning Trace**, and **Reasoning Summary** details
+- A **Conversation Activity Step** is a user-visible rendering unit derived from **Conversation Trace** metadata
+- A **Conversation Trace** may expose raw model reasoning in both **Admin Conversations** and **User Conversations**, but it must still protect credentials, hidden system/developer instructions, internal auth headers, raw secret reveal results, infrastructure/runtime environment dumps, and other authority-bearing internals
+- When the minimal blocklist catches protected content inside a **Trace Delta**, **Sage** should keep the event, replace protected content with `[redacted]`, and mark it guarded; hidden authority-bearing instructions should be redacted as a whole field
+- Raw decrypted database rows should appear in **Conversation Trace** only when the row content was already intentionally returned through an authorized product view or authorized **Tool** result
+- A **Reasoning Summary** is a concise explanation of how **Sage** approached a response, while a **Reasoning Trace** may include raw provider reasoning content when the **Model Provider** exposes it
+- **Sage** should not fabricate a **Reasoning Trace** by asking the model to narrate hidden thoughts after the fact; when raw reasoning is unavailable, **Conversation Trace** should rely on model step, **Tool**, retry, correction, retrieval, timing, and optional **Reasoning Summary** details
+- **Conversation Traces** should be persisted with the assistant turns they describe so refreshed conversations, exports, and admin troubleshooting remain coherent
 - Persisted **Conversation Traces** are assistant-turn metadata, preferably stored with the assistant message record and otherwise in a sidecar record keyed to that assistant turn
 - Assistant turns should have backend-generated stable message identifiers so streamed answer deltas, final responses, persisted **Conversation Traces**, exports, and deletion workflows can refer to the same turn
-- When **Trace Visibility Policy** is `off`, **Sage** should not persist **Conversation Traces** for future turns
-- Raw provider trace data, raw prompts, raw tool outputs, and raw reasoning should not be persisted as **Conversation Traces**
+- **Conversation Traces** should be on by default in the transparent prototype phase
+- Raw reasoning traces should persist as **Conversation Traces** with the assistant turn they describe and should be included in conversation exports by default
 - **Session Memory Deletion** should delete persisted **Conversation Traces** for the associated **Conversation**
-- Conversation exports should include the viewer-visible sanitized **Conversation Trace** by default
-- **Conversation Trace** should be exposed through a structured `trace` response object on Conversation transports when **Trace Visibility Policy** permits it
+- Conversation exports should include the full persisted **Conversation Trace** by default
+- **Conversation Trace** should be exposed through a structured `trace` response object on Conversation transports
 - **Admin Conversations** and **User Conversations** should share the same **Conversation UI Surface** with role-specific controls
-- **Activity** should be the user-facing presentation for both live **Conversation Activity Steps** and final sanitized **Conversation Trace** metadata
-- **Activity** should be visible by default during the prototype phase, with a polished timeline that is verbose enough for debugging but does not expose raw payloads in ordinary chat
-- **Activity** should use progressive disclosure: visible rows for meaningful work, expandable sanitized row details, and no raw JSON, raw SQL results, provider traces, backend event names, or internal identifiers in normal chat
+- **Activity** should be the user-facing presentation for both live **Conversation Activity Steps** and final **Conversation Trace** metadata
+- **Activity** should be visible by default during the prototype phase, with a polished timeline that is verbose enough for debugging and auditability
+- **Activity** should use progressive disclosure: visible rows for meaningful work, expandable details for raw or near-raw trace material, and hard protection for secrets and hidden authority-bearing instructions
 - The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
 - The **Conversation UI Surface** should adapt to Sage-owned **Conversation Streaming Transport** rather than redefining **Agent Runtime** behavior
 - **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
+- **Sage** should emit live **Trace Deltas** from inside the **Model-Driven Tool Loop** so model steps, tool calls, tool results, retries, reasoning traces, and timing are visible as they happen
+- Streaming **Conversation** transports should deliver **Trace Deltas** live, while non-streaming **Conversation** transports should return the accumulated **Conversation Trace** in the final response
+- The **Conversation UI Surface** should render **Trace Deltas** as assistant-ui-style reasoning and tool-call message parts, with **Conversation Activity Steps** remaining available as summary or compatibility metadata
 - During streaming turns, the **Conversation UI Surface** should render meaningful **Conversation Activity Steps** in order before the final assistant response is complete
 - **Conversation Activity Steps** should remain scannable after completion rather than being packed only into a dense trace blob
-- During streaming turns, **Conversation Activity Steps** must be emitted and sanitized by **Sage**, and the prototype should bias toward showing enough activity to make the agent loop inspectable
+- During streaming turns, **Conversation Activity Steps** must be emitted by **Sage**, and the prototype should bias toward showing enough activity to make the agent loop inspectable
 - **Activity** may explain that **Sage** prepared an **Executable Change Set**, but **Change Confirmation** should remain a separate approval artifact because it authorizes state-changing action
-- During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status to that turn, and attach the final sanitized **Conversation Trace** when it arrives
-- Streaming live status must follow the active **Trace Visibility Policy** and must not reveal more detail than the final persisted **Conversation Trace** would reveal
+- During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status and **Trace Deltas** to that turn, and attach the final **Conversation Trace** when it arrives
+- Streaming live status and Activity should use the same transparent trace posture for **Admin Conversations** and **User Conversations**
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
-- The **Agent Runtime** should own **Conversation Trace** redaction before returning traces to clients
+- **Sage** should own **Conversation Trace** minimal blocklist protection before returning traces to clients
 - The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
 - **Conversation Streaming Transport** should support the same **Model-Driven Tool Loop** as non-streaming **Conversations** rather than preserving separate assistant-style and retrieval-first tool paths
 - **Conversation Streaming Transport** should remain tool-aware so configuration, database, web, and knowledge-assisted **Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
 - **Sage** should expose enabled **Tool** contracts to the model, execute model-chosen calls, inject **Tool** results, and continue until the model can answer or produce an **Executable Change Set**
 - **Sage** should not pre-classify a user turn into a scoped prompt context before the model sees available **Tools**
 - The **Model-Driven Tool Loop** should stay provider-portable and should not depend on provider-native function-calling support
-- Individual **Tools** and retrieval steps should emit safe trace drafts for their own work, and the **Agent Runtime** should compose those drafts into the final policy-filtered **Conversation Trace**
+- Individual **Tools** and retrieval steps should emit trace material for their own work, and **Sage** should compose that material into the final **Conversation Trace** while protecting the minimal blocklist
 - Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
-- Changes to **Trace Visibility Policy** should create **Audit Log** events because they change operator-visible conversation behavior
-- **Conversation Trace** redaction failures should suppress the trace without failing the associated chat response
-- **Conversation Trace** redaction failures should be visible to **Admins** as trace suppression and should create **Audit Log** events without exposing sensitive trace contents
-- **Trace Visibility Policy** should fully control trace presentation; viewers may expand or collapse a shown per-message disclosure but should not have a persistent local preference that hides enabled traces
-- **Trace Visibility Policy** should be configured in the admin **Agent Settings** surface rather than as a per-turn chat tool choice
-- **Admin Configuration Assistant** may propose **Trace Visibility Policy** changes through confirmed change sets because trace policy is an **Agent Setting**
-- Raising **User Conversation** trace visibility should be presented as a privacy-relevant configuration change, and `detailed` should remain invalid for **User Conversations**
-- **Tool Trace** for `db-query` should never expose raw SQL results and should summarize status, execution location, sanitized query intent, row counts, safe column metadata, truncation, and redaction warnings
+- The transparent prototype **Trace Visibility Posture** should not require actor-specific **Audit Log** events because it is not currently a configurable policy surface
+- **Conversation Trace** blocklist handling should keep the trace event when possible, replace protected content with `[redacted]`, and mark the event guarded without failing the associated chat response
+- Viewers may expand or collapse shown per-message trace details, but the prototype should avoid actor-specific trace visibility plumbing unless a later decision reintroduces it
+- **Tool Trace** for `db-query` should expose authorized SQL results only when those results were intentionally returned through the database **Tool** result, while still protecting credentials and hidden authority-bearing internals
 - **Admin Conversation** detailed traces may include validated read-only SQL only after sensitive literals are redacted
 - `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only
-- **Trace Visibility Policy** should be actor-specific, with separate defaults for **Admin Conversations** and **User Conversations**
-- **Trace Visibility Policy** belongs to **Agent Settings** because it shapes **Sage** conversation behavior and response metadata
-- The first **Trace Visibility Policy** implementation should not include per-**User Type** overrides, but the model may evolve to support them later
-- The default **Admin Conversation** trace posture should expose detailed sanitized traces for troubleshooting and configuration work
-- The default **User Conversation** trace posture should be minimal or off, exposing confidence-building summaries without operational detail
-- **Activity** should be more verbose by default in **Admin Conversations** than in **User Conversations** during the prototype phase
-- **User Conversation** Activity should focus on confidence-building context such as retrieved **Documents** or searched sources, not operator internals
+- The transparent prototype posture intentionally avoids separate trace defaults for **Admin Conversations**, **User Conversations**, or **User Types**
+- The default **Conversation** trace posture should expose raw reasoning and detailed tool traces for troubleshooting and auditability
+- The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
+- **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase
 - **Sage** may invoke **Tools** during a **Conversation**
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility

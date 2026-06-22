@@ -165,6 +165,67 @@ describe('generateExport', () => {
     expect(exported).toContain('Tool completed\\.');
   });
 
+  it('exports persisted Conversation Trace Deltas by default', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        trace: {
+          visibility: 'detailed',
+          reasoning: {
+            summary: 'Sage used enabled tools before answering.',
+          },
+          trace_deltas: [
+            {
+              id: 'trace-model-step',
+              kind: 'model_step',
+              title: 'Model step',
+              status: 'succeeded',
+              content: 'Model step 1 completed.',
+              metadata: { duration_ms: 1200 },
+            },
+            {
+              id: 'trace-secret',
+              kind: 'tool_result',
+              title: 'Admin Config',
+              status: 'guarded',
+              content: '[redacted]',
+              tool_name: 'read_deployment_settings',
+              metadata: {},
+            },
+          ],
+          tools: [],
+          retrieval: [],
+          activity_steps: [],
+          suppressed: false,
+        },
+      },
+    ];
+
+    const exportedMarkdown = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    });
+    const exportedText = generateExport({
+      messages,
+      format: 'txt',
+      translations,
+    });
+
+    expect(exportedMarkdown).toContain('Trace Deltas');
+    expect(exportedMarkdown).toContain('Model step [model\\_step]');
+    expect(exportedMarkdown).toContain('Model step 1 completed\\.');
+    expect(exportedMarkdown).toContain('Admin Config [tool\\_result]');
+    expect(exportedMarkdown).toContain('\\[redacted\\]');
+    expect(exportedText).toContain('Trace Deltas');
+    expect(exportedText).toContain('Model step [model_step]');
+    expect(exportedText).toContain(
+      'Admin Config [tool_result] (guarded): [redacted]'
+    );
+  });
+
   it('exports completed-turn Conversation Activity Steps even when final trace is unavailable', () => {
     const messages: TestMessage[] = [
       {

@@ -54,8 +54,28 @@ export interface ConversationTrace {
     summary?: string | null;
     score?: number | null;
   }>;
+  trace_deltas?: ConversationTraceDelta[];
   activity_steps?: ConversationActivityStep[];
   suppressed?: boolean;
+}
+
+export interface ConversationTraceDelta {
+  id: string;
+  kind:
+    | 'reasoning'
+    | 'model_step'
+    | 'tool_call'
+    | 'tool_result'
+    | 'retry'
+    | 'correction'
+    | 'retrieval'
+    | 'timing';
+  title?: string;
+  content?: string;
+  tool_name?: string;
+  status?: 'running' | 'succeeded' | 'failed' | 'guarded' | string;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
 }
 
 export interface ConversationActivityStep {
@@ -75,6 +95,7 @@ export interface Message {
   trace?: ConversationTrace | null;
   traceStatus?: string | null;
   activitySteps?: ConversationActivityStep[];
+  traceDeltas?: ConversationTraceDelta[];
   controlSnapshot?: {
     selectedTools: string[];
     selectedDocuments: string[];
@@ -185,10 +206,12 @@ function CodeBlock({ language, children, resolvedTheme }: CodeBlockProps) {
 function ConversationTracePanel({
   trace,
   activitySteps = [],
+  traceDeltas = [],
   liveStatus,
 }: {
   trace?: ConversationTrace | null;
   activitySteps?: ConversationActivityStep[];
+  traceDeltas?: ConversationTraceDelta[];
   liveStatus?: string | null;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -199,6 +222,7 @@ function ConversationTracePanel({
   const combinedActivitySteps =
     activitySteps.length > 0 ? activitySteps : (trace?.activity_steps ?? []);
   const hasActivity = combinedActivitySteps.length > 0;
+  const hasTraceDeltas = traceDeltas.length > 0;
   const hasTraceChips = tools.length > 0 || retrieval.length > 0;
   const hasTraceDetail = Boolean(summary) || hasTraceChips;
   const isLive = Boolean(liveStatus);
@@ -207,10 +231,12 @@ function ConversationTracePanel({
     tools.some((tool) => Boolean(tool.input_summary || tool.output_summary)) ||
     retrieval.some((item) => Boolean(item.summary));
 
-  if (visibility === 'off' && !isLive && !hasActivity) return null;
-  if (!isLive && !hasActivity && !hasTraceDetail) return null;
+  if (visibility === 'off' && !isLive && !hasActivity && !hasTraceDeltas)
+    return null;
+  if (!isLive && !hasActivity && !hasTraceDeltas && !hasTraceDetail)
+    return null;
 
-  if (visibility === 'minimal' && !isLive && !hasActivity) {
+  if (visibility === 'minimal' && !isLive && !hasActivity && !hasTraceDeltas) {
     if (!hasTraceChips) return null;
 
     return (
@@ -297,6 +323,13 @@ function ConversationTracePanel({
             ))}
           </div>
         )}
+        {hasTraceDeltas && (
+          <TraceRows label="Trace">
+            {traceDeltas.map((delta) => (
+              <TraceDeltaRow key={delta.id} delta={delta} />
+            ))}
+          </TraceRows>
+        )}
         {tools.length > 0 && (
           <TraceRows label="Tool calls">
             {tools.map((tool, index) => (
@@ -327,13 +360,16 @@ function ConversationTracePanel({
 function isTraceRenderable(
   trace?: ConversationTrace | null,
   liveStatus?: string | null,
-  activitySteps: ConversationActivityStep[] = []
+  activitySteps: ConversationActivityStep[] = [],
+  traceDeltas: ConversationTraceDelta[] = []
 ): boolean {
   const isLive = Boolean(liveStatus);
+  const hasTraceDeltas = traceDeltas.length > 0;
   const hasActivity =
     activitySteps.length > 0 || (trace?.activity_steps?.length ?? 0) > 0;
-  if (trace?.visibility === 'off' && !isLive && !hasActivity) return false;
-  if (isLive || hasActivity) return true;
+  if (trace?.visibility === 'off' && !isLive && !hasActivity && !hasTraceDeltas)
+    return false;
+  if (isLive || hasActivity || hasTraceDeltas) return true;
   const tools = trace?.tools ?? [];
   const retrieval = trace?.retrieval ?? [];
   const summary = trace?.reasoning?.summary;
@@ -381,6 +417,42 @@ function ActivityStepRow({ step }: { step: ConversationActivityStep }) {
       </div>
     </div>
   );
+}
+
+function TraceDeltaRow({ delta }: { delta: ConversationTraceDelta }) {
+  const title =
+    delta.title || delta.tool_name || formatTraceDeltaKind(delta.kind);
+
+  return (
+    <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
+      <div className="flex items-start gap-2">
+        <TraceIcon kind={delta.kind} name={title} status={delta.status} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-medium text-text">{title}</span>
+            {delta.tool_name && delta.tool_name !== title && (
+              <span className="text-[11px] text-text-muted">
+                {delta.tool_name}
+              </span>
+            )}
+            {delta.status && <TraceStatus status={delta.status} />}
+          </div>
+          {delta.content && (
+            <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed text-text-secondary">
+              {delta.content}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatTraceDeltaKind(kind: string) {
+  return kind
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 type ToolTrace = NonNullable<ConversationTrace['tools']>[number];
@@ -563,6 +635,8 @@ function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
     message.traceStatus && !isInternalWritingStatus(message.traceStatus)
       ? message.traceStatus
       : null;
+  const resolvedTraceDeltas =
+    message.traceDeltas ?? message.trace?.trace_deltas ?? [];
 
   if (
     !isUser &&
@@ -571,9 +645,11 @@ function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
     !isTraceRenderable(
       message.trace,
       visibleTraceStatus,
-      message.activitySteps
+      message.activitySteps,
+      resolvedTraceDeltas
     ) &&
-    !(message.activitySteps && message.activitySteps.length > 0)
+    !(message.activitySteps && message.activitySteps.length > 0) &&
+    resolvedTraceDeltas.length === 0
   ) {
     return null;
   }
@@ -693,6 +769,7 @@ function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
                   <ConversationTracePanel
                     trace={message.trace}
                     activitySteps={message.activitySteps}
+                    traceDeltas={resolvedTraceDeltas}
                     liveStatus={visibleTraceStatus}
                   />
                   {message.content.trim() && (
@@ -701,7 +778,8 @@ function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
                         message.trace ||
                         visibleTraceStatus ||
                         (message.activitySteps &&
-                          message.activitySteps.length > 0)
+                          message.activitySteps.length > 0) ||
+                        resolvedTraceDeltas.length > 0
                           ? 'mt-3'
                           : ''
                       }

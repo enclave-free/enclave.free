@@ -38,6 +38,7 @@ COMPOSE_ARGS = [
 DEFAULT_API_BASE = "http://127.0.0.1:18000"
 DEFAULT_TIMEOUT_SECONDS = 180.0
 SLOW_FIRST_ANSWER_WARNING_MS = 30_000.0
+SLOW_TRACE_FEEDBACK_WARNING_MS = 10_000.0
 SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
     "admin_config_bootstrap",
@@ -278,6 +279,7 @@ def run_scenario(
             admin_change_set=None,
             timings={
                 "first_event_ms": None,
+                "first_trace_or_tool_feedback_ms": None,
                 "first_visible_assistant_token_ms": None,
                 "done_ms": None,
             },
@@ -322,6 +324,8 @@ def checks_for_scenario(
     tool_evidence: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     checks = common_stream_checks(stream)
+    if scenario.tools:
+        checks.extend(trace_feedback_checks(stream))
     if scenario.id == "admin_config_bootstrap":
         checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
@@ -370,6 +374,31 @@ def common_stream_checks(stream: StreamResult) -> list[dict[str, Any]]:
     ]
 
 
+def trace_feedback_checks(stream: StreamResult) -> list[dict[str, Any]]:
+    first_trace_or_tool_feedback_ms = stream.timings.get(
+        "first_trace_or_tool_feedback_ms"
+    )
+    return [
+        check(
+            "first_trace_or_tool_feedback_present",
+            first_trace_or_tool_feedback_ms is not None,
+            "warning",
+            "no trace_delta or activity_step arrived before completion"
+            if first_trace_or_tool_feedback_ms is None
+            else None,
+        ),
+        check(
+            "first_trace_or_tool_feedback_under_10s",
+            first_trace_or_tool_feedback_ms is None
+            or first_trace_or_tool_feedback_ms <= SLOW_TRACE_FEEDBACK_WARNING_MS,
+            "warning",
+            f"first trace/tool feedback took {first_trace_or_tool_feedback_ms}ms"
+            if first_trace_or_tool_feedback_ms is not None
+            else None,
+        ),
+    ]
+
+
 def contains_generic_generation_failure(answer: str) -> bool:
     answer_lower = answer.lower()
     return any(
@@ -399,6 +428,14 @@ def admin_deployment_readiness_checks(
         check(
             "admin_config_tool_used",
             any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "admin_change_set_not_staged",
+            not any(
+                tool_evidence_matches(evidence, "admin_change_set")
+                for evidence in tool_evidence
+            ),
             "hard",
         ),
         check(
@@ -854,21 +891,30 @@ print(json.dumps({"job_ids": [job_id], "sources": [source_file], "chunk_id": chu
         deadline = time.time() + 180
         last_error = ""
         while time.time() < deadline:
-            result = subprocess.run(
-                [
-                    *COMPOSE_ARGS,
-                    "exec",
-                    "-T",
-                    "sage",
-                    "curl",
-                    "-fsS",
-                    "http://127.0.0.1:3000/health",
-                ],
-                capture_output=True,
-                text=True,
-                cwd=REPO_ROOT,
-                timeout=10,
-            )
+            try:
+                result = subprocess.run(
+                    [
+                        *COMPOSE_ARGS,
+                        "exec",
+                        "-T",
+                        "sage",
+                        "curl",
+                        "-fsS",
+                        "http://127.0.0.1:3000/health",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                last_error = "health probe timed out"
+                time.sleep(2)
+                continue
+            except Exception as exc:
+                last_error = f"health probe failed: {exc}"
+                time.sleep(2)
+                continue
             if result.returncode == 0:
                 return
             last_error = result.stderr.strip() or result.stdout.strip()
@@ -923,13 +969,15 @@ class HttpConversationClient:
         trace: dict[str, Any] | None = None
         admin_change_set: dict[str, Any] | None = None
         first_event_ms: float | None = None
+        first_trace_or_tool_feedback_ms: float | None = None
         first_delta_ms: float | None = None
         done_ms: float | None = None
         stream_error: str | None = None
         decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
 
         def process_buffer() -> None:
-            nonlocal buffer, first_event_ms, first_delta_ms, done_ms
+            nonlocal buffer, first_event_ms, first_trace_or_tool_feedback_ms
+            nonlocal first_delta_ms, done_ms
             nonlocal trace, admin_change_set, done
             while "\n\n" in buffer:
                 block, buffer = buffer.split("\n\n", 1)
@@ -939,6 +987,11 @@ class HttpConversationClient:
                 elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
                 if first_event_ms is None:
                     first_event_ms = elapsed_ms
+                if (
+                    first_trace_or_tool_feedback_ms is None
+                    and is_trace_or_tool_feedback_event(event_name, data)
+                ):
+                    first_trace_or_tool_feedback_ms = elapsed_ms
                 events.append(
                     {
                         "event": event_name,
@@ -1001,6 +1054,7 @@ class HttpConversationClient:
             admin_change_set=admin_change_set,
             timings={
                 "first_event_ms": first_event_ms,
+                "first_trace_or_tool_feedback_ms": first_trace_or_tool_feedback_ms,
                 "first_visible_assistant_token_ms": first_delta_ms,
                 "done_ms": done_ms,
             },
@@ -1021,6 +1075,14 @@ def parse_sse_event(block: str) -> tuple[str | None, dict[str, Any]]:
     return event_name, data
 
 
+def is_trace_or_tool_feedback_event(event_name: str, data: dict[str, Any]) -> bool:
+    if event_name == "trace_delta":
+        return isinstance(data.get("trace_delta"), dict)
+    if event_name == "activity_step":
+        return isinstance(data.get("activity_step"), dict)
+    return False
+
+
 def run_backend_python(script: str, timeout: int = 120) -> str:
     return run_command(
         [*COMPOSE_ARGS, "exec", "-T", "core-backend", "python", "-c", script],
@@ -1029,19 +1091,55 @@ def run_backend_python(script: str, timeout: int = 120) -> str:
 
 
 def run_command(cmd: list[str], timeout: int, env: dict[str, str] | None = None) -> str:
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=REPO_ROOT,
-        timeout=timeout,
-        env=env,
-    )
+    redacted_command = " ".join(redact_command(cmd))
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f"command timed out ({redacted_command}) after {timeout}s"
+        ) from None
     if result.returncode != 0:
         raise RuntimeError(
-            f"command failed ({' '.join(cmd)}): {result.stderr.strip() or result.stdout.strip()}"
+            f"command failed ({redacted_command}): "
+            f"{result.stderr.strip() or result.stdout.strip()}"
         )
     return result.stdout
+
+
+def redact_command(cmd: list[str]) -> list[str]:
+    redacted: list[str] = []
+    redact_next = False
+    for arg in cmd:
+        if redact_next:
+            redacted.append("<redacted>")
+            redact_next = False
+            continue
+        sanitized, redact_next = redact_command_arg(arg)
+        redacted.append(sanitized)
+    return redacted
+
+
+def redact_command_arg(arg: str) -> tuple[str, bool]:
+    lower_arg = arg.lower()
+    if "x-internal-agent-token" not in lower_arg:
+        return arg, False
+
+    for separator in (":", "="):
+        prefix, found, suffix = arg.partition(separator)
+        if found:
+            if separator == ":":
+                redacted = f"{prefix}{separator} <redacted>"
+            else:
+                redacted = f"{prefix}=<redacted>"
+            return redacted, not bool(suffix.strip())
+    return arg, True
 
 
 def write_artifact(artifact: dict[str, Any], output: str | None) -> Path:

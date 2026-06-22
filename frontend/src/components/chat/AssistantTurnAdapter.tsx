@@ -79,6 +79,7 @@ function convertTurnToAssistantMessage(
     metadata: {
       custom: {
         activitySteps: turn.activitySteps,
+        traceDeltas: turn.traceDeltas,
         trace: turn.trace,
         traceStatus: turn.traceStatus,
       },
