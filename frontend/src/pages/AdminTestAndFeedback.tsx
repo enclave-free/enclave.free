@@ -43,7 +43,7 @@ export function AdminTestAndFeedback() {
             className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text"
           >
             <ArrowLeft className="h-4 w-4" />
-            {t('common.backToAdmin', 'Back to Admin')}
+            {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
           </Link>
           <SectionHeader
             title={
@@ -54,7 +54,7 @@ export function AdminTestAndFeedback() {
             }
             description={t(
               'adminTestFeedback.subtitle',
-              'Try the assistant as one of your user types, then review the transcript and rate each answer to refine your setup.'
+              'Run a Test User Session, then review encrypted beta logs and feedback from saved conversations.'
             )}
           />
           <div

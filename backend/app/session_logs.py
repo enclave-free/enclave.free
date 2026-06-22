@@ -12,8 +12,9 @@ review pathway serves both without re-architecting.
 
 Layout:
 - metadata rows live in the session_logs / session_log_feedback tables
-- the transcript ciphertext lives in a file at <data dir>/session_logs/<log_id>.json
-- the DB row points at that file and carries the ephemeral pubkey for decryption
+- transcript ciphertext lives in session_logs.transcript_ciphertext for Database
+  Explorer visibility; transcript_path remains a legacy encrypted-file fallback
+- the DB row carries the ephemeral pubkey for admin-side decryption
 """
 
 from __future__ import annotations
@@ -66,7 +67,7 @@ def _row_to_metadata(row: Any) -> dict[str, Any]:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "completed_at": row["completed_at"],
-        "has_transcript": bool(row["transcript_path"]),
+        "has_transcript": bool(row["transcript_ciphertext"] or row["transcript_path"]),
     }
 
 
@@ -164,6 +165,7 @@ def save_transcript(
             cursor.execute(
                 """UPDATE session_logs
                    SET transcript_path = ?,
+                       transcript_ciphertext = ?,
                        transcript_ephemeral_pubkey = ?,
                        encrypted_to_pubkey = ?,
                        turn_metadata_json = ?,
@@ -174,6 +176,7 @@ def save_transcript(
                    WHERE log_id = ?""",
                 (
                     path,
+                    ciphertext,
                     ephemeral_pubkey,
                     admin_pubkey,
                     turn_metadata,
@@ -225,6 +228,25 @@ def list_session_logs(
         return [_row_to_metadata(row) for row in cursor.fetchall()]
 
 
+def get_session_log_metadata_by_sage_session_id(
+    *,
+    source: str,
+    sage_session_id: str,
+) -> Optional[dict[str, Any]]:
+    if source not in VALID_SOURCES:
+        raise ValueError(f"Invalid session log source: {source}")
+    with database.get_cursor() as cursor:
+        cursor.execute(
+            """SELECT * FROM session_logs
+               WHERE source = ? AND sage_session_id = ?
+               ORDER BY datetime(updated_at) DESC, id DESC
+               LIMIT 1""",
+            (source, sage_session_id),
+        )
+        row = cursor.fetchone()
+    return _row_to_metadata(row) if row else None
+
+
 def _get_row(log_id: str) -> Any:
     with database.get_cursor() as cursor:
         cursor.execute("SELECT * FROM session_logs WHERE log_id = ?", (log_id,))
@@ -244,8 +266,8 @@ def get_session_log(log_id: str) -> Optional[dict[str, Any]]:
     if not row:
         return None
 
-    transcript_ciphertext: Optional[str] = None
-    if row["transcript_path"]:
+    transcript_ciphertext: Optional[str] = row["transcript_ciphertext"]
+    if not transcript_ciphertext and row["transcript_path"]:
         try:
             with open(row["transcript_path"], "r", encoding="utf-8") as handle:
                 transcript_ciphertext = handle.read()

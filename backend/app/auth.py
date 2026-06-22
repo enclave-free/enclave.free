@@ -9,6 +9,7 @@ import os
 import secrets
 import smtplib
 import logging
+import html
 from pathlib import Path
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -192,6 +193,71 @@ def get_smtp_timeout() -> int:
         SMTP connection timeout in seconds (default: 10)
     """
     return _get_smtp_config()["timeout"]
+
+
+def _get_instance_setting(key: str) -> str | None:
+    try:
+        import database
+        value = database.get_setting(key)
+        return value if isinstance(value, str) else None
+    except Exception as error:
+        logger.debug("Could not read instance setting %s for email identity: %s", key, error)
+        return None
+
+
+def _clean_email_identity(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def get_magic_link_email_display_name() -> str:
+    """Resolve the public product name used in magic-link emails."""
+    return (
+        _clean_email_identity(_get_instance_setting("public_email_display_name"))
+        or _clean_email_identity(_get_instance_setting("instance_name"))
+        or "Enclave"
+    )
+
+
+def build_magic_link_email(to_email: str, token: str) -> MIMEMultipart:
+    verify_url = f"{FRONTEND_URL}/verify?token={token}"
+    display_name = get_magic_link_email_display_name()
+    escaped_display_name = html.escape(display_name)
+    escaped_verify_url = html.escape(verify_url, quote=True)
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Sign in to {display_name}"
+    msg["From"] = get_smtp_from()
+    msg["To"] = to_email
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
+        <div style="max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #333; margin-bottom: 24px;">Sign in to {escaped_display_name}</h2>
+            <p style="margin-bottom: 24px;">Click the button below to sign in. This link will expire in 15 minutes.</p>
+            <a href="{escaped_verify_url}"
+               style="display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+                Sign in to {escaped_display_name}
+            </a>
+            <p style="margin-top: 24px; font-size: 14px; color: #666;">
+                If you didn't request this email, you can safely ignore it.
+            </p>
+            <p style="margin-top: 24px; font-size: 12px; color: #999;">
+                Or copy this link: {escaped_verify_url}
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html_body, "html"))
+    return msg
 
 # Token expiration (15 minutes)
 MAGIC_LINK_MAX_AGE = 15 * 60
@@ -502,37 +568,7 @@ def send_magic_link_email(to_email: str, token: str) -> bool:
         logger.info("=" * 60)
         return True
 
-    # Build email
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Sign in to Enclave"
-    msg["From"] = smtp["from_address"]
-    msg["To"] = to_email
-
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
-        <div style="max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #333; margin-bottom: 24px;">Sign in to Enclave</h2>
-            <p style="margin-bottom: 24px;">Click the button below to sign in. This link will expire in 15 minutes.</p>
-            <a href="{verify_url}"
-               style="display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-                Sign in to Enclave
-            </a>
-            <p style="margin-top: 24px; font-size: 14px; color: #666;">
-                If you didn't request this email, you can safely ignore it.
-            </p>
-            <p style="margin-top: 24px; font-size: 12px; color: #999;">
-                Or copy this link: {verify_url}
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-    msg.attach(MIMEText(html, "html"))
+    msg = build_magic_link_email(to_email, token)
 
     try:
         if smtp["port"] == 465:

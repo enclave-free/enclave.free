@@ -153,6 +153,7 @@ class UserAuditCoverageTest(unittest.TestCase):
             "/admin/settings",
             json={
                 "instance_name": "FreeThem",
+                "public_email_display_name": "World Liberty Congress",
                 "primary_color": "#2563EB",
                 "description": "Support resources",
                 "logo_url": "",
@@ -189,6 +190,10 @@ class UserAuditCoverageTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.database.get_setting("header_tagline"), "Support team")
+        self.assertEqual(
+            self.database.get_setting("public_email_display_name"),
+            "World Liberty Congress",
+        )
         self.assertEqual(self.database.get_setting("default_language"), "en")
         self.assertEqual(self.database.get_setting("reachout_to_email"), "ops@example.test")
 

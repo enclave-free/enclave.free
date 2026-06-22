@@ -629,10 +629,9 @@ def init_schema():
     # Captured chat transcripts for admin review / refinement. `source` keeps this
     # general so we are not boxed into admin-only testing: 'admin_test' = an admin
     # chatting as a user persona; 'user' = a real user's session logged for review.
-    # Transcript content is NIP-04 encrypted to the admin pubkey AT REST — the file
-    # at transcript_path holds only ciphertext, and transcript_ephemeral_pubkey is
-    # the ephemeral pubkey the admin needs to decrypt client-side via NIP-07. The
-    # control plane can never read it back. See encryption.encrypt_for_admin.
+    # Transcript content is NIP-04 encrypted to the admin pubkey AT REST. New
+    # writes store ciphertext in SQLite so Database Explorer can show the saved
+    # encrypted record directly; transcript_path remains for legacy exports.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS session_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -644,6 +643,7 @@ def init_schema():
             user_type_id INTEGER,
             sage_session_id TEXT,
             transcript_path TEXT,
+            transcript_ciphertext TEXT,
             transcript_ephemeral_pubkey TEXT,
             encrypted_to_pubkey TEXT,
             turn_metadata_json TEXT,
@@ -699,6 +699,7 @@ def init_schema():
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
     _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
     _migrate_add_session_log_turn_metadata()  # Store safe turn role metadata for feedback validation
+    _migrate_add_session_log_transcript_ciphertext()  # Store encrypted beta logs in SQLite
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -1106,6 +1107,21 @@ def _migrate_add_session_log_turn_metadata() -> None:
         cursor.execute("ALTER TABLE session_logs ADD COLUMN turn_metadata_json TEXT")
         conn.commit()
         logger.info("Migration: Added 'turn_metadata_json' column to session_logs table")
+
+    cursor.close()
+
+
+def _migrate_add_session_log_transcript_ciphertext() -> None:
+    """Add SQLite ciphertext storage for encrypted beta Conversation logs."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(session_logs)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "transcript_ciphertext" not in columns:
+        cursor.execute("ALTER TABLE session_logs ADD COLUMN transcript_ciphertext TEXT")
+        conn.commit()
+        logger.info("Migration: Added 'transcript_ciphertext' column to session_logs table")
 
     cursor.close()
 
@@ -1568,6 +1584,7 @@ def seed_default_settings():
     """Seed default instance settings if not present"""
     defaults = {
         "instance_name": "Enclave",
+        "public_email_display_name": "",
         "primary_color": "#3B82F6",
         "description": "A privacy-first RAG knowledge base",
         "logo_url": "",

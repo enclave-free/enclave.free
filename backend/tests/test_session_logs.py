@@ -156,6 +156,14 @@ class SessionLogsTest(unittest.TestCase):
         detail = self.session_logs.get_session_log(log["log_id"])
         self.assertIsNotNone(detail)
         self.assertNotIn(transcript_sentinel, detail["transcript_ciphertext"])
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT transcript_ciphertext FROM session_logs WHERE log_id = ?",
+                (log["log_id"],),
+            )
+            stored = cursor.fetchone()["transcript_ciphertext"]
+        self.assertEqual(stored, detail["transcript_ciphertext"])
+        self.assertNotIn(transcript_sentinel, stored)
         decrypted_transcript = self.encryption.nip04_decrypt(
             detail["transcript_ciphertext"],
             detail["transcript_ephemeral_pubkey"],

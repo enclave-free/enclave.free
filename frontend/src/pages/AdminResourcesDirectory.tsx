@@ -338,7 +338,7 @@ export function AdminResourcesDirectory({
         <Card className="py-12 text-center text-text-secondary">
           {t(
             'adminResources.empty',
-            'No resources yet. Add one, or describe it to the admin assistant in chat.'
+            'No resources yet. Add one manually when you have a vetted referral.'
           )}
         </Card>
       ) : (
@@ -678,7 +678,7 @@ export function AdminResourcesDirectory({
             className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text"
           >
             <ArrowLeft className="h-4 w-4" />
-            {t('common.backToAdmin', 'Back to Admin')}
+            {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
           </Link>
           <SectionHeader
             title={
@@ -689,7 +689,7 @@ export function AdminResourcesDirectory({
             }
             description={t(
               'adminResources.subtitle',
-              'Curated, trusted real-world resources the assistant can refer people to when a conversation escalates. Filtered by region and type of help. Only "ready" resources are shown to end users.'
+              'Manually maintain vetted referral resources the assistant can mention when a conversation escalates. Only "ready" resources are shown to end users.'
             )}
             actions={addButton}
           />

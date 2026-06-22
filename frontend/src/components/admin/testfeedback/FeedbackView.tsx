@@ -228,7 +228,7 @@ export function FeedbackView() {
     setExportError(null);
     try {
       const blob = await exportSessionLog(selectedId);
-      downloadBlob(blob, `test-feedback-${selectedId}.zip`);
+      downloadBlob(blob, `beta-session-log-${selectedId}.zip`);
     } catch (err) {
       setExportError(
         err instanceof Error ? err.message : 'Session export failed'
@@ -238,13 +238,26 @@ export function FeedbackView() {
     }
   }, [selectedId]);
 
+  const sourceLabel = useCallback(
+    (source: string) => {
+      if (source === 'user') {
+        return t('adminTestFeedback.feedback.sourceUser', 'User Conversation');
+      }
+      if (source === 'admin_test') {
+        return t('adminTestFeedback.feedback.sourceTest', 'Test User Session');
+      }
+      return source;
+    },
+    [t]
+  );
+
   return (
     <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
       {/* Trial list */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="label">
-            {t('adminTestFeedback.feedback.trials', 'Trials')}
+            {t('adminTestFeedback.feedback.trials', 'Beta Logs')}
           </div>
           <Button
             variant="ghost"
@@ -265,7 +278,7 @@ export function FeedbackView() {
           <Card className="py-8 text-center text-sm text-text-secondary">
             {t(
               'adminTestFeedback.feedback.empty',
-              'No saved trials yet. Run a session under Test as User.'
+              'No saved beta logs yet. Run a Test User Session or wait for user conversations.'
             )}
           </Card>
         ) : (
@@ -287,12 +300,12 @@ export function FeedbackView() {
                       {log.title ||
                         t(
                           'adminTestFeedback.feedback.untitled',
-                          'Untitled trial'
+                          'Untitled conversation'
                         )}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
                       <span className="rounded bg-surface-overlay px-1.5 py-0.5">
-                        {log.source}
+                        {sourceLabel(log.source)}
                       </span>
                       <span>
                         {log.turn_count}{' '}
@@ -325,7 +338,7 @@ export function FeedbackView() {
           <Card className="py-16 text-center text-sm text-text-secondary">
             {t(
               'adminTestFeedback.feedback.selectPrompt',
-              'Select a trial to review its transcript and rate each turn.'
+              'Select a beta log to review its transcript and rate each turn.'
             )}
           </Card>
         ) : loadingDetail ? (
@@ -339,7 +352,10 @@ export function FeedbackView() {
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold text-text">
                 {detail?.title ||
-                  t('adminTestFeedback.feedback.untitled', 'Untitled trial')}
+                  t(
+                    'adminTestFeedback.feedback.untitled',
+                    'Untitled conversation'
+                  )}
               </div>
               {selectedId && (
                 <div className="flex items-center gap-2">

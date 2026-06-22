@@ -78,6 +78,26 @@ class StoreMinimizedPayloadTest(unittest.TestCase):
 
         self.assertEqual(self.store.EMBEDDING_API_KEY, "env-only-llm-key")
 
+    def test_qdrant_collection_create_race_treats_already_exists_as_success(self) -> None:
+        class AlreadyExists(Exception):
+            status_code = 409
+            content = b'{"status":{"error":"Collection `enclave_knowledge` already exists!"}}'
+
+        class CollectionList:
+            collections = []
+
+        class RacingQdrantClient:
+            def get_collections(inner_self) -> CollectionList:
+                return CollectionList()
+
+            def create_collection(inner_self, **_kwargs: object) -> None:
+                raise AlreadyExists("already exists")
+
+        self.store.get_qdrant_client = lambda: RacingQdrantClient()
+        self.store.get_embedding_dimension = lambda: 3
+
+        self.store.ensure_qdrant_collection()
+
 
 if __name__ == "__main__":
     unittest.main()
