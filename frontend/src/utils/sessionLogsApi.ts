@@ -7,14 +7,26 @@
  */
 
 import { adminFetch } from './adminApi';
+import type { ConversationTrace } from '../components/chat/ChatMessage';
 
 export type SessionLogSource = 'admin_test' | 'user';
 export type FeedbackRating = 'up' | 'down';
+
+export interface TranscriptToolCall {
+  tool_id: string;
+  tool_name: string;
+  query?: string | null;
+  output_summary?: string | null;
+  warnings?: string[];
+  guarded?: boolean;
+}
 
 export interface TranscriptTurn {
   role: string; // 'user' | 'assistant' | 'system'
   content: string;
   ts?: string | null;
+  trace?: ConversationTrace | null;
+  tools_used?: TranscriptToolCall[];
 }
 
 export interface SessionLogMetadata {

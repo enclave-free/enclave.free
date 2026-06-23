@@ -88,10 +88,20 @@ describe('TestAsUserView', () => {
     mockSendLlmChatWithUnifiedTools.mockResolvedValue(
       Response.json({ message: 'Hello from Sage', session_id: 'sage-1' })
     );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          web_search_enabled: true,
+          default_document_ids: ['doc-1', 'doc-2'],
+        })
+      )
+    );
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   async function startStudentSession() {
@@ -131,6 +141,35 @@ describe('TestAsUserView', () => {
         })
       );
     });
+  });
+
+  it('sends real user default Tool Sets and document constraints while impersonating the synthetic User', async () => {
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Do you have any resources you can read through?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(mockSendLlmChatWithUnifiedTools).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Do you have any resources you can read through?',
+          tools: ['curated-resources', 'knowledge-search', 'web-search'],
+          jobIds: ['doc-1', 'doc-2'],
+          authToken: 'synthetic-user-token',
+        })
+      );
+    });
+    const lastCall =
+      mockSendLlmChatWithUnifiedTools.mock.calls[
+        mockSendLlmChatWithUnifiedTools.mock.calls.length - 1
+      ];
+    const request = lastCall?.[0];
+    expect(request?.tools).not.toContain('admin-config');
+    expect(request?.tools).not.toContain('db-query');
+    expect(fetch).toHaveBeenCalledWith('/api/session-defaults?user_type_id=1');
   });
 
   it('does not start a test chat when synthetic User auth is unavailable', async () => {
@@ -232,5 +271,76 @@ describe('TestAsUserView', () => {
     resolveChat(Response.json({ message: 'Done', session_id: 'sage-1' }));
     expect(await screen.findByText('Done')).toBeInTheDocument();
     expect(saveButton).not.toBeDisabled();
+  });
+
+  it('preserves Sage trace and tool metadata when saving the test transcript', async () => {
+    mockSendLlmChatWithUnifiedTools.mockResolvedValueOnce(
+      Response.json({
+        message: 'I found vetted resources.',
+        session_id: 'sage-1',
+        tools_used: [
+          {
+            tool_id: 'curated-resources',
+            tool_name: 'Curated Resources',
+            query: 'Nicaragua political detention legal aid',
+            output_summary: 'Found 2 vetted resources.',
+          },
+        ],
+        trace: {
+          visibility: 'detailed',
+          reasoning: {
+            summary: 'Sage used enabled tools before answering.',
+          },
+          tools: [
+            {
+              id: 'curated-resources',
+              name: 'Curated Resources',
+              status: 'succeeded',
+              output_summary: 'Found 2 vetted resources.',
+            },
+          ],
+          retrieval: [],
+        },
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Find resources for me'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(
+      await screen.findByText('I found vetted resources.')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+
+    await waitFor(() => {
+      expect(mockSaveTranscript).toHaveBeenCalledWith(
+        'log-1',
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: 'assistant',
+            content: 'I found vetted resources.',
+            tools_used: [
+              expect.objectContaining({
+                tool_id: 'curated-resources',
+                tool_name: 'Curated Resources',
+              }),
+            ],
+            trace: expect.objectContaining({
+              tools: [
+                expect.objectContaining({
+                  id: 'curated-resources',
+                  name: 'Curated Resources',
+                }),
+              ],
+            }),
+          }),
+        ]),
+        expect.any(String)
+      );
+    });
   });
 });

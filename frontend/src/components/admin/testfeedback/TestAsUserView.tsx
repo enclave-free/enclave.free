@@ -21,12 +21,77 @@ import {
   type AdminUserType,
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
+import { API_BASE } from '../../../types/onboarding';
+
+const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
+const KNOWLEDGE_SEARCH_TOOL_ID = 'knowledge-search';
+const WEB_SEARCH_TOOL_ID = 'web-search';
+
+interface UserSessionToolDefaults {
+  tools: string[];
+  documentIds: string[];
+  status: 'configured' | 'fallback';
+}
 
 interface ActiveSession {
   testUserId: number;
   userTypeId: number | null;
   personaName: string;
   token: string; // bearer token used to chat AS the test user
+  tools: string[];
+  documentIds: string[];
+  defaultsStatus: UserSessionToolDefaults['status'];
+}
+
+function sessionDefaultsUrl(userTypeId: number | null): string {
+  if (userTypeId === null) return `${API_BASE}/session-defaults`;
+  return `${API_BASE}/session-defaults?user_type_id=${encodeURIComponent(
+    String(userTypeId)
+  )}`;
+}
+
+function resolveUserSessionToolDefaults(
+  data: unknown
+): UserSessionToolDefaults {
+  const record = data && typeof data === 'object' ? data : {};
+  const defaultDocumentIds = Array.isArray(
+    (record as Record<string, unknown>).default_document_ids
+  )
+    ? ((record as Record<string, unknown>).default_document_ids as unknown[])
+        .filter((id): id is string => typeof id === 'string' && Boolean(id))
+        .slice()
+    : [];
+
+  return {
+    tools: [
+      CURATED_RESOURCES_TOOL_ID,
+      ...(defaultDocumentIds.length > 0 ? [KNOWLEDGE_SEARCH_TOOL_ID] : []),
+      (record as Record<string, unknown>).web_search_enabled === true
+        ? WEB_SEARCH_TOOL_ID
+        : null,
+    ].filter((tool): tool is string => typeof tool === 'string'),
+    documentIds: defaultDocumentIds,
+    status: 'configured',
+  };
+}
+
+async function fetchUserSessionToolDefaults(
+  userTypeId: number | null
+): Promise<UserSessionToolDefaults> {
+  try {
+    const response = await fetch(sessionDefaultsUrl(userTypeId));
+    if (response.ok) {
+      return resolveUserSessionToolDefaults(await response.json());
+    }
+  } catch {
+    // Fall back below to preserve the normal user chat default behavior.
+  }
+
+  return {
+    tools: [CURATED_RESOURCES_TOOL_ID, WEB_SEARCH_TOOL_ID],
+    documentIds: [],
+    status: 'fallback',
+  };
 }
 
 /**
@@ -80,11 +145,15 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       if (!token?.token) {
         throw new Error('Could not create a synthetic user session token');
       }
+      const defaults = await fetchUserSessionToolDefaults(selectedTypeId);
       setSession({
         testUserId: provisioned.user_id,
         userTypeId: selectedTypeId,
         personaName: personaName(selectedTypeId),
         token: token.token,
+        tools: defaults.tools,
+        documentIds: defaults.documentIds,
+        defaultsStatus: defaults.status,
       });
       setTurns([]);
       sessionIdRef.current = null;
@@ -114,7 +183,8 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       // authenticates the chat as them (not the admin).
       const res = await sendLlmChatWithUnifiedTools({
         content,
-        tools: [],
+        tools: session?.tools ?? [],
+        jobIds: session?.documentIds ?? [],
         sessionId: sessionIdRef.current,
         authToken: session?.token,
       });
@@ -122,6 +192,8 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         message?: string;
         session_id?: string;
         detail?: string;
+        trace?: TranscriptTurn['trace'];
+        tools_used?: TranscriptTurn['tools_used'];
       };
       if (!res.ok) {
         throw new Error(data?.detail || `HTTP ${res.status}`);
@@ -135,6 +207,8 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
           role: 'assistant',
           content: data.message ?? '',
           ts: new Date().toISOString(),
+          trace: data.trace ?? null,
+          tools_used: data.tools_used ?? [],
         },
       ]);
     } catch (err) {

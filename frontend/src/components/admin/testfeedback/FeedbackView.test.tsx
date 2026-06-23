@@ -199,6 +199,57 @@ describe('FeedbackView', () => {
     expect(mockAnchorClick).toHaveBeenCalled();
   });
 
+  it('shows saved assistant tool trace metadata after decrypting a transcript', async () => {
+    const user = userEvent.setup();
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Find resources' },
+          {
+            role: 'assistant',
+            content: 'I found vetted resources.',
+            tools_used: [
+              {
+                tool_id: 'curated-resources',
+                tool_name: 'Curated Resources',
+                output_summary: 'Found 2 vetted resources.',
+              },
+            ],
+            trace: {
+              visibility: 'detailed',
+              reasoning: {
+                summary: 'Sage used enabled tools before answering.',
+              },
+              tools: [
+                {
+                  id: 'curated-resources',
+                  name: 'Curated Resources',
+                  status: 'succeeded',
+                  output_summary: 'Found 2 vetted resources.',
+                },
+              ],
+              retrieval: [],
+            },
+          },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    expect(trialButton).toBeInstanceOf(HTMLButtonElement);
+    await user.click(trialButton as HTMLButtonElement);
+
+    expect(
+      await screen.findByText('I found vetted resources.')
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Curated Resources')).toBeInTheDocument();
+    expect(screen.getByText('Found 2 vetted resources.')).toBeInTheDocument();
+  });
+
   it('ignores stale transcript loads after a newer log is selected', async () => {
     const user = userEvent.setup();
     let resolveFirstLog!: (

@@ -4,7 +4,7 @@ Request and response models for user/admin management.
 """
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from typing import Optional, Union
+from typing import Any, Optional, Union
 from datetime import datetime
 
 
@@ -999,6 +999,8 @@ class SessionLogTurn(BaseModel):
     role: str = Field(..., max_length=32)        # 'user' | 'assistant' | 'system'
     content: str
     ts: Optional[str] = None
+    trace: Optional[dict[str, Any]] = None
+    tools_used: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SessionLogCreate(BaseModel):

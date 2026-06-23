@@ -58,6 +58,48 @@ class SessionLogsTest(unittest.TestCase):
         with self.database.get_cursor() as cursor:
             cursor.execute("DELETE FROM admins")
 
+    def test_session_log_save_payload_preserves_trace_and_tool_metadata(self) -> None:
+        from models import SessionLogSaveTranscript
+
+        payload = SessionLogSaveTranscript(
+            turns=[
+                {"role": "user", "content": "Find resources"},
+                {
+                    "role": "assistant",
+                    "content": "I found vetted resources.",
+                    "tools_used": [
+                        {
+                            "tool_id": "curated-resources",
+                            "tool_name": "Curated Resources",
+                            "output_summary": "Found 2 vetted resources.",
+                        }
+                    ],
+                    "trace": {
+                        "visibility": "detailed",
+                        "reasoning": {
+                            "summary": "Sage used enabled tools before answering."
+                        },
+                        "tools": [
+                            {
+                                "id": "curated-resources",
+                                "name": "Curated Resources",
+                                "status": "succeeded",
+                                "output_summary": "Found 2 vetted resources.",
+                            }
+                        ],
+                    },
+                },
+            ]
+        )
+
+        assistant_turn = payload.turns[1].model_dump()
+        self.assertEqual(
+            assistant_turn["tools_used"][0]["tool_id"], "curated-resources"
+        )
+        self.assertEqual(
+            assistant_turn["trace"]["tools"][0]["name"], "Curated Resources"
+        )
+
     def test_saving_missing_session_log_leaves_no_transcript_artifact(self) -> None:
         turns = [
             {"role": "user", "content": "please help me test this instance"},
