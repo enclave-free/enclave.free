@@ -80,13 +80,16 @@ Initial Tools:
 - `read_user_types`
 - `read_document_access`
 - `read_onboarding_status`
+- `propose_admin_config_bootstrap`
 - `propose_config_change_set`
 
 Tool descriptions should encourage Sage to inspect current Instance reality when it can answer the Admin's question. If the Admin asks what is configured, missing, ready, stale, stored, available, or still needing setup, Sage should call the relevant read Tool instead of asking the Admin to check manually.
 
 There is no `overview` fallback scope and no keyword category classifier. If one Tool result is not enough, Sage may call another enabled Tool in the same model-driven loop until it has enough evidence or hits deterministic limits.
 
-Admin write intent is represented through `propose_config_change_set`, a model-callable, non-mutating proposal Tool. The UI validates the staged change set and still requires Admin Change Confirmation before applying ordinary admin endpoints.
+Admin write intent is represented through non-mutating proposal Tools. Primary guided bootstrap/setup should use `propose_admin_config_bootstrap`, whose arguments describe setup intent in product terms: instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, and supported behavior-rule intent. Deterministic Sage code builds the canonical request paths and bodies, validates the resulting change set, and stages it for the same Admin Change Confirmation flow.
+
+`propose_config_change_set` remains available as a lower-level compatibility and escape-hatch Tool for supported Admin Config writes that do not yet have a typed proposal Tool. The UI validates every staged change set and still requires Admin Change Confirmation before applying ordinary admin endpoints.
 
 Canonical Admin Config proposal shapes:
 
