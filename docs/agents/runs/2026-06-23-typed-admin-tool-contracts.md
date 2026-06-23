@@ -75,7 +75,14 @@ Replace brittle, slow, free-form Admin Config proposal JSON generation with stri
 | --- | --- | --- | --- | --- | --- |
 | #419 | ba8d46f | Hume (019ef4df-a342-7f41-ab94-ce6bba5ed356) + orchestrator follow-up | parent c102871, Sage cad2309 | Standards doc drift fixed; spec review gaps fixed except prompt preference deferred to #420 | 10 bootstrap tests passed; Tool Set exposure test passed; diff checks clean |
 | #420 | 48d6f0a | Orchestrator | Pending | Default rules now prefer `propose_admin_config_bootstrap`; stale exact defaults are removed on merge; docs aligned | 4 prompt-rule tests passed; Tool Set exposure test passed; diff checks clean |
-| #421 | 6c0f175 | Orchestrator | Pending | Bench now fails bootstrap if typed proposal Tool is not used and checks onboarding/user-field plus behavior-rule requests | 29 benchmark unittest cases passed; diff check clean |
+| #421 | 6c0f175 | Orchestrator | parent acbd509 plus Sage follow-ups 2693d6a and 237d63f | Bench now fails bootstrap if typed proposal Tool is not used and checks onboarding/user-field plus behavior-rule requests; live Gemma run exposed and fixed plain-language access-policy normalization | 29 benchmark unittest cases passed; focused live `admin_config_bootstrap` passed on `gemma4-31b` with artifact `/tmp/conversation-model-bench-typed-admin-bootstrap-2026-06-23-rerun2.json` |
+
+## Live Verification Notes
+
+- Rebuilt local `sage` service with `docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up -d --build sage`.
+- Health passed at `http://127.0.0.1:18000/health`.
+- Focused live command: `python3 scripts/benches/conversation_model_bench.py --api-base http://127.0.0.1:18000 --scenario admin_config_bootstrap --timeout 300 --output /tmp/conversation-model-bench-typed-admin-bootstrap-2026-06-23-rerun2.json`.
+- Result: passed on `gemma4-31b`; typed bootstrap Tool used; generic change-set Tool not used; staged request paths were `/admin/settings`, two `/admin/user-types`, two `/admin/user-fields`, and `/admin/ai-config/prompt_rules`; completion was about 14.3s.
 
 ## Open Questions
 
