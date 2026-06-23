@@ -192,10 +192,11 @@ This cache must not replace server-side authorization or validation.
 ### Change Application (Propose-Then-Confirm-Then-Apply)
 
 For guided setup/bootstrap, the assistant proposes changes by calling
-`propose_admin_config_bootstrap`. Its arguments are typed product setup fields:
-instance identity, assistant identity, public copy, visual defaults, access
-policy, language, user types, onboarding questions, and behavior-rule intent.
-Sage then builds canonical Admin request paths and bodies deterministically.
+`propose_admin_config_bootstrap` with empty args or a short summary. Sage uses
+the current Admin message as setup notes, normalizes the numbered guided setup
+answers, and builds canonical Admin request paths and bodies deterministically.
+The model should not copy long setup answers into tool args or decompose every
+setup answer into individual fields.
 
 For supported Admin Config writes that do not yet have a typed proposal Tool,
 the assistant may use the lower-level `propose_config_change_set` escape hatch.

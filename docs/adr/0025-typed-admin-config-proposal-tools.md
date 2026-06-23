@@ -2,6 +2,8 @@
 
 Admin Config write intent should prefer Typed Proposal Tools over model-authored raw change-set JSON. Sage still owns the Model-Driven Tool Loop and Change Confirmation, but models should express product-level intent while deterministic code builds canonical Enclave Control Plane request shapes, validates them, and returns an Executable Change Set for the existing Apply flow.
 
+For guided Admin Config bootstrap, the model-visible contract should stay small: call the bootstrap proposal Tool with empty args or a short summary. Sage supplies the current Admin message to the deterministic planner, normalizes the numbered setup answers, and stages the reviewable change set without requiring Kimi to copy long setup notes or decompose every field by deduction.
+
 ## Considered Options
 
 - Keep only `propose_config_change_set` with raw `requests_json`. Rejected because it makes the model hand-author exact control-plane paths, nested JSON string values, and request grouping; this is slow and brittle for Kimi on bootstrap setup.
