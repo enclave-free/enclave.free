@@ -158,6 +158,7 @@ describe('FeedbackView', () => {
 
     render(<FeedbackView />);
 
+    expect(await screen.findByText('Test User Session')).toBeInTheDocument();
     const trialButton = (await screen.findByText('Student trial')).closest(
       'button'
     );

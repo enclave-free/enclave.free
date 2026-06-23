@@ -108,6 +108,85 @@ class SessionLogsTest(unittest.TestCase):
 
         self.assertEqual(self.session_logs.list_feedback(feedback_log["log_id"]), [])
 
+    def test_sage_session_lookup_is_scoped_to_subject_user(self) -> None:
+        first_user_id = self.database.create_user()
+        second_user_id = self.database.create_user()
+
+        first_log = self.session_logs.create_session_log(
+            source="user",
+            title="First user",
+            subject_user_id=first_user_id,
+            sage_session_id="shared-sage-session",
+        )
+        second_log = self.session_logs.create_session_log(
+            source="user",
+            title="Second user",
+            subject_user_id=second_user_id,
+            sage_session_id="shared-sage-session",
+        )
+
+        first_lookup = self.session_logs.get_session_log_metadata_by_sage_session_id(
+            source="user",
+            sage_session_id="shared-sage-session",
+            subject_user_id=first_user_id,
+        )
+        second_lookup = self.session_logs.get_session_log_metadata_by_sage_session_id(
+            source="user",
+            sage_session_id="shared-sage-session",
+            subject_user_id=second_user_id,
+        )
+
+        self.assertEqual(first_lookup["log_id"], first_log["log_id"])
+        self.assertEqual(second_lookup["log_id"], second_log["log_id"])
+        with self.assertRaises(self.database.sqlite3.IntegrityError):
+            self.session_logs.create_session_log(
+                source="user",
+                title="Duplicate first user",
+                subject_user_id=first_user_id,
+                sage_session_id="shared-sage-session",
+            )
+
+    def test_sage_session_index_migration_dedupes_existing_rows(self) -> None:
+        with self.database.get_cursor() as cursor:
+            cursor.execute("DROP INDEX idx_session_logs_source_sage_session_subject")
+        user_id = self.database.create_user()
+        older_log = self.session_logs.create_session_log(
+            source="user",
+            title="Older duplicate",
+            subject_user_id=user_id,
+            sage_session_id="duplicate-sage-session",
+        )
+        newer_log = self.session_logs.create_session_log(
+            source="user",
+            title="Newer duplicate",
+            subject_user_id=user_id,
+            sage_session_id="duplicate-sage-session",
+        )
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE session_logs SET updated_at = ? WHERE log_id = ?",
+                ("2026-01-01T00:00:00Z", older_log["log_id"]),
+            )
+            cursor.execute(
+                "UPDATE session_logs SET updated_at = ? WHERE log_id = ?",
+                ("2026-01-02T00:00:00Z", newer_log["log_id"]),
+            )
+
+        self.database._migrate_add_session_log_source_sage_session_index()
+
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                """SELECT log_id
+                   FROM session_logs
+                   WHERE source = 'user'
+                     AND sage_session_id = 'duplicate-sage-session'
+                     AND subject_user_id = ?""",
+                (user_id,),
+            )
+            rows = cursor.fetchall()
+
+        self.assertEqual([row["log_id"] for row in rows], [newer_log["log_id"]])
+
     def test_feedback_rejects_user_turns(self) -> None:
         log = self.session_logs.create_session_log(title="Synthetic User test")
         self.session_logs.save_transcript(
@@ -156,6 +235,14 @@ class SessionLogsTest(unittest.TestCase):
         detail = self.session_logs.get_session_log(log["log_id"])
         self.assertIsNotNone(detail)
         self.assertNotIn(transcript_sentinel, detail["transcript_ciphertext"])
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT transcript_ciphertext FROM session_logs WHERE log_id = ?",
+                (log["log_id"],),
+            )
+            stored = cursor.fetchone()["transcript_ciphertext"]
+        self.assertEqual(stored, detail["transcript_ciphertext"])
+        self.assertNotIn(transcript_sentinel, stored)
         decrypted_transcript = self.encryption.nip04_decrypt(
             detail["transcript_ciphertext"],
             detail["transcript_ephemeral_pubkey"],

@@ -35,6 +35,7 @@ import { ConversationSurface } from '../components/chat/ConversationSurface';
 import { buildConversationSurfaceTurns } from '../components/chat/ConversationSurfaceModel';
 import {
   adaptSageStreamEvent,
+  readTraceDelta,
   buildAdminChangePreview,
   createAdminChangeConfirmationState,
   createConversationUiState,
@@ -53,6 +54,7 @@ import { AppHeader } from '../components/shared/AppHeader';
 import { Message } from '../components/chat/ChatMessage';
 import type {
   ConversationActivityStep,
+  ConversationTraceDelta,
   ConversationTrace,
 } from '../components/chat/ChatMessage';
 import {
@@ -136,6 +138,7 @@ function conversationTurnToMessage(turn: ConversationUiTurn): Message {
     trace: turn.trace,
     traceStatus: turn.traceStatus,
     activitySteps: turn.activitySteps,
+    traceDeltas: turn.traceDeltas,
     controlSnapshot: turn.controlSnapshot,
   };
 }
@@ -221,6 +224,10 @@ function conversationTurnFromSessionMessage(
   if (typeof record.content !== 'string') return null;
   const trace = conversationTraceFromApi(record.trace);
   const activitySteps = activityStepsFromApi(record.activity_steps);
+  const topLevelTraceDeltas = traceDeltasFromApi(record.trace_deltas);
+  const traceDeltas = topLevelTraceDeltas.length
+    ? topLevelTraceDeltas
+    : traceDeltasFromApi(trace?.trace_deltas);
   return {
     id:
       typeof record.id === 'string' && record.id.trim()
@@ -234,6 +241,7 @@ function conversationTurnFromSessionMessage(
         : trace?.activity_steps
           ? activityStepsFromApi(trace.activity_steps)
           : [],
+    traceDeltas,
     trace,
     traceStatus: null,
   };
@@ -256,7 +264,20 @@ function conversationTraceFromApi(value: unknown): ConversationTrace | null {
   if (!isOptionalObjectArray(record.activity_steps)) {
     return null;
   }
+  if (!isOptionalObjectArray(record.trace_deltas)) {
+    return null;
+  }
   return record as unknown as ConversationTrace;
+}
+
+function traceDeltasFromApi(value: unknown): ConversationTraceDelta[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item): ConversationTraceDelta | null => {
+      if (!item || typeof item !== 'object') return null;
+      return readTraceDelta({ trace_delta: item as Record<string, unknown> });
+    })
+    .filter((delta): delta is ConversationTraceDelta => Boolean(delta));
 }
 
 function isOptionalObjectArray(value: unknown): boolean {

@@ -9,6 +9,7 @@ reads without reimplementing those product rules in Rust.
 
 import os
 import re
+import sqlite3
 import time
 import logging
 from datetime import datetime, timezone
@@ -52,6 +53,7 @@ INSTANCE_SETTINGS_INTERNAL_KEYS = {
 }
 INSTANCE_SETTINGS_FIELD_ORDER = (
     "instance_name",
+    "public_email_display_name",
     "assistant_name",
     "header_tagline",
     "description",
@@ -95,6 +97,7 @@ INSTANCE_SETTINGS_SUPPORTED_VALUES = {
 }
 INSTANCE_SETTINGS_LABELS = {
     "instance_name": "Instance name",
+    "public_email_display_name": "Public email display name",
     "assistant_name": "Assistant name",
     "header_tagline": "Tagline",
     "primary_color": "Primary color",
@@ -872,22 +875,48 @@ async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessio
         )
 
     log = None
+    created_log = False
     subject_user_id = payload.actor.id
     try:
-        log = session_logs.create_session_log(
-            source="user",
-            title=payload.title,
-            subject_user_id=subject_user_id,
-            user_type_id=payload.user_type_id or payload.actor.user_type_id,
-            sage_session_id=payload.sage_session_id,
-            created_by=f"user:{subject_user_id}" if subject_user_id else "system",
-        )
-        saved = session_logs.save_transcript(
-            log["log_id"],
-            [turn.model_dump() for turn in payload.turns],
-        )
+        with database.dedicated_connection():
+            if payload.sage_session_id:
+                log = session_logs.get_session_log_metadata_by_sage_session_id(
+                    source="user",
+                    sage_session_id=payload.sage_session_id,
+                    subject_user_id=subject_user_id,
+                )
+            if log is None:
+                try:
+                    log = session_logs.create_session_log(
+                        source="user",
+                        title=payload.title,
+                        subject_user_id=subject_user_id,
+                        user_type_id=payload.user_type_id or payload.actor.user_type_id,
+                        sage_session_id=payload.sage_session_id,
+                        created_by=f"user:{subject_user_id}",
+                    )
+                    created_log = True
+                except sqlite3.IntegrityError:
+                    if not payload.sage_session_id:
+                        raise
+                    log = session_logs.get_session_log_metadata_by_sage_session_id(
+                        source="user",
+                        sage_session_id=payload.sage_session_id,
+                        subject_user_id=subject_user_id,
+                    )
+                    if log is None:
+                        raise
+            incoming_turns = [turn.model_dump() for turn in payload.turns]
+            saved_turn_count = int(log.get("turn_count") or 0)
+            if saved_turn_count > len(incoming_turns):
+                saved = log
+            else:
+                saved = session_logs.save_transcript(
+                    log["log_id"],
+                    incoming_turns,
+                )
     except ValueError as exc:
-        if log is not None:
+        if created_log and log is not None:
             try:
                 session_logs.delete_session_log(log["log_id"])
             except OSError:

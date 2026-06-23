@@ -38,11 +38,16 @@ COMPOSE_ARGS = [
 DEFAULT_API_BASE = "http://127.0.0.1:18000"
 DEFAULT_TIMEOUT_SECONDS = 180.0
 SLOW_FIRST_ANSWER_WARNING_MS = 30_000.0
+SLOW_TRACE_FEEDBACK_WARNING_MS = 10_000.0
 SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
     "admin_config_bootstrap",
     "admin_deployment_readiness",
+    "admin_database_direct_select",
+    "admin_database_natural_language_guardrail",
     "user_knowledge_assistance",
+    "user_curated_resource_referral",
+    "user_knowledge_and_resource_assistance",
 )
 
 
@@ -55,6 +60,7 @@ class BenchOptions:
     timeout: float = DEFAULT_TIMEOUT_SECONDS
     reset: bool = False
     seed_knowledge: bool = False
+    seed_resources: bool = False
     restore_model: bool = True
     verbose: bool = False
 
@@ -95,6 +101,9 @@ class BenchEnvironment(Protocol):
         ...
 
     def seed_knowledge(self) -> dict[str, Any]:
+        ...
+
+    def seed_resources(self) -> dict[str, Any]:
         ...
 
     def switch_model(self, model: str) -> None:
@@ -152,6 +161,46 @@ SCENARIOS: dict[str, Scenario] = {
             "and feels unsafe. What should they do first today?"
         ),
         tools=("knowledge-search",),
+    ),
+    "admin_database_direct_select": Scenario(
+        id="admin_database_direct_select",
+        actor="admin",
+        message=(
+            "SELECT key, value FROM instance_settings "
+            "WHERE key IN ('instance_name', 'assistant_name', 'default_language') "
+            "ORDER BY key LIMIT 10"
+        ),
+        tools=("db-query",),
+    ),
+    "admin_database_natural_language_guardrail": Scenario(
+        id="admin_database_natural_language_guardrail",
+        actor="admin",
+        message=(
+            "Use the Database Query tool to tell me how many users and curated "
+            "resources are in SQLite, but do not make me write SQL."
+        ),
+        tools=("db-query",),
+    ),
+    "user_curated_resource_referral": Scenario(
+        id="user_curated_resource_referral",
+        actor="user",
+        message=(
+            "My sibling was just released from detention in Nicaragua and needs a "
+            "vetted legal referral. Use curated resources if available, and do not "
+            "invent contact details."
+        ),
+        tools=("curated-resources",),
+    ),
+    "user_knowledge_and_resource_assistance": Scenario(
+        id="user_knowledge_and_resource_assistance",
+        actor="user",
+        message=(
+            "A family member in Nicaragua says their loved one was just released "
+            "after political imprisonment and feels unsafe. Give first-day safety "
+            "steps and a real legal or humanitarian referral if curated resources "
+            "have one."
+        ),
+        tools=("knowledge-search", "curated-resources"),
     ),
 }
 
@@ -229,6 +278,7 @@ def run_candidate(
             client=client,
             timeout=options.timeout,
             seed_knowledge=options.seed_knowledge,
+            seed_resources=options.seed_resources,
         )
         scenarios.append(scenario_result)
         candidate_checks.extend(scenario_result["checks"])
@@ -248,14 +298,18 @@ def run_scenario(
     client: ConversationClient,
     timeout: float,
     seed_knowledge: bool,
+    seed_resources: bool,
 ) -> dict[str, Any]:
     knowledge_fixture: dict[str, Any] | None = None
+    resource_fixture: dict[str, Any] | None = None
     if scenario.actor == "admin":
         token = environment.admin_token()
     elif scenario.actor == "user":
         token = environment.user_token()
-        if seed_knowledge:
+        if seed_knowledge and "knowledge-search" in scenario.tools:
             knowledge_fixture = environment.seed_knowledge()
+        if seed_resources and "curated-resources" in scenario.tools:
+            resource_fixture = environment.seed_resources()
     else:
         raise ValueError(f"unsupported actor for current bench slice: {scenario.actor}")
 
@@ -278,6 +332,7 @@ def run_scenario(
             admin_change_set=None,
             timings={
                 "first_event_ms": None,
+                "first_trace_or_tool_feedback_ms": None,
                 "first_visible_assistant_token_ms": None,
                 "done_ms": None,
             },
@@ -292,6 +347,10 @@ def run_scenario(
         "request": {
             "tools": list(scenario.tools),
             "message_preview": truncate(scenario.message, 500),
+        },
+        "fixtures": {
+            "knowledge": knowledge_fixture,
+            "resources": resource_fixture,
         },
         "response": {
             "answer_preview": truncate(stream.answer, 2000),
@@ -322,12 +381,22 @@ def checks_for_scenario(
     tool_evidence: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     checks = common_stream_checks(stream)
+    if scenario.tools:
+        checks.extend(trace_feedback_checks(stream))
     if scenario.id == "admin_config_bootstrap":
         checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
         checks.extend(admin_deployment_readiness_checks(stream, tool_evidence))
+    elif scenario.id == "admin_database_direct_select":
+        checks.extend(admin_database_direct_select_checks(stream, tool_evidence))
+    elif scenario.id == "admin_database_natural_language_guardrail":
+        checks.extend(admin_database_natural_language_guardrail_checks(stream, tool_evidence))
     elif scenario.id == "user_knowledge_assistance":
         checks.extend(user_knowledge_assistance_checks(stream, tool_evidence))
+    elif scenario.id == "user_curated_resource_referral":
+        checks.extend(user_curated_resource_referral_checks(stream, tool_evidence))
+    elif scenario.id == "user_knowledge_and_resource_assistance":
+        checks.extend(user_knowledge_and_resource_assistance_checks(stream, tool_evidence))
     return checks
 
 
@@ -370,6 +439,31 @@ def common_stream_checks(stream: StreamResult) -> list[dict[str, Any]]:
     ]
 
 
+def trace_feedback_checks(stream: StreamResult) -> list[dict[str, Any]]:
+    first_trace_or_tool_feedback_ms = stream.timings.get(
+        "first_trace_or_tool_feedback_ms"
+    )
+    return [
+        check(
+            "first_trace_or_tool_feedback_present",
+            first_trace_or_tool_feedback_ms is not None,
+            "warning",
+            "no trace_delta or activity_step arrived before completion"
+            if first_trace_or_tool_feedback_ms is None
+            else None,
+        ),
+        check(
+            "first_trace_or_tool_feedback_under_10s",
+            first_trace_or_tool_feedback_ms is None
+            or first_trace_or_tool_feedback_ms <= SLOW_TRACE_FEEDBACK_WARNING_MS,
+            "warning",
+            f"first trace/tool feedback took {first_trace_or_tool_feedback_ms}ms"
+            if first_trace_or_tool_feedback_ms is not None
+            else None,
+        ),
+    ]
+
+
 def contains_generic_generation_failure(answer: str) -> bool:
     answer_lower = answer.lower()
     return any(
@@ -387,6 +481,14 @@ def admin_deployment_readiness_checks(
     tool_evidence: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     answer_lower = stream.answer.lower()
+    has_staged_admin_change_set = (
+        any(
+            tool_evidence_matches(evidence, "admin_change_set")
+            for evidence in tool_evidence
+        )
+        or bool(stream.admin_change_set)
+        or bool(stream.done.get("admin_change_set"))
+    )
     manual_check_phrases = [
         "please double-check",
         "you'll need to check",
@@ -399,6 +501,11 @@ def admin_deployment_readiness_checks(
         check(
             "admin_config_tool_used",
             any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "admin_change_set_not_staged",
+            not has_staged_admin_change_set,
             "hard",
         ),
         check(
@@ -481,6 +588,123 @@ def user_knowledge_assistance_checks(
     ]
 
 
+def admin_database_direct_select_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        check(
+            "db_query_tool_used",
+            any(tool_evidence_matches(evidence, "db-query") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "db_query_was_executed",
+            not any_tool_warning(tool_evidence, "db-query", "direct_select_required"),
+            "hard",
+        ),
+        check(
+            "db_query_results_redacted_from_trace",
+            any_tool_warning(tool_evidence, "db-query", "raw_results_redacted"),
+            "hard",
+        ),
+        check(
+            "answer_mentions_requested_settings",
+            contains_any(
+                stream.answer,
+                [
+                    "instance_name",
+                    "assistant_name",
+                    "default_language",
+                    "instance name",
+                    "assistant name",
+                    "default language",
+                ],
+            ),
+            "warning",
+        ),
+    ]
+
+
+def admin_database_natural_language_guardrail_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    answer_lower = stream.answer.lower()
+    return [
+        check(
+            "db_query_guardrail_recorded",
+            any_tool_warning(tool_evidence, "db-query", "direct_select_required"),
+            "hard",
+        ),
+        check(
+            "db_query_not_executed_from_natural_language",
+            not any_tool_warning(tool_evidence, "db-query", "raw_results_redacted"),
+            "hard",
+        ),
+        check(
+            "answer_directs_admin_to_submit_select",
+            "select" in answer_lower and "database" in answer_lower,
+            "warning",
+        ),
+    ]
+
+
+def user_curated_resource_referral_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        check(
+            "curated_resources_tool_used",
+            any(tool_evidence_matches(evidence, "curated-resources") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "curated_resource_found",
+            not any_tool_warning(tool_evidence, "curated-resources", "no_curated_resources"),
+            "warning",
+        ),
+        check(
+            "answer_surfaces_vetted_resource",
+            contains_any(
+                stream.answer,
+                [
+                    "Bench Liberty Legal Hotline",
+                    "bench-legal@example.test",
+                    "Signal: +1-000-000-0000",
+                ],
+            ),
+            "warning",
+        ),
+    ]
+
+
+def user_knowledge_and_resource_assistance_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    checks = user_knowledge_assistance_checks(stream, tool_evidence)
+    checks.extend(user_curated_resource_referral_checks(stream, tool_evidence))
+    checks.append(
+        check(
+            "answer_combines_safety_and_referral",
+            contains_practical_safety_guidance(stream.answer)
+            and contains_any(
+                stream.answer,
+                [
+                    "Bench Liberty Legal Hotline",
+                    "bench-legal@example.test",
+                    "legal",
+                    "humanitarian",
+                ],
+            ),
+            "warning",
+        )
+    )
+    return checks
+
+
 def contains_practical_safety_guidance(answer: str) -> bool:
     answer_lower = answer.lower()
     return any(
@@ -495,6 +719,25 @@ def contains_practical_safety_guidance(answer: str) -> bool:
             "document",
         ]
     )
+
+
+def contains_any(value: str, needles: list[str]) -> bool:
+    value_lower = value.lower()
+    return any(needle.lower() in value_lower for needle in needles)
+
+
+def any_tool_warning(
+    tool_evidence: list[dict[str, Any]],
+    tool_set_id: str,
+    warning: str,
+) -> bool:
+    for evidence in tool_evidence:
+        if not tool_evidence_matches(evidence, tool_set_id):
+            continue
+        warnings = evidence.get("warnings") or []
+        if isinstance(warnings, list) and warning in warnings:
+            return True
+    return False
 
 
 BASELINE_SETTING_KEYS = {
@@ -619,9 +862,11 @@ def normalize_tool_evidence(value: dict[str, Any]) -> dict[str, Any]:
     return {
         "tool_id": tool_id,
         "tool_name": raw_name or tool_id,
+        "query": value.get("query"),
         "status": value.get("status"),
         "output_summary": value.get("output_summary") or value.get("summary"),
         "warnings": value.get("warnings") or [],
+        "guarded": value.get("guarded"),
     }
 
 
@@ -707,7 +952,7 @@ class LocalComposeEnvironment:
 
     def current_model(self) -> str:
         env = self.container_env("sage")
-        return env.get("TINFOIL_MODEL") or "kimi-k2-6"
+        return env.get("TINFOIL_MODEL") or "gemma4-31b"
 
     def verify_runtime_model(self, expected_model: str | None = None) -> dict[str, Any]:
         env = self.container_env("sage")
@@ -834,6 +1079,43 @@ print(json.dumps({"job_ids": [job_id], "sources": [source_file], "chunk_id": chu
         except (IndexError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"knowledge fixture did not return JSON: {raw[:400]}") from exc
 
+    def seed_resources(self) -> dict[str, Any]:
+        script = """
+import json
+
+import database
+
+resource_id = "conversation-bench-global-legal"
+database.init_schema()
+if database.get_resource(resource_id) is None:
+    database.create_resource(
+        resource_id=resource_id,
+        name="Bench Liberty Legal Hotline",
+        resource_type="ngo",
+        description="Synthetic benchmark fixture for vetted legal triage after detention release.",
+        contact={
+            "email": "bench-legal@example.test",
+            "secure_channel": "Signal: +1-000-000-0000",
+            "url": "https://example.test/bench-legal",
+        },
+        languages=["en", "es"],
+        scope_level="global",
+        scope_code=None,
+        help_types=["legal", "humanitarian"],
+        verified_at=database.utc_timestamp_z(),
+        vetted_by="conversation-model-bench",
+        source_note="Synthetic benchmark fixture.",
+        display_order=-100,
+    )
+resource = database.get_resource(resource_id)
+print(json.dumps({"resource_ids": [resource_id], "resources": [resource]}))
+"""
+        raw = run_backend_python(script, timeout=30)
+        try:
+            return json.loads(raw.strip().splitlines()[-1])
+        except (IndexError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"resource fixture did not return JSON: {raw[:400]}") from exc
+
     def switch_model(self, model: str) -> None:
         env = os.environ.copy()
         env["TINFOIL_MODEL"] = model
@@ -854,21 +1136,30 @@ print(json.dumps({"job_ids": [job_id], "sources": [source_file], "chunk_id": chu
         deadline = time.time() + 180
         last_error = ""
         while time.time() < deadline:
-            result = subprocess.run(
-                [
-                    *COMPOSE_ARGS,
-                    "exec",
-                    "-T",
-                    "sage",
-                    "curl",
-                    "-fsS",
-                    "http://127.0.0.1:3000/health",
-                ],
-                capture_output=True,
-                text=True,
-                cwd=REPO_ROOT,
-                timeout=10,
-            )
+            try:
+                result = subprocess.run(
+                    [
+                        *COMPOSE_ARGS,
+                        "exec",
+                        "-T",
+                        "sage",
+                        "curl",
+                        "-fsS",
+                        "http://127.0.0.1:3000/health",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                    timeout=10,
+                )
+            except subprocess.TimeoutExpired:
+                last_error = "health probe timed out"
+                time.sleep(2)
+                continue
+            except Exception as exc:
+                last_error = f"health probe failed: {exc}"
+                time.sleep(2)
+                continue
             if result.returncode == 0:
                 return
             last_error = result.stderr.strip() or result.stdout.strip()
@@ -923,13 +1214,15 @@ class HttpConversationClient:
         trace: dict[str, Any] | None = None
         admin_change_set: dict[str, Any] | None = None
         first_event_ms: float | None = None
+        first_trace_or_tool_feedback_ms: float | None = None
         first_delta_ms: float | None = None
         done_ms: float | None = None
         stream_error: str | None = None
         decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
 
         def process_buffer() -> None:
-            nonlocal buffer, first_event_ms, first_delta_ms, done_ms
+            nonlocal buffer, first_event_ms, first_trace_or_tool_feedback_ms
+            nonlocal first_delta_ms, done_ms
             nonlocal trace, admin_change_set, done
             while "\n\n" in buffer:
                 block, buffer = buffer.split("\n\n", 1)
@@ -939,6 +1232,11 @@ class HttpConversationClient:
                 elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
                 if first_event_ms is None:
                     first_event_ms = elapsed_ms
+                if (
+                    first_trace_or_tool_feedback_ms is None
+                    and is_trace_or_tool_feedback_event(event_name, data)
+                ):
+                    first_trace_or_tool_feedback_ms = elapsed_ms
                 events.append(
                     {
                         "event": event_name,
@@ -1001,6 +1299,7 @@ class HttpConversationClient:
             admin_change_set=admin_change_set,
             timings={
                 "first_event_ms": first_event_ms,
+                "first_trace_or_tool_feedback_ms": first_trace_or_tool_feedback_ms,
                 "first_visible_assistant_token_ms": first_delta_ms,
                 "done_ms": done_ms,
             },
@@ -1021,6 +1320,14 @@ def parse_sse_event(block: str) -> tuple[str | None, dict[str, Any]]:
     return event_name, data
 
 
+def is_trace_or_tool_feedback_event(event_name: str, data: dict[str, Any]) -> bool:
+    if event_name == "trace_delta":
+        return isinstance(data.get("trace_delta"), dict)
+    if event_name == "activity_step":
+        return isinstance(data.get("activity_step"), dict)
+    return False
+
+
 def run_backend_python(script: str, timeout: int = 120) -> str:
     return run_command(
         [*COMPOSE_ARGS, "exec", "-T", "core-backend", "python", "-c", script],
@@ -1029,19 +1336,55 @@ def run_backend_python(script: str, timeout: int = 120) -> str:
 
 
 def run_command(cmd: list[str], timeout: int, env: dict[str, str] | None = None) -> str:
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=REPO_ROOT,
-        timeout=timeout,
-        env=env,
-    )
+    redacted_command = " ".join(redact_command(cmd))
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f"command timed out ({redacted_command}) after {timeout}s"
+        ) from None
     if result.returncode != 0:
         raise RuntimeError(
-            f"command failed ({' '.join(cmd)}): {result.stderr.strip() or result.stdout.strip()}"
+            f"command failed ({redacted_command}): "
+            f"{result.stderr.strip() or result.stdout.strip()}"
         )
     return result.stdout
+
+
+def redact_command(cmd: list[str]) -> list[str]:
+    redacted: list[str] = []
+    redact_next = False
+    for arg in cmd:
+        if redact_next:
+            redacted.append("<redacted>")
+            redact_next = False
+            continue
+        sanitized, redact_next = redact_command_arg(arg)
+        redacted.append(sanitized)
+    return redacted
+
+
+def redact_command_arg(arg: str) -> tuple[str, bool]:
+    lower_arg = arg.lower()
+    if "x-internal-agent-token" not in lower_arg:
+        return arg, False
+
+    for separator in (":", "="):
+        prefix, found, suffix = arg.partition(separator)
+        if found:
+            if separator == ":":
+                redacted = f"{prefix}{separator} <redacted>"
+            else:
+                redacted = f"{prefix}=<redacted>"
+            return redacted, not bool(suffix.strip())
+    return arg, True
 
 
 def write_artifact(artifact: dict[str, Any], output: str | None) -> Path:
@@ -1063,6 +1406,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--seed-knowledge", action="store_true")
+    parser.add_argument("--seed-resources", action="store_true")
     parser.add_argument("--no-restore-model", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
@@ -1074,6 +1418,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
         timeout=args.timeout,
         reset=args.reset,
         seed_knowledge=args.seed_knowledge,
+        seed_resources=args.seed_resources,
         restore_model=not args.no_restore_model,
         verbose=args.verbose,
     )

@@ -1,8 +1,10 @@
 import type {
   ConversationActivityStep,
+  ConversationTraceDelta,
   ConversationTrace,
 } from './ChatMessage';
 import type { ConversationUiAction } from './ConversationUiState';
+import { isConversationTraceDeltaKind } from '../../utils/conversationTraceDeltas';
 
 export function adaptSageStreamEvent(
   event: string,
@@ -41,6 +43,16 @@ export function adaptSageStreamEvent(
         step,
       };
     }
+    case 'trace_delta': {
+      if (!assistantTurnId) return null;
+      const traceDelta = readTraceDelta(payload);
+      if (!traceDelta) return null;
+      return {
+        type: 'assistantTraceDeltaReceived',
+        assistantTurnId,
+        traceDelta,
+      };
+    }
     case 'answer_delta': {
       if (!assistantTurnId) return null;
       return {
@@ -77,6 +89,41 @@ export function adaptSageStreamEvent(
     default:
       return null;
   }
+}
+
+export function readTraceDelta(
+  payload: Record<string, unknown>
+): ConversationTraceDelta | null {
+  const raw = payload.trace_delta;
+  if (!raw || typeof raw !== 'object') return null;
+  const delta = raw as Record<string, unknown>;
+  if (typeof delta.id !== 'string' || typeof delta.kind !== 'string') {
+    return null;
+  }
+  const id = delta.id.trim();
+  const kind = delta.kind.trim();
+  if (!id || !isConversationTraceDeltaKind(kind)) {
+    return null;
+  }
+
+  const result: ConversationTraceDelta = {
+    id,
+    kind,
+  };
+  if (typeof delta.title === 'string') result.title = delta.title;
+  if (typeof delta.content === 'string') result.content = delta.content;
+  if (typeof delta.tool_name === 'string') result.tool_name = delta.tool_name;
+  if (typeof delta.status === 'string') result.status = delta.status;
+  if (typeof delta.created_at === 'string')
+    result.created_at = delta.created_at;
+  if (
+    delta.metadata &&
+    typeof delta.metadata === 'object' &&
+    !Array.isArray(delta.metadata)
+  ) {
+    result.metadata = delta.metadata as Record<string, unknown>;
+  }
+  return result;
 }
 
 function formatTraceStatus(status: string, timing: unknown): string {
@@ -119,6 +166,8 @@ function isConversationTrace(value: unknown): value is ConversationTrace {
     trace.activity_steps !== undefined &&
     !Array.isArray(trace.activity_steps)
   )
+    return false;
+  if (trace.trace_deltas !== undefined && !Array.isArray(trace.trace_deltas))
     return false;
   if (
     trace.reasoning !== undefined &&

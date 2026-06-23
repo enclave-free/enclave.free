@@ -64,7 +64,7 @@ Enabled does not mean forced. Enabled means the model is allowed and encouraged 
 
 `knowledge-search` is a first-class visible Tool Set, not a hidden retrieval mode. Selected Documents are constraints on `knowledge_search`, not silent Required Context for ordinary chat.
 
-Sage passes allowed document constraints to the Knowledge Tool. Python enforces Document Access and hydrates retrieved chunks from product-owned storage after vector search. Retrieved chunks enter the Conversation as Tool results and sanitized Activity/Trace metadata.
+Sage passes allowed document constraints to the Knowledge Tool. Python enforces Document Access and hydrates retrieved chunks from product-owned storage after vector search. Retrieved chunks enter the Conversation as Tool results and Activity/Trace metadata under the transparent trace posture in ADR-0024.
 
 Required Context remains a separate product-policy term for future mandatory context that must be included outside ordinary model discretion. It is not the default document-chat path.
 
@@ -105,13 +105,13 @@ User types use `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
 keys after that. Unknown keys and unsupported values reject the proposal before
 review.
 
-Admin Config Tools may return non-secret configuration and secret status metadata by default. Raw Deployment Setting secret values require explicit Admin sharing and must remain redacted in messages, Activity, traces, and previews.
+Admin Config Tools may return non-secret configuration and secret status metadata by default. Raw Deployment Setting secret values require explicit Admin sharing and remain inside the trace blocklist unless they are intentionally shared by the Admin for the current turn; secret previews must stay masked in Change Confirmation.
 
-Theme requests in Admin Conversations mean Instance visual identity settings, such as theme, primary color, chat bubble style, surface style, icon set, and typography preset. They should become Instance Settings change-set proposals, not frontend CSS or source-code theme edits.
+Theme requests in Admin Conversations mean Instance visual identity settings, such as default theme and `primary_color`. They should become Instance Settings change-set proposals, not frontend CSS or source-code theme edits.
 
 ## Database
 
-`db-query` is an admin-only Tool Set for read-only inspection. Sage may use the model-driven Tool loop for database questions, but Python remains the safe SQL executor and must enforce read-only validation, blocked keywords, authorization, truncation, and redaction. Direct database mutation is not a supported product path.
+`db-query` is an admin-only Tool Set for read-only inspection. Sage exposes the executable Database Query Tool only when the Admin submits a direct read-only `SELECT`; natural-language database questions are guarded quickly and ask the Admin to submit a reviewed `SELECT` instead of triggering text-to-SQL. Python remains the safe SQL executor and must enforce read-only validation, blocked keywords, authorization, truncation, and redaction. Direct database mutation is not a supported product path.
 
 ## Web Search
 
@@ -130,7 +130,7 @@ Sage decides Tool planning through model instructions and Tool descriptions, not
 - which Tool Sets and Tools are available for the actor
 - max Tool-loop steps, timeouts, and output budgets
 - Tool result injection
-- Activity and Conversation Trace assembly
+- Activity, Trace Delta, and Conversation Trace assembly
 - Change Confirmation handoff for Executable Change Sets
 
 ## Python Duties

@@ -165,6 +165,67 @@ describe('generateExport', () => {
     expect(exported).toContain('Tool completed\\.');
   });
 
+  it('exports persisted Conversation Trace Deltas by default', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        trace: {
+          visibility: 'detailed',
+          reasoning: {
+            summary: 'Sage used enabled tools before answering.',
+          },
+          trace_deltas: [
+            {
+              id: 'trace-model-step',
+              kind: 'model_step',
+              title: 'Model step',
+              status: 'succeeded',
+              content: 'Model step 1 completed.',
+              metadata: { duration_ms: 1200 },
+            },
+            {
+              id: 'trace-secret',
+              kind: 'tool_result',
+              title: 'Admin Config',
+              status: 'guarded',
+              content: '[redacted]',
+              tool_name: 'read_deployment_settings',
+              metadata: {},
+            },
+          ],
+          tools: [],
+          retrieval: [],
+          activity_steps: [],
+          suppressed: false,
+        },
+      },
+    ];
+
+    const exportedMarkdown = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    });
+    const exportedText = generateExport({
+      messages,
+      format: 'txt',
+      translations,
+    });
+
+    expect(exportedMarkdown).toContain('Trace Deltas');
+    expect(exportedMarkdown).toContain('Model step [model\\_step]');
+    expect(exportedMarkdown).toContain('Model step 1 completed\\.');
+    expect(exportedMarkdown).toContain('Admin Config [tool\\_result]');
+    expect(exportedMarkdown).toContain('\\[redacted\\]');
+    expect(exportedText).toContain('Trace Deltas');
+    expect(exportedText).toContain('Model step [model_step]');
+    expect(exportedText).toContain(
+      'Admin Config [tool_result] (guarded): [redacted]'
+    );
+  });
+
   it('exports completed-turn Conversation Activity Steps even when final trace is unavailable', () => {
     const messages: TestMessage[] = [
       {
@@ -201,6 +262,52 @@ describe('generateExport', () => {
     expect(exportedText).toContain('Conversation Activity');
     expect(exportedText).toContain('Web Search');
     expect(exportedText).toContain('Tool completed.');
+  });
+
+  it('prefers live activity steps over settled activity steps with duplicate ids', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        activitySteps: [
+          {
+            id: 'tool-admin-config',
+            kind: 'tool',
+            title: 'Live Admin Config',
+            status: 'running',
+            summary: 'Live step is current.',
+            warnings: [],
+          },
+        ],
+        trace: {
+          visibility: 'detailed',
+          tools: [],
+          retrieval: [],
+          activity_steps: [
+            {
+              id: 'tool-admin-config',
+              kind: 'tool',
+              title: 'Settled Admin Config',
+              status: 'succeeded',
+              summary: 'Settled step is stale.',
+              warnings: [],
+            },
+          ],
+        },
+      },
+    ];
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    });
+
+    expect(exported).toContain('Live Admin Config');
+    expect(exported).toContain('Live step is current\\.');
+    expect(exported).not.toContain('Settled Admin Config');
+    expect(exported).not.toContain('Settled step is stale');
   });
 
   it('exports submitted-turn Conversation Control Snapshots without browser state details', () => {
@@ -366,5 +473,53 @@ describe('generateExport', () => {
     expect(exported).toContain(
       'Matched \\[section\\]\\(https://example\\.com\\)'
     );
+  });
+
+  it('prefers live trace deltas over settled trace deltas with duplicate ids', () => {
+    const messages: TestMessage[] = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: 'Here is the answer.',
+        traceDeltas: [
+          {
+            id: 'trace-model-step',
+            kind: 'model_step',
+            title: 'Live model step',
+            status: 'running',
+            content: 'Live trace is current.',
+            metadata: {},
+          },
+        ],
+        trace: {
+          visibility: 'detailed',
+          trace_deltas: [
+            {
+              id: 'trace-model-step',
+              kind: 'model_step',
+              title: 'Settled model step',
+              status: 'succeeded',
+              content: 'Settled trace is stale.',
+              metadata: {},
+            },
+          ],
+          tools: [],
+          retrieval: [],
+          activity_steps: [],
+          suppressed: false,
+        },
+      },
+    ];
+
+    const exported = generateExport({
+      messages,
+      format: 'md',
+      translations,
+    });
+
+    expect(exported).toContain('Live model step [model\\_step]');
+    expect(exported).toContain('Live trace is current\\.');
+    expect(exported).not.toContain('Settled model step');
+    expect(exported).not.toContain('Settled trace is stale');
   });
 });

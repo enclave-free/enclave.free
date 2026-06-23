@@ -72,6 +72,14 @@ describe('AdminInstanceConfig', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Display Name' }), {
       target: { value: 'Operator Desk' },
     })
+    fireEvent.change(
+      screen.getByRole('textbox', {
+        name: 'Public email display name (optional)',
+      }),
+      {
+        target: { value: 'World Liberty Congress' },
+      }
+    )
     fireEvent.change(screen.getByRole('textbox', { name: 'Logo URL' }), {
       target: { value: 'https://example.com/logo.png' },
     })
@@ -87,28 +95,33 @@ describe('AdminInstanceConfig', () => {
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify({
-          instance_name: 'Operator Desk',
-          primary_color: DEFAULT_INSTANCE_CONFIG.accentColor,
-          icon: DEFAULT_INSTANCE_CONFIG.icon,
-          logo_url: 'https://example.com/logo.png',
-          favicon_url: DEFAULT_INSTANCE_CONFIG.faviconUrl,
-          apple_touch_icon_url: DEFAULT_INSTANCE_CONFIG.appleTouchIconUrl,
-          assistant_icon: DEFAULT_INSTANCE_CONFIG.assistantIcon,
-          user_icon: DEFAULT_INSTANCE_CONFIG.userIcon,
-          assistant_name: 'Sage',
-          user_label: 'Operator',
-          header_layout: DEFAULT_INSTANCE_CONFIG.headerLayout,
-          header_tagline: DEFAULT_INSTANCE_CONFIG.headerTagline,
-          chat_bubble_style: DEFAULT_INSTANCE_CONFIG.chatBubbleStyle,
-          chat_bubble_shadow: String(DEFAULT_INSTANCE_CONFIG.chatBubbleShadow),
-          surface_style: DEFAULT_INSTANCE_CONFIG.surfaceStyle,
-          status_icon_set: DEFAULT_INSTANCE_CONFIG.statusIconSet,
-          typography_preset: DEFAULT_INSTANCE_CONFIG.typographyPreset,
-          default_language: DEFAULT_INSTANCE_CONFIG.defaultLanguage,
-          default_theme: DEFAULT_INSTANCE_CONFIG.defaultTheme,
-        }),
       }))
+    })
+    const putCall = mockAdminFetch.mock.calls.find(
+      ([endpoint, options]) => endpoint === '/admin/settings' && options?.method === 'PUT'
+    )
+    expect(putCall).toBeDefined()
+    expect(JSON.parse(String(putCall?.[1]?.body))).toEqual({
+      instance_name: 'Operator Desk',
+      public_email_display_name: 'World Liberty Congress',
+      primary_color: DEFAULT_INSTANCE_CONFIG.accentColor,
+      icon: DEFAULT_INSTANCE_CONFIG.icon,
+      logo_url: 'https://example.com/logo.png',
+      favicon_url: DEFAULT_INSTANCE_CONFIG.faviconUrl,
+      apple_touch_icon_url: DEFAULT_INSTANCE_CONFIG.appleTouchIconUrl,
+      assistant_icon: DEFAULT_INSTANCE_CONFIG.assistantIcon,
+      user_icon: DEFAULT_INSTANCE_CONFIG.userIcon,
+      assistant_name: 'Sage',
+      user_label: 'Operator',
+      header_layout: DEFAULT_INSTANCE_CONFIG.headerLayout,
+      header_tagline: DEFAULT_INSTANCE_CONFIG.headerTagline,
+      chat_bubble_style: DEFAULT_INSTANCE_CONFIG.chatBubbleStyle,
+      chat_bubble_shadow: String(DEFAULT_INSTANCE_CONFIG.chatBubbleShadow),
+      surface_style: DEFAULT_INSTANCE_CONFIG.surfaceStyle,
+      status_icon_set: DEFAULT_INSTANCE_CONFIG.statusIconSet,
+      typography_preset: DEFAULT_INSTANCE_CONFIG.typographyPreset,
+      default_language: DEFAULT_INSTANCE_CONFIG.defaultLanguage,
+      default_theme: DEFAULT_INSTANCE_CONFIG.defaultTheme,
     })
 
     expect(updateConfig).toHaveBeenCalledWith(expect.objectContaining({
@@ -152,5 +165,36 @@ describe('AdminInstanceConfig', () => {
       defaultLanguage: 'es',
       defaultTheme: 'dark',
     }))
+  })
+
+  it('does not clear the public email display name when initial settings fail to load', async () => {
+    mockAdminFetch
+      .mockRejectedValueOnce(new Error('settings unavailable'))
+      .mockResolvedValueOnce(Response.json({ settings: {} }))
+
+    render(
+      <MemoryRouter initialEntries={['/admin/instance']}>
+        <Routes>
+          <Route path="/admin/instance" element={<AdminInstanceConfig />} />
+          <Route path="/admin/setup" element={<div>Admin Dashboard</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings')
+    })
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Display Name' }), {
+      target: { value: 'Operator Desk' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Configuration' }))
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith('/admin/settings', expect.objectContaining({
+        method: 'PUT',
+        body: expect.not.stringContaining('public_email_display_name'),
+      }))
+    })
   })
 })

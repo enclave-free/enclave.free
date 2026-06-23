@@ -20,7 +20,7 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0010 Session Memory Deletion uses retryable tombstones                  | No change required; route names remain API compatibility details.                                                 |
 | 0011 Minimize Retrieval Index and encrypt chunk text                    | Still valid; ADR-0023 changes how Retrieval enters Conversations, not the storage boundary.                       |
 | 0012 Conversations require current Verifiable Inference                 | No change required.                                                                                               |
-| 0013 Conversation Traces are sanitized product metadata                 | Updated to route-agnostic Conversation wording.                                                                   |
+| 0013 Conversation Traces are sanitized product metadata                 | Superseded by ADR-0024's transparent trace posture.                                                               |
 | 0014 Sage owns tool-aware Conversation Streaming Transport              | Superseded for future tool-loop work by ADR-0023.                                                                 |
 | 0015 External Retention Scheduler with product-owned run records        | No change required.                                                                                               |
 | 0016 User Memory retention depends on retention class, not age alone    | No change required.                                                                                               |
@@ -30,4 +30,5 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0020 Use assistant-ui for the Conversation UI Surface                   | Updated so Knowledge is an explicit Tool control and Documents are Knowledge constraints.                         |
 | 0021 Signal is a Conversation Channel                                   | No change required.                                                                                               |
 | 0022 Bound Admin Database Streaming and Turn Timing                     | Superseded for future tool-loop work by ADR-0023.                                                                 |
-| 0023 Unified Model-Driven Tool Loop                                     | New anchor decision.                                                                                              |
+| 0023 Unified Model-Driven Tool Loop                                     | Anchor decision for Conversation tool orchestration.                                                              |
+| 0024 Transparent Reasoning and Tool Trace Posture                       | New anchor decision for live and persisted reasoning/tool trace visibility.                                       |

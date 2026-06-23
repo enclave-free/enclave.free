@@ -66,7 +66,7 @@ Composer Knowledge semantics:
 - Composer Knowledge controls mean selecting constraints for the `knowledge-search` Tool Set.
 - Composer Resources controls mean enabling the admin-curated Resource Directory Tool Set; it is not document retrieval.
 - The chat composer does not upload files, hold ephemeral browser-only file attachments, or expose assistant-ui attachment persistence as a product contract.
-- Document persistence, Retrieval availability, deletion, export, trace visibility, active-content handling, and authorization remain owned by the existing Document Library and Retrieval workflow.
+- Document persistence, Retrieval availability, deletion, export, Activity/Trace metadata, active-content handling, and authorization remain owned by the existing Document Library and Retrieval workflow.
 - Unsupported file attachment affordances should stay absent so the composer does not imply hidden upload, multimodal, or one-turn file semantics.
 
 Transport-backed chat commands:
@@ -77,9 +77,9 @@ Transport-backed chat commands:
 
 Tool-call lifecycle:
 
-- Enclave keeps the current sanitized Activity adapter rather than adopting native assistant-ui tool-call lifecycle parts.
-- Sage remains the authority for sanitized Activity, redaction, persistence, resume, export, and Trace Visibility Policy boundaries.
-- Raw tool inputs/outputs, SQL results, decrypted rows, secrets, prompts, provider traces, hidden instructions, and hidden chain of thought must not be mapped into frontend tool-call parts.
+- The Sage stream adapter now branches on `trace_delta` events, so Enclave can map Sage Trace Deltas into assistant-ui-style reasoning and tool-call parts as those surfaces mature.
+- Sage remains the authority for Activity, Trace Deltas, Conversation Trace assembly, minimal blocklist protection, persistence, resume, and export boundaries.
+- Raw reasoning, tool inputs/outputs, retrieval details, and timing should map into frontend trace parts when available, while credentials, hidden system/developer instructions, raw secret reveal results, infrastructure/runtime dumps, and other authority-bearing internals remain blocklisted.
 - Admin Change Confirmation remains separate from Activity and still requires explicit approval.
 
 ## Full End-To-End Smoke Gate
@@ -92,7 +92,7 @@ Verify message sending, streaming, activity steps, Knowledge Search controls, re
 
 Expected boundaries:
 
-- Sage owns Agent Runtime behavior, streaming semantics, tool execution, trace sanitization, memory, and inference.
+- Sage owns Agent Runtime behavior, streaming semantics, tool execution, trace assembly, minimal blocklist protection, memory, and inference.
 - Enclave-specific controls stay outside the shared ConversationSurface, including Tool Set controls, Knowledge Search constraints, reachout, export, and role-specific page chrome.
 - Conversation Activity Steps appear before the clean assistant response when Sage emits them.
 

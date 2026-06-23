@@ -158,6 +158,7 @@ class InstanceSettings(BaseModel):
     instance_name: Optional[str] = None
     primary_color: Optional[str] = None
     description: Optional[str] = None
+    public_email_display_name: Optional[str] = None
     logo_url: Optional[str] = None
     favicon_url: Optional[str] = None
     apple_touch_icon_url: Optional[str] = None

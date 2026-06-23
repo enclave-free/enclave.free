@@ -609,6 +609,125 @@ describe('ChatPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('hydrates persisted Conversation Trace Deltas when resuming a saved Conversation', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }));
+      }
+
+      if (url.endsWith('/session-defaults')) {
+        return Promise.resolve(
+          Response.json({
+            web_search_enabled: false,
+            default_document_ids: [],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/sessions')) {
+        return Promise.resolve(
+          Response.json({
+            conversations: [
+              {
+                id: 'session-1',
+                title: 'Check deployment settings',
+                updated_at: '2026-06-18T12:00:00Z',
+                message_count: 2,
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/query/session/session-1')) {
+        return Promise.resolve(
+          Response.json({
+            id: 'session-1',
+            title: 'Check deployment settings',
+            messages: [
+              {
+                id: 'msg-user',
+                role: 'user',
+                content: 'Check the settings.',
+              },
+              {
+                id: 'msg-assistant',
+                role: 'assistant',
+                content: 'Settings are ready.',
+                trace_deltas: [
+                  {
+                    id: 'trace-toplevel-config',
+                    kind: 'tool_result',
+                    title: 'Top Level Admin Config',
+                    tool_name: 'read_instance_settings',
+                    status: 'succeeded',
+                    content: 'Top-level tool completed.',
+                    metadata: { duration_ms: 42 },
+                  },
+                ],
+                trace: {
+                  visibility: 'detailed',
+                  reasoning: {
+                    summary: 'Sage checked configuration before answering.',
+                  },
+                  trace_deltas: [
+                    {
+                      id: 'trace-nested-config',
+                      kind: 'tool_result',
+                      title: 'Nested Admin Config',
+                      tool_name: 'read_nested_settings',
+                      status: 'succeeded',
+                      content: 'Nested tool completed.',
+                      metadata: { duration_ms: 42 },
+                    },
+                  ],
+                  tools: [],
+                  retrieval: [],
+                  activity_steps: [],
+                  suppressed: false,
+                },
+              },
+            ],
+          })
+        );
+      }
+
+      if (url.endsWith('/ingest/jobs')) {
+        return Promise.resolve(Response.json({ jobs: [] }));
+      }
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return Promise.resolve(
+          Response.json({
+            needs_user_type: false,
+            needs_onboarding: false,
+            effective_user_type_id: null,
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Check deployment settings 2 messages',
+      })
+    );
+
+    expect(await screen.findByText('Settings are ready.')).toBeInTheDocument();
+    expect(screen.getByText('Top Level Admin Config')).toBeInTheDocument();
+    expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
+    expect(screen.getByText('Top-level tool completed.')).toBeInTheDocument();
+    expect(screen.queryByText('Nested Admin Config')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nested tool completed.')).not.toBeInTheDocument();
+  });
+
   it('rejects malformed resumed Conversations instead of clearing the thread', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(

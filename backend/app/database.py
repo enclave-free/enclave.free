@@ -629,10 +629,9 @@ def init_schema():
     # Captured chat transcripts for admin review / refinement. `source` keeps this
     # general so we are not boxed into admin-only testing: 'admin_test' = an admin
     # chatting as a user persona; 'user' = a real user's session logged for review.
-    # Transcript content is NIP-04 encrypted to the admin pubkey AT REST — the file
-    # at transcript_path holds only ciphertext, and transcript_ephemeral_pubkey is
-    # the ephemeral pubkey the admin needs to decrypt client-side via NIP-07. The
-    # control plane can never read it back. See encryption.encrypt_for_admin.
+    # Transcript content is NIP-04 encrypted to the admin pubkey AT REST. New
+    # writes store ciphertext in SQLite so Database Explorer can show the saved
+    # encrypted record directly; transcript_path remains for legacy exports.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS session_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -644,6 +643,7 @@ def init_schema():
             user_type_id INTEGER,
             sage_session_id TEXT,
             transcript_path TEXT,
+            transcript_ciphertext TEXT,
             transcript_ephemeral_pubkey TEXT,
             encrypted_to_pubkey TEXT,
             turn_metadata_json TEXT,
@@ -661,6 +661,17 @@ def init_schema():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_status ON session_logs(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_source ON session_logs(source)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_logs_user_type ON session_logs(user_type_id)")
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_session_logs_source_sage_session
+        ON session_logs(source, sage_session_id, updated_at DESC, id DESC)
+        WHERE sage_session_id IS NOT NULL
+    """)
+    _dedupe_session_log_source_sage_session_subject(cursor)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_session_logs_source_sage_session_subject
+        ON session_logs(source, sage_session_id, subject_user_id)
+        WHERE sage_session_id IS NOT NULL AND subject_user_id IS NOT NULL
+    """)
 
     # Per-turn feedback on a logged session. The rating stays plaintext so it can
     # be queried/aggregated; the optional qualitative comment is NIP-04 encrypted
@@ -699,6 +710,8 @@ def init_schema():
     _migrate_deletion_tombstones_status_check()  # Enforce lifecycle tombstone status values
     _migrate_add_user_memory_retention_class()  # Classify User Memory for conservative retention
     _migrate_add_session_log_turn_metadata()  # Store safe turn role metadata for feedback validation
+    _migrate_add_session_log_transcript_ciphertext()  # Store encrypted beta logs in SQLite
+    _migrate_add_session_log_source_sage_session_index()  # Optimize and enforce Sage session reuse
 
     # Initialize ingest job tables
     from ingest_db import init_ingest_schema
@@ -1108,6 +1121,81 @@ def _migrate_add_session_log_turn_metadata() -> None:
         logger.info("Migration: Added 'turn_metadata_json' column to session_logs table")
 
     cursor.close()
+
+
+def _migrate_add_session_log_transcript_ciphertext() -> None:
+    """Add SQLite ciphertext storage for encrypted beta Conversation logs."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(session_logs)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "transcript_ciphertext" not in columns:
+        cursor.execute("ALTER TABLE session_logs ADD COLUMN transcript_ciphertext TEXT")
+        conn.commit()
+        logger.info("Migration: Added 'transcript_ciphertext' column to session_logs table")
+
+    cursor.close()
+
+
+def _migrate_add_session_log_source_sage_session_index() -> None:
+    """Index Sage session reuse and enforce per-user idempotency."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_session_logs_source_sage_session
+        ON session_logs(source, sage_session_id, updated_at DESC, id DESC)
+        WHERE sage_session_id IS NOT NULL
+    """)
+    _dedupe_session_log_source_sage_session_subject(cursor)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_session_logs_source_sage_session_subject
+        ON session_logs(source, sage_session_id, subject_user_id)
+        WHERE sage_session_id IS NOT NULL AND subject_user_id IS NOT NULL
+    """)
+    conn.commit()
+    logger.info("Migration: Added session log Sage session reuse indexes")
+    cursor.close()
+
+
+def _dedupe_session_log_source_sage_session_subject(cursor: sqlite3.Cursor) -> None:
+    """Keep the newest duplicate Sage session log before adding the unique index."""
+    cursor.execute("""
+        SELECT source, sage_session_id, subject_user_id, COUNT(*) AS count
+        FROM session_logs
+        WHERE sage_session_id IS NOT NULL
+          AND subject_user_id IS NOT NULL
+        GROUP BY source, sage_session_id, subject_user_id
+        HAVING COUNT(*) > 1
+    """)
+    duplicate_groups = cursor.fetchall()
+    removed = 0
+    for group in duplicate_groups:
+        cursor.execute(
+            """SELECT id
+               FROM session_logs
+               WHERE source = ?
+                 AND sage_session_id = ?
+                 AND subject_user_id = ?
+               ORDER BY updated_at DESC, id DESC""",
+            (group["source"], group["sage_session_id"], group["subject_user_id"]),
+        )
+        ids = [row["id"] for row in cursor.fetchall()]
+        duplicate_ids = ids[1:]
+        if not duplicate_ids:
+            continue
+        placeholders = ",".join("?" for _ in duplicate_ids)
+        cursor.execute(
+            f"DELETE FROM session_logs WHERE id IN ({placeholders})",
+            duplicate_ids,
+        )
+        removed += len(duplicate_ids)
+    if removed:
+        logger.warning(
+            "Migration: Removed %d duplicate session_logs rows before Sage session unique index",
+            removed,
+        )
 
 
 def _migrate_encrypt_deployment_config_secrets() -> None:
@@ -1568,6 +1656,7 @@ def seed_default_settings():
     """Seed default instance settings if not present"""
     defaults = {
         "instance_name": "Enclave",
+        "public_email_display_name": "",
         "primary_color": "#3B82F6",
         "description": "A privacy-first RAG knowledge base",
         "logo_url": "",

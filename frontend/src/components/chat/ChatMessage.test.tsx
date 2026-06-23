@@ -435,4 +435,48 @@ describe('ChatMessage', () => {
 
     expect(screen.getByText('Searching documents...')).toBeInTheDocument();
   });
+
+  it('renders live Trace Deltas as Activity rows before the final answer finishes', () => {
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-1',
+              role: 'assistant',
+              content: '',
+              traceDeltas: [
+                {
+                  id: 'trace-admin-config-call',
+                  kind: 'tool_call',
+                  title: 'Admin Config',
+                  content: 'Calling read_instance_settings.',
+                  tool_name: 'read_instance_settings',
+                  status: 'running',
+                  metadata: { phase: 'tool_loop' },
+                  created_at: '2026-06-18T12:00:00Z',
+                },
+                {
+                  id: 'trace-redacted-secret',
+                  kind: 'tool_result',
+                  title: 'Admin Config',
+                  content: '[redacted]',
+                  tool_name: 'read_deployment_settings',
+                  status: 'guarded',
+                },
+              ],
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    );
+
+    expect(screen.getByText('Activity')).toBeInTheDocument();
+    expect(screen.getAllByText('Admin Config')).toHaveLength(2);
+    expect(
+      screen.getByText('Calling read_instance_settings.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('[redacted]')).toBeInTheDocument();
+    expect(screen.getByText('guarded')).toBeInTheDocument();
+  });
 });

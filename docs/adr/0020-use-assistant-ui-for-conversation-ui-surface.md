@@ -1,6 +1,6 @@
 # Use assistant-ui for the Conversation UI Surface
 
-The Enclave Free Prototype will use assistant-ui as the shared Conversation UI Surface for Admin Conversations and User Conversations, starting with a thin adapter around Sage-owned Conversation Streaming Transport. The first slice should replace the custom message thread and prompt input, render Sage-emitted Conversation Activity Steps as a progressive turn timeline before the final answer is complete, and preserve Enclave-specific controls such as Tool Set selection, Knowledge Search document constraints, reachout, export, final Conversation Trace rendering, and Admin Change Confirmation. Because this is still a prototype, the live activity timeline should bias toward an inspectable agent-loop/debug experience while relying on Sage to sanitize what is safe to show. This favors a configurable open-source chat UI layer without moving Agent Runtime ownership, streaming semantics, Tool behavior, memory, or inference boundaries out of Sage.
+The Enclave Free Prototype will use assistant-ui as the shared Conversation UI Surface for Admin Conversations and User Conversations, starting with a thin adapter around Sage-owned Conversation Streaming Transport. The first slice should replace the custom message thread and prompt input, render Sage-emitted Conversation Activity Steps as a progressive turn timeline before the final answer is complete, and preserve Enclave-specific controls such as Tool Set selection, Knowledge Search document constraints, reachout, export, final Conversation Trace rendering, and Admin Change Confirmation. ADR-0024 updates the trace posture: the live activity experience should render reasoning and tool-call details transparently as assistant-ui-style message parts while Sage still protects the minimal credential and authority-bearing blocklist. This favors a configurable open-source chat UI layer without moving Agent Runtime ownership, streaming semantics, Tool behavior, memory, or inference boundaries out of Sage.
 
 ## Refined Product Direction
 
@@ -18,18 +18,18 @@ Tool Set selection should be represented as compact composer context rather than
 
 The chat should use Enclave theme tokens lightly for text, backgrounds, borders, accent, danger, and warning states, but should not preserve heavy legacy chat styling such as glow, strong gradients, oversized empty-state ornamentation, or bespoke bubble chrome. The Conversation UI Surface should become the best-designed part of the product and should be allowed to pull future theme work forward.
 
-The current Sage stream contract emits safe, sanitized activity and trace events rather than native assistant-ui tool-call lifecycle parts. This slice should keep that contract and adapt `activity_step`, `trace_status`, and `trace_final` into the new Activity presentation. Native assistant-ui tool-call parts should only be adopted later if Sage's stream contract changes to provide a compatible, sanitized, durable tool-call protocol.
+The current Sage stream contract emits `activity_step`, `trace_status`, and `trace_final` events rather than native assistant-ui tool-call lifecycle parts. After ADR-0024, Sage should also emit `trace_delta` events that the Conversation UI Surface adapts into assistant-ui-style reasoning and tool-call message parts. Conversation Activity Steps remain useful as summary or compatibility metadata, but the rich live experience should follow assistant-ui's grouped reasoning/tool-call presentation.
 
 ## Implementation Boundaries
 
 - Use assistant-ui for the shared thread, composer, message layout, message actions, empty state, running state, and future-ready shell structure where practical.
 - Keep Sage-owned Conversation Streaming Transport while moving route-specific tool behavior toward the unified model-driven Tool loop from ADR-0023.
-- Keep Conversation Activity Steps and Conversation Trace as sanitized product metadata from Sage.
+- Keep Conversation Activity Steps and Conversation Trace as Sage-owned Conversation metadata, with raw reasoning/tool details exposed according to ADR-0024's transparent trace posture.
 - Render traces before assistant answers when activity exists.
 - Keep trace details expandable with local UI state only; do not persist open/closed state.
 - Keep compaction notices as small system notices inside the thread rather than prominent warning blocks.
 - Do not add message edit, regenerate, or full stop/cancel generation unless the existing Sage transport can support the behavior truthfully without corrupting **Conversation UI State**, **Session Memory**, or later turns.
-- Preserve behavioral tests around stream adaptation, conversation state, trace visibility, Admin Change Confirmation, Knowledge Search constraints, Tool Set selection, and export, while rewriting brittle DOM or style assertions as needed.
+- Preserve behavioral tests around stream adaptation, conversation state, transparent trace rendering, Admin Change Confirmation, Knowledge Search constraints, Tool Set selection, and export, while rewriting brittle DOM or style assertions as needed.
 
 ## Current Slice Status
 

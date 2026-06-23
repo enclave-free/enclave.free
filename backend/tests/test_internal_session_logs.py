@@ -4,12 +4,15 @@ import importlib
 import os
 import sys
 import tempfile
+import threading
 import types
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from coincurve import PrivateKey
 
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
@@ -106,6 +109,136 @@ class InternalSessionLogsTest(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertIn("No admin configured", response.json()["detail"])
         self.assertEqual(self._session_log_count(), 0)
+
+    def test_internal_user_session_log_updates_existing_sage_session_record(self) -> None:
+        admin_key = PrivateKey()
+        self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())
+        user_id = self.database.create_user()
+
+        first = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": user_id, "type": "user", "approved": True},
+                "sage_session_id": "sage-session-1",
+                "turns": [
+                    {"role": "user", "content": "first question"},
+                    {"role": "assistant", "content": "first answer"},
+                ],
+            },
+        )
+        second = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": user_id, "type": "user", "approved": True},
+                "sage_session_id": "sage-session-1",
+                "turns": [
+                    {"role": "user", "content": "first question"},
+                    {"role": "assistant", "content": "first answer"},
+                    {"role": "user", "content": "second question"},
+                    {"role": "assistant", "content": "second answer"},
+                ],
+            },
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(self._session_log_count(), 1)
+        self.assertEqual(second.json()["log_id"], first.json()["log_id"])
+        self.assertEqual(second.json()["turn_count"], 4)
+        stale = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": user_id, "type": "user", "approved": True},
+                "sage_session_id": "sage-session-1",
+                "turns": [
+                    {"role": "user", "content": "first question"},
+                    {"role": "assistant", "content": "first answer"},
+                ],
+            },
+        )
+        self.assertEqual(stale.status_code, 200)
+        self.assertEqual(stale.json()["log_id"], first.json()["log_id"])
+        self.assertEqual(stale.json()["turn_count"], 4)
+        with self.database.get_cursor() as cursor:
+            cursor.execute("SELECT transcript_ciphertext, turn_count FROM session_logs")
+            row = cursor.fetchone()
+            ciphertext = row["transcript_ciphertext"]
+            turn_count = row["turn_count"]
+        self.assertIsNotNone(ciphertext)
+        self.assertNotIn("second answer", ciphertext)
+        self.assertEqual(turn_count, 4)
+
+    def test_internal_user_session_log_reuse_is_concurrent_idempotent(self) -> None:
+        admin_key = PrivateKey()
+        self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())
+        user_id = self.database.create_user()
+        barrier = threading.Barrier(2)
+
+        def post_session(content: str):
+            barrier.wait(timeout=5)
+            return self.client.post(
+                "/internal/agent/session-logs",
+                headers=self._headers(),
+                json={
+                    "actor": {"id": user_id, "type": "user", "approved": True},
+                    "sage_session_id": "sage-session-concurrent",
+                    "turns": [
+                        {"role": "user", "content": content},
+                        {"role": "assistant", "content": f"answer to {content}"},
+                    ],
+                },
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            responses = list(
+                executor.map(
+                    post_session,
+                    ["first concurrent turn", "second concurrent turn"],
+                )
+            )
+
+        self.assertEqual([response.status_code for response in responses], [200, 200])
+        self.assertEqual(self._session_log_count(), 1)
+        self.assertEqual(responses[0].json()["log_id"], responses[1].json()["log_id"])
+
+    def test_internal_user_session_log_reuse_is_scoped_to_subject_user(self) -> None:
+        admin_key = PrivateKey()
+        self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())
+        first_user_id = self.database.create_user()
+        second_user_id = self.database.create_user()
+
+        first = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": first_user_id, "type": "user", "approved": True},
+                "sage_session_id": "shared-sage-session",
+                "turns": [
+                    {"role": "user", "content": "first user question"},
+                    {"role": "assistant", "content": "first user answer"},
+                ],
+            },
+        )
+        second = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {"id": second_user_id, "type": "user", "approved": True},
+                "sage_session_id": "shared-sage-session",
+                "turns": [
+                    {"role": "user", "content": "second user question"},
+                    {"role": "assistant", "content": "second user answer"},
+                ],
+            },
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertNotEqual(second.json()["log_id"], first.json()["log_id"])
+        self.assertEqual(self._session_log_count(), 2)
 
 
 if __name__ == "__main__":

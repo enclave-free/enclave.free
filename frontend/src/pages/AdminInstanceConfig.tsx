@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -40,6 +40,9 @@ export function AdminInstanceConfig() {
   const { config, updateConfig } = useInstanceConfig()
 
   const [instanceName, setInstanceName] = useState(config.name)
+  const [publicEmailDisplayName, setPublicEmailDisplayName] = useState('')
+  const publicEmailDisplayNameTouchedRef = useRef(false)
+  const publicEmailDisplayNameLoadedRef = useRef(false)
   // Preview state - only applies on save, not immediately
   const [previewAccentColor, setPreviewAccentColor] = useState<AccentColor>(config.accentColor)
   const [previewIcon, setPreviewIcon] = useState(config.icon)
@@ -70,6 +73,30 @@ export function AdminInstanceConfig() {
       navigate('/admin')
     }
   }, [navigate])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPublicEmailDisplayName() {
+      try {
+        const response = await adminFetch('/admin/settings')
+        if (!response.ok) return
+        const data = await response.json()
+        publicEmailDisplayNameLoadedRef.current = true
+        if (!cancelled && !publicEmailDisplayNameTouchedRef.current) {
+          setPublicEmailDisplayName(data.settings?.public_email_display_name ?? '')
+        }
+      } catch {
+        // Non-blocking: save will not overwrite this server value unless loaded or edited.
+      }
+    }
+
+    void loadPublicEmailDisplayName()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Sync config (only on initial load or external changes, skip if user has made edits)
   useEffect(() => {
@@ -198,29 +225,34 @@ export function AdminInstanceConfig() {
 
     // Persist to backend API
     try {
+      const settingsPayload: Record<string, string> = {
+        instance_name: name,
+        primary_color: previewAccentColor,
+        icon: previewIcon,
+        logo_url: previewLogoUrl.trim(),
+        favicon_url: previewFaviconUrl.trim(),
+        apple_touch_icon_url: previewAppleTouchIconUrl.trim(),
+        assistant_icon: previewAssistantIcon,
+        user_icon: previewUserIcon,
+        assistant_name: previewAssistantName.trim(),
+        user_label: previewUserLabel.trim(),
+        header_layout: previewHeaderLayout,
+        header_tagline: previewHeaderTagline.trim(),
+        chat_bubble_style: previewChatBubbleStyle,
+        chat_bubble_shadow: String(previewChatBubbleShadow),
+        surface_style: previewSurfaceStyle,
+        status_icon_set: previewStatusIconSet,
+        typography_preset: previewTypographyPreset,
+        default_language: previewDefaultLanguage,
+        default_theme: previewDefaultTheme,
+      }
+      if (publicEmailDisplayNameLoadedRef.current || publicEmailDisplayNameTouchedRef.current) {
+        settingsPayload.public_email_display_name = publicEmailDisplayName.trim()
+      }
+
       const response = await adminFetch('/admin/settings', {
         method: 'PUT',
-        body: JSON.stringify({
-          instance_name: name,
-          primary_color: previewAccentColor,
-          icon: previewIcon,
-          logo_url: previewLogoUrl.trim(),
-          favicon_url: previewFaviconUrl.trim(),
-          apple_touch_icon_url: previewAppleTouchIconUrl.trim(),
-          assistant_icon: previewAssistantIcon,
-          user_icon: previewUserIcon,
-          assistant_name: previewAssistantName.trim(),
-          user_label: previewUserLabel.trim(),
-          header_layout: previewHeaderLayout,
-          header_tagline: previewHeaderTagline.trim(),
-          chat_bubble_style: previewChatBubbleStyle,
-          chat_bubble_shadow: String(previewChatBubbleShadow),
-          surface_style: previewSurfaceStyle,
-          status_icon_set: previewStatusIconSet,
-          typography_preset: previewTypographyPreset,
-          default_language: previewDefaultLanguage,
-          default_theme: previewDefaultTheme,
-        }),
+        body: JSON.stringify(settingsPayload),
       })
 
       if (response.ok) {
@@ -262,7 +294,7 @@ export function AdminInstanceConfig() {
 
   const footer = (
     <Link to="/admin/setup" className="text-text-muted hover:text-text transition-colors">
-      {t('common.back', 'Back to Dashboard')}
+      {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
     </Link>
   )
 
@@ -406,6 +438,25 @@ export function AdminInstanceConfig() {
               onChange={(e) => { setInstanceName(e.target.value); setIsDirty(true) }}
               placeholder={t('admin.setup.defaultName')}
               description={t('admin.setup.displayNameHint')}
+            />
+
+            <TextField
+              id="public-email-display-name"
+              label={t(
+                'admin.instanceConfig.publicEmailDisplayNameLabel',
+                'Public email display name (optional)'
+              )}
+              value={publicEmailDisplayName}
+              onChange={(e) => {
+                publicEmailDisplayNameTouchedRef.current = true
+                setPublicEmailDisplayName(e.target.value)
+                setIsDirty(true)
+              }}
+              placeholder={instanceName.trim() || t('admin.setup.defaultName')}
+              description={t(
+                'admin.instanceConfig.publicEmailDisplayNameHint',
+                'Used in magic-link sign-in emails. Leave blank to use the Instance name.'
+              )}
             />
 
             {/* Icon */}
@@ -700,7 +751,7 @@ export function AdminInstanceConfig() {
             className="flex-1 flex items-center justify-center gap-2 border border-border hover:border-accent/50 text-text rounded-xl px-4 py-3 text-sm font-medium transition-all hover:bg-surface"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t('common.back', 'Back')}
+            {t('common.backToAdminDashboard', 'Back to Admin Dashboard')}
           </Link>
           <Button
             onClick={handleSave}
