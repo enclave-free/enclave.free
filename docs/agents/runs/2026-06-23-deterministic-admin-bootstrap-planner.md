@@ -9,7 +9,7 @@
 - Feature branch: feature/deterministic-admin-bootstrap-planner
 - Human owner: Austin
 - Started: 2026-06-23T16-16-26Z
-- Current status: prototype branch validation passed; PR pending
+- Current status: prototype and Sage PRs opened; PR-side CodeRabbit requested
 - Skill setup status: present; `AGENTS.md`, `CONTEXT.md`, and `docs/agents/*` exist
 
 ## Goal
@@ -24,9 +24,10 @@ Hard-cut the slow Kimi Admin Config bootstrap flow by moving exact bootstrap cha
 - Slice issues: #424, #425, #426
 - Issue sessions: local orchestrator implementation
 - Agent briefs: issue bodies #424, #425, #426
-- Review packets: pending
+- Review packets: Sage PR enclave-free/sage#19; prototype PR enclave-free/enclave.free-prototype#427
 - Local CodeRabbit report: parent review had one unrelated untracked-doc finding skipped; Sage rerun passed with zero findings
-- PR URL: pending
+- PR URL: https://github.com/enclave-free/enclave.free-prototype/pull/427
+- Sage PR URL: https://github.com/enclave-free/sage/pull/19
 
 ## Commands
 
@@ -55,9 +56,9 @@ Hard-cut the slow Kimi Admin Config bootstrap flow by moving exact bootstrap cha
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #424 | origin/staging | current thread | Sage `dde99a1` | Sage CodeRabbit passed | `cargo test -p sage-core --lib` |
-| #425 | origin/staging | current thread | Sage `dde99a1` | Sage CodeRabbit passed | `cargo test -p sage-core --lib` |
-| #426 | origin/staging | current thread | Sage `dde99a1` | Sage CodeRabbit passed | Local Docker rebuild + Kimi benchmark |
+| #424 | origin/staging | current thread | Sage `dde99a1`, prototype `6fa5ef2` | Sage CodeRabbit passed | `cargo test -p sage-core --lib` |
+| #425 | origin/staging | current thread | Sage `dde99a1`, prototype `6fa5ef2` | Sage CodeRabbit passed | `cargo test -p sage-core --lib` |
+| #426 | origin/staging | current thread | Sage `dde99a1`, prototype `6fa5ef2` | Sage CodeRabbit passed | Local Docker rebuild + Kimi benchmark |
 
 ## Open Questions
 
