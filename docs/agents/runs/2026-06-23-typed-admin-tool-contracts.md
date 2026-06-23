@@ -9,7 +9,7 @@
 - Feature branch: feature/typed-admin-tool-contracts
 - Human owner: Austin
 - Started: 2026-06-23
-- Current status: Review and PR prep
+- Current status: PR open
 - Skill setup status: Present. Repo has AGENTS.md, docs/agents/issue-tracker.md, docs/agents/triage-labels.md, and docs/agents/domain.md.
 
 ## Goal
@@ -38,7 +38,7 @@ Replace brittle, slow, free-form Admin Config proposal JSON generation with stri
 - Agent briefs: Pending
 - Review packets: Pending
 - Local CodeRabbit report: initial all-diff review raised 5 minor issues; fixed 4 in-scope issues and skipped 1 unrelated untracked file note for `docs/apple-container-sidecar.md`; committed-diff rerun raised 0 issues
-- PR URL: Pending
+- PR URL: https://github.com/enclave-free/enclave.free-prototype/pull/422
 
 ## Commands
 
