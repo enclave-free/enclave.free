@@ -239,7 +239,7 @@ Behavior-rule and forbidden-topic examples:
 
 Sage validates the proposal against the backend's canonical allowlist and validation rules, emits the staged payload, and records Activity/Trace metadata without leaking secret values, blocklisted credentials, or hidden authority-bearing internals. The frontend mirrors those backend rules only for preview display and secret masking, then applies the changes only if the admin clicks **Apply**.
 
-If a proposal is rejected by validation but the admin request is supported, Sage should correct the proposal and call `propose_config_change_set` again. It should not claim that supported Admin Config writes are unavailable.
+If a proposal is rejected by validation but the admin request is supported, Sage should correct the proposal and call the best matching proposal Tool again. Guided setup/bootstrap should retry `propose_admin_config_bootstrap`; unsupported typed gaps may retry the lower-level `propose_config_change_set`. It should not claim that supported Admin Config writes are unavailable.
 
 Additional safety rules:
 
@@ -308,7 +308,7 @@ The placeholder may appear in:
 
 Example:
 
-Call `propose_config_change_set` with summary `Add a new user type and attach one onboarding field` and this `requests_json`:
+For the lower-level escape hatch, call `propose_config_change_set` with summary `Add a new user type and attach one onboarding field` and this `requests_json`:
 
 ```json
 [

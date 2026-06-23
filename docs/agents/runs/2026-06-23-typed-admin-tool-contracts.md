@@ -9,7 +9,7 @@
 - Feature branch: feature/typed-admin-tool-contracts
 - Human owner: Austin
 - Started: 2026-06-23
-- Current status: Implementing #420
+- Current status: Implementing #421
 - Skill setup status: Present. Repo has AGENTS.md, docs/agents/issue-tracker.md, docs/agents/triage-labels.md, and docs/agents/domain.md.
 
 ## Goal
@@ -60,7 +60,7 @@ Replace brittle, slow, free-form Admin Config proposal JSON generation with stri
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
 | #419 Add typed Admin Config bootstrap proposal Tool | AFK | Complete | Gauss + Meitner | Fixed stale docs, removed nested JSON typed fields, added onboarding question support, added validation tests | `cargo fmt --all`; `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core admin_config_bootstrap --lib`; `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core selected_tool_sets_expand_to_model_callable_tool_contracts --lib`; `git diff --check`; `git -C runtime/sage diff --check` |
-| #420 Prefer typed bootstrap proposals in Admin Config conversations | AFK | Pending | Pending | Pending | Pending |
+| #420 Prefer typed bootstrap proposals in Admin Config conversations | AFK | Complete | Self-review | Updated default prompt rules, retired obsolete generic-write defaults during merge, and aligned docs | `cargo fmt --all`; `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core prompt_rules --lib`; `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core selected_tool_sets_expand_to_model_callable_tool_contracts --lib`; `git diff --check`; `git -C runtime/sage diff --check` |
 | #421 Benchmark typed Admin Config proposals against existing Tool Sets | AFK | Pending | Pending | Pending | Pending |
 
 ## Parked HITL Slices
@@ -74,6 +74,7 @@ Replace brittle, slow, free-form Admin Config proposal JSON generation with stri
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #419 | ba8d46f | Hume (019ef4df-a342-7f41-ab94-ce6bba5ed356) + orchestrator follow-up | parent c102871, Sage cad2309 | Standards doc drift fixed; spec review gaps fixed except prompt preference deferred to #420 | 10 bootstrap tests passed; Tool Set exposure test passed; diff checks clean |
+| #420 | 48d6f0a | Orchestrator | Pending | Default rules now prefer `propose_admin_config_bootstrap`; stale exact defaults are removed on merge; docs aligned | 4 prompt-rule tests passed; Tool Set exposure test passed; diff checks clean |
 
 ## Open Questions
 
