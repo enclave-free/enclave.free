@@ -36,6 +36,7 @@ export function buildAssistantConversationState({
   transportCapabilities = {},
   hasPendingApproval = false,
   hasPersistedSession = false,
+  runtimeMessageIdPrefix = '',
 }: {
   turns: ConversationSurfaceTurn[];
   isRunning?: boolean;
@@ -44,9 +45,12 @@ export function buildAssistantConversationState({
   transportCapabilities?: ConversationTransportCapabilities;
   hasPendingApproval?: boolean;
   hasPersistedSession?: boolean;
+  runtimeMessageIdPrefix?: string;
 }): AssistantConversationState {
   return {
-    messages: turns.map((turn) => convertTurnToAssistantMessage(turn)),
+    messages: turns.map((turn) =>
+      convertTurnToAssistantMessage(turn, runtimeMessageIdPrefix)
+    ),
     turnItems: turns.map((turn) => ({
       turn,
       accessory: turnAccessories?.[turn.id] ?? null,
@@ -70,10 +74,11 @@ export function buildAssistantConversationState({
 }
 
 function convertTurnToAssistantMessage(
-  turn: ConversationSurfaceTurn
+  turn: ConversationSurfaceTurn,
+  runtimeMessageIdPrefix: string
 ): ThreadMessage {
   const common = {
-    id: turn.id,
+    id: `${runtimeMessageIdPrefix}${turn.id}`,
     createdAt: new Date(),
     content: [{ type: 'text' as const, text: turn.content }],
     metadata: {

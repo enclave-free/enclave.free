@@ -70,7 +70,7 @@ def post_stream(token: str, payload: dict[str, Any], timeout: int = 120) -> str:
             "--header=Content-Type: application/json",
             "--header=Accept: text/event-stream",
             f"--post-data={json.dumps(payload)}",
-            "http://127.0.0.1:8000/llm/chat/stream",
+            "http://127.0.0.1:18000/llm/chat/stream",
         ],
         capture_output=True,
         text=True,
@@ -177,7 +177,11 @@ def check_admin_config(token: str) -> int:
         if isinstance(tool, dict)
     }
     failures += 0 if expect("admin-config trace names tool", "Admin Config" in tool_names) else 1
-    failures += 0 if expect("admin-config done includes tool metadata", "admin-config" in done_tool_ids) else 1
+    failures += 0 if expect(
+        "admin-config done includes tool metadata",
+        any(tool_id.startswith("admin-config:") for tool_id in done_tool_ids),
+        str(done_tool_ids),
+    ) else 1
     return failures
 
 
@@ -210,7 +214,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Test 5C: Assistant chat streaming transport")
     parser.add_argument(
         "--api-base",
-        default="http://localhost:8000",
+        default="http://localhost:18000",
         help="Accepted for compatibility with run_all_be_tests.py; this test intentionally uses the Docker gateway container.",
     )
     parser.parse_args()
