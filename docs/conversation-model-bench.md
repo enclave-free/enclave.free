@@ -80,6 +80,19 @@ Expected evidence:
 - Canonical Admin Config paths and setting keys are used.
 - Sage does not claim it lacks proposal/write authority.
 
+### Admin Config Live Onboarding Prompt
+
+The Admin replies to the current first-run onboarding prompt exactly as it appears in the chat UI, including a leading markdown bullet before answer 1, delegated assistant/color answers, auto-approval language, and answer 9 as User Types. Sage should normalize the numbered answers and stage the setup change set without requiring the model to regenerate long setup notes.
+
+Expected evidence:
+
+- The typed `propose_admin_config_bootstrap` Tool is used.
+- The bootstrap proposal is not guarded or rejected as `invalid_admin_config_bootstrap`.
+- A staged Executable Change Set is present.
+- The proposal includes the guided baseline settings and preserves the Instance name, dark theme, and Auto Approval answer.
+- The proposal includes both requested User Types.
+- The proposal does not misread answer 9 as Onboarding Questions or behavior rules.
+
 ### Admin Deployment Readiness Check
 
 The Admin asks what remains to be set up for the specific local Instance. Sage should inspect available Admin Config context and report the remaining setup state without asking the Admin to manually check the same settings.
@@ -204,6 +217,7 @@ Deterministic checks should cover observable contract behavior:
 - Admin Config proposals used canonical paths and setting keys
 - Admin Config bootstrap used `propose_admin_config_bootstrap`, not the lower-level `requests_json` escape hatch
 - bootstrap proposals included expected user types, onboarding/user-field requests, and behavior-rule requests
+- live onboarding prompt proposals included baseline settings and user types without creating user-field or behavior-rule requests
 - answer text avoided known failure phrases such as asking the Admin to manually check settings after tools were available
 - Knowledge Search behavior was recorded for the user scenario
 - timing fields were captured, including first trace/tool feedback latency for Tool-using scenarios
@@ -221,6 +235,7 @@ V0 fails the run only on contract or harness failures:
 - expected Admin Config proposal was missing in the bootstrap scenario
 - the bootstrap scenario did not call the typed `propose_admin_config_bootstrap` Tool
 - expected bootstrap user types, onboarding fields, or behavior rules were missing
+- the live onboarding prompt scenario rejected the current UI answer format or misread User Types as Onboarding Questions
 - an Admin Config proposal contained non-canonical paths or setting keys
 - an unsafe proposal path appeared
 - a scenario errored before producing an artifact
@@ -300,13 +315,14 @@ Optional flags:
 
 `--reset` runs the local reset script with its own smoke checks skipped; the bench scenarios become the verification pass after the reset.
 
-The default scenario set is all seven v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
+The default scenario set is all eight v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
 
 Focused examples:
 
 ```bash
 python scripts/benches/conversation_model_bench.py --scenario admin_deployment_readiness
 python scripts/benches/conversation_model_bench.py --scenario admin_config_bootstrap
+python scripts/benches/conversation_model_bench.py --scenario admin_config_live_onboarding_prompt
 python scripts/benches/conversation_model_bench.py --scenario admin_database_direct_select
 python scripts/benches/conversation_model_bench.py --scenario admin_database_natural_language_guardrail
 python scripts/benches/conversation_model_bench.py --scenario user_knowledge_assistance --seed-knowledge
