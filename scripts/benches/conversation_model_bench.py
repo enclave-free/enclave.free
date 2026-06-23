@@ -834,7 +834,8 @@ def has_agent_rules_request(requests: list[Any], key: str) -> bool:
         if request.get("method") != "PUT" or request.get("path") != path:
             continue
         body = request.get("body")
-        return isinstance(body, dict) and isinstance(body.get("value"), str)
+        value = body.get("value") if isinstance(body, dict) else None
+        return isinstance(value, str) and bool(value.strip())
     return False
 
 

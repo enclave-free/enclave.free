@@ -37,7 +37,7 @@ Replace brittle, slow, free-form Admin Config proposal JSON generation with stri
 - Issue sessions: Pending
 - Agent briefs: Pending
 - Review packets: Pending
-- Local CodeRabbit report: Pending
+- Local CodeRabbit report: 5 minor issues; fixed 4 in-scope issues and skipped 1 unrelated untracked file note for `docs/apple-container-sidecar.md`
 - PR URL: Pending
 
 ## Commands

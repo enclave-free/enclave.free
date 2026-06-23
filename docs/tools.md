@@ -88,7 +88,7 @@ Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private 
 - `propose_admin_config_bootstrap`
 - `propose_config_change_set`
 
-Reads may happen directly within Admin Conversation authority. Guided setup/bootstrap write intent should use `propose_admin_config_bootstrap`, whose typed arguments describe instance identity, public copy, visual defaults, access policy, user types, onboarding questions, and behavior rules. Other supported Admin Config writes may use `propose_config_change_set` as the lower-level escape hatch. Applying either proposal still requires Change Confirmation in the Conversation UI Surface.
+Reads may happen directly within Admin Conversation authority. Guided setup/bootstrap write intent should use `propose_admin_config_bootstrap`, whose typed arguments describe instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and behavior rules. Other supported Admin Config writes may use `propose_config_change_set` as the lower-level escape hatch. Applying either proposal still requires Change Confirmation in the Conversation UI Surface.
 
 Both proposal Tools are model-callable and non-mutating. They validate and stage a change set for review, but they never call admin mutation endpoints. Confirmed **Apply** remains a UI/admin action, not a model-authorized Tool call.
 
@@ -104,7 +104,7 @@ User types use `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
 with `{ "field_name", "field_type", "required"?, "display_order"?, "user_type_id"?,
 "placeholder"?, "options"?, "encryption_enabled"?, "include_in_chat"? }`.
 The proposal boundary may normalize only known small drift
-(`/admin/user_types`, `tagline`, and supported language labels such as
+(`/admin/user_types`, legacy `tagline` into canonical `header_tagline`, and supported language labels such as
 `English`); staged `admin_change_set` payloads must contain canonical paths and
 keys after that. Unknown keys and unsupported values reject the proposal before
 review.
