@@ -87,7 +87,7 @@ Tool descriptions should encourage Sage to inspect current Instance reality when
 
 There is no `overview` fallback scope and no keyword category classifier. If one Tool result is not enough, Sage may call another enabled Tool in the same model-driven loop until it has enough evidence or hits deterministic limits.
 
-Admin write intent is represented through non-mutating proposal Tools. Primary guided bootstrap/setup should use `propose_admin_config_bootstrap`, whose arguments describe setup intent in product terms: instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, and supported behavior-rule intent. Deterministic Sage code builds the canonical request paths and bodies, validates the resulting change set, and stages it for the same Admin Change Confirmation flow.
+Admin write intent is represented through non-mutating proposal Tools. Primary guided bootstrap/setup should use `propose_admin_config_bootstrap`, whose arguments describe setup intent in product terms: instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and supported behavior-rule intent. Deterministic Sage code builds the canonical request paths and bodies, validates the resulting change set, and stages it for the same Admin Change Confirmation flow.
 
 `propose_config_change_set` remains available as a lower-level compatibility and escape-hatch Tool for supported Admin Config writes that do not yet have a typed proposal Tool. The UI validates every staged change set and still requires Admin Change Confirmation before applying ordinary admin endpoints.
 
@@ -96,7 +96,8 @@ Canonical Admin Config proposal shapes:
 - Instance settings: `PUT /admin/settings` with a patch body using stored setting keys such as `instance_name`, `assistant_name`, `header_tagline`, `description`, `primary_color`, `default_theme`, `default_language`, and `auto_approve_users`.
 - Agent Settings: `PUT /admin/ai-config/{key}` with `{ "value": "..." }`. Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules` and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string array, such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - User types: `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
-- Guided onboarding bootstrap should propose the eight baseline settings plus any supplied user types in one change set when the admin has supplied them.
+- User fields/onboarding questions: `POST /admin/user-fields` with `{ "field_name", "field_type", "required"?, "display_order"?, "user_type_id"?, "placeholder"?, "options"?, "encryption_enabled"?, "include_in_chat"? }`. A bootstrap change set may reference newly proposed user types with `@type:<slug>` placeholders so Apply can resolve the created IDs.
+- Guided onboarding bootstrap should propose the eight baseline settings plus any supplied visual defaults, user types, onboarding questions, and behavior rules in one change set when the admin has supplied them.
 
 For Admin Conversations, theme requests mean Instance visual identity settings:
 
@@ -190,7 +191,14 @@ This cache must not replace server-side authorization or validation.
 
 ### Change Application (Propose-Then-Confirm-Then-Apply)
 
-The assistant proposes changes by calling `propose_config_change_set`.
+For guided setup/bootstrap, the assistant proposes changes by calling
+`propose_admin_config_bootstrap`. Its arguments are typed product setup fields:
+instance identity, assistant identity, public copy, visual defaults, access
+policy, user types, onboarding questions, and behavior-rule intent. Sage then
+builds canonical Admin request paths and bodies deterministically.
+
+For supported Admin Config writes that do not yet have a typed proposal Tool,
+the assistant may use the lower-level `propose_config_change_set` escape hatch.
 The tool arguments are:
 
 - `summary`: one sentence summary of what will change.
