@@ -202,6 +202,8 @@ Deterministic checks should cover observable contract behavior:
 - unsafe or drifted tool paths did not appear
 - an `admin_change_set` was staged when expected
 - Admin Config proposals used canonical paths and setting keys
+- Admin Config bootstrap used `propose_admin_config_bootstrap`, not the lower-level `requests_json` escape hatch
+- bootstrap proposals included expected user types, onboarding/user-field requests, and behavior-rule requests
 - answer text avoided known failure phrases such as asking the Admin to manually check settings after tools were available
 - Knowledge Search behavior was recorded for the user scenario
 - timing fields were captured, including first trace/tool feedback latency for Tool-using scenarios
@@ -217,6 +219,8 @@ V0 fails the run only on contract or harness failures:
 - expected response event or payload was missing
 - the visible answer is a generic generation-failure apology
 - expected Admin Config proposal was missing in the bootstrap scenario
+- the bootstrap scenario did not call the typed `propose_admin_config_bootstrap` Tool
+- expected bootstrap user types, onboarding fields, or behavior rules were missing
 - an Admin Config proposal contained non-canonical paths or setting keys
 - an unsafe proposal path appeared
 - a scenario errored before producing an artifact
@@ -351,6 +355,7 @@ Interpretation:
 Follow-up bench hardening:
 
 - Add an explicit check that read-only readiness scenarios must not stage an `admin_change_set`.
+- Add model-by-model notes for any bootstrap runs that fall back to `propose_config_change_set`; this is now a warning plus a hard typed-tool failure.
 - Consider repeated runs before changing the default model, because live provider latency and model variance can swing single-run rankings.
 
 ### 2026-06-22 Gemma Expanded Tool-Layer Run

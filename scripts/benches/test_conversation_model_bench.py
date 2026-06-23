@@ -474,9 +474,14 @@ class FakeConversationClient:
                     "provider": "sage",
                     "tools_used": [
                         {
-                            "tool_id": "admin-config",
+                            "tool_id": "admin-config:read_instance_settings",
                             "tool_name": "Admin Config",
                             "output_summary": "Read read_instance_settings.",
+                        },
+                        {
+                            "tool_id": "admin-config:propose_admin_config_bootstrap",
+                            "tool_name": "Admin Config",
+                            "output_summary": "Prepared bootstrap change set: Bootstrap FreeThem",
                         }
                     ],
                     "admin_change_set": {
@@ -513,10 +518,53 @@ class FakeConversationClient:
                                     "description": "For former political prisoners and supporters seeking post-release resources.",
                                 },
                             },
+                            {
+                                "method": "POST",
+                                "path": "/admin/user-fields",
+                                "body": {
+                                    "field_name": "What country are you in?",
+                                    "field_type": "text",
+                                    "display_order": 1,
+                                    "include_in_chat": True,
+                                },
+                            },
+                            {
+                                "method": "POST",
+                                "path": "/admin/user-fields",
+                                "body": {
+                                    "field_name": "What kind of support do you need?",
+                                    "field_type": "select",
+                                    "display_order": 2,
+                                    "include_in_chat": True,
+                                    "options": [
+                                        "Current prisoner support",
+                                        "Post-release support",
+                                    ],
+                                },
+                            },
+                            {
+                                "method": "PUT",
+                                "path": "/admin/ai-config/prompt_rules",
+                                "body": {
+                                    "value": json.dumps(
+                                        [
+                                            "Ask where users are before giving location-specific guidance."
+                                        ]
+                                    )
+                                },
+                            },
                         ],
                     },
                 },
-                trace={"tools": [{"id": "admin-config", "name": "Admin Config"}]},
+                trace={
+                    "tools": [
+                        {"id": "admin-config:read_instance_settings", "name": "Admin Config"},
+                        {
+                            "id": "admin-config:propose_admin_config_bootstrap",
+                            "name": "Admin Config",
+                        },
+                    ]
+                },
                 admin_change_set={
                     "version": 1,
                     "summary": "Bootstrap FreeThem",
@@ -549,6 +597,41 @@ class FakeConversationClient:
                             "body": {
                                 "name": "Former Prisoners and Supporters",
                                 "description": "For former political prisoners and supporters seeking post-release resources.",
+                            },
+                        },
+                        {
+                            "method": "POST",
+                            "path": "/admin/user-fields",
+                            "body": {
+                                "field_name": "What country are you in?",
+                                "field_type": "text",
+                                "display_order": 1,
+                                "include_in_chat": True,
+                            },
+                        },
+                        {
+                            "method": "POST",
+                            "path": "/admin/user-fields",
+                            "body": {
+                                "field_name": "What kind of support do you need?",
+                                "field_type": "select",
+                                "display_order": 2,
+                                "include_in_chat": True,
+                                "options": [
+                                    "Current prisoner support",
+                                    "Post-release support",
+                                ],
+                            },
+                        },
+                        {
+                            "method": "PUT",
+                            "path": "/admin/ai-config/prompt_rules",
+                            "body": {
+                                "value": json.dumps(
+                                    [
+                                        "Ask where users are before giving location-specific guidance."
+                                    ]
+                                )
                             },
                         },
                     ],
@@ -1100,9 +1183,59 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["admin_change_set_uses_canonical_paths"], "passed")
         self.assertEqual(checks["baseline_settings_present"], "passed")
         self.assertEqual(checks["user_types_present"], "passed")
+        self.assertEqual(checks["typed_bootstrap_tool_used"], "passed")
+        self.assertEqual(checks["onboarding_fields_present"], "passed")
+        self.assertEqual(checks["behavior_rules_present"], "passed")
         self.assertEqual(
             scenario["response"]["admin_change_set"]["requests"][1]["path"],
             "/admin/user-types",
+        )
+
+    def test_admin_config_bootstrap_scenario_fails_without_typed_bootstrap_tool(self) -> None:
+        class FakeGenericBootstrapClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                done = dict(result.done)
+                done["tools_used"] = [
+                    {
+                        "tool_id": "admin-config:propose_config_change_set",
+                        "tool_name": "Admin Config",
+                        "output_summary": "Proposed change set: Bootstrap FreeThem",
+                    }
+                ]
+                trace = {
+                    "tools": [
+                        {
+                            "id": "admin-config:propose_config_change_set",
+                            "name": "Admin Config",
+                        }
+                    ]
+                }
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=done,
+                    trace=trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_config_bootstrap",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeGenericBootstrapClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["typed_bootstrap_tool_used"], "failed")
+        self.assertEqual(
+            checks["generic_change_set_tool_not_used_for_bootstrap"], "failed"
         )
 
     def test_user_knowledge_assistance_records_retrieval_evidence(self) -> None:

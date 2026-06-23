@@ -380,6 +380,10 @@ _Avoid_: debug mode, logging level, actor-specific trace policy
 A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
 _Avoid_: endpoint, fuzzy context category, hidden prompt blob
 
+**Typed Proposal Tool**:
+A model-callable **Admin Config Tool Set** contract whose arguments describe admin write intent in product terms and whose deterministic implementation returns an **Executable Change Set**. It keeps canonical **Enclave Control Plane** request construction out of model-authored free-form JSON.
+_Avoid_: raw change-set JSON tool, request JSON proposal, hidden serializer prompt
+
 **Tool Set**:
 A visible **Conversation UI Surface** control that enables a related set of **Tools** for the submitted turn.
 _Avoid_: route mode, hidden classifier, prompt context toggle

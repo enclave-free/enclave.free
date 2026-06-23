@@ -138,6 +138,8 @@ SCENARIOS: dict[str, Scenario] = {
             "6. English.\n"
             "7. political prisoner support team.\n"
             "8. Let new users in right away. Create two simple user types: family and friends of current political prisoners, and former political prisoners with their family and friends.\n"
+            "9. Add onboarding questions for what country the user is in and what kind of support they need. Include those answers in chat context.\n"
+            "10. Add a behavior rule to ask where users are before giving location-specific guidance.\n"
             "Read the current Admin Config first, then prepare the changes for review."
         ),
         tools=("admin-config",),
@@ -540,6 +542,24 @@ def admin_config_bootstrap_checks(
             any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
             "hard",
         ),
+        check(
+            "typed_bootstrap_tool_used",
+            any(
+                admin_config_tool_invoked(
+                    evidence, "propose_admin_config_bootstrap"
+                )
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
+            "generic_change_set_tool_not_used_for_bootstrap",
+            not any(
+                admin_config_tool_invoked(evidence, "propose_config_change_set")
+                for evidence in tool_evidence
+            ),
+            "warning",
+        ),
         check("admin_change_set_present", bool(request_list), "hard"),
         check(
             "admin_change_set_uses_canonical_paths",
@@ -554,6 +574,16 @@ def admin_config_bootstrap_checks(
         check(
             "user_types_present",
             count_user_type_requests(request_list) >= 2,
+            "hard",
+        ),
+        check(
+            "onboarding_fields_present",
+            count_user_field_requests(request_list) >= 2,
+            "hard",
+        ),
+        check(
+            "behavior_rules_present",
+            has_agent_rules_request(request_list, "prompt_rules"),
             "hard",
         ),
         check(
@@ -754,6 +784,9 @@ BASELINE_SETTING_KEYS = {
 CANONICAL_ADMIN_CONFIG_WRITES = {
     ("PUT", "/admin/settings"),
     ("POST", "/admin/user-types"),
+    ("POST", "/admin/user-fields"),
+    ("PUT", "/admin/ai-config/prompt_rules"),
+    ("PUT", "/admin/ai-config/prompt_forbidden"),
 }
 
 UNSAFE_ADMIN_CONFIG_PATH_PREFIXES = (
@@ -781,6 +814,29 @@ def count_user_type_requests(requests: list[Any]) -> int:
         and request.get("method") == "POST"
         and request.get("path") == "/admin/user-types"
     )
+
+
+def count_user_field_requests(requests: list[Any]) -> int:
+    return sum(
+        1
+        for request in requests
+        if isinstance(request, dict)
+        and request.get("method") == "POST"
+        and request.get("path") == "/admin/user-fields"
+    )
+
+
+def has_agent_rules_request(requests: list[Any], key: str) -> bool:
+    path = f"/admin/ai-config/{key}"
+    for request in requests:
+        if not isinstance(request, dict):
+            continue
+        if request.get("method") != "PUT" or request.get("path") != path:
+            continue
+        body = request.get("body")
+        value = body.get("value") if isinstance(body, dict) else None
+        return isinstance(value, str) and bool(value.strip())
+    return False
 
 
 def admin_change_set_uses_canonical_paths(requests: list[Any]) -> bool:
@@ -877,6 +933,11 @@ def tool_evidence_matches(evidence: dict[str, Any], tool_set_id: str) -> bool:
         or tool_id.startswith(f"{tool_set_id}:")
         or tool_id.startswith(f"tool-{tool_set_id}:")
     )
+
+
+def admin_config_tool_invoked(evidence: dict[str, Any], tool_name: str) -> bool:
+    tool_id = str(evidence.get("tool_id") or "")
+    return tool_id == f"admin-config:{tool_name}" or tool_id == tool_name
 
 
 def tool_id_from_name(name: str) -> str:
