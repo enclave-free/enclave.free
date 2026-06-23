@@ -42,6 +42,7 @@ SLOW_TRACE_FEEDBACK_WARNING_MS = 10_000.0
 SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
     "admin_config_bootstrap",
+    "admin_config_live_onboarding_prompt",
     "admin_deployment_readiness",
     "admin_database_direct_select",
     "admin_database_natural_language_guardrail",
@@ -141,6 +142,24 @@ SCENARIOS: dict[str, Scenario] = {
             "9. Add onboarding questions for what country the user is in and what kind of support they need. Include those answers in chat context.\n"
             "10. Add a behavior rule to ask where users are before giving location-specific guidance.\n"
             "Read the current Admin Config first, then prepare the changes for review."
+        ),
+        tools=("admin-config",),
+    ),
+    "admin_config_live_onboarding_prompt": Scenario(
+        id="admin_config_live_onboarding_prompt",
+        actor="admin",
+        message=(
+            "- 1. FreeThem\n"
+            "2. We are the political prisoners support team an arm of the World Liberty Congress\n"
+            "3. Your call\n"
+            "4. Your call\n"
+            "5. dark please\n"
+            "6. english\n"
+            "7. political prisoners support team\n"
+            "8. Yes don't block access\n"
+            "9. there are two kinds of users. families and friends of current political prisoners "
+            "(support those in the situation) and friends/family/former political prisoners "
+            "(support for those after the situation)"
         ),
         tools=("admin-config",),
     ),
@@ -387,6 +406,8 @@ def checks_for_scenario(
         checks.extend(trace_feedback_checks(stream))
     if scenario.id == "admin_config_bootstrap":
         checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
+    elif scenario.id == "admin_config_live_onboarding_prompt":
+        checks.extend(admin_config_live_onboarding_prompt_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
         checks.extend(admin_deployment_readiness_checks(stream, tool_evidence))
     elif scenario.id == "admin_database_direct_select":
@@ -589,6 +610,96 @@ def admin_config_bootstrap_checks(
         check(
             "does_not_claim_missing_proposal_authority",
             not any(phrase in answer_lower for phrase in lack_of_authority_phrases),
+            "hard",
+        ),
+    ]
+
+
+def admin_config_live_onboarding_prompt_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    change_set = stream.admin_change_set
+    requests = change_set.get("requests") if isinstance(change_set, dict) else None
+    request_list = requests if isinstance(requests, list) else []
+    settings_body = settings_request_body(request_list)
+    user_type_text = "\n".join(user_type_request_texts(request_list)).lower()
+
+    return [
+        check(
+            "admin_config_tool_used",
+            any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "typed_bootstrap_tool_used",
+            any(
+                admin_config_tool_invoked(
+                    evidence, "propose_admin_config_bootstrap"
+                )
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
+            "generic_change_set_tool_not_used_for_bootstrap",
+            not any(
+                admin_config_tool_invoked(evidence, "propose_config_change_set")
+                for evidence in tool_evidence
+            ),
+            "warning",
+        ),
+        check(
+            "live_onboarding_bootstrap_not_rejected",
+            not any_admin_config_bootstrap_rejection(tool_evidence),
+            "hard",
+        ),
+        check("admin_change_set_present", bool(request_list), "hard"),
+        check(
+            "admin_change_set_uses_canonical_paths",
+            admin_change_set_uses_canonical_paths(request_list),
+            "hard",
+        ),
+        check(
+            "live_onboarding_baseline_settings_present",
+            BASELINE_SETTING_KEYS <= set(settings_body),
+            "hard",
+        ),
+        check(
+            "live_onboarding_instance_name_preserved",
+            settings_body.get("instance_name") == "FreeThem",
+            "hard",
+        ),
+        check(
+            "live_onboarding_dark_theme_preserved",
+            settings_body.get("default_theme") == "dark",
+            "hard",
+        ),
+        check(
+            "live_onboarding_auto_approval_enabled",
+            settings_body.get("auto_approve_users") is True,
+            "hard",
+        ),
+        check(
+            "live_onboarding_user_types_present",
+            count_user_type_requests(request_list) >= 2,
+            "hard",
+        ),
+        check(
+            "live_onboarding_user_type_content_present",
+            "famil" in user_type_text
+            and "current" in user_type_text
+            and ("former" in user_type_text or "after" in user_type_text),
+            "warning",
+        ),
+        check(
+            "live_onboarding_does_not_create_user_fields",
+            count_user_field_requests(request_list) == 0,
+            "hard",
+        ),
+        check(
+            "live_onboarding_does_not_create_behavior_rules",
+            not has_agent_rules_request(request_list, "prompt_rules"),
             "hard",
         ),
     ]
@@ -816,6 +927,24 @@ def count_user_type_requests(requests: list[Any]) -> int:
     )
 
 
+def user_type_request_texts(requests: list[Any]) -> list[str]:
+    texts: list[str] = []
+    for request in requests:
+        if not isinstance(request, dict):
+            continue
+        if request.get("method") != "POST" or request.get("path") != "/admin/user-types":
+            continue
+        body = request.get("body")
+        if not isinstance(body, dict):
+            continue
+        values = [
+            str(body.get("name") or ""),
+            str(body.get("description") or ""),
+        ]
+        texts.append(" ".join(value for value in values if value.strip()))
+    return texts
+
+
 def count_user_field_requests(requests: list[Any]) -> int:
     return sum(
         1
@@ -836,6 +965,25 @@ def has_agent_rules_request(requests: list[Any], key: str) -> bool:
         body = request.get("body")
         value = body.get("value") if isinstance(body, dict) else None
         return isinstance(value, str) and bool(value.strip())
+    return False
+
+
+def any_admin_config_bootstrap_rejection(tool_evidence: list[dict[str, Any]]) -> bool:
+    for evidence in tool_evidence:
+        if not admin_config_tool_invoked(evidence, "propose_admin_config_bootstrap"):
+            continue
+        status = str(evidence.get("status") or "").lower()
+        summary = str(evidence.get("output_summary") or "").lower()
+        warnings = [
+            str(warning).lower()
+            for warning in evidence.get("warnings") or []
+        ]
+        if evidence.get("guarded") or status == "guarded":
+            return True
+        if "invalid_admin_config_bootstrap" in warnings:
+            return True
+        if "invalid bootstrap" in summary or "invalid admin config bootstrap" in summary:
+            return True
     return False
 
 
