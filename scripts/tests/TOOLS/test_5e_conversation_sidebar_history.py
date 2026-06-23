@@ -45,37 +45,29 @@ def run_compose_exec(service: str, *args: str, timeout: int = 60) -> str:
 
 def mint_smoke_tokens() -> dict[str, str]:
     script = r"""
-import auth, database, sqlite3
+import auth, database, time
 
 pub = "a" * 64
 admin = database.get_admin_by_pubkey(pub)
 if not admin:
-    conn = sqlite3.connect("/data/enclave.db")
-    cur = conn.cursor()
-    cur.execute("insert into admins(pubkey) values(?)", (pub,))
-    conn.commit()
-    conn.close()
-    admin = database.get_admin_by_pubkey(pub)
+    admins = database.list_admins()
+    admin = admins[0] if admins else None
 if not admin:
-    try:
-        database.add_admin(pub)
-    except Exception:
-        conn = sqlite3.connect("/data/enclave.db")
-        cur = conn.cursor()
-        cur.execute("insert into admins(pubkey) values(?)", (pub,))
-        conn.commit()
-        conn.close()
+    database.add_admin(pub)
     admin = database.get_admin_by_pubkey(pub)
+admin_pubkey = admin["pubkey"]
 
-email = "sidebar-history-smoke@example.test"
-user = database.get_user_by_email(email)
-if not user:
-    user_id = database.create_user(email=email, name="Sidebar History Smoke")
-    database.update_user_approval(user_id, True)
-    user = database.get_user(user_id)
+suffix = str(int(time.time() * 1000))
+email = "sidebar-history-smoke-" + suffix + "@example.test"
+with database.get_write_cursor() as cursor:
+    cursor.execute(
+        "INSERT INTO users (email, name, approved, created_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP)",
+        (email, "Sidebar History Smoke"),
+    )
+    user_id = cursor.lastrowid
 
-print(auth.create_admin_session_token(admin["id"], pub, int(admin.get("session_nonce", 0) or 0)))
-print(auth.create_session_token(user["id"], email))
+print(auth.create_admin_session_token(admin["id"], admin_pubkey, int(admin.get("session_nonce", 0) or 0)))
+print(auth.create_session_token(user_id, email))
 """
     lines = [
         line.strip()
@@ -96,7 +88,7 @@ def gateway_post(token: str, path: str, payload: dict[str, Any], timeout: int = 
         f"--header=Authorization: Bearer {token}",
         "--header=Content-Type: application/json",
         f"--post-data={json.dumps(payload)}",
-        f"http://127.0.0.1:8000{path}",
+        f"http://127.0.0.1:18000{path}",
         timeout=timeout + 10,
     )
     return json.loads(raw)
@@ -109,7 +101,7 @@ def gateway_get(token: str, path: str, timeout: int = 60) -> dict[str, Any]:
         "-qO-",
         f"--timeout={timeout}",
         f"--header=Authorization: Bearer {token}",
-        f"http://127.0.0.1:8000{path}",
+        f"http://127.0.0.1:18000{path}",
         timeout=timeout + 10,
     )
     return json.loads(raw)
@@ -127,7 +119,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Test 5E: Conversation Sidebar History")
     parser.add_argument(
         "--api-base",
-        default="http://localhost:8000",
+        default="http://localhost:18000",
         help="Accepted for compatibility with run_all_be_tests.py; this test intentionally uses the Docker gateway container.",
     )
     parser.parse_args()

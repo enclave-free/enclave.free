@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useMemo } from 'react';
+import { ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AssistantRuntimeProvider,
@@ -17,6 +17,8 @@ import type {
   ConversationTransportCapabilities,
 } from './ConversationMessageActions';
 import type { ConversationSurfaceTurn } from './ConversationSurfaceModel';
+
+let conversationSurfaceRuntimeInstance = 0;
 
 interface ConversationSurfaceProps {
   turns: ConversationSurfaceTurn[];
@@ -51,6 +53,9 @@ export function ConversationSurface({
   onMessageAction,
 }: ConversationSurfaceProps) {
   const { t } = useTranslation();
+  const runtimeMessageIdPrefix = useRef(
+    `surface-${++conversationSurfaceRuntimeInstance}-`
+  ).current;
   const assistantState = useMemo(
     () =>
       buildAssistantConversationState({
@@ -61,12 +66,14 @@ export function ConversationSurface({
         transportCapabilities,
         hasPersistedSession,
         hasPendingApproval,
+        runtimeMessageIdPrefix,
       }),
     [
       disabled,
       hasPendingApproval,
       hasPersistedSession,
       isRunning,
+      runtimeMessageIdPrefix,
       transportCapabilities,
       turnAccessories,
       turns,

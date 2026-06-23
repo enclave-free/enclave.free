@@ -45,18 +45,20 @@ def run_compose_exec(service: str, *args: str, timeout: int = 60) -> str:
 
 def mint_smoke_tokens() -> dict[str, str]:
     script = r"""
-import auth, database
+import auth, database, time
 
 def user_token(email, name):
-    user = database.get_user_by_email(email)
-    if not user:
-        user_id = database.create_user(email=email, name=name)
-        database.update_user_approval(user_id, True)
-        user = database.get_user(user_id)
-    return auth.create_session_token(user["id"], email)
+    with database.get_write_cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO users (email, name, approved, created_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP)",
+            (email, name),
+        )
+        user_id = cursor.lastrowid
+    return auth.create_session_token(user_id, email)
 
-print(user_token("delete-lifecycle-smoke@example.test", "Delete Lifecycle Smoke"))
-print(user_token("delete-lifecycle-other@example.test", "Delete Lifecycle Other"))
+suffix = str(int(time.time() * 1000))
+print(user_token("delete-lifecycle-smoke-" + suffix + "@example.test", "Delete Lifecycle Smoke"))
+print(user_token("delete-lifecycle-other-" + suffix + "@example.test", "Delete Lifecycle Other"))
 """
     lines = [
         line.strip()
@@ -94,7 +96,7 @@ def gateway_request(
                 json.dumps(payload),
             ]
         )
-    args.append(f"http://127.0.0.1:8000{path}")
+    args.append(f"http://127.0.0.1:18000{path}")
     result = subprocess.run(
         [*COMPOSE_ARGS, "exec", "-T", "backend", *args],
         capture_output=True,
@@ -133,7 +135,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Test 5G: Conversation Delete Lifecycle")
     parser.add_argument(
         "--api-base",
-        default="http://localhost:8000",
+        default="http://localhost:18000",
         help="Accepted for compatibility with run_all_be_tests.py; this test intentionally uses the Docker gateway container.",
     )
     parser.parse_args()
