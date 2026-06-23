@@ -172,6 +172,28 @@ describe('TestAsUserView', () => {
     expect(fetch).toHaveBeenCalledWith('/api/session-defaults?user_type_id=1');
   });
 
+  it('uses a conservative Tool Set fallback when user defaults cannot be loaded', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500 }));
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Can you look up resources?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(mockSendLlmChatWithUnifiedTools).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Can you look up resources?',
+          tools: ['curated-resources'],
+          jobIds: [],
+          authToken: 'synthetic-user-token',
+        })
+      );
+    });
+  });
+
   it('does not start a test chat when synthetic User auth is unavailable', async () => {
     const user = userEvent.setup();
     mockGetImpersonationStatus.mockResolvedValue(false);

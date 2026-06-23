@@ -99,6 +99,19 @@ class SessionLogsTest(unittest.TestCase):
         self.assertEqual(
             assistant_turn["trace"]["tools"][0]["name"], "Curated Resources"
         )
+        dumped = payload.model_dump()
+        self.assertEqual(len(dumped["turns"]), 2)
+        self.assertEqual(dumped["turns"][0]["role"], "user")
+        self.assertEqual(dumped["turns"][0]["content"], "Find resources")
+        self.assertEqual(dumped["turns"][1]["role"], "assistant")
+        self.assertEqual(
+            dumped["turns"][1]["tools_used"][0]["output_summary"],
+            "Found 2 vetted resources.",
+        )
+        self.assertEqual(
+            dumped["turns"][1]["trace"]["reasoning"]["summary"],
+            "Sage used enabled tools before answering.",
+        )
 
     def test_saving_missing_session_log_leaves_no_transcript_artifact(self) -> None:
         turns = [

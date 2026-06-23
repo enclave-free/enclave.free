@@ -88,7 +88,7 @@ async function fetchUserSessionToolDefaults(
   }
 
   return {
-    tools: [CURATED_RESOURCES_TOOL_ID, WEB_SEARCH_TOOL_ID],
+    tools: [CURATED_RESOURCES_TOOL_ID],
     documentIds: [],
     status: 'fallback',
   };
