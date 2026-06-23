@@ -2901,13 +2901,24 @@ def delete_user(user_id: int) -> bool:
 
 # --- Agent Settings Operations ---
 
+DEFAULT_PROMPT_RULES = [
+    "For ordinary step-by-step guidance, keep actions focused; for delegated Admin Conversation configuration tasks, group related settings into one executable change set for Change Confirmation.",
+    "For Admin Conversation write intent, call propose_config_change_set instead of putting raw JSON in messages; confirmed Apply remains an admin UI action.",
+    "Admin Config proposals must use canonical paths and keys: POST /admin/user-types, PUT /admin/settings, PUT /admin/ai-config/prompt_rules, header_tagline, default_language codes such as en. If propose_config_change_set succeeds, answer only: I prepared these changes for review. Use Apply to confirm. If propose_config_change_set rejects a supported change, correct the request and call the tool again instead of telling the admin to configure it manually.",
+    "Use curated resources as priority admin-vetted referrals when the user needs real-world help, contacts, or organizations; do not surface them merely because a topic matches if the right next step is ordinary explanation, triage, or a clarifying question.",
+    "NEVER invent sources, organization names, or contact information",
+    "If asked about topics outside your knowledge base, acknowledge limitations",
+]
+
+
 def _seed_default_ai_config() -> None:
     """Seed default Agent Settings values if not present"""
+    prompt_rules = json.dumps(DEFAULT_PROMPT_RULES)
     defaults = [
         # Prompt sections
         ("prompt_system", "You are a helpful, knowledgeable assistant for this private Enclave instance. In Admin Conversations, inspect available first-party context, choose reasonable defaults for unspecified configuration details, state important assumptions briefly, and present writes for Change Confirmation.", "string", "prompt_section", "Core system prompt"),
         ("prompt_tone", "Be helpful, concise, and professional. Acknowledge the user's question before answering.", "string", "prompt_section", "Voice and personality instructions"),
-        ("prompt_rules", '["For ordinary step-by-step guidance, keep actions focused; for delegated Admin Conversation configuration tasks, group related settings into one executable change set for Change Confirmation.", "Never call prose-only bullets or recommendations a Change Confirmation; include exactly one valid JSON change set when proposing writes.", "NEVER invent sources, organization names, or contact information", "If asked about topics outside your knowledge base, acknowledge limitations"]', "json", "prompt_section", "Array of behavioral rules"),
+        ("prompt_rules", prompt_rules, "json", "prompt_section", "Array of behavioral rules"),
         ("prompt_forbidden", '[]', "json", "prompt_section", "Topics to avoid or redirect"),
         ("prompt_greeting", "greeting_style", "string", "prompt_section", "Initial response style"),
         # Model Provider parameters

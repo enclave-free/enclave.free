@@ -51,7 +51,9 @@ class AIConfigDefaultsTest(unittest.TestCase):
         self.assertIn("reasonable defaults", system_value)
         self.assertIn("Change Confirmation", system_value)
         self.assertTrue(any("group related" in rule for rule in rules_value))
-        self.assertTrue(any("valid JSON change set" in rule for rule in rules_value))
+        self.assertTrue(any("propose_config_change_set" in rule for rule in rules_value))
+        self.assertTrue(any("PUT /admin/ai-config/prompt_rules" in rule for rule in rules_value))
+        self.assertTrue(any("do not surface them merely because a topic matches" in rule for rule in rules_value))
         self.assertFalse(any(rule == "ONE action per response when providing step-by-step guidance" for rule in rules_value))
 
 
