@@ -45,20 +45,20 @@ Make the read-heavy Admin Config conversation paths use product-level typed Tool
 - PRD issue: https://github.com/enclave-free/enclave.free-prototype/issues/439
 - Slice issues: #440, #441, #442
 - Sage branch: enclave-free/sage `feature/typed-admin-summary-tools`
-- Sage commit: `92cf4eb add typed admin setup summary tool`
+- Sage commit: `756ed93 harden admin config proposal validation`
 - Sage PR: https://github.com/enclave-free/sage/pull/21
 - Issue sessions: Current thread
 - Agent briefs: Pending
 - Review packets: Pending
-- Local CodeRabbit report: Pending
-- PR URL: Pending
+- Local CodeRabbit report: Parent repo clean after one minor typing fix; Sage repo clean after three Admin Config contract fixes.
+- PR URL: https://github.com/enclave-free/enclave.free-prototype/pull/443
 
 ## Commands
 
 - Install: `cd frontend && npm install`
 - Typecheck: `cd frontend && npm run build`
 - Test: `python3 -m unittest scripts.benches.test_conversation_model_bench backend.tests.test_ai_config_defaults` -> 33 passed
-- Test: `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib` -> 101 passed
+- Test: `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib` -> 104 passed
 - Build: `docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up -d --build core-backend sage`
 - Hygiene: `git diff --check`; `git -C runtime/sage diff --check`
 - Live verification: Conversation Model Bench against `http://127.0.0.1:18000`
@@ -70,6 +70,12 @@ Make the read-heavy Admin Config conversation paths use product-level typed Tool
 - First post-implementation run `/tmp/conversation-model-bench-kimi-admin-summary-2026-06-24.json` passed in 16.453s and used `read_admin_setup_summary` plus one narrow `read_deployment_readiness` follow-up. The final prompt-contract tightening removed that follow-up.
 - Bootstrap regression `/tmp/conversation-model-bench-kimi-admin-bootstrap-summary-feature-2026-06-24.json` passed in 22.807s and stayed on `propose_admin_config_bootstrap`.
 - Interpretation: the structural problem is fixed. Kimi/Tinfoil still has normal provider-side latency wobble, but broad Admin Config readiness no longer burns model/tool steps on a loose low-level read cascade.
+
+## Review Notes
+
+- Local CodeRabbit parent review found one minor issue: add a type annotation to `LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS`. Fixed in `003cd64`.
+- Local CodeRabbit Sage review found three valid Admin Config contract issues: non-boolean `auto_approve_users` proposal validation, final proposal-result handling, and negated access-policy phrase ordering. Fixed in Sage commit `756ed93` with regression tests.
+- Remote CodeRabbit for the parent PR reported success but skipped automatic review because `staging` is not the default branch; local CodeRabbit was used as the review gate.
 
 ## Slice Ledger
 
