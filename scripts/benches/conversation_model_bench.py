@@ -714,7 +714,7 @@ def admin_config_live_onboarding_prompt_checks(
             "famil" in user_type_text
             and "current" in user_type_text
             and ("former" in user_type_text or "after" in user_type_text),
-            "warning",
+            "hard",
         ),
         check(
             "live_onboarding_does_not_create_user_fields",
@@ -723,7 +723,8 @@ def admin_config_live_onboarding_prompt_checks(
         ),
         check(
             "live_onboarding_does_not_create_behavior_rules",
-            not has_agent_rules_request(request_list, "prompt_rules"),
+            not has_agent_rules_request(request_list, "prompt_rules")
+            and not has_agent_rules_request(request_list, "prompt_forbidden"),
             "hard",
         ),
     ]

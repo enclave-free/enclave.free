@@ -1377,6 +1377,7 @@ class ConversationModelBenchTest(unittest.TestCase):
 
         scenario = artifact["candidates"][0]["scenarios"][0]
         checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        severities = {check["name"]: check["severity"] for check in scenario["checks"]}
         requests = scenario["response"]["admin_change_set"]["requests"]
 
         self.assertEqual(scenario["id"], "admin_config_live_onboarding_prompt")
@@ -1393,8 +1394,52 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["live_onboarding_dark_theme_preserved"], "passed")
         self.assertEqual(checks["live_onboarding_auto_approval_enabled"], "passed")
         self.assertEqual(checks["live_onboarding_user_types_present"], "passed")
+        self.assertEqual(severities["live_onboarding_user_type_content_present"], "hard")
         self.assertEqual(checks["live_onboarding_does_not_create_user_fields"], "passed")
         self.assertEqual(checks["live_onboarding_does_not_create_behavior_rules"], "passed")
+
+    def test_admin_config_live_onboarding_prompt_rejects_forbidden_agent_config_writes(
+        self,
+    ) -> None:
+        class FakeForbiddenRulesClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                admin_change_set = dict(result.admin_change_set or {})
+                admin_change_set["requests"] = [
+                    *(admin_change_set.get("requests") or []),
+                    {
+                        "method": "PUT",
+                        "path": "/admin/ai-config/prompt_forbidden",
+                        "body": {"value": json.dumps(["Never discuss legal help."])},
+                    },
+                ]
+                done = dict(result.done)
+                done["admin_change_set"] = admin_change_set
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=done,
+                    trace=result.trace,
+                    admin_change_set=admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_config_live_onboarding_prompt",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeForbiddenRulesClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(
+            checks["live_onboarding_does_not_create_behavior_rules"], "failed"
+        )
 
     def test_admin_config_live_onboarding_prompt_fails_when_bootstrap_is_rejected(self) -> None:
         class FakeRejectedBootstrapClient(FakeConversationClient):
