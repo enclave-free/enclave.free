@@ -10,7 +10,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { Button, Callout, Card } from '../../ui';
-import { sendLlmChatWithUnifiedTools } from '../../../utils/llmChat';
+import { sendLlmChatStreamWithUnifiedTools } from '../../../utils/llmChat';
 import {
   createSessionLog,
   getImpersonationStatus,
@@ -21,12 +21,97 @@ import {
   type AdminUserType,
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
+import { API_BASE } from '../../../types/onboarding';
+
+const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
+const KNOWLEDGE_SEARCH_TOOL_ID = 'knowledge-search';
+const WEB_SEARCH_TOOL_ID = 'web-search';
+
+interface UserSessionToolDefaults {
+  tools: string[];
+  documentIds: string[];
+  status: 'configured' | 'fallback';
+}
 
 interface ActiveSession {
   testUserId: number;
   userTypeId: number | null;
   personaName: string;
   token: string; // bearer token used to chat AS the test user
+  tools: string[];
+  documentIds: string[];
+  defaultsStatus: UserSessionToolDefaults['status'];
+}
+
+function sessionDefaultsUrl(userTypeId: number | null): string {
+  if (userTypeId === null) return `${API_BASE}/session-defaults`;
+  return `${API_BASE}/session-defaults?user_type_id=${encodeURIComponent(
+    String(userTypeId)
+  )}`;
+}
+
+function resolveUserSessionToolDefaults(
+  data: unknown
+): UserSessionToolDefaults {
+  const record = data && typeof data === 'object' ? data : {};
+  const defaultDocumentIds = Array.isArray(
+    (record as Record<string, unknown>).default_document_ids
+  )
+    ? ((record as Record<string, unknown>).default_document_ids as unknown[])
+        .filter((id): id is string => typeof id === 'string' && Boolean(id))
+        .slice()
+    : [];
+
+  return {
+    tools: [
+      CURATED_RESOURCES_TOOL_ID,
+      ...(defaultDocumentIds.length > 0 ? [KNOWLEDGE_SEARCH_TOOL_ID] : []),
+      (record as Record<string, unknown>).web_search_enabled === true
+        ? WEB_SEARCH_TOOL_ID
+        : null,
+    ].filter((tool): tool is string => typeof tool === 'string'),
+    documentIds: defaultDocumentIds,
+    status: 'configured',
+  };
+}
+
+async function fetchUserSessionToolDefaults(
+  userTypeId: number | null
+): Promise<UserSessionToolDefaults> {
+  try {
+    const response = await fetch(sessionDefaultsUrl(userTypeId));
+    if (response.ok) {
+      return resolveUserSessionToolDefaults(await response.json());
+    }
+  } catch {
+    // Fall back below to preserve the normal user chat default behavior.
+  }
+
+  return {
+    tools: [CURATED_RESOURCES_TOOL_ID],
+    documentIds: [],
+    status: 'fallback',
+  };
+}
+
+function streamPayloadRecord(payload: unknown): Record<string, unknown> {
+  return payload && typeof payload === 'object'
+    ? (payload as Record<string, unknown>)
+    : {};
+}
+
+function updateLastAssistantTurn(
+  turns: TranscriptTurn[],
+  update: (turn: TranscriptTurn) => TranscriptTurn
+): TranscriptTurn[] {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const currentTurn = turns[index];
+    if (!currentTurn || currentTurn.role !== 'assistant') continue;
+    const nextTurns = turns.slice();
+    nextTurns[index] = update(currentTurn);
+    return nextTurns;
+  }
+  return turns;
 }
 
 /**
@@ -51,6 +136,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
   const [saving, setSaving] = useState(false);
@@ -80,13 +166,18 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       if (!token?.token) {
         throw new Error('Could not create a synthetic user session token');
       }
+      const defaults = await fetchUserSessionToolDefaults(selectedTypeId);
       setSession({
         testUserId: provisioned.user_id,
         userTypeId: selectedTypeId,
         personaName: personaName(selectedTypeId),
         token: token.token,
+        tools: defaults.tools,
+        documentIds: defaults.documentIds,
+        defaultsStatus: defaults.status,
       });
       setTurns([]);
+      setStreamStatus(null);
       sessionIdRef.current = null;
     } catch (err) {
       setStartError(
@@ -102,47 +193,126 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     if (!content || sending) return;
     setInput('');
     setChatError(null);
+    setStreamStatus(null);
     const userTurn: TranscriptTurn = {
       role: 'user',
       content,
       ts: new Date().toISOString(),
+      tools_used: [],
     };
     setTurns((prev) => [...prev, userTurn]);
     setSending(true);
     try {
+      let assistantStarted = false;
+      let assistantContent = '';
+      let assistantTrace: TranscriptTurn['trace'] = null;
+      let assistantTools: TranscriptTurn['tools_used'] = [];
+
+      const ensureAssistantTurn = () => {
+        if (assistantStarted) return;
+        assistantStarted = true;
+        setTurns((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: '',
+            ts: new Date().toISOString(),
+            trace: null,
+            tools_used: [],
+          },
+        ]);
+      };
+
+      const updateAssistantTurn = (
+        update: (turn: TranscriptTurn) => TranscriptTurn
+      ) => {
+        ensureAssistantTurn();
+        setTurns((prev) => updateLastAssistantTurn(prev, update));
+      };
+
       // When acting as the test user, send the impersonation bearer so Sage
       // authenticates the chat as them (not the admin).
-      const res = await sendLlmChatWithUnifiedTools({
+      await sendLlmChatStreamWithUnifiedTools({
         content,
-        tools: [],
+        tools: session?.tools ?? [],
+        jobIds: session?.documentIds ?? [],
         sessionId: sessionIdRef.current,
         authToken: session?.token,
-      });
-      const data = (await res.json()) as {
-        message?: string;
-        session_id?: string;
-        detail?: string;
-      };
-      if (!res.ok) {
-        throw new Error(data?.detail || `HTTP ${res.status}`);
-      }
-      if (typeof data.session_id === 'string') {
-        sessionIdRef.current = data.session_id;
-      }
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.message ?? '',
-          ts: new Date().toISOString(),
+        onEvent: (event, payload) => {
+          const data = streamPayloadRecord(payload);
+          if (typeof data.session_id === 'string' && data.session_id.trim()) {
+            sessionIdRef.current = data.session_id;
+          }
+
+          if (event === 'assistant_message_started') {
+            ensureAssistantTurn();
+            setStreamStatus(
+              t('chat.trace.finalizing', 'Finalizing response...')
+            );
+            return;
+          }
+
+          if (event === 'trace_status') {
+            ensureAssistantTurn();
+            if (typeof data.status === 'string' && data.status.trim()) {
+              setStreamStatus(data.status);
+            }
+            return;
+          }
+
+          if (event === 'answer_delta') {
+            const delta = typeof data.delta === 'string' ? data.delta : '';
+            assistantContent += delta;
+            setStreamStatus(null);
+            updateAssistantTurn((turn) => ({
+              ...turn,
+              content: assistantContent,
+            }));
+            return;
+          }
+
+          if (event === 'trace_final') {
+            assistantTrace =
+              data.trace === null || data.trace === undefined
+                ? null
+                : (data.trace as TranscriptTurn['trace']);
+            updateAssistantTurn((turn) => ({
+              ...turn,
+              trace: assistantTrace,
+            }));
+            return;
+          }
+
+          if (event === 'done') {
+            setStreamStatus(null);
+            assistantTools = Array.isArray(data.tools_used)
+              ? (data.tools_used as TranscriptTurn['tools_used'])
+              : [];
+            updateAssistantTurn((turn) => ({
+              ...turn,
+              content: assistantContent,
+              trace: assistantTrace ?? turn.trace ?? null,
+              tools_used: assistantTools ?? [],
+            }));
+            return;
+          }
+
+          if (event === 'error') {
+            throw new Error(
+              typeof data.detail === 'string' && data.detail.trim()
+                ? data.detail
+                : 'Chat failed'
+            );
+          }
         },
-      ]);
+      });
     } catch (err) {
       setChatError(err instanceof Error ? err.message : 'Chat failed');
     } finally {
+      setStreamStatus(null);
       setSending(false);
     }
-  }, [input, sending, session]);
+  }, [input, sending, session, t]);
 
   const endAndSave = useCallback(async () => {
     if (!session || turns.length === 0 || sending) return;
@@ -179,6 +349,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setTurns([]);
     setInput('');
     setChatError(null);
+    setStreamStatus(null);
     sessionIdRef.current = null;
   }, []);
 
@@ -187,6 +358,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setTurns([]);
     setInput('');
     setChatError(null);
+    setStreamStatus(null);
     setSavedNotice(null);
     sessionIdRef.current = null;
   }, []);
@@ -257,6 +429,9 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   }
 
   // --- Active session: synthetic user chat ---
+  const showingStreamingAssistant =
+    sending && turns[turns.length - 1]?.role === 'assistant';
+
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-wrap items-center justify-between gap-3">
@@ -320,29 +495,42 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
               )}
             </div>
           ) : (
-            turns.map((turn, index) => (
-              <div
-                key={index}
-                className={
-                  turn.role === 'user'
-                    ? 'flex justify-end'
-                    : 'flex justify-start'
-                }
-              >
+            turns.map((turn, index) => {
+              const isStreamingAssistant =
+                sending &&
+                turn.role === 'assistant' &&
+                index === turns.length - 1;
+
+              return (
                 <div
-                  className={[
-                    'max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm',
+                  key={index}
+                  className={
                     turn.role === 'user'
-                      ? 'bg-accent text-accent-text'
-                      : 'bg-surface-overlay text-text',
-                  ].join(' ')}
+                      ? 'flex justify-end'
+                      : 'flex justify-start'
+                  }
                 >
-                  {turn.content || <span className="text-text-muted">…</span>}
+                  <div
+                    className={[
+                      'max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm',
+                      turn.role === 'user'
+                        ? 'bg-accent text-accent-text'
+                        : 'bg-surface-overlay text-text',
+                    ].join(' ')}
+                  >
+                    {turn.content || <span className="text-text-muted">…</span>}
+                    {isStreamingAssistant && streamStatus && (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-text-muted">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>{streamStatus}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
-          {sending && (
+          {sending && !showingStreamingAssistant && (
             <div className="flex justify-start">
               <div className="rounded-2xl bg-surface-overlay px-3.5 py-2 text-text-muted">
                 <Loader2 className="h-4 w-4 animate-spin" />

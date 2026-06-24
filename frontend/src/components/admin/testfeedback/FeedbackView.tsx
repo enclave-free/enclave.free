@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   RefreshCw,
   Download,
+  Wrench,
 } from 'lucide-react';
 import { Button, Callout, Card } from '../../ui';
 import { decryptField, hasNip04Support } from '../../../utils/encryption';
@@ -39,6 +40,76 @@ function downloadBlob(blob: Blob, filename: string) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(href);
+}
+
+interface TranscriptToolSummary {
+  id: string;
+  name: string;
+  summary?: string | null;
+}
+
+function transcriptToolSummaries(
+  turn: TranscriptTurn
+): TranscriptToolSummary[] {
+  const seen = new Set<string>();
+  const summaries: TranscriptToolSummary[] = [];
+
+  for (const tool of turn.trace?.tools ?? []) {
+    const id = tool.id || tool.name;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    summaries.push({
+      id,
+      name: tool.name || id,
+      summary: tool.output_summary,
+    });
+  }
+
+  for (const tool of turn.tools_used ?? []) {
+    const id = tool.tool_id || tool.tool_name;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    summaries.push({
+      id,
+      name: tool.tool_name || id,
+      summary: tool.output_summary,
+    });
+  }
+
+  return summaries;
+}
+
+function TranscriptTraceSummary({ turn }: { turn: TranscriptTurn }) {
+  const tools = transcriptToolSummaries(turn);
+  const reasoning = turn.trace?.reasoning?.summary;
+  if (tools.length === 0 && !reasoning) return null;
+
+  return (
+    <div
+      className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-secondary"
+      aria-label="Conversation trace"
+    >
+      {reasoning && <div className="mb-2 leading-relaxed">{reasoning}</div>}
+      {tools.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {tools.map((tool) => (
+            <div key={tool.id} className="flex items-start gap-2">
+              <Wrench
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <div className="font-medium text-text">{tool.name}</div>
+                {tool.summary && (
+                  <div className="mt-0.5 leading-relaxed">{tool.summary}</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -413,6 +484,7 @@ export function FeedbackView() {
                   <div className="whitespace-pre-wrap break-words text-sm text-text">
                     {turn.content}
                   </div>
+                  {isAssistant && <TranscriptTraceSummary turn={turn} />}
 
                   {/* Only the assistant's (machine) turns are ratable — the
                       user's own messages aren't graded. */}

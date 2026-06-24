@@ -4,7 +4,7 @@ Request and response models for user/admin management.
 """
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from typing import Optional, Union
+from typing import Any, Optional, Union
 from datetime import datetime
 
 
@@ -994,11 +994,95 @@ class HelpTypeListResponse(BaseModel):
 
 # --- Session Logs (Test & Feedback) ---
 
+class SessionLogTraceReasoning(BaseModel):
+    """Reasoning summary attached to a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    summary: Optional[str] = None
+
+
+class SessionLogTraceTool(BaseModel):
+    """Tool trace metadata attached to a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+    execution: Optional[str] = None
+    input_summary: Optional[str] = None
+    output_summary: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SessionLogTraceRetrieval(BaseModel):
+    """Retrieval trace metadata attached to a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    source_type: Optional[str] = None
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    score: Optional[float] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SessionLogTraceDelta(BaseModel):
+    """Streamed trace delta retained in a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    id: Optional[str] = None
+    kind: Optional[str] = None
+    title: Optional[str] = None
+    content: Optional[str] = None
+    tool_name: Optional[str] = None
+    status: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: Optional[str] = None
+
+
+class SessionLogTraceActivityStep(BaseModel):
+    """Activity step retained in a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    id: Optional[str] = None
+    kind: Optional[str] = None
+    title: Optional[str] = None
+    status: Optional[str] = None
+    summary: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class SessionLogConversationTrace(BaseModel):
+    """Conversation Trace metadata retained in a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    visibility: Optional[str] = Field(default=None, max_length=32)
+    reasoning: Optional[SessionLogTraceReasoning] = None
+    tools: list[SessionLogTraceTool] = Field(default_factory=list)
+    retrieval: list[SessionLogTraceRetrieval] = Field(default_factory=list)
+    trace_deltas: list[SessionLogTraceDelta] = Field(default_factory=list)
+    activity_steps: list[SessionLogTraceActivityStep] = Field(default_factory=list)
+    suppressed: bool = False
+
+
+class SessionLogToolCall(BaseModel):
+    """Tool call metadata retained in a saved assistant turn."""
+    model_config = ConfigDict(extra="allow")
+
+    tool_id: str = Field(..., min_length=1, max_length=128)
+    tool_name: str = Field(..., min_length=1, max_length=256)
+    query: Optional[str] = None
+    output_summary: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
+    guarded: bool = False
+
 class SessionLogTurn(BaseModel):
     """One turn of a captured transcript (admin-supplied on save)."""
     role: str = Field(..., max_length=32)        # 'user' | 'assistant' | 'system'
     content: str
     ts: Optional[str] = None
+    trace: Optional[SessionLogConversationTrace] = None
+    tools_used: list[SessionLogToolCall] = Field(default_factory=list)
 
 
 class SessionLogCreate(BaseModel):
