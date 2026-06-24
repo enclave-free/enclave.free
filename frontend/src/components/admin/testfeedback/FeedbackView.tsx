@@ -51,38 +51,29 @@ interface TranscriptToolSummary {
 function transcriptToolSummaries(
   turn: TranscriptTurn
 ): TranscriptToolSummary[] {
+  const seen = new Set<string>();
   const summaries: TranscriptToolSummary[] = [];
-
-  const hasSummary = (summary?: string | null) =>
-    typeof summary === 'string' && summary.trim().length > 0;
-
-  const addSummary = (id: string, name: string, summary?: string | null) => {
-    const existingIndex = summaries.findIndex((item) => item.id === id);
-    if (existingIndex >= 0) {
-      const existing = summaries[existingIndex];
-      if (!hasSummary(existing.summary) && hasSummary(summary)) {
-        summaries[existingIndex] = {
-          ...existing,
-          name: name || existing.name,
-          summary,
-        };
-      }
-      return;
-    }
-
-    summaries.push({ id, name, summary });
-  };
 
   for (const tool of turn.trace?.tools ?? []) {
     const id = tool.id || tool.name;
-    if (!id) continue;
-    addSummary(id, tool.name || id, tool.output_summary);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    summaries.push({
+      id,
+      name: tool.name || id,
+      summary: tool.output_summary,
+    });
   }
 
   for (const tool of turn.tools_used ?? []) {
     const id = tool.tool_id || tool.tool_name;
-    if (!id) continue;
-    addSummary(id, tool.tool_name || id, tool.output_summary);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    summaries.push({
+      id,
+      name: tool.tool_name || id,
+      summary: tool.output_summary,
+    });
   }
 
   return summaries;

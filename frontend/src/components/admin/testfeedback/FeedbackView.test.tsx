@@ -225,7 +225,7 @@ describe('FeedbackView', () => {
                   id: 'curated-resources',
                   name: 'Curated Resources',
                   status: 'succeeded',
-                  output_summary: null,
+                  output_summary: 'Found 2 vetted resources.',
                 },
               ],
               retrieval: [],
