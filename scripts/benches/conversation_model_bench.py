@@ -51,7 +51,7 @@ DEFAULT_SCENARIOS = (
     "user_knowledge_and_resource_assistance",
 )
 
-LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS = {
+LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS: set[str] = {
     "read_instance_settings",
     "read_deployment_settings",
     "read_deployment_readiness",
