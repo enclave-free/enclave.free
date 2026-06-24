@@ -17,8 +17,8 @@ export interface TranscriptToolCall {
   tool_name: string;
   query?: string | null;
   output_summary?: string | null;
-  warnings?: string[];
-  guarded?: boolean;
+  warnings: string[];
+  guarded: boolean;
 }
 
 export interface TranscriptTurn {
@@ -26,7 +26,7 @@ export interface TranscriptTurn {
   content: string;
   ts?: string | null;
   trace?: ConversationTrace | null;
-  tools_used?: TranscriptToolCall[];
+  tools_used: TranscriptToolCall[];
 }
 
 export interface SessionLogMetadata {

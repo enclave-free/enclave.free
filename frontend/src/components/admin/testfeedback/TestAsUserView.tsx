@@ -198,6 +198,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       role: 'user',
       content,
       ts: new Date().toISOString(),
+      tools_used: [],
     };
     setTurns((prev) => [...prev, userTurn]);
     setSending(true);
