@@ -50,7 +50,7 @@ Make the read-heavy Admin Config conversation paths use product-level typed Tool
 - Issue sessions: Current thread
 - Agent briefs: Pending
 - Review packets: Pending
-- Local CodeRabbit report: Parent repo clean after one minor typing fix; Sage repo clean after three Admin Config contract fixes.
+- Local CodeRabbit report: Parent repo clean after one minor typing fix. Sage repo produced three valid Admin Config contract findings; all were fixed with regression tests. A follow-up Sage CodeRabbit rerun was rate-limited, so final Sage validation used tests plus manual diff review.
 - PR URL: https://github.com/enclave-free/enclave.free-prototype/pull/443
 
 ## Commands
@@ -75,6 +75,7 @@ Make the read-heavy Admin Config conversation paths use product-level typed Tool
 
 - Local CodeRabbit parent review found one minor issue: add a type annotation to `LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS`. Fixed in `003cd64`.
 - Local CodeRabbit Sage review found three valid Admin Config contract issues: non-boolean `auto_approve_users` proposal validation, final proposal-result handling, and negated access-policy phrase ordering. Fixed in Sage commit `756ed93` with regression tests.
+- Sage CodeRabbit rerun after fixes was rate-limited for 44 minutes, so the accepted fallback was manual diff review plus `cargo test -p sage-core --lib` -> 104 passed.
 - Remote CodeRabbit for the parent PR reported success but skipped automatic review because `staging` is not the default branch; local CodeRabbit was used as the review gate.
 
 ## Slice Ledger
