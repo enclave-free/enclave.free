@@ -51,6 +51,16 @@ DEFAULT_SCENARIOS = (
     "user_knowledge_and_resource_assistance",
 )
 
+LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS = {
+    "read_instance_settings",
+    "read_deployment_settings",
+    "read_deployment_readiness",
+    "read_agent_settings",
+    "read_user_types",
+    "read_document_access",
+    "read_onboarding_status",
+}
+
 
 @dataclass(frozen=True)
 class BenchOptions:
@@ -525,6 +535,20 @@ def admin_deployment_readiness_checks(
             "admin_config_tool_used",
             any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
             "hard",
+        ),
+        check(
+            "admin_setup_summary_tool_used",
+            any(
+                admin_config_tool_invoked(evidence, "read_admin_setup_summary")
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
+            "broad_status_avoids_low_level_read_fanout",
+            count_low_level_admin_config_reads(tool_evidence) <= 1,
+            "warning",
+            f"low-level Admin Config read tools used: {count_low_level_admin_config_reads(tool_evidence)}",
         ),
         check(
             "admin_change_set_not_staged",
@@ -1085,7 +1109,20 @@ def tool_evidence_matches(evidence: dict[str, Any], tool_set_id: str) -> bool:
 
 def admin_config_tool_invoked(evidence: dict[str, Any], tool_name: str) -> bool:
     tool_id = str(evidence.get("tool_id") or "")
-    return tool_id == f"admin-config:{tool_name}" or tool_id == tool_name
+    return (
+        tool_id == f"admin-config:{tool_name}"
+        or tool_id == f"tool-admin-config:{tool_name}"
+        or tool_id == tool_name
+    )
+
+
+def count_low_level_admin_config_reads(tool_evidence: list[dict[str, Any]]) -> int:
+    invoked: set[str] = set()
+    for evidence in tool_evidence:
+        for tool_name in LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS:
+            if admin_config_tool_invoked(evidence, tool_name):
+                invoked.add(tool_name)
+    return len(invoked)
 
 
 def tool_id_from_name(name: str) -> str:

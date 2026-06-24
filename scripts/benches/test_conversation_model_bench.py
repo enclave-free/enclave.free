@@ -724,7 +724,7 @@ class FakeConversationClient:
         return StreamResult(
             answer=(
                 "FreeThem is mostly configured. I checked the available Admin "
-                "Config tools and model keys remain redacted."
+                "Config setup summary and model keys remain redacted."
             ),
             events=[
                 {
@@ -737,7 +737,7 @@ class FakeConversationClient:
                     "elapsed_ms": 25.0,
                     "data": {
                         "activity_step": {
-                            "id": "admin-config",
+                            "id": "admin-config:read_admin_setup_summary",
                             "title": "Admin Config",
                             "status": "completed",
                         }
@@ -756,9 +756,12 @@ class FakeConversationClient:
                         "provider": "sage",
                         "tools_used": [
                             {
-                                "tool_id": "admin-config:read_instance_settings",
+                                "tool_id": "admin-config:read_admin_setup_summary",
                                 "tool_name": "Admin Config",
-                                "output_summary": "Read read_instance_settings.",
+                                "output_summary": (
+                                    "Read Admin Config setup summary: warnings, "
+                                    "2 item(s) need attention."
+                                ),
                             }
                         ],
                     },
@@ -769,13 +772,23 @@ class FakeConversationClient:
                 "provider": "sage",
                 "tools_used": [
                     {
-                        "tool_id": "admin-config",
+                        "tool_id": "admin-config:read_admin_setup_summary",
                         "tool_name": "Admin Config",
-                        "output_summary": "Read read_instance_settings.",
+                        "output_summary": (
+                            "Read Admin Config setup summary: warnings, "
+                            "2 item(s) need attention."
+                        ),
                     }
                 ],
             },
-            trace={"tools": [{"id": "admin-config", "name": "Admin Config"}]},
+            trace={
+                "tools": [
+                    {
+                        "id": "admin-config:read_admin_setup_summary",
+                        "name": "Admin Config",
+                    }
+                ]
+            },
             admin_change_set=None,
             timings={
                 "first_event_ms": 10.0,
@@ -1177,6 +1190,88 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(artifact["summary"]["status"], "failed")
         self.assertEqual(checks["admin_change_set_not_staged"]["severity"], "hard")
         self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
+
+    def test_admin_readiness_requires_setup_summary_tool(self) -> None:
+        class FakeLowLevelReadFanoutClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                low_level_tools = [
+                    {
+                        "tool_id": "admin-config:read_deployment_readiness",
+                        "tool_name": "Admin Config",
+                        "output_summary": "Read read_deployment_readiness.",
+                    },
+                    {
+                        "tool_id": "admin-config:read_instance_settings",
+                        "tool_name": "Admin Config",
+                        "output_summary": "Read read_instance_settings.",
+                    },
+                    {
+                        "tool_id": "admin-config:read_user_types",
+                        "tool_name": "Admin Config",
+                        "output_summary": "Read read_user_types.",
+                    },
+                ]
+                return StreamResult(
+                    answer=result.answer,
+                    events=[
+                        {
+                            "event": "activity_step",
+                            "elapsed_ms": 25.0,
+                            "data": {
+                                "activity_step": {
+                                    "id": "admin-config:read_deployment_readiness",
+                                    "title": "Admin Config",
+                                    "status": "completed",
+                                }
+                            },
+                        },
+                        {
+                            "event": "answer_delta",
+                            "elapsed_ms": 100.0,
+                            "data": {"delta": "FreeThem is mostly configured."},
+                        },
+                        {
+                            "event": "done",
+                            "elapsed_ms": 120.0,
+                            "data": {
+                                "model": "kimi-k2-6",
+                                "provider": "sage",
+                                "tools_used": low_level_tools,
+                            },
+                        },
+                    ],
+                    done={**result.done, "tools_used": low_level_tools},
+                    trace={
+                        "tools": [
+                            {"id": tool["tool_id"], "name": "Admin Config"}
+                            for tool in low_level_tools
+                        ]
+                    },
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                    error=result.error,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_deployment_readiness",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeLowLevelReadFanoutClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["admin_setup_summary_tool_used"]["severity"], "hard")
+        self.assertEqual(checks["admin_setup_summary_tool_used"]["status"], "failed")
+        self.assertEqual(
+            checks["broad_status_avoids_low_level_read_fanout"]["status"],
+            "failed",
+        )
 
     def test_admin_readiness_fails_when_stream_change_set_payload_is_staged(self) -> None:
         class FakeStagedChangeSetClient(FakeConversationClient):
