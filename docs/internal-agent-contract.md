@@ -542,6 +542,10 @@ The proposal Tool stages canonical Admin Config write shapes:
   array, such as
   `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
+- `POST /admin/user-fields` for onboarding questions, plus supported
+  `PUT/DELETE /admin/user-fields...` mutation paths.
+- `PUT /admin/deployment/config/{key}` for deployment config values.
+- `PUT/DELETE /ingest/admin/documents/...` defaults paths for document access.
 
 Sage may normalize only the known small drift at the proposal boundary:
 `/admin/user_types` to `/admin/user-types`, `tagline` to `header_tagline`, and

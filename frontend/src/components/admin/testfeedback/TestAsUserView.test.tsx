@@ -253,7 +253,9 @@ describe('TestAsUserView', () => {
     const request = lastCall?.[0];
     expect(request?.tools).not.toContain('admin-config');
     expect(request?.tools).not.toContain('db-query');
-    expect(fetch).toHaveBeenCalledWith('/api/session-defaults?user_type_id=1');
+    expect(fetch).toHaveBeenCalledWith('/api/session-defaults?user_type_id=1', {
+      credentials: 'include',
+    });
   });
 
   it('uses a conservative Tool Set fallback when user defaults cannot be loaded', async () => {
@@ -276,6 +278,50 @@ describe('TestAsUserView', () => {
         })
       );
     });
+  });
+
+  it('removes an unfinished assistant placeholder when streaming fails before done', async () => {
+    mockSendLlmChatStreamWithUnifiedTools.mockImplementationOnce(
+      async (options) => {
+        options.onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'sage-1',
+        });
+        options.onEvent('answer_delta', {
+          delta: 'Partial answer',
+          session_id: 'sage-1',
+        });
+        throw new Error('Sage stream failed');
+      }
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'This stream will fail'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText('Sage stream failed')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+
+    await waitFor(() => {
+      expect(mockSaveTranscript).toHaveBeenCalled();
+    });
+    const savedTurns = mockSaveTranscript.mock.calls[0]?.[1] ?? [];
+    expect(savedTurns).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: 'This stream will fail',
+      }),
+    ]);
+    expect(savedTurns).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'assistant',
+        }),
+      ])
+    );
   });
 
   it('does not start a test chat when synthetic User auth is unavailable', async () => {

@@ -79,7 +79,9 @@ async function fetchUserSessionToolDefaults(
   userTypeId: number | null
 ): Promise<UserSessionToolDefaults> {
   try {
-    const response = await fetch(sessionDefaultsUrl(userTypeId));
+    const response = await fetch(sessionDefaultsUrl(userTypeId), {
+      credentials: 'include',
+    });
     if (response.ok) {
       return resolveUserSessionToolDefaults(await response.json());
     }
@@ -100,18 +102,16 @@ function streamPayloadRecord(payload: unknown): Record<string, unknown> {
     : {};
 }
 
-function updateLastAssistantTurn(
+function completedTranscriptTurns(
   turns: TranscriptTurn[],
-  update: (turn: TranscriptTurn) => TranscriptTurn
+  completedAssistantTurnIds: ReadonlySet<string>
 ): TranscriptTurn[] {
-  for (let index = turns.length - 1; index >= 0; index -= 1) {
-    const currentTurn = turns[index];
-    if (!currentTurn || currentTurn.role !== 'assistant') continue;
-    const nextTurns = turns.slice();
-    nextTurns[index] = update(currentTurn);
-    return nextTurns;
-  }
-  return turns;
+  return turns.filter((turn) => {
+    if (turn.role !== 'assistant') return true;
+    return (
+      typeof turn.ts === 'string' && completedAssistantTurnIds.has(turn.ts)
+    );
+  });
 }
 
 /**
@@ -138,6 +138,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const [chatError, setChatError] = useState<string | null>(null);
   const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const completedAssistantTurnIdsRef = useRef<Set<string>>(new Set());
 
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -179,6 +180,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       setTurns([]);
       setStreamStatus(null);
       sessionIdRef.current = null;
+      completedAssistantTurnIdsRef.current.clear();
     } catch (err) {
       setStartError(
         err instanceof Error ? err.message : 'Failed to start a test session'
@@ -202,21 +204,34 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     };
     setTurns((prev) => [...prev, userTurn]);
     setSending(true);
-    try {
-      let assistantStarted = false;
-      let assistantContent = '';
-      let assistantTrace: TranscriptTurn['trace'] = null;
-      let assistantTools: TranscriptTurn['tools_used'] = [];
+    let assistantStarted = false;
+    let assistantCompleted = false;
+    let assistantTurnId: string | null = null;
+    let assistantContent = '';
+    let assistantTrace: TranscriptTurn['trace'] = null;
+    let assistantTools: TranscriptTurn['tools_used'] = [];
 
+    const removePendingAssistantTurn = () => {
+      if (!assistantStarted || assistantCompleted || !assistantTurnId) return;
+      completedAssistantTurnIdsRef.current.delete(assistantTurnId);
+      setTurns((prev) => {
+        return prev.filter(
+          (turn) => !(turn.role === 'assistant' && turn.ts === assistantTurnId)
+        );
+      });
+    };
+
+    try {
       const ensureAssistantTurn = () => {
         if (assistantStarted) return;
         assistantStarted = true;
+        assistantTurnId = new Date().toISOString();
         setTurns((prev) => [
           ...prev,
           {
             role: 'assistant',
             content: '',
-            ts: new Date().toISOString(),
+            ts: assistantTurnId,
             trace: null,
             tools_used: [],
           },
@@ -227,7 +242,15 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         update: (turn: TranscriptTurn) => TranscriptTurn
       ) => {
         ensureAssistantTurn();
-        setTurns((prev) => updateLastAssistantTurn(prev, update));
+        const targetTurnId = assistantTurnId;
+        if (!targetTurnId) return;
+        setTurns((prev) =>
+          prev.map((turn) =>
+            turn.role === 'assistant' && turn.ts === targetTurnId
+              ? update(turn)
+              : turn
+          )
+        );
       };
 
       // When acting as the test user, send the impersonation bearer so Sage
@@ -294,6 +317,10 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
               trace: assistantTrace ?? turn.trace ?? null,
               tools_used: assistantTools ?? [],
             }));
+            if (assistantTurnId) {
+              completedAssistantTurnIdsRef.current.add(assistantTurnId);
+            }
+            assistantCompleted = true;
             return;
           }
 
@@ -307,6 +334,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         },
       });
     } catch (err) {
+      removePendingAssistantTurn();
       setChatError(err instanceof Error ? err.message : 'Chat failed');
     } finally {
       setStreamStatus(null);
@@ -315,7 +343,11 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   }, [input, sending, session, t]);
 
   const endAndSave = useCallback(async () => {
-    if (!session || turns.length === 0 || sending) return;
+    const completedTurns = completedTranscriptTurns(
+      turns,
+      completedAssistantTurnIdsRef.current
+    );
+    if (!session || completedTurns.length === 0 || sending) return;
     setSaving(true);
     setSavedNotice(null);
     try {
@@ -327,7 +359,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         user_type_id: session.userTypeId,
         sage_session_id: sessionIdRef.current,
       });
-      await saveTranscript(log.log_id, turns, title);
+      await saveTranscript(log.log_id, completedTurns, title);
       setSavedNotice(
         t(
           'adminTestFeedback.test.saved',
@@ -337,6 +369,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       setSession(null);
       setTurns([]);
       sessionIdRef.current = null;
+      completedAssistantTurnIdsRef.current.clear();
       onSaved?.();
     } catch (err) {
       setChatError(err instanceof Error ? err.message : 'Failed to save trial');
@@ -351,6 +384,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setChatError(null);
     setStreamStatus(null);
     sessionIdRef.current = null;
+    completedAssistantTurnIdsRef.current.clear();
   }, []);
 
   const exitSession = useCallback(() => {
@@ -361,6 +395,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setStreamStatus(null);
     setSavedNotice(null);
     sessionIdRef.current = null;
+    completedAssistantTurnIdsRef.current.clear();
   }, []);
 
   // --- Persona picker (no active session) ---
