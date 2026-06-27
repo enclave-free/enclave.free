@@ -26,6 +26,15 @@ import { API_BASE } from '../../../types/onboarding';
 const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
 const KNOWLEDGE_SEARCH_TOOL_ID = 'knowledge-search';
 const WEB_SEARCH_TOOL_ID = 'web-search';
+let assistantTurnSequence = 0;
+
+function generateAssistantTurnId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return `assistant-turn-${globalThis.crypto.randomUUID()}`;
+  }
+  assistantTurnSequence += 1;
+  return `assistant-turn-${Date.now()}-${assistantTurnSequence}`;
+}
 
 interface UserSessionToolDefaults {
   tools: string[];
@@ -222,10 +231,13 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     };
 
     try {
-      const ensureAssistantTurn = () => {
+      const ensureAssistantTurn = (candidateTurnId?: unknown) => {
         if (assistantStarted) return;
         assistantStarted = true;
-        assistantTurnId = new Date().toISOString();
+        assistantTurnId =
+          typeof candidateTurnId === 'string' && candidateTurnId.trim()
+            ? candidateTurnId
+            : generateAssistantTurnId();
         setTurns((prev) => [
           ...prev,
           {
@@ -239,9 +251,10 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       };
 
       const updateAssistantTurn = (
-        update: (turn: TranscriptTurn) => TranscriptTurn
+        update: (turn: TranscriptTurn) => TranscriptTurn,
+        candidateTurnId?: unknown
       ) => {
-        ensureAssistantTurn();
+        ensureAssistantTurn(candidateTurnId);
         const targetTurnId = assistantTurnId;
         if (!targetTurnId) return;
         setTurns((prev) =>
@@ -268,7 +281,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
           }
 
           if (event === 'assistant_message_started') {
-            ensureAssistantTurn();
+            ensureAssistantTurn(data.message_id);
             setStreamStatus(
               t('chat.trace.finalizing', 'Finalizing response...')
             );
@@ -276,7 +289,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
           }
 
           if (event === 'trace_status') {
-            ensureAssistantTurn();
+            ensureAssistantTurn(data.message_id);
             if (typeof data.status === 'string' && data.status.trim()) {
               setStreamStatus(data.status);
             }
@@ -287,10 +300,13 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
             const delta = typeof data.delta === 'string' ? data.delta : '';
             assistantContent += delta;
             setStreamStatus(null);
-            updateAssistantTurn((turn) => ({
-              ...turn,
-              content: assistantContent,
-            }));
+            updateAssistantTurn(
+              (turn) => ({
+                ...turn,
+                content: assistantContent,
+              }),
+              data.message_id
+            );
             return;
           }
 
@@ -299,10 +315,13 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
               data.trace === null || data.trace === undefined
                 ? null
                 : (data.trace as TranscriptTurn['trace']);
-            updateAssistantTurn((turn) => ({
-              ...turn,
-              trace: assistantTrace,
-            }));
+            updateAssistantTurn(
+              (turn) => ({
+                ...turn,
+                trace: assistantTrace,
+              }),
+              data.message_id
+            );
             return;
           }
 
@@ -311,12 +330,15 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
             assistantTools = Array.isArray(data.tools_used)
               ? (data.tools_used as TranscriptTurn['tools_used'])
               : [];
-            updateAssistantTurn((turn) => ({
-              ...turn,
-              content: assistantContent,
-              trace: assistantTrace ?? turn.trace ?? null,
-              tools_used: assistantTools ?? [],
-            }));
+            updateAssistantTurn(
+              (turn) => ({
+                ...turn,
+                content: assistantContent,
+                trace: assistantTrace ?? turn.trace ?? null,
+                tools_used: assistantTools ?? [],
+              }),
+              data.message_id
+            );
             if (assistantTurnId) {
               completedAssistantTurnIdsRef.current.add(assistantTurnId);
             }

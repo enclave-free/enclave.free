@@ -553,11 +553,6 @@ class FakeConversationClient:
                     "provider": "sage",
                     "tools_used": [
                         {
-                            "tool_id": "admin-config:read_instance_settings",
-                            "tool_name": "Admin Config",
-                            "output_summary": "Read read_instance_settings.",
-                        },
-                        {
                             "tool_id": "admin-config:propose_admin_config_bootstrap",
                             "tool_name": "Admin Config",
                             "output_summary": "Prepared bootstrap change set: Bootstrap FreeThem",
@@ -637,7 +632,6 @@ class FakeConversationClient:
                 },
                 trace={
                     "tools": [
-                        {"id": "admin-config:read_instance_settings", "name": "Admin Config"},
                         {
                             "id": "admin-config:propose_admin_config_bootstrap",
                             "name": "Admin Config",
@@ -1362,6 +1356,9 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["baseline_settings_present"], "passed")
         self.assertEqual(checks["user_types_present"], "passed")
         self.assertEqual(checks["typed_bootstrap_tool_used"], "passed")
+        self.assertEqual(
+            checks["bootstrap_uses_only_typed_bootstrap_tool"], "passed"
+        )
         self.assertEqual(checks["onboarding_fields_present"], "passed")
         self.assertEqual(checks["behavior_rules_present"], "passed")
         self.assertEqual(
@@ -1396,11 +1393,57 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["live_onboarding_baseline_settings_present"], "passed")
         self.assertEqual(checks["live_onboarding_instance_name_preserved"], "passed")
         self.assertEqual(checks["live_onboarding_dark_theme_preserved"], "passed")
+        self.assertEqual(
+            checks["live_onboarding_default_language_normalized"], "passed"
+        )
         self.assertEqual(checks["live_onboarding_auto_approval_enabled"], "passed")
         self.assertEqual(checks["live_onboarding_user_types_present"], "passed")
         self.assertEqual(severities["live_onboarding_user_type_content_present"], "hard")
         self.assertEqual(checks["live_onboarding_does_not_create_user_fields"], "passed")
         self.assertEqual(checks["live_onboarding_does_not_create_behavior_rules"], "passed")
+
+    def test_admin_config_live_onboarding_prompt_requires_language_normalization(
+        self,
+    ) -> None:
+        class FakeEnglishLanguageClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                admin_change_set = dict(result.admin_change_set or {})
+                requests = list(admin_change_set.get("requests") or [])
+                settings = dict(requests[0])
+                settings["body"] = {
+                    **settings.get("body", {}),
+                    "default_language": "english",
+                }
+                requests[0] = settings
+                admin_change_set["requests"] = requests
+                done = dict(result.done)
+                done["admin_change_set"] = admin_change_set
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=done,
+                    trace=result.trace,
+                    admin_change_set=admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_config_live_onboarding_prompt",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeEnglishLanguageClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(
+            checks["live_onboarding_default_language_normalized"], "failed"
+        )
 
     def test_admin_config_live_onboarding_prompt_rejects_forbidden_agent_config_writes(
         self,
@@ -1611,6 +1654,97 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             checks["generic_change_set_tool_not_used_for_bootstrap"], "failed"
         )
+
+    def test_admin_config_bootstrap_scenario_rejects_read_before_write_fanout(
+        self,
+    ) -> None:
+        class FakeReadFanoutBootstrapClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                done = dict(result.done)
+                done["tools_used"] = [
+                    {
+                        "tool_id": "admin-config:read_instance_settings",
+                        "tool_name": "Admin Config",
+                        "output_summary": "Read read_instance_settings.",
+                    },
+                    *(done.get("tools_used") or []),
+                ]
+                trace = dict(result.trace or {})
+                trace["tools"] = [
+                    {"id": "admin-config:read_instance_settings", "name": "Admin Config"},
+                    *(trace.get("tools") or []),
+                ]
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=done,
+                    trace=trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_config_bootstrap",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeReadFanoutBootstrapClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(
+            checks["bootstrap_uses_only_typed_bootstrap_tool"], "failed"
+        )
+        self.assertEqual(checks["typed_bootstrap_tool_used"], "passed")
+
+    def test_admin_config_bootstrap_scenario_rejects_malformed_agent_rules(
+        self,
+    ) -> None:
+        class FakeMalformedRulesBootstrapClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                admin_change_set = dict(result.admin_change_set or {})
+                requests = []
+                for request in admin_change_set.get("requests") or []:
+                    if request.get("path") == "/admin/ai-config/prompt_rules":
+                        request = {
+                            **request,
+                            "body": {
+                                "value": "Ask where users are before location-specific guidance."
+                            },
+                        }
+                    requests.append(request)
+                admin_change_set["requests"] = requests
+                done = dict(result.done)
+                done["admin_change_set"] = admin_change_set
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=done,
+                    trace=result.trace,
+                    admin_change_set=admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_config_bootstrap",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeMalformedRulesBootstrapClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["behavior_rules_present"], "failed")
 
     def test_user_knowledge_assistance_records_retrieval_evidence(self) -> None:
         env = FakeEnvironment()

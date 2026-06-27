@@ -491,6 +491,7 @@ describe('TestAsUserView', () => {
           expect.objectContaining({
             role: 'assistant',
             content: 'I found vetted resources.',
+            ts: 'msg-1',
             tools_used: [
               expect.objectContaining({
                 tool_id: 'curated-resources',

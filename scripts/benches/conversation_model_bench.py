@@ -580,6 +580,7 @@ def admin_config_bootstrap_checks(
         "you'll need to apply",
         "you need to apply",
     ]
+    non_bootstrap_admin_tools = non_bootstrap_admin_config_tools(tool_evidence)
 
     return [
         check(
@@ -596,6 +597,17 @@ def admin_config_bootstrap_checks(
                 for evidence in tool_evidence
             ),
             "hard",
+        ),
+        check(
+            "bootstrap_uses_only_typed_bootstrap_tool",
+            not non_bootstrap_admin_tools,
+            "hard",
+            (
+                "non-bootstrap Admin Config tools used: "
+                + ", ".join(sorted(non_bootstrap_admin_tools))
+            )
+            if non_bootstrap_admin_tools
+            else None,
         ),
         check(
             "generic_change_set_tool_not_used_for_bootstrap",
@@ -697,6 +709,11 @@ def admin_config_live_onboarding_prompt_checks(
         check(
             "live_onboarding_dark_theme_preserved",
             settings_body.get("default_theme") == "dark",
+            "hard",
+        ),
+        check(
+            "live_onboarding_default_language_normalized",
+            settings_body.get("default_language") == "en",
             "hard",
         ),
         check(
@@ -1005,8 +1022,20 @@ def has_agent_rules_request(requests: list[Any], key: str) -> bool:
             continue
         body = request.get("body")
         value = body.get("value") if isinstance(body, dict) else None
-        return isinstance(value, str) and bool(value.strip())
+        return is_json_string_array(value)
     return False
+
+
+def is_json_string_array(value: Any) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(parsed, list) and all(
+        isinstance(item, str) and bool(item.strip()) for item in parsed
+    ) and bool(parsed)
 
 
 def any_admin_config_bootstrap_rejection(tool_evidence: list[dict[str, Any]]) -> bool:
@@ -1131,6 +1160,27 @@ def admin_config_tool_invoked(evidence: dict[str, Any], tool_name: str) -> bool:
         or tool_id == f"tool-admin-config:{tool_name}"
         or tool_id == tool_name
     )
+
+
+def non_bootstrap_admin_config_tools(
+    tool_evidence: list[dict[str, Any]],
+) -> set[str]:
+    non_bootstrap_tools: set[str] = set()
+    for evidence in tool_evidence:
+        if not tool_evidence_matches(evidence, "admin-config"):
+            continue
+        if admin_config_tool_invoked(evidence, "propose_admin_config_bootstrap"):
+            continue
+        tool_id = str(evidence.get("tool_id") or "").strip()
+        if tool_id.startswith("tool-admin-config:"):
+            non_bootstrap_tools.add(tool_id.removeprefix("tool-admin-config:"))
+        elif tool_id.startswith("admin-config:"):
+            non_bootstrap_tools.add(tool_id.removeprefix("admin-config:"))
+        elif tool_id:
+            non_bootstrap_tools.add(tool_id)
+        else:
+            non_bootstrap_tools.add(str(evidence.get("tool_name") or "admin-config"))
+    return non_bootstrap_tools
 
 
 def count_low_level_admin_config_reads(tool_evidence: list[dict[str, Any]]) -> int:

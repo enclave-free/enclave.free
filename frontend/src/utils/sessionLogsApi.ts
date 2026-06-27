@@ -31,6 +31,7 @@ export interface TranscriptTrace {
     title?: string | null;
     summary?: string | null;
     score?: number | null;
+    metadata?: Record<string, unknown>;
   }>;
   trace_deltas?: Array<{
     id?: string | null;
