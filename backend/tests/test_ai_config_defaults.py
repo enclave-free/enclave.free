@@ -55,6 +55,7 @@ class AIConfigDefaultsTest(unittest.TestCase):
         self.assertTrue(any("PUT /admin/deployment/config/{key}" in rule for rule in rules_value))
         self.assertTrue(any("PUT /admin/ai-config/prompt_rules" in rule for rule in rules_value))
         self.assertTrue(any("PUT /admin/ai-config/prompt_forbidden" in rule for rule in rules_value))
+        self.assertTrue(any("POST/PUT/DELETE /admin/user-fields" in rule for rule in rules_value))
         self.assertTrue(any("/ingest/admin/documents/..." in rule for rule in rules_value))
         self.assertTrue(any("do not surface them merely because a topic matches" in rule for rule in rules_value))
         self.assertFalse(any(rule == "ONE action per response when providing step-by-step guidance" for rule in rules_value))

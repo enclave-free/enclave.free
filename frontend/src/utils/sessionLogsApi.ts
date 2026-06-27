@@ -7,10 +7,51 @@
  */
 
 import { adminFetch } from './adminApi';
-import type { ConversationTrace } from '../components/chat/ChatMessage';
 
 export type SessionLogSource = 'admin_test' | 'user';
 export type FeedbackRating = 'up' | 'down';
+
+export interface TranscriptTrace {
+  visibility?: 'off' | 'minimal' | 'summary' | 'detailed' | string | null;
+  reasoning?: {
+    summary?: string | null;
+  } | null;
+  tools?: Array<{
+    id?: string | null;
+    name?: string | null;
+    status?: string | null;
+    execution?: string | null;
+    input_summary?: string | null;
+    output_summary?: string | null;
+    warnings?: string[];
+    metadata?: Record<string, unknown>;
+  }>;
+  retrieval?: Array<{
+    source_type?: string | null;
+    title?: string | null;
+    summary?: string | null;
+    score?: number | null;
+  }>;
+  trace_deltas?: Array<{
+    id?: string | null;
+    kind?: string | null;
+    title?: string | null;
+    content?: string | null;
+    tool_name?: string | null;
+    status?: string | null;
+    metadata?: Record<string, unknown>;
+    created_at?: string | null;
+  }>;
+  activity_steps?: Array<{
+    id?: string | null;
+    kind?: string | null;
+    title?: string | null;
+    status?: string | null;
+    summary?: string | null;
+    warnings?: string[];
+  }>;
+  suppressed?: boolean;
+}
 
 export interface TranscriptToolCall {
   tool_id: string;
@@ -25,7 +66,7 @@ export interface TranscriptTurn {
   role: string; // 'user' | 'assistant' | 'system'
   content: string;
   ts?: string | null;
-  trace?: ConversationTrace | null;
+  trace?: TranscriptTrace | null;
   tools_used: TranscriptToolCall[];
 }
 

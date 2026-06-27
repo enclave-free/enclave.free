@@ -20,6 +20,7 @@ from scripts.benches.conversation_model_bench import (
     BenchOptions,
     HttpConversationClient,
     LocalComposeEnvironment,
+    SCENARIOS,
     StreamResult,
     parse_args,
     run_bench,
@@ -1350,9 +1351,12 @@ class ConversationModelBenchTest(unittest.TestCase):
 
         scenario = artifact["candidates"][0]["scenarios"][0]
         checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        scenario_prompt = SCENARIOS["admin_config_bootstrap"].message
 
         self.assertEqual(scenario["id"], "admin_config_bootstrap")
         self.assertEqual(artifact["summary"]["status"], "passed")
+        self.assertIn("propose_admin_config_bootstrap directly", scenario_prompt)
+        self.assertNotIn("Read the current Admin Config first", scenario_prompt)
         self.assertEqual(checks["admin_change_set_present"], "passed")
         self.assertEqual(checks["admin_change_set_uses_canonical_paths"], "passed")
         self.assertEqual(checks["baseline_settings_present"], "passed")
@@ -1440,6 +1444,71 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             checks["live_onboarding_does_not_create_behavior_rules"], "failed"
         )
+
+    def test_admin_config_live_onboarding_prompt_requires_separate_user_type_entries(
+        self,
+    ) -> None:
+        class FakeCombinedUserTypeClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                admin_change_set = dict(result.admin_change_set or {})
+                admin_change_set["requests"] = [
+                    {
+                        "method": "PUT",
+                        "path": "/admin/settings",
+                        "body": {
+                            "instance_name": "FreeThem",
+                            "assistant_name": "Liberty",
+                            "header_tagline": "political prisoners support team",
+                            "description": "World Liberty Congress support team",
+                            "primary_color": "#2563EB",
+                            "default_theme": "dark",
+                            "default_language": "en",
+                            "auto_approve_users": True,
+                        },
+                    },
+                    {
+                        "method": "POST",
+                        "path": "/admin/user-types",
+                        "body": {
+                            "name": "Families, current prisoners, former prisoners, and aftercare",
+                            "description": "Combined malformed catch-all type.",
+                        },
+                    },
+                    {
+                        "method": "POST",
+                        "path": "/admin/user-types",
+                        "body": {
+                            "name": "General Supporter",
+                            "description": "Unrelated second type.",
+                        },
+                    },
+                ]
+                done = dict(result.done)
+                done["admin_change_set"] = admin_change_set
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=done,
+                    trace=result.trace,
+                    admin_change_set=admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                api_base="http://127.0.0.1:18000",
+                scenarios=("admin_config_live_onboarding_prompt",),
+            ),
+            environment=FakeEnvironment(),
+            client=FakeCombinedUserTypeClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(checks["live_onboarding_user_type_content_present"], "failed")
 
     def test_admin_config_live_onboarding_prompt_fails_when_bootstrap_is_rejected(self) -> None:
         class FakeRejectedBootstrapClient(FakeConversationClient):

@@ -79,6 +79,7 @@ Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private 
 `admin-config` is an admin-only Tool Set. It should expose concrete model-callable Tools rather than a prompt-ready scoped prompt blob. Initial Tools should include:
 
 - `read_instance_settings`
+- `read_admin_setup_summary`
 - `read_deployment_settings`
 - `read_deployment_readiness`
 - `read_agent_settings`
@@ -88,7 +89,7 @@ Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private 
 - `propose_admin_config_bootstrap`
 - `propose_config_change_set`
 
-Reads may happen directly within Admin Conversation authority. Guided setup/bootstrap write intent should use `propose_admin_config_bootstrap`, whose typed arguments describe instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and behavior rules. Other supported Admin Config writes may use `propose_config_change_set` as the lower-level escape hatch. Applying either proposal still requires Change Confirmation in the Conversation UI Surface.
+Reads may happen directly within Admin Conversation authority. Broad setup, status, and readiness questions should use `read_admin_setup_summary` first because it compacts readiness, missing setup, and next actions. Guided setup/bootstrap write intent should use `propose_admin_config_bootstrap`, whose typed arguments describe instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and behavior rules. Other supported Admin Config writes may use `propose_config_change_set` as the lower-level escape hatch. Applying either proposal still requires Change Confirmation in the Conversation UI Surface.
 
 Each proposal Tool is a model-callable, non-mutating Tool. They validate and stage a change set for review, but they never call admin mutation endpoints. Confirmed **Apply** remains a UI/admin action, not a model-authorized Tool call.
 

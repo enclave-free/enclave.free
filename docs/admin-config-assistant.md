@@ -74,6 +74,7 @@ Sidebar behavior:
 Initial Tools:
 
 - `read_instance_settings`
+- `read_admin_setup_summary`
 - `read_deployment_settings`
 - `read_deployment_readiness`
 - `read_agent_settings`
@@ -83,7 +84,7 @@ Initial Tools:
 - `propose_admin_config_bootstrap`
 - `propose_config_change_set`
 
-Tool descriptions should encourage Sage to inspect current Instance reality when it can answer the Admin's question. If the Admin asks what is configured, missing, ready, stale, stored, available, or still needing setup, Sage should call the relevant read Tool instead of asking the Admin to check manually.
+Tool descriptions should encourage Sage to inspect current Instance reality when it can answer the Admin's question. If the Admin asks broadly what is configured, missing, ready, stale, stored, available, or still needing setup, Sage should call `read_admin_setup_summary` first instead of manually fanning out across low-level read Tools. Narrow follow-up questions may call the relevant low-level read Tool directly.
 
 There is no `overview` fallback scope and no keyword category classifier. If one Tool result is not enough, Sage may call another enabled Tool in the same model-driven loop until it has enough evidence or hits deterministic limits.
 
