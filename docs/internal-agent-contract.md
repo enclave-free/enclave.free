@@ -413,6 +413,11 @@ Authorization behavior:
 
 Target private endpoints behind the Sage Tool contracts:
 
+Sage also exposes `read_admin_setup_summary` as a model-callable Admin Config
+Tool. It is a Sage-local aggregate over the lower-level Admin Config read
+contracts below, not a separate Python endpoint. Broad setup, status, and
+readiness questions should use it first.
+
 | Endpoint                                                 | Sage Tool                   | Notes                                                                                                                 |
 | -------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `POST /internal/agent/admin-config/instance-settings`    | `read_instance_settings`    | Instance branding, public behavior, visual identity, and other Instance Settings                                      |

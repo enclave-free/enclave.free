@@ -92,24 +92,39 @@ class SessionLogsTest(unittest.TestCase):
             ]
         )
 
-        assistant_turn = payload.turns[1].model_dump()
+        log = self.session_logs.create_session_log(title="Trace metadata test")
+        saved = self.session_logs.save_transcript(
+            log["log_id"],
+            payload.model_dump()["turns"],
+            created_by="admin",
+        )
+        self.assertTrue(saved["has_transcript"])
+
+        detail = self.session_logs.get_session_log(log["log_id"])
+        self.assertIsNotNone(detail)
+        decrypted_transcript = self.encryption.nip04_decrypt(
+            detail["transcript_ciphertext"],
+            detail["transcript_ephemeral_pubkey"],
+            self.admin_private_key,
+        )
+        persisted = json.loads(decrypted_transcript)
+        assistant_turn = persisted["turns"][1]
         self.assertEqual(
             assistant_turn["tools_used"][0]["tool_id"], "curated-resources"
         )
         self.assertEqual(
             assistant_turn["trace"]["tools"][0]["name"], "Curated Resources"
         )
-        dumped = payload.model_dump()
-        self.assertEqual(len(dumped["turns"]), 2)
-        self.assertEqual(dumped["turns"][0]["role"], "user")
-        self.assertEqual(dumped["turns"][0]["content"], "Find resources")
-        self.assertEqual(dumped["turns"][1]["role"], "assistant")
+        self.assertEqual(len(persisted["turns"]), 2)
+        self.assertEqual(persisted["turns"][0]["role"], "user")
+        self.assertEqual(persisted["turns"][0]["content"], "Find resources")
+        self.assertEqual(persisted["turns"][1]["role"], "assistant")
         self.assertEqual(
-            dumped["turns"][1]["tools_used"][0]["output_summary"],
+            persisted["turns"][1]["tools_used"][0]["output_summary"],
             "Found 2 vetted resources.",
         )
         self.assertEqual(
-            dumped["turns"][1]["trace"]["reasoning"]["summary"],
+            persisted["turns"][1]["trace"]["reasoning"]["summary"],
             "Sage used enabled tools before answering.",
         )
 

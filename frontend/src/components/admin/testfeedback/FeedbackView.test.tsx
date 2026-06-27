@@ -225,7 +225,7 @@ describe('FeedbackView', () => {
                   id: 'curated-resources',
                   name: 'Curated Resources',
                   status: 'succeeded',
-                  output_summary: null,
+                  output_summary: 'Found 2 vetted resources.',
                 },
               ],
               retrieval: [],
@@ -245,6 +245,9 @@ describe('FeedbackView', () => {
 
     expect(
       await screen.findByText('I found vetted resources.')
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText('Sage used enabled tools before answering.')
     ).toBeInTheDocument();
     expect(await screen.findByText('Curated Resources')).toBeInTheDocument();
     expect(screen.getByText('Found 2 vetted resources.')).toBeInTheDocument();

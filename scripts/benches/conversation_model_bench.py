@@ -151,7 +151,7 @@ SCENARIOS: dict[str, Scenario] = {
             "8. Let new users in right away. Create two simple user types: family and friends of current political prisoners, and former political prisoners with their family and friends.\n"
             "9. Add onboarding questions for what country the user is in and what kind of support they need. Include those answers in chat context.\n"
             "10. Add a behavior rule to ask where users are before giving location-specific guidance.\n"
-            "Read the current Admin Config first, then prepare the changes for review."
+            "Call propose_admin_config_bootstrap directly for this guided setup/bootstrap flow, then prepare the changes for review."
         ),
         tools=("admin-config",),
     ),
@@ -647,7 +647,7 @@ def admin_config_live_onboarding_prompt_checks(
     requests = change_set.get("requests") if isinstance(change_set, dict) else None
     request_list = requests if isinstance(requests, list) else []
     settings_body = settings_request_body(request_list)
-    user_type_text = "\n".join(user_type_request_texts(request_list)).lower()
+    user_type_texts = [text.lower() for text in user_type_request_texts(request_list)]
 
     return [
         check(
@@ -711,9 +711,7 @@ def admin_config_live_onboarding_prompt_checks(
         ),
         check(
             "live_onboarding_user_type_content_present",
-            "famil" in user_type_text
-            and "current" in user_type_text
-            and ("former" in user_type_text or "after" in user_type_text),
+            has_separate_live_onboarding_user_types(user_type_texts),
             "hard",
         ),
         check(
@@ -968,6 +966,24 @@ def user_type_request_texts(requests: list[Any]) -> list[str]:
         ]
         texts.append(" ".join(value for value in values if value.strip()))
     return texts
+
+
+def has_separate_live_onboarding_user_types(user_type_texts: list[str]) -> bool:
+    current_family_indexes = {
+        index
+        for index, text in enumerate(user_type_texts)
+        if "famil" in text and "current" in text
+    }
+    former_after_indexes = {
+        index
+        for index, text in enumerate(user_type_texts)
+        if "former" in text or "after" in text
+    }
+    return any(
+        current_index != former_index
+        for current_index in current_family_indexes
+        for former_index in former_after_indexes
+    )
 
 
 def count_user_field_requests(requests: list[Any]) -> int:
