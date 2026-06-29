@@ -10,7 +10,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { Button, Callout, Card } from '../../ui';
-import { sendLlmChatWithUnifiedTools } from '../../../utils/llmChat';
+import { sendLlmChatStreamWithUnifiedTools } from '../../../utils/llmChat';
 import {
   createSessionLog,
   getImpersonationStatus,
@@ -21,12 +21,106 @@ import {
   type AdminUserType,
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
+import { API_BASE } from '../../../types/onboarding';
+
+const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
+const KNOWLEDGE_SEARCH_TOOL_ID = 'knowledge-search';
+const WEB_SEARCH_TOOL_ID = 'web-search';
+let assistantTurnSequence = 0;
+
+function generateAssistantTurnId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return `assistant-turn-${globalThis.crypto.randomUUID()}`;
+  }
+  assistantTurnSequence += 1;
+  return `assistant-turn-${Date.now()}-${assistantTurnSequence}`;
+}
+
+interface UserSessionToolDefaults {
+  tools: string[];
+  documentIds: string[];
+  status: 'configured' | 'fallback';
+}
 
 interface ActiveSession {
   testUserId: number;
   userTypeId: number | null;
   personaName: string;
   token: string; // bearer token used to chat AS the test user
+  tools: string[];
+  documentIds: string[];
+  defaultsStatus: UserSessionToolDefaults['status'];
+}
+
+function sessionDefaultsUrl(userTypeId: number | null): string {
+  if (userTypeId === null) return `${API_BASE}/session-defaults`;
+  return `${API_BASE}/session-defaults?user_type_id=${encodeURIComponent(
+    String(userTypeId)
+  )}`;
+}
+
+function resolveUserSessionToolDefaults(
+  data: unknown
+): UserSessionToolDefaults {
+  const record = data && typeof data === 'object' ? data : {};
+  const defaultDocumentIds = Array.isArray(
+    (record as Record<string, unknown>).default_document_ids
+  )
+    ? ((record as Record<string, unknown>).default_document_ids as unknown[])
+        .filter((id): id is string => typeof id === 'string' && Boolean(id))
+        .slice()
+    : [];
+
+  return {
+    tools: [
+      CURATED_RESOURCES_TOOL_ID,
+      ...(defaultDocumentIds.length > 0 ? [KNOWLEDGE_SEARCH_TOOL_ID] : []),
+      (record as Record<string, unknown>).web_search_enabled === true
+        ? WEB_SEARCH_TOOL_ID
+        : null,
+    ].filter((tool): tool is string => typeof tool === 'string'),
+    documentIds: defaultDocumentIds,
+    status: 'configured',
+  };
+}
+
+async function fetchUserSessionToolDefaults(
+  userTypeId: number | null
+): Promise<UserSessionToolDefaults> {
+  try {
+    const response = await fetch(sessionDefaultsUrl(userTypeId), {
+      credentials: 'include',
+    });
+    if (response.ok) {
+      return resolveUserSessionToolDefaults(await response.json());
+    }
+  } catch {
+    // Fall back below to preserve the normal user chat default behavior.
+  }
+
+  return {
+    tools: [CURATED_RESOURCES_TOOL_ID],
+    documentIds: [],
+    status: 'fallback',
+  };
+}
+
+function streamPayloadRecord(payload: unknown): Record<string, unknown> {
+  return payload && typeof payload === 'object'
+    ? (payload as Record<string, unknown>)
+    : {};
+}
+
+function completedTranscriptTurns(
+  turns: TranscriptTurn[],
+  completedAssistantTurnIds: ReadonlySet<string>
+): TranscriptTurn[] {
+  return turns.filter((turn) => {
+    if (turn.role !== 'assistant') return true;
+    return (
+      typeof turn.ts === 'string' && completedAssistantTurnIds.has(turn.ts)
+    );
+  });
 }
 
 /**
@@ -51,7 +145,9 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const completedAssistantTurnIdsRef = useRef<Set<string>>(new Set());
 
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
@@ -80,14 +176,20 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       if (!token?.token) {
         throw new Error('Could not create a synthetic user session token');
       }
+      const defaults = await fetchUserSessionToolDefaults(selectedTypeId);
       setSession({
         testUserId: provisioned.user_id,
         userTypeId: selectedTypeId,
         personaName: personaName(selectedTypeId),
         token: token.token,
+        tools: defaults.tools,
+        documentIds: defaults.documentIds,
+        defaultsStatus: defaults.status,
       });
       setTurns([]);
+      setStreamStatus(null);
       sessionIdRef.current = null;
+      completedAssistantTurnIdsRef.current.clear();
     } catch (err) {
       setStartError(
         err instanceof Error ? err.message : 'Failed to start a test session'
@@ -102,50 +204,172 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     if (!content || sending) return;
     setInput('');
     setChatError(null);
+    setStreamStatus(null);
     const userTurn: TranscriptTurn = {
       role: 'user',
       content,
       ts: new Date().toISOString(),
+      tools_used: [],
     };
     setTurns((prev) => [...prev, userTurn]);
     setSending(true);
+    let assistantStarted = false;
+    let assistantCompleted = false;
+    let assistantTurnId: string | null = null;
+    let assistantContent = '';
+    let assistantTrace: TranscriptTurn['trace'] = null;
+    let assistantTools: TranscriptTurn['tools_used'] = [];
+
+    const removePendingAssistantTurn = () => {
+      if (!assistantStarted || assistantCompleted || !assistantTurnId) return;
+      completedAssistantTurnIdsRef.current.delete(assistantTurnId);
+      setTurns((prev) => {
+        return prev.filter(
+          (turn) => !(turn.role === 'assistant' && turn.ts === assistantTurnId)
+        );
+      });
+    };
+
     try {
+      const ensureAssistantTurn = (candidateTurnId?: unknown) => {
+        if (assistantStarted) return;
+        assistantStarted = true;
+        assistantTurnId =
+          typeof candidateTurnId === 'string' && candidateTurnId.trim()
+            ? candidateTurnId
+            : generateAssistantTurnId();
+        setTurns((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: '',
+            ts: assistantTurnId,
+            trace: null,
+            tools_used: [],
+          },
+        ]);
+      };
+
+      const updateAssistantTurn = (
+        update: (turn: TranscriptTurn) => TranscriptTurn,
+        candidateTurnId?: unknown
+      ) => {
+        ensureAssistantTurn(candidateTurnId);
+        const targetTurnId = assistantTurnId;
+        if (!targetTurnId) return;
+        setTurns((prev) =>
+          prev.map((turn) =>
+            turn.role === 'assistant' && turn.ts === targetTurnId
+              ? update(turn)
+              : turn
+          )
+        );
+      };
+
       // When acting as the test user, send the impersonation bearer so Sage
       // authenticates the chat as them (not the admin).
-      const res = await sendLlmChatWithUnifiedTools({
+      await sendLlmChatStreamWithUnifiedTools({
         content,
-        tools: [],
+        tools: session?.tools ?? [],
+        jobIds: session?.documentIds ?? [],
         sessionId: sessionIdRef.current,
         authToken: session?.token,
-      });
-      const data = (await res.json()) as {
-        message?: string;
-        session_id?: string;
-        detail?: string;
-      };
-      if (!res.ok) {
-        throw new Error(data?.detail || `HTTP ${res.status}`);
-      }
-      if (typeof data.session_id === 'string') {
-        sessionIdRef.current = data.session_id;
-      }
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.message ?? '',
-          ts: new Date().toISOString(),
+        onEvent: (event, payload) => {
+          const data = streamPayloadRecord(payload);
+          if (typeof data.session_id === 'string' && data.session_id.trim()) {
+            sessionIdRef.current = data.session_id;
+          }
+
+          if (event === 'assistant_message_started') {
+            ensureAssistantTurn(data.message_id);
+            setStreamStatus(
+              t('chat.trace.finalizing', 'Finalizing response...')
+            );
+            return;
+          }
+
+          if (event === 'trace_status') {
+            ensureAssistantTurn(data.message_id);
+            if (typeof data.status === 'string' && data.status.trim()) {
+              setStreamStatus(data.status);
+            }
+            return;
+          }
+
+          if (event === 'answer_delta') {
+            const delta = typeof data.delta === 'string' ? data.delta : '';
+            assistantContent += delta;
+            setStreamStatus(null);
+            updateAssistantTurn(
+              (turn) => ({
+                ...turn,
+                content: assistantContent,
+              }),
+              data.message_id
+            );
+            return;
+          }
+
+          if (event === 'trace_final') {
+            assistantTrace =
+              data.trace === null || data.trace === undefined
+                ? null
+                : (data.trace as TranscriptTurn['trace']);
+            updateAssistantTurn(
+              (turn) => ({
+                ...turn,
+                trace: assistantTrace,
+              }),
+              data.message_id
+            );
+            return;
+          }
+
+          if (event === 'done') {
+            setStreamStatus(null);
+            assistantTools = Array.isArray(data.tools_used)
+              ? (data.tools_used as TranscriptTurn['tools_used'])
+              : [];
+            updateAssistantTurn(
+              (turn) => ({
+                ...turn,
+                content: assistantContent,
+                trace: assistantTrace ?? turn.trace ?? null,
+                tools_used: assistantTools ?? [],
+              }),
+              data.message_id
+            );
+            if (assistantTurnId) {
+              completedAssistantTurnIdsRef.current.add(assistantTurnId);
+            }
+            assistantCompleted = true;
+            return;
+          }
+
+          if (event === 'error') {
+            throw new Error(
+              typeof data.detail === 'string' && data.detail.trim()
+                ? data.detail
+                : 'Chat failed'
+            );
+          }
         },
-      ]);
+      });
     } catch (err) {
+      removePendingAssistantTurn();
       setChatError(err instanceof Error ? err.message : 'Chat failed');
     } finally {
+      setStreamStatus(null);
       setSending(false);
     }
-  }, [input, sending, session]);
+  }, [input, sending, session, t]);
 
   const endAndSave = useCallback(async () => {
-    if (!session || turns.length === 0 || sending) return;
+    const completedTurns = completedTranscriptTurns(
+      turns,
+      completedAssistantTurnIdsRef.current
+    );
+    if (!session || completedTurns.length === 0 || sending) return;
     setSaving(true);
     setSavedNotice(null);
     try {
@@ -157,7 +381,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         user_type_id: session.userTypeId,
         sage_session_id: sessionIdRef.current,
       });
-      await saveTranscript(log.log_id, turns, title);
+      await saveTranscript(log.log_id, completedTurns, title);
       setSavedNotice(
         t(
           'adminTestFeedback.test.saved',
@@ -167,6 +391,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       setSession(null);
       setTurns([]);
       sessionIdRef.current = null;
+      completedAssistantTurnIdsRef.current.clear();
       onSaved?.();
     } catch (err) {
       setChatError(err instanceof Error ? err.message : 'Failed to save trial');
@@ -179,7 +404,9 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setTurns([]);
     setInput('');
     setChatError(null);
+    setStreamStatus(null);
     sessionIdRef.current = null;
+    completedAssistantTurnIdsRef.current.clear();
   }, []);
 
   const exitSession = useCallback(() => {
@@ -187,8 +414,10 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setTurns([]);
     setInput('');
     setChatError(null);
+    setStreamStatus(null);
     setSavedNotice(null);
     sessionIdRef.current = null;
+    completedAssistantTurnIdsRef.current.clear();
   }, []);
 
   // --- Persona picker (no active session) ---
@@ -257,6 +486,9 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   }
 
   // --- Active session: synthetic user chat ---
+  const showingStreamingAssistant =
+    sending && turns[turns.length - 1]?.role === 'assistant';
+
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-wrap items-center justify-between gap-3">
@@ -320,29 +552,42 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
               )}
             </div>
           ) : (
-            turns.map((turn, index) => (
-              <div
-                key={index}
-                className={
-                  turn.role === 'user'
-                    ? 'flex justify-end'
-                    : 'flex justify-start'
-                }
-              >
+            turns.map((turn, index) => {
+              const isStreamingAssistant =
+                sending &&
+                turn.role === 'assistant' &&
+                index === turns.length - 1;
+
+              return (
                 <div
-                  className={[
-                    'max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm',
+                  key={index}
+                  className={
                     turn.role === 'user'
-                      ? 'bg-accent text-accent-text'
-                      : 'bg-surface-overlay text-text',
-                  ].join(' ')}
+                      ? 'flex justify-end'
+                      : 'flex justify-start'
+                  }
                 >
-                  {turn.content || <span className="text-text-muted">…</span>}
+                  <div
+                    className={[
+                      'max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm',
+                      turn.role === 'user'
+                        ? 'bg-accent text-accent-text'
+                        : 'bg-surface-overlay text-text',
+                    ].join(' ')}
+                  >
+                    {turn.content || <span className="text-text-muted">…</span>}
+                    {isStreamingAssistant && streamStatus && (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-text-muted">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>{streamStatus}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
-          {sending && (
+          {sending && !showingStreamingAssistant && (
             <div className="flex justify-start">
               <div className="rounded-2xl bg-surface-overlay px-3.5 py-2 text-text-muted">
                 <Loader2 className="h-4 w-4 animate-spin" />
