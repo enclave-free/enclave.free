@@ -413,6 +413,11 @@ Authorization behavior:
 
 Target private endpoints behind the Sage Tool contracts:
 
+Sage also exposes `read_admin_setup_summary` as a model-callable Admin Config
+Tool. It is a Sage-local aggregate over the lower-level Admin Config read
+contracts below, not a separate Python endpoint. Broad setup, status, and
+readiness questions should use it first.
+
 | Endpoint                                                 | Sage Tool                   | Notes                                                                                                                 |
 | -------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `POST /internal/agent/admin-config/instance-settings`    | `read_instance_settings`    | Instance branding, public behavior, visual identity, and other Instance Settings                                      |
@@ -542,6 +547,10 @@ The proposal Tool stages canonical Admin Config write shapes:
   array, such as
   `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
+- `POST /admin/user-fields` for onboarding questions, plus supported
+  `PUT/DELETE /admin/user-fields...` mutation paths.
+- `PUT /admin/deployment/config/{key}` for deployment config values.
+- `PUT/DELETE /ingest/admin/documents/...` defaults paths for document access.
 
 Sage may normalize only the known small drift at the proposal boundary:
 `/admin/user_types` to `/admin/user-types`, `tagline` to `header_tagline`, and

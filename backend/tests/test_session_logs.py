@@ -58,6 +58,76 @@ class SessionLogsTest(unittest.TestCase):
         with self.database.get_cursor() as cursor:
             cursor.execute("DELETE FROM admins")
 
+    def test_session_log_save_payload_preserves_trace_and_tool_metadata(self) -> None:
+        from models import SessionLogSaveTranscript
+
+        payload = SessionLogSaveTranscript(
+            turns=[
+                {"role": "user", "content": "Find resources"},
+                {
+                    "role": "assistant",
+                    "content": "I found vetted resources.",
+                    "tools_used": [
+                        {
+                            "tool_id": "curated-resources",
+                            "tool_name": "Curated Resources",
+                            "output_summary": "Found 2 vetted resources.",
+                        }
+                    ],
+                    "trace": {
+                        "visibility": "detailed",
+                        "reasoning": {
+                            "summary": "Sage used enabled tools before answering."
+                        },
+                        "tools": [
+                            {
+                                "id": "curated-resources",
+                                "name": "Curated Resources",
+                                "status": "succeeded",
+                                "output_summary": "Found 2 vetted resources.",
+                            }
+                        ],
+                    },
+                },
+            ]
+        )
+
+        log = self.session_logs.create_session_log(title="Trace metadata test")
+        saved = self.session_logs.save_transcript(
+            log["log_id"],
+            payload.model_dump()["turns"],
+            created_by="admin",
+        )
+        self.assertTrue(saved["has_transcript"])
+
+        detail = self.session_logs.get_session_log(log["log_id"])
+        self.assertIsNotNone(detail)
+        decrypted_transcript = self.encryption.nip04_decrypt(
+            detail["transcript_ciphertext"],
+            detail["transcript_ephemeral_pubkey"],
+            self.admin_private_key,
+        )
+        persisted = json.loads(decrypted_transcript)
+        assistant_turn = persisted["turns"][1]
+        self.assertEqual(
+            assistant_turn["tools_used"][0]["tool_id"], "curated-resources"
+        )
+        self.assertEqual(
+            assistant_turn["trace"]["tools"][0]["name"], "Curated Resources"
+        )
+        self.assertEqual(len(persisted["turns"]), 2)
+        self.assertEqual(persisted["turns"][0]["role"], "user")
+        self.assertEqual(persisted["turns"][0]["content"], "Find resources")
+        self.assertEqual(persisted["turns"][1]["role"], "assistant")
+        self.assertEqual(
+            persisted["turns"][1]["tools_used"][0]["output_summary"],
+            "Found 2 vetted resources.",
+        )
+        self.assertEqual(
+            persisted["turns"][1]["trace"]["reasoning"]["summary"],
+            "Sage used enabled tools before answering.",
+        )
+
     def test_saving_missing_session_log_leaves_no_transcript_artifact(self) -> None:
         turns = [
             {"role": "user", "content": "please help me test this instance"},

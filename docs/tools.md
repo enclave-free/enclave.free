@@ -55,7 +55,7 @@ Visible Tool Sets are conversation controls and permission bundles:
 | `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                  |
 | `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory                                    |
 | `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service                                           |
-| `admin-config`      | admins only                                   | admin configuration read Tools and the non-mutating `propose_config_change_set` proposal Tool |
+| `admin-config`      | admins only                                   | admin configuration read Tools, typed bootstrap proposal Tool, and lower-level change-set proposal Tool |
 | `db-query`          | admins only                                   | read-only database inspection Tools                                                           |
 
 Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
@@ -79,19 +79,21 @@ Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private 
 `admin-config` is an admin-only Tool Set. It should expose concrete model-callable Tools rather than a prompt-ready scoped prompt blob. Initial Tools should include:
 
 - `read_instance_settings`
+- `read_admin_setup_summary`
 - `read_deployment_settings`
 - `read_deployment_readiness`
 - `read_agent_settings`
 - `read_user_types`
 - `read_document_access`
 - `read_onboarding_status`
+- `propose_admin_config_bootstrap`
 - `propose_config_change_set`
 
-Reads may happen directly within Admin Conversation authority. Write intent must become an Executable Change Set proposal through `propose_config_change_set`. Applying that change set still requires Change Confirmation in the Conversation UI Surface.
+Reads may happen directly within Admin Conversation authority. Broad setup, status, and readiness questions should use `read_admin_setup_summary` first because it compacts readiness, missing setup, and next actions. Guided setup/bootstrap write intent should use `propose_admin_config_bootstrap`, whose typed arguments describe instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and behavior rules. Other supported Admin Config writes may use `propose_config_change_set` as the lower-level escape hatch. Applying either proposal still requires Change Confirmation in the Conversation UI Surface.
 
-`propose_config_change_set` is a model-callable, non-mutating Tool. It validates and stages a change set for review, but it never calls admin mutation endpoints. Confirmed **Apply** remains a UI/admin action, not a model-authorized Tool call.
+Each proposal Tool is a model-callable, non-mutating Tool. They validate and stage a change set for review, but they never call admin mutation endpoints. Confirmed **Apply** remains a UI/admin action, not a model-authorized Tool call.
 
-Admin Config proposals must stage canonical write shapes. Instance settings use
+Admin Config proposals must stage canonical write shapes. Typed bootstrap builds these shapes deterministically; the generic escape hatch must provide them directly. Instance settings use
 `PUT /admin/settings` with stored setting keys such as `header_tagline`,
 `default_language`, `default_theme`, and `auto_approve_users`. Agent Settings use
 `PUT /admin/ai-config/{key}` with `{ "value": "..." }`; behavior rules and
@@ -99,8 +101,13 @@ forbidden topics use `PUT /admin/ai-config/prompt_rules` and
 `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string array,
 such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 User types use `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
-"display_order"? }`. The proposal boundary may normalize only known small drift
-(`/admin/user_types`, `tagline`, and supported language labels such as
+"display_order"? }`. User fields/onboarding questions use `POST /admin/user-fields`
+with `{ "field_name", "field_type", "required"?, "display_order"?, "user_type_id"?,
+"placeholder"?, "options"?, "encryption_enabled"?, "include_in_chat"? }`.
+Deployment config uses `PUT /admin/deployment/config/{key}`. Document-default
+assignments use the `PUT/DELETE /ingest/admin/documents/...` defaults paths.
+The proposal boundary may normalize only known small drift
+(`/admin/user_types`, legacy `tagline` into canonical `header_tagline`, and supported language labels such as
 `English`); staged `admin_change_set` payloads must contain canonical paths and
 keys after that. Unknown keys and unsupported values reject the proposal before
 review.

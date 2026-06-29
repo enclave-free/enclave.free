@@ -74,26 +74,31 @@ Sidebar behavior:
 Initial Tools:
 
 - `read_instance_settings`
+- `read_admin_setup_summary`
 - `read_deployment_settings`
 - `read_deployment_readiness`
 - `read_agent_settings`
 - `read_user_types`
 - `read_document_access`
 - `read_onboarding_status`
+- `propose_admin_config_bootstrap`
 - `propose_config_change_set`
 
-Tool descriptions should encourage Sage to inspect current Instance reality when it can answer the Admin's question. If the Admin asks what is configured, missing, ready, stale, stored, available, or still needing setup, Sage should call the relevant read Tool instead of asking the Admin to check manually.
+Tool descriptions should encourage Sage to inspect current Instance reality when it can answer the Admin's question. If the Admin asks broadly what is configured, missing, ready, stale, stored, available, or still needing setup, Sage should call `read_admin_setup_summary` first instead of manually fanning out across low-level read Tools. Narrow follow-up questions may call the relevant low-level read Tool directly.
 
 There is no `overview` fallback scope and no keyword category classifier. If one Tool result is not enough, Sage may call another enabled Tool in the same model-driven loop until it has enough evidence or hits deterministic limits.
 
-Admin write intent is represented through `propose_config_change_set`, a model-callable, non-mutating proposal Tool. The UI validates the staged change set and still requires Admin Change Confirmation before applying ordinary admin endpoints.
+Admin write intent is represented through non-mutating proposal Tools. Primary guided bootstrap/setup should use `propose_admin_config_bootstrap`, whose arguments describe setup intent in product terms: instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and supported behavior-rule intent. Deterministic Sage code builds the canonical request paths and bodies, validates the resulting change set, and stages it for the same Admin Change Confirmation flow.
+
+`propose_config_change_set` remains available as a lower-level compatibility and escape-hatch Tool for supported Admin Config writes that do not yet have a typed proposal Tool. The UI validates every staged change set and still requires Admin Change Confirmation before applying ordinary admin endpoints.
 
 Canonical Admin Config proposal shapes:
 
 - Instance settings: `PUT /admin/settings` with a patch body using stored setting keys such as `instance_name`, `assistant_name`, `header_tagline`, `description`, `primary_color`, `default_theme`, `default_language`, and `auto_approve_users`.
 - Agent Settings: `PUT /admin/ai-config/{key}` with `{ "value": "..." }`. Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules` and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string array, such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
 - User types: `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
-- Guided onboarding bootstrap should propose the eight baseline settings plus any supplied user types in one change set when the admin has supplied them.
+- User fields/onboarding questions: `POST /admin/user-fields` with `{ "field_name", "field_type", "required"?, "display_order"?, "user_type_id"?, "placeholder"?, "options"?, "encryption_enabled"?, "include_in_chat"? }`. A bootstrap change set may reference newly proposed user types with `@type:<slug>` placeholders so Apply can resolve the created IDs.
+- Guided onboarding bootstrap should propose the eight baseline settings plus any supplied visual defaults, user types, onboarding questions, and behavior rules in one change set when the admin has supplied them.
 
 For Admin Conversations, theme requests mean Instance visual identity settings:
 
@@ -187,7 +192,15 @@ This cache must not replace server-side authorization or validation.
 
 ### Change Application (Propose-Then-Confirm-Then-Apply)
 
-The assistant proposes changes by calling `propose_config_change_set`.
+For guided setup/bootstrap, the assistant proposes changes by calling
+`propose_admin_config_bootstrap` with empty args or a short summary. Sage uses
+the current Admin message as setup notes, normalizes the numbered guided setup
+answers, and builds canonical Admin request paths and bodies deterministically.
+The model should not copy long setup answers into tool args or decompose every
+setup answer into individual fields.
+
+For supported Admin Config writes that do not yet have a typed proposal Tool,
+the assistant may use the lower-level `propose_config_change_set` escape hatch.
 The tool arguments are:
 
 - `summary`: one sentence summary of what will change.
@@ -228,7 +241,7 @@ Behavior-rule and forbidden-topic examples:
 
 Sage validates the proposal against the backend's canonical allowlist and validation rules, emits the staged payload, and records Activity/Trace metadata without leaking secret values, blocklisted credentials, or hidden authority-bearing internals. The frontend mirrors those backend rules only for preview display and secret masking, then applies the changes only if the admin clicks **Apply**.
 
-If a proposal is rejected by validation but the admin request is supported, Sage should correct the proposal and call `propose_config_change_set` again. It should not claim that supported Admin Config writes are unavailable.
+If a proposal is rejected by validation but the admin request is supported, Sage should correct the proposal and call the best matching proposal Tool again. Guided setup/bootstrap should retry `propose_admin_config_bootstrap`; unsupported typed gaps may retry the lower-level `propose_config_change_set`. It should not claim that supported Admin Config writes are unavailable.
 
 Additional safety rules:
 
@@ -297,7 +310,7 @@ The placeholder may appear in:
 
 Example:
 
-Call `propose_config_change_set` with summary `Add a new user type and attach one onboarding field` and this `requests_json`:
+For the lower-level escape hatch, call `propose_config_change_set` with summary `Add a new user type and attach one onboarding field` and this `requests_json`:
 
 ```json
 [

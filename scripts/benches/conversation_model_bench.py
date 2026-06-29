@@ -42,6 +42,7 @@ SLOW_TRACE_FEEDBACK_WARNING_MS = 10_000.0
 SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
     "admin_config_bootstrap",
+    "admin_config_live_onboarding_prompt",
     "admin_deployment_readiness",
     "admin_database_direct_select",
     "admin_database_natural_language_guardrail",
@@ -49,6 +50,16 @@ DEFAULT_SCENARIOS = (
     "user_curated_resource_referral",
     "user_knowledge_and_resource_assistance",
 )
+
+LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS: set[str] = {
+    "read_instance_settings",
+    "read_deployment_settings",
+    "read_deployment_readiness",
+    "read_agent_settings",
+    "read_user_types",
+    "read_document_access",
+    "read_onboarding_status",
+}
 
 
 @dataclass(frozen=True)
@@ -138,7 +149,27 @@ SCENARIOS: dict[str, Scenario] = {
             "6. English.\n"
             "7. political prisoner support team.\n"
             "8. Let new users in right away. Create two simple user types: family and friends of current political prisoners, and former political prisoners with their family and friends.\n"
-            "Read the current Admin Config first, then prepare the changes for review."
+            "9. Add onboarding questions for what country the user is in and what kind of support they need. Include those answers in chat context.\n"
+            "10. Add a behavior rule to ask where users are before giving location-specific guidance.\n"
+            "Call propose_admin_config_bootstrap directly for this guided setup/bootstrap flow, then prepare the changes for review."
+        ),
+        tools=("admin-config",),
+    ),
+    "admin_config_live_onboarding_prompt": Scenario(
+        id="admin_config_live_onboarding_prompt",
+        actor="admin",
+        message=(
+            "- 1. FreeThem\n"
+            "2. We are the political prisoners support team an arm of the World Liberty Congress\n"
+            "3. Your call\n"
+            "4. Your call\n"
+            "5. dark please\n"
+            "6. english\n"
+            "7. political prisoners support team\n"
+            "8. Yes don't block access\n"
+            "9. there are two kinds of users. families and friends of current political prisoners "
+            "(support those in the situation) and friends/family/former political prisoners "
+            "(support for those after the situation)"
         ),
         tools=("admin-config",),
     ),
@@ -385,6 +416,8 @@ def checks_for_scenario(
         checks.extend(trace_feedback_checks(stream))
     if scenario.id == "admin_config_bootstrap":
         checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
+    elif scenario.id == "admin_config_live_onboarding_prompt":
+        checks.extend(admin_config_live_onboarding_prompt_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
         checks.extend(admin_deployment_readiness_checks(stream, tool_evidence))
     elif scenario.id == "admin_database_direct_select":
@@ -504,6 +537,20 @@ def admin_deployment_readiness_checks(
             "hard",
         ),
         check(
+            "admin_setup_summary_tool_used",
+            any(
+                admin_config_tool_invoked(evidence, "read_admin_setup_summary")
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
+            "broad_status_avoids_low_level_read_fanout",
+            count_low_level_admin_config_reads(tool_evidence) <= 1,
+            "warning",
+            f"low-level Admin Config read tools used: {count_low_level_admin_config_reads(tool_evidence)}",
+        ),
+        check(
             "admin_change_set_not_staged",
             not has_staged_admin_change_set,
             "hard",
@@ -533,12 +580,42 @@ def admin_config_bootstrap_checks(
         "you'll need to apply",
         "you need to apply",
     ]
+    non_bootstrap_admin_tools = non_bootstrap_admin_config_tools(tool_evidence)
 
     return [
         check(
             "admin_config_tool_used",
             any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
             "hard",
+        ),
+        check(
+            "typed_bootstrap_tool_used",
+            any(
+                admin_config_tool_invoked(
+                    evidence, "propose_admin_config_bootstrap"
+                )
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
+            "bootstrap_uses_only_typed_bootstrap_tool",
+            not non_bootstrap_admin_tools,
+            "hard",
+            (
+                "non-bootstrap Admin Config tools used: "
+                + ", ".join(sorted(non_bootstrap_admin_tools))
+            )
+            if non_bootstrap_admin_tools
+            else None,
+        ),
+        check(
+            "generic_change_set_tool_not_used_for_bootstrap",
+            not any(
+                admin_config_tool_invoked(evidence, "propose_config_change_set")
+                for evidence in tool_evidence
+            ),
+            "warning",
         ),
         check("admin_change_set_present", bool(request_list), "hard"),
         check(
@@ -557,8 +634,112 @@ def admin_config_bootstrap_checks(
             "hard",
         ),
         check(
+            "onboarding_fields_present",
+            count_user_field_requests(request_list) >= 2,
+            "hard",
+        ),
+        check(
+            "behavior_rules_present",
+            has_agent_rules_request(request_list, "prompt_rules"),
+            "hard",
+        ),
+        check(
             "does_not_claim_missing_proposal_authority",
             not any(phrase in answer_lower for phrase in lack_of_authority_phrases),
+            "hard",
+        ),
+    ]
+
+
+def admin_config_live_onboarding_prompt_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    change_set = stream.admin_change_set
+    requests = change_set.get("requests") if isinstance(change_set, dict) else None
+    request_list = requests if isinstance(requests, list) else []
+    settings_body = settings_request_body(request_list)
+    user_type_texts = [text.lower() for text in user_type_request_texts(request_list)]
+
+    return [
+        check(
+            "admin_config_tool_used",
+            any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
+            "hard",
+        ),
+        check(
+            "typed_bootstrap_tool_used",
+            any(
+                admin_config_tool_invoked(
+                    evidence, "propose_admin_config_bootstrap"
+                )
+                for evidence in tool_evidence
+            ),
+            "hard",
+        ),
+        check(
+            "generic_change_set_tool_not_used_for_bootstrap",
+            not any(
+                admin_config_tool_invoked(evidence, "propose_config_change_set")
+                for evidence in tool_evidence
+            ),
+            "warning",
+        ),
+        check(
+            "live_onboarding_bootstrap_not_rejected",
+            not any_admin_config_bootstrap_rejection(tool_evidence),
+            "hard",
+        ),
+        check("admin_change_set_present", bool(request_list), "hard"),
+        check(
+            "admin_change_set_uses_canonical_paths",
+            admin_change_set_uses_canonical_paths(request_list),
+            "hard",
+        ),
+        check(
+            "live_onboarding_baseline_settings_present",
+            BASELINE_SETTING_KEYS <= set(settings_body),
+            "hard",
+        ),
+        check(
+            "live_onboarding_instance_name_preserved",
+            settings_body.get("instance_name") == "FreeThem",
+            "hard",
+        ),
+        check(
+            "live_onboarding_dark_theme_preserved",
+            settings_body.get("default_theme") == "dark",
+            "hard",
+        ),
+        check(
+            "live_onboarding_default_language_normalized",
+            settings_body.get("default_language") == "en",
+            "hard",
+        ),
+        check(
+            "live_onboarding_auto_approval_enabled",
+            settings_body.get("auto_approve_users") is True,
+            "hard",
+        ),
+        check(
+            "live_onboarding_user_types_present",
+            count_user_type_requests(request_list) >= 2,
+            "hard",
+        ),
+        check(
+            "live_onboarding_user_type_content_present",
+            has_separate_live_onboarding_user_types(user_type_texts),
+            "hard",
+        ),
+        check(
+            "live_onboarding_does_not_create_user_fields",
+            count_user_field_requests(request_list) == 0,
+            "hard",
+        ),
+        check(
+            "live_onboarding_does_not_create_behavior_rules",
+            not has_agent_rules_request(request_list, "prompt_rules")
+            and not has_agent_rules_request(request_list, "prompt_forbidden"),
             "hard",
         ),
     ]
@@ -754,6 +935,9 @@ BASELINE_SETTING_KEYS = {
 CANONICAL_ADMIN_CONFIG_WRITES = {
     ("PUT", "/admin/settings"),
     ("POST", "/admin/user-types"),
+    ("POST", "/admin/user-fields"),
+    ("PUT", "/admin/ai-config/prompt_rules"),
+    ("PUT", "/admin/ai-config/prompt_forbidden"),
 }
 
 UNSAFE_ADMIN_CONFIG_PATH_PREFIXES = (
@@ -781,6 +965,96 @@ def count_user_type_requests(requests: list[Any]) -> int:
         and request.get("method") == "POST"
         and request.get("path") == "/admin/user-types"
     )
+
+
+def user_type_request_texts(requests: list[Any]) -> list[str]:
+    texts: list[str] = []
+    for request in requests:
+        if not isinstance(request, dict):
+            continue
+        if request.get("method") != "POST" or request.get("path") != "/admin/user-types":
+            continue
+        body = request.get("body")
+        if not isinstance(body, dict):
+            continue
+        values = [
+            str(body.get("name") or ""),
+            str(body.get("description") or ""),
+        ]
+        texts.append(" ".join(value for value in values if value.strip()))
+    return texts
+
+
+def has_separate_live_onboarding_user_types(user_type_texts: list[str]) -> bool:
+    current_family_indexes = {
+        index
+        for index, text in enumerate(user_type_texts)
+        if "famil" in text and "current" in text
+    }
+    former_after_indexes = {
+        index
+        for index, text in enumerate(user_type_texts)
+        if "former" in text or "after" in text
+    }
+    return any(
+        current_index != former_index
+        for current_index in current_family_indexes
+        for former_index in former_after_indexes
+    )
+
+
+def count_user_field_requests(requests: list[Any]) -> int:
+    return sum(
+        1
+        for request in requests
+        if isinstance(request, dict)
+        and request.get("method") == "POST"
+        and request.get("path") == "/admin/user-fields"
+    )
+
+
+def has_agent_rules_request(requests: list[Any], key: str) -> bool:
+    path = f"/admin/ai-config/{key}"
+    for request in requests:
+        if not isinstance(request, dict):
+            continue
+        if request.get("method") != "PUT" or request.get("path") != path:
+            continue
+        body = request.get("body")
+        value = body.get("value") if isinstance(body, dict) else None
+        return is_json_string_array(value)
+    return False
+
+
+def is_json_string_array(value: Any) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(parsed, list) and all(
+        isinstance(item, str) and bool(item.strip()) for item in parsed
+    ) and bool(parsed)
+
+
+def any_admin_config_bootstrap_rejection(tool_evidence: list[dict[str, Any]]) -> bool:
+    for evidence in tool_evidence:
+        if not admin_config_tool_invoked(evidence, "propose_admin_config_bootstrap"):
+            continue
+        status = str(evidence.get("status") or "").lower()
+        summary = str(evidence.get("output_summary") or "").lower()
+        warnings = [
+            str(warning).lower()
+            for warning in evidence.get("warnings") or []
+        ]
+        if evidence.get("guarded") or status == "guarded":
+            return True
+        if "invalid_admin_config_bootstrap" in warnings:
+            return True
+        if "invalid bootstrap" in summary or "invalid admin config bootstrap" in summary:
+            return True
+    return False
 
 
 def admin_change_set_uses_canonical_paths(requests: list[Any]) -> bool:
@@ -877,6 +1151,45 @@ def tool_evidence_matches(evidence: dict[str, Any], tool_set_id: str) -> bool:
         or tool_id.startswith(f"{tool_set_id}:")
         or tool_id.startswith(f"tool-{tool_set_id}:")
     )
+
+
+def admin_config_tool_invoked(evidence: dict[str, Any], tool_name: str) -> bool:
+    tool_id = str(evidence.get("tool_id") or "")
+    return (
+        tool_id == f"admin-config:{tool_name}"
+        or tool_id == f"tool-admin-config:{tool_name}"
+        or tool_id == tool_name
+    )
+
+
+def non_bootstrap_admin_config_tools(
+    tool_evidence: list[dict[str, Any]],
+) -> set[str]:
+    non_bootstrap_tools: set[str] = set()
+    for evidence in tool_evidence:
+        if not tool_evidence_matches(evidence, "admin-config"):
+            continue
+        if admin_config_tool_invoked(evidence, "propose_admin_config_bootstrap"):
+            continue
+        tool_id = str(evidence.get("tool_id") or "").strip()
+        if tool_id.startswith("tool-admin-config:"):
+            non_bootstrap_tools.add(tool_id.removeprefix("tool-admin-config:"))
+        elif tool_id.startswith("admin-config:"):
+            non_bootstrap_tools.add(tool_id.removeprefix("admin-config:"))
+        elif tool_id:
+            non_bootstrap_tools.add(tool_id)
+        else:
+            non_bootstrap_tools.add(str(evidence.get("tool_name") or "admin-config"))
+    return non_bootstrap_tools
+
+
+def count_low_level_admin_config_reads(tool_evidence: list[dict[str, Any]]) -> int:
+    invoked: set[str] = set()
+    for evidence in tool_evidence:
+        for tool_name in LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS:
+            if admin_config_tool_invoked(evidence, tool_name):
+                invoked.add(tool_name)
+    return len(invoked)
 
 
 def tool_id_from_name(name: str) -> str:
