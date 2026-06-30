@@ -4,13 +4,21 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminUserConfig } from './AdminUserConfig';
 import { adminFetch } from '../utils/adminApi';
+import { decryptField, hasNip04Support } from '../utils/encryption';
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
   isAdminAuthenticated: vi.fn(() => true),
 }));
 
+vi.mock('../utils/encryption', () => ({
+  decryptField: vi.fn(),
+  hasNip04Support: vi.fn(),
+}));
+
 const mockAdminFetch = vi.mocked(adminFetch);
+const mockDecryptField = vi.mocked(decryptField);
+const mockHasNip04Support = vi.mocked(hasNip04Support);
 
 let userTypesResponse: unknown[] = [];
 let usersResponse: unknown[] = [];
@@ -19,6 +27,16 @@ describe('AdminUserConfig', () => {
   beforeEach(() => {
     userTypesResponse = [];
     usersResponse = [];
+    mockHasNip04Support.mockReturnValue(true);
+    mockDecryptField.mockImplementation(async (encrypted) => {
+      const values: Record<string, string> = {
+        'email-cipher': 'austin@example.com',
+        'name-cipher': 'Austin Kelsay',
+        'migration-email-cipher': 'jamie@example.com',
+        'migration-name-cipher': 'Jamie Tester',
+      };
+      return encrypted ? (values[encrypted.ciphertext] ?? null) : null;
+    });
 
     mockAdminFetch.mockImplementation(
       (endpoint: string, options?: RequestInit) => {
@@ -146,6 +164,14 @@ describe('AdminUserConfig', () => {
         user_type: null,
         approved: false,
         created_at: '2026-06-30T17:57:16Z',
+        email_encrypted: {
+          ciphertext: 'email-cipher',
+          ephemeral_pubkey: 'ephemeral-email',
+        },
+        name_encrypted: {
+          ciphertext: 'name-cipher',
+          ephemeral_pubkey: 'ephemeral-name',
+        },
       },
     ];
     const user = userEvent.setup();
@@ -162,6 +188,8 @@ describe('AdminUserConfig', () => {
     expect(
       await screen.findByText('1 user needs approval before chat access.')
     ).toBeInTheDocument();
+    expect(await screen.findAllByText('Austin Kelsay')).toHaveLength(2);
+    expect(await screen.findAllByText('austin@example.com')).toHaveLength(2);
 
     await user.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
 
@@ -195,6 +223,14 @@ describe('AdminUserConfig', () => {
         user_type: null,
         approved: true,
         created_at: '2026-05-01T12:00:00Z',
+        email_encrypted: {
+          ciphertext: 'migration-email-cipher',
+          ephemeral_pubkey: 'ephemeral-email',
+        },
+        name_encrypted: {
+          ciphertext: 'migration-name-cipher',
+          ephemeral_pubkey: 'ephemeral-name',
+        },
       },
     ];
     const user = userEvent.setup();
@@ -208,6 +244,8 @@ describe('AdminUserConfig', () => {
     );
 
     await screen.findByText('User Type Migration');
+    expect(await screen.findByText('Jamie Tester')).toBeInTheDocument();
+    expect(await screen.findByText('jamie@example.com')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Select visible' }));
     const migrateButton = screen.getByRole('button', {

@@ -33,6 +33,7 @@ import { DynamicIcon } from '../components/shared/DynamicIcon';
 import { Button, Callout, Card, SelectField } from '../components/ui';
 import { CustomField, UserType, FieldType } from '../types/onboarding';
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
+import { decryptField, hasNip04Support } from '../utils/encryption';
 
 const FIELD_TYPE_VALUES: FieldType[] = [
   'text',
@@ -103,6 +104,12 @@ interface AdminUserSummary {
   user_type?: UserType | null;
   approved: boolean;
   created_at?: string | null;
+}
+
+interface DecryptedUserIdentity {
+  status: 'decrypting' | 'ready' | 'unavailable' | 'failed';
+  email: string | null;
+  name: string | null;
 }
 
 interface SingleMigrationResponse {
@@ -206,6 +213,11 @@ export function AdminUserConfig() {
   const [approvalActionSuccess, setApprovalActionSuccess] = useState<
     string | null
   >(null);
+  const [decryptedUserIdentities, setDecryptedUserIdentities] = useState<
+    Record<number, DecryptedUserIdentity>
+  >({});
+  const [identityDecryptNonce, setIdentityDecryptNonce] = useState(0);
+  const userIdentityDecryptRunIdRef = useRef(0);
 
   // Reachout settings (stored in instance_settings; only reachout_* public keys are exposed via /settings/public)
   const [reachoutLoaded, setReachoutLoaded] = useState(false);
@@ -1415,6 +1427,141 @@ export function AdminUserConfig() {
     [users]
   );
 
+  const hasEncryptedIdentity = (user: AdminUserSummary): boolean =>
+    Boolean(
+      user.email_encrypted?.ciphertext || user.name_encrypted?.ciphertext
+    );
+
+  useEffect(() => {
+    const usersWithEncryptedIdentity = users.filter(hasEncryptedIdentity);
+
+    if (usersWithEncryptedIdentity.length === 0) {
+      setDecryptedUserIdentities({});
+      return;
+    }
+
+    const runId = userIdentityDecryptRunIdRef.current + 1;
+    userIdentityDecryptRunIdRef.current = runId;
+
+    setDecryptedUserIdentities((prev) => {
+      const next: Record<number, DecryptedUserIdentity> = {};
+      for (const user of usersWithEncryptedIdentity) {
+        const existing = prev[user.id];
+        next[user.id] =
+          existing?.status === 'ready'
+            ? existing
+            : { status: 'decrypting', email: null, name: null };
+      }
+      return next;
+    });
+
+    if (!hasNip04Support()) {
+      setDecryptedUserIdentities((prev) => {
+        const next: Record<number, DecryptedUserIdentity> = {};
+        for (const user of usersWithEncryptedIdentity) {
+          next[user.id] = {
+            ...(prev[user.id] ?? { email: null, name: null }),
+            status: 'unavailable',
+          };
+        }
+        return next;
+      });
+      return;
+    }
+
+    const decryptIdentities = async () => {
+      const entries = await Promise.all(
+        usersWithEncryptedIdentity.map(async (user) => {
+          const [email, name] = await Promise.all([
+            decryptField(user.email_encrypted),
+            decryptField(user.name_encrypted),
+          ]);
+          const encryptedFieldCount =
+            (user.email_encrypted?.ciphertext ? 1 : 0) +
+            (user.name_encrypted?.ciphertext ? 1 : 0);
+          const decryptedFieldCount = (email ? 1 : 0) + (name ? 1 : 0);
+
+          return [
+            user.id,
+            {
+              status:
+                decryptedFieldCount > 0 || encryptedFieldCount === 0
+                  ? 'ready'
+                  : 'failed',
+              email,
+              name,
+            } satisfies DecryptedUserIdentity,
+          ] as const;
+        })
+      );
+
+      if (userIdentityDecryptRunIdRef.current !== runId) return;
+      setDecryptedUserIdentities(Object.fromEntries(entries));
+    };
+
+    void decryptIdentities();
+  }, [users, identityDecryptNonce]);
+
+  const hasEncryptedUserIdentities = useMemo(
+    () => users.some(hasEncryptedIdentity),
+    [users]
+  );
+
+  const handleUnlockUserIdentities = async () => {
+    if (hasNip04Support()) {
+      try {
+        await window.nostr?.getPublicKey?.();
+      } catch (error) {
+        console.warn(
+          'Failed to trigger NIP-07 identity permission prompt:',
+          error
+        );
+      }
+    }
+    setIdentityDecryptNonce((current) => current + 1);
+  };
+
+  const getUserIdentityDisplay = (user: AdminUserSummary) => {
+    const identity = decryptedUserIdentities[user.id];
+    const decryptedName = identity?.name?.trim() || null;
+    const decryptedEmail = identity?.email?.trim() || null;
+    const fallbackLabel = user.pubkey
+      ? formatPubkeyShort(user.pubkey)
+      : t('admin.userMigration.userLabel', { id: user.id });
+    const primaryLabel = decryptedName || decryptedEmail || fallbackLabel;
+    const secondaryLabel =
+      decryptedName && decryptedEmail ? decryptedEmail : null;
+    const isEncrypted = hasEncryptedIdentity(user);
+    let statusLabel: string | null = null;
+
+    if (isEncrypted && !decryptedName && !decryptedEmail) {
+      if (identity?.status === 'decrypting') {
+        statusLabel = t(
+          'admin.userIdentity.decrypting',
+          'Decrypting name/email...'
+        );
+      } else if (identity?.status === 'failed') {
+        statusLabel = t(
+          'admin.userIdentity.decryptFailed',
+          'Could not decrypt name/email'
+        );
+      } else {
+        statusLabel = t(
+          'admin.userIdentity.unlockDetails',
+          'Unlock to show name/email'
+        );
+      }
+    }
+
+    return {
+      primaryLabel,
+      secondaryLabel,
+      statusLabel,
+      hasDecryptedIdentity: Boolean(decryptedName || decryptedEmail),
+      isFallback: !decryptedName && !decryptedEmail,
+    };
+  };
+
   const selectedVisibleCount = useMemo(
     () => filteredUsers.filter((user) => selectedUserIds.has(user.id)).length,
     [filteredUsers, selectedUserIds]
@@ -1607,19 +1754,31 @@ export function AdminUserConfig() {
                           )}
                     </p>
                   </div>
-                  <Button
-                    onClick={fetchUsers}
-                    disabled={usersLoading}
-                    variant="secondary"
-                    size="sm"
-                    leadingIcon={
-                      <RefreshCw
-                        className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`}
-                      />
-                    }
-                  >
-                    {t('common.refresh', 'Refresh')}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {hasEncryptedUserIdentities && (
+                      <Button
+                        onClick={handleUnlockUserIdentities}
+                        variant="secondary"
+                        size="sm"
+                        leadingIcon={<Key className="w-4 h-4" />}
+                      >
+                        {t('admin.userIdentity.unlockButton', 'Unlock details')}
+                      </Button>
+                    )}
+                    <Button
+                      onClick={fetchUsers}
+                      disabled={usersLoading}
+                      variant="secondary"
+                      size="sm"
+                      leadingIcon={
+                        <RefreshCw
+                          className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`}
+                        />
+                      }
+                    >
+                      {t('common.refresh', 'Refresh')}
+                    </Button>
+                  </div>
                 </div>
 
                 {approvalActionSuccess && (
@@ -1666,9 +1825,7 @@ export function AdminUserConfig() {
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {pendingApprovalUsers.map((user) => {
                       const isUpdating = approvalUpdatingUserIds.has(user.id);
-                      const primaryLabel = user.pubkey
-                        ? formatPubkeyShort(user.pubkey)
-                        : t('admin.userMigration.userLabel', { id: user.id });
+                      const identityDisplay = getUserIdentityDisplay(user);
 
                       return (
                         <div
@@ -1678,9 +1835,13 @@ export function AdminUserConfig() {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <span
-                                className={`text-sm font-medium text-text ${user.pubkey ? 'font-mono' : ''}`}
+                                className={`text-sm font-medium text-text ${
+                                  identityDisplay.isFallback && user.pubkey
+                                    ? 'font-mono'
+                                    : ''
+                                }`}
                               >
-                                {primaryLabel}
+                                {identityDisplay.primaryLabel}
                               </span>
                               <span className="text-[10px] text-text-muted font-mono">
                                 #{user.id}
@@ -1691,6 +1852,18 @@ export function AdminUserConfig() {
                               </span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-text-muted">
+                              {identityDisplay.secondaryLabel && (
+                                <span className="inline-flex items-center gap-1 text-text">
+                                  <Mail className="w-3 h-3" />
+                                  {identityDisplay.secondaryLabel}
+                                </span>
+                              )}
+                              {identityDisplay.statusLabel && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Lock className="w-3 h-3" />
+                                  {identityDisplay.statusLabel}
+                                </span>
+                              )}
                               {user.created_at && (
                                 <span>
                                   {new Date(
@@ -1698,24 +1871,26 @@ export function AdminUserConfig() {
                                   ).toLocaleDateString()}
                                 </span>
                               )}
-                              {user.email_encrypted?.ciphertext && (
-                                <span className="inline-flex items-center gap-1">
-                                  <Mail className="w-3 h-3" />
-                                  {t(
-                                    'admin.userApproval.emailOnFile',
-                                    'Email on file'
-                                  )}
-                                </span>
-                              )}
-                              {user.name_encrypted?.ciphertext && (
-                                <span className="inline-flex items-center gap-1">
-                                  <Lock className="w-3 h-3" />
-                                  {t(
-                                    'admin.userApproval.nameOnFile',
-                                    'Name on file'
-                                  )}
-                                </span>
-                              )}
+                              {user.email_encrypted?.ciphertext &&
+                                !identityDisplay.hasDecryptedIdentity && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Mail className="w-3 h-3" />
+                                    {t(
+                                      'admin.userApproval.emailOnFile',
+                                      'Email on file'
+                                    )}
+                                  </span>
+                                )}
+                              {user.name_encrypted?.ciphertext &&
+                                !identityDisplay.hasDecryptedIdentity && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    {t(
+                                      'admin.userApproval.nameOnFile',
+                                      'Name on file'
+                                    )}
+                                  </span>
+                                )}
                             </div>
                           </div>
                           <Button
@@ -2700,7 +2875,7 @@ export function AdminUserConfig() {
             <p className="text-[11px] text-text-muted mb-4">
               {t(
                 'admin.userMigration.anonymizedHint',
-                'Users are shown anonymously here. Names/emails are encrypted and intentionally hidden in this list.'
+                'Names/emails are encrypted at rest and shown here only after your admin Nostr key decrypts them locally.'
               )}
             </p>
 
@@ -2789,6 +2964,18 @@ export function AdminUserConfig() {
               >
                 {t('common.refresh', 'Refresh')}
               </Button>
+
+              {hasEncryptedUserIdentities && (
+                <Button
+                  onClick={handleUnlockUserIdentities}
+                  disabled={usersLoading}
+                  variant="secondary"
+                  size="sm"
+                  leadingIcon={<Key className="w-4 h-4" />}
+                >
+                  {t('admin.userIdentity.unlockButton', 'Unlock details')}
+                </Button>
+              )}
 
               <Button
                 onClick={handleToggleSelectAllFilteredUsers}
@@ -2898,9 +3085,8 @@ export function AdminUserConfig() {
                     user.id
                   );
                   const avatarColor = getUserAvatarColor(user.id);
-                  const primaryLabel = user.pubkey
-                    ? formatPubkeyShort(user.pubkey)
-                    : t('admin.userMigration.userLabel', { id: user.id });
+                  const identityDisplay = getUserIdentityDisplay(user);
+                  const primaryLabel = identityDisplay.primaryLabel;
 
                   return (
                     <div
@@ -2929,7 +3115,11 @@ export function AdminUserConfig() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <p
-                              className={`text-sm font-medium text-text ${user.pubkey ? 'font-mono' : ''}`}
+                              className={`text-sm font-medium text-text ${
+                                identityDisplay.isFallback && user.pubkey
+                                  ? 'font-mono'
+                                  : ''
+                              }`}
                             >
                               {primaryLabel}
                             </p>
@@ -2950,6 +3140,19 @@ export function AdminUserConfig() {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2 mt-1">
+                            {identityDisplay.secondaryLabel && (
+                              <span className="inline-flex items-center gap-1 text-xs text-text">
+                                <Mail className="w-3 h-3" />
+                                {identityDisplay.secondaryLabel}
+                              </span>
+                            )}
+                            {identityDisplay.statusLabel && (
+                              <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+                                <Lock className="w-3 h-3" />
+                                {identityDisplay.statusLabel}
+                              </span>
+                            )}
+
                             {/* Approval status */}
                             {user.approved ? (
                               <span className="inline-flex items-center gap-1 text-xs text-success">
@@ -2978,24 +3181,26 @@ export function AdminUserConfig() {
                                   <Key className="w-3 h-3 text-text-muted" />
                                 </span>
                               )}
-                              {user.email_encrypted?.ciphertext && (
-                                <span
-                                  title={t(
-                                    'admin.userMigration.emailEncryptedHint'
-                                  )}
-                                >
-                                  <Mail className="w-3 h-3 text-text-muted" />
-                                </span>
-                              )}
-                              {user.name_encrypted?.ciphertext && (
-                                <span
-                                  title={t(
-                                    'admin.userMigration.nameEncryptedHint'
-                                  )}
-                                >
-                                  <Lock className="w-3 h-3 text-text-muted" />
-                                </span>
-                              )}
+                              {user.email_encrypted?.ciphertext &&
+                                !identityDisplay.hasDecryptedIdentity && (
+                                  <span
+                                    title={t(
+                                      'admin.userMigration.emailEncryptedHint'
+                                    )}
+                                  >
+                                    <Mail className="w-3 h-3 text-text-muted" />
+                                  </span>
+                                )}
+                              {user.name_encrypted?.ciphertext &&
+                                !identityDisplay.hasDecryptedIdentity && (
+                                  <span
+                                    title={t(
+                                      'admin.userMigration.nameEncryptedHint'
+                                    )}
+                                  >
+                                    <Lock className="w-3 h-3 text-text-muted" />
+                                  </span>
+                                )}
                             </div>
                           </div>
 
