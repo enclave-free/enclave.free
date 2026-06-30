@@ -3,13 +3,17 @@
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter as pathDelimiter, dirname, join } from 'node:path';
+import { basename, delimiter as pathDelimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..', '..');
 const resetScript = join(repoRoot, 'scripts', 'reset_local_instance.sh');
+const composeProjectName = basename(repoRoot)
+  .toLowerCase()
+  .replace(/[^a-z0-9_-]/g, '');
+const volumeName = (name: string) => `${composeProjectName}_${name}`;
 
 function runReset(args: string[] = [], env: NodeJS.ProcessEnv = {}): string {
   return execFileSync(resetScript, args, {
@@ -81,20 +85,16 @@ describe('local instance reset script', () => {
     expect(output).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down'
     );
+    expect(output).toContain(`docker volume rm ${volumeName('qdrant_data')}`);
     expect(output).toContain(
-      'docker volume rm enclavefree-prototype_qdrant_data'
+      `docker volume rm ${volumeName('sage_postgres_data')}`
     );
     expect(output).toContain(
-      'docker volume rm enclavefree-prototype_sage_postgres_data'
+      `docker volume rm ${volumeName('sage_workspace')}`
     );
-    expect(output).toContain(
-      'docker volume rm enclavefree-prototype_sage_workspace'
-    );
-    expect(output).toContain(
-      'docker volume rm enclavefree-prototype_sqlite_data'
-    );
+    expect(output).toContain(`docker volume rm ${volumeName('sqlite_data')}`);
     expect(output).not.toContain(
-      'docker volume rm enclavefree-prototype_embedding_cache'
+      `docker volume rm ${volumeName('embedding_cache')}`
     );
     expect(output).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d'
@@ -109,16 +109,14 @@ describe('local instance reset script', () => {
     expect(log).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down'
     );
-    expect(log).toContain('docker volume rm enclavefree-prototype_qdrant_data');
+    expect(log).toContain(`docker volume rm ${volumeName('qdrant_data')}`);
     expect(log).toContain(
-      'docker volume rm enclavefree-prototype_sage_postgres_data'
+      `docker volume rm ${volumeName('sage_postgres_data')}`
     );
-    expect(log).toContain(
-      'docker volume rm enclavefree-prototype_sage_workspace'
-    );
-    expect(log).toContain('docker volume rm enclavefree-prototype_sqlite_data');
+    expect(log).toContain(`docker volume rm ${volumeName('sage_workspace')}`);
+    expect(log).toContain(`docker volume rm ${volumeName('sqlite_data')}`);
     expect(log).not.toContain(
-      'docker volume rm enclavefree-prototype_embedding_cache'
+      `docker volume rm ${volumeName('embedding_cache')}`
     );
     expect(log).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d'
@@ -131,9 +129,7 @@ describe('local instance reset script', () => {
   it('can reset every local volume including the embedding cache', () => {
     const { log } = runWithFakes(['--all']);
 
-    expect(log).toContain(
-      'docker volume rm enclavefree-prototype_embedding_cache'
-    );
+    expect(log).toContain(`docker volume rm ${volumeName('embedding_cache')}`);
   });
 
   it('can start existing images without rebuilding', () => {
