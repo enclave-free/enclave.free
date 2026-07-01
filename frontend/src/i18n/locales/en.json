@@ -927,6 +927,8 @@
     "adminAssistantDesc": "Use the admin chat for configuration help and change review.",
     "guidedSetup": "Guided Setup",
     "guidedSetupDesc": "Walk through setup, documents, resources, and testing.",
+    "guides": "Admin Guides",
+    "guidesDesc": "Simple setup steps for first-time admins.",
     "testUserSession": "Test User Session",
     "testUserSessionDesc": "Chat as a simulated user and review saved beta logs.",
     "aiSetupTitle": "Set up with the AI assistant",

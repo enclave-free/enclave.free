@@ -41,6 +41,9 @@ describe('AdminSetup', () => {
       within(workflows).getByRole('link', { name: /Guided Setup/ })
     ).toHaveAttribute('href', '/admin/onboarding');
     expect(
+      within(workflows).getByRole('link', { name: /Admin Guides/ })
+    ).toHaveAttribute('href', '/admin/guides');
+    expect(
       within(workflows).getByRole('link', { name: /Test User Session/ })
     ).toHaveAttribute('href', '/admin/test-and-feedback');
 

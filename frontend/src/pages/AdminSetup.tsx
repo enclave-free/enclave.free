@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowRight,
+  BookOpen,
   Brain,
   Database,
   LifeBuoy,
@@ -112,6 +113,15 @@ export function AdminSetup() {
             description={t(
               'adminDashboard.guidedSetupDesc',
               'Walk through setup, documents, resources, and testing.'
+            )}
+          />
+          <DashboardCard
+            to="/admin/guides"
+            icon={<BookOpen className="h-5 w-5" />}
+            title={t('adminDashboard.guides', 'Admin Guides')}
+            description={t(
+              'adminDashboard.guidesDesc',
+              'Simple setup steps for first-time admins.'
             )}
           />
           <DashboardCard
