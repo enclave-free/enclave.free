@@ -16,7 +16,7 @@ describe('AdminGuides', () => {
     cleanup();
   });
 
-  it('starts admins with a short beginner setup path', () => {
+  it('starts admins with a short setup path', () => {
     renderAdminGuides();
 
     expect(
@@ -24,59 +24,112 @@ describe('AdminGuides', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Get to a small useful setup first. Improve it after testing.'
+        'A simple map of what admins configure, what the product can do, and what needs care before launch.'
       )
     ).toBeInTheDocument();
 
-    const quickStart = screen.getByRole('region', { name: 'Start with this' });
+    const quickStart = screen.getByRole('region', { name: 'Start here' });
     expect(
       within(quickStart).getByText('Sign in as admin')
     ).toBeInTheDocument();
+    expect(within(quickStart).getByText('Set the basics')).toBeInTheDocument();
     expect(
-      within(quickStart).getByText('Run Guided Setup')
+      within(quickStart).getByText('Define your users')
     ).toBeInTheDocument();
     expect(
-      within(quickStart).getByText('Test like a user')
+      within(quickStart).getByText('Test before launch')
     ).toBeInTheDocument();
   });
 
-  it('links the guide to the admin work pages', () => {
+  it('maps product configuration areas to the real admin pages', () => {
     renderAdminGuides();
 
     expect(
-      screen.getByRole('link', { name: 'Back to Admin Dashboard' })
-    ).toHaveAttribute('href', '/admin/setup');
+      screen.getByRole('link', { name: /Identity and look/ })
+    ).toHaveAttribute('href', '/admin/instance');
+    expect(
+      screen.getByRole('link', { name: /People and access/ })
+    ).toHaveAttribute('href', '/admin/users');
+    expect(
+      screen.getByRole('link', { name: /Agent behavior/ })
+    ).toHaveAttribute('href', '/admin/ai');
+    expect(
+      screen.getByRole('link', { name: /Document knowledge/ })
+    ).toHaveAttribute('href', '/admin/upload');
+    expect(
+      screen.getByRole('link', { name: /Vetted resources/ })
+    ).toHaveAttribute('href', '/admin/resources');
+    expect(
+      screen.getByRole('link', { name: /Operations and runtime/ })
+    ).toHaveAttribute('href', '/admin/deployment');
+  });
+
+  it('describes the important admin-controlled features', () => {
+    renderAdminGuides();
+
+    expect(
+      screen.getByText(
+        'Logo, favicon, icon, accent color, theme, typography, and chat style.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Onboarding fields, required questions, options, placeholders, and per-type fields.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Feature defaults for Knowledge, Resources, Web, Config, and Database tools.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Runtime env export, readiness, stale settings, and admin key migration.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('states product truths and safety boundaries plainly', () => {
+    renderAdminGuides();
+
+    expect(
+      screen.getByText(
+        'Knowledge, Resources, Web, Config, and Database are visible tool sets, not separate chat systems.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Admins use NIP-07. Users use email magic links.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Encrypted profile fields stay out of chat context.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Deployment Settings store desired runtime values. Operators still export env and restart services when needed.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('keeps workflows and assistant prompts beginner friendly', () => {
+    renderAdminGuides();
+
+    expect(
+      screen.getByRole('link', { name: /Admin Assistant/ })
+    ).toHaveAttribute('href', '/chat');
     expect(screen.getByRole('link', { name: /Guided Setup/ })).toHaveAttribute(
       'href',
       '/admin/onboarding'
     );
-    expect(screen.getByRole('link', { name: /User Settings/ })).toHaveAttribute(
-      'href',
-      '/admin/users'
-    );
     expect(
-      screen.getByRole('link', { name: /Document Upload/ })
-    ).toHaveAttribute('href', '/admin/upload');
-    expect(
-      screen.getByRole('link', { name: /Resource Directory/ })
-    ).toHaveAttribute('href', '/admin/resources');
-    expect(
-      screen.getByRole('link', { name: /Test User Session/ })
+      screen.getByRole('link', { name: /Test and feedback/ })
     ).toHaveAttribute('href', '/admin/test-and-feedback');
     expect(
-      screen.getByRole('link', { name: /Deployment Settings/ })
-    ).toHaveAttribute('href', '/admin/deployment');
-  });
-
-  it('keeps safety copy short and concrete', () => {
-    renderAdminGuides();
-
-    expect(screen.getByText('Safety basics')).toBeInTheDocument();
+      screen.getByRole('link', { name: /Database Explorer/ })
+    ).toHaveAttribute('href', '/admin/database');
     expect(
-      screen.getByText('Review every change before clicking Apply.')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Keep admin login keys out of chat, email, and tickets.')
+      screen.getByText(
+        'What is still missing before this instance is ready for users?'
+      )
     ).toBeInTheDocument();
   });
 });

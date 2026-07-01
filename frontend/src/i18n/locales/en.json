@@ -95,6 +95,8 @@
       "instanceConfigDesc": "Return to the main admin dashboard.",
       "guidedSetup": "Guided Setup",
       "guidedSetupDesc": "Walk through setup, documents, resources, and testing.",
+      "guides": "Admin Guides",
+      "guidesDesc": "Understand what admins configure and where.",
       "testUserSession": "Test User Session",
       "testUserSessionDesc": "Chat as a simulated user and review beta feedback.",
       "testDashboard": "Diagnostics Test Dashboard",
