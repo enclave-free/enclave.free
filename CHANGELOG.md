@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 - 2026-07-01
+
+- Added admin-facing guides for setup, configuration, launch safety, and common workflows.
+- Added onboarding language switching for user auth, type selection, profile onboarding, and admin onboarding.
+
 ## 0.1.0 - 2026-07-01
 
 Initial customer-facing demo release checkpoint.
