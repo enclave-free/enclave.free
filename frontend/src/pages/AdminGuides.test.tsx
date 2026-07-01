@@ -41,6 +41,27 @@ describe('AdminGuides', () => {
     ).toBeInTheDocument();
   });
 
+  it('opens with a scannable admin control map', () => {
+    renderAdminGuides();
+
+    expect(screen.getByText('Admin control map')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Brand the instance/ })
+    ).toHaveAttribute('href', '/admin/instance');
+    expect(
+      screen.getByRole('link', { name: /Control people/ })
+    ).toHaveAttribute('href', '/admin/users');
+    expect(screen.getByRole('link', { name: /Shape Sage/ })).toHaveAttribute(
+      'href',
+      '/admin/ai'
+    );
+    expect(screen.getByRole('link', { name: /Launch safely/ })).toHaveAttribute(
+      'href',
+      '/admin/deployment'
+    );
+    expect(screen.getAllByText('Admins can').length).toBeGreaterThan(6);
+  });
+
   it('maps product configuration areas to the real admin pages', () => {
     renderAdminGuides();
 
