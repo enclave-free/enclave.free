@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Mail, ShieldCheck, Lock, Timer } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher'
 import { Button, Callout, TextField } from '../components/ui'
 import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
 import { useInstanceConfig } from '../context/InstanceConfigContext'
@@ -225,7 +226,12 @@ export function UserAuth() {
     : t('onboarding.auth.welcomeBackSubtitle')
 
   return (
-    <OnboardingCard title={title} subtitle={subtitle} footer={footer}>
+    <OnboardingCard
+      topRight={<LanguageSwitcher />}
+      title={title}
+      subtitle={subtitle}
+      footer={footer}
+    >
       {formState === 'success' ? (
         <SuccessMessage
           email={submittedEmail}

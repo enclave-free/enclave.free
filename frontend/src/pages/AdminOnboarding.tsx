@@ -1,77 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { Link2, AlertCircle, Check, ShieldCheck, CheckCircle2, Key, Shield, Sliders, Fingerprint, FileSignature, ArrowRight, ChevronDown, Globe } from 'lucide-react'
+import { Link2, AlertCircle, Check, ShieldCheck, CheckCircle2, Key, Shield, Sliders, Fingerprint, FileSignature, ArrowRight, ChevronDown } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
 import { NostrInfo, NostrExtensionLinks } from '../components/onboarding/NostrInfo'
+import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher'
 import { STORAGE_KEYS } from '../types/onboarding'
 import { authenticateWithNostr, hasNostrExtension, type AuthResult } from '../utils/nostrAuth'
 import { fetchInstanceStatus } from '../utils/instanceStatus'
-import { LANGUAGES } from '../utils/languages'
 import { Callout } from '../components/ui'
 
 type ConnectionState = 'idle' | 'connecting' | 'success' | 'no-extension' | 'error'
-
-function LanguageSwitcher() {
-  const { i18n, t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  const currentLang = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0]
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [open])
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="btn-ghost flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-text-muted hover:text-text transition-colors"
-        aria-label={t('adminOnboarding.extracted.change_language_789b14', 'Change language')}
-      >
-        <Globe className="w-3.5 h-3.5" />
-        <span>{currentLang.nativeName}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-52 max-h-64 overflow-y-auto bg-surface-raised border border-border rounded-xl shadow-lg z-50 animate-fade-in-scale">
-          {LANGUAGES.map((lang) => (
-            <button
-              key={lang.code}
-              type="button"
-              onClick={() => {
-                i18n.changeLanguage(lang.code)
-                setOpen(false)
-              }}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
-                lang.code === i18n.language
-                  ? 'text-accent bg-accent/5'
-                  : 'text-text-secondary hover:text-text hover:bg-surface-overlay'
-              }`}
-            >
-              <span className="text-base leading-none">{lang.flag}</span>
-              <span>{lang.nativeName}</span>
-              {lang.code === i18n.language && (
-                <Check className="w-3.5 h-3.5 text-accent ml-auto shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function NostrIcon({ variant = 'initiation' }: { variant?: 'initiation' | 'login' }) {
   const Icon = variant === 'login' ? Link2 : ShieldCheck

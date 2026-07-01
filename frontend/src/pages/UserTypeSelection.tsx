@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Loader2 } from 'lucide-react'
 import { OnboardingCard } from '../components/onboarding/OnboardingCard'
+import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher'
 import { DynamicIcon } from '../components/shared/DynamicIcon'
 import { Button, Callout } from '../components/ui'
 import {
@@ -127,6 +128,7 @@ export function UserTypeSelection() {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center p-4">
         <OnboardingCard
+          topRight={<LanguageSwitcher />}
           title={t('common.error')}
         >
           <Callout className="mb-6" label={t('onboarding.userType.errorLabel', 'User type loading error')} tone="error">
@@ -148,6 +150,7 @@ export function UserTypeSelection() {
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <OnboardingCard
+        topRight={<LanguageSwitcher />}
         title={t('onboarding.userType.title')}
         subtitle={t('onboarding.userType.description')}
       >
