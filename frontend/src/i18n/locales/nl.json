@@ -11,6 +11,7 @@
     "required": "Verplicht",
     "settings": "Instellingen",
     "toggleTheme": "Thema wisselen",
+    "changeLanguage": "Taal wijzigen",
     "switchToLight": "Naar lichte modus",
     "switchToDark": "Naar donkere modus",
     "moveUp": "Omhoog",
@@ -745,6 +746,11 @@
     "authenticationFailed": "Verificatie mislukt",
     "noNostrExtension": "Geen Nostr-extensie gevonden",
     "exportFailed": "Exporteren mislukt"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Admins kunnen"
+    }
   },
   "adminDashboard": {
     "title": "Beheerdashboard",

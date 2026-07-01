@@ -174,6 +174,7 @@
     "required": "आवश्यक",
     "settings": "सेटिंग्स",
     "toggleTheme": "थीम बदलें",
+    "changeLanguage": "भाषा बदलें",
     "switchToLight": "लाइट मोड में बदलें",
     "switchToDark": "डार्क मोड में बदलें",
     "moveUp": "ऊपर ले जाएं",
@@ -747,6 +748,11 @@
     "authenticationFailed": "प्रमाणीकरण विफल",
     "noNostrExtension": "कोई Nostr एक्सटेंशन नहीं मिला",
     "exportFailed": "निर्यात विफल"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "व्यवस्थापक कर सकते हैं"
+    }
   },
   "adminDashboard": {
     "title": "एडमिन डैशबोर्ड",

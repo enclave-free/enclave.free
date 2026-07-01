@@ -11,6 +11,7 @@
     "required": "Wajib",
     "settings": "Pengaturan",
     "toggleTheme": "Ganti tema",
+    "changeLanguage": "Ubah bahasa",
     "switchToLight": "Beralih ke mode terang",
     "switchToDark": "Beralih ke mode gelap",
     "moveUp": "Pindah ke atas",
@@ -745,6 +746,11 @@
     "authenticationFailed": "Autentikasi gagal",
     "noNostrExtension": "Ekstensi Nostr tidak ditemukan",
     "exportFailed": "Ekspor Gagal"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Admin dapat"
+    }
   },
   "adminDashboard": {
     "title": "Dashboard Admin",

@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactElement, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -23,6 +23,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { PageShell } from '../components/ui';
+import { cx } from '../components/ui/utils';
 
 interface Step {
   title: string;
@@ -33,7 +34,7 @@ interface SummaryCard {
   title: string;
   body: string;
   to: string;
-  icon: JSX.Element;
+  icon: ReactElement;
 }
 
 interface GuideCard {
@@ -43,8 +44,23 @@ interface GuideCard {
   details: string[];
   to?: string;
   linkLabel?: string;
-  icon: JSX.Element;
+  icon: ReactElement;
 }
+
+const interactiveCardClassName = cx(
+  'focus-ring group flex h-full flex-col rounded-2xl bg-surface-raised p-5 shadow-sm ring-1 ring-border/70',
+  'transition-[transform,box-shadow,background-color] duration-200 ease-out',
+  'hover:-translate-y-0.5 hover:bg-surface-overlay hover:shadow-md active:scale-[0.96]'
+);
+
+const summaryCardClassName = cx(
+  'focus-ring group flex min-h-32 flex-col justify-between rounded-2xl bg-surface p-4 text-left shadow-sm ring-1 ring-border/70',
+  'transition-[transform,box-shadow,background-color] duration-200 ease-out',
+  'hover:-translate-y-0.5 hover:bg-surface-overlay hover:shadow-md active:scale-[0.96]'
+);
+
+const infoCardClassName =
+  'rounded-2xl bg-surface-raised p-5 shadow-sm ring-1 ring-border/70';
 
 const quickSteps: Step[] = [
   {
@@ -79,6 +95,7 @@ const safetyBasics = [
 
 export function AdminGuides() {
   const { t } = useTranslation();
+  const adminsCanLabel = t('adminGuides.card.adminsCan', 'Admins can');
 
   const summaryCards: SummaryCard[] = [
     {
@@ -573,7 +590,11 @@ export function AdminGuides() {
       >
         <div className="grid gap-4 lg:grid-cols-2">
           {configureCards.map((card) => (
-            <GuideLinkCard key={card.title} card={card} />
+            <GuideLinkCard
+              key={card.title}
+              card={card}
+              adminsCanLabel={adminsCanLabel}
+            />
           ))}
         </div>
       </GuideSection>
@@ -589,7 +610,12 @@ export function AdminGuides() {
       >
         <div className="grid gap-4 lg:grid-cols-4">
           {workflowCards.map((card) => (
-            <GuideLinkCard key={card.title} card={card} compact />
+            <GuideLinkCard
+              key={card.title}
+              card={card}
+              compact
+              adminsCanLabel={adminsCanLabel}
+            />
           ))}
         </div>
       </GuideSection>
@@ -605,7 +631,11 @@ export function AdminGuides() {
       >
         <div className="grid gap-4 lg:grid-cols-2">
           {truthCards.map((card) => (
-            <GuideInfoCard key={card.title} card={card} />
+            <GuideInfoCard
+              key={card.title}
+              card={card}
+              adminsCanLabel={adminsCanLabel}
+            />
           ))}
         </div>
       </GuideSection>
@@ -638,7 +668,10 @@ export function AdminGuides() {
                 key={item}
                 className="flex items-start gap-3 rounded-2xl bg-surface p-4 text-sm leading-6 text-text-secondary ring-1 ring-border/60"
               >
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+                <CheckCircle2
+                  className="mt-0.5 h-5 w-5 shrink-0 text-success"
+                  aria-hidden="true"
+                />
                 <span className="text-pretty">
                   {t(`adminGuides.safety.items.${index}`, item)}
                 </span>
@@ -683,14 +716,11 @@ export function AdminGuides() {
 
 function SummaryLink({ card }: { card: SummaryCard }) {
   return (
-    <Link
-      to={card.to}
-      className="focus-ring group flex min-h-32 flex-col justify-between rounded-2xl bg-surface p-4 text-left shadow-sm ring-1 ring-border/70 transition-[transform,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-surface-overlay hover:shadow-md active:scale-[0.96]"
-    >
+    <Link to={card.to} className={summaryCardClassName}>
       <div>
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15">
+        <IconFrame size="sm" className="mb-3">
           {card.icon}
-        </div>
+        </IconFrame>
         <h2 className="text-balance text-sm font-semibold text-text">
           {card.title}
         </h2>
@@ -698,7 +728,10 @@ function SummaryLink({ card }: { card: SummaryCard }) {
           {card.body}
         </p>
       </div>
-      <ArrowRight className="mt-4 h-4 w-4 text-text-muted transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-accent" />
+      <ArrowRight
+        className="mt-4 h-4 w-4 text-text-muted transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-accent"
+        aria-hidden="true"
+      />
     </Link>
   );
 }
@@ -742,28 +775,40 @@ function GuideSection({
 function GuideLinkCard({
   card,
   compact = false,
+  adminsCanLabel,
 }: {
   card: GuideCard;
   compact?: boolean;
+  adminsCanLabel: string;
 }) {
   return (
-    <Link
-      to={card.to ?? '/admin/setup'}
-      className="focus-ring group flex h-full flex-col rounded-2xl bg-surface-raised p-5 shadow-sm ring-1 ring-border/70 transition-[transform,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-surface-overlay hover:shadow-md active:scale-[0.96]"
-    >
-      <GuideCardContent card={card} compact={compact} />
+    <Link to={card.to ?? '/admin/setup'} className={interactiveCardClassName}>
+      <GuideCardContent
+        card={card}
+        compact={compact}
+        adminsCanLabel={adminsCanLabel}
+      />
       <div className="mt-auto flex min-h-10 items-center gap-2 pt-4 text-sm font-medium text-accent">
         <span>{card.linkLabel}</span>
-        <ArrowRight className="h-4 w-4 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
+        <ArrowRight
+          className="h-4 w-4 transition-transform duration-150 ease-out group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
       </div>
     </Link>
   );
 }
 
-function GuideInfoCard({ card }: { card: GuideCard }) {
+function GuideInfoCard({
+  card,
+  adminsCanLabel,
+}: {
+  card: GuideCard;
+  adminsCanLabel: string;
+}) {
   return (
-    <article className="rounded-2xl bg-surface-raised p-5 shadow-sm ring-1 ring-border/70">
-      <GuideCardContent card={card} />
+    <article className={infoCardClassName}>
+      <GuideCardContent card={card} adminsCanLabel={adminsCanLabel} />
     </article>
   );
 }
@@ -771,16 +816,16 @@ function GuideInfoCard({ card }: { card: GuideCard }) {
 function GuideCardContent({
   card,
   compact = false,
+  adminsCanLabel,
 }: {
   card: GuideCard;
   compact?: boolean;
+  adminsCanLabel: string;
 }) {
   return (
     <div className="flex h-full flex-col gap-5">
       <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-accent/15">
-          {card.icon}
-        </div>
+        <IconFrame>{card.icon}</IconFrame>
         <div className="min-w-0">
           <p className="mb-2 text-xs font-semibold uppercase tracking-normal text-accent">
             {card.eyebrow}
@@ -796,7 +841,7 @@ function GuideCardContent({
 
       <div className="rounded-2xl bg-surface p-4 ring-1 ring-border/60">
         <p className="mb-3 text-xs font-semibold uppercase tracking-normal text-text-muted">
-          Admins can
+          {adminsCanLabel}
         </p>
         <ul className={compact ? 'space-y-2' : 'grid gap-2'}>
           {card.details.map((detail) => (
@@ -804,12 +849,37 @@ function GuideCardContent({
               key={detail}
               className="flex items-start gap-2 text-sm leading-6 text-text-secondary"
             >
-              <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-success" />
+              <CheckCircle2
+                className="mt-1 h-4 w-4 shrink-0 text-success"
+                aria-hidden="true"
+              />
               <span className="text-pretty">{detail}</span>
             </li>
           ))}
         </ul>
       </div>
+    </div>
+  );
+}
+
+function IconFrame({
+  children,
+  className,
+  size = 'md',
+}: {
+  children: ReactNode;
+  className?: string;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <div
+      className={cx(
+        'flex shrink-0 items-center justify-center bg-accent/10 text-accent ring-1 ring-accent/15',
+        size === 'sm' ? 'h-10 w-10 rounded-xl' : 'h-12 w-12 rounded-2xl',
+        className
+      )}
+    >
+      {children}
     </div>
   );
 }

@@ -13,6 +13,7 @@
     "required": "Απαιτούμενο",
     "settings": "Ρυθμίσεις",
     "toggleTheme": "Εναλλαγή θέματος",
+    "changeLanguage": "Αλλαγή γλώσσας",
     "switchToLight": "Μετάβαση σε φωτεινή λειτουργία",
     "switchToDark": "Μετάβαση σε σκοτεινή λειτουργία",
     "moveUp": "Μετακίνηση πάνω",
@@ -747,6 +748,11 @@
     "authenticationFailed": "Η πιστοποίηση απέτυχε",
     "noNostrExtension": "Δεν βρέθηκε επέκταση Nostr",
     "exportFailed": "Αποτυχία Εξαγωγής"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Οι διαχειριστές μπορούν"
+    }
   },
   "adminDashboard": {
     "title": "Πίνακας Ελέγχου Διαχειριστή",

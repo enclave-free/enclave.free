@@ -174,6 +174,7 @@
     "required": "Obligatoriu",
     "settings": "Setări",
     "toggleTheme": "Schimbă tema",
+    "changeLanguage": "Schimbă limba",
     "switchToLight": "Comută la modul luminos",
     "switchToDark": "Comută la modul întunecat",
     "moveUp": "Mută în sus",
@@ -761,6 +762,11 @@
     "authenticationFailed": "Autentificarea a eșuat",
     "noNostrExtension": "Nu s-a găsit nicio extensie Nostr",
     "exportFailed": "Export Eșuat"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Administratorii pot"
+    }
   },
   "adminDashboard": {
     "title": "Panou de administrare",

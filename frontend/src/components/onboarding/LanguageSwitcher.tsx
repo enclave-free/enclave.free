@@ -42,7 +42,7 @@ export function LanguageSwitcher() {
         type="button"
         onClick={() => setOpen(!open)}
         className="btn-ghost flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-text-muted transition-colors hover:text-text"
-        aria-label={t('adminOnboarding.extracted.change_language_789b14', 'Change language')}
+        aria-label={t('common.changeLanguage', 'Change language')}
         aria-expanded={open}
         aria-haspopup="menu"
       >

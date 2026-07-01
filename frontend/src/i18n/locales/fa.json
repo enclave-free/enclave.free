@@ -11,6 +11,7 @@
     "required": "الزامی",
     "settings": "تنظیمات",
     "toggleTheme": "تغییر پوسته",
+    "changeLanguage": "تغییر زبان",
     "switchToLight": "تغییر به حالت روشن",
     "switchToDark": "تغییر به حالت تاریک",
     "moveUp": "حرکت به بالا",
@@ -745,6 +746,11 @@
     "authenticationFailed": "احراز هویت ناموفق بود",
     "noNostrExtension": "افزونه Nostr یافت نشد",
     "exportFailed": "خروجی گرفتن ناموفق"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "مدیران می‌توانند"
+    }
   },
   "adminDashboard": {
     "title": "داشبورد مدیر",

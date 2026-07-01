@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
+import i18n from '../i18n';
 import { AdminGuides } from './AdminGuides';
 
 function renderAdminGuides() {
@@ -43,6 +44,7 @@ describe('AdminGuides', () => {
 
   it('opens with a scannable admin control map', () => {
     renderAdminGuides();
+    const adminsCanLabel = i18n.t('adminGuides.card.adminsCan');
 
     expect(screen.getByText('Admin control map')).toBeInTheDocument();
     expect(
@@ -59,7 +61,11 @@ describe('AdminGuides', () => {
       'href',
       '/admin/deployment'
     );
-    expect(screen.getAllByText('Admins can').length).toBeGreaterThan(6);
+
+    const identityGuide = screen.getByRole('link', {
+      name: /Identity and look/,
+    });
+    expect(within(identityGuide).getByText(adminsCanLabel)).toBeInTheDocument();
   });
 
   it('maps product configuration areas to the real admin pages', () => {

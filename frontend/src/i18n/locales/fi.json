@@ -174,6 +174,7 @@
     "required": "Pakollinen",
     "settings": "Asetukset",
     "toggleTheme": "Vaihda teemaa",
+    "changeLanguage": "Vaihda kieli",
     "switchToLight": "Vaihda vaaleaan tilaan",
     "switchToDark": "Vaihda tummaan tilaan",
     "moveUp": "Siirrä ylös",
@@ -745,6 +746,11 @@
     "authenticationFailed": "Todennus epäonnistui",
     "noNostrExtension": "Nostr-laajennusta ei löytynyt",
     "exportFailed": "Vienti epäonnistui"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Ylläpitäjät voivat"
+    }
   },
   "adminDashboard": {
     "title": "Ylläpidon kojelauta",
