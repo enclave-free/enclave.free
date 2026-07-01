@@ -27,6 +27,8 @@ Start with the current-state docs below. They are the files that describe the ac
 
 ## Admin And Ops
 
+- [demo-deployment-handoff.md](demo-deployment-handoff.md): simple recipient-facing walkthrough for an already-initialized demo instance.
+- [release-process.md](release-process.md): minimal tag-based process for publishing versioned GitHub releases.
 - [admin-config-assistant.md](admin-config-assistant.md): admin config assistant bubble and change-apply flow.
 - [admin-key-recovery-runbook.md](admin-key-recovery-runbook.md): admin key recovery procedures.
 - [browser-storage-posture.md](browser-storage-posture.md): browser storage allowlist, logout clearing, and cache-minimizing response guidance.
