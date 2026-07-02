@@ -174,6 +174,7 @@
     "required": "Obligatorio",
     "settings": "Configuración",
     "toggleTheme": "Cambiar tema",
+    "changeLanguage": "Cambiar idioma",
     "switchToLight": "Cambiar a modo claro",
     "switchToDark": "Cambiar a modo oscuro",
     "moveUp": "Subir",
@@ -712,6 +713,11 @@
     "legalResponsibilityNotice": "Eres responsable de la configuración legalmente adecuada, de las divulgaciones a usuarios y de las políticas de manejo de datos de esta instancia.",
     "extracted": {
       "change_language_789b14": "Cambiar idioma"
+    }
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Los administradores pueden"
     }
   },
   "adminDashboard": {

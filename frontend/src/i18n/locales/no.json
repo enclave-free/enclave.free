@@ -174,6 +174,7 @@
     "required": "Påkrevd",
     "settings": "Innstillinger",
     "toggleTheme": "Bytt tema",
+    "changeLanguage": "Endre språk",
     "switchToLight": "Bytt til lyst modus",
     "switchToDark": "Bytt til mørkt modus",
     "moveUp": "Flytt opp",
@@ -746,6 +747,11 @@
     "authenticationFailed": "Autentisering mislyktes",
     "noNostrExtension": "Ingen Nostr-utvidelse funnet",
     "exportFailed": "Eksport mislyktes"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "Administratorer kan"
+    }
   },
   "adminDashboard": {
     "title": "Adminkontrollpanel",

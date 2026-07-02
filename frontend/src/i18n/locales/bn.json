@@ -11,6 +11,7 @@
     "required": "আবশ্যক",
     "settings": "সেটিংস",
     "toggleTheme": "থিম পরিবর্তন করুন",
+    "changeLanguage": "ভাষা পরিবর্তন করুন",
     "switchToLight": "লাইট মোডে পরিবর্তন করুন",
     "switchToDark": "ডার্ক মোডে পরিবর্তন করুন",
     "moveUp": "উপরে সরান",
@@ -745,6 +746,11 @@
     "authenticationFailed": "প্রমাণীকরণ ব্যর্থ",
     "noNostrExtension": "কোনো Nostr এক্সটেনশন পাওয়া যায়নি",
     "exportFailed": "রপ্তানি ব্যর্থ হয়েছে"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "অ্যাডমিনরা করতে পারেন"
+    }
   },
   "adminDashboard": {
     "title": "অ্যাডমিন ড্যাশবোর্ড",

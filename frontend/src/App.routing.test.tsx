@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
@@ -19,6 +20,16 @@ vi.mock('./pages/ChatPage', () => ({
     }
     return <main>Chat route</main>;
   },
+}));
+
+vi.mock('./components/shared/AdminRoute', () => ({
+  AdminRoute: ({ children }: { children: ReactNode }) => (
+    <section data-testid="admin-route-shell">{children}</section>
+  ),
+}));
+
+vi.mock('./pages/AdminGuides', () => ({
+  AdminGuides: () => <main>Admin guides route</main>,
 }));
 
 describe('App routing', () => {
@@ -71,5 +82,14 @@ describe('App routing', () => {
     expect(
       await screen.findByText('Failed to load page. Please refresh.')
     ).toBeInTheDocument();
+  });
+
+  it('keeps the admin guides route behind the admin route shell', async () => {
+    window.history.pushState({}, '', '/admin/guides');
+
+    render(<App />);
+
+    expect(await screen.findByText('Admin guides route')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-route-shell')).toBeInTheDocument();
   });
 });

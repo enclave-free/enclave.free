@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { OnboardingCard } from '../components/onboarding/OnboardingCard';
+import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher';
 import { DynamicField } from '../components/onboarding/DynamicField';
 import { Button } from '../components/ui';
 import {
@@ -219,6 +220,7 @@ export function UserProfile() {
 
   return (
     <OnboardingCard
+      topRight={<LanguageSwitcher />}
       title={t('onboarding.profile.title')}
       subtitle={t('onboarding.profile.subtitle')}
     >

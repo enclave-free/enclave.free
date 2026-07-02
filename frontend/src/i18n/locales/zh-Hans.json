@@ -13,6 +13,7 @@
     "required": "必填",
     "settings": "设置",
     "toggleTheme": "切换主题",
+    "changeLanguage": "更改语言",
     "switchToLight": "切换到浅色模式",
     "switchToDark": "切换到深色模式",
     "moveUp": "上移",
@@ -747,6 +748,11 @@
     "authenticationFailed": "认证失败",
     "noNostrExtension": "未找到Nostr扩展",
     "exportFailed": "导出失败"
+  },
+  "adminGuides": {
+    "card": {
+      "adminsCan": "管理员可以"
+    }
   },
   "adminDashboard": {
     "title": "管理员仪表板",

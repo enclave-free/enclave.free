@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Bot,
+  BookOpen,
   Database,
   Gauge,
   LayoutDashboard,
@@ -161,6 +162,16 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             'Walk through setup, documents, resources, and testing.'
           ),
           icon: <Wand2 className="h-4 w-4" aria-hidden="true" />,
+        },
+        {
+          to: '/admin/guides',
+          onClick: onClose,
+          label: t('settings.admin.guides', 'Admin Guides'),
+          description: t(
+            'settings.admin.guidesDesc',
+            'Understand what admins configure and where.'
+          ),
+          icon: <BookOpen className="h-4 w-4" aria-hidden="true" />,
         },
         {
           to: '/admin/test-and-feedback',
