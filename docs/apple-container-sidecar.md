@@ -64,6 +64,7 @@ $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh doctor
 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh prepare
 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh backup
 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh import-docker
+$APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh diagnose-peers
 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh up-alt
 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh health
 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh gateway
@@ -90,6 +91,40 @@ For a lighter health check that skips the live LLM route:
 ENCLAVE_APPLE_SKIP_LLM_HEALTH=1 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh health
 ```
 
+## Safe Diagnostics
+
+Use `diagnose-peers` before starting an additional Enclave Apple profile or
+when validating coexistence with Firecrawl and Hermes Apple sidecars. The
+diagnostic gate checks Docker Compose state, Apple image imports, alternate
+port availability, live sidecar health, and shared Apple network peer
+reachability. It intentionally does not start profile service containers and
+does not mutate Docker Compose state.
+
+Each run writes a report under the profile run directory, for example:
+
+```sh
+$APPLE_SIDECAR_HOME/run/enclavefree-staging-guides-apple/diagnose-peers-latest.txt
+```
+
+The report should include:
+
+```text
+service_containers_started: no
+docker_compose_mutated: no
+result: ok
+```
+
+For guarded profiles, `up-alt` is blocked unless the planned validation shell
+sets:
+
+```sh
+export ENCLAVE_APPLE_ALLOW_UNSAFE_START=1
+```
+
+Keep `ENCLAVE_APPLE_DIAGNOSE_PROFILE_NETWORK=0` for routine diagnostics. Set it
+to `1` only during a planned validation window, because probing extra Apple
+networks can disturb already-running Apple sidecars on this Mac.
+
 ## Caveats
 
 - Apple volumes are separate from Docker volumes. Use `backup` before migration
@@ -105,6 +140,9 @@ ENCLAVE_APPLE_SKIP_LLM_HEALTH=1 $APPLE_SIDECAR_HOME/bin/enclavefree-apple.sh hea
 - Firecrawl's Apple profile should join `apple-enclavefree-prototype` via
   `up-shared` when it needs to coexist with Enclave. Running Firecrawl on
   Apple's `default` network remains the known failing repro for coexistence.
+- Extra Enclave Apple profiles, such as the staging-guides profile, are
+  guarded by default. Prefer `diagnose-peers` for routine validation and start
+  them only during an intentional validation window.
 - Startup depends on Tinfoil's external verifier for
   `tinfoilsh/confidential-model-router`; verifier outages can stop sidecar
   startup without implying an Enclave source or Compose regression.
