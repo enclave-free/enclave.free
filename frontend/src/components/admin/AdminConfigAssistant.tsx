@@ -8,9 +8,14 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  BookOpen,
+  Database,
+  LifeBuoy,
   X,
   MessageCircle,
   RefreshCw,
+  Search,
+  Settings2,
   ShieldAlert,
   Play,
   EyeOff,
@@ -79,6 +84,8 @@ interface AdminConfigAssistantProps {
 }
 
 const CONFIG_TOOL_ID = 'admin-config';
+const KNOWLEDGE_TOOL_ID = 'knowledge-search';
+const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
 const ONBOARDING_WELCOME_MESSAGE =
   "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime.";
 
@@ -259,27 +266,45 @@ export function AdminConfigAssistant({
     }
   }, [messages, isLoading]);
 
-  const availableTools = useMemo<Tool[]>(
-    () => [
+  const availableTools = useMemo<Tool[]>(() => {
+    if (isOnboarding) {
+      return [
+        {
+          id: CONFIG_TOOL_ID,
+          name: t('chat.tools.configName', 'Config'),
+          description: t(
+            'chat.tools.config',
+            'Read and update admin configuration'
+          ),
+          icon: <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />,
+        },
+      ];
+    }
+
+    return [
+      {
+        id: KNOWLEDGE_TOOL_ID,
+        name: t('chat.tools.knowledgeSearchName', 'Knowledge'),
+        description: t(
+          'chat.tools.knowledgeSearch',
+          'Search uploaded documents and knowledge chunks'
+        ),
+        icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+      },
+      {
+        id: CURATED_RESOURCES_TOOL_ID,
+        name: t('chat.tools.curatedResourcesName', 'Resources'),
+        description: t(
+          'chat.tools.curatedResources',
+          'Find admin-vetted referral resources and trusted organizations'
+        ),
+        icon: <LifeBuoy className="h-3.5 w-3.5" aria-hidden="true" />,
+      },
       {
         id: 'web-search',
         name: t('chat.tools.webSearchName'),
         description: t('chat.tools.webSearch'),
-        icon: (
-          <svg
-            className="w-3.5 h-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-            />
-          </svg>
-        ),
+        icon: <Search className="h-3.5 w-3.5" aria-hidden="true" />,
       },
       {
         id: CONFIG_TOOL_ID,
@@ -288,45 +313,16 @@ export function AdminConfigAssistant({
           'chat.tools.config',
           'Read and update admin configuration'
         ),
-        icon: (
-          <svg
-            className="w-3.5 h-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 6h9m-9 6h9m-9 6h9M4.5 6h.008v.008H4.5V6zm0 6h.008v.008H4.5V12zm0 6h.008v.008H4.5V18z"
-            />
-          </svg>
-        ),
+        icon: <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />,
       },
       {
         id: 'db-query',
         name: t('chat.tools.databaseName'),
         description: t('chat.tools.database'),
-        icon: (
-          <svg
-            className="w-3.5 h-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
-            />
-          </svg>
-        ),
+        icon: <Database className="h-3.5 w-3.5" aria-hidden="true" />,
       },
-    ],
-    [t]
-  );
+    ];
+  }, [isOnboarding, t]);
 
   const fetchJson = useCallback(
     async <T,>(endpoint: string, options?: RequestInit): Promise<T> => {
