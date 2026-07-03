@@ -9,7 +9,7 @@
 - Feature branch: feature/document-upload-show-more
 - Human owner: plebdev
 - Started: 2026-07-03 12:31:31 CDT
-- Current status: local CodeRabbit finding fixed; rerun pending
+- Current status: local CodeRabbit passed; staging PR pending
 - Skill setup status: present; AGENTS.md, CONTEXT.md, docs/agents/issue-tracker.md, docs/agents/triage-labels.md, and docs/agents/domain.md exist.
 
 ## Goal
@@ -22,10 +22,10 @@ Make sure that on the document upload page, when there are many documents upload
 - ADRs: none planned; this is a reversible local UI affordance.
 - PRD issue: https://github.com/enclave-free/enclave.free/issues/451
 - Slice issues: https://github.com/enclave-free/enclave.free/issues/452
-- Issue sessions: #452 in current Codex thread; commit 1fcff87.
+- Issue sessions: #452 in current Codex thread; commits 1fcff87 and 5c0de77.
 - Agent briefs: #452 issue body is the executable brief.
 - Review packets: standards/spec review completed; initial findings fixed.
-- Local CodeRabbit report: first local run found one major refresh hydration issue; fixed and pending rerun.
+- Local CodeRabbit report: first local run found one major refresh hydration issue; fixed in 5c0de77. Rerun completed with 0 issues.
 - PR URL: pending.
 
 ## Commands
@@ -52,7 +52,7 @@ Make sure that on the document upload page, when there are many documents upload
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #452 | 66fbf3c45e00c7575813e436d677a7f47caec810 | current Codex thread; tiny isolated low-risk single-slice UI write | 1fcff87 plus CodeRabbit fix commit pending | standards/spec findings fixed; local CodeRabbit refresh hydration finding fixed | `npm test -- AdminDocumentUpload.test.tsx`; `npm test`; `npm run build` |
+| #452 | 66fbf3c45e00c7575813e436d677a7f47caec810 | current Codex thread; tiny isolated low-risk single-slice UI write | 1fcff87, 5c0de77 | standards/spec findings fixed; local CodeRabbit refresh hydration finding fixed | `npm test -- AdminDocumentUpload.test.tsx`; `npm test`; `npm run build` |
 
 ## Open Questions
 
