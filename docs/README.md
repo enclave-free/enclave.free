@@ -27,7 +27,7 @@ Start with the current-state docs below. They are the files that describe the ac
 
 ## Admin And Ops
 
-- [demo-deployment-handoff.md](demo-deployment-handoff.md): simple recipient-facing walkthrough for an already-initialized demo instance.
+- [demo-deployment-handoff.md](demo-deployment-handoff.md): simple recipient-facing walkthrough for an already-initialized demo instance. PDF: [enclave-demo-deployment-handoff.pdf](enclave-demo-deployment-handoff.pdf). Rebuild with `python3 scripts/build_demo_handoff_pdf.py`.
 - [release-process.md](release-process.md): minimal tag-based process for publishing versioned GitHub releases.
 - [admin-config-assistant.md](admin-config-assistant.md): admin config assistant bubble and change-apply flow.
 - [admin-key-recovery-runbook.md](admin-key-recovery-runbook.md): admin key recovery procedures.
