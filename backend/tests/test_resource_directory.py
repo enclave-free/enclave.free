@@ -238,15 +238,37 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["detail"], "Invalid internal agent token")
 
-    def test_internal_resource_search_rejects_blank_help_type(self) -> None:
+    def test_internal_resource_search_blank_help_type_lists_ready_inventory(self) -> None:
+        self.database.create_resource(
+            resource_id="pending-inventory",
+            name="Pending Inventory",
+            resource_type="ngo",
+            scope_level="country",
+            scope_code="NI",
+            help_types=["legal"],
+        )
+        self._create_ready_resource(
+            "ready-inventory",
+            scope_level="country",
+            scope_code="NI",
+            languages=["es"],
+            verified=True,
+        )
+
         response = self.client.post(
             "/internal/agent/resources/search",
             headers=self.headers,
-            json={"help_type": "   ", "jurisdiction": "NI"},
+            json={"help_type": "   ", "limit": 10},
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["detail"], "help_type is required")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIsNone(body["help_type"])
+        self.assertIsNone(body["resolved_country_code"])
+        self.assertEqual(
+            [resource["resource_id"] for resource in body["resources"]],
+            ["ready-inventory"],
+        )
 
     def test_internal_resource_search_trims_help_type_and_bounds_limit(self) -> None:
         original = self.database.search_resources

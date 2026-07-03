@@ -72,7 +72,7 @@ Required Context remains a separate product-policy term for future mandatory con
 
 `curated-resources` is a first-class visible Tool Set for the admin-curated Resource Directory. It is separate from `knowledge-search`: Resources are structured, priority referrals stored in SQLite by admins; Knowledge is uploaded document retrieval through embeddings and document access policy.
 
-Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns vetted organizations, contacts, coverage, help types, and languages. The Tool should be enabled by default for user chat so Sage can recommend known priority resources before guessing, searching the web, or asking the user to check manually.
+Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns vetted organizations, contacts, coverage, help types, and languages. The Tool should be enabled by default for user chat so Sage can recommend known priority resources before guessing, searching the web, or asking the user to check manually. When a user asks what resources are available or asks to list resources, Sage should call `find_resources` without a `help_type` so it lists ready curated resources from the live Resource Directory instead of describing the tool catalog.
 
 ## Admin Config
 
