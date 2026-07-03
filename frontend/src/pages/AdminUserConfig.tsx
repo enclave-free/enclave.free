@@ -56,6 +56,21 @@ const FIELD_TYPE_VALUES: FieldType[] = [
   'date',
   'url',
 ];
+
+const EXPORT_DECRYPT_BATCH_SIZE = 5;
+
+async function mapInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    const batch = items.slice(index, index + batchSize);
+    results.push(...(await Promise.all(batch.map(mapper))));
+  }
+  return results;
+}
 type SourceTypeFilter = 'all' | 'untyped' | number;
 
 const USER_AVATAR_COLORS = [
@@ -1572,10 +1587,10 @@ export function AdminUserConfig() {
   const collectExportIdentities = async (): Promise<
     Record<number, DecryptedUserIdentity | undefined>
   > => {
-    const entries = await Promise.all(
-      users.map(
-        async (user) => [user.id, await decryptIdentityForExport(user)] as const
-      )
+    const entries = await mapInBatches(
+      users,
+      EXPORT_DECRYPT_BATCH_SIZE,
+      async (user) => [user.id, await decryptIdentityForExport(user)] as const
     );
     return Object.fromEntries(entries);
   };
@@ -1587,17 +1602,19 @@ export function AdminUserConfig() {
       return {};
     }
 
-    const userEntries = await Promise.all(
-      users.map(async (user) => {
-        const encryptedFields = user.fields_encrypted ?? {};
-        const decryptedEntries = await Promise.all(
-          Object.entries(encryptedFields).map(
-            async ([fieldName, encrypted]) =>
-              [fieldName, await decryptField(encrypted)] as const
-          )
+    const userEntries = await mapInBatches(
+      users,
+      EXPORT_DECRYPT_BATCH_SIZE,
+      async (user) => {
+        const encryptedEntries = Object.entries(user.fields_encrypted ?? {});
+        const decryptedEntries = await mapInBatches(
+          encryptedEntries,
+          EXPORT_DECRYPT_BATCH_SIZE,
+          async ([fieldName, encrypted]) =>
+            [fieldName, await decryptField(encrypted)] as const
         );
         return [user.id, Object.fromEntries(decryptedEntries)] as const;
-      })
+      }
     );
 
     return Object.fromEntries(userEntries);

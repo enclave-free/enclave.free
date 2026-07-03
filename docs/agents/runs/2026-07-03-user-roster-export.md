@@ -9,7 +9,7 @@
 - Feature branch: feature/user-roster-export
 - Human owner: Austin
 - Started: 2026-07-03
-- Current status: #464 implemented; local review and local CodeRabbit passed after fixes; PR pending.
+- Current status: PR #465 open against staging; PR CodeRabbit round 1 findings fixed locally and pending push.
 - Skill setup status: Present. Repo has AGENTS.md, docs/agents/issue-tracker.md, docs/agents/triage-labels.md, and docs/agents/domain.md.
 
 ## Goal
@@ -55,7 +55,7 @@ Admins need a clean spreadsheet-friendly list of Users for ordinary operational 
 - Agent briefs: #463 and #464 published in GitHub Issues.
 - Review packets: `docs/agents/runs/2026-07-03-user-roster-export-review-464.md`
 - Local CodeRabbit report: `docs/agents/runs/2026-07-03-user-roster-export-coderabbit-local.md`
-- PR URL: Pending.
+- PR URL: https://github.com/enclave-free/enclave.free/pull/465
 
 ## Commands
 
@@ -82,6 +82,12 @@ Admins need a clean spreadsheet-friendly list of Users for ordinary operational 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #464 | origin/staging | Current thread | 9a550d5 | Pass after fixes | Frontend full suite, backend full suite, build, targeted tests, diff check |
+
+## PR Review Ledger
+
+| Round | Source | Status | Findings | Result |
+| --- | --- | --- | --- | --- |
+| 1 | CodeRabbit PR full review | Fixed locally | Decrypt throttling, audit-failure no-download test | Pending push/recheck |
 
 ## Open Questions
 

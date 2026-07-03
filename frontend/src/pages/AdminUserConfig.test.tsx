@@ -398,4 +398,86 @@ describe('AdminUserConfig', () => {
       await screen.findByRole('note', { name: 'User roster export ready' })
     ).toHaveTextContent('User roster spreadsheet downloaded.');
   });
+
+  it('does not download a User Roster Export when audit recording fails', async () => {
+    userTypesResponse = [
+      { id: 1, name: 'Member', description: 'Community member', icon: 'User' },
+    ];
+    fieldsResponse = [
+      {
+        id: 1,
+        field_name: 'Organization',
+        field_type: 'text',
+        required: true,
+        user_type_id: null,
+        encryption_enabled: false,
+        include_in_chat: true,
+        display_order: 0,
+      },
+    ];
+    usersResponse = [
+      {
+        id: 7,
+        pubkey: null,
+        user_type_id: 1,
+        user_type: {
+          id: 1,
+          name: 'Member',
+          description: 'Community member',
+          icon: 'User',
+          display_order: 0,
+        },
+        approved: false,
+        created_at: '2026-06-30T17:57:16Z',
+        email_encrypted: {
+          ciphertext: 'email-cipher',
+          ephemeral_pubkey: 'ephemeral-email',
+        },
+        name_encrypted: {
+          ciphertext: 'name-cipher',
+          ephemeral_pubkey: 'ephemeral-name',
+        },
+        fields: {
+          Organization: 'Enclave',
+        },
+      },
+    ];
+    const defaultAdminFetch = mockAdminFetch.getMockImplementation();
+    mockAdminFetch.mockImplementation(
+      (endpoint: string, options?: RequestInit) => {
+        if (
+          endpoint === '/admin/users/roster-export' &&
+          options?.method === 'POST'
+        ) {
+          return Promise.resolve(
+            Response.json({ detail: 'audit unavailable' }, { status: 500 })
+          );
+        }
+        return defaultAdminFetch!(endpoint, options);
+      }
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findAllByText('Austin Kelsay')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Export users' }));
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/users/roster-export',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+    expect(anchorClickSpy).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole('note', { name: 'User roster export failed' })
+    ).toHaveTextContent('audit unavailable');
+  });
 });
