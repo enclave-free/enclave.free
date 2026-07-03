@@ -21,12 +21,26 @@ const mockDecryptField = vi.mocked(decryptField);
 const mockHasNip04Support = vi.mocked(hasNip04Support);
 
 let userTypesResponse: unknown[] = [];
+let fieldsResponse: unknown[] = [];
 let usersResponse: unknown[] = [];
+let anchorClickSpy: ReturnType<typeof vi.spyOn>;
 
 describe('AdminUserConfig', () => {
   beforeEach(() => {
     userTypesResponse = [];
+    fieldsResponse = [];
     usersResponse = [];
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:user-roster-export'),
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    anchorClickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
     mockHasNip04Support.mockReturnValue(true);
     mockDecryptField.mockImplementation(async (encrypted) => {
       const values: Record<string, string> = {
@@ -34,6 +48,7 @@ describe('AdminUserConfig', () => {
         'name-cipher': 'Austin Kelsay',
         'migration-email-cipher': 'jamie@example.com',
         'migration-name-cipher': 'Jamie Tester',
+        'profile-cipher': 'Local decrypted profile note',
       };
       return encrypted ? (values[encrypted.ciphertext] ?? null) : null;
     });
@@ -44,10 +59,18 @@ describe('AdminUserConfig', () => {
           return Promise.resolve(Response.json({ types: userTypesResponse }));
         }
         if (endpoint === '/admin/user-fields') {
-          return Promise.resolve(Response.json({ fields: [] }));
+          return Promise.resolve(Response.json({ fields: fieldsResponse }));
         }
         if (endpoint === '/admin/users') {
           return Promise.resolve(Response.json({ users: usersResponse }));
+        }
+        if (
+          endpoint === '/admin/users/roster-export' &&
+          options?.method === 'POST'
+        ) {
+          return Promise.resolve(
+            Response.json({ success: true, message: 'recorded' })
+          );
         }
         if (endpoint.startsWith('/users/') && options?.method === 'PUT') {
           const userId = Number(endpoint.split('/')[2]);
@@ -109,6 +132,7 @@ describe('AdminUserConfig', () => {
 
   afterEach(() => {
     cleanup();
+    anchorClickSpy?.mockRestore();
     vi.clearAllMocks();
   });
 
@@ -276,5 +300,102 @@ describe('AdminUserConfig', () => {
     expect(
       await screen.findByRole('note', { name: 'User type migration summary' })
     ).toHaveTextContent('Migration complete. Migrated: 1. Failed: 0.');
+  });
+
+  it('downloads a User Roster Export and records copied export metadata', async () => {
+    userTypesResponse = [
+      { id: 1, name: 'Member', description: 'Community member', icon: 'User' },
+    ];
+    fieldsResponse = [
+      {
+        id: 1,
+        field_name: 'Organization',
+        field_type: 'text',
+        required: true,
+        user_type_id: null,
+        encryption_enabled: false,
+        include_in_chat: true,
+        display_order: 0,
+      },
+      {
+        id: 2,
+        field_name: 'Case Notes',
+        field_type: 'textarea',
+        required: false,
+        user_type_id: 1,
+        encryption_enabled: true,
+        include_in_chat: false,
+        display_order: 1,
+      },
+    ];
+    usersResponse = [
+      {
+        id: 7,
+        pubkey: null,
+        user_type_id: 1,
+        user_type: {
+          id: 1,
+          name: 'Member',
+          description: 'Community member',
+          icon: 'User',
+          display_order: 0,
+        },
+        approved: false,
+        created_at: '2026-06-30T17:57:16Z',
+        email_encrypted: {
+          ciphertext: 'email-cipher',
+          ephemeral_pubkey: 'ephemeral-email',
+        },
+        name_encrypted: {
+          ciphertext: 'name-cipher',
+          ephemeral_pubkey: 'ephemeral-name',
+        },
+        fields: {
+          Organization: 'Enclave',
+        },
+        fields_encrypted: {
+          'Case Notes': {
+            ciphertext: 'profile-cipher',
+            ephemeral_pubkey: 'ephemeral-profile',
+          },
+        },
+      },
+    ];
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findAllByText('Austin Kelsay')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Export users' }));
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/users/roster-export',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(String),
+        })
+      );
+    });
+
+    const auditCall = mockAdminFetch.mock.calls.find(
+      ([endpoint]) => endpoint === '/admin/users/roster-export'
+    );
+    expect(auditCall).toBeDefined();
+    const body = JSON.parse(String(auditCall?.[1]?.body));
+    expect(body.filename).toMatch(/^enclave_users_.*\.xlsx$/);
+    expect(body.user_count).toBe(1);
+    expect(body.pending_count).toBe(1);
+    expect(body.includes_decrypted_browser_values).toBe(true);
+    expect(anchorClickSpy).toHaveBeenCalled();
+    expect(
+      await screen.findByRole('note', { name: 'User roster export ready' })
+    ).toHaveTextContent('User roster spreadsheet downloaded.');
   });
 });

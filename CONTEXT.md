@@ -272,6 +272,10 @@ _Avoid_: custom field
 The structured information a **User** provides in response to **Onboarding Questions**.
 _Avoid_: user fields, profile fields
 
+**User Roster Export**:
+A **Copied Export** that gives an **Admin** a spreadsheet-friendly roster of **Users**, their **User Approval** status, **User Type**, and available **User Profile** values for operational auditing.
+_Avoid_: database export, backup, raw table dump
+
 **User Memory**:
 Sage-owned durable context about a specific **User** that supports subtle personalization across **Conversations**.
 _Avoid_: user profile, session memory, profile fields, user-facing memory manager
