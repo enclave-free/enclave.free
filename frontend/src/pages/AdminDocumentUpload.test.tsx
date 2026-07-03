@@ -333,6 +333,14 @@ describe('AdminDocumentUpload', () => {
     expect(
       screen.queryByRole('button', { name: 'Show more' })
     ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    expect(await screen.findByText('Extraction failed')).toBeInTheDocument();
+    expect(
+      screen.getByText('Replacing Original Document 11.pdf')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Showing 12 of 12 documents')).toBeInTheDocument();
   });
 
   it('does not show the Show More affordance for a short Recent Uploads list', async () => {

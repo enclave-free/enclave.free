@@ -145,6 +145,7 @@ export function AdminDocumentUpload({
   );
   const isFetchingJobsRef = useRef(false);
   const recentJobsRef = useRef<JobStatus[]>([]);
+  const recentDocumentsVisibleLimitRef = useRef(RECENT_DOCUMENTS_INITIAL_LIMIT);
 
   const JOBS_FETCH_TIMEOUT_MS = 30000;
   const validSelectedFiles = selectedFiles.filter(
@@ -162,6 +163,17 @@ export function AdminDocumentUpload({
     message.startsWith('errors.') && i18n.exists(message)
       ? fixedT(message)
       : message;
+  const updateRecentDocumentsVisibleLimit = useCallback(
+    (nextLimit: number | ((currentLimit: number) => number)) => {
+      setRecentDocumentsVisibleLimit((currentLimit) => {
+        const resolvedLimit =
+          typeof nextLimit === 'function' ? nextLimit(currentLimit) : nextLimit;
+        recentDocumentsVisibleLimitRef.current = resolvedLimit;
+        return resolvedLimit;
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     currentUploadPageUrlRef.current = `${location.pathname}${location.search}${location.hash}`;
@@ -276,19 +288,21 @@ export function AdminDocumentUpload({
         const data: JobsListResponse = await response.json();
 
         const previousJobCount = recentJobsRef.current.length;
+        const hydrationLimit = Math.max(
+          RECENT_DOCUMENTS_INITIAL_LIMIT,
+          Math.min(recentDocumentsVisibleLimitRef.current, data.jobs.length)
+        );
         const visibleJobStatuses = await Promise.all(
-          data.jobs
-            .slice(0, RECENT_DOCUMENTS_INITIAL_LIMIT)
-            .map(fetchDetailedJobStatus)
+          data.jobs.slice(0, hydrationLimit).map(fetchDetailedJobStatus)
         );
         const deferredJobStatuses = data.jobs
-          .slice(RECENT_DOCUMENTS_INITIAL_LIMIT)
+          .slice(hydrationLimit)
           .map(buildFallbackJobStatus);
         const jobStatuses = visibleJobStatuses.concat(deferredJobStatuses);
 
         setRecentJobs(jobStatuses);
         recentJobsRef.current = jobStatuses;
-        setRecentDocumentsVisibleLimit((currentLimit) => {
+        updateRecentDocumentsVisibleLimit((currentLimit) => {
           if (jobStatuses.length <= RECENT_DOCUMENTS_INITIAL_LIMIT) {
             return RECENT_DOCUMENTS_INITIAL_LIMIT;
           }
@@ -346,7 +360,7 @@ export function AdminDocumentUpload({
         isFetchingJobsRef.current = false;
       }
     },
-    [t]
+    [t, updateRecentDocumentsVisibleLimit]
   );
 
   useEffect(() => {
@@ -685,7 +699,7 @@ export function AdminDocumentUpload({
       recentDocumentsVisibleLimit + RECENT_DOCUMENTS_BATCH_SIZE,
       recentJobs.length
     );
-    setRecentDocumentsVisibleLimit(nextLimit);
+    updateRecentDocumentsVisibleLimit(nextLimit);
 
     const documentsToHydrate = recentJobsRef.current.slice(
       startIndex,
