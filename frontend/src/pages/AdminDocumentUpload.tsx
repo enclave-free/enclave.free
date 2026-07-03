@@ -10,6 +10,7 @@ import {
   Clock,
   ArrowLeft,
   HelpCircle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -41,9 +42,58 @@ type UploadQueueItem = {
 };
 
 type FileWithPath = File & { webkitRelativePath?: string };
+type JobsListItem = JobsListResponse['jobs'][number];
 
 const fileRelativePath = (file: File) =>
   (file as FileWithPath).webkitRelativePath || '';
+
+const RECENT_DOCUMENTS_INITIAL_LIMIT = 10;
+const RECENT_DOCUMENTS_BATCH_SIZE = 10;
+const JOB_STATUS_FETCH_TIMEOUT_MS = 5000;
+
+const buildFallbackJobStatus = (job: JobsListItem): JobStatus => {
+  const status = job.status as JobStatus['status'];
+  const isComplete = status === 'completed';
+
+  return {
+    job_id: job.job_id,
+    filename: job.filename,
+    status,
+    created_at: job.created_at,
+    updated_at: job.created_at,
+    total_chunks: job.total_chunks,
+    processed_chunks: isComplete ? job.total_chunks : 0,
+    canonical_name: job.canonical_name,
+    replacement_for_job_id: job.replacement_for_job_id,
+    replacement_for_filename: job.replacement_for_filename,
+    replaced_by_job_id: job.replaced_by_job_id,
+    is_current: job.is_current,
+  };
+};
+
+const fetchDetailedJobStatus = async (
+  job: JobsListItem | JobStatus
+): Promise<JobStatus> => {
+  const statusController = new AbortController();
+  const statusTimeout = setTimeout(
+    () => statusController.abort(),
+    JOB_STATUS_FETCH_TIMEOUT_MS
+  );
+  const fallbackStatus =
+    'processed_chunks' in job ? job : buildFallbackJobStatus(job);
+
+  try {
+    const statusResponse = await adminFetch(`/ingest/status/${job.job_id}`, {
+      signal: statusController.signal,
+    });
+    if (!statusResponse.ok) return fallbackStatus;
+    return statusResponse.json() as Promise<JobStatus>;
+  } catch {
+    return fallbackStatus;
+  } finally {
+    clearTimeout(statusTimeout);
+  }
+};
 
 export function AdminDocumentUpload({
   embedded = false,
@@ -72,6 +122,8 @@ export function AdminDocumentUpload({
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [jobsErrorTitle, setJobsErrorTitle] = useState<string | null>(null);
   const [jobsWarning, setJobsWarning] = useState<string | null>(null);
+  const [recentDocumentsVisibleLimit, setRecentDocumentsVisibleLimit] =
+    useState(RECENT_DOCUMENTS_INITIAL_LIMIT);
 
   // Pipeline help modal state
   const [showPipelineHelpModal, setShowPipelineHelpModal] = useState(false);
@@ -92,6 +144,7 @@ export function AdminDocumentUpload({
   );
   const isFetchingJobsRef = useRef(false);
   const recentJobsRef = useRef<JobStatus[]>([]);
+  const recentDocumentsVisibleLimitRef = useRef(RECENT_DOCUMENTS_INITIAL_LIMIT);
 
   const JOBS_FETCH_TIMEOUT_MS = 30000;
   const validSelectedFiles = selectedFiles.filter(
@@ -109,6 +162,17 @@ export function AdminDocumentUpload({
     message.startsWith('errors.') && i18n.exists(message)
       ? fixedT(message)
       : message;
+  const updateRecentDocumentsVisibleLimit = useCallback(
+    (nextLimit: number | ((currentLimit: number) => number)) => {
+      setRecentDocumentsVisibleLimit((currentLimit) => {
+        const resolvedLimit =
+          typeof nextLimit === 'function' ? nextLimit(currentLimit) : nextLimit;
+        recentDocumentsVisibleLimitRef.current = resolvedLimit;
+        return resolvedLimit;
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     currentUploadPageUrlRef.current = `${location.pathname}${location.search}${location.hash}`;
@@ -222,51 +286,35 @@ export function AdminDocumentUpload({
         if (!response.ok) throw new Error(t('errors.failedToFetchJobs'));
         const data: JobsListResponse = await response.json();
 
-        // Fetch full status for each job (with individual timeouts)
-        // On failure, fall back to list data so jobs aren't dropped from the UI
-        const jobStatuses = await Promise.all(
-          data.jobs.slice(0, 10).map(async (job): Promise<JobStatus> => {
-            const statusController = new AbortController();
-            const statusTimeout = setTimeout(
-              () => statusController.abort(),
-              5000
-            );
-
-            // Fallback using data from the jobs list
-            const fallbackStatus: JobStatus = {
-              job_id: job.job_id,
-              filename: job.filename,
-              status: job.status as JobStatus['status'],
-              created_at: job.created_at,
-              updated_at: job.created_at, // Best guess from list data
-              total_chunks: job.total_chunks,
-              processed_chunks: 0, // Unknown, default to 0
-              canonical_name: job.canonical_name,
-              replacement_for_job_id: job.replacement_for_job_id,
-              replacement_for_filename: job.replacement_for_filename,
-              replaced_by_job_id: job.replaced_by_job_id,
-              is_current: job.is_current,
-            };
-
-            try {
-              const statusResponse = await adminFetch(
-                `/ingest/status/${job.job_id}`,
-                {
-                  signal: statusController.signal,
-                }
-              );
-              if (!statusResponse.ok) return fallbackStatus;
-              return statusResponse.json() as Promise<JobStatus>;
-            } catch {
-              return fallbackStatus;
-            } finally {
-              clearTimeout(statusTimeout);
-            }
-          })
+        const previousJobCount = recentJobsRef.current.length;
+        const hydrationLimit = Math.max(
+          RECENT_DOCUMENTS_INITIAL_LIMIT,
+          Math.min(recentDocumentsVisibleLimitRef.current, data.jobs.length)
         );
+        const visibleJobStatuses = await Promise.all(
+          data.jobs
+            .slice(0, hydrationLimit)
+            .map((job) => fetchDetailedJobStatus(buildFallbackJobStatus(job)))
+        );
+        const deferredJobStatuses = data.jobs
+          .slice(hydrationLimit)
+          .map(buildFallbackJobStatus);
+        const jobStatuses = visibleJobStatuses.concat(deferredJobStatuses);
 
         setRecentJobs(jobStatuses);
         recentJobsRef.current = jobStatuses;
+        updateRecentDocumentsVisibleLimit((currentLimit) => {
+          if (jobStatuses.length <= RECENT_DOCUMENTS_INITIAL_LIMIT) {
+            return RECENT_DOCUMENTS_INITIAL_LIMIT;
+          }
+          if (previousJobCount > 0 && jobStatuses.length < previousJobCount) {
+            return RECENT_DOCUMENTS_INITIAL_LIMIT;
+          }
+          if (currentLimit > jobStatuses.length) {
+            return RECENT_DOCUMENTS_INITIAL_LIMIT;
+          }
+          return Math.max(currentLimit, RECENT_DOCUMENTS_INITIAL_LIMIT);
+        });
         setJobsError(null);
         setJobsErrorTitle(null);
         setJobsWarning(null);
@@ -313,7 +361,7 @@ export function AdminDocumentUpload({
         isFetchingJobsRef.current = false;
       }
     },
-    [t]
+    [t, updateRecentDocumentsVisibleLimit]
   );
 
   useEffect(() => {
@@ -638,6 +686,44 @@ export function AdminDocumentUpload({
     }
   };
 
+  const visibleRecentDocuments = recentJobs.slice(
+    0,
+    recentDocumentsVisibleLimit
+  );
+  const hasMoreRecentDocuments =
+    visibleRecentDocuments.length < recentJobs.length;
+  const shouldShowRecentDocumentsCount =
+    recentJobs.length > RECENT_DOCUMENTS_INITIAL_LIMIT;
+  const handleShowMoreRecentDocuments = async () => {
+    const startIndex = recentDocumentsVisibleLimit;
+    const nextLimit = Math.min(
+      recentDocumentsVisibleLimit + RECENT_DOCUMENTS_BATCH_SIZE,
+      recentJobs.length
+    );
+    updateRecentDocumentsVisibleLimit(nextLimit);
+
+    const documentsToHydrate = recentJobsRef.current.slice(
+      startIndex,
+      nextLimit
+    );
+    if (documentsToHydrate.length === 0) return;
+
+    const hydratedDocuments = await Promise.all(
+      documentsToHydrate.map(fetchDetailedJobStatus)
+    );
+    const hydratedById = new Map(
+      hydratedDocuments.map((job) => [job.job_id, job])
+    );
+
+    setRecentJobs((currentJobs) => {
+      const updatedJobs = currentJobs.map(
+        (job) => hydratedById.get(job.job_id) ?? job
+      );
+      recentJobsRef.current = updatedJobs;
+      return updatedJobs;
+    });
+  };
+
   // Close pipeline help modal
   const handleClosePipelineHelpModal = () => {
     setShowPipelineHelpModal(false);
@@ -959,6 +1045,7 @@ export function AdminDocumentUpload({
               fetchJobs({ showLoading: true, showErrors: true });
             }}
             disabled={isLoadingJobs || isRefreshingJobs}
+            aria-label={t('upload.refresh', 'Refresh')}
             className="text-xs text-text-muted hover:text-accent transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             {isLoadingJobs || isRefreshingJobs ? (
@@ -1001,7 +1088,7 @@ export function AdminDocumentUpload({
                 {jobsWarning}
               </div>
             )}
-            {recentJobs.map((job) => {
+            {visibleRecentDocuments.map((job) => {
               const statusInfo = getStatusDisplay(job.status);
               const canDelete =
                 job.status !== 'pending' && job.status !== 'processing';
@@ -1072,6 +1159,30 @@ export function AdminDocumentUpload({
                 </div>
               );
             })}
+            {shouldShowRecentDocumentsCount && (
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-text-muted">
+                  {t(
+                    'upload.recentDocumentsShowing',
+                    'Showing {{shown}} of {{total}} documents',
+                    {
+                      shown: visibleRecentDocuments.length,
+                      total: recentJobs.length,
+                    }
+                  )}
+                </p>
+                {hasMoreRecentDocuments && (
+                  <button
+                    type="button"
+                    onClick={handleShowMoreRecentDocuments}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-text transition-colors hover:border-accent/50 hover:text-accent active-press"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    {t('upload.showMore', 'Show more')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-6 bg-surface border border-border border-dashed rounded-lg">
