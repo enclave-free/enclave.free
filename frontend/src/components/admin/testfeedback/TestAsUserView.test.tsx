@@ -132,6 +132,8 @@ describe('TestAsUserView', () => {
         Response.json({
           web_search_enabled: true,
           default_document_ids: ['doc-1', 'doc-2'],
+          default_tool_ids: ['curated-resources', 'web-search'],
+          knowledge_source_scope: 'selected',
         })
       )
     );
@@ -240,7 +242,11 @@ describe('TestAsUserView', () => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
         expect.objectContaining({
           content: 'Do you have any resources you can read through?',
-          tools: ['curated-resources', 'knowledge-search', 'web-search'],
+          tools: expect.arrayContaining([
+            'curated-resources',
+            'knowledge-search',
+            'web-search',
+          ]),
           jobIds: ['doc-1', 'doc-2'],
           authToken: 'synthetic-user-token',
         })
@@ -272,7 +278,7 @@ describe('TestAsUserView', () => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
         expect.objectContaining({
           content: 'Can you look up resources?',
-          tools: ['curated-resources'],
+          tools: [],
           jobIds: [],
           authToken: 'synthetic-user-token',
         })

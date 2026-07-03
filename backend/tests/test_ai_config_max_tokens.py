@@ -64,6 +64,45 @@ class AIConfigMaxTokensTest(unittest.TestCase):
         self.assertEqual(max_tokens["value"], "2048")
         self.assertEqual(max_tokens["value_type"], "number")
 
+    def test_user_conversation_defaults_are_seeded_as_agent_settings(self) -> None:
+        response = self.client.get("/admin/ai-config")
+
+        self.assertEqual(response.status_code, 200)
+        defaults = response.json()["defaults"]
+        by_key = {item["key"]: item for item in defaults}
+
+        self.assertEqual(by_key["user_default_tool_ids"]["value"], "[]")
+        self.assertEqual(by_key["user_default_tool_ids"]["value_type"], "json")
+        self.assertEqual(by_key["knowledge_source_default"]["value"], "none")
+        self.assertEqual(by_key["knowledge_source_default"]["value_type"], "string")
+
+    def test_user_default_tool_ids_rejects_admin_only_tools(self) -> None:
+        response = self.client.put(
+            "/admin/ai-config/user_default_tool_ids",
+            json={"value": '["curated-resources", "admin-config"]'},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("user_default_tool_ids", response.json()["detail"])
+
+    def test_knowledge_source_default_accepts_supported_values(self) -> None:
+        response = self.client.put(
+            "/admin/ai-config/knowledge_source_default",
+            json={"value": "ALL"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["value"], "all")
+
+    def test_knowledge_source_default_rejects_unknown_values(self) -> None:
+        response = self.client.put(
+            "/admin/ai-config/knowledge_source_default",
+            json={"value": "everything"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Knowledge source default must be one of", response.json()["detail"])
+
     def test_max_tokens_rejects_values_outside_supported_range(self) -> None:
         response = self.client.put(
             "/admin/ai-config/max_tokens",

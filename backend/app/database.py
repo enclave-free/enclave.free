@@ -2939,6 +2939,32 @@ def _seed_default_ai_config() -> None:
                 VALUES (?, ?, ?, ?, ?)
             """, (key, value, value_type, category, description))
 
+        cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("web_search_default",))
+        web_search_row = cursor.fetchone()
+        user_default_tool_ids = ["web-search"] if (
+            web_search_row and str(web_search_row["value"]).lower() == "true"
+        ) else []
+        cursor.execute("""
+            INSERT OR IGNORE INTO ai_config (key, value, value_type, category, description)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            "user_default_tool_ids",
+            json.dumps(user_default_tool_ids),
+            "json",
+            "default",
+            "Tool Sets active by default for User Conversations",
+        ))
+        cursor.execute("""
+            INSERT OR IGNORE INTO ai_config (key, value, value_type, category, description)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            "knowledge_source_default",
+            "none",
+            "string",
+            "default",
+            "Knowledge Source scope active by default for User Conversations: none, selected, or all",
+        ))
+
     logger.info("Default Agent Settings seeded")
 
 
