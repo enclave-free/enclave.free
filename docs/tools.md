@@ -40,15 +40,15 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 }
 ```
 
-- `tools` is a list of Tool Set IDs selected by an Admin or resolved from User Conversation defaults.
-- Sage drops or rejects Tool Sets the actor is not authorized to use. For non-admin users, Sage ignores client attempts to enable Tool Sets outside the effective configured defaults.
+- `tools` is a list of Tool Set IDs selected by an Admin or resolved by Sage from User Conversation defaults.
+- Sage drops or rejects Tool Sets the actor is not authorized to use. For non-admin users, Sage ignores the client-submitted `tools` list for effective resolution and computes the Tool Set list from server-side `/session-defaults`, including the empty or omitted case where configured defaults still apply.
 - `job_ids` is an optional Knowledge Search constraint: it is a list of selected Document Library `job_id` values, not an arbitrary prompt blob.
 - Additional Knowledge filters must be added as explicit request fields before the browser can send them.
 - `conversation_history` is optional recent client context; Sage-owned session memory remains authoritative when a `session_id` is present.
 
 ## Tool Sets
 
-Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations; User Conversations consume configured defaults without showing Tool controls by default.
+Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
 
 | Tool Set ID         | Access                                        | Exposes                                                                                       |
 | ------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------- |

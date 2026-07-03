@@ -264,6 +264,38 @@ describe('TestAsUserView', () => {
     });
   });
 
+  it('sends all-knowledge defaults without selected document constraints while impersonating the synthetic User', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({
+        web_search_enabled: false,
+        default_document_ids: [],
+        default_tool_ids: ['curated-resources', 'knowledge-search'],
+        knowledge_source_scope: 'all',
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Can you search all available knowledge?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Can you search all available knowledge?',
+          tools: expect.arrayContaining([
+            'curated-resources',
+            'knowledge-search',
+          ]),
+          jobIds: [],
+          authToken: 'synthetic-user-token',
+        })
+      );
+    });
+  });
+
   it('uses a conservative Tool Set fallback when user defaults cannot be loaded', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500 }));
     const user = await startStudentSession();

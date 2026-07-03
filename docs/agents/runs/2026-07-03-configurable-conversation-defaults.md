@@ -40,7 +40,7 @@ Change User Conversations so user-facing chats show no Tool controls by default,
 - Issue sessions: current orchestrator thread
 - Agent briefs: current orchestrator thread
 - Review packets: self-review complete
-- Local CodeRabbit report: not run locally
+- Local CodeRabbit report: ran locally; first pass raised 2 major issues, both fixed; second pass raised 0 issues
 - PR URL: https://github.com/enclave-free/enclave.free/pull/462
 - Sage support PR: https://github.com/enclave-free/sage/pull/25
 
@@ -77,10 +77,12 @@ Change User Conversations so user-facing chats show no Tool controls by default,
 ## Verification Log
 
 - `python3 -m unittest backend.tests.test_ai_config_max_tokens backend.tests.test_ai_config_defaults` using bundled Python after installing `backend/requirements.txt`: passed, 10 tests.
-- `cd frontend && npm test -- ChatPage.test.tsx TestAsUserView.test.tsx AdminAIConfig.test.tsx`: passed, 65 tests.
+- `cd frontend && npm test -- ChatPage.test.tsx TestAsUserView.test.tsx AdminAIConfig.test.tsx`: passed, 66 tests after CodeRabbit follow-up.
 - `cd frontend && npm run build -- --outDir /tmp/enclave-build-config-defaults --emptyOutDir`: passed; existing large-chunk warning only.
 - `cd runtime/sage && cargo check -p sage-core --bin enclave_web`: passed.
 - `cd runtime/sage && cargo test -p sage-core --bin enclave_web user_conversation_default_policy_applies_tool_and_knowledge_scope`: blocked locally by missing `libpq` linker library; `cargo check` passed.
+- `coderabbit review --agent --type all --base staging`: first pass raised 2 major issues (`TestAsUserView` Knowledge Source scope handling and docs authority wording); both addressed.
+- `coderabbit review --agent --type all --base staging`: second pass passed with 0 issues.
 
 ## Open Questions
 

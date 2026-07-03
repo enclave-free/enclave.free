@@ -22,7 +22,10 @@ import {
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
 import { API_BASE } from '../../../types/onboarding';
-import { resolveUserConversationSessionDefaults } from '../../../utils/sessionDefaults';
+import {
+  type KnowledgeSourceScope,
+  resolveUserConversationSessionDefaults,
+} from '../../../utils/sessionDefaults';
 
 let assistantTurnSequence = 0;
 
@@ -37,6 +40,7 @@ function generateAssistantTurnId(): string {
 interface UserSessionToolDefaults {
   tools: string[];
   documentIds: string[];
+  knowledgeSourceScope: KnowledgeSourceScope;
   status: 'configured' | 'fallback';
 }
 
@@ -47,6 +51,7 @@ interface ActiveSession {
   token: string; // bearer token used to chat AS the test user
   tools: string[];
   documentIds: string[];
+  knowledgeSourceScope: KnowledgeSourceScope;
   defaultsStatus: UserSessionToolDefaults['status'];
 }
 
@@ -65,6 +70,7 @@ function resolveUserSessionToolDefaults(
   return {
     tools: defaults.tools,
     documentIds: defaults.documentIds,
+    knowledgeSourceScope: defaults.knowledgeSourceScope,
     status: 'configured',
   };
 }
@@ -86,6 +92,7 @@ async function fetchUserSessionToolDefaults(
   return {
     tools: [],
     documentIds: [],
+    knowledgeSourceScope: 'none',
     status: 'fallback',
   };
 }
@@ -169,6 +176,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         token: token.token,
         tools: defaults.tools,
         documentIds: defaults.documentIds,
+        knowledgeSourceScope: defaults.knowledgeSourceScope,
         defaultsStatus: defaults.status,
       });
       setTurns([]);
@@ -253,10 +261,13 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
 
       // When acting as the test user, send the impersonation bearer so Sage
       // authenticates the chat as them (not the admin).
+      const knowledgeSourceScope = session?.knowledgeSourceScope ?? 'none';
+      const jobIds =
+        knowledgeSourceScope === 'selected' ? (session?.documentIds ?? []) : [];
       await sendLlmChatStreamWithUnifiedTools({
         content,
         tools: session?.tools ?? [],
-        jobIds: session?.documentIds ?? [],
+        jobIds,
         sessionId: sessionIdRef.current,
         authToken: session?.token,
         onEvent: (event, payload) => {
