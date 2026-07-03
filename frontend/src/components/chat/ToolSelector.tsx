@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Search } from 'lucide-react';
 import { Button } from '../ui';
+import { cx } from '../ui/utils';
 
 export interface Tool {
   id: string;
@@ -46,7 +47,12 @@ export function ToolSelector({
   const activeTools = tools ?? defaultTools;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div
+      className={cx(
+        'flex items-center gap-1.5',
+        compact && 'min-w-0 max-w-full flex-1 flex-wrap'
+      )}
+    >
       {!compact && <span className="label mr-1">{t('chat.tools.label')}</span>}
       {activeTools.map((tool) => {
         const isSelected = selectedTools.includes(tool.id);
@@ -58,7 +64,10 @@ export function ToolSelector({
             variant={isSelected ? 'primary' : 'ghost'}
             size="sm"
             leadingIcon={tool.icon}
-            className="text-xs"
+            className={cx(
+              'text-xs',
+              compact && 'min-w-0 shrink-0 px-2.5'
+            )}
             title={tool.description}
           >
             {tool.name}
