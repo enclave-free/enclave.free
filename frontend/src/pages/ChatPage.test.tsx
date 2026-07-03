@@ -8,7 +8,7 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatPage, ENCLAVE_USER_EMAIL_KEY } from './ChatPage';
@@ -18,6 +18,7 @@ import {
   DEFAULT_INSTANCE_CONFIG,
   INSTANCE_CONFIG_KEY,
 } from '../types/instance';
+import { STORAGE_KEYS } from '../types/onboarding';
 import {
   adminFetch,
   isAdminAuthenticated,
@@ -54,6 +55,50 @@ function ChatPageTestWrapper({ children }: { children: ReactNode }) {
       </ThemeProvider>
     </MemoryRouter>
   );
+}
+
+function renderChatPageRoute() {
+  return render(
+    <MemoryRouter initialEntries={['/chat']}>
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <Routes>
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/pending" element={<main>Pending approval</main>} />
+            <Route path="/profile" element={<main>Profile completion</main>} />
+            <Route
+              path="/user-type"
+              element={<main>User type selection</main>}
+            />
+            <Route path="/login" element={<main>Login</main>} />
+          </Routes>
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+}
+
+function setOnboardingStatusResponse(handler: () => Promise<Response>) {
+  const existingFetch = vi.mocked(fetch).getMockImplementation();
+  vi.mocked(fetch).mockImplementation(
+    (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/users/me/onboarding-status')) {
+        return handler();
+      }
+
+      return existingFetch?.(input, init) ?? Promise.resolve(Response.json({}));
+    }
+  );
+}
+
+function setOnboardingStatus(status: {
+  needs_user_type: boolean;
+  needs_onboarding: boolean;
+  effective_user_type_id: number | null;
+}) {
+  setOnboardingStatusResponse(() => Promise.resolve(Response.json(status)));
 }
 
 describe('ChatPage', () => {
@@ -206,6 +251,79 @@ describe('ChatPage', () => {
       'aria-pressed',
       'true'
     );
+  });
+
+  it('routes pending-approval users to User Type selection before pending approval on direct chat entry', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-type@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatus({
+      needs_user_type: true,
+      needs_onboarding: true,
+      effective_user_type_id: null,
+    });
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('User type selection')).toBeInTheDocument();
+    expect(screen.queryByText('Pending approval')).not.toBeInTheDocument();
+  });
+
+  it('routes pending-approval users to profile completion before pending approval on direct chat entry', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-profile@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatus({
+      needs_user_type: false,
+      needs_onboarding: true,
+      effective_user_type_id: 7,
+    });
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('Profile completion')).toBeInTheDocument();
+    expect(screen.queryByText('Pending approval')).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEYS.USER_TYPE_ID)).toBe('7');
+  });
+
+  it('routes pending-approval users to pending approval once onboarding is complete on direct chat entry', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-ready@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatus({
+      needs_user_type: false,
+      needs_onboarding: false,
+      effective_user_type_id: null,
+    });
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('Pending approval')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/users\/me\/onboarding-status$/),
+      expect.objectContaining({ credentials: 'include' })
+    );
+  });
+
+  it('routes pending-approval users to pending approval when onboarding status returns an error', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-error@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatusResponse(() =>
+      Promise.resolve(Response.json({}, { status: 500 }))
+    );
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('Pending approval')).toBeInTheDocument();
+  });
+
+  it('routes pending-approval users to pending approval when onboarding status cannot be fetched', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-network@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatusResponse(() =>
+      Promise.reject(new Error('network down'))
+    );
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('Pending approval')).toBeInTheDocument();
   });
 
   it('activates Curated Resources by default for user chat turns', async () => {
@@ -725,7 +843,9 @@ describe('ChatPage', () => {
     expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
     expect(screen.getByText('Top-level tool completed.')).toBeInTheDocument();
     expect(screen.queryByText('Nested Admin Config')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nested tool completed.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nested tool completed.')
+    ).not.toBeInTheDocument();
   });
 
   it('rejects malformed resumed Conversations instead of clearing the thread', async () => {

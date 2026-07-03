@@ -8,7 +8,7 @@ import { fetchInstanceStatus } from '../utils/instanceStatus'
  * Redirects users based on their authentication state:
  * - Admin → /chat
  * - Authenticated + approved → /chat
- * - Authenticated + not approved → /pending
+ * - Authenticated + not approved → /chat, then ChatPage checks onboarding before /pending
  * - Not authenticated → /login
  */
 export function HomeRedirect() {

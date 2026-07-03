@@ -22,6 +22,7 @@ describe('VerifyMagicLink', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('verifies a token only once when React StrictMode remounts the page', async () => {
@@ -125,6 +126,104 @@ describe('VerifyMagicLink', () => {
     await waitFor(() => {
       expect(localStorage.getItem(STORAGE_KEYS.USER_TYPE_ID)).toBeNull();
     });
+  });
+
+  it('routes unapproved users to profile completion before pending approval when onboarding is incomplete', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/verify') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json({
+            success: true,
+            user: {
+              id: 18,
+              email: 'pending-profile@example.test',
+              name: 'Pending Profile',
+              user_type_id: null,
+              approved: false,
+              created_at: '2026-07-03 17:30:00',
+              needs_onboarding: true,
+              needs_user_type: false,
+            },
+            session_token: 'session-token',
+          })
+        );
+      }
+
+      if (url.endsWith('/user-types')) {
+        return Promise.resolve(Response.json({ types: [] }));
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/verify?token=magic-token']}>
+        <Routes>
+          <Route path="/verify" element={<VerifyMagicLink />} />
+          <Route path="/profile" element={<div>Profile completion</div>} />
+          <Route path="/pending" element={<div>Pending approval</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByText('pending-profile@example.test')
+    ).toBeInTheDocument();
+
+    expect(
+      await screen.findByText('Profile completion', {}, { timeout: 4000 })
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Pending approval')).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEYS.USER_APPROVED)).toBe('false');
+  });
+
+  it('routes unapproved users to user type selection before pending approval when a type is required', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/verify') && init?.method === 'POST') {
+        return Promise.resolve(
+          Response.json({
+            success: true,
+            user: {
+              id: 19,
+              email: 'pending-type@example.test',
+              name: 'Pending Type',
+              user_type_id: null,
+              approved: false,
+              created_at: '2026-07-03 17:31:00',
+              needs_onboarding: false,
+              needs_user_type: true,
+            },
+            session_token: 'session-token',
+          })
+        );
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/verify?token=magic-token']}>
+        <Routes>
+          <Route path="/verify" element={<VerifyMagicLink />} />
+          <Route path="/user-type" element={<div>User type selection</div>} />
+          <Route path="/pending" element={<div>Pending approval</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByText('pending-type@example.test')
+    ).toBeInTheDocument();
+
+    expect(
+      await screen.findByText('User type selection', {}, { timeout: 4000 })
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Pending approval')).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEYS.USER_APPROVED)).toBe('false');
   });
 
   it('clears stale user name when verified user has no name', async () => {

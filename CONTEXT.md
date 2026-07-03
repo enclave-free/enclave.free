@@ -1031,6 +1031,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - "registration" is too generic for first setup; resolved: use **Instance Initiation** for the first Admin authentication that claims an **Instance**.
 - "signup" is too narrow for onboarding; resolved: **User Onboarding** can create a first profile and can later reopen when required questions are added.
 - **User Approval** is distinct from authentication and **User Onboarding**: it gates access after sign-in.
+- **User Approval** gates **Conversation** access after required **User Onboarding** is complete; pending-approval **Users** may still complete **User Type** selection and required **Onboarding Questions** before landing on the pending approval screen.
 - "open signup" is too broad for approval behavior; resolved: **Auto Approval** is an **Instance Setting** that grants **User Approval** after authentication.
 - **User Reachout** should not be described as a **Conversation** or **Tool**; it is an authenticated **Ordinary Product Flow** for contacting the **Operator**.
 - **Reachout Message** is distinct from **Conversation Content** in the current prototype.
