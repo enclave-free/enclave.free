@@ -5,7 +5,7 @@
 - Issue: #464 Export User Roster workbook from User management
 - Fixed point before session: origin/staging
 - Worker session: Current Codex thread
-- Commit: 7601460
+- Commit: 9a550d5
 - Status: Implemented; review/checks passed; committed.
 
 ## Inputs

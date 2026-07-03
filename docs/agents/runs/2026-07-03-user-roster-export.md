@@ -81,7 +81,7 @@ Admins need a clean spreadsheet-friendly list of Users for ordinary operational 
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #464 | origin/staging | Current thread | 7601460 | Pass after fixes | Frontend full suite, backend full suite, build, targeted tests, diff check |
+| #464 | origin/staging | Current thread | 9a550d5 | Pass after fixes | Frontend full suite, backend full suite, build, targeted tests, diff check |
 
 ## Open Questions
 
