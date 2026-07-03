@@ -4,12 +4,12 @@
 
 - Run ID: 2026-07-03-user-approval-after-onboarding
 - Loop: Feature Dev
-- Target repo: enclave-free/enclave.free (`/Users/plebdev/Desktop/Projects/enclave-free/enclave.free-user-approval-after-onboarding`)
+- Target repo: enclave-free/enclave.free
 - Base branch: staging
 - Feature branch: feature/user-approval-after-onboarding
 - Human owner: Austin
 - Started: 2026-07-03
-- Current status: #450 implemented and locally verified; local CodeRabbit pending.
+- Current status: #450 implemented and locally verified; local CodeRabbit minor docs finding addressed.
 - Skill setup status: Present. Repo has AGENTS.md, docs/agents/issue-tracker.md, docs/agents/triage-labels.md, and docs/agents/domain.md.
 
 ## Goal
@@ -40,7 +40,7 @@ There's an option where users can be required to be approved before they are acc
 - Issue sessions: docs/agents/runs/2026-07-03-user-approval-after-onboarding-issue-450.md
 - Agent briefs: Pending
 - Review packets: docs/agents/runs/2026-07-03-user-approval-after-onboarding-review-450.md
-- Local CodeRabbit report: Pending
+- Local CodeRabbit report: docs/agents/runs/2026-07-03-user-approval-after-onboarding-coderabbit-local.md
 - PR URL: Pending
 
 ## Commands
@@ -79,7 +79,7 @@ There's an option where users can be required to be approved before they are acc
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #450 | staging | Current thread | Pending | Pass; one spec-edge finding fixed before completion | `npm run test -- ChatPage.test.tsx VerifyMagicLink.test.tsx useAuthFlow.test.ts`; `npm run build`; `npm run test`; `git diff --check` |
+| #450 | staging | Current thread | 3fe31c6 | Pass; one spec-edge finding fixed before completion | `npm run test -- ChatPage.test.tsx VerifyMagicLink.test.tsx useAuthFlow.test.ts`; `npm run build`; `npm run test`; `git diff --check` |
 
 ## Verification Evidence
 
@@ -93,6 +93,7 @@ There's an option where users can be required to be approved before they are acc
 - Local code-review standards axis passed against `AGENTS.md`, `CONTEXT.md`, and documented frontend routing/onboarding guidance.
 - Local code-review spec axis found and fixed one edge: magic-link routing now treats `needs_user_type=true` as sufficient to route to User Type selection even if `needs_onboarding=false`.
 - Sub-agent review was not used because the currently exposed sub-agent tool requires an explicit user request for delegation; the review was performed locally using the code-review skill's two-axis structure.
+- Local CodeRabbit completed and reported one minor docs finding about a machine-specific path in this ledger. The finding was addressed and recorded in docs/agents/runs/2026-07-03-user-approval-after-onboarding-coderabbit-local.md.
 
 ## Open Questions
 

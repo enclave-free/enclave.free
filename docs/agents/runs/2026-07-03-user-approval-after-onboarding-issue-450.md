@@ -5,7 +5,7 @@
 - Issue: #450 Route pending-approval Users through User Onboarding before pending approval
 - Fixed point before session: staging (`66fbf3c45e00c7575813e436d677a7f47caec810`)
 - Worker session: Current Codex thread
-- Commit: Pending
+- Commit: 3fe31c6
 - Status: Implemented and locally verified
 
 ## Inputs
