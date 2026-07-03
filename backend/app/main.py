@@ -49,6 +49,7 @@ from models import (
     FieldDefinitionCreate, FieldDefinitionUpdate, FieldDefinitionResponse, FieldDefinitionListResponse,
     FieldEncryptionRequest, FieldEncryptionResponse,
     UserCreate, UserUpdate, UserResponse, UserListResponse,
+    UserRosterExportAuditRequest,
     UserTypeMigrationRequest, UserTypeMigrationResponse,
     UserTypeMigrationBatchRequest, UserTypeMigrationBatchResponse, UserTypeMigrationBatchResult,
     SuccessResponse,
@@ -2277,6 +2278,39 @@ async def list_users(admin: dict = Depends(auth.require_admin)):
     """List all users with their field values (requires admin auth)"""
     users = database.list_users()
     return UserListResponse(users=[UserResponse(**u) for u in users])
+
+
+@app.post("/admin/users/roster-export", response_model=SuccessResponse)
+async def record_user_roster_export(
+    request: UserRosterExportAuditRequest,
+    admin: dict = Depends(auth.require_admin),
+):
+    """
+    Record a copied User Roster Export event.
+
+    The roster workbook is generated in the Admin browser so locally decrypted
+    User Profile values never need to be posted back to the backend. This
+    endpoint records only export metadata/counts for Audit Log visibility.
+    """
+    exported_at = database.utc_timestamp_z()
+    _best_effort_config_audit_event(
+        table_name="data_deletion",
+        config_key="copied_export:user_roster",
+        old_value=None,
+        new_value=json.dumps({
+            "workflow": "copied_export",
+            "target": "user_roster",
+            "lifecycle_posture": "outside_active_storage_lifecycle",
+            "filename": request.filename,
+            "user_count": request.user_count,
+            "pending_count": request.pending_count,
+            "includes_decrypted_browser_values": request.includes_decrypted_browser_values,
+            "plaintext_contents_received_by_backend": False,
+            "exported_at": exported_at,
+        }, sort_keys=True),
+        changed_by=admin.get("pubkey", "unknown"),
+    )
+    return SuccessResponse(success=True, message="User roster export recorded")
 
 
 @app.post("/admin/users/{user_id}/migrate-type", response_model=UserTypeMigrationResponse)

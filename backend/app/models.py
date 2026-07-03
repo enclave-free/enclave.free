@@ -385,6 +385,14 @@ class UserListResponse(BaseModel):
     users: list[UserResponse]
 
 
+class UserRosterExportAuditRequest(BaseModel):
+    """Audit metadata for a browser-generated User Roster Export."""
+    filename: str = Field(..., min_length=1, max_length=240)
+    user_count: int = Field(..., ge=0)
+    pending_count: int = Field(..., ge=0)
+    includes_decrypted_browser_values: bool = False
+
+
 # --- Magic Link Auth Models ---
 
 class MagicLinkRequest(BaseModel):

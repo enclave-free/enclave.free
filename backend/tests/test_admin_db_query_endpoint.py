@@ -153,6 +153,32 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
         self.assertEqual(event["target"], "sqlite_database")
         self.assertEqual(event["lifecycle_posture"], "outside_active_storage_lifecycle")
 
+    def test_user_roster_export_records_copied_export_audit_evidence(self) -> None:
+        response = self.client.post(
+            "/admin/users/roster-export",
+            json={
+                "filename": "enclave_users_20260703T183000Z.xlsx",
+                "user_count": 3,
+                "pending_count": 1,
+                "includes_decrypted_browser_values": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
+        self.assertTrue(entries)
+        self.assertEqual(entries[0]["config_key"], "copied_export:user_roster")
+        self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
+        event = json.loads(entries[0]["new_value"])
+        self.assertEqual(event["workflow"], "copied_export")
+        self.assertEqual(event["target"], "user_roster")
+        self.assertEqual(event["lifecycle_posture"], "outside_active_storage_lifecycle")
+        self.assertEqual(event["filename"], "enclave_users_20260703T183000Z.xlsx")
+        self.assertEqual(event["user_count"], 3)
+        self.assertEqual(event["pending_count"], 1)
+        self.assertTrue(event["includes_decrypted_browser_values"])
+        self.assertFalse(event["plaintext_contents_received_by_backend"])
+
 
 if __name__ == "__main__":
     unittest.main()

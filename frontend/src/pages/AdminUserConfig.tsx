@@ -24,6 +24,7 @@ import {
   Key,
   Lock,
   User,
+  Download,
 } from 'lucide-react';
 import * as nip19 from 'nostr-tools/nip19';
 import { OnboardingCard } from '../components/onboarding/OnboardingCard';
@@ -31,9 +32,19 @@ import { FieldEditor } from '../components/onboarding/FieldEditor';
 import { IconPicker } from '../components/onboarding/IconPicker';
 import { DynamicIcon } from '../components/shared/DynamicIcon';
 import { Button, Callout, Card, SelectField } from '../components/ui';
-import { CustomField, UserType, FieldType } from '../types/onboarding';
+import {
+  CustomField,
+  UserType,
+  FieldType,
+  STORAGE_KEYS,
+} from '../types/onboarding';
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import { decryptField, hasNip04Support } from '../utils/encryption';
+import {
+  buildUserRosterWorkbook,
+  type EncryptedFieldValue,
+  type UserRosterIdentity,
+} from '../utils/userRosterExport';
 
 const FIELD_TYPE_VALUES: FieldType[] = [
   'text',
@@ -45,6 +56,21 @@ const FIELD_TYPE_VALUES: FieldType[] = [
   'date',
   'url',
 ];
+
+const EXPORT_DECRYPT_BATCH_SIZE = 5;
+
+async function mapInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    const batch = items.slice(index, index + batchSize);
+    results.push(...(await Promise.all(batch.map(mapper))));
+  }
+  return results;
+}
 type SourceTypeFilter = 'all' | 'untyped' | number;
 
 const USER_AVATAR_COLORS = [
@@ -98,19 +124,19 @@ function formatPubkeyShort(hexPubkey: string): string {
 interface AdminUserSummary {
   id: number;
   pubkey?: string | null;
+  email?: string | null;
+  name?: string | null;
   email_encrypted?: { ciphertext: string; ephemeral_pubkey: string } | null;
   name_encrypted?: { ciphertext: string; ephemeral_pubkey: string } | null;
   user_type_id: number | null;
   user_type?: UserType | null;
   approved: boolean;
   created_at?: string | null;
+  fields?: Record<string, unknown>;
+  fields_encrypted?: Record<string, EncryptedFieldValue | null | undefined>;
 }
 
-interface DecryptedUserIdentity {
-  status: 'decrypting' | 'ready' | 'unavailable' | 'failed';
-  email: string | null;
-  name: string | null;
-}
+type DecryptedUserIdentity = UserRosterIdentity;
 
 interface SingleMigrationResponse {
   success: boolean;
@@ -150,6 +176,13 @@ export function AdminUserConfig() {
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [userRosterExporting, setUserRosterExporting] = useState(false);
+  const [userRosterExportError, setUserRosterExportError] = useState<
+    string | null
+  >(null);
+  const [userRosterExportSuccess, setUserRosterExportSuccess] = useState<
+    string | null
+  >(null);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [migrationSummary, setMigrationSummary] = useState<string | null>(null);
   const [sourceTypeFilter, setSourceTypeFilter] =
@@ -1519,6 +1552,158 @@ export function AdminUserConfig() {
       }
     }
     setIdentityDecryptNonce((current) => current + 1);
+  };
+
+  const decryptIdentityForExport = async (
+    user: AdminUserSummary
+  ): Promise<DecryptedUserIdentity | undefined> => {
+    const existing = decryptedUserIdentities[user.id];
+    if (existing?.status === 'ready') return existing;
+
+    if (!hasEncryptedIdentity(user)) {
+      return undefined;
+    }
+
+    if (!hasNip04Support()) {
+      return {
+        status: 'unavailable',
+        email: null,
+        name: null,
+      };
+    }
+
+    const [email, name] = await Promise.all([
+      decryptField(user.email_encrypted),
+      decryptField(user.name_encrypted),
+    ]);
+
+    return {
+      status: email || name ? 'ready' : 'failed',
+      email,
+      name,
+    };
+  };
+
+  const collectExportIdentities = async (): Promise<
+    Record<number, DecryptedUserIdentity | undefined>
+  > => {
+    const entries = await mapInBatches(
+      users,
+      EXPORT_DECRYPT_BATCH_SIZE,
+      async (user) => [user.id, await decryptIdentityForExport(user)] as const
+    );
+    return Object.fromEntries(entries);
+  };
+
+  const collectExportProfileValues = async (): Promise<
+    Record<number, Record<string, string | null>>
+  > => {
+    if (!hasNip04Support()) {
+      return {};
+    }
+
+    const userEntries = await mapInBatches(
+      users,
+      EXPORT_DECRYPT_BATCH_SIZE,
+      async (user) => {
+        const encryptedEntries = Object.entries(user.fields_encrypted ?? {});
+        const decryptedEntries = await mapInBatches(
+          encryptedEntries,
+          EXPORT_DECRYPT_BATCH_SIZE,
+          async ([fieldName, encrypted]) =>
+            [fieldName, await decryptField(encrypted)] as const
+        );
+        return [user.id, Object.fromEntries(decryptedEntries)] as const;
+      }
+    );
+
+    return Object.fromEntries(userEntries);
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    window.setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+    }, 0);
+    document.body.removeChild(anchor);
+  };
+
+  const handleExportUserRoster = async () => {
+    setUserRosterExportError(null);
+    setUserRosterExportSuccess(null);
+    setUserRosterExporting(true);
+
+    try {
+      if (hasNip04Support()) {
+        try {
+          await window.nostr?.getPublicKey?.();
+        } catch (error) {
+          console.warn(
+            'Failed to trigger NIP-07 permission prompt before roster export:',
+            error
+          );
+        }
+      }
+
+      const exportedAt = new Date();
+      const [exportIdentities, exportProfileValues] = await Promise.all([
+        collectExportIdentities(),
+        collectExportProfileValues(),
+      ]);
+      const workbook = buildUserRosterWorkbook({
+        users,
+        userTypes,
+        onboardingFields: fields,
+        identities: exportIdentities,
+        profileValues: exportProfileValues,
+        exportedAt,
+        exportedBy: localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY),
+      });
+
+      const auditResponse = await adminFetch('/admin/users/roster-export', {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: workbook.filename,
+          user_count: users.length,
+          pending_count: pendingApprovalUsers.length,
+          includes_decrypted_browser_values: workbook.includesDecryptedValues,
+        }),
+      });
+
+      if (!auditResponse.ok) {
+        setUserRosterExportError(
+          await parseErrorMessage(
+            auditResponse,
+            t(
+              'admin.userRosterExport.auditFailed',
+              'User roster export could not be audited. The spreadsheet was not downloaded.'
+            )
+          )
+        );
+        return;
+      }
+
+      downloadBlob(workbook.blob, workbook.filename);
+      setUserRosterExportSuccess(
+        t(
+          'admin.userRosterExport.success',
+          'User roster spreadsheet downloaded.'
+        )
+      );
+    } catch (err) {
+      setUserRosterExportError(
+        err instanceof Error
+          ? err.message
+          : t('admin.userRosterExport.failed', 'Failed to export user roster.')
+      );
+    } finally {
+      setUserRosterExporting(false);
+    }
   };
 
   const getUserIdentityDisplay = (user: AdminUserSummary) => {
@@ -2978,6 +3163,22 @@ export function AdminUserConfig() {
               )}
 
               <Button
+                onClick={() => void handleExportUserRoster()}
+                disabled={usersLoading || userRosterExporting}
+                variant="secondary"
+                size="sm"
+                leadingIcon={
+                  userRosterExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )
+                }
+              >
+                {t('admin.userRosterExport.button', 'Export users')}
+              </Button>
+
+              <Button
                 onClick={handleToggleSelectAllFilteredUsers}
                 disabled={filteredUsers.length === 0 || isBatchMigrating}
                 variant="secondary"
@@ -3025,6 +3226,32 @@ export function AdminUserConfig() {
                 tone="error"
               >
                 <p className="text-xs text-error">{usersError}</p>
+              </Callout>
+            )}
+
+            {userRosterExportSuccess && (
+              <Callout
+                className="mb-3"
+                label={t(
+                  'admin.userRosterExport.successLabel',
+                  'User roster export ready'
+                )}
+                tone="success"
+              >
+                <p className="text-xs text-accent">{userRosterExportSuccess}</p>
+              </Callout>
+            )}
+
+            {userRosterExportError && (
+              <Callout
+                className="mb-3"
+                label={t(
+                  'admin.userRosterExport.errorLabel',
+                  'User roster export failed'
+                )}
+                tone="error"
+              >
+                <p className="text-xs text-error">{userRosterExportError}</p>
               </Callout>
             )}
 
