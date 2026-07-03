@@ -22,10 +22,11 @@ import {
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
 import { API_BASE } from '../../../types/onboarding';
+import {
+  type KnowledgeSourceScope,
+  resolveUserConversationSessionDefaults,
+} from '../../../utils/sessionDefaults';
 
-const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
-const KNOWLEDGE_SEARCH_TOOL_ID = 'knowledge-search';
-const WEB_SEARCH_TOOL_ID = 'web-search';
 let assistantTurnSequence = 0;
 
 function generateAssistantTurnId(): string {
@@ -39,6 +40,7 @@ function generateAssistantTurnId(): string {
 interface UserSessionToolDefaults {
   tools: string[];
   documentIds: string[];
+  knowledgeSourceScope: KnowledgeSourceScope;
   status: 'configured' | 'fallback';
 }
 
@@ -49,6 +51,7 @@ interface ActiveSession {
   token: string; // bearer token used to chat AS the test user
   tools: string[];
   documentIds: string[];
+  knowledgeSourceScope: KnowledgeSourceScope;
   defaultsStatus: UserSessionToolDefaults['status'];
 }
 
@@ -62,24 +65,12 @@ function sessionDefaultsUrl(userTypeId: number | null): string {
 function resolveUserSessionToolDefaults(
   data: unknown
 ): UserSessionToolDefaults {
-  const record = data && typeof data === 'object' ? data : {};
-  const defaultDocumentIds = Array.isArray(
-    (record as Record<string, unknown>).default_document_ids
-  )
-    ? ((record as Record<string, unknown>).default_document_ids as unknown[])
-        .filter((id): id is string => typeof id === 'string' && Boolean(id))
-        .slice()
-    : [];
+  const defaults = resolveUserConversationSessionDefaults(data);
 
   return {
-    tools: [
-      CURATED_RESOURCES_TOOL_ID,
-      ...(defaultDocumentIds.length > 0 ? [KNOWLEDGE_SEARCH_TOOL_ID] : []),
-      (record as Record<string, unknown>).web_search_enabled === true
-        ? WEB_SEARCH_TOOL_ID
-        : null,
-    ].filter((tool): tool is string => typeof tool === 'string'),
-    documentIds: defaultDocumentIds,
+    tools: defaults.tools,
+    documentIds: defaults.documentIds,
+    knowledgeSourceScope: defaults.knowledgeSourceScope,
     status: 'configured',
   };
 }
@@ -95,12 +86,13 @@ async function fetchUserSessionToolDefaults(
       return resolveUserSessionToolDefaults(await response.json());
     }
   } catch {
-    // Fall back below to preserve the normal user chat default behavior.
+    // Fall back below to match the normal user chat fail-closed behavior.
   }
 
   return {
-    tools: [CURATED_RESOURCES_TOOL_ID],
+    tools: [],
     documentIds: [],
+    knowledgeSourceScope: 'none',
     status: 'fallback',
   };
 }
@@ -184,6 +176,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         token: token.token,
         tools: defaults.tools,
         documentIds: defaults.documentIds,
+        knowledgeSourceScope: defaults.knowledgeSourceScope,
         defaultsStatus: defaults.status,
       });
       setTurns([]);
@@ -268,10 +261,13 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
 
       // When acting as the test user, send the impersonation bearer so Sage
       // authenticates the chat as them (not the admin).
+      const knowledgeSourceScope = session?.knowledgeSourceScope ?? 'none';
+      const jobIds =
+        knowledgeSourceScope === 'selected' ? (session?.documentIds ?? []) : [];
       await sendLlmChatStreamWithUnifiedTools({
         content,
         tools: session?.tools ?? [],
-        jobIds: session?.documentIds ?? [],
+        jobIds,
         sessionId: sessionIdRef.current,
         authToken: session?.token,
         onEvent: (event, payload) => {

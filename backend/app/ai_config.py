@@ -28,6 +28,18 @@ logger = logging.getLogger("enclave.ai_config")
 
 router = APIRouter(prefix="/admin/ai-config", tags=["ai-config"])
 
+USER_CONVERSATION_TOOL_SET_IDS = {
+    "curated-resources",
+    "knowledge-search",
+    "web-search",
+}
+KNOWLEDGE_SOURCE_DEFAULT_VALUES = {"none", "selected", "all"}
+JSON_STRING_ARRAY_KEYS = {
+    "prompt_rules",
+    "prompt_forbidden",
+    "user_default_tool_ids",
+}
+
 
 def _config_to_item(config: dict) -> AIConfigItem:
     """Convert database row to AIConfigItem"""
@@ -83,6 +95,19 @@ def validate_trace_visibility_setting(key: str, value: str) -> str:
             status_code=400,
             detail=f"{actor_label} trace visibility is invalid: {exc}",
         ) from exc
+
+
+def validate_user_default_tool_ids(value: object) -> None:
+    if not isinstance(value, list):
+        raise ValueError("user_default_tool_ids must be a JSON array")
+    invalid = [
+        item
+        for item in value
+        if not isinstance(item, str) or item not in USER_CONVERSATION_TOOL_SET_IDS
+    ]
+    if invalid:
+        allowed = ", ".join(sorted(USER_CONVERSATION_TOOL_SET_IDS))
+        raise ValueError(f"user_default_tool_ids may only include: {allowed}")
 
 
 @router.get("", response_model=AIConfigResponse)
@@ -149,16 +174,18 @@ async def update_ai_config_value(
         elif value_type == "json":
             parsed = json.loads(update.value)  # Validate it's valid JSON
             # Additional validation for list-type keys
-            if key in {"prompt_rules", "prompt_forbidden"}:
+            if key in JSON_STRING_ARRAY_KEYS:
                 if not isinstance(parsed, list):
                     raise ValueError(f"{key} must be a JSON array")
                 if not all(isinstance(item, str) for item in parsed):
                     raise ValueError(f"{key} must be an array of strings")
+                if key == "user_default_tool_ids":
+                    validate_user_default_tool_ids(parsed)
     except (ValueError, json.JSONDecodeError, AttributeError) as e:
         logger.warning(f"Invalid value for type {value_type}: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in {"prompt_rules", "prompt_forbidden"} else f"Invalid value for type '{value_type}'"
+            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in JSON_STRING_ARRAY_KEYS else f"Invalid value for type '{value_type}'"
         )
 
     # Additional validation for specific keys
@@ -188,6 +215,15 @@ async def update_ai_config_value(
             update.value = str(max_tokens)
         elif key in {"admin_trace_visibility", "user_trace_visibility"}:
             update.value = validate_trace_visibility_setting(key, update.value)
+        elif key == "knowledge_source_default":
+            normalized = update.value.strip().lower()
+            if normalized not in KNOWLEDGE_SOURCE_DEFAULT_VALUES:
+                allowed = ", ".join(sorted(KNOWLEDGE_SOURCE_DEFAULT_VALUES))
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Knowledge source default must be one of: {allowed}"
+                )
+            update.value = normalized
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 
@@ -286,16 +322,18 @@ async def set_ai_config_override(
                 raise ValueError("Boolean must be 'true' or 'false'")
         elif value_type == "json":
             parsed = json.loads(update.value)
-            if key in {"prompt_rules", "prompt_forbidden"}:
+            if key in JSON_STRING_ARRAY_KEYS:
                 if not isinstance(parsed, list):
                     raise ValueError(f"{key} must be a JSON array")
                 if not all(isinstance(item, str) for item in parsed):
                     raise ValueError(f"{key} must be an array of strings")
+                if key == "user_default_tool_ids":
+                    validate_user_default_tool_ids(parsed)
     except (ValueError, json.JSONDecodeError, AttributeError) as e:
         logger.warning(f"Invalid override value for type {value_type}: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in {"prompt_rules", "prompt_forbidden"} else f"Invalid value for type '{value_type}'"
+            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in JSON_STRING_ARRAY_KEYS else f"Invalid value for type '{value_type}'"
         )
 
     # Additional validation for specific keys
@@ -314,6 +352,17 @@ async def set_ai_config_override(
         elif key == "max_tokens":
             max_tokens = validate_max_tokens(update.value)
             update.value = str(max_tokens)
+        elif key in {"admin_trace_visibility", "user_trace_visibility"}:
+            update.value = validate_trace_visibility_setting(key, update.value)
+        elif key == "knowledge_source_default":
+            normalized = update.value.strip().lower()
+            if normalized not in KNOWLEDGE_SOURCE_DEFAULT_VALUES:
+                allowed = ", ".join(sorted(KNOWLEDGE_SOURCE_DEFAULT_VALUES))
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Knowledge source default must be one of: {allowed}"
+                )
+            update.value = normalized
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
 

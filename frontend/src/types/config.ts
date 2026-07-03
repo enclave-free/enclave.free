@@ -845,7 +845,11 @@ export interface DefaultMeta {
   hint: string;
 }
 
-export const DEFAULT_KEY_LIST = ['web_search_default'] as const;
+export const DEFAULT_KEY_LIST = [
+  'knowledge_source_default',
+  'user_default_tool_ids',
+  'web_search_default',
+] as const;
 
 export type DefaultKey = (typeof DEFAULT_KEY_LIST)[number];
 
@@ -854,6 +858,28 @@ export type DefaultKey = (typeof DEFAULT_KEY_LIST)[number];
  */
 export function getDefaultMeta(t: TFunction): Record<DefaultKey, DefaultMeta> {
   return {
+    knowledge_source_default: {
+      label: t('defaults.knowledge_source_default.label', 'Knowledge Sources'),
+      description: t(
+        'defaults.knowledge_source_default.description',
+        'Choose which uploaded knowledge sources are active in User Conversations'
+      ),
+      hint: t(
+        'defaults.knowledge_source_default.hint',
+        'Use "none" for no uploaded knowledge by default, "selected" for documents marked Active by Default, or "all" for all available documents.'
+      ),
+    },
+    user_default_tool_ids: {
+      label: t('defaults.user_default_tool_ids.label', 'User Tool Sets'),
+      description: t(
+        'defaults.user_default_tool_ids.description',
+        'Tool Sets active by default in User Conversations'
+      ),
+      hint: t(
+        'defaults.user_default_tool_ids.hint',
+        'JSON array using any of "curated-resources", "knowledge-search", and "web-search". Knowledge Search is also controlled by Knowledge Sources.'
+      ),
+    },
     web_search_default: {
       label: t('defaults.web_search_default.label', 'Web Search'),
       description: t(

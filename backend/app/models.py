@@ -612,6 +612,8 @@ class SessionDefaultsResponse(BaseModel):
     """Response model for public session defaults"""
     web_search_enabled: bool = False
     default_document_ids: list[str] = []
+    default_tool_ids: list[str] = []
+    knowledge_source_scope: str = "none"
 
 
 # --- Agent Settings User-Type Override Models ---

@@ -23,7 +23,7 @@ Route names do not define separate tool systems. Document-grounded chat is Conve
 
 ## Browser To Sage Request Contract
 
-The browser sends selected Tool Set IDs to Sage in the Conversation request. Sage is responsible for expanding those IDs into the concrete Tool contracts that the current actor is authorized to use.
+The browser sends Tool Set IDs to Sage in the Conversation request. Admin Conversations send the Admin's visible selections. User Conversations use the operator-configured session defaults returned by Sage-owned `/session-defaults`; the default user composer does not expose Tool Set controls or a Knowledge document selector. Sage is responsible for expanding those IDs into concrete Tool contracts and enforcing the effective non-admin default policy server-side.
 
 For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
@@ -40,15 +40,15 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 }
 ```
 
-- `tools` is a list of visible Tool Set IDs selected in the composer.
-- Sage drops or rejects Tool Sets the actor is not authorized to use.
+- `tools` is a list of Tool Set IDs selected by an Admin or resolved by Sage from User Conversation defaults.
+- Sage drops or rejects Tool Sets the actor is not authorized to use. For non-admin users, Sage ignores the client-submitted `tools` list for effective resolution and computes the Tool Set list from server-side `/session-defaults`, including the empty or omitted case where configured defaults still apply.
 - `job_ids` is an optional Knowledge Search constraint: it is a list of selected Document Library `job_id` values, not an arbitrary prompt blob.
 - Additional Knowledge filters must be added as explicit request fields before the browser can send them.
 - `conversation_history` is optional recent client context; Sage-owned session memory remains authoritative when a `session_id` is present.
 
 ## Tool Sets
 
-Visible Tool Sets are conversation controls and permission bundles:
+Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
 
 | Tool Set ID         | Access                                        | Exposes                                                                                       |
 | ------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -72,7 +72,7 @@ Required Context remains a separate product-policy term for future mandatory con
 
 `curated-resources` is a first-class visible Tool Set for the admin-curated Resource Directory. It is separate from `knowledge-search`: Resources are structured, priority referrals stored in SQLite by admins; Knowledge is uploaded document retrieval through embeddings and document access policy.
 
-Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns vetted organizations, contacts, coverage, help types, and languages. The Tool should be enabled by default for user chat so Sage can recommend known priority resources before guessing, searching the web, or asking the user to check manually. When a user asks what resources are available or asks to list resources, Sage should call `find_resources` without a `help_type` so it lists ready curated resources from the live Resource Directory instead of describing the tool catalog.
+Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns vetted organizations, contacts, coverage, help types, and languages. Operators may enable it as a User Conversation default when they want Sage to recommend known priority resources before guessing, searching the web, or asking the user to check manually. When this Tool Set is enabled and a user asks what resources are available or asks to list resources, Sage should call `find_resources` without a `help_type` so it lists ready curated resources from the live Resource Directory instead of describing the tool catalog.
 
 ## Admin Config
 
@@ -126,9 +126,9 @@ Theme requests in Admin Conversations mean Instance visual identity settings, su
 
 ## Frontend Duties
 
-The frontend chooses visible Tool Sets and Tool constraints. It must not prefetch admin configuration context for chat, run hidden document retrieval for ordinary turns, or send `client_executed_tools` as a compatibility path.
+The frontend chooses visible Admin Tool Sets and Tool constraints. For non-admin User Conversations, it consumes `/session-defaults` and sends the configured default Tool Set IDs and Knowledge Source scope without showing Tool controls by default. It must not prefetch admin configuration context for chat, run hidden document retrieval outside configured defaults, or send `client_executed_tools` as a compatibility path.
 
-The composer should make Knowledge, Resources, Web, Config, and Database explicit controls. Knowledge document scope belongs under the Knowledge Tool Set control. Resources is enabled by default for user chat; Config and Database must only render for server-validated admins.
+Admin composers should make Knowledge, Resources, Web, Config, and Database explicit controls. Knowledge document scope belongs under the Knowledge Tool Set control. User composers show no Tool Set controls by default; Config and Database must only render for server-validated admins.
 
 ## Sage Duties
 

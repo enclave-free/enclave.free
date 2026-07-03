@@ -132,6 +132,8 @@ describe('TestAsUserView', () => {
         Response.json({
           web_search_enabled: true,
           default_document_ids: ['doc-1', 'doc-2'],
+          default_tool_ids: ['curated-resources', 'web-search'],
+          knowledge_source_scope: 'selected',
         })
       )
     );
@@ -240,7 +242,11 @@ describe('TestAsUserView', () => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
         expect.objectContaining({
           content: 'Do you have any resources you can read through?',
-          tools: ['curated-resources', 'knowledge-search', 'web-search'],
+          tools: expect.arrayContaining([
+            'curated-resources',
+            'knowledge-search',
+            'web-search',
+          ]),
           jobIds: ['doc-1', 'doc-2'],
           authToken: 'synthetic-user-token',
         })
@@ -258,6 +264,38 @@ describe('TestAsUserView', () => {
     });
   });
 
+  it('sends all-knowledge defaults without selected document constraints while impersonating the synthetic User', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({
+        web_search_enabled: false,
+        default_document_ids: [],
+        default_tool_ids: ['curated-resources', 'knowledge-search'],
+        knowledge_source_scope: 'all',
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Can you search all available knowledge?'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Can you search all available knowledge?',
+          tools: expect.arrayContaining([
+            'curated-resources',
+            'knowledge-search',
+          ]),
+          jobIds: [],
+          authToken: 'synthetic-user-token',
+        })
+      );
+    });
+  });
+
   it('uses a conservative Tool Set fallback when user defaults cannot be loaded', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500 }));
     const user = await startStudentSession();
@@ -272,7 +310,7 @@ describe('TestAsUserView', () => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
         expect.objectContaining({
           content: 'Can you look up resources?',
-          tools: ['curated-resources'],
+          tools: [],
           jobIds: [],
           authToken: 'synthetic-user-token',
         })

@@ -53,8 +53,8 @@ Defense-in-depth:
 
 Tool defaults:
 
-- Applies Sage-owned session defaults from the Gateway/Sage runtime path (same default source as full chat).
-- `admin-config` is default-on for admin configuration conversations, while `web-search` and `db-query` remain explicit unless enabled by defaults.
+- User Conversation Tool Sets and Knowledge Source scope are configured through Sage-owned session defaults from the Gateway/Sage runtime path.
+- Admin configuration conversations are config-only by default: `admin-config` is default-on, while `knowledge-search`, `curated-resources`, `web-search`, and `db-query` remain explicit Admin controls.
 - `knowledge-search` is a visible Tool Set. When an admin configuration request refers to uploaded materials, theming, copy, or content, Sage should call Knowledge Search when enabled and relevant.
 - `curated-resources` is a visible Tool Set for the admin-curated Resource Directory. It is separate from Knowledge Search and should be used for vetted referral/resource suggestions, not uploaded document retrieval.
 - Admin `/chat`, the sidebar, and guided onboarding use the same Sage model-driven Tool loop.

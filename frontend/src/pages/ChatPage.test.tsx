@@ -175,6 +175,8 @@ describe('ChatPage', () => {
             Response.json({
               web_search_enabled: true,
               default_document_ids: ['doc-1'],
+              default_tool_ids: ['curated-resources', 'web-search'],
+              knowledge_source_scope: 'selected',
             })
           );
         }
@@ -238,7 +240,7 @@ describe('ChatPage', () => {
     document.documentElement.classList.remove('dark');
   });
 
-  it('activates the Web Search tool when it is enabled by default for new conversations', async () => {
+  it('loads configured user defaults without showing Tool controls', async () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
     await waitFor(() => {
@@ -247,10 +249,12 @@ describe('ChatPage', () => {
       );
     });
 
-    expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(
+      screen.queryByRole('button', { name: 'Web' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Resources' })
+    ).not.toBeInTheDocument();
   });
 
   it('routes pending-approval users to User Type selection before pending approval on direct chat entry', async () => {
@@ -326,7 +330,7 @@ describe('ChatPage', () => {
     expect(await screen.findByText('Pending approval')).toBeInTheDocument();
   });
 
-  it('activates Curated Resources by default for user chat turns', async () => {
+  it('sends configured default user Tool Sets without exposing controls', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
       async ({ onEvent }) => {
@@ -348,11 +352,13 @@ describe('ChatPage', () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/api\/session-defaults(?:\?|$)/)
       );
     });
+    expect(
+      screen.queryByRole('button', { name: 'Resources' })
+    ).not.toBeInTheDocument();
 
     await user.type(getComposerTextbox(), 'Who can help in Nicaragua?');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -364,31 +370,12 @@ describe('ChatPage', () => {
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
     expect(callArgs.tools).toContain('curated-resources');
+    expect(callArgs.tools).toContain('web-search');
     expect(callArgs.tools).not.toContain('admin-config');
     expect(callArgs.tools).not.toContain('db-query');
   });
 
-  it('selects documents that are active by default for new conversations', async () => {
-    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
-    });
-
-    await userEvent.click(screen.getByRole('button', { name: 'Docs 1' }));
-
-    expect(
-      screen.getByRole('button', { name: /operator-handbook/ })
-    ).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /user-faq/ })).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
-  });
-
-  it('sends document-grounded chat through unified Knowledge Search tools', async () => {
+  it('sends configured selected knowledge sources without exposing document controls', async () => {
     const user = userEvent.setup();
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
@@ -402,6 +389,8 @@ describe('ChatPage', () => {
           Response.json({
             web_search_enabled: true,
             default_document_ids: ['doc-1'],
+            default_tool_ids: ['curated-resources', 'web-search'],
+            knowledge_source_scope: 'selected',
           })
         );
       }
@@ -454,16 +443,14 @@ describe('ChatPage', () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/api\/session-defaults(?:\?|$)/)
+      );
     });
-    await user.type(
-      screen.getByRole('textbox', {
-        name: 'Ask about your selected documents...',
-      }),
-      'What does the handbook say?'
-    );
+    expect(
+      screen.queryByRole('button', { name: 'Docs 1' })
+    ).not.toBeInTheDocument();
+    await user.type(getComposerTextbox(), 'What does the handbook say?');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('The handbook answer.')).toBeInTheDocument();
@@ -488,22 +475,19 @@ describe('ChatPage', () => {
     );
   });
 
-  it('shows selected Documents as composer context for the next turn', async () => {
+  it('hides the user composer Tool and Document controls', async () => {
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    const composerContext = await screen.findByRole('region', {
-      name: 'Composer context',
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/api\/session-defaults(?:\?|$)/)
+      );
     });
-    expect(composerContext).toBeInTheDocument();
-    expect(within(composerContext).getByText('Tools')).toBeInTheDocument();
     expect(
-      within(composerContext).getAllByText('Documents').length
-    ).toBeGreaterThan(0);
-    expect(await screen.findByText('operator-handbook')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+      screen.queryByRole('region', { name: 'Composer context' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Tools')).not.toBeInTheDocument();
+    expect(screen.queryByText('Documents')).not.toBeInTheDocument();
     expect(
       document.querySelector('input[type="file"]')
     ).not.toBeInTheDocument();
@@ -532,6 +516,8 @@ describe('ChatPage', () => {
           Response.json({
             web_search_enabled: true,
             default_document_ids: ['doc-1'],
+            default_tool_ids: ['curated-resources', 'web-search'],
+            knowledge_source_scope: 'selected',
           })
         );
       }
@@ -569,10 +555,12 @@ describe('ChatPage', () => {
     expect(
       await screen.findByRole('region', { name: 'Conversation surface' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Web' })).toBeInTheDocument();
     expect(
-      await screen.findByRole('button', { name: 'Docs 1' })
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: 'Web' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Docs 1' })
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Get help' })
     ).toBeInTheDocument();
@@ -629,13 +617,6 @@ describe('ChatPage', () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText('Current chat').length).toBeGreaterThan(0);
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
-    });
-    await user.click(screen.getByRole('button', { name: 'Docs 1' }));
-    await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
     await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(await screen.findByText('First answer.')).toBeInTheDocument();
@@ -1668,14 +1649,6 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
-    });
-    await user.click(screen.getByRole('button', { name: 'Docs 1' }));
-    await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
-
     await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
@@ -1711,14 +1684,6 @@ describe('ChatPage', () => {
     );
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
-    });
-    await user.click(screen.getByRole('button', { name: 'Docs 1' }));
-    await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
     await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -1759,14 +1724,6 @@ describe('ChatPage', () => {
     );
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
-    });
-    await user.click(screen.getByRole('button', { name: 'Docs 1' }));
-    await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
     await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -1844,14 +1801,6 @@ describe('ChatPage', () => {
     );
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Docs 1' })
-      ).toBeInTheDocument();
-    });
-    await user.click(screen.getByRole('button', { name: 'Docs 1' }));
-    await user.click(screen.getByRole('button', { name: /operator-handbook/ }));
 
     await user.type(getComposerTextbox(), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -1957,13 +1906,12 @@ describe('ChatPage', () => {
       ).not.toBeInTheDocument();
     });
 
-    expect(screen.getByRole('button', { name: 'Web' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
+    expect(
+      screen.queryByRole('button', { name: 'Web' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Resources' })
+    ).not.toBeInTheDocument();
 
     await user.type(getComposerTextbox(), 'I need user help.');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
@@ -1997,10 +1945,9 @@ describe('ChatPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Config' })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(
+      screen.queryByRole('button', { name: 'Resources' })
+    ).not.toBeInTheDocument();
   });
 
   it('admin config defaults to config-only tools without web-search', async () => {
