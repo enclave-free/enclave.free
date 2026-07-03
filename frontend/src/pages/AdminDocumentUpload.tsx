@@ -53,8 +53,7 @@ const JOB_STATUS_FETCH_TIMEOUT_MS = 5000;
 
 const buildFallbackJobStatus = (job: JobsListItem): JobStatus => {
   const status = job.status as JobStatus['status'];
-  const isComplete =
-    status === 'completed' || status === 'completed_with_errors';
+  const isComplete = status === 'completed';
 
   return {
     job_id: job.job_id,
@@ -293,7 +292,9 @@ export function AdminDocumentUpload({
           Math.min(recentDocumentsVisibleLimitRef.current, data.jobs.length)
         );
         const visibleJobStatuses = await Promise.all(
-          data.jobs.slice(0, hydrationLimit).map(fetchDetailedJobStatus)
+          data.jobs
+            .slice(0, hydrationLimit)
+            .map((job) => fetchDetailedJobStatus(buildFallbackJobStatus(job)))
         );
         const deferredJobStatuses = data.jobs
           .slice(hydrationLimit)

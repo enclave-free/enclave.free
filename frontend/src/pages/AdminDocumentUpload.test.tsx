@@ -397,6 +397,44 @@ describe('AdminDocumentUpload', () => {
     expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
   });
 
+  it('does not infer all chunks processed for fallback completed-with-errors Documents', async () => {
+    const jobs: MockIngestJob[] = [
+      {
+        ...buildCompletedJob(1),
+        status: 'completed_with_errors',
+        total_chunks: 7,
+      },
+    ];
+
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(
+          Response.json({
+            total: jobs.length,
+            jobs,
+          })
+        );
+      }
+      if (endpoint === '/ingest/status/job-01') {
+        return Promise.resolve(Response.json({}, { status: 503 }));
+      }
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Document 01.pdf')).toBeInTheDocument();
+    expect(screen.getByText('Completed with errors')).toBeInTheDocument();
+    expect(screen.getByText('0/7 chunks')).toBeInTheDocument();
+    expect(screen.queryByText('7/7 chunks')).not.toBeInTheDocument();
+  });
+
   it('confirms and deletes a completed Document Ingestion job', async () => {
     const user = userEvent.setup();
 
