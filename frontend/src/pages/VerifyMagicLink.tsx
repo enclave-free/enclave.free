@@ -84,6 +84,7 @@ export function VerifyMagicLink() {
   const [needsUserType, setNeedsUserType] = useState(false);
   const [isApproved, setIsApproved] = useState(true);
   const hasVerified = useRef(false); // Prevent double-execution in StrictMode
+  const hasOnboardingWork = needsUserType || needsOnboarding;
 
   useEffect(() => {
     let active = true;
@@ -226,16 +227,13 @@ export function VerifyMagicLink() {
     // Redirect after success
     if (state === 'success') {
       const redirectTimer = setTimeout(() => {
-        // If not approved, go to pending page
-        if (!isApproved) {
-          navigate('/pending');
+        // User Approval gates chat, not required onboarding steps.
+        if (needsUserType) {
+          navigate('/user-type');
         } else if (needsOnboarding) {
-          // If onboarding needed, go to user-type selection (which auto-skips if needed)
-          if (needsUserType) {
-            navigate('/user-type');
-          } else {
-            navigate('/profile');
-          }
+          navigate('/profile');
+        } else if (!isApproved) {
+          navigate('/pending');
         } else {
           navigate('/chat');
         }
@@ -290,7 +288,7 @@ export function VerifyMagicLink() {
             {email}
           </p>
           <p className="text-xs text-text-muted mt-6">
-            {needsOnboarding
+            {hasOnboardingWork
               ? t('onboarding.verify.completingProfile')
               : t('onboarding.verify.redirectingChat')}
           </p>

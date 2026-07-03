@@ -946,7 +946,7 @@ export function ChatPage() {
     };
   }, [loadConversationHistory]);
 
-  // Check auth and approval status on mount
+  // Check auth, onboarding, and approval status on mount
   useEffect(() => {
     if (adminSessionChecking) return;
 
@@ -959,16 +959,12 @@ export function ChatPage() {
       return;
     }
 
-    // User authenticated but not approved - redirect to pending
-    const approved = localStorage.getItem(STORAGE_KEYS.USER_APPROVED);
-    if (!isAdmin && approved === 'false') {
-      navigate('/pending');
-      return;
-    }
-
     // Keep onboarding enforcement server-authoritative for returning users.
+    // User Approval gates Conversation access after required onboarding steps.
     if (!isAdmin) {
       const checkOnboardingStatus = async () => {
+        const approved = localStorage.getItem(STORAGE_KEYS.USER_APPROVED);
+
         try {
           const response = await fetch(
             `${API_BASE}/users/me/onboarding-status`,
@@ -985,6 +981,9 @@ export function ChatPage() {
           }
 
           if (!response.ok) {
+            if (approved === 'false') {
+              navigate('/pending');
+            }
             return;
           }
 
@@ -1002,9 +1001,20 @@ export function ChatPage() {
 
           if (status.needs_onboarding) {
             navigate('/profile');
+            return;
+          }
+
+          if (approved === 'false') {
+            navigate('/pending');
           }
         } catch (err) {
           console.error('Failed to fetch onboarding status:', err);
+          if (!isCancelled) {
+            const approved = localStorage.getItem(STORAGE_KEYS.USER_APPROVED);
+            if (approved === 'false') {
+              navigate('/pending');
+            }
+          }
         }
       };
 
