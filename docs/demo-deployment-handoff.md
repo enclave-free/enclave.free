@@ -1,150 +1,147 @@
 # Enclave Demo Deployment Handoff
 
-This is the short guide for trying an already-created Enclave instance.
+This is the simple path for taking over and trying the demo instance.
 
 You should receive two things separately:
 
-- Demo URL: `[DEMO_URL]`
+- Demo URL: `https://demo.enclave.free`
 - Admin Nostr key: sent privately, not in this document
 
-Keep the admin Nostr key in a password manager. Do not paste it into chat, email threads, support tickets, or the Enclave admin assistant. The key is the admin credential for this demo instance.
-
-Because this demo instance is already initiated, use the exact admin Nostr key you were given. A different Nostr key will not have admin access.
+Keep the admin Nostr key private. Do not paste it into Enclave chat, the admin assistant, email, or support threads.
 
 ## Fast Path
 
-1. Open `[DEMO_URL]/admin`.
-2. Sign in with the admin Nostr key through your browser extension.
+1. Put the admin Nostr key into a NIP-07 signer, such as nos2x.
+2. Sign in as admin at `https://demo.enclave.free/admin`.
 3. Open **Guided Setup**.
-4. Answer the setup questions in one message.
-5. Upload a few documents.
+4. Answer the onboarding questions.
+5. Upload a few initial documents.
 6. Add a few curated resources.
 7. Test as a user.
-8. Ask the admin assistant what is still missing.
+8. Approve any new users from **User Settings**.
+9. Ask the admin agent to configure anything else you need.
 
-## 1. Sign In As Admin
+## 1. Admin Sign-In
 
-1. Install or open a NIP-07 Nostr browser extension, such as Alby or nos2x.
+Admins use the Nostr key.
+
+1. Install or open a NIP-07 signer, such as nos2x, Alby, or another Nostr browser extension.
 2. Import the admin Nostr key you were given.
-3. Open `[DEMO_URL]/admin`.
+3. Open `https://demo.enclave.free/admin`.
 4. Click **Connect with Nostr**.
-5. Approve the signature request in the browser extension.
+5. Approve the signature request in the signer.
 
-The private key stays in the extension. Enclave only asks the extension to sign a login event.
+The private key stays in the signer. Enclave only asks the signer to approve the admin login.
+
+Use the exact admin key you were given. A different Nostr key will not have admin access.
+
+If you are using nos2x:
+
+Click the nos2x extension icon. If it shows **start here**, click it.
+
+On the nos2x options page, paste the admin Nostr key into **private key**, save it, then return to `https://demo.enclave.free/admin` and click **Connect with Nostr**.
+
+Do not click **generate** for this demo. Use the admin key you were given.
+
+![nos2x start here](assets/demo-deployment-handoff/nos2x-start-here.png)
+
+![nos2x private key setup](assets/demo-deployment-handoff/nos2x-private-key.png)
 
 ![Admin Nostr sign-in](assets/demo-deployment-handoff/admin-nostr-signin.png)
 
-## 2. Run Guided Setup
+## 2. User Sign-In
 
-After admin sign-in, go to **Guided Setup** from the admin dashboard.
+Users do not need Nostr.
 
-The first screen is a setup chat. You can answer everything in one message. Use this template:
+Users sign up or log in with email:
 
-```text
-1. Name:
-2. Description:
-3. Assistant name:
-4. Accent color:
-5. Theme:
-6. Default language:
-7. Tagline:
-8. New users: let them in right away OR approve each person
-9. User types:
-```
-
-Example:
-
-```text
-1. Name: Example Org Help Desk
-2. Description: Private demo space for testing the org support assistant.
-3. Assistant name: Guide
-4. Accent color: blue
-5. Theme: dark
-6. Default language: English
-7. Tagline: Ask for help, resources, and next steps.
-8. New users: approve each person
-9. User types: Staff and Member
-```
-
-When Enclave proposes changes, read the summary and click **Apply** if it looks right.
-
-![Guided setup chat](assets/demo-deployment-handoff/guided-setup.png)
-
-Then continue through:
-
-- **Upload Docs**: add PDFs, guides, policies, FAQs, or other source material.
-- **Curated Resources**: add trusted referrals, contacts, links, and services.
-- **Finish & start testing**: try the demo as a user before inviting anyone else.
-
-## 3. Try The User Flow
-
-Use a different browser profile or an incognito window for the user side.
-
-1. Open `[DEMO_URL]`.
+1. Open `https://demo.enclave.free`.
 2. Choose the user sign-up or login flow.
 3. Enter a name and email.
 4. Click **Continue with Email**.
 5. Open the magic link email and click the link.
 
-Users do not need a Nostr key. They sign in with email magic links.
+Email is already set up for this demo, so you can create a real test user yourself.
+
+Important: new users currently need to be verified one by one before they can use chat. After a user signs up, approve them from **Admin Dashboard -> User Settings**.
 
 ![User email sign-up](assets/demo-deployment-handoff/user-email-signup.png)
 
-If you chose **approve each person** during setup, approve the user from **Admin Dashboard -> User Settings** before they can fully use the instance.
+## 3. First Setup
 
-## 4. Use The Admin Assistant
+After admin sign-in, open **Guided Setup** from the admin dashboard.
 
-The admin assistant is for setup help, review, and configuration changes.
+Use the onboarding chat to get the instance into a useful starting state:
 
-From the admin dashboard, open **Admin Assistant**, or use the assistant drawer on the right side of admin pages.
+1. Answer the onboarding questions in plain language.
+2. Upload a few initial documents, such as PDFs, guides, policies, FAQs, or other reference material.
+3. Add a few curated resources, such as trusted links, contacts, referrals, or services.
+
+You can answer the setup chat in one message. Keep it simple:
+
+```text
+Name:
+What this instance is for:
+Assistant name:
+User types:
+What new users should be asked:
+Any important rules or tone:
+```
+
+When Enclave proposes changes, review them and click **Apply** if they look right.
+
+![Guided setup chat](assets/demo-deployment-handoff/guided-setup.png)
+
+## 4. Admin Dashboard And Agent
+
+The admin dashboard is where you manage the instance.
+
+The main thing to know: you can ask the admin agent to configure or set things up at any time.
 
 Good things to ask:
 
 ```text
-What is still missing before this demo is ready for users?
+What still needs setup before this demo is ready?
 ```
 
 ```text
-Review my current setup and tell me the next 3 things to configure.
+Create onboarding questions for new users.
 ```
 
 ```text
-Set the assistant name to Guide and make the default language English.
+Set up user types for Staff and Member.
 ```
 
 ```text
-Create user types for Staff and Member, and ask Members what kind of help they need.
+Show me which documents and resources are currently configured.
 ```
 
 ```text
-What documents have been uploaded, and which user types can access them?
+Change the assistant name and default tone.
 ```
 
-When the assistant suggests a configuration change, Enclave should show a change review before anything is applied. Read it, then click **Apply** only if it matches what you want.
+The agent should show a change review before applying configuration changes. Read the review, then click **Apply** only if it matches what you want.
 
-Leave **Share secret env vars** off unless you are debugging deployment settings and understand that secrets may be shared with the assistant for that session.
+You can also test from the admin side:
+
+- **Test User Session** lets you simulate a user chat without leaving the admin dashboard.
+- You can also sign up as a real user with email and go through the magic link flow.
+
+Leave **Share secret env vars** off unless you are intentionally debugging deployment settings.
 
 ![Admin dashboard and assistant](assets/demo-deployment-handoff/admin-dashboard-assistant.png)
 
-## 5. What Each Admin Tile Is For
+## Speed And Chat Sessions
 
-- **Admin Assistant**: ask setup questions and request configuration changes.
-- **Guided Setup**: first-run flow for identity, docs, resources, and testing.
-- **Test User Session**: simulate a user conversation and review saved beta logs.
-- **Instance Settings**: name, branding, theme, public identity.
-- **User Settings**: user types, onboarding questions, approvals.
-- **Agent Settings**: assistant behavior, prompts, model behavior, document defaults.
-- **Document Upload**: add documents to the knowledge base.
-- **Resource Directory**: add trusted referrals and links the assistant can recommend.
-- **Deployment Settings**: runtime config, health, readiness.
-- **Database Explorer**: read-only inspection for admins.
-- **Diagnostics**: smoke checks when something seems broken.
+The AI model may feel a little slower than we want right now. For this demo, we are choosing intelligence over speed.
 
-## 6. Tiny Troubleshooting
+Start new chats often, especially when doing admin configuration. Fresh chats are usually faster, easier to follow, and cheaper in AI tokens.
 
-- Admin sign-in fails: confirm the browser extension has the exact admin key for this instance.
-- No Nostr prompt appears: unlock the extension, refresh the page, and click **Connect with Nostr** again.
-- Magic link does not arrive: check spam, then ask an admin to verify email settings in **Deployment Settings**.
-- User is stuck waiting: check **User Settings** and approve the user if approvals are enabled.
+## Tiny Troubleshooting
 
-That is enough for a first demo. Everything else can be refined later from the admin dashboard.
+- Admin sign-in fails: confirm the signer has the exact admin Nostr key for this instance.
+- No Nostr prompt appears: unlock the signer, refresh the page, and click **Connect with Nostr** again.
+- User cannot chat yet: approve the user in **Admin Dashboard -> User Settings**.
+- Magic link does not arrive: check spam, then ask an admin to check **Deployment Settings**.
+
+That is enough for a first demo. Everything else can be refined from the admin dashboard.
