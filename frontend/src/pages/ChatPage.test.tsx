@@ -78,23 +78,27 @@ function renderChatPageRoute() {
   );
 }
 
-function setOnboardingStatus(status: {
-  needs_user_type: boolean;
-  needs_onboarding: boolean;
-  effective_user_type_id: number | null;
-}) {
+function setOnboardingStatusResponse(handler: () => Promise<Response>) {
   const existingFetch = vi.mocked(fetch).getMockImplementation();
   vi.mocked(fetch).mockImplementation(
     (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
       if (url.endsWith('/users/me/onboarding-status')) {
-        return Promise.resolve(Response.json(status));
+        return handler();
       }
 
       return existingFetch?.(input, init) ?? Promise.resolve(Response.json({}));
     }
   );
+}
+
+function setOnboardingStatus(status: {
+  needs_user_type: boolean;
+  needs_onboarding: boolean;
+  effective_user_type_id: number | null;
+}) {
+  setOnboardingStatusResponse(() => Promise.resolve(Response.json(status)));
 }
 
 describe('ChatPage', () => {
@@ -296,6 +300,30 @@ describe('ChatPage', () => {
       expect.stringMatching(/\/users\/me\/onboarding-status$/),
       expect.objectContaining({ credentials: 'include' })
     );
+  });
+
+  it('routes pending-approval users to pending approval when onboarding status returns an error', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-error@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatusResponse(() =>
+      Promise.resolve(Response.json({}, { status: 500 }))
+    );
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('Pending approval')).toBeInTheDocument();
+  });
+
+  it('routes pending-approval users to pending approval when onboarding status cannot be fetched', async () => {
+    localStorage.setItem(ENCLAVE_USER_EMAIL_KEY, 'pending-network@example.com');
+    localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+    setOnboardingStatusResponse(() =>
+      Promise.reject(new Error('network down'))
+    );
+
+    renderChatPageRoute();
+
+    expect(await screen.findByText('Pending approval')).toBeInTheDocument();
   });
 
   it('activates Curated Resources by default for user chat turns', async () => {
@@ -815,7 +843,9 @@ describe('ChatPage', () => {
     expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
     expect(screen.getByText('Top-level tool completed.')).toBeInTheDocument();
     expect(screen.queryByText('Nested Admin Config')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nested tool completed.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nested tool completed.')
+    ).not.toBeInTheDocument();
   });
 
   it('rejects malformed resumed Conversations instead of clearing the thread', async () => {

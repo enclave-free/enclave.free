@@ -290,7 +290,9 @@ export function VerifyMagicLink() {
           <p className="text-xs text-text-muted mt-6">
             {hasOnboardingWork
               ? t('onboarding.verify.completingProfile')
-              : t('onboarding.verify.redirectingChat')}
+              : !isApproved
+                ? t('onboarding.pending.heading')
+                : t('onboarding.verify.redirectingChat')}
           </p>
         </div>
       )}
