@@ -9,7 +9,7 @@
 - Feature branch: feature/user-approval-after-onboarding
 - Human owner: Austin
 - Started: 2026-07-03
-- Current status: #450 implemented and locally verified; local CodeRabbit minor docs finding addressed.
+- Current status: PR #453 is open against staging, not draft; PR CodeRabbit round 2 and all PR checks passed.
 - Skill setup status: Present. Repo has AGENTS.md, docs/agents/issue-tracker.md, docs/agents/triage-labels.md, and docs/agents/domain.md.
 
 ## Goal
@@ -41,7 +41,8 @@ There's an option where users can be required to be approved before they are acc
 - Agent briefs: Pending
 - Review packets: docs/agents/runs/2026-07-03-user-approval-after-onboarding-review-450.md
 - Local CodeRabbit report: docs/agents/runs/2026-07-03-user-approval-after-onboarding-coderabbit-local.md
-- PR URL: Pending
+- PR CodeRabbit report: docs/agents/runs/2026-07-03-user-approval-after-onboarding-coderabbit-pr.md
+- PR URL: https://github.com/enclave-free/enclave.free/pull/453
 
 ## Commands
 
@@ -81,12 +82,19 @@ There's an option where users can be required to be approved before they are acc
 | --- | --- | --- | --- | --- | --- |
 | #450 | staging | Current thread | 3fe31c6 | Pass; one spec-edge finding fixed before completion | `npm run test -- ChatPage.test.tsx VerifyMagicLink.test.tsx useAuthFlow.test.ts`; `npm run build`; `npm run test`; `git diff --check` |
 
+## PR Ledger
+
+| PR | Base | Branch | Draft | Status | Latest review/check result |
+| --- | --- | --- | --- | --- | --- |
+| https://github.com/enclave-free/enclave.free/pull/453 | staging | feature/user-approval-after-onboarding | No | Open | CodeRabbit and all PR checks passed after commit `7672153` |
+
 ## Verification Evidence
 
-- `cd frontend && npm run test -- ChatPage.test.tsx VerifyMagicLink.test.tsx useAuthFlow.test.ts` passed: 3 files, 54 tests.
+- `cd frontend && npm run test -- ChatPage.test.tsx VerifyMagicLink.test.tsx useAuthFlow.test.ts` passed after PR review fixes: 3 files, 56 tests.
 - `cd frontend && npm run build` passed. Vite reported existing large-chunk warnings.
-- `cd frontend && npm run test` passed: 68 files, 348 tests. Output includes existing intentional test noise for missing `LLM_API_KEY`, Prettier sample failures, jsdom navigation, and lazy-route error fallback.
+- `cd frontend && npm run test` passed after PR review fixes: 68 files, 350 tests. Output includes existing intentional test noise for missing `LLM_API_KEY`, Prettier sample failures, jsdom navigation, and lazy-route error fallback.
 - `git diff --check` passed.
+- GitHub PR checks passed on the latest pushed branch state: Backend security regression tests, Frontend security regression tests, Dependency and SAST scans, Semgrep OSS, and CodeRabbit.
 
 ## Review Evidence
 
@@ -94,6 +102,8 @@ There's an option where users can be required to be approved before they are acc
 - Local code-review spec axis found and fixed one edge: magic-link routing now treats `needs_user_type=true` as sufficient to route to User Type selection even if `needs_onboarding=false`.
 - Sub-agent review was not used because the currently exposed sub-agent tool requires an explicit user request for delegation; the review was performed locally using the code-review skill's two-axis structure.
 - Local CodeRabbit completed and reported one minor docs finding about a machine-specific path in this ledger. The finding was addressed and recorded in docs/agents/runs/2026-07-03-user-approval-after-onboarding-coderabbit-local.md.
+- PR CodeRabbit round 1 reported two valid findings: the magic-link success copy incorrectly said unapproved users were redirecting to chat after onboarding was complete, and the new ChatPage fallback routes needed tests. Both were addressed in commit `7672153`.
+- PR CodeRabbit round 2 was requested after the fix commit. The manual command reply reported full review completion and the PR CodeRabbit check passed; CodeRabbit's reusable walkthrough comment also showed an automatic push-review rate-limit warning, recorded in docs/agents/runs/2026-07-03-user-approval-after-onboarding-coderabbit-pr.md.
 
 ## Open Questions
 
