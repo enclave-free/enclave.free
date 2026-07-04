@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -41,18 +41,33 @@ import {
 } from '../types/config';
 import type { UserType } from '../types/onboarding';
 
-const USER_DEFAULT_TOOL_OPTIONS = [
-  { id: 'curated-resources', label: 'Resources' },
-  { id: 'knowledge-search', label: 'Knowledge' },
-  { id: 'web-search', label: 'Web Search' },
-];
+const USER_DEFAULT_TOOL_IDS = [
+  'curated-resources',
+  'knowledge-search',
+  'web-search',
+] as const;
+const USER_DEFAULT_TOOL_ID_SET = new Set<string>(USER_DEFAULT_TOOL_IDS);
+const USER_DEFAULT_TOOL_LABEL_KEYS: Record<
+  (typeof USER_DEFAULT_TOOL_IDS)[number],
+  { key: string; fallback: string }
+> = {
+  'curated-resources': {
+    key: 'chat.tools.curatedResourcesName',
+    fallback: 'Resources',
+  },
+  'knowledge-search': {
+    key: 'chat.tools.knowledgeSearchName',
+    fallback: 'Knowledge',
+  },
+  'web-search': { key: 'chat.tools.webSearchName', fallback: 'Web Search' },
+};
 
 function parseUserDefaultToolIds(value: string): string[] {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed)
       ? parsed.filter((item): item is string =>
-          USER_DEFAULT_TOOL_OPTIONS.some((option) => option.id === item)
+          USER_DEFAULT_TOOL_ID_SET.has(item)
         )
       : [];
   } catch {
@@ -124,6 +139,38 @@ export function AdminAIConfig() {
   const fixedT = i18n.getFixedT(i18n.language);
   const translateMaybeKey = (value: string | null) =>
     value && i18n.exists(value) ? fixedT(value) : value;
+  const userDefaultToolOptions = useMemo(
+    () =>
+      USER_DEFAULT_TOOL_IDS.map((id) => ({
+        id,
+        label: t(
+          USER_DEFAULT_TOOL_LABEL_KEYS[id].key,
+          USER_DEFAULT_TOOL_LABEL_KEYS[id].fallback
+        ),
+      })),
+    [t]
+  );
+  const knowledgeSourceDefaultOptions = useMemo(
+    () => [
+      { value: 'none', label: t('defaults.knowledgeSource.none', 'None') },
+      {
+        value: 'selected',
+        label: t(
+          'defaults.knowledgeSource.selected',
+          'Selected default documents'
+        ),
+      },
+      {
+        value: 'all',
+        label: t('defaults.knowledgeSource.all', 'All available documents'),
+      },
+    ],
+    [t]
+  );
+  const getKnowledgeSourceDefaultLabel = (value: string) =>
+    knowledgeSourceDefaultOptions.find(
+      (option) => option.value === value.trim().toLowerCase()
+    )?.label ?? value;
   const [authChecked, setAuthChecked] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -166,14 +213,18 @@ export function AdminAIConfig() {
   // Focus trap for parameters help modal
   useEffect(() => {
     if (showParametersHelpModal && parametersHelpModalRef.current) {
+      const previousFocus = document.activeElement as HTMLElement;
       parametersHelpModalRef.current.focus();
+      return () => previousFocus?.focus();
     }
   }, [showParametersHelpModal]);
 
   // Focus trap for prompt help modal
   useEffect(() => {
     if (showPromptHelpModal && promptHelpModalRef.current) {
+      const previousFocus = document.activeElement as HTMLElement;
       promptHelpModalRef.current.focus();
+      return () => previousFocus?.focus();
     }
   }, [showPromptHelpModal]);
 
@@ -434,7 +485,7 @@ export function AdminAIConfig() {
           <div className="mt-3 space-y-3">
             {item.key === 'user_default_tool_ids' ? (
               <div className="flex flex-wrap gap-2">
-                {USER_DEFAULT_TOOL_OPTIONS.map((option) => {
+                {userDefaultToolOptions.map((option) => {
                   const checked = userDefaultToolIds.includes(option.id);
                   return (
                     <label
@@ -465,18 +516,11 @@ export function AdminAIConfig() {
                 onChange={(e) => setEditValue(e.target.value)}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
-                <option value="none">
-                  {t('defaults.knowledgeSource.none', 'None')}
-                </option>
-                <option value="selected">
-                  {t(
-                    'defaults.knowledgeSource.selected',
-                    'Selected default documents'
-                  )}
-                </option>
-                <option value="all">
-                  {t('defaults.knowledgeSource.all', 'All available documents')}
-                </option>
+                {knowledgeSourceDefaultOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             ) : item.value_type === 'json' ? (
               <textarea
@@ -562,7 +606,11 @@ export function AdminAIConfig() {
           </div>
         ) : (
           <div className="mt-2">
-            {item.value_type === 'json' ? (
+            {item.key === 'knowledge_source_default' ? (
+              <p className="text-sm text-text-muted line-clamp-2">
+                {getKnowledgeSourceDefaultLabel(item.value)}
+              </p>
+            ) : item.value_type === 'json' ? (
               <pre className="text-xs text-text-muted bg-surface-overlay rounded-lg p-2 overflow-x-auto">
                 {item.value}
               </pre>

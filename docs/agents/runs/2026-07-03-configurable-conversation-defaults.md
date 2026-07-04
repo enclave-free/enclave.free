@@ -4,7 +4,7 @@
 
 - Run ID: 2026-07-03-configurable-conversation-defaults
 - Loop: Feature Dev
-- Target repo: `/Users/plebdev/Desktop/Projects/enclave-free/enclave.free-configurable-conversation-defaults`
+- Target repo: `enclave-free/enclave.free`
 - Base branch: `staging`
 - Feature branch: `feature/configurable-conversation-defaults`
 - Human owner: Austin

@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -85,6 +86,7 @@ describe('AdminDocumentUpload', () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it('asks before leaving while document transfer has not produced an ingestion job', async () => {
@@ -395,6 +397,136 @@ describe('AdminDocumentUpload', () => {
     });
     expect(screen.queryByText('Document 11.pdf')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
+  });
+
+  it('does not start duplicate Show more hydration while details are loading', async () => {
+    const jobs = Array.from({ length: 21 }, (_, index) =>
+      buildCompletedJob(index + 1)
+    );
+    const deferredDetails = new Map(
+      jobs.slice(10, 20).map((job) => [job.job_id, deferredResponse()] as const)
+    );
+    const firstBatchStatusEndpoints = jobs
+      .slice(10, 20)
+      .map((job) => `/ingest/status/${job.job_id}`);
+    const statusCalls: string[] = [];
+
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(Response.json({ total: jobs.length, jobs }));
+      }
+
+      const statusMatch = endpoint.match(/^\/ingest\/status\/(.+)$/);
+      if (statusMatch) {
+        statusCalls.push(endpoint);
+        const deferred = deferredDetails.get(statusMatch[1]);
+        if (deferred) return deferred.promise;
+        const job = jobs.find(
+          (candidate) => candidate.job_id === statusMatch[1]
+        );
+        return Promise.resolve(Response.json(job ?? {}));
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Document 01.pdf')).toBeInTheDocument();
+
+    const showMore = screen.getByRole('button', { name: 'Show more' });
+    fireEvent.click(showMore);
+    fireEvent.click(showMore);
+    expect(
+      statusCalls.filter((endpoint) =>
+        firstBatchStatusEndpoints.includes(endpoint)
+      )
+    ).toHaveLength(firstBatchStatusEndpoints.length);
+
+    for (const [jobId, deferred] of deferredDetails.entries()) {
+      const job = jobs.find((candidate) => candidate.job_id === jobId);
+      if (job) deferred.resolve(Response.json(job));
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText('Document 20.pdf')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
+  });
+
+  it('only rehydrates active jobs during background polling', async () => {
+    vi.useFakeTimers();
+    const jobs: MockIngestJob[] = [
+      {
+        ...buildCompletedJob(1),
+        status: 'completed_with_errors',
+        total_chunks: 7,
+        processed_chunks: 0,
+      },
+      {
+        ...buildCompletedJob(2),
+        status: 'pending',
+        processed_chunks: 0,
+      },
+    ];
+    let statusCalls: string[] = [];
+
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(Response.json({ total: jobs.length, jobs }));
+      }
+
+      const statusMatch = endpoint.match(/^\/ingest\/status\/(.+)$/);
+      if (statusMatch) {
+        statusCalls.push(endpoint);
+        const job = jobs.find(
+          (candidate) => candidate.job_id === statusMatch[1]
+        );
+        if (job?.job_id === 'job-01') {
+          return Promise.resolve(
+            Response.json({ ...job, processed_chunks: 3 })
+          );
+        }
+        return Promise.resolve(Response.json(job ?? {}));
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Document 01.pdf')).toBeInTheDocument();
+    });
+    await vi.waitFor(() => {
+      expect(screen.getByText('3/7 chunks')).toBeInTheDocument();
+    });
+    await vi.waitFor(() => {
+      expect(screen.getByText('Queued')).toBeInTheDocument();
+    });
+    expect(statusCalls).toEqual([
+      '/ingest/status/job-01',
+      '/ingest/status/job-02',
+    ]);
+
+    statusCalls = [];
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(statusCalls).toEqual(['/ingest/status/job-02']);
+    expect(screen.getByText('3/7 chunks')).toBeInTheDocument();
   });
 
   it('does not infer all chunks processed for fallback completed-with-errors Documents', async () => {

@@ -200,6 +200,33 @@ describe('AdminAIConfig', () => {
     })
   })
 
+  it('shows Knowledge Source defaults as a human-readable label', async () => {
+    aiConfigResponse = {
+      ...baseAIConfigResponse,
+      defaults: [
+        {
+          key: 'knowledge_source_default',
+          value: 'all',
+          value_type: 'string',
+          category: 'default',
+          description: 'Knowledge source scope for new user sessions',
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await screen.findByText('Knowledge Sources')
+    const knowledgeSourceCard = getConfigCard('Knowledge Sources')
+    expect(knowledgeSourceCard).toHaveTextContent('All available documents')
+  })
+
   it('lets an admin configure the AI System Prompt', async () => {
     aiConfigResponse = {
       ...baseAIConfigResponse,

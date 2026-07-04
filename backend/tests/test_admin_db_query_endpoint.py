@@ -179,6 +179,29 @@ class AdminDbQueryEndpointTest(unittest.TestCase):
         self.assertTrue(event["includes_decrypted_browser_values"])
         self.assertFalse(event["plaintext_contents_received_by_backend"])
 
+    def test_user_roster_export_fails_when_audit_write_fails(self) -> None:
+        original_log_config_audit_event = self.database.log_config_audit_event
+
+        def failing_log_config_audit_event(**_kwargs) -> None:
+            raise RuntimeError("audit unavailable")
+
+        self.database.log_config_audit_event = failing_log_config_audit_event
+        try:
+            client = TestClient(self.main.app, raise_server_exceptions=False)
+            response = client.post(
+                "/admin/users/roster-export",
+                json={
+                    "filename": "enclave_users_20260703T183000Z.xlsx",
+                    "user_count": 3,
+                    "pending_count": 1,
+                    "includes_decrypted_browser_values": True,
+                },
+            )
+        finally:
+            self.database.log_config_audit_event = original_log_config_audit_event
+
+        self.assertEqual(response.status_code, 500)
+
 
 if __name__ == "__main__":
     unittest.main()

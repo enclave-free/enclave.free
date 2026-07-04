@@ -50,6 +50,14 @@ const fileRelativePath = (file: File) =>
 const RECENT_DOCUMENTS_INITIAL_LIMIT = 10;
 const RECENT_DOCUMENTS_BATCH_SIZE = 10;
 const JOB_STATUS_FETCH_TIMEOUT_MS = 5000;
+const ACTIVE_JOB_STATUSES = new Set<JobStatus['status']>([
+  'pending',
+  'processing',
+  'chunked',
+]);
+
+const shouldHydrateJobStatus = (job: JobsListItem | JobStatus) =>
+  ACTIVE_JOB_STATUSES.has(job.status as JobStatus['status']);
 
 const buildFallbackJobStatus = (job: JobsListItem): JobStatus => {
   const status = job.status as JobStatus['status'];
@@ -118,6 +126,7 @@ export function AdminDocumentUpload({
   } | null>(null);
   const [recentJobs, setRecentJobs] = useState<JobStatus[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [isLoadingMoreDocuments, setIsLoadingMoreDocuments] = useState(false);
   const [isRefreshingJobs, setIsRefreshingJobs] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [jobsErrorTitle, setJobsErrorTitle] = useState<string | null>(null);
@@ -143,6 +152,7 @@ export function AdminDocumentUpload({
     `${location.pathname}${location.search}${location.hash}`
   );
   const isFetchingJobsRef = useRef(false);
+  const isLoadingMoreDocumentsRef = useRef(false);
   const recentJobsRef = useRef<JobStatus[]>([]);
   const recentDocumentsVisibleLimitRef = useRef(RECENT_DOCUMENTS_INITIAL_LIMIT);
 
@@ -164,12 +174,12 @@ export function AdminDocumentUpload({
       : message;
   const updateRecentDocumentsVisibleLimit = useCallback(
     (nextLimit: number | ((currentLimit: number) => number)) => {
-      setRecentDocumentsVisibleLimit((currentLimit) => {
-        const resolvedLimit =
-          typeof nextLimit === 'function' ? nextLimit(currentLimit) : nextLimit;
-        recentDocumentsVisibleLimitRef.current = resolvedLimit;
-        return resolvedLimit;
-      });
+      const resolvedLimit =
+        typeof nextLimit === 'function'
+          ? nextLimit(recentDocumentsVisibleLimitRef.current)
+          : nextLimit;
+      recentDocumentsVisibleLimitRef.current = resolvedLimit;
+      setRecentDocumentsVisibleLimit(resolvedLimit);
     },
     []
   );
@@ -291,10 +301,17 @@ export function AdminDocumentUpload({
           RECENT_DOCUMENTS_INITIAL_LIMIT,
           Math.min(recentDocumentsVisibleLimitRef.current, data.jobs.length)
         );
+        const previousById = new Map(
+          recentJobsRef.current.map((job) => [job.job_id, job])
+        );
+        const fallbackJobStatuses = data.jobs.map(buildFallbackJobStatus);
         const visibleJobStatuses = await Promise.all(
-          data.jobs
-            .slice(0, hydrationLimit)
-            .map((job) => fetchDetailedJobStatus(buildFallbackJobStatus(job)))
+          fallbackJobStatuses.slice(0, hydrationLimit).map((job) => {
+            if (!showLoading && !shouldHydrateJobStatus(job)) {
+              return Promise.resolve(previousById.get(job.job_id) ?? job);
+            }
+            return fetchDetailedJobStatus(job);
+          })
         );
         const deferredJobStatuses = data.jobs
           .slice(hydrationLimit)
@@ -427,9 +444,7 @@ export function AdminDocumentUpload({
   // Poll for job status updates
   // TODO: Consider WebSocket or SSE for real-time job status updates
   useEffect(() => {
-    const hasActiveJobs = recentJobs.some(
-      (job) => job.status === 'pending' || job.status === 'processing'
-    );
+    const hasActiveJobs = recentJobs.some(shouldHydrateJobStatus);
 
     if (hasActiveJobs) {
       const interval = setInterval(
@@ -695,33 +710,41 @@ export function AdminDocumentUpload({
   const shouldShowRecentDocumentsCount =
     recentJobs.length > RECENT_DOCUMENTS_INITIAL_LIMIT;
   const handleShowMoreRecentDocuments = async () => {
+    if (isLoadingMoreDocumentsRef.current) return;
+
     const startIndex = recentDocumentsVisibleLimit;
     const nextLimit = Math.min(
       recentDocumentsVisibleLimit + RECENT_DOCUMENTS_BATCH_SIZE,
       recentJobs.length
     );
-    updateRecentDocumentsVisibleLimit(nextLimit);
+    if (nextLimit <= startIndex) return;
 
-    const documentsToHydrate = recentJobsRef.current.slice(
-      startIndex,
-      nextLimit
-    );
-    if (documentsToHydrate.length === 0) return;
+    isLoadingMoreDocumentsRef.current = true;
+    setIsLoadingMoreDocuments(true);
+    try {
+      updateRecentDocumentsVisibleLimit(nextLimit);
 
-    const hydratedDocuments = await Promise.all(
-      documentsToHydrate.map(fetchDetailedJobStatus)
-    );
-    const hydratedById = new Map(
-      hydratedDocuments.map((job) => [job.job_id, job])
-    );
+      const documentsToHydrate = recentJobsRef.current.slice(
+        startIndex,
+        nextLimit
+      );
+      if (documentsToHydrate.length === 0) return;
 
-    setRecentJobs((currentJobs) => {
-      const updatedJobs = currentJobs.map(
+      const hydratedDocuments = await Promise.all(
+        documentsToHydrate.map(fetchDetailedJobStatus)
+      );
+      const hydratedById = new Map(
+        hydratedDocuments.map((job) => [job.job_id, job])
+      );
+      const updatedJobs = recentJobsRef.current.map(
         (job) => hydratedById.get(job.job_id) ?? job
       );
       recentJobsRef.current = updatedJobs;
-      return updatedJobs;
-    });
+      setRecentJobs(updatedJobs);
+    } finally {
+      isLoadingMoreDocumentsRef.current = false;
+      setIsLoadingMoreDocuments(false);
+    }
   };
 
   // Close pipeline help modal
@@ -1175,9 +1198,14 @@ export function AdminDocumentUpload({
                   <button
                     type="button"
                     onClick={handleShowMoreRecentDocuments}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-text transition-colors hover:border-accent/50 hover:text-accent active-press"
+                    disabled={isLoadingMoreDocuments}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-text transition-colors hover:border-accent/50 hover:text-accent active-press disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <ChevronDown className="h-4 w-4" />
+                    {isLoadingMoreDocuments ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
                     {t('upload.showMore', 'Show more')}
                   </button>
                 )}
