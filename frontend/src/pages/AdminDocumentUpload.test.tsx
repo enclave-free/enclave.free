@@ -459,7 +459,12 @@ describe('AdminDocumentUpload', () => {
 
   it('only rehydrates active jobs during background polling', async () => {
     const jobs: MockIngestJob[] = [
-      buildCompletedJob(1),
+      {
+        ...buildCompletedJob(1),
+        status: 'completed_with_errors',
+        total_chunks: 7,
+        processed_chunks: 0,
+      },
       {
         ...buildCompletedJob(2),
         status: 'pending',
@@ -479,6 +484,11 @@ describe('AdminDocumentUpload', () => {
         const job = jobs.find(
           (candidate) => candidate.job_id === statusMatch[1]
         );
+        if (job?.job_id === 'job-01') {
+          return Promise.resolve(
+            Response.json({ ...job, processed_chunks: 3 })
+          );
+        }
         return Promise.resolve(Response.json(job ?? {}));
       }
 
@@ -494,6 +504,7 @@ describe('AdminDocumentUpload', () => {
     );
 
     expect(await screen.findByText('Document 01.pdf')).toBeInTheDocument();
+    await screen.findByText('3/7 chunks');
     await screen.findByText('Queued');
     expect(statusCalls).toEqual([
       '/ingest/status/job-01',
@@ -507,6 +518,7 @@ describe('AdminDocumentUpload', () => {
       },
       { timeout: 4000 }
     );
+    expect(screen.getByText('3/7 chunks')).toBeInTheDocument();
   }, 6000);
 
   it('does not infer all chunks processed for fallback completed-with-errors Documents', async () => {

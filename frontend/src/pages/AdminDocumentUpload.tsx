@@ -301,11 +301,14 @@ export function AdminDocumentUpload({
           RECENT_DOCUMENTS_INITIAL_LIMIT,
           Math.min(recentDocumentsVisibleLimitRef.current, data.jobs.length)
         );
+        const previousById = new Map(
+          recentJobsRef.current.map((job) => [job.job_id, job])
+        );
         const fallbackJobStatuses = data.jobs.map(buildFallbackJobStatus);
         const visibleJobStatuses = await Promise.all(
           fallbackJobStatuses.slice(0, hydrationLimit).map((job) => {
             if (!showLoading && !shouldHydrateJobStatus(job)) {
-              return Promise.resolve(job);
+              return Promise.resolve(previousById.get(job.job_id) ?? job);
             }
             return fetchDetailedJobStatus(job);
           })
