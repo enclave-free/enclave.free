@@ -63,6 +63,25 @@ jobs:
             src/pages/AdminDeploymentConfig.test.tsx \
             src/pages/UserAuth.test.tsx
 
+  docs-pdf-drift-check:
+    name: Demo handoff PDF drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PDF build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+      - name: Rebuild and compare demo handoff PDF
+        run: |
+          python scripts/build_demo_handoff_pdf.py \
+            --output /tmp/enclave-demo-deployment-handoff.pdf \
+            --docs-copy ""
+          cmp /tmp/enclave-demo-deployment-handoff.pdf docs/enclave-demo-deployment-handoff.pdf
+
   dependency-and-sast-scans:
     name: Dependency and SAST scans
     runs-on: ubuntu-latest

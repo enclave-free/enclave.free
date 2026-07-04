@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-07-04
+
+- Hardened Agent Settings validation, roster export audit gating, and document upload polling/show-more behavior.
+- Added demo handoff PDF drift checking and deterministic PDF generation.
+- Polished Agent Settings labels, modal focus restoration, and run-log portability.
+
 ## 0.1.1 - 2026-07-01
 
 - Added admin-facing guides for setup, configuration, launch safety, and common workflows.

@@ -9,6 +9,7 @@ import re
 import shutil
 from pathlib import Path
 
+from reportlab import rl_config
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import letter
@@ -30,6 +31,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / "docs" / "demo-deployment-handoff.md"
 DEFAULT_OUTPUT = ROOT / "output" / "pdf" / "enclave-demo-deployment-handoff.pdf"
 DEFAULT_DOCS_COPY = ROOT / "docs" / "enclave-demo-deployment-handoff.pdf"
+
+rl_config.invariant = True
 
 PAGE_WIDTH, _PAGE_HEIGHT = letter
 MARGIN_X = 0.72 * inch
@@ -341,7 +344,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--docs-copy",
-        type=Path,
+        type=lambda value: None if value == "" else Path(value),
         default=DEFAULT_DOCS_COPY,
         help="Second PDF copy for convenient docs-folder sharing. Use '' to skip.",
     )
@@ -350,11 +353,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    docs_copy = args.docs_copy if str(args.docs_copy) else None
-    build_pdf(args.source, args.output, docs_copy)
+    build_pdf(args.source, args.output, args.docs_copy)
     print(args.output)
-    if docs_copy:
-        print(docs_copy)
+    if args.docs_copy:
+        print(args.docs_copy)
     return 0
 
 

@@ -144,7 +144,7 @@ def _best_effort_config_audit_event(**kwargs) -> None:
 app = FastAPI(
     title="Enclave API",
     description="Privacy-first RAG system for curated knowledge",
-    version="0.1.1"
+    version="0.1.2"
 )
 
 def _normalize_origin(origin: str) -> str:
@@ -500,7 +500,7 @@ async def root():
     """Root endpoint"""
     return {
         "name": "Enclave API",
-        "version": "0.1.1",
+        "version": "0.1.2",
         "status": "running"
     }
 
@@ -2293,7 +2293,7 @@ async def record_user_roster_export(
     endpoint records only export metadata/counts for Audit Log visibility.
     """
     exported_at = database.utc_timestamp_z()
-    _best_effort_config_audit_event(
+    database.log_config_audit_event(
         table_name="data_deletion",
         config_key="copied_export:user_roster",
         old_value=None,

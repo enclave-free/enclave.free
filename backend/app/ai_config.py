@@ -110,6 +110,78 @@ def validate_user_default_tool_ids(value: object) -> None:
         raise ValueError(f"user_default_tool_ids may only include: {allowed}")
 
 
+def validate_json_string_array_config(key: str, value: object) -> None:
+    if not isinstance(value, list):
+        raise ValueError(f"{key} must be a JSON array")
+    if not all(isinstance(item, str) for item in value):
+        raise ValueError(f"{key} must be an array of strings")
+    if key == "user_default_tool_ids":
+        validate_user_default_tool_ids(value)
+
+
+def normalize_knowledge_source_default(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in KNOWLEDGE_SOURCE_DEFAULT_VALUES:
+        allowed = ", ".join(sorted(KNOWLEDGE_SOURCE_DEFAULT_VALUES))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Knowledge source default must be one of: {allowed}"
+        )
+    return normalized
+
+
+def validate_ai_config_value(key: str, value: str, value_type: str, log_context: str) -> str:
+    try:
+        if value_type == "number":
+            float(value)  # Validate it's a number
+        elif value_type == "boolean":
+            if value.lower() not in ("true", "false"):
+                raise ValueError("Boolean must be 'true' or 'false'")
+        elif value_type == "json":
+            parsed = json.loads(value)  # Validate it's valid JSON
+            if key in JSON_STRING_ARRAY_KEYS:
+                validate_json_string_array_config(key, parsed)
+    except (ValueError, json.JSONDecodeError, AttributeError) as e:
+        logger.warning(f"Invalid {log_context} for type {value_type}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in JSON_STRING_ARRAY_KEYS else f"Invalid value for type '{value_type}'"
+        )
+
+    try:
+        if key == "temperature":
+            temp = float(value)
+            if temp < 0.0 or temp > 1.0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Temperature must be between 0.0 and 1.0"
+                )
+        elif key == "top_k":
+            top_k_float = float(value)
+            if not top_k_float.is_integer():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Top-K must be a whole number"
+                )
+            top_k = int(top_k_float)
+            if top_k < 1 or top_k > 100:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Top-K must be between 1 and 100"
+                )
+        elif key == "max_tokens":
+            max_tokens = validate_max_tokens(value)
+            value = str(max_tokens)
+        elif key in {"admin_trace_visibility", "user_trace_visibility"}:
+            value = validate_trace_visibility_setting(key, value)
+        elif key == "knowledge_source_default":
+            value = normalize_knowledge_source_default(value)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
+
+    return value
+
+
 @router.get("", response_model=AIConfigResponse)
 async def get_ai_config(admin: dict = Depends(auth.require_admin)):
     """
@@ -163,69 +235,12 @@ async def update_ai_config_value(
     if update.value is None:
         raise HTTPException(status_code=400, detail="Value cannot be null")
 
-    # Validate value based on type
-    value_type = existing["value_type"]
-    try:
-        if value_type == "number":
-            float(update.value)  # Validate it's a number
-        elif value_type == "boolean":
-            if update.value.lower() not in ("true", "false"):
-                raise ValueError("Boolean must be 'true' or 'false'")
-        elif value_type == "json":
-            parsed = json.loads(update.value)  # Validate it's valid JSON
-            # Additional validation for list-type keys
-            if key in JSON_STRING_ARRAY_KEYS:
-                if not isinstance(parsed, list):
-                    raise ValueError(f"{key} must be a JSON array")
-                if not all(isinstance(item, str) for item in parsed):
-                    raise ValueError(f"{key} must be an array of strings")
-                if key == "user_default_tool_ids":
-                    validate_user_default_tool_ids(parsed)
-    except (ValueError, json.JSONDecodeError, AttributeError) as e:
-        logger.warning(f"Invalid value for type {value_type}: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in JSON_STRING_ARRAY_KEYS else f"Invalid value for type '{value_type}'"
-        )
-
-    # Additional validation for specific keys
-    try:
-        if key == "temperature":
-            temp = float(update.value)
-            if temp < 0.0 or temp > 1.0:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Temperature must be between 0.0 and 1.0"
-                )
-        elif key == "top_k":
-            top_k_float = float(update.value)
-            if not top_k_float.is_integer():
-                raise HTTPException(
-                    status_code=400,
-                    detail="Top-K must be a whole number"
-                )
-            top_k = int(top_k_float)
-            if top_k < 1 or top_k > 100:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Top-K must be between 1 and 100"
-                )
-        elif key == "max_tokens":
-            max_tokens = validate_max_tokens(update.value)
-            update.value = str(max_tokens)
-        elif key in {"admin_trace_visibility", "user_trace_visibility"}:
-            update.value = validate_trace_visibility_setting(key, update.value)
-        elif key == "knowledge_source_default":
-            normalized = update.value.strip().lower()
-            if normalized not in KNOWLEDGE_SOURCE_DEFAULT_VALUES:
-                allowed = ", ".join(sorted(KNOWLEDGE_SOURCE_DEFAULT_VALUES))
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Knowledge source default must be one of: {allowed}"
-                )
-            update.value = normalized
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
+    update.value = validate_ai_config_value(
+        key,
+        update.value,
+        existing["value_type"],
+        "value",
+    )
 
     # Validate prompt sections length
     if existing["category"] == "prompt_section" and len(update.value) > 5000:
@@ -312,59 +327,12 @@ async def set_ai_config_override(
     if update.value is None:
         raise HTTPException(status_code=400, detail="Value cannot be null")
 
-    # Validate value based on type (same logic as global update)
-    value_type = existing["value_type"]
-    try:
-        if value_type == "number":
-            float(update.value)
-        elif value_type == "boolean":
-            if update.value.lower() not in ("true", "false"):
-                raise ValueError("Boolean must be 'true' or 'false'")
-        elif value_type == "json":
-            parsed = json.loads(update.value)
-            if key in JSON_STRING_ARRAY_KEYS:
-                if not isinstance(parsed, list):
-                    raise ValueError(f"{key} must be a JSON array")
-                if not all(isinstance(item, str) for item in parsed):
-                    raise ValueError(f"{key} must be an array of strings")
-                if key == "user_default_tool_ids":
-                    validate_user_default_tool_ids(parsed)
-    except (ValueError, json.JSONDecodeError, AttributeError) as e:
-        logger.warning(f"Invalid override value for type {value_type}: {e}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in JSON_STRING_ARRAY_KEYS else f"Invalid value for type '{value_type}'"
-        )
-
-    # Additional validation for specific keys
-    try:
-        if key == "temperature":
-            temp = float(update.value)
-            if temp < 0.0 or temp > 1.0:
-                raise HTTPException(status_code=400, detail="Temperature must be between 0.0 and 1.0")
-        elif key == "top_k":
-            top_k_float = float(update.value)
-            if not top_k_float.is_integer():
-                raise HTTPException(status_code=400, detail="Top-K must be a whole number")
-            top_k = int(top_k_float)
-            if top_k < 1 or top_k > 100:
-                raise HTTPException(status_code=400, detail="Top-K must be between 1 and 100")
-        elif key == "max_tokens":
-            max_tokens = validate_max_tokens(update.value)
-            update.value = str(max_tokens)
-        elif key in {"admin_trace_visibility", "user_trace_visibility"}:
-            update.value = validate_trace_visibility_setting(key, update.value)
-        elif key == "knowledge_source_default":
-            normalized = update.value.strip().lower()
-            if normalized not in KNOWLEDGE_SOURCE_DEFAULT_VALUES:
-                allowed = ", ".join(sorted(KNOWLEDGE_SOURCE_DEFAULT_VALUES))
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Knowledge source default must be one of: {allowed}"
-                )
-            update.value = normalized
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
+    update.value = validate_ai_config_value(
+        key,
+        update.value,
+        existing["value_type"],
+        "override value",
+    )
 
     # Validate prompt sections length
     if existing["category"] == "prompt_section" and len(update.value) > 5000:

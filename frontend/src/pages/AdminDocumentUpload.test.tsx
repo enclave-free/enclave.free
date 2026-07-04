@@ -85,6 +85,7 @@ describe('AdminDocumentUpload', () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it('asks before leaving while document transfer has not produced an ingestion job', async () => {
@@ -396,6 +397,117 @@ describe('AdminDocumentUpload', () => {
     expect(screen.queryByText('Document 11.pdf')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
   });
+
+  it('does not start duplicate Show more hydration while details are loading', async () => {
+    const jobs = Array.from({ length: 12 }, (_, index) =>
+      buildCompletedJob(index + 1)
+    );
+    const deferredDetails = new Map([
+      ['job-11', deferredResponse()],
+      ['job-12', deferredResponse()],
+    ]);
+    const statusCalls: string[] = [];
+
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(Response.json({ total: jobs.length, jobs }));
+      }
+
+      const statusMatch = endpoint.match(/^\/ingest\/status\/(.+)$/);
+      if (statusMatch) {
+        statusCalls.push(endpoint);
+        const deferred = deferredDetails.get(statusMatch[1]);
+        if (deferred) return deferred.promise;
+        const job = jobs.find(
+          (candidate) => candidate.job_id === statusMatch[1]
+        );
+        return Promise.resolve(Response.json(job ?? {}));
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Document 01.pdf')).toBeInTheDocument();
+
+    const showMore = screen.getByRole('button', { name: 'Show more' });
+    fireEvent.click(showMore);
+    fireEvent.click(showMore);
+    expect(
+      statusCalls.filter((endpoint) =>
+        ['/ingest/status/job-11', '/ingest/status/job-12'].includes(endpoint)
+      )
+    ).toHaveLength(2);
+
+    deferredDetails.get('job-11')?.resolve(Response.json(jobs[10]));
+    deferredDetails.get('job-12')?.resolve(Response.json(jobs[11]));
+
+    await waitFor(() => {
+      expect(screen.getByText('Document 11.pdf')).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole('button', { name: 'Show more' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('only rehydrates active jobs during background polling', async () => {
+    const jobs: MockIngestJob[] = [
+      buildCompletedJob(1),
+      {
+        ...buildCompletedJob(2),
+        status: 'pending',
+        processed_chunks: 0,
+      },
+    ];
+    let statusCalls: string[] = [];
+
+    mockAdminFetch.mockImplementation((endpoint: string) => {
+      if (endpoint === '/ingest/jobs') {
+        return Promise.resolve(Response.json({ total: jobs.length, jobs }));
+      }
+
+      const statusMatch = endpoint.match(/^\/ingest\/status\/(.+)$/);
+      if (statusMatch) {
+        statusCalls.push(endpoint);
+        const job = jobs.find(
+          (candidate) => candidate.job_id === statusMatch[1]
+        );
+        return Promise.resolve(Response.json(job ?? {}));
+      }
+
+      return Promise.resolve(Response.json({}));
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/upload']}>
+        <Routes>
+          <Route path="/admin/upload" element={<AdminDocumentUpload />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Document 01.pdf')).toBeInTheDocument();
+    await screen.findByText('Queued');
+    expect(statusCalls).toEqual([
+      '/ingest/status/job-01',
+      '/ingest/status/job-02',
+    ]);
+
+    statusCalls = [];
+    await waitFor(
+      () => {
+        expect(statusCalls).toEqual(['/ingest/status/job-02']);
+      },
+      { timeout: 4000 }
+    );
+  }, 6000);
 
   it('does not infer all chunks processed for fallback completed-with-errors Documents', async () => {
     const jobs: MockIngestJob[] = [

@@ -10,20 +10,20 @@
 - Availability: completed
 - Fallback review thread: None
 
-## Findings To Address
+## Round 1 Findings To Address
 
 | Finding | Severity | Decision | Notes |
 | --- | --- | --- | --- |
 | Magic-link success text still said it was redirecting to chat for pending-approval users whose onboarding was complete. | Minor | Fixed | `VerifyMagicLink` now renders the existing pending-approval heading for unapproved users with no onboarding work before navigating to `/pending`. |
 | New `ChatPage` fallback routes for onboarding-status failures lacked tests. | Trivial | Fixed | Added non-OK and thrown-fetch direct-chat-entry tests for pending-approval users. |
 
-## Findings Not Addressed
+## Round 1 Findings Not Addressed
 
 | Finding | Reason |
 | --- | --- |
 | None | |
 
-## Result
+## Round 1 Result
 
 - Continue: Yes. Findings were addressed in commit `7672153`.
 - Escalate: No.
@@ -39,19 +39,19 @@
 - Availability: completed for the manual trigger; CodeRabbit's reusable walkthrough comment also showed an automatic push-review rate-limit warning
 - Fallback review thread: None needed because the manual command reply reported full review completion and the PR CodeRabbit check passed
 
-## Findings To Address
+## Round 2 Findings To Address
 
 | Finding | Severity | Decision | Notes |
 | --- | --- | --- | --- |
 | None new | | | |
 
-## Findings Not Addressed
+## Round 2 Findings Not Addressed
 
 | Finding | Reason |
 | --- | --- |
 | None | |
 
-## Result
+## Round 2 Result
 
 - Continue: Yes. CodeRabbit PR check passed on the latest branch state.
 - Escalate: No.
