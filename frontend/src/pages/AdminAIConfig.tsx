@@ -47,6 +47,20 @@ const USER_DEFAULT_TOOL_IDS = [
   'web-search',
 ] as const;
 const USER_DEFAULT_TOOL_ID_SET = new Set<string>(USER_DEFAULT_TOOL_IDS);
+const USER_DEFAULT_TOOL_LABEL_KEYS: Record<
+  (typeof USER_DEFAULT_TOOL_IDS)[number],
+  { key: string; fallback: string }
+> = {
+  'curated-resources': {
+    key: 'chat.tools.curatedResourcesName',
+    fallback: 'Resources',
+  },
+  'knowledge-search': {
+    key: 'chat.tools.knowledgeSearchName',
+    fallback: 'Knowledge',
+  },
+  'web-search': { key: 'chat.tools.webSearchName', fallback: 'Web Search' },
+};
 
 function parseUserDefaultToolIds(value: string): string[] {
   try {
@@ -126,20 +140,14 @@ export function AdminAIConfig() {
   const translateMaybeKey = (value: string | null) =>
     value && i18n.exists(value) ? fixedT(value) : value;
   const userDefaultToolOptions = useMemo(
-    () => [
-      {
-        id: 'curated-resources',
-        label: t('chat.tools.curatedResourcesName', 'Resources'),
-      },
-      {
-        id: 'knowledge-search',
-        label: t('chat.tools.knowledgeSearchName', 'Knowledge'),
-      },
-      {
-        id: 'web-search',
-        label: t('chat.tools.webSearchName', 'Web Search'),
-      },
-    ],
+    () =>
+      USER_DEFAULT_TOOL_IDS.map((id) => ({
+        id,
+        label: t(
+          USER_DEFAULT_TOOL_LABEL_KEYS[id].key,
+          USER_DEFAULT_TOOL_LABEL_KEYS[id].fallback
+        ),
+      })),
     [t]
   );
   const knowledgeSourceDefaultOptions = useMemo(

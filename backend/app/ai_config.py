@@ -145,8 +145,10 @@ def validate_ai_config_value(key: str, value: str, value_type: str, log_context:
         logger.warning(f"Invalid {log_context} for type {value_type}: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid value for type '{value_type}': {str(e)}" if key in JSON_STRING_ARRAY_KEYS else f"Invalid value for type '{value_type}'"
-        )
+            detail=f"Invalid value for type '{value_type}': {e}"
+            if key in JSON_STRING_ARRAY_KEYS
+            else f"Invalid value for type '{value_type}'"
+        ) from e
 
     try:
         if key == "temperature":
@@ -176,8 +178,10 @@ def validate_ai_config_value(key: str, value: str, value_type: str, log_context:
             value = validate_trace_visibility_setting(key, value)
         elif key == "knowledge_source_default":
             value = normalize_knowledge_source_default(value)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {key}")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid numeric value for {key}"
+        ) from exc
 
     return value
 

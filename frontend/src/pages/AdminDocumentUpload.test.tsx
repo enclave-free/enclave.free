@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -399,13 +400,15 @@ describe('AdminDocumentUpload', () => {
   });
 
   it('does not start duplicate Show more hydration while details are loading', async () => {
-    const jobs = Array.from({ length: 12 }, (_, index) =>
+    const jobs = Array.from({ length: 21 }, (_, index) =>
       buildCompletedJob(index + 1)
     );
-    const deferredDetails = new Map([
-      ['job-11', deferredResponse()],
-      ['job-12', deferredResponse()],
-    ]);
+    const deferredDetails = new Map(
+      jobs.slice(10, 20).map((job) => [job.job_id, deferredResponse()] as const)
+    );
+    const firstBatchStatusEndpoints = jobs
+      .slice(10, 20)
+      .map((job) => `/ingest/status/${job.job_id}`);
     const statusCalls: string[] = [];
 
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -442,22 +445,23 @@ describe('AdminDocumentUpload', () => {
     fireEvent.click(showMore);
     expect(
       statusCalls.filter((endpoint) =>
-        ['/ingest/status/job-11', '/ingest/status/job-12'].includes(endpoint)
+        firstBatchStatusEndpoints.includes(endpoint)
       )
-    ).toHaveLength(2);
+    ).toHaveLength(firstBatchStatusEndpoints.length);
 
-    deferredDetails.get('job-11')?.resolve(Response.json(jobs[10]));
-    deferredDetails.get('job-12')?.resolve(Response.json(jobs[11]));
+    for (const [jobId, deferred] of deferredDetails.entries()) {
+      const job = jobs.find((candidate) => candidate.job_id === jobId);
+      if (job) deferred.resolve(Response.json(job));
+    }
 
     await waitFor(() => {
-      expect(screen.getByText('Document 11.pdf')).toBeInTheDocument();
+      expect(screen.getByText('Document 20.pdf')).toBeInTheDocument();
     });
-    expect(
-      screen.queryByRole('button', { name: 'Show more' })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show more' })).toBeEnabled();
   });
 
   it('only rehydrates active jobs during background polling', async () => {
+    vi.useFakeTimers();
     const jobs: MockIngestJob[] = [
       {
         ...buildCompletedJob(1),
@@ -503,23 +507,27 @@ describe('AdminDocumentUpload', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Document 01.pdf')).toBeInTheDocument();
-    await screen.findByText('3/7 chunks');
-    await screen.findByText('Queued');
+    await vi.waitFor(() => {
+      expect(screen.getByText('Document 01.pdf')).toBeInTheDocument();
+    });
+    await vi.waitFor(() => {
+      expect(screen.getByText('3/7 chunks')).toBeInTheDocument();
+    });
+    await vi.waitFor(() => {
+      expect(screen.getByText('Queued')).toBeInTheDocument();
+    });
     expect(statusCalls).toEqual([
       '/ingest/status/job-01',
       '/ingest/status/job-02',
     ]);
 
     statusCalls = [];
-    await waitFor(
-      () => {
-        expect(statusCalls).toEqual(['/ingest/status/job-02']);
-      },
-      { timeout: 4000 }
-    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(statusCalls).toEqual(['/ingest/status/job-02']);
     expect(screen.getByText('3/7 chunks')).toBeInTheDocument();
-  }, 6000);
+  });
 
   it('does not infer all chunks processed for fallback completed-with-errors Documents', async () => {
     const jobs: MockIngestJob[] = [

@@ -444,12 +444,7 @@ export function AdminDocumentUpload({
   // Poll for job status updates
   // TODO: Consider WebSocket or SSE for real-time job status updates
   useEffect(() => {
-    const hasActiveJobs = recentJobs.some(
-      (job) =>
-        job.status === 'pending' ||
-        job.status === 'processing' ||
-        job.status === 'chunked'
-    );
+    const hasActiveJobs = recentJobs.some(shouldHydrateJobStatus);
 
     if (hasActiveJobs) {
       const interval = setInterval(
