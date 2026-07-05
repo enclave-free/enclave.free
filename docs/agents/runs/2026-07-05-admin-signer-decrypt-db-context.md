@@ -71,6 +71,7 @@ Let an approved Admin Database-enabled conversation delegate bounded plaintext d
 - Local CodeRabbit found two minor docs findings: clarify that the browser sends `client_decrypted_context`, and remove the local Python executable path from this ledger. Both were fixed.
 - CodeRabbit rerun was stopped after a bounded wait while still heartbeating.
 - Opened PR: https://github.com/enclave-free/enclave.free/pull/471. Added `@coderabbit full review` comment.
+- Added the `0.2.0` minor release checkpoint on the PR branch: `VERSION`, frontend package files, backend version strings, and `CHANGELOG.md` now agree on `0.2.0`.
 
 ## Review Notes
 
