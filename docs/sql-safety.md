@@ -6,7 +6,7 @@ The product-supported SQL surface is read-only admin inspection.
 
 - `POST /admin/db/query` accepts `SELECT` statements only.
 - `GET /admin/db/tables` and `GET /admin/db/tables/{table_name}` expose only the shared allowlisted admin inspection tables.
-- The Sage `db-query` Tool Set exposes the executable tool only for direct `SELECT` admin messages; natural-language database questions are guarded before text-to-SQL or automatic execution. Executed SQL still uses the same shared allowlist and rejects mutation keywords before execution.
+- The Sage `db-query` Tool Set exposes the executable tool for approved Admin turns when the Tool Set is enabled. Sage may translate natural-language database questions into a single read-only SQLite `SELECT`; executed SQL still uses the same shared allowlist and rejects mutation keywords before execution.
 
 Direct database mutation through the Database Explorer is not a supported product path. Admin data changes should use audited product flows such as User Type administration, User approval, Document governance, retention, and Data Deletion workflows.
 
