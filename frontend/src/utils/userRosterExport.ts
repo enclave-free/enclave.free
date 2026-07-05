@@ -484,8 +484,10 @@ function includesDecryptedValues(input: UserRosterWorkbookInput): boolean {
   );
 }
 
-function buildSheets(input: UserRosterWorkbookInput): SheetDefinition[] {
-  const decrypted = includesDecryptedValues(input);
+function buildSheets(
+  input: UserRosterWorkbookInput,
+  hasDecryptedValues: boolean
+): SheetDefinition[] {
   return [
     { name: 'Users', rows: buildUsersRows(input.users, input) },
     {
@@ -497,7 +499,10 @@ function buildSheets(input: UserRosterWorkbookInput): SheetDefinition[] {
     },
     { name: 'User Types', rows: buildUserTypesRows(input) },
     { name: 'Field Dictionary', rows: buildFieldDictionaryRows(input) },
-    { name: 'Export Notes', rows: buildExportNotesRows(input, decrypted) },
+    {
+      name: 'Export Notes',
+      rows: buildExportNotesRows(input, hasDecryptedValues),
+    },
   ];
 }
 
@@ -645,7 +650,8 @@ function timestampForFilename(date: Date): string {
 export function buildUserRosterWorkbook(
   input: UserRosterWorkbookInput
 ): UserRosterWorkbook {
-  const sheets = buildSheets(input);
+  const decrypted = includesDecryptedValues(input);
+  const sheets = buildSheets(input, decrypted);
   const bytes = xlsxBytes(sheets);
   const blobBuffer = new ArrayBuffer(bytes.length);
   new Uint8Array(blobBuffer).set(bytes);
@@ -656,6 +662,6 @@ export function buildUserRosterWorkbook(
   return {
     blob,
     filename: `enclave_users_${timestampForFilename(input.exportedAt)}.xlsx`,
-    includesDecryptedValues: includesDecryptedValues(input),
+    includesDecryptedValues: decrypted,
   };
 }
