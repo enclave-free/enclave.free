@@ -45,18 +45,19 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 - `job_ids` is an optional Knowledge Search constraint: it is a list of selected Document Library `job_id` values, not an arbitrary prompt blob.
 - Additional Knowledge filters must be added as explicit request fields before the browser can send them.
 - `conversation_history` is optional recent client context; Sage-owned session memory remains authoritative when a `session_id` is present.
+- `client_decrypted_context` is optional **Admin Signer-Decrypted Context**, shaped like `{ "source": "admin-signer-user-roster", "users": [...] }`. The browser may attach it only for authenticated Admin turns with the `db-query` Tool Set enabled, and Sage treats it as signer-delegated plaintext for the current encrypted inference turn rather than Tool output or trace metadata.
 
 ## Tool Sets
 
 Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
 
-| Tool Set ID         | Access                                        | Exposes                                                                                       |
-| ------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                  |
-| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory                                    |
-| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service                                           |
+| Tool Set ID         | Access                                        | Exposes                                                                                                 |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                            |
+| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory                                              |
+| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service                                                     |
 | `admin-config`      | admins only                                   | admin configuration read Tools, typed bootstrap proposal Tool, and lower-level change-set proposal Tool |
-| `db-query`          | admins only                                   | read-only database inspection Tools                                                           |
+| `db-query`          | admins only                                   | read-only database inspection Tools                                                                     |
 
 Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
 
@@ -120,13 +121,15 @@ Theme requests in Admin Conversations mean Instance visual identity settings, su
 
 `db-query` is an admin-only Tool Set for read-only inspection. When an approved Admin enables it, Sage exposes the executable Database Query Tool to the model for the turn. Sage may translate natural-language database questions into a single read-only SQLite `SELECT` when live database facts would improve the answer. Python remains the safe SQL executor and must enforce read-only validation, blocked keywords, allowed tables, authorization, truncation, and redaction. Direct database mutation is not a supported product path.
 
+Admin Database turns may also include **Admin Signer-Decrypted Context** built by the browser from admin-authorized encrypted User values. This context lets Sage combine safe query results with plaintext identity/profile values under encrypted inference. It must not be accepted for non-Admin turns, non-Database turns, Python database execution, Activity, or Conversation Trace.
+
 ## Web Search
 
 `web-search` uses the internal SearXNG service at `http://searxng:8080/search?format=json`. It is intended for current or external information and should not replace Enclave Document Library Retrieval.
 
 ## Frontend Duties
 
-The frontend chooses visible Admin Tool Sets and Tool constraints. For non-admin User Conversations, it consumes `/session-defaults` and sends the configured default Tool Set IDs and Knowledge Source scope without showing Tool controls by default. It must not prefetch admin configuration context for chat, run hidden document retrieval outside configured defaults, or send `client_executed_tools` as a compatibility path.
+The frontend chooses visible Admin Tool Sets and Tool constraints. For non-admin User Conversations, it consumes `/session-defaults` and sends the configured default Tool Set IDs and Knowledge Source scope without showing Tool controls by default. It must not prefetch admin configuration context for chat, run hidden document retrieval outside configured defaults, or send `client_executed_tools` as a compatibility path. It may build Admin Signer-Decrypted Context only after an authenticated Admin submits a Database-enabled turn.
 
 Admin composers should make Knowledge, Resources, Web, Config, and Database explicit controls. Knowledge document scope belongs under the Knowledge Tool Set control. User composers show no Tool Set controls by default; Config and Database must only render for server-validated admins.
 

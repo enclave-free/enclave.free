@@ -324,6 +324,10 @@ _Avoid_: query session, chat session
 The messages, prompts, retrieved document excerpts, required context, user profile context, tool results, and other content sent to a **Model Provider** for inference.
 _Avoid_: user message, prompt text
 
+**Admin Signer-Decrypted Context**:
+Plaintext that an **Admin** browser signer decrypts from admin-authorized encrypted **Instance** data and deliberately delegates into one **Admin Conversation** turn protected by **Encrypted Inference**. It is not backend decryption, not backend private-key custody, and should not become **Conversation Trace** or **Audit Log** detail.
+_Avoid_: backend decrypt, private-key handoff, trace evidence
+
 **Conversation Trace**:
 Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and reasoning traces when available.
 _Avoid_: audit log, server log

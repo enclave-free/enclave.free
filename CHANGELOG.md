@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 - 2026-07-05
+
+- Added Admin signer-decrypted context for Database-enabled Admin conversations so Sage can interpret encrypted User identity/profile values during encrypted inference.
+- Kept signer-decrypted plaintext browser-delegated, Admin-only, Database-turn-only, and out of Activity/Conversation Trace metadata.
+- Documented the Admin Signer-Decrypted Context boundary and updated release/runtime verification evidence.
+
 ## 0.1.3 - 2026-07-05
 
 - Allowed approved Admin DB Query turns to translate natural-language prompts into read-only SQLite SELECT tool calls instead of requiring literal SELECT-only messages.

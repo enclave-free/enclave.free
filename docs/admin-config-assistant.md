@@ -22,6 +22,8 @@ This document describes the admin configuration assistant workflow used by:
 
 The admin's Nostr private key (`nsec`) is custodied by the browser extension via NIP-07 and is not accessible to the application or the assistant. The assistant should never request it.
 
+For Admin Database turns, the browser may ask the Admin signer to decrypt a bounded set of encrypted User identity/profile values and delegate that plaintext into the current encrypted inference turn as **Admin Signer-Decrypted Context**. The key remains inside the signer; the backend and Sage never receive private-key custody.
+
 ### Secret Environment Variables
 
 - Deployment config secrets are stored encrypted at rest in SQLite (`deployment_config`) and are masked in list endpoints.
@@ -48,6 +50,7 @@ Defense-in-depth:
   - `tools` / Tool Sets (same admin-visible Tool Set IDs as full chat: `knowledge-search`, `curated-resources`, `web-search`, `admin-config`, `db-query`)
   - `admin-config` admin-only Tool Set
   - optional Tool constraints such as Knowledge Search document scope
+  - optional `client_decrypted_context` only for Admin `db-query` turns, containing bounded plaintext produced by the Admin browser signer
   - no `client_executed_tools`
   - no admin configuration `tool_context` prefetch
 
@@ -59,6 +62,7 @@ Tool defaults:
 - `curated-resources` is a visible Tool Set for the admin-curated Resource Directory. It is separate from Knowledge Search and should be used for vetted referral/resource suggestions, not uploaded document retrieval.
 - Admin `/chat`, the sidebar, and guided onboarding use the same Sage model-driven Tool loop.
 - The browser does not assemble or inject admin configuration snapshots for chat turns.
+- When Database is enabled for an Admin turn, the browser may build Admin Signer-Decrypted Context from `/admin/users` so Sage can interpret encrypted User roster values alongside safe database query results. Non-Database and non-Admin turns omit this context.
 
 Sidebar behavior:
 
