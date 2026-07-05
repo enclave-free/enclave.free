@@ -199,6 +199,45 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
+  it('opts Database-enabled turns into Admin signer-decrypted context', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Database' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Tell me about the users in our db.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce();
+    });
+
+    expect(
+      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
+    ).toEqual(
+      expect.objectContaining({
+        tools: expect.arrayContaining(['db-query']),
+        includeAdminSignerDecryptedContext: true,
+      })
+    );
+  });
+
   it('does not expose broad tool toggles during onboarding setup', () => {
     render(
       <ThemeProvider>

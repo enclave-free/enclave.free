@@ -1508,6 +1508,8 @@ export function ChatPage() {
             sessionId: conversationSessionId,
             jobIds: selectedDocuments,
             conversationHistory,
+            includeAdminSignerDecryptedContext:
+              isAdmin && backendTools.includes('db-query'),
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
               if (event === 'assistant_message_started') {
@@ -1652,6 +1654,8 @@ export function ChatPage() {
           sessionId: conversationSessionId,
           jobIds: selectedDocuments,
           conversationHistory,
+          includeAdminSignerDecryptedContext:
+            isAdmin && backendTools.includes('db-query'),
         });
       }
 

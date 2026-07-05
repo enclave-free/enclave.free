@@ -3,6 +3,10 @@ import {
   classifyProviderError,
   formatClassifiedProviderError,
 } from './providerErrors';
+import {
+  buildAdminSignerDecryptedContext,
+  type AdminSignerDecryptedContext,
+} from './adminSignerContext';
 
 interface SendLlmChatOptions {
   content: string;
@@ -16,6 +20,12 @@ interface SendLlmChatOptions {
    * just this request to the token's user without touching the admin cookie.
    */
   authToken?: string | null;
+  /**
+   * Admin-only opt-in for Database turns. When true, the browser may use the
+   * Admin's NIP-04 signer to decrypt bounded context for this turn.
+   */
+  includeAdminSignerDecryptedContext?: boolean;
+  adminSignerDecryptedContext?: AdminSignerDecryptedContext | null;
 }
 
 type ConversationHistoryMessage = NonNullable<
@@ -32,6 +42,8 @@ async function buildUnifiedChatBody({
   sessionId,
   jobIds,
   conversationHistory,
+  includeAdminSignerDecryptedContext,
+  adminSignerDecryptedContext,
 }: SendLlmChatOptions): Promise<Record<string, unknown>> {
   const body: Record<string, unknown> = {
     message: content,
@@ -58,7 +70,38 @@ async function buildUnifiedChatBody({
     body.conversation_history = recentHistory.slice(-8);
   }
 
+  const clientDecryptedContext = await resolveAdminSignerDecryptedContext({
+    tools,
+    includeAdminSignerDecryptedContext,
+    adminSignerDecryptedContext,
+  });
+  if (clientDecryptedContext) {
+    body.client_decrypted_context = clientDecryptedContext;
+  }
+
   return body;
+}
+
+async function resolveAdminSignerDecryptedContext({
+  tools,
+  includeAdminSignerDecryptedContext,
+  adminSignerDecryptedContext,
+}: Pick<
+  SendLlmChatOptions,
+  'tools' | 'includeAdminSignerDecryptedContext' | 'adminSignerDecryptedContext'
+>): Promise<AdminSignerDecryptedContext | null> {
+  if (!includeAdminSignerDecryptedContext || !tools.includes('db-query')) {
+    return null;
+  }
+  if (adminSignerDecryptedContext !== undefined) {
+    return adminSignerDecryptedContext;
+  }
+  try {
+    return await buildAdminSignerDecryptedContext();
+  } catch (error) {
+    console.warn('Failed to build Admin signer-decrypted context:', error);
+    return null;
+  }
 }
 
 function normalizedConversationHistory(
@@ -77,7 +120,9 @@ function normalizedConversationHistory(
     }));
 }
 
-function isAdminConfigApplySummary(message: ConversationHistoryMessage): boolean {
+function isAdminConfigApplySummary(
+  message: ConversationHistoryMessage
+): boolean {
   if (message.role !== 'assistant') return false;
 
   const content = message.content.trim();
