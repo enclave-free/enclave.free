@@ -2939,6 +2939,32 @@ def _seed_default_ai_config() -> None:
                 VALUES (?, ?, ?, ?, ?)
             """, (key, value, value_type, category, description))
 
+        cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("web_search_default",))
+        web_search_row = cursor.fetchone()
+        user_default_tool_ids = ["web-search"] if (
+            web_search_row and str(web_search_row["value"]).lower() == "true"
+        ) else []
+        cursor.execute("""
+            INSERT OR IGNORE INTO ai_config (key, value, value_type, category, description)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            "user_default_tool_ids",
+            json.dumps(user_default_tool_ids),
+            "json",
+            "default",
+            "Tool Sets active by default for User Conversations",
+        ))
+        cursor.execute("""
+            INSERT OR IGNORE INTO ai_config (key, value, value_type, category, description)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            "knowledge_source_default",
+            "none",
+            "string",
+            "default",
+            "Knowledge Source scope active by default for User Conversations: none, selected, or all",
+        ))
+
     logger.info("Default Agent Settings seeded")
 
 
@@ -4363,46 +4389,66 @@ def normalize_jurisdiction(value: str | None) -> str | None:
 
 def search_resources(
     jurisdiction: str | None,
-    help_type: str,
+    help_type: str | None = None,
     language: str | None = None,
     limit: int = 5,
 ) -> list[dict]:
-    """Faceted lookup: ready resources whose coverage scope contains the user's country
-    and that provide the requested help type. Ranked by scope specificity, then verified,
-    then (optionally) language match, then display order."""
+    """Faceted lookup of ready resources.
+
+    When help_type is provided, return resources that match that type and whose
+    coverage contains the user's country, preserving the existing referral lookup
+    semantics. When help_type is omitted, return a bounded inventory of ready
+    resources; if a jurisdiction is available, keep the same coverage filter.
+    """
     import region_data
 
+    normalized_help_type = (help_type or "").strip()
     sql_limit = max(0, int(limit))
     fetch_limit = min(max(sql_limit * 4, sql_limit), 100) if language and sql_limit else sql_limit
     country_code = region_data.resolve_country_code(jurisdiction)
     ancestors = region_data.region_ancestors(country_code)
 
     with get_cursor() as cursor:
+        joins = []
+        where = ["r.status = 'ready'"]
+        params: list[object] = []
+        if normalized_help_type:
+            joins.append("JOIN resource_help_types h ON h.resource_id = r.resource_id")
+            where.append("h.help_type = ?")
+            params.append(normalized_help_type)
+        if country_code or normalized_help_type:
+            where.append(
+                """
+                (
+                     (r.scope_level = 'country'   AND r.scope_code = ?)
+                  OR (r.scope_level = 'subregion' AND r.scope_code = ?)
+                  OR (r.scope_level = 'region'    AND r.scope_code = ?)
+                  OR (r.scope_level = 'global')
+                )
+                """
+            )
+            params.extend(
+                [
+                    ancestors["country_code"],
+                    ancestors["subregion_code"],
+                    ancestors["region_code"],
+                ]
+            )
+        params.append(fetch_limit)
         cursor.execute(
-            """
-            SELECT r.* FROM resources r
-            JOIN resource_help_types h ON h.resource_id = r.resource_id
-            WHERE r.status = 'ready' AND h.help_type = ?
-              AND (
-                   (r.scope_level = 'country'   AND r.scope_code = ?)
-                OR (r.scope_level = 'subregion' AND r.scope_code = ?)
-                OR (r.scope_level = 'region'    AND r.scope_code = ?)
-                OR (r.scope_level = 'global')
-              )
+            f"""
+            SELECT DISTINCT r.* FROM resources r
+            {' '.join(joins)}
+            WHERE {' AND '.join(where)}
             ORDER BY
               CASE r.scope_level
                 WHEN 'country' THEN 0 WHEN 'subregion' THEN 1 WHEN 'region' THEN 2 ELSE 3 END,
               CASE WHEN r.verified_at IS NOT NULL THEN 0 ELSE 1 END,
-              r.display_order
+              r.display_order,
+              r.name
             LIMIT ?
             """,
-            (
-                help_type,
-                ancestors["country_code"],
-                ancestors["subregion_code"],
-                ancestors["region_code"],
-                fetch_limit,
-            ),
+            params,
         )
         rows = cursor.fetchall()
         results = []

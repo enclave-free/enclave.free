@@ -145,7 +145,7 @@ class InternalDocumentSearchResponse(BaseModel):
 
 
 class InternalResourceSearchRequest(BaseModel):
-    help_type: str
+    help_type: Optional[str] = None
     jurisdiction: Optional[str] = None
     language: Optional[str] = None
     limit: int = 5
@@ -154,7 +154,7 @@ class InternalResourceSearchRequest(BaseModel):
 class InternalResourceSearchResponse(BaseModel):
     resources: list[dict]
     resolved_country_code: Optional[str] = None
-    help_type: str
+    help_type: Optional[str] = None
 
 
 class InternalSessionLogTurn(BaseModel):
@@ -241,9 +241,6 @@ def _build_accessible_job_ids(user: InternalActorContext, requested_job_ids: Opt
         if requested_job_ids:
             return [job_id for job_id in requested_job_ids if job_id in available_job_ids]
         return list(available_job_ids)
-
-    if user.user_type_id is None:
-        return []
 
     available_job_ids = set(database.get_available_documents_for_user_type(user.user_type_id))
     if requested_job_ids:
@@ -829,10 +826,9 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
 
     Returns only `ready` resources whose coverage scope contains the user's country,
     ranked by scope specificity (in-country first), then verified, then language match.
+    If `help_type` is omitted, returns a bounded inventory of ready curated resources.
     """
-    help_type = payload.help_type.strip()
-    if not help_type:
-        raise HTTPException(status_code=400, detail="help_type is required")
+    help_type = (payload.help_type or "").strip() or None
     effective_limit = max(
         0,
         min(

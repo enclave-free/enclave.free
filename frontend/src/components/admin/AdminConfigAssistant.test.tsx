@@ -134,6 +134,95 @@ describe('AdminConfigAssistant', () => {
     vi.clearAllMocks();
   });
 
+  it('shows the full admin assistant tool set in the sidebar', () => {
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByRole('button', { name: 'Knowledge' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: 'Web' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: 'Database' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+  });
+
+  it('sends Knowledge Search when an admin enables it in the sidebar', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Knowledge' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Use the uploaded guide.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce();
+    });
+
+    const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
+      .calls[0][0];
+    expect(callArgs.tools).toEqual(
+      expect.arrayContaining(['admin-config', 'knowledge-search'])
+    );
+  });
+
+  it('does not expose broad tool toggles during onboarding setup', () => {
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    expect(
+      screen.queryByRole('button', { name: 'Config' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Knowledge' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Resources' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Web' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Database' })
+    ).not.toBeInTheDocument();
+  });
+
   it('passes previous admin assistant turns into follow-up chat requests', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools)

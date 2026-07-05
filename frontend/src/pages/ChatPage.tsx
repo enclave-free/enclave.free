@@ -102,6 +102,7 @@ import {
   recordProviderFailureInstrumentation,
 } from '../utils/adminResilienceInstrumentation';
 import { refreshAdminConfigRedactionMetadata } from '../utils/adminConfigContext';
+import { resolveUserConversationSessionDefaults } from '../utils/sessionDefaults';
 
 const CONFIG_TOOL_ID = 'admin-config';
 const KNOWLEDGE_TOOL_ID = 'knowledge-search';
@@ -634,14 +635,6 @@ export function ChatPage() {
   );
   const isLoading = conversationState.isRunning;
   const error = conversationState.error;
-  const selectedDocumentSources = useMemo(
-    () =>
-      selectedDocuments
-        .map((id) => documents.find((document) => document.id === id))
-        .filter((document): document is DocumentSource => Boolean(document)),
-    [documents, selectedDocuments]
-  );
-
   useEffect(() => {
     let cancelled = false;
 
@@ -946,7 +939,7 @@ export function ChatPage() {
     };
   }, [loadConversationHistory]);
 
-  // Check auth and approval status on mount
+  // Check auth, onboarding, and approval status on mount
   useEffect(() => {
     if (adminSessionChecking) return;
 
@@ -959,16 +952,12 @@ export function ChatPage() {
       return;
     }
 
-    // User authenticated but not approved - redirect to pending
-    const approved = localStorage.getItem(STORAGE_KEYS.USER_APPROVED);
-    if (!isAdmin && approved === 'false') {
-      navigate('/pending');
-      return;
-    }
-
     // Keep onboarding enforcement server-authoritative for returning users.
+    // User Approval gates Conversation access after required onboarding steps.
     if (!isAdmin) {
       const checkOnboardingStatus = async () => {
+        const approved = localStorage.getItem(STORAGE_KEYS.USER_APPROVED);
+
         try {
           const response = await fetch(
             `${API_BASE}/users/me/onboarding-status`,
@@ -985,6 +974,9 @@ export function ChatPage() {
           }
 
           if (!response.ok) {
+            if (approved === 'false') {
+              navigate('/pending');
+            }
             return;
           }
 
@@ -1002,9 +994,20 @@ export function ChatPage() {
 
           if (status.needs_onboarding) {
             navigate('/profile');
+            return;
+          }
+
+          if (approved === 'false') {
+            navigate('/pending');
           }
         } catch (err) {
           console.error('Failed to fetch onboarding status:', err);
+          if (!isCancelled) {
+            const approved = localStorage.getItem(STORAGE_KEYS.USER_APPROVED);
+            if (approved === 'false') {
+              navigate('/pending');
+            }
+          }
         }
       };
 
@@ -1037,44 +1040,29 @@ export function ChatPage() {
               selectedTools: [CONFIG_TOOL_ID],
             });
           } else {
-            const hasDefaultDocuments =
-              Array.isArray(data.default_document_ids) &&
-              data.default_document_ids.length > 0;
-            const defaultTools = [
-              CURATED_RESOURCES_TOOL_ID,
-              ...(hasDefaultDocuments ? [KNOWLEDGE_TOOL_ID] : []),
-              ...(data.web_search_enabled ? ['web-search'] : []),
-            ];
+            const defaults = resolveUserConversationSessionDefaults(data);
             dispatchConversation({
               type: 'selectedToolsChanged',
-              selectedTools: defaultTools,
+              selectedTools: defaults.tools,
             });
-          }
-          // Store default document IDs to apply once documents are loaded
-          if (
-            data.default_document_ids &&
-            data.default_document_ids.length > 0
-          ) {
-            setPendingDefaultDocs(data.default_document_ids);
+            if (defaults.documentIds.length > 0) {
+              setPendingDefaultDocs(defaults.documentIds);
+            }
           }
         } else {
-          // Non-2xx response - fall back to web search enabled by default (non-admin only)
+          // Non-2xx response - fail closed for non-admin user Tool Sets.
           console.warn('Failed to fetch session defaults:', res.status);
           dispatchConversation({
             type: 'selectedToolsChanged',
-            selectedTools: isAdmin
-              ? [CONFIG_TOOL_ID]
-              : [CURATED_RESOURCES_TOOL_ID, 'web-search'],
+            selectedTools: isAdmin ? [CONFIG_TOOL_ID] : [],
           });
         }
       } catch (err) {
         console.error('Failed to fetch session defaults:', err);
-        // Fall back to web search enabled by default on error (non-admin only)
+        // Fail closed for non-admin user Tool Sets on defaults load errors.
         dispatchConversation({
           type: 'selectedToolsChanged',
-          selectedTools: isAdmin
-            ? [CONFIG_TOOL_ID]
-            : [CURATED_RESOURCES_TOOL_ID, 'web-search'],
+          selectedTools: isAdmin ? [CONFIG_TOOL_ID] : [],
         });
       } finally {
         setSessionDefaultsLoaded(true);
@@ -1161,14 +1149,18 @@ export function ChatPage() {
     (docId: string) => {
       const selectedAfterToggle = !selectedDocuments.includes(docId);
       dispatchConversation({ type: 'documentToggled', documentId: docId });
-      if (selectedAfterToggle && !selectedTools.includes(KNOWLEDGE_TOOL_ID)) {
+      if (
+        isAdmin &&
+        selectedAfterToggle &&
+        !selectedTools.includes(KNOWLEDGE_TOOL_ID)
+      ) {
         dispatchConversation({
           type: 'toolToggled',
           toolId: KNOWLEDGE_TOOL_ID,
         });
       }
     },
-    [selectedDocuments, selectedTools]
+    [isAdmin, selectedDocuments, selectedTools]
   );
 
   const handleConversationSelect = useCallback(
@@ -1426,11 +1418,7 @@ export function ChatPage() {
     }
 
     try {
-      const backendTools =
-        selectedDocuments.length > 0 &&
-        !actorScopedSelectedTools.includes(KNOWLEDGE_TOOL_ID)
-          ? [...actorScopedSelectedTools, KNOWLEDGE_TOOL_ID]
-          : actorScopedSelectedTools;
+      const backendTools = actorScopedSelectedTools;
       let conversationHistory = messages.map(
         ({ role, content: turnContent }) => ({
           role,
@@ -2395,8 +2383,6 @@ export function ChatPage() {
     </div>
   );
 
-  // Tool Sets stay visible in the composer; admin-only capabilities are gated
-  // through the available tool list.
   const inputToolbar = isAdmin ? (
     <section
       aria-label={t('chat.composerContextAria', 'Composer context')}
@@ -2454,76 +2440,7 @@ export function ChatPage() {
         )}
       </div>
     </section>
-  ) : (
-    <section
-      aria-label={t('chat.composerContextAria', 'Composer context')}
-      className="flex w-full flex-col gap-2"
-    >
-      {selectedDocumentSources.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-medium text-text-muted">
-            {t('chat.documentsContextTitle', 'Documents')}
-          </span>
-          {selectedDocumentSources.map((document) => (
-            <span
-              key={document.id}
-              className="inline-flex max-w-[14rem] items-center truncate rounded-full border border-border bg-surface px-2 py-1 text-xs text-text-secondary"
-              title={document.name}
-            >
-              {document.name}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-medium text-text-muted">
-          {t('chat.tools.label', 'Tools')}
-        </span>
-        <ToolSelector
-          tools={availableTools}
-          selectedTools={selectedTools}
-          onToggle={handleToolToggle}
-          compact
-        />
-        {isAdmin && selectedTools.includes(CONFIG_TOOL_ID) && (
-          <>
-            <div className="h-4 w-px bg-border" />
-            <label
-              htmlFor="share-secrets-toggle"
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <input
-                id="share-secrets-toggle"
-                type="checkbox"
-                checked={shareSecrets}
-                onChange={(e) => {
-                  void handleShareSecretsToggle(e.target.checked);
-                }}
-                className="w-3 h-3"
-              />
-              <EyeOff className="w-3 h-3 text-text-muted" />
-              <span className="text-[10px] text-text-muted">
-                {t(
-                  'admin.configAssistant.shareSecretsTitle',
-                  'Share secret env vars'
-                )}
-              </span>
-            </label>
-          </>
-        )}
-        <div className="h-4 w-px bg-border" />
-        <span className="text-[11px] font-medium text-text-muted">
-          {t('chat.documentsContextTitle', 'Documents')}
-        </span>
-        <DocumentScope
-          selectedDocuments={selectedDocuments}
-          onToggle={handleDocumentToggle}
-          documents={documents}
-          compact
-        />
-      </div>
-    </section>
-  );
+  ) : null;
   const conversationTurns = buildConversationSurfaceTurns(messages);
   const lastAssistantTurnId = useMemo(
     () =>
@@ -2692,11 +2609,7 @@ export function ChatPage() {
         turns={conversationTurns}
         onSend={handleSend}
         isRunning={isLoading}
-        placeholder={
-          !isAdmin && selectedDocuments.length > 0
-            ? t('chat.input.placeholderWithDocs')
-            : t('chat.input.placeholder')
-        }
+        placeholder={t('chat.input.placeholder')}
         toolbar={inputToolbar}
         turnAccessories={turnAccessories}
         notices={threadNotices}

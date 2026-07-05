@@ -35,11 +35,9 @@ export function useAuthFlow(): AuthFlowState {
     } else if (!userEmail) {
       // Not authenticated at all
       redirectPath = '/login'
-    } else if (!isApproved) {
-      // Authenticated but not approved
-      redirectPath = '/pending'
     } else {
-      // Authenticated and approved
+      // Authenticated users enter through chat so ChatPage can apply the
+      // server-authoritative onboarding-before-approval gate.
       redirectPath = '/chat'
     }
 

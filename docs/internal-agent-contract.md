@@ -301,6 +301,12 @@ Request:
 }
 ```
 
+`help_type` is optional. When present, the endpoint performs a referral lookup
+for that type. When omitted or blank, the endpoint returns a bounded inventory
+of ready curated resources so Sage can answer questions such as "what resources
+do you have?" from the live Resource Directory instead of describing the tool
+catalog.
+
 Response:
 
 ```json
@@ -324,9 +330,12 @@ Response:
 }
 ```
 
-Only `ready` resources are returned. Ranking prefers most-local coverage, then
-verified resources, then optional language match. Blank `help_type` returns
-`400`; invalid payload shapes return `422`.
+Only `ready` resources are returned. Referral lookups preserve the existing
+coverage behavior: matching resources must cover the resolved country, then are
+ranked by most-local coverage, verified resources, optional language match, and
+display order. Inventory lookups are capped, exclude pending/archived resources,
+and apply the same coverage filter when `jurisdiction` is supplied. Invalid
+payload shapes return `422`.
 
 ### `POST /internal/agent/admin-db-query`
 
