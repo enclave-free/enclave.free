@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 - 2026-07-05
+
+- Allowed approved Admin DB Query turns to translate natural-language prompts into read-only SQLite SELECT tool calls instead of requiring literal SELECT-only messages.
+- Updated Sage tool-contract coverage and DB query safety docs to match the delegated read-only SQL execution path.
+
 ## 0.1.2 - 2026-07-04
 
 - Hardened Agent Settings validation, roster export audit gating, and document upload polling/show-more behavior.
