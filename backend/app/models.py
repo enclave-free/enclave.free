@@ -625,7 +625,7 @@ class PromptPreviewResponse(BaseModel):
 
 class SessionDefaultsResponse(BaseModel):
     """Response model for public session defaults"""
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, validate_default=True)
 
     web_search_enabled: bool = False
     default_document_ids: list[str] = []
