@@ -118,7 +118,7 @@ Theme requests in Admin Conversations mean Instance visual identity settings, su
 
 ## Database
 
-`db-query` is an admin-only Tool Set for read-only inspection. Sage exposes the executable Database Query Tool only when the Admin submits a direct read-only `SELECT`; natural-language database questions are guarded quickly and ask the Admin to submit a reviewed `SELECT` instead of triggering text-to-SQL. Python remains the safe SQL executor and must enforce read-only validation, blocked keywords, authorization, truncation, and redaction. Direct database mutation is not a supported product path.
+`db-query` is an admin-only Tool Set for read-only inspection. When an approved Admin enables it, Sage exposes the executable Database Query Tool to the model for the turn. Sage may translate natural-language database questions into a single read-only SQLite `SELECT` when live database facts would improve the answer. Python remains the safe SQL executor and must enforce read-only validation, blocked keywords, allowed tables, authorization, truncation, and redaction. Direct database mutation is not a supported product path.
 
 ## Web Search
 
