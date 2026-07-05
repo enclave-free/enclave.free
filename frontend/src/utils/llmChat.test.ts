@@ -4,13 +4,19 @@ import {
   sendLlmChatWithUnifiedTools,
 } from './llmChat';
 import { adminFetch } from './adminApi';
+import { buildAdminSignerDecryptedContext } from './adminSignerContext';
 
 vi.mock('./adminApi', () => ({
   adminFetch: vi.fn(),
 }));
 
+vi.mock('./adminSignerContext', () => ({
+  buildAdminSignerDecryptedContext: vi.fn(),
+}));
+
 describe('sendLlmChatWithUnifiedTools', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(Response.json({ message: 'ok' }))
@@ -97,6 +103,70 @@ describe('sendLlmChatWithUnifiedTools', () => {
     expect(body).toEqual({
       message: 'Use the database tool',
       tools: ['db-query'],
+    });
+  });
+
+  it('sends Admin Signer-Decrypted Context for opted-in Database turns', async () => {
+    vi.mocked(buildAdminSignerDecryptedContext).mockResolvedValueOnce({
+      source: 'admin-signer-user-roster',
+      generated_at: '2026-07-05T22:00:00.000Z',
+      users: [
+        {
+          id: 7,
+          approved: false,
+          user_type_id: null,
+          created_at: '2026-07-03T16:40:00Z',
+          pubkey_present: false,
+          email: 'marisol@example.test',
+          name: 'Marisol Rivera',
+        },
+      ],
+      truncated: false,
+      warnings: [],
+    });
+
+    await sendLlmChatWithUnifiedTools({
+      content: 'Tell me about the users in our db',
+      tools: ['db-query'],
+      includeAdminSignerDecryptedContext: true,
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'Tell me about the users in our db',
+      tools: ['db-query'],
+      client_decrypted_context: {
+        source: 'admin-signer-user-roster',
+        generated_at: '2026-07-05T22:00:00.000Z',
+        users: [
+          {
+            id: 7,
+            approved: false,
+            user_type_id: null,
+            created_at: '2026-07-03T16:40:00Z',
+            pubkey_present: false,
+            email: 'marisol@example.test',
+            name: 'Marisol Rivera',
+          },
+        ],
+        truncated: false,
+        warnings: [],
+      },
+    });
+  });
+
+  it('does not build signer-decrypted context for non-Database turns', async () => {
+    await sendLlmChatWithUnifiedTools({
+      content: 'Check configuration',
+      tools: ['admin-config'],
+      includeAdminSignerDecryptedContext: true,
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(buildAdminSignerDecryptedContext).not.toHaveBeenCalled();
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: 'Check configuration',
+      tools: ['admin-config'],
     });
   });
 
@@ -286,6 +356,59 @@ describe('sendLlmChatWithUnifiedTools', () => {
     expect(JSON.parse(String(options?.body))).toEqual({
       message: 'Check my deployment config',
       tools: ['admin-config'],
+    });
+  });
+
+  it('streams Admin Signer-Decrypted Context for opted-in Database turns', async () => {
+    vi.mocked(buildAdminSignerDecryptedContext).mockResolvedValueOnce({
+      source: 'admin-signer-user-roster',
+      generated_at: '2026-07-05T22:00:00.000Z',
+      users: [
+        {
+          id: 5,
+          approved: true,
+          user_type_id: 1,
+          created_at: '2026-07-01T21:22:00Z',
+          pubkey_present: true,
+          email: 'ana@example.test',
+        },
+      ],
+      truncated: false,
+      warnings: [],
+    });
+    const encoder = new TextEncoder();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                encoder.encode('event: done\ndata: {"message_id":"msg_1"}\n\n')
+              );
+              controller.close();
+            },
+          }),
+          { headers: { 'Content-Type': 'text/event-stream' } }
+        )
+      )
+    );
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'Tell me about the users',
+      tools: ['db-query'],
+      includeAdminSignerDecryptedContext: true,
+      onEvent: vi.fn(),
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(options?.body))).toMatchObject({
+      message: 'Tell me about the users',
+      tools: ['db-query'],
+      client_decrypted_context: {
+        source: 'admin-signer-user-roster',
+        users: [{ id: 5, email: 'ana@example.test' }],
+      },
     });
   });
 

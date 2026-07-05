@@ -529,6 +529,8 @@ export function AdminConfigAssistant({
             tools: selectedTools,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
+            includeAdminSignerDecryptedContext:
+              selectedTools.includes('db-query'),
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
               if (
@@ -711,6 +713,8 @@ export function AdminConfigAssistant({
             tools: selectedTools,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
+            includeAdminSignerDecryptedContext:
+              selectedTools.includes('db-query'),
           });
           if (res.status === 401) {
             window.location.href = '/admin';
