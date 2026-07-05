@@ -242,9 +242,6 @@ def _build_accessible_job_ids(user: InternalActorContext, requested_job_ids: Opt
             return [job_id for job_id in requested_job_ids if job_id in available_job_ids]
         return list(available_job_ids)
 
-    if user.user_type_id is None:
-        return []
-
     available_job_ids = set(database.get_available_documents_for_user_type(user.user_type_id))
     if requested_job_ids:
         return [job_id for job_id in requested_job_ids if job_id in available_job_ids]

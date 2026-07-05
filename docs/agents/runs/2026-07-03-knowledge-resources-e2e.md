@@ -41,9 +41,9 @@ Curated resources created through `/admin/resources`:
 
 Fixture and result artifacts:
 
-- `/Users/plebdev/Desktop/Projects/enclave-free/output/e2e-fixtures/Harbor-Release-Protocol.md`
-- `/Users/plebdev/Desktop/Projects/enclave-free/output/e2e-fixtures/Family-Support-Field-Manual.md`
-- `/Users/plebdev/Desktop/Projects/enclave-free/output/e2e-agent-results.json`
+- `output/e2e-fixtures/Harbor-Release-Protocol.md`
+- `output/e2e-fixtures/Family-Support-Field-Manual.md`
+- `output/e2e-agent-results.json`
 
 ## Verification Evidence
 

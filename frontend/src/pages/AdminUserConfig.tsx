@@ -1602,22 +1602,34 @@ export function AdminUserConfig() {
       return {};
     }
 
-    const userEntries = await mapInBatches(
-      users,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async (user) => {
-        const encryptedEntries = Object.entries(user.fields_encrypted ?? {});
-        const decryptedEntries = await mapInBatches(
-          encryptedEntries,
-          EXPORT_DECRYPT_BATCH_SIZE,
-          async ([fieldName, encrypted]) =>
-            [fieldName, await decryptField(encrypted)] as const
-        );
-        return [user.id, Object.fromEntries(decryptedEntries)] as const;
-      }
+    const profileValues = Object.fromEntries(
+      users.map((user) => [user.id, {}])
+    ) as Record<number, Record<string, string | null>>;
+    const encryptedFieldTasks = users.flatMap((user) =>
+      Object.entries(user.fields_encrypted ?? {}).map(
+        ([fieldName, encrypted]) => ({
+          userId: user.id,
+          fieldName,
+          encrypted,
+        })
+      )
     );
 
-    return Object.fromEntries(userEntries);
+    const decryptedFieldValues = await mapInBatches(
+      encryptedFieldTasks,
+      EXPORT_DECRYPT_BATCH_SIZE,
+      async ({ userId, fieldName, encrypted }) => ({
+        userId,
+        fieldName,
+        value: await decryptField(encrypted),
+      })
+    );
+
+    for (const { userId, fieldName, value } of decryptedFieldValues) {
+      profileValues[userId][fieldName] = value;
+    }
+
+    return profileValues;
   };
 
   const downloadBlob = (blob: Blob, filename: string) => {

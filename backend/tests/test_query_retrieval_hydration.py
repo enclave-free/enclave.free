@@ -388,7 +388,11 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         )
         captured_payloads = []
 
-        def fake_post(_url: str, json: dict[str, Any], **_kwargs: Any) -> FakeQdrantResponse:
+        def fake_post(
+            _url: str,
+            json: dict[str, Any],
+            **_kwargs: Any,
+        ) -> FakeQdrantResponse:
             captured_payloads.append(json)
             return FakeQdrantResponse([
                 {
@@ -435,6 +439,59 @@ class QueryRetrievalHydrationTest(unittest.TestCase):
         self.assertEqual(
             captured_payloads[0]["filter"],
             {"should": [{"key": "job_id", "match": {"value": "allowed-job"}}]},
+        )
+
+    def test_approved_user_without_type_can_access_global_default_document(self) -> None:
+        self.create_completed_document("global-default", filename="Global Default.md")
+        self.ingest_db.upsert_retrieval_chunk(
+            chunk_id="global-default_chunk_0000",
+            job_id="global-default",
+            chunk_index=0,
+            source_file="Global Default.md",
+            text="Global default context is available before user type assignment.",
+        )
+        captured_payloads = []
+
+        def fake_post(_url: str, json: dict[str, Any], **_kwargs: Any) -> FakeQdrantResponse:
+            captured_payloads.append(json)
+            return FakeQdrantResponse([
+                {
+                    "score": 0.91,
+                    "payload": {
+                        "type": "chunk",
+                        "chunk_id": "global-default_chunk_0000",
+                        "job_id": "global-default",
+                        "source_file": "Global Default.md",
+                    },
+                }
+            ])
+
+        with patch.object(self.internal_agent.httpx, "post", side_effect=fake_post):
+            response = self.client.post(
+                "/internal/agent/document-search",
+                headers=self.internal_headers,
+                json={
+                    "query": "What global document can I read?",
+                    "user": {
+                        "id": 3,
+                        "type": "user",
+                        "approved": True,
+                        "user_type_id": None,
+                    },
+                    "job_ids": ["global-default", "missing-job"],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("Global default context is available", body["context"])
+        self.assertEqual(
+            [source["chunk_id"] for source in body["sources"]],
+            ["global-default_chunk_0000"],
+        )
+        self.assertEqual(
+            captured_payloads[0]["filter"],
+            {"should": [{"key": "job_id", "match": {"value": "global-default"}}]},
         )
 
     def test_required_context_job_ids_limit_admin_retrieval_context(self) -> None:

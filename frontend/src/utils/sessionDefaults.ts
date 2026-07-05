@@ -24,9 +24,13 @@ function uniqueTools(tools: string[]): string[] {
 }
 
 function parseDocumentIds(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((id): id is string => typeof id === 'string' && Boolean(id))
-    : [];
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  return value.filter((id): id is string => {
+    if (typeof id !== 'string' || !id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 function parseKnowledgeSourceScope(

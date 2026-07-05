@@ -28,8 +28,8 @@ Admins now have an `Export users` action in User management that downloads an `.
   - `cd frontend && npm run test -- userRosterExport.test.ts AdminUserConfig.test.tsx` -> 2 files, 5 tests passed.
   - `cd frontend && npm run test -- --reporter=dot` -> 69 files, 356 tests passed.
   - `cd frontend && npm run build` -> passed with existing large chunk warnings.
-  - `uv run --python /Users/plebdev/.local/bin/python3.12 --with fastapi --with qdrant-client --with pydantic --with pycryptodome --with coincurve --with bech32 --with python-multipart --with itsdangerous --with httpx --with redis --with requests --with python-dotenv --with openai --with urllib3 --with filelock --with Pillow --with numpy python -m unittest backend.tests.test_admin_db_query_endpoint` -> 7 tests passed.
-  - `PYTHONWARNINGS=ignore uv run --python /Users/plebdev/.local/bin/python3.12 --with fastapi --with qdrant-client --with pydantic --with pycryptodome --with coincurve --with bech32 --with python-multipart --with itsdangerous --with httpx --with redis --with requests --with python-dotenv --with openai --with urllib3 --with filelock --with Pillow --with numpy python -m unittest discover -q backend/tests` -> 380 tests passed.
+  - `uv run --python python3.12 --with fastapi --with qdrant-client --with pydantic --with pycryptodome --with coincurve --with bech32 --with python-multipart --with itsdangerous --with httpx --with redis --with requests --with python-dotenv --with openai --with urllib3 --with filelock --with Pillow --with numpy python -m unittest backend.tests.test_admin_db_query_endpoint` -> 7 tests passed.
+  - `PYTHONWARNINGS=ignore uv run --python python3.12 --with fastapi --with qdrant-client --with pydantic --with pycryptodome --with coincurve --with bech32 --with python-multipart --with itsdangerous --with httpx --with redis --with requests --with python-dotenv --with openai --with urllib3 --with filelock --with Pillow --with numpy python -m unittest discover -q backend/tests` -> 380 tests passed.
   - `git diff --check` -> passed.
 
 ## Reviewer Output

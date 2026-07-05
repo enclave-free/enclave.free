@@ -3,6 +3,7 @@ Enclave Pydantic Models
 Request and response models for user/admin management.
 """
 
+from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing import Any, Optional, Union
 from datetime import datetime
@@ -55,6 +56,12 @@ SUPPORTED_DEFAULT_LANGUAGES = {
 }
 
 SUPPORTED_DEFAULT_THEMES = {"light", "dark", "system"}
+
+
+class KnowledgeSourceScope(str, Enum):
+    NONE = "none"
+    SELECTED = "selected"
+    ALL = "all"
 
 
 def _validate_email_shape(value: str) -> str:
@@ -618,10 +625,12 @@ class PromptPreviewResponse(BaseModel):
 
 class SessionDefaultsResponse(BaseModel):
     """Response model for public session defaults"""
+    model_config = ConfigDict(use_enum_values=True)
+
     web_search_enabled: bool = False
     default_document_ids: list[str] = []
     default_tool_ids: list[str] = []
-    knowledge_source_scope: str = "none"
+    knowledge_source_scope: KnowledgeSourceScope = KnowledgeSourceScope.NONE
 
 
 # --- Agent Settings User-Type Override Models ---

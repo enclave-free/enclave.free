@@ -257,6 +257,9 @@ describe('TestAsUserView', () => {
         mockSendLlmChatStreamWithUnifiedTools.mock.calls.length - 1
       ];
     const request = lastCall?.[0];
+    expect([...(request?.tools ?? [])].sort()).toEqual(
+      ['curated-resources', 'knowledge-search', 'web-search'].sort()
+    );
     expect(request?.tools).not.toContain('admin-config');
     expect(request?.tools).not.toContain('db-query');
     expect(fetch).toHaveBeenCalledWith('/api/session-defaults?user_type_id=1', {
@@ -294,6 +297,14 @@ describe('TestAsUserView', () => {
         })
       );
     });
+    const lastCall =
+      mockSendLlmChatStreamWithUnifiedTools.mock.calls[
+        mockSendLlmChatStreamWithUnifiedTools.mock.calls.length - 1
+      ];
+    const request = lastCall?.[0];
+    expect([...(request?.tools ?? [])].sort()).toEqual(
+      ['curated-resources', 'knowledge-search'].sort()
+    );
   });
 
   it('uses a conservative Tool Set fallback when user defaults cannot be loaded', async () => {
