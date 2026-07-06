@@ -9,7 +9,7 @@
 - Feature branch: `feature/user-manager-dashboard`
 - Human owner: Austin Kelsay
 - Started: 2026-07-06 09:26 CDT
-- Current status: staging PR opened; PR review in progress
+- Current status: staging PR open; local review, full tests, build, browser verification, and PR checks complete
 - Skill setup status: present (`AGENTS.md`, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/domain.md`)
 
 ## Goal
@@ -25,18 +25,18 @@ Build a brand new end-to-end admin **User Manager Dashboard** so a non-technical
 - Issue sessions: Codex orchestrator implemented #478 and #479 together because the dashboard route, approval action, filters, and export flow share one user-facing surface.
 - Agent briefs: Composer 2.5 read-only repo recon on 2026-07-06; Composer review sidecar on 2026-07-06.
 - Review packets: local sidecar review found npub search, live announcement, export-failure coverage, and locale hygiene follow-ups; all actionable items were addressed before final verification.
-- Local CodeRabbit report: `coderabbit review --agent --type all --base staging` completed with 0 findings.
+- Local CodeRabbit report: `coderabbit review --agent --type all --base staging` completed with 0 findings after fixing the per-user identity decrypt failure path and removing artificial non-English locale churn.
 - PR URL: https://github.com/enclave-free/enclave.free/pull/480
 
 ## Commands
 
 - Install: `cd frontend && npm install` if dependencies are missing
 - Typecheck/build: `cd frontend && npm run build` passed on 2026-07-06. Vite reported existing large chunk warnings; generated `frontend/dist/index.html` churn was reverted.
-- Test: `cd frontend && npm run test -- AdminUserManager App.routing AdminSetup` passed 15 tests on 2026-07-06.
-- Test: `cd frontend && npm run test` passed 72 files / 378 tests on 2026-07-06. Existing console noise included the deliberate Chat route failure-boundary test, a missing `LLM_API_KEY` fixture warning, jsdom navigation warnings, and a temporary Prettier sample warning.
+- Test: `cd frontend && npm run test -- AdminUserManager.test.tsx App.routing.test.tsx AdminSetup.test.tsx userRosterExport.test.ts` passed 17 tests on 2026-07-06.
+- Test: `cd frontend && npm run test` passed 72 files / 379 tests on 2026-07-06. Existing console noise included the deliberate Chat route failure-boundary test, a missing `LLM_API_KEY` fixture warning, jsdom navigation warnings, and a temporary Prettier sample warning.
 - Format: `cd frontend && npx prettier --check src/pages/AdminUserManager.tsx src/pages/AdminUserManager.test.tsx src/App.tsx src/App.routing.test.tsx src/pages/AdminSetup.tsx src/pages/AdminSetup.test.tsx src/i18n/locales/en.json` passed.
 - Format note: `cd frontend && npm run format:check` failed on 144 pre-existing files, including tracked `dist` assets and untouched source files, so it is not a clean repo-wide gate for this branch.
-- Visual verification: Vite dev server plus mock API/browser harness verified `/admin/user-manager` desktop layout, semantic `User roster` table, visible Austin/Jamie/Sam rows, approval interaction, pending/approved metric update, and row Approved state. Mobile viewport harness had an empty-root issue specific to the temporary visual harness; source implementation includes a mobile card layout.
+- Visual verification: Vite dev server plus Playwright/mock API harness verified `/admin/user-manager` on desktop and mobile. Desktop showed the semantic `User roster` table; mobile hid the table and showed card rows; both had zero horizontal overflow or detected element bounds issues.
 
 ## Alignment
 
@@ -83,4 +83,5 @@ Build a brand new end-to-end admin **User Manager Dashboard** so a non-technical
 ## CodeRabbit Rounds
 
 - Local gate: `coderabbit review --agent --type all --base staging` completed on 2026-07-06 with 0 findings.
-- PR gate: requested with `@coderabbit full review` on https://github.com/enclave-free/enclave.free/pull/480#issuecomment-4894837522.
+- PR gate: requested with `@coderabbit full review` on https://github.com/enclave-free/enclave.free/pull/480#issuecomment-4894837522; GitHub CodeRabbit check passed with "review skipped" because reviews are disabled for the non-default `staging` base branch.
+- PR checks: GitHub security regression checks, Semgrep OSS, dependency/SAST scans, and demo handoff PDF drift check passed on PR #480.
