@@ -9,7 +9,7 @@
 - Feature branch: feature/user-manager-detail
 - Human owner: plebdev
 - Started: 2026-07-06
-- Current status: Implemented and committed locally; PR pending
+- Current status: PR open; CI and PR-side CodeRabbit pending
 - Skill setup status: Present. `AGENTS.md`, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and `docs/agents/domain.md` exist.
 
 ## Goal
@@ -26,7 +26,7 @@ Extend the new admin User Manager so a non-technical admin can click a given use
 - Agent briefs: This ledger.
 - Review packets: Local standards/spec review completed in current thread.
 - Local CodeRabbit report: `coderabbit review --agent --type uncommitted` completed with 0 findings. Post-commit `coderabbit review --agent --type all --base staging` hit the org rate limit with a 38-minute wait.
-- PR URL: Pending.
+- PR URL: https://github.com/enclave-free/enclave.free/pull/484
 
 ## Commands
 
@@ -42,7 +42,7 @@ Extend the new admin User Manager so a non-technical admin can click a given use
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #483 | AFK | Implemented locally | Current thread | None from local review | Tests/build/CodeRabbit passed |
+| #483 | AFK | PR open | Current thread | None from local review | Tests/build/local CodeRabbit passed; CI pending |
 
 ## Parked HITL Slices
 
