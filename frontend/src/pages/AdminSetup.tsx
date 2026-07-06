@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Paintbrush,
   Server,
+  ShieldCheck,
   Sparkles,
   Upload,
   UserCheck,
@@ -122,6 +123,15 @@ export function AdminSetup() {
             description={t(
               'adminDashboard.guidesDesc',
               'Simple setup steps for first-time admins.'
+            )}
+          />
+          <DashboardCard
+            to="/admin/user-manager"
+            icon={<ShieldCheck className="h-5 w-5" />}
+            title={t('adminDashboard.userManager', 'User Manager')}
+            description={t(
+              'adminDashboard.userManagerDesc',
+              'Review users, approvals, and roster exports.'
             )}
           />
           <DashboardCard

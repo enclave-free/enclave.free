@@ -32,6 +32,10 @@ vi.mock('./pages/AdminGuides', () => ({
   AdminGuides: () => <main>Admin guides route</main>,
 }));
 
+vi.mock('./pages/AdminUserManager', () => ({
+  AdminUserManager: () => <main>User Manager route</main>,
+}));
+
 describe('App routing', () => {
   afterEach(() => {
     cleanup();
@@ -90,6 +94,15 @@ describe('App routing', () => {
     render(<App />);
 
     expect(await screen.findByText('Admin guides route')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-route-shell')).toBeInTheDocument();
+  });
+
+  it('keeps the user manager route behind the admin route shell', async () => {
+    window.history.pushState({}, '', '/admin/user-manager');
+
+    render(<App />);
+
+    expect(await screen.findByText('User Manager route')).toBeInTheDocument();
     expect(screen.getByTestId('admin-route-shell')).toBeInTheDocument();
   });
 });
