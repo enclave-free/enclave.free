@@ -41,6 +41,14 @@ describe('AdminConfigAssistant', () => {
   const mockAdminFetch = vi.mocked(adminFetch);
   const mockPlanAdminPromptBudget = vi.mocked(planAdminPromptBudget);
 
+  async function enableConfigTool(user: ReturnType<typeof userEvent.setup>) {
+    const configButton = screen.getByRole('button', { name: 'Config' });
+    if (configButton.getAttribute('aria-pressed') !== 'true') {
+      await user.click(configButton);
+    }
+    expect(configButton).toHaveAttribute('aria-pressed', 'true');
+  }
+
   beforeEach(() => {
     resetAdminResilienceInstrumentationListeners();
     const store = new Map<string, string>();
@@ -155,7 +163,7 @@ describe('AdminConfigAssistant', () => {
     );
     expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
       'aria-pressed',
-      'true'
+      'false'
     );
     expect(screen.getByRole('button', { name: 'Database' })).toHaveAttribute(
       'aria-pressed',
@@ -171,7 +179,21 @@ describe('AdminConfigAssistant', () => {
           message_id: 'msg-1',
           session_id: 'session-1',
         });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+        onEvent('done', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+          admin_change_set: {
+            version: 1,
+            summary: 'Unexpected default-off change',
+            requests: [
+              {
+                method: 'PUT',
+                path: '/admin/settings',
+                body: { instance_name: 'Unexpected' },
+              },
+            ],
+          },
+        });
       }
     );
 
@@ -195,8 +217,9 @@ describe('AdminConfigAssistant', () => {
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
     expect(callArgs.tools).toEqual(
-      expect.arrayContaining(['admin-config', 'knowledge-search'])
+      expect.arrayContaining(['knowledge-search'])
     );
+    expect(callArgs.tools).not.toContain('admin-config');
   });
 
   it('opts Database-enabled turns into Admin signer-decrypted context', async () => {
@@ -293,11 +316,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
-
-    expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -369,6 +388,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -422,6 +442,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -554,7 +575,7 @@ describe('AdminConfigAssistant', () => {
     );
   });
 
-  it('ignores public web-search defaults for admin config sends', async () => {
+  it('starts admin config assistant sends with no tools selected', async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       'fetch',
@@ -584,7 +605,7 @@ describe('AdminConfigAssistant', () => {
 
     expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
       'aria-pressed',
-      'true'
+      'false'
     );
 
     await user.type(
@@ -599,8 +620,11 @@ describe('AdminConfigAssistant', () => {
 
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
-    expect(callArgs.tools).toContain('admin-config');
-    expect(callArgs.tools).not.toContain('web-search');
+    expect(callArgs.tools).toEqual([]);
+    expect(screen.queryByText(/Pending changes:/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(screen.queryByText(/Pending changes:/)).not.toBeInTheDocument();
   });
 
   it('relies on Sage for document context retrieval (Sage-only path)', async () => {
@@ -627,8 +651,9 @@ describe('AdminConfigAssistant', () => {
 
     expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
       'aria-pressed',
-      'true'
+      'false'
     );
+    await user.click(screen.getByRole('button', { name: 'Config' }));
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -686,6 +711,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     for (let index = 0; index < 17; index += 1) {
       await user.type(
@@ -767,6 +793,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -811,6 +838,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     for (let index = 0; index < 5; index += 1) {
       await user.type(
@@ -874,6 +902,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -929,6 +958,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -973,6 +1003,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1019,6 +1050,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1075,6 +1107,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1134,6 +1167,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1193,6 +1227,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1269,6 +1304,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1324,6 +1360,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1374,6 +1411,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1435,6 +1473,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1472,6 +1511,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1527,6 +1567,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1669,6 +1710,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1785,6 +1827,7 @@ describe('AdminConfigAssistant', () => {
         <AdminConfigAssistant />
       </ThemeProvider>
     );
+    await enableConfigTool(user);
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -1918,7 +1961,7 @@ describe('AdminConfigAssistant', () => {
     ).toBeInTheDocument();
   });
 
-  it('defaults to config-only tools without web-search', async () => {
+  it('defaults to no tools without web-search', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
       async ({ onEvent }) => {
@@ -1952,7 +1995,6 @@ describe('AdminConfigAssistant', () => {
 
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
-    expect(callArgs.tools).toContain('admin-config');
-    expect(callArgs.tools).not.toContain('web-search');
+    expect(callArgs.tools).toEqual([]);
   });
 });

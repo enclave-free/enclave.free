@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues and PRDs for this repo live in GitHub Issues for `enclave-free/enclave.free-prototype`. See `docs/agents/issue-tracker.md`.
+Issues and PRDs for this repo live in GitHub Issues for `enclave-free/enclave.free`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

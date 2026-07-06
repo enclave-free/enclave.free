@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live as GitHub issues in `enclave-free/enclave.free-prototype`. Use the `gh` CLI for all operations.
+Issues and PRDs for this repo live as GitHub issues in `enclave-free/enclave.free`. Use the `gh` CLI for all operations.
 
 ## Conventions
 
@@ -11,11 +11,11 @@ Issues and PRDs for this repo live as GitHub issues in `enclave-free/enclave.fre
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
-Infer the repo from `git remote -v`. The default repo for this prototype is `enclave-free/enclave.free-prototype`; use `gh repo set-default enclave-free/enclave.free-prototype` if the CLI cannot infer it.
+Infer the repo from `git remote -v`. The default repo for this app is `enclave-free/enclave.free`; use `gh repo set-default enclave-free/enclave.free` if the CLI cannot infer it.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue in `enclave-free/enclave.free-prototype`.
+Create a GitHub issue in `enclave-free/enclave.free`.
 
 ## When a skill says "fetch the relevant ticket"
 
