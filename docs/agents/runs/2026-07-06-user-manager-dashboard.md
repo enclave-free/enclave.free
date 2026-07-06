@@ -9,7 +9,7 @@
 - Feature branch: `feature/user-manager-dashboard`
 - Human owner: Austin Kelsay
 - Started: 2026-07-06 09:26 CDT
-- Current status: implemented locally; staging PR preparation in progress
+- Current status: staging PR opened; PR review in progress
 - Skill setup status: present (`AGENTS.md`, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/domain.md`)
 
 ## Goal
@@ -26,7 +26,7 @@ Build a brand new end-to-end admin **User Manager Dashboard** so a non-technical
 - Agent briefs: Composer 2.5 read-only repo recon on 2026-07-06; Composer review sidecar on 2026-07-06.
 - Review packets: local sidecar review found npub search, live announcement, export-failure coverage, and locale hygiene follow-ups; all actionable items were addressed before final verification.
 - Local CodeRabbit report: `coderabbit review --agent --type all --base staging` completed with 0 findings.
-- PR URL: pending
+- PR URL: https://github.com/enclave-free/enclave.free/pull/480
 
 ## Commands
 
@@ -68,9 +68,9 @@ Build a brand new end-to-end admin **User Manager Dashboard** so a non-technical
 
 ## Issue Session Ledger
 
-| Issue     | Fixed point | Worker session                                               | Commit  | Review result               | Checks                                                   |
-| --------- | ----------- | ------------------------------------------------------------ | ------- | --------------------------- | -------------------------------------------------------- |
-| #478/#479 | `8965caa`   | Codex orchestrator with Composer read-only + review sidecars | pending | CodeRabbit local 0 findings | targeted tests, full tests, touched-file Prettier, build |
+| Issue     | Fixed point | Worker session                                               | Commit    | Review result               | Checks                                                   |
+| --------- | ----------- | ------------------------------------------------------------ | --------- | --------------------------- | -------------------------------------------------------- |
+| #478/#479 | `8965caa`   | Codex orchestrator with Composer read-only + review sidecars | `3860360` | CodeRabbit local 0 findings | targeted tests, full tests, touched-file Prettier, build |
 
 ## Open Questions
 
@@ -83,4 +83,4 @@ Build a brand new end-to-end admin **User Manager Dashboard** so a non-technical
 ## CodeRabbit Rounds
 
 - Local gate: `coderabbit review --agent --type all --base staging` completed on 2026-07-06 with 0 findings.
-- PR gate: pending PR comment after push.
+- PR gate: requested with `@coderabbit full review` on https://github.com/enclave-free/enclave.free/pull/480#issuecomment-4894837522.
