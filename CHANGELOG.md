@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 - 2026-07-06
+
+- Added a dedicated Admin User Manager detail screen so admins can open a user from the roster and review identity, approval, user type, public key, joined date, and all applicable profile fields.
+- Kept the detail view accessible for non-technical admins with a clear back path, status summaries, and the same approve, refresh, and encrypted-detail unlock actions as the roster.
+- Released the User Manager detail workflow to the demo release train.
+
 ## 0.2.1 - 2026-07-06
 
 - Added a focused admin User Manager dashboard for reviewing users, statuses, profiles, approval, and roster exports.
