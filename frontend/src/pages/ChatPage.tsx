@@ -1033,11 +1033,11 @@ export function ChatPage() {
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          // Admin config sidebar: config-only by default, no inherited web-search
+          // Admin conversations show Tool Set controls, but start opt-in.
           if (isAdmin) {
             dispatchConversation({
               type: 'selectedToolsChanged',
-              selectedTools: [CONFIG_TOOL_ID],
+              selectedTools: [],
             });
           } else {
             const defaults = resolveUserConversationSessionDefaults(data);
@@ -1054,7 +1054,7 @@ export function ChatPage() {
           console.warn('Failed to fetch session defaults:', res.status);
           dispatchConversation({
             type: 'selectedToolsChanged',
-            selectedTools: isAdmin ? [CONFIG_TOOL_ID] : [],
+            selectedTools: [],
           });
         }
       } catch (err) {
@@ -1062,7 +1062,7 @@ export function ChatPage() {
         // Fail closed for non-admin user Tool Sets on defaults load errors.
         dispatchConversation({
           type: 'selectedToolsChanged',
-          selectedTools: isAdmin ? [CONFIG_TOOL_ID] : [],
+          selectedTools: [],
         });
       } finally {
         setSessionDefaultsLoaded(true);
@@ -1485,12 +1485,9 @@ export function ChatPage() {
         let streamContent = '';
         let streamSessionId: string | null = null;
         let streamReportedError = false;
-        let sawStructuredChangeSetPayload = false;
         let structuredChangeSet: AdminAssistantChangeSet | null = null;
         const stageStructuredForCurrentTurn = (payload: unknown) => {
-          if (payload !== undefined && payload !== null) {
-            sawStructuredChangeSetPayload = true;
-          }
+          if (!hasConfigTool) return;
           if (structuredChangeSet) return;
           const staged = stageStructuredAdminChangeSet(
             payload,
@@ -1588,7 +1585,7 @@ export function ChatPage() {
                 message: extracted.error,
               });
             }
-          } else if (!hasConfigTool && !sawStructuredChangeSetPayload) {
+          } else if (!hasConfigTool) {
             dispatchAdminApply({ type: 'dismissed' });
           }
           streamed = true;
@@ -1691,9 +1688,7 @@ export function ChatPage() {
         });
       }
 
-      const hasStructuredChangeSetPayload =
-        data.admin_change_set !== undefined && data.admin_change_set !== null;
-      if (hasConfigTool || hasStructuredChangeSetPayload) {
+      if (hasConfigTool) {
         const structuredChangeSet = stageStructuredAdminChangeSet(
           data.admin_change_set,
           dispatchAdminApply

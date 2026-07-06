@@ -23,7 +23,7 @@ Route names do not define separate tool systems. Document-grounded chat is Conve
 
 ## Browser To Sage Request Contract
 
-The browser sends Tool Set IDs to Sage in the Conversation request. Admin Conversations send the Admin's visible selections. User Conversations use the operator-configured session defaults returned by Sage-owned `/session-defaults`; the default user composer does not expose Tool Set controls or a Knowledge document selector. Sage is responsible for expanding those IDs into concrete Tool contracts and enforcing the effective non-admin default policy server-side.
+The browser sends Tool Set IDs to Sage in the Conversation request. Admin Conversations send the Admin's visible selections and normal Admin Conversation surfaces start with no Tool Sets selected. User Conversations use the operator-configured session defaults returned by Sage-owned `/session-defaults`; the default user composer does not expose Tool Set controls or a Knowledge document selector. Sage is responsible for expanding those IDs into concrete Tool contracts and enforcing the effective non-admin default policy server-side.
 
 For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
@@ -49,7 +49,7 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
 ## Tool Sets
 
-Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
+Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only, and normal Admin Conversations do not enable any Tool Set by default. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
 
 | Tool Set ID         | Access                                        | Exposes                                                                                                 |
 | ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -131,7 +131,7 @@ Admin Database turns may also include **Admin Signer-Decrypted Context** built b
 
 The frontend chooses visible Admin Tool Sets and Tool constraints. For non-admin User Conversations, it consumes `/session-defaults` and sends the configured default Tool Set IDs and Knowledge Source scope without showing Tool controls by default. It must not prefetch admin configuration context for chat, run hidden document retrieval outside configured defaults, or send `client_executed_tools` as a compatibility path. It may build Admin Signer-Decrypted Context only after an authenticated Admin submits a Database-enabled turn.
 
-Admin composers should make Knowledge, Resources, Web, Config, and Database explicit controls. Knowledge document scope belongs under the Knowledge Tool Set control. User composers show no Tool Set controls by default; Config and Database must only render for server-validated admins.
+Admin composers should make Knowledge, Resources, Web, Config, and Database explicit opt-in controls with none selected by default. Knowledge document scope belongs under the Knowledge Tool Set control. User composers show no Tool Set controls by default; Config and Database must only render for server-validated admins.
 
 ## Sage Duties
 

@@ -111,12 +111,15 @@ describe('ChatPage', () => {
   const defaultAdminFetch = (_endpoint: string) => null;
 
   async function waitForValidatedAdminConfig() {
+    let configButton!: HTMLElement;
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
+      configButton = screen.getByRole('button', { name: 'Config' });
+      expect(configButton).toBeInTheDocument();
     });
+    if (configButton.getAttribute('aria-pressed') !== 'true') {
+      fireEvent.click(configButton);
+    }
+    expect(configButton).toHaveAttribute('aria-pressed', 'true');
   }
 
   function getComposerTextbox() {
@@ -1813,7 +1816,7 @@ describe('ChatPage', () => {
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 
-  it('keeps Config selected by default for authenticated admin chat turns', async () => {
+  it('starts authenticated admin chat turns with no tools selected', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -1844,7 +1847,21 @@ describe('ChatPage', () => {
           message_id: 'admin-msg',
           delta: 'I can inspect config.',
         });
-        onEvent('done', { message_id: 'admin-msg', session_id: 'session-1' });
+        onEvent('done', {
+          message_id: 'admin-msg',
+          session_id: 'session-1',
+          admin_change_set: {
+            version: 1,
+            summary: 'Unexpected default-off change',
+            requests: [
+              {
+                method: 'PUT',
+                path: '/admin/settings',
+                body: { instance_name: 'Unexpected' },
+              },
+            ],
+          },
+        });
       }
     );
 
@@ -1853,7 +1870,7 @@ describe('ChatPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
         'aria-pressed',
-        'true'
+        'false'
       );
     });
 
@@ -1868,9 +1885,17 @@ describe('ChatPage', () => {
     ).toEqual(
       expect.objectContaining({
         content: 'Review instance config.',
-        tools: expect.arrayContaining(['admin-config']),
+        tools: [],
       })
     );
+    expect(
+      screen.queryByRole('button', { name: 'Approve changes' })
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(
+      screen.queryByRole('button', { name: 'Approve changes' })
+    ).not.toBeInTheDocument();
   });
 
   it('does not expose admin-only tools when a stale admin marker fails server validation', async () => {
@@ -1950,7 +1975,7 @@ describe('ChatPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('admin config defaults to config-only tools without web-search', async () => {
+  it('admin tools default off without inherited web-search', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -1990,7 +2015,7 @@ describe('ChatPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
         'aria-pressed',
-        'true'
+        'false'
       );
     });
 
@@ -2008,8 +2033,7 @@ describe('ChatPage', () => {
 
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
-    expect(callArgs.tools).toContain('admin-config');
-    expect(callArgs.tools).not.toContain('web-search');
+    expect(callArgs.tools).toEqual([]);
   });
 
   it('clears admin secret sharing when starting fresh or disabling Config', async () => {
@@ -2021,9 +2045,10 @@ describe('ChatPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
         'aria-pressed',
-        'true'
+        'false'
       );
     });
+    await user.click(screen.getByRole('button', { name: 'Config' }));
 
     const shareToggle = screen.getByLabelText(
       'Share secret env vars'
@@ -2068,9 +2093,10 @@ describe('ChatPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
         'aria-pressed',
-        'true'
+        'false'
       );
     });
+    await user.click(screen.getByRole('button', { name: 'Config' }));
 
     await user.click(screen.getByLabelText('Share secret env vars'));
     expect(screen.getByLabelText('Share secret env vars')).toBeChecked();
@@ -3337,12 +3363,7 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
+    await waitForValidatedAdminConfig();
 
     for (let index = 0; index < 17; index += 1) {
       fireEvent.change(getComposerTextbox(), {
@@ -3435,12 +3456,7 @@ describe('ChatPage', () => {
 
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-    });
+    await waitForValidatedAdminConfig();
 
     fireEvent.change(getComposerTextbox(), {
       target: {
