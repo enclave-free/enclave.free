@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - 2026-07-06
+
+- Added a focused admin User Manager dashboard for reviewing users, statuses, profiles, approval, and roster exports.
+- Kept curated resource inventory lookup behavior from staging so Sage can list ready Resource Directory entries without requiring a help type.
+- Updated demo deployment handoff guidance for the new User Manager approval path.
+
 ## 0.2.0 - 2026-07-05
 
 - Added Admin signer-decrypted context for Database-enabled Admin conversations so Sage can interpret encrypted User identity/profile values during encrypted inference.
