@@ -10,7 +10,7 @@
 - Feature branch: feature/admin-tools-default-off
 - Human owner: plebdev
 - Started: 2026-07-06T01:03:02Z
-- Current status: Commit created, PR pending
+- Current status: Merged to staging by PR #475
 - Skill setup status: Present. `AGENTS.md`, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and `docs/agents/domain.md` exist. Current remote truth is `enclave-free/enclave.free`; stale issue-tracker references to the previous repo name were corrected in this run.
 
 ## Goal
@@ -34,7 +34,8 @@ Config Tool should not be on by default for admins. No tools on by default. Do t
 - Agent briefs: None.
 - Review packets: Local two-axis review completed in current thread; sub-agent review was not used because the available multi-agent tool requires an explicit user request for subagents.
 - Local CodeRabbit report: `coderabbit review --agent --type all --base origin/staging -c AGENTS.md` completed with 0 findings.
-- PR URL: Pending.
+- PR URL: https://github.com/enclave-free/enclave.free/pull/475
+- Staging merge commit: a3cbe4ca73f4ace9fffb361c71597b814b81ee15
 
 ## Commands
 
@@ -48,7 +49,7 @@ Config Tool should not be on by default for admins. No tools on by default. Do t
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #474 Start normal Admin Conversations with no Tool Sets selected | AFK | Implemented | Local review completed | None pending | Focused and full frontend checks passed |
+| #474 Start normal Admin Conversations with no Tool Sets selected | AFK | Merged to staging | Local review completed | None pending | Focused and full frontend checks, build, PR checks passed |
 
 ## Parked HITL Slices
 
@@ -60,7 +61,7 @@ Config Tool should not be on by default for admins. No tools on by default. Do t
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #474 | 2534c9565e85c6baa6bab2ae0e4a8e3168bc5227 | Current thread | feature branch HEAD | Pass after one fix | `npm test -- --run src/pages/ChatPage.test.tsx src/components/admin/AdminConfigAssistant.test.tsx`; `npm run build`; `npm test -- --run`; `git diff --check` |
+| #474 | 2534c9565e85c6baa6bab2ae0e4a8e3168bc5227 | Current thread | ba1a3dd2f1acb202b54b2c0bc59d5630f7aafb27; staging merge a3cbe4ca73f4ace9fffb361c71597b814b81ee15 | Pass after one fix | `npm test -- --run src/pages/ChatPage.test.tsx src/components/admin/AdminConfigAssistant.test.tsx`; `npm run build`; `npm test -- --run`; `git diff --check`; PR #475 checks |
 
 ## Review
 
@@ -75,6 +76,8 @@ Config Tool should not be on by default for admins. No tools on by default. Do t
 - `npm test -- --run`: passed, 370 tests across 71 files.
 - `git diff --check`: passed.
 - `coderabbit review --agent --type all --base origin/staging -c AGENTS.md`: passed, 0 findings.
+- PR #475 checks: passed. Backend security regression tests, Frontend security regression tests, Demo handoff PDF drift check, Dependency and SAST scans, Semgrep OSS, and CodeRabbit status all completed successfully.
+- PR CodeRabbit: `@coderabbit full review` was posted. Hosted CodeRabbit accepted the command and reached a successful status context on the staging PR, but its comment body remained on the processing note during the bounded wait and posted no actionable review findings.
 
 ## Open Questions
 
