@@ -276,6 +276,10 @@ _Avoid_: user fields, profile fields
 A **Copied Export** that gives an **Admin** a spreadsheet-friendly roster of **Users**, their **User Approval** status, **User Type**, and available **User Profile** values for operational auditing.
 _Avoid_: database export, backup, raw table dump
 
+**User Manager Dashboard**:
+An admin-only **Ordinary Product Flow** where the **Admin** can review **Users**, understand **User Approval**, **User Type**, and **User Profile** status, and perform focused user operations such as approving pending **Users**.
+_Avoid_: CRM, staff console, user settings
+
 **User Memory**:
 Sage-owned durable context about a specific **User** that supports subtle personalization across **Conversations**.
 _Avoid_: user profile, session memory, profile fields, user-facing memory manager
@@ -1071,6 +1075,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - "User Type" currently appears in implementation surfaces for onboarding, document defaults, and AI config overrides; resolved: its domain meaning is onboarding segmentation, while other per-type behavior is an extension point rather than the definition.
 - "custom field" is an implementation phrase; resolved: use **Onboarding Question** for the admin-defined prompt and **User Profile** for the user's structured answers.
 - **User Profile** and **Session Memory** are distinct: profile information is Enclave-owned user data, while session memory is Sage-owned conversation state.
+- **User Manager Dashboard** is the focused admin surface for reviewing **Users** and taking simple **User Approval** actions; schema setup for **User Types** and **Onboarding Questions** remains a separate User Settings workflow.
 - "delete query session" is too narrow; resolved: use **Session Memory Deletion** for removing Sage-owned memory associated with a **Conversation**.
 - "query session" is implementation/API language; resolved: use **Conversation** for the product/domain concept.
 - "user message" is too narrow for privacy discussions; resolved: use **Conversation Content** for the full inference payload sent to a **Model Provider**.

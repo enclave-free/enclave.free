@@ -1006,7 +1006,9 @@
     "humanReviewAction": "Review Deployment Readiness",
     "settingsSectionLabel": "Settings",
     "configSectionLabel": "Admin Settings",
-    "dataSectionLabel": "Data & Content"
+    "dataSectionLabel": "Data & Content",
+    "userManager": "User Manager",
+    "userManagerDesc": "Review users, check status, export rosters, and approve access."
   },
   "adminResources": {
     "title": "Resource Directory",
@@ -2021,6 +2023,97 @@
       "description_d2b81d": "Description",
       "developer_96882c": "Developer",
       "company_name_2959df": "company_name"
+    }
+  },
+  "adminUserManager": {
+    "backToAdmin": "Back to Admin Dashboard",
+    "eyebrow": "Admin operations",
+    "title": "User Manager",
+    "subtitle": "Review users, understand their status, and approve access from one simple dashboard.",
+    "unlockDetails": "Unlock details",
+    "refreshRoster": "Refresh roster",
+    "exportVisible": "Export visible roster",
+    "rosterTitle": "User roster",
+    "rosterShown": "{{shown}} shown from {{total}} total.",
+    "tableLabel": "User roster",
+    "tableRowsLabel": "User roster rows",
+    "loadingLabel": "Loading user roster",
+    "loadingUsers": "Loading users...",
+    "loadRetry": "User roster could not load. Use Refresh roster to try again.",
+    "emptyNoUsers": "No users yet. New authenticated users will appear here.",
+    "emptyFiltered": "No users match these filters.",
+    "noUserType": "No User Type",
+    "unknown": "Unknown",
+    "userFallback": "User #{{id}}",
+    "approvalSuccess": "{{name}} approved.",
+    "exportSuccess": "User roster spreadsheet downloaded.",
+    "metrics": {
+      "total": "Total users",
+      "totalDetail": "in roster",
+      "pendingApproval": "Pending approval",
+      "pendingDetail": "{{count}} pending",
+      "approved": "Approved",
+      "approvedDetail": "can enter chat",
+      "incompleteProfiles": "Incomplete profiles",
+      "incompleteDetail": "need required answers"
+    },
+    "callouts": {
+      "loadFailed": "User roster load failed",
+      "approvalUpdated": "User approval updated",
+      "approvalFailed": "User approval update failed",
+      "exportReady": "User roster export ready",
+      "exportFailed": "User roster export failed"
+    },
+    "filters": {
+      "search": "Search users",
+      "searchPlaceholder": "Name, email, public key, or #ID",
+      "approvalStatus": "Approval status",
+      "allApprovalStates": "All approval states",
+      "pendingApproval": "Pending approval",
+      "approved": "Approved",
+      "allUserTypes": "All User Types"
+    },
+    "columns": {
+      "user": "User",
+      "approval": "Approval",
+      "userType": "User Type",
+      "userProfile": "User Profile",
+      "joined": "Joined",
+      "action": "Action"
+    },
+    "status": {
+      "approved": "Approved",
+      "pending": "Pending"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveUser": "Approve {{name}}"
+    },
+    "profile": {
+      "noQuestions": "No questions",
+      "noQuestionsDetail": "No onboarding questions apply.",
+      "needsProfile": "Needs profile",
+      "missingRequiredOne": "1 required answer missing",
+      "missingRequiredMany": "{{count}} required answers missing",
+      "noProfileYet": "No profile yet",
+      "noAnswersSaved": "No answers saved.",
+      "ready": "Profile ready",
+      "answersSavedOne": "1 answer saved",
+      "answersSavedMany": "{{count}} answers saved"
+    },
+    "identity": {
+      "decrypting": "Decrypting name and email...",
+      "failed": "Encrypted details could not be unlocked.",
+      "unavailable": "Encrypted details need a browser signer.",
+      "locked": "Encrypted details are locked."
+    },
+    "errors": {
+      "loadUsers": "Failed to load users.",
+      "loadUserTypes": "Failed to load user types.",
+      "loadQuestions": "Failed to load onboarding questions.",
+      "approvalUpdate": "User approval could not be updated.",
+      "exportAudit": "User roster export could not be audited.",
+      "exportRoster": "Failed to export user roster."
     }
   }
 }

@@ -18,7 +18,7 @@ Keep the admin Nostr key private. Do not paste it into Enclave chat, the admin a
 5. Upload a few initial documents.
 6. Add a few curated resources.
 7. Test as a user.
-8. Approve any new users from **User Settings**.
+8. Approve any new users from **User Manager**.
 9. Ask the admin agent to configure anything else you need.
 
 ## 1. Admin Sign-In
@@ -63,7 +63,7 @@ Users sign up or log in with email:
 
 Email is already set up for this demo, so you can create a real test user yourself.
 
-Important: new users currently need to be verified one by one before they can use chat. After a user signs up, approve them from **Admin Dashboard -> User Settings**.
+Important: new users currently need to be verified one by one before they can use chat. After a user signs up, approve them from **Admin Dashboard -> User Manager**.
 
 ![User email sign-up](assets/demo-deployment-handoff/user-email-signup.png)
 
@@ -141,7 +141,7 @@ Start new chats often, especially when doing admin configuration. Fresh chats ar
 
 - Admin sign-in fails: confirm the signer has the exact admin Nostr key for this instance.
 - No Nostr prompt appears: unlock the signer, refresh the page, and click **Connect with Nostr** again.
-- User cannot chat yet: approve the user in **Admin Dashboard -> User Settings**.
+- User cannot chat yet: approve the user in **Admin Dashboard -> User Manager**.
 - Magic link does not arrive: check spam, then ask an admin to check **Deployment Settings**.
 
 That is enough for a first demo. Everything else can be refined from the admin dashboard.
