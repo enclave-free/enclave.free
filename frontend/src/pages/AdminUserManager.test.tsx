@@ -55,13 +55,17 @@ let failUsersLoad = false;
 let failExportAudit = false;
 let anchorClickSpy: ReturnType<typeof vi.spyOn>;
 
-function renderUserManager() {
+function renderUserManager(initialEntry = '/admin/user-manager') {
   render(
-    <MemoryRouter initialEntries={['/admin/user-manager']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <ThemeProvider>
         <InstanceConfigProvider>
           <Routes>
             <Route path="/admin/user-manager" element={<AdminUserManager />} />
+            <Route
+              path="/admin/user-manager/:userId"
+              element={<AdminUserManager />}
+            />
           </Routes>
         </InstanceConfigProvider>
       </ThemeProvider>
@@ -351,6 +355,99 @@ describe('AdminUserManager', () => {
         within(row).queryByRole('button', { name: /approve Austin Kelsay/i })
       ).not.toBeInTheDocument();
     });
+  });
+
+  it('opens a user detail screen from the roster and shows all fields', async () => {
+    const user = userEvent.setup();
+    renderUserManager();
+
+    await screen.findAllByText('Jamie Tester');
+    await user.click(
+      screen.getAllByRole('link', {
+        name: /view Jamie Tester details/i,
+      })[0]
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Jamie Tester' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('User details')).toBeInTheDocument();
+    expect(screen.getByText('jamie@example.com')).toBeInTheDocument();
+    expect(screen.getAllByText('Partner')).not.toHaveLength(0);
+    expect(
+      screen.getByText(
+        'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Organization')).toBeInTheDocument();
+    expect(screen.getByText('Partner Org')).toBeInTheDocument();
+    expect(screen.getByText('Role')).toBeInTheDocument();
+    expect(await screen.findByText('Operations lead')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Back to user roster' })
+    ).toHaveAttribute('href', '/admin/user-manager');
+  });
+
+  it('lets an admin approve a pending user from the detail screen', async () => {
+    const user = userEvent.setup();
+    renderUserManager('/admin/user-manager/7');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Austin Kelsay' })
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: /approve Austin Kelsay/i })
+    );
+
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/users/7',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ approved: true }),
+        })
+      );
+    });
+    expect(
+      await screen.findByRole('note', { name: 'User approval updated' })
+    ).toHaveTextContent('Austin Kelsay approved.');
+    expect(
+      screen.queryByRole('button', { name: /approve Austin Kelsay/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('can enter chat')).toBeInTheDocument();
+  });
+
+  it('offers unlock on detail screens with encrypted profile fields', async () => {
+    usersResponse = usersResponse.map((user) =>
+      user.id === 42
+        ? {
+            ...user,
+            email_encrypted: undefined,
+            name_encrypted: undefined,
+          }
+        : user
+    );
+
+    renderUserManager('/admin/user-manager/42');
+
+    expect(await screen.findByText('Role')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Unlock details' })
+    ).toBeInTheDocument();
+  });
+
+  it('shows a helpful not-found state for unknown user detail routes', async () => {
+    renderUserManager('/admin/user-manager/999');
+
+    expect(
+      await screen.findByRole('heading', { name: 'User not found' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('This user is not in the current admin roster.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Back to user roster' })
+    ).toHaveAttribute('href', '/admin/user-manager');
   });
 
   it('shows an accessible error if approval fails', async () => {

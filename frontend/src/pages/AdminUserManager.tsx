@@ -1,17 +1,30 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
+  ArrowLeft,
+  CalendarDays,
   Download,
+  Fingerprint,
   Key,
   Loader2,
+  Mail,
   RefreshCw,
   Shield,
   ShieldCheck,
+  UserRound,
   UserRoundCheck,
   Users,
 } from 'lucide-react';
 import * as nip19 from 'nostr-tools/nip19';
+import { Link, useParams } from 'react-router-dom';
 import { AppHeader } from '../components/shared/AppHeader';
 import {
   Badge,
@@ -63,6 +76,11 @@ interface UserProfileStatus {
   missingRequired: number;
 }
 
+interface ProfileFieldValueState {
+  status: 'decrypting' | 'ready' | 'failed' | 'unavailable';
+  value: string | null;
+}
+
 async function mapInBatches<T, R>(
   items: T[],
   batchSize: number,
@@ -107,6 +125,38 @@ function formatJoinedDate(
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function userDetailPath(userId: number): string {
+  return `/admin/user-manager/${userId}`;
+}
+
+function formatFieldValue(value: unknown, t: TFunction): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  if (typeof value === 'boolean') {
+    return value
+      ? t('adminUserManager.detail.booleanYes', 'Yes')
+      : t('adminUserManager.detail.booleanNo', 'No');
+  }
+  if (Array.isArray(value)) {
+    const joined = value
+      .map((item) => formatFieldValue(item, t))
+      .filter(Boolean)
+      .join(', ');
+    return joined || null;
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
 }
 
 async function parseErrorMessage(
@@ -243,6 +293,77 @@ function profileStatusForUser(
   };
 }
 
+function profileValueForField(
+  user: AdminUserSummary,
+  field: CustomField,
+  values: Record<number, Record<string, ProfileFieldValueState | undefined>>,
+  t: TFunction
+): { value: string; helper: string | null; encrypted: boolean } {
+  const plainValue = formatFieldValue(user.fields?.[field.name], t);
+  if (plainValue) return { value: plainValue, helper: null, encrypted: false };
+
+  const encrypted = user.fields_encrypted?.[field.name];
+  if (encrypted?.ciphertext) {
+    const state = values[user.id]?.[field.name];
+    if (state?.status === 'ready' && state.value) {
+      return {
+        value: state.value,
+        helper: t(
+          'adminUserManager.detail.fieldUnlocked',
+          'Encrypted answer unlocked in this browser.'
+        ),
+        encrypted: true,
+      };
+    }
+    if (state?.status === 'decrypting') {
+      return {
+        value: t(
+          'adminUserManager.detail.decryptingField',
+          'Decrypting answer...'
+        ),
+        helper: null,
+        encrypted: true,
+      };
+    }
+    if (state?.status === 'unavailable') {
+      return {
+        value: t(
+          'adminUserManager.detail.encryptedFieldUnavailable',
+          'Encrypted answer needs a browser signer.'
+        ),
+        helper: null,
+        encrypted: true,
+      };
+    }
+    if (state?.status === 'failed') {
+      return {
+        value: t(
+          'adminUserManager.detail.encryptedFieldFailed',
+          'Encrypted answer could not be unlocked.'
+        ),
+        helper: null,
+        encrypted: true,
+      };
+    }
+    return {
+      value: t(
+        'adminUserManager.detail.encryptedFieldLocked',
+        'Encrypted answer is locked.'
+      ),
+      helper: null,
+      encrypted: true,
+    };
+  }
+
+  return {
+    value: t('adminUserManager.detail.notAnswered', 'Not answered'),
+    helper: field.required
+      ? t('adminUserManager.detail.requiredMissing', 'Required answer missing.')
+      : null,
+    encrypted: false,
+  };
+}
+
 function identityForUser(
   user: AdminUserSummary,
   identities: Record<number, IdentityState | undefined>,
@@ -299,6 +420,8 @@ function identityForUser(
   return {
     primary,
     secondary,
+    name,
+    email,
     helper,
     searchText: [
       primary,
@@ -351,8 +474,31 @@ function Metric({
   );
 }
 
+function DetailItem({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface-overlay px-4 py-3">
+      <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+        {icon}
+        {label}
+      </dt>
+      <dd className="mt-2 break-words text-sm font-medium text-text">
+        {children}
+      </dd>
+    </div>
+  );
+}
+
 export function AdminUserManager() {
   const { t } = useTranslation();
+  const { userId } = useParams<{ userId?: string }>();
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
   const [fields, setFields] = useState<CustomField[]>([]);
@@ -373,7 +519,18 @@ export function AdminUserManager() {
   const [exporting, setExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [profileValues, setProfileValues] = useState<
+    Record<number, Record<string, ProfileFieldValueState | undefined>>
+  >({});
   const decryptRunIdRef = useRef(0);
+  const profileDecryptRunIdRef = useRef(0);
+
+  const detailRequested = userId !== undefined;
+  const parsedUserId = userId ? Number(userId) : null;
+  const detailUserId =
+    parsedUserId !== null && Number.isInteger(parsedUserId) && parsedUserId > 0
+      ? parsedUserId
+      : null;
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -579,6 +736,97 @@ export function AdminUserManager() {
         .includes(normalizedQuery);
     });
   }, [approvalFilter, identities, query, t, typeFilter, users]);
+
+  const selectedUser = useMemo(
+    () =>
+      detailUserId === null
+        ? null
+        : (users.find((user) => user.id === detailUserId) ?? null),
+    [detailUserId, users]
+  );
+
+  const selectedUserFields = useMemo(
+    () =>
+      selectedUser
+        ? fields
+            .filter((field) => fieldAppliesToUser(field, selectedUser))
+            .sort(
+              (a, b) =>
+                (a.display_order ?? 0) - (b.display_order ?? 0) ||
+                a.name.localeCompare(b.name)
+            )
+        : [],
+    [fields, selectedUser]
+  );
+
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    const encryptedFields = selectedUserFields
+      .map((field) => ({
+        field,
+        encrypted: selectedUser.fields_encrypted?.[field.name],
+      }))
+      .filter(({ encrypted }) => Boolean(encrypted?.ciphertext));
+
+    if (encryptedFields.length === 0) return;
+
+    const runId = profileDecryptRunIdRef.current + 1;
+    profileDecryptRunIdRef.current = runId;
+
+    setProfileValues((previous) => {
+      const userValues = { ...(previous[selectedUser.id] ?? {}) };
+      for (const { field } of encryptedFields) {
+        userValues[field.name] = { status: 'decrypting', value: null };
+      }
+      return { ...previous, [selectedUser.id]: userValues };
+    });
+
+    if (!hasNip04Support()) {
+      setProfileValues((previous) => {
+        const userValues = { ...(previous[selectedUser.id] ?? {}) };
+        for (const { field } of encryptedFields) {
+          userValues[field.name] = { status: 'unavailable', value: null };
+        }
+        return { ...previous, [selectedUser.id]: userValues };
+      });
+      return;
+    }
+
+    void mapInBatches(
+      encryptedFields,
+      EXPORT_DECRYPT_BATCH_SIZE,
+      async ({ field, encrypted }) => {
+        try {
+          const value = await decryptField(encrypted);
+          return {
+            fieldName: field.name,
+            state: {
+              status: value ? 'ready' : 'failed',
+              value,
+            } satisfies ProfileFieldValueState,
+          };
+        } catch {
+          return {
+            fieldName: field.name,
+            state: {
+              status: 'failed',
+              value: null,
+            } satisfies ProfileFieldValueState,
+          };
+        }
+      }
+    ).then((entries) => {
+      if (profileDecryptRunIdRef.current !== runId) return;
+      setProfileValues((previous) => {
+        const userValues = { ...(previous[selectedUser.id] ?? {}) };
+        for (const entry of entries) {
+          userValues[entry.fieldName] = entry.state;
+        }
+        return { ...previous, [selectedUser.id]: userValues };
+      });
+    });
+  }, [identityDecryptNonce, selectedUser, selectedUserFields]);
 
   const handleUnlockIdentities = async () => {
     if (hasNip04Support()) {
@@ -796,6 +1044,444 @@ export function AdminUserManager() {
   };
 
   const hasEncryptedUsers = users.some(hasEncryptedIdentity);
+
+  if (detailRequested) {
+    const selectedIdentity = selectedUser
+      ? identityForUser(selectedUser, identities, t)
+      : null;
+    const selectedProfile = selectedUser
+      ? profileStatuses[selectedUser.id]
+      : undefined;
+    const updating = selectedUser
+      ? approvalUpdatingIds.has(selectedUser.id)
+      : false;
+    const selectedUserHasEncryptedDetails = selectedUser
+      ? hasEncryptedIdentity(selectedUser) ||
+        selectedUserFields.some((field) =>
+          Boolean(selectedUser.fields_encrypted?.[field.name]?.ciphertext)
+        )
+      : false;
+
+    return (
+      <div className="min-h-screen bg-surface">
+        <AppHeader
+          showBackButton
+          backTo="/admin/user-manager"
+          backLabel={t(
+            'adminUserManager.detail.backToUserManager',
+            'Back to User Manager'
+          )}
+        />
+        <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+          <Link
+            to="/admin/user-manager"
+            className="focus-ring inline-flex w-fit items-center gap-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text"
+            aria-label={t(
+              'adminUserManager.detail.backToRoster',
+              'Back to user roster'
+            )}
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {t('adminUserManager.detail.backToRoster', 'Back to user roster')}
+          </Link>
+
+          {loading ? (
+            <div
+              role="status"
+              aria-label={t(
+                'adminUserManager.loadingLabel',
+                'Loading user roster'
+              )}
+              className="flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-5 py-10 text-sm text-text-muted"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {t('adminUserManager.loadingUsers', 'Loading users...')}
+            </div>
+          ) : loadError ? (
+            <Callout
+              label={t(
+                'adminUserManager.callouts.loadFailed',
+                'User roster load failed'
+              )}
+              tone="error"
+              aria-live="assertive"
+              aria-atomic="true"
+            >
+              <p className="text-error">{loadError}</p>
+            </Callout>
+          ) : !selectedUser || !selectedIdentity ? (
+            <section className="rounded-lg border border-border bg-surface-raised px-5 py-8">
+              <div className="label mb-2">
+                {t('adminUserManager.detail.eyebrow', 'User details')}
+              </div>
+              <h1 className="heading-xl">
+                {t('adminUserManager.detail.notFoundTitle', 'User not found')}
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-text-muted">
+                {t(
+                  'adminUserManager.detail.notFoundBody',
+                  'This user is not in the current admin roster.'
+                )}
+              </p>
+            </section>
+          ) : (
+            <>
+              <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div className="max-w-3xl">
+                  <div className="label mb-2">
+                    {t('adminUserManager.detail.eyebrow', 'User details')}
+                  </div>
+                  <h1 className="heading-xl">{selectedIdentity.primary}</h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-text-muted">
+                    {t(
+                      'adminUserManager.detail.subtitle',
+                      'Review this user status, profile answers, and access details.'
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedUserHasEncryptedDetails && (
+                    <Button
+                      variant="secondary"
+                      onClick={handleUnlockIdentities}
+                      leadingIcon={
+                        <Key className="h-4 w-4" aria-hidden="true" />
+                      }
+                    >
+                      {t('adminUserManager.unlockDetails', 'Unlock details')}
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    onClick={loadDashboard}
+                    disabled={loading}
+                    leadingIcon={
+                      <RefreshCw
+                        className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                        aria-hidden="true"
+                      />
+                    }
+                  >
+                    {t('adminUserManager.refreshRoster', 'Refresh roster')}
+                  </Button>
+                  {!selectedUser.approved && (
+                    <Button
+                      onClick={() => handleApproveUser(selectedUser)}
+                      disabled={updating}
+                      leadingIcon={
+                        updating ? (
+                          <Loader2
+                            className="h-4 w-4 animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                        )
+                      }
+                      aria-label={t('adminUserManager.actions.approveUser', {
+                        name: selectedIdentity.primary,
+                        defaultValue: 'Approve {{name}}',
+                      })}
+                    >
+                      {t('adminUserManager.actions.approve', 'Approve')}
+                    </Button>
+                  )}
+                </div>
+              </section>
+
+              {actionMessage && (
+                <Callout
+                  label={t(
+                    'adminUserManager.callouts.approvalUpdated',
+                    'User approval updated'
+                  )}
+                  tone="success"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <p className="text-success">{actionMessage}</p>
+                </Callout>
+              )}
+              {actionError && (
+                <Callout
+                  label={t(
+                    'adminUserManager.callouts.approvalFailed',
+                    'User approval update failed'
+                  )}
+                  tone="error"
+                  aria-live="assertive"
+                  aria-atomic="true"
+                >
+                  <p className="text-error">{actionError}</p>
+                </Callout>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <section
+                  aria-label={t(
+                    'adminUserManager.detail.approvalStatus',
+                    'Approval status'
+                  )}
+                  className="rounded-lg border border-border bg-surface-raised px-4 py-3"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                    {t('adminUserManager.columns.approval', 'Approval')}
+                  </p>
+                  <div className="mt-2">
+                    {selectedUser.approved ? (
+                      <Badge
+                        tone="success"
+                        leadingIcon={
+                          <ShieldCheck
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                        }
+                      >
+                        {t('adminUserManager.status.approved', 'Approved')}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        tone="warning"
+                        leadingIcon={
+                          <Shield className="h-3.5 w-3.5" aria-hidden="true" />
+                        }
+                      >
+                        {t('adminUserManager.status.pending', 'Pending')}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-text-muted">
+                    {selectedUser.approved
+                      ? t(
+                          'adminUserManager.metrics.approvedDetail',
+                          'can enter chat'
+                        )
+                      : t(
+                          'adminUserManager.detail.waitingApproval',
+                          'waiting for approval'
+                        )}
+                  </p>
+                </section>
+                <section
+                  aria-label={t(
+                    'adminUserManager.columns.userType',
+                    'User Type'
+                  )}
+                  className="rounded-lg border border-border bg-surface-raised px-4 py-3"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                    {t('adminUserManager.columns.userType', 'User Type')}
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-text">
+                    {selectedUser.user_type?.name ??
+                      t('adminUserManager.noUserType', 'No User Type')}
+                  </p>
+                </section>
+                <section
+                  aria-label={t(
+                    'adminUserManager.columns.userProfile',
+                    'User Profile'
+                  )}
+                  className="rounded-lg border border-border bg-surface-raised px-4 py-3"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                    {t('adminUserManager.columns.userProfile', 'User Profile')}
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    <Badge tone={selectedProfile?.tone ?? 'neutral'}>
+                      {selectedProfile?.label ??
+                        t('adminUserManager.unknown', 'Unknown')}
+                    </Badge>
+                    {selectedProfile?.detail && (
+                      <p className="text-xs text-text-muted">
+                        {selectedProfile.detail}
+                      </p>
+                    )}
+                  </div>
+                </section>
+                <section
+                  aria-label={t('adminUserManager.columns.joined', 'Joined')}
+                  className="rounded-lg border border-border bg-surface-raised px-4 py-3"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                    {t('adminUserManager.columns.joined', 'Joined')}
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-text">
+                    {formatJoinedDate(
+                      selectedUser.created_at,
+                      t('adminUserManager.unknown', 'Unknown')
+                    )}
+                  </p>
+                </section>
+              </div>
+
+              <section
+                aria-labelledby="user-detail-identity-title"
+                className="rounded-lg border border-border bg-surface-raised px-4 py-4 sm:px-5"
+              >
+                <h2 id="user-detail-identity-title" className="heading-sm">
+                  {t('adminUserManager.detail.identityTitle', 'Identity')}
+                </h2>
+                <dl className="mt-4 grid gap-3 md:grid-cols-2">
+                  <DetailItem
+                    label={t('adminUserManager.detail.name', 'Name')}
+                    icon={
+                      <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
+                    }
+                  >
+                    {selectedIdentity.name ??
+                      t(
+                        'adminUserManager.detail.nameUnavailable',
+                        'Not available'
+                      )}
+                  </DetailItem>
+                  <DetailItem
+                    label={t('adminUserManager.detail.email', 'Email')}
+                    icon={<Mail className="h-3.5 w-3.5" aria-hidden="true" />}
+                  >
+                    {selectedIdentity.email ??
+                      selectedIdentity.helper ??
+                      t(
+                        'adminUserManager.detail.emailUnavailable',
+                        'Not available'
+                      )}
+                  </DetailItem>
+                  <DetailItem
+                    label={t('adminUserManager.detail.userId', 'User ID')}
+                    icon={
+                      <Fingerprint className="h-3.5 w-3.5" aria-hidden="true" />
+                    }
+                  >
+                    #{selectedUser.id}
+                  </DetailItem>
+                  <DetailItem
+                    label={t('adminUserManager.columns.joined', 'Joined')}
+                    icon={
+                      <CalendarDays
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                    }
+                  >
+                    {formatJoinedDate(
+                      selectedUser.created_at,
+                      t('adminUserManager.unknown', 'Unknown')
+                    )}
+                  </DetailItem>
+                  <div className="rounded-lg border border-border bg-surface-overlay px-4 py-3 md:col-span-2">
+                    <dt className="text-xs font-medium uppercase tracking-[0.08em] text-text-muted">
+                      {t('adminUserManager.detail.publicKey', 'Public key')}
+                    </dt>
+                    <dd className="mt-2 break-all font-mono text-xs text-text">
+                      {selectedUser.pubkey ??
+                        t(
+                          'adminUserManager.detail.noPublicKey',
+                          'No public key'
+                        )}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section
+                aria-labelledby="user-detail-fields-title"
+                className="rounded-lg border border-border bg-surface-raised"
+              >
+                <div className="border-b border-border px-4 py-4 sm:px-5">
+                  <h2 id="user-detail-fields-title" className="heading-sm">
+                    {t('adminUserManager.detail.fieldsTitle', 'Profile fields')}
+                  </h2>
+                  <p className="mt-1 text-sm text-text-muted">
+                    {t('adminUserManager.detail.fieldsShown', {
+                      count: selectedUserFields.length,
+                      defaultValue: '{{count}} fields apply to this user.',
+                    })}
+                  </p>
+                </div>
+                {selectedUserFields.length === 0 ? (
+                  <div className="px-5 py-8 text-sm text-text-muted">
+                    {t(
+                      'adminUserManager.detail.noFields',
+                      'No onboarding fields apply to this user.'
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {selectedUserFields.map((field) => {
+                      const fieldValue = profileValueForField(
+                        selectedUser,
+                        field,
+                        profileValues,
+                        t
+                      );
+                      return (
+                        <article
+                          key={field.id}
+                          className="grid gap-4 px-4 py-4 sm:px-5 md:grid-cols-[minmax(12rem,18rem)_1fr]"
+                        >
+                          <div>
+                            <h3 className="text-sm font-semibold text-text">
+                              {field.name}
+                            </h3>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Badge
+                                tone={field.required ? 'warning' : 'neutral'}
+                              >
+                                {field.required
+                                  ? t(
+                                      'adminUserManager.detail.required',
+                                      'Required'
+                                    )
+                                  : t(
+                                      'adminUserManager.detail.optional',
+                                      'Optional'
+                                    )}
+                              </Badge>
+                              <Badge
+                                tone={
+                                  fieldValue.encrypted ? 'warning' : 'neutral'
+                                }
+                              >
+                                {fieldValue.encrypted
+                                  ? t(
+                                      'adminUserManager.detail.encrypted',
+                                      'Encrypted'
+                                    )
+                                  : t('adminUserManager.detail.plain', 'Plain')}
+                              </Badge>
+                              {field.include_in_chat && (
+                                <Badge tone="success">
+                                  {t(
+                                    'adminUserManager.detail.chatContext',
+                                    'Chat context'
+                                  )}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="whitespace-pre-wrap break-words text-sm font-medium text-text">
+                              {fieldValue.value}
+                            </p>
+                            {fieldValue.helper && (
+                              <p className="mt-1 text-xs text-text-muted">
+                                {fieldValue.helper}
+                              </p>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface">
@@ -1092,7 +1778,19 @@ export function AdminUserManager() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-sm font-semibold text-text">
-                              {identity.primary}
+                              <Link
+                                to={userDetailPath(user.id)}
+                                className="focus-ring rounded text-text hover:text-accent"
+                                aria-label={t(
+                                  'adminUserManager.actions.viewUserDetails',
+                                  {
+                                    name: identity.primary,
+                                    defaultValue: 'View {{name}} details',
+                                  }
+                                )}
+                              >
+                                {identity.primary}
+                              </Link>
                             </h3>
                             <span className="font-mono text-[11px] text-text-muted">
                               #{user.id}
@@ -1292,9 +1990,19 @@ export function AdminUserManager() {
                               </div>
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-medium text-text">
+                                  <Link
+                                    to={userDetailPath(user.id)}
+                                    className="focus-ring rounded font-medium text-text hover:text-accent"
+                                    aria-label={t(
+                                      'adminUserManager.actions.viewUserDetails',
+                                      {
+                                        name: identity.primary,
+                                        defaultValue: 'View {{name}} details',
+                                      }
+                                    )}
+                                  >
                                     {identity.primary}
-                                  </span>
+                                  </Link>
                                   <span className="font-mono text-[11px] text-text-muted">
                                     #{user.id}
                                   </span>

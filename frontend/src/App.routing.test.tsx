@@ -105,4 +105,13 @@ describe('App routing', () => {
     expect(await screen.findByText('User Manager route')).toBeInTheDocument();
     expect(screen.getByTestId('admin-route-shell')).toBeInTheDocument();
   });
+
+  it('keeps user manager detail routes behind the admin route shell', async () => {
+    window.history.pushState({}, '', '/admin/user-manager/42');
+
+    render(<App />);
+
+    expect(await screen.findByText('User Manager route')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-route-shell')).toBeInTheDocument();
+  });
 });

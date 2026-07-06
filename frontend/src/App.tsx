@@ -246,6 +246,16 @@ function App() {
           }
         />
         <Route
+          path="/admin/user-manager/:userId"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminUserManager />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/users"
           element={
             <AdminRoute>
