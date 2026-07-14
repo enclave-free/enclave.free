@@ -3,6 +3,7 @@
 ## Fixed Point
 
 - Base: parent `05075a0`, Sage `174aac6`
+- Reviewed parent commit: `d1a4ae2`
 - Reviewed Sage commit: `5a1770c7d0ccc5badef2395385edda0a167336c1`
 - Review axes: issue/spec contract, fixture isolation, lifecycle cleanup, false-green resistance, and repository standards
 
@@ -20,6 +21,8 @@
    Resolution: give each measurement a client-owned session ID and delete it in `finally`; require the returned ID to match. The five historical timing sessions were deleted and zero orphan agents remained.
 6. P2: external-policy cleanup restored values but changed policy timestamps, and a failed Sage identity cleanup could still delete the Core principal needed for retry.
    Resolution: snapshot and restore exact Core/Sage values and timestamps; retain Core principals when Sage policy or identity cleanup fails while still removing retrieval fixtures.
+7. P2: the expanded reset workflow shell test could exceed Vitest's default timeout under full-suite load.
+   Resolution: give that integration-style test an explicit 15-second budget; the final serial full suite passed all 384 tests.
 
 ## Final Result
 

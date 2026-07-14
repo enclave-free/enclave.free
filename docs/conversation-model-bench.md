@@ -178,7 +178,7 @@ Each bench run should produce a JSON artifact with enough sanitized detail to co
 - run metadata: timestamp, git revisions, API base, provider, candidate model ids
 - scenario metadata: scenario id, actor, enabled Tool Sets, prompt
 - timing: first event, first trace/tool feedback, first visible answer token, completion, Sage timing phases when available
-- stream diagnostics: answer-delta count, model-call count, correction/retry counts, summed tool execution duration, and phase-to-phase durations
+- stream diagnostics: answer-delta count, model-call count, correction/retry counts, summed Tool execution duration, and phase-to-phase durations. Counts are integers. Durations are milliseconds rounded to one decimal. `phase_durations` always emits `event_to_tool_feedback_ms`, `tool_feedback_to_answer_ms`, `answer_to_done_ms`, and `total_ms`; a phase whose boundary was not observed is JSON `null`, never omitted or represented as zero.
 - fixtures: seeded knowledge and resource fixture metadata when requested
 - tool evidence: called Tools, statuses, warnings, rejection reasons, duplicate calls
 - Admin Config proposal evidence: staged change-set presence, canonical paths and keys, validation errors
@@ -340,8 +340,10 @@ Default behavior:
 For User scenarios, the local runner creates a temporary User and User Type and configures the scenario's Tool Sets through Sage's server-authoritative User Type policy. When Knowledge Search is seeded, it also grants that User Type access to a uniquely named synthetic document and selects it as Required Context. Curated Resource fixtures receive unique IDs and contact details per scenario plus a stable model-readable display name. The hard answer gate requires the run-specific email address, so another run's globally visible fixture cannot produce a false green result. Sending client-side `tools` or `job_ids` alone is intentionally insufficient because production policy must remain authoritative.
 
 Scenario cleanup always runs, including when auth, seeding, or streaming fails.
-Each successful stream first deletes its temporary conversation through the
-authenticated public lifecycle route. Fixture cleanup then removes the Sage
+Before dispatch, the runner assigns the conversation UUID and includes it in the
+request. Every dispatched request attempts deletion of that UUID through the
+authenticated public lifecycle route in unconditional cleanup, even when the
+stream fails before returning an event. Fixture cleanup then removes the Sage
 Postgres policy, identity, and residual Session Memory rows; SQLite User and User
 Type; Knowledge document/default/override rows; Qdrant point; upload; and Curated
 Resource. Session or fixture cleanup failure is itself a hard benchmark failure.

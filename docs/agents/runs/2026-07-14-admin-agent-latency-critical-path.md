@@ -59,7 +59,7 @@ Implement all high-priority fixes from the measured admin-agent latency investig
 | #487 | `67d36eb` | `/root/ticket_487` | `d5f3237` | pass | focused unittest, Python compile, shell syntax, Compose config, real GLM non-stream + stream |
 | #488 | Sage `782aaa7` | `/root/ticket_488` + root | Sage `9664b38` | pass | 137 lib tests, enclave_web check, fmt, diff check, changed-code clippy |
 | #489 | Sage `9664b38` | `/root/ticket_489` | Sage `174aac6` | pass after two P1 fixes | 143 lib tests, enclave_web check, fmt, diff check, changed-code clippy |
-| #490 | parent `05075a0`, Sage `174aac6` | `/root` + `/root/benchmark_hardening` | parent pending, Sage `5a1770c` | pass after lifecycle hardening; final P0–P2 review clean | 174 live benchmark checks, 98 focused tests, 142 Sage tests, 382 backend tests, 384 frontend tests/build, browser Config/DB, 5D both modes |
+| #490 | parent `05075a0`, Sage `174aac6` | `/root` + `/root/benchmark_hardening` | parent `d1a4ae2`, Sage `5a1770c` | pass after lifecycle hardening; final P0–P2 review clean | 174 live benchmark checks, 98 focused tests, 142 Sage tests, 382 backend tests, 384 frontend tests/build, browser Config/DB, 5D both modes |
 
 ## Open Questions
 

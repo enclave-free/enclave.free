@@ -38,3 +38,12 @@
 - Availability: completed
 - Findings: 0
 - Result: clean
+
+## Round 3
+
+- Scope: committed branch diff against `staging` at `d1a4ae2`
+- Command: `coderabbit review --agent --type all --base staging`
+- Availability: completed
+- Findings: 2 documentation-contract clarifications
+- Resolution: documented stable `phase_durations` keys/units/null semantics and unconditional client-owned session deletion for every dispatched request.
+- Result: corrected; final refresh required
