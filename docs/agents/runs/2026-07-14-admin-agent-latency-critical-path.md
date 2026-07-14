@@ -9,7 +9,7 @@
 - Feature branch: `feature/admin-agent-latency-critical-path`
 - Human owner: plebdev
 - Started: 2026-07-14
-- Current status: tickets #487–#490 implemented and locally verified; fixed-point review clean; local CodeRabbit findings resolved with the final refresh rate-limited; staging PR delivery in progress
+- Current status: tickets #487–#490 implemented and locally verified; fixed-point review clean; local CodeRabbit findings resolved; non-draft staging PR #491 open
 - Skill setup status: present (`AGENTS.md`, issue tracker, triage labels, and domain-doc configuration all exist)
 
 ## Goal
@@ -27,7 +27,7 @@ Implement all high-priority fixes from the measured admin-agent latency investig
 - Agent briefs: this ledger plus the published spec/tickets
 - Review packets: `docs/agents/runs/2026-07-14-tinfoil-proxy-review-487.md`, `docs/agents/runs/2026-07-14-agent-streaming-review-488.md`, `docs/agents/runs/2026-07-14-deferred-memory-review-489.md`, `docs/agents/runs/2026-07-14-admin-latency-e2e-review-490.md`
 - Local CodeRabbit report: `docs/agents/runs/2026-07-14-admin-agent-latency-coderabbit-local.md`
-- PR URL: pending
+- PR URL: [#491](https://github.com/enclave-free/enclave.free/pull/491)
 
 ## Commands
 

@@ -7,6 +7,7 @@
 - Worker session: `/root` with `/root/benchmark_hardening`
 - Parent commit: `d1a4ae2`
 - Sage commit: `5a1770c7d0ccc5badef2395385edda0a167336c1`
+- Pull request: [#491](https://github.com/enclave-free/enclave.free/pull/491) targeting `staging`
 - Status: complete
 
 ## Inputs
