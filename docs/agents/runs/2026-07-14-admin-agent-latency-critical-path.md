@@ -9,7 +9,7 @@
 - Feature branch: `feature/admin-agent-latency-critical-path`
 - Human owner: plebdev
 - Started: 2026-07-14
-- Current status: ticket #489 implementation; #487 and #488 complete
+- Current status: ticket #490 clean-stack integration and latency verification; #487–#489 complete
 - Skill setup status: present (`AGENTS.md`, issue tracker, triage labels, and domain-doc configuration all exist)
 
 ## Goal
@@ -23,9 +23,9 @@ Implement all high-priority fixes from the measured admin-agent latency investig
 - Prototype source branch, if any: none planned
 - Spec issue: [#486](https://github.com/enclave-free/enclave.free/issues/486)
 - Tickets: [#487](https://github.com/enclave-free/enclave.free/issues/487), [#488](https://github.com/enclave-free/enclave.free/issues/488), [#489](https://github.com/enclave-free/enclave.free/issues/489), [#490](https://github.com/enclave-free/enclave.free/issues/490)
-- Ticket sessions: `docs/agents/runs/2026-07-14-tinfoil-proxy-issue-session-487.md`, `docs/agents/runs/2026-07-14-agent-streaming-issue-session-488.md`; #489–#490 pending
+- Ticket sessions: `docs/agents/runs/2026-07-14-tinfoil-proxy-issue-session-487.md`, `docs/agents/runs/2026-07-14-agent-streaming-issue-session-488.md`, `docs/agents/runs/2026-07-14-deferred-memory-issue-session-489.md`; #490 pending
 - Agent briefs: this ledger plus the published spec/tickets
-- Review packets: `docs/agents/runs/2026-07-14-tinfoil-proxy-review-487.md`, `docs/agents/runs/2026-07-14-agent-streaming-review-488.md`; #489–#490 pending
+- Review packets: `docs/agents/runs/2026-07-14-tinfoil-proxy-review-487.md`, `docs/agents/runs/2026-07-14-agent-streaming-review-488.md`, `docs/agents/runs/2026-07-14-deferred-memory-review-489.md`; #490 pending
 - Local CodeRabbit report: pending
 - PR URL: pending
 
@@ -43,8 +43,8 @@ Implement all high-priority fixes from the measured admin-agent latency investig
 | --- | --- | --- | --- | --- | --- |
 | #487 proxy transport integrity | AFK | complete | standards + spec | all fixed | yes |
 | #488 typed Tool decisions and plain streamed answers | AFK | complete | multi-round standards + spec | all fixed | yes |
-| #489 deferred Session Memory embeddings | AFK | in progress | pending | pending | no |
-| #490 end-to-end latency verification | AFK | blocked by #487, #488, #489 | pending | pending | no |
+| #489 deferred Session Memory embeddings | AFK | complete | standards + spec | all fixed | yes |
+| #490 end-to-end latency verification | AFK | in progress | pending | pending | no |
 
 ## Parked HITL Slices
 
@@ -58,6 +58,7 @@ Implement all high-priority fixes from the measured admin-agent latency investig
 | --- | --- | --- | --- | --- | --- |
 | #487 | `67d36eb` | `/root/ticket_487` | `d5f3237` | pass | focused unittest, Python compile, shell syntax, Compose config, real GLM non-stream + stream |
 | #488 | Sage `782aaa7` | `/root/ticket_488` + root | Sage `9664b38` | pass | 137 lib tests, enclave_web check, fmt, diff check, changed-code clippy |
+| #489 | Sage `9664b38` | `/root/ticket_489` | Sage `174aac6` | pass after two P1 fixes | 143 lib tests, enclave_web check, fmt, diff check, changed-code clippy |
 
 ## Open Questions
 
