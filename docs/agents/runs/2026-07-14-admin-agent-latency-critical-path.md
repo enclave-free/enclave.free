@@ -9,7 +9,7 @@
 - Feature branch: `feature/admin-agent-latency-critical-path`
 - Human owner: plebdev
 - Started: 2026-07-14
-- Current status: tickets #487–#490 implemented and locally verified; fixed-point and local CodeRabbit reviews clean; staging PR delivery in progress
+- Current status: tickets #487–#490 implemented and locally verified; fixed-point review clean; local CodeRabbit findings resolved with the final refresh rate-limited; staging PR delivery in progress
 - Skill setup status: present (`AGENTS.md`, issue tracker, triage labels, and domain-doc configuration all exist)
 
 ## Goal

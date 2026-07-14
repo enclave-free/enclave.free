@@ -47,3 +47,11 @@
 - Findings: 2 documentation-contract clarifications
 - Resolution: documented stable `phase_durations` keys/units/null semantics and unconditional client-owned session deletion for every dispatched request.
 - Result: corrected; final refresh required
+
+## Round 4
+
+- Scope: committed branch diff against `staging` at `e437e87`
+- Command: `coderabbit review --agent --type all --base staging`
+- Availability: rate-limited for 20 minutes before analysis
+- Fallback: the two Round 3 documentation findings were rechecked with 33 documentation contract tests, diff hygiene, the clean fixed-point P0–P2 review, and the already-clean Round 2 full review.
+- Result: proceed to the PR review/check loop; no unresolved local finding
