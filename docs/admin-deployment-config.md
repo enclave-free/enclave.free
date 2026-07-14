@@ -38,6 +38,13 @@ It is no longer the owner of Agent Settings. `/admin/ai-config/*` now belongs to
 
 Important consequence: changing admin deployment config records desired Deployment Settings. It does not mutate live Sage process state until the Operator applies generated runtime env and restarts affected services.
 
+The supported Compose path runs Tinfoil's standalone proxy and keeps it private
+at `http://tinfoil-proxy:8089/v1`. `TINFOIL_ROUTER_HOST` and
+`TINFOIL_ROUTER_REPO` pin the verified router enclave; the Compose service
+explicitly permits the `tinfoil-proxy` Docker hostname without disabling host
+validation for other names. Run `scripts/smoke_test.sh` after deployment changes
+to verify gateway health and strict non-streaming response integrity.
+
 ## Model Provider Deployment Settings On This Prototype
 
 Recommended current values in admin deployment config:

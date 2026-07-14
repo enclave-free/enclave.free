@@ -40,11 +40,11 @@ Commits run `frontend/.husky/pre-commit`, which formats staged files with Pretti
 Smoke tests:
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
-lsof -nP -iTCP:8000 -sTCP:LISTEN
-curl http://localhost:8000/test
-curl http://localhost:8000/llm/test
+lsof -nP -iTCP:18000 -sTCP:LISTEN
+curl http://localhost:18000/test
+curl http://localhost:18000/llm/test
 ```
-These curls must reach the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:8000`, stop that process or verify through the gateway container with `docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test` before treating a 404 as product behavior.
+These curls must reach the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:18000`, stop that process or verify through the gateway container with `docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/test` before treating a 404 as product behavior.
 
 For repeatable local smoke tests, prefer `scripts/reset_local_instance.sh` over `docker compose ... down -v`; it clears runtime state while preserving the embedding cache by default. Use `scripts/reset_local_instance.sh --all` only when cached model data should be removed too.
 

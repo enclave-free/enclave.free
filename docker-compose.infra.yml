@@ -18,10 +18,9 @@ services:
       - enclave-net
 
   tinfoil-proxy:
-    image: ghcr.io/tinfoilsh/tinfoil-cli:latest
+    image: ghcr.io/tinfoilsh/tinfoil-proxy:0.1.6
     container_name: enclave-tinfoil-proxy
     command:
-      - proxy
       - -e
       - ${TINFOIL_ROUTER_HOST:-inference.tinfoil.sh}
       - -r
@@ -30,6 +29,8 @@ services:
       - "8089"
       - -b
       - 0.0.0.0
+      - --allowed-host
+      - tinfoil-proxy
     environment:
       - TINFOIL_API_KEY=${LLM_API_KEY:?LLM_API_KEY is required}
     healthcheck:

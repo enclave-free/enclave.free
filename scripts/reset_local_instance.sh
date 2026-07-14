@@ -7,7 +7,7 @@
 #   - remove runtime state volumes
 #   - preserve embedding cache
 #   - rebuild/start the stack
-#   - run gateway smoke checks
+#   - run gateway and provider response-integrity smoke checks
 
 set -euo pipefail
 
@@ -31,7 +31,7 @@ Usage: scripts/reset_local_instance.sh [options]
 Options:
   --all          Also remove the embedding model cache volume.
   --no-build     Start existing images with `up -d` instead of `up --build -d`.
-  --skip-smoke   Do not run gateway smoke checks after startup.
+  --skip-smoke   Do not run gateway or provider-integrity smoke checks after startup.
   --dry-run      Print commands without changing Docker state.
   -h, --help     Show this help text.
 EOF
@@ -156,6 +156,5 @@ fi
 
 if [[ "$SMOKE" == true ]]; then
   run lsof -nP -iTCP:18000 -sTCP:LISTEN
-  run curl -fsS http://localhost:18000/test
-  run curl -fsS http://localhost:18000/llm/test
+  run "$SCRIPT_DIR/smoke_test.sh"
 fi

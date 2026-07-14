@@ -14,24 +14,24 @@ paths in this architecture.
 | Service | Runtime | Responsibility |
 | --- | --- | --- |
 | `frontend` | Vite + React | User and admin UI |
-| `backend` | nginx | Public Gateway on `:8000`; routes AI paths to Sage and everything else to Python |
+| `backend` | nginx | Public Gateway on `:18000`; routes AI paths to Sage and everything else to Python |
 | `core-backend` | FastAPI + SQLite | Enclave Control Plane for auth issuance, users/admins/settings, ingest, Document visibility, deployment config, and Sage private control-plane endpoints |
 | `sage` | Axum + Rust | `enclave_web` Agent Runtime; native auth/CORS/CSRF; Agent Settings; Tool orchestration; public query-session records |
 | `postgres` | Postgres + pgvector | Sage Session Memory tables, `web_sessions`, `external_identities`, `ai_config`, `ai_config_user_type_overrides` |
 | `qdrant` | Qdrant | Enclave document embeddings and retrieval index |
-| `tinfoil-proxy` | Tinfoil CLI proxy | OpenAI-compatible transport for chat, embedding, and vision Model Provider calls |
+| `tinfoil-proxy` | Tinfoil standalone proxy | OpenAI-compatible transport for chat, embedding, and vision Model Provider calls |
 | `searxng` | SearXNG | Web-search backend for Sage tools |
 
 ## Public Topology
 
 ```text
 frontend
-  -> backend (nginx gateway, host port 8000)
+  -> backend (nginx gateway, host port 18000)
       -> core-backend (FastAPI Enclave Control Plane)
       -> sage (Axum Agent Runtime)
 ```
 
-The public origin stays the same. The browser still talks to `:8000`. The difference is that nginx no longer compensates for auth or browser semantics on Sage-owned routes.
+The public origin stays the same. The browser still talks to `:18000`. The difference is that nginx no longer compensates for auth or browser semantics on Sage-owned routes.
 
 ## Tool And Retrieval Posture
 
@@ -113,7 +113,7 @@ Scoped admin context is not a supported integration path.
 
 ### Conversation Transport Target
 
-1. frontend calls `http://localhost:8000/llm/chat`
+1. frontend calls `http://localhost:18000/llm/chat`
 2. `gateway/nginx.conf` forwards the public path to Sage; Python has no public handler for this route
 3. Sage verifies auth natively from bearer or cookie session state
 4. Sage enforces CSRF if the request is cookie-authenticated and unsafe
