@@ -59,6 +59,11 @@ def request_completion(
             content_type = response.headers.get_content_type()
             response_body = response.read()
     except http.client.IncompleteRead as exc:
+        if exc.expected is None:
+            raise SmokeFailure(
+                f"incomplete response body: received {len(exc.partial)} bytes "
+                "before the connection closed (chunked transfer, length unknown)"
+            ) from exc
         expected_total = len(exc.partial) + exc.expected
         raise SmokeFailure(
             "incomplete response body: "

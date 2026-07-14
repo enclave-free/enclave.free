@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import subprocess
@@ -12,6 +13,9 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Iterator
+from unittest.mock import patch
+
+from scripts.tinfoil_response_integrity_smoke import SmokeFailure, request_completion
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -76,6 +80,37 @@ def run_integrity_smoke(api_base: str) -> subprocess.CompletedProcess[str]:
 
 
 class TinfoilProxyComposeTests(unittest.TestCase):
+    def test_chunked_incomplete_response_reports_unknown_length(self) -> None:
+        class Headers:
+            @staticmethod
+            def get_content_type() -> str:
+                return "application/json"
+
+        class IncompleteResponse:
+            headers = Headers()
+
+            def __enter__(self) -> "IncompleteResponse":
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            @staticmethod
+            def read() -> bytes:
+                raise http.client.IncompleteRead(b"partial", expected=None)
+
+        with patch(
+            "scripts.tinfoil_response_integrity_smoke.urllib.request.urlopen",
+            return_value=IncompleteResponse(),
+        ):
+            with self.assertRaisesRegex(SmokeFailure, "chunked transfer, length unknown"):
+                request_completion(
+                    api_base="http://proxy.test/v1",
+                    api_key="test-key",
+                    model="test-model",
+                    timeout=1,
+                )
+
     def test_default_compose_uses_supported_standalone_proxy(self) -> None:
         env = {
             **os.environ,

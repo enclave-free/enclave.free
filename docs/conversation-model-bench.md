@@ -52,7 +52,7 @@ It may borrow helper patterns from integration tests, but it should be able to r
 - create or discover deterministic approved User auth
 - optionally seed a tiny Knowledge Search fixture for the user scenario
 - write artifacts to an explicit output path
-- leave or clean up state based on runner flags
+- clean up all temporary scenario state even when setup or streaming fails
 
 The bench should not mutate production-like data unless the operator explicitly points it at that environment and accepts the risk. The default posture should assume local Compose smoke/evaluation use.
 
@@ -66,6 +66,20 @@ The bench should not mutate production-like data unless the operator explicitly 
 6. Report issues for remediation without treating every model variance as a product failure.
 
 ## V0 Scenarios
+
+### Admin No-Tools Control
+
+The Admin asks a trivial control question with no Tool Sets enabled. Sage should
+make exactly one model call, stream the answer incrementally, avoid correction
+or retry calls, and produce no tool evidence. This separates baseline provider
+generation latency from tool-planning and tool-execution latency.
+
+Expected evidence:
+
+- No Tool is planned or executed.
+- Exactly one model call is recorded in public stream diagnostics.
+- No correction or retry call is recorded.
+- The answer is correct and arrives in multiple `answer_delta` events.
 
 ### Admin Config Bootstrap Proposal
 
@@ -116,15 +130,16 @@ Expected evidence:
 - Raw DB results are redacted from trace/tool evidence.
 - The answer mentions the requested settings or rows.
 
-### Admin Database Natural-Language Guardrail
+### Admin Database Natural-Language Read-Only Query
 
-The Admin asks a natural-language DB question while enabling Database Query. Sage should not invent SQL or run a hidden query; the guardrail should tell the Admin to submit a direct read-only `SELECT`.
+The Admin asks a natural-language DB question while enabling Database Query. Sage should choose a single read-only SQLite `SELECT`, execute it through the guarded Python database boundary, and summarize the result without making the Admin write SQL. The legacy scenario ID remains `admin_database_natural_language_guardrail` for artifact and CLI compatibility.
 
 Expected evidence:
 
-- Database Query guardrail evidence is recorded.
-- The tool is not executed from natural language.
-- The answer tells the Admin to submit a direct `SELECT`.
+- Database Query is used.
+- A model-chosen query is executed through the read-only executor.
+- Raw DB results are redacted from trace/tool evidence.
+- The answer reports the requested database fact.
 
 ### User Knowledge Assistance
 
@@ -163,6 +178,7 @@ Each bench run should produce a JSON artifact with enough sanitized detail to co
 - run metadata: timestamp, git revisions, API base, provider, candidate model ids
 - scenario metadata: scenario id, actor, enabled Tool Sets, prompt
 - timing: first event, first trace/tool feedback, first visible answer token, completion, Sage timing phases when available
+- stream diagnostics: answer-delta count, model-call count, correction/retry counts, summed tool execution duration, and phase-to-phase durations
 - fixtures: seeded knowledge and resource fixture metadata when requested
 - tool evidence: called Tools, statuses, warnings, rejection reasons, duplicate calls
 - Admin Config proposal evidence: staged change-set presence, canonical paths and keys, validation errors
@@ -188,6 +204,14 @@ The v0 artifact should be one schema-versioned JSON file per run:
           "response": {},
           "checks": [],
           "timing": {},
+          "diagnostics": {
+            "answer_delta_count": 0,
+            "model_call_count": 0,
+            "correction_call_count": 0,
+            "retry_count": 0,
+            "tool_execution_ms": 0,
+            "phase_durations": {}
+          },
           "tool_evidence": [],
           "retrieval_evidence": [],
           "summary": {},
@@ -220,6 +244,11 @@ Deterministic checks should cover observable contract behavior:
 - live onboarding prompt proposals included baseline settings and user types without creating user-field or behavior-rule requests
 - answer text avoided known failure phrases such as asking the Admin to manually check settings after tools were available
 - Knowledge Search behavior was recorded for the user scenario
+- the no-Tool control used one model call with zero corrections/retries and no Tool evidence
+- deterministic bootstrap used one planning model call and no final answer model call
+- ordinary final answers were incrementally streamed in multiple answer deltas
+- seeded Knowledge and Curated Resources facts appeared exactly in retrieval/answer evidence
+- the natural-language Database Query answer reported the exact pre-request SQLite User count
 - timing fields were captured, including first trace/tool feedback latency for Tool-using scenarios
 
 The bench output should make room for human notes and later rubric expansion, but v0 pass/fail signals should come from stable structured evidence.
@@ -235,6 +264,11 @@ V0 fails the run only on contract or harness failures:
 - expected Admin Config proposal was missing in the bootstrap scenario
 - the bootstrap scenario did not call the typed `propose_admin_config_bootstrap` Tool
 - expected bootstrap user types, onboarding fields, or behavior rules were missing
+- model-call, correction, retry, or answer-delta diagnostics violated the control/runtime contract
+- a required Knowledge Search or Curated Resources call was missing
+- seeded Knowledge or Curated Resource facts were absent from the answer
+- the Database Query answer did not report the exact seeded database fact
+- temporary benchmark fixture cleanup failed
 - the live onboarding prompt scenario rejected the current UI answer format or misread User Types as Onboarding Questions
 - an Admin Config proposal contained non-canonical paths or setting keys
 - an unsafe proposal path appeared
@@ -303,6 +337,17 @@ Default behavior:
 - do not reset local state unless requested
 - write to `/tmp/conversation-model-bench-<timestamp>.json` when `--output` is omitted
 
+For User scenarios, the local runner creates a temporary User and User Type and configures the scenario's Tool Sets through Sage's server-authoritative User Type policy. When Knowledge Search is seeded, it also grants that User Type access to a uniquely named synthetic document and selects it as Required Context. Curated Resource fixtures receive unique IDs and contact details per scenario plus a stable model-readable display name. The hard answer gate requires the run-specific email address, so another run's globally visible fixture cannot produce a false green result. Sending client-side `tools` or `job_ids` alone is intentionally insufficient because production policy must remain authoritative.
+
+Scenario cleanup always runs, including when auth, seeding, or streaming fails.
+Each successful stream first deletes its temporary conversation through the
+authenticated public lifecycle route. Fixture cleanup then removes the Sage
+Postgres policy, identity, and residual Session Memory rows; SQLite User and User
+Type; Knowledge document/default/override rows; Qdrant point; upload; and Curated
+Resource. Session or fixture cleanup failure is itself a hard benchmark failure.
+Benchmark-only policy setup uses no audit actor, so temporary fixture activity
+does not leave permanent configuration-audit rows.
+
 Optional flags:
 
 - `--models gpt-oss-120b,kimi-k2-6`
@@ -315,12 +360,13 @@ Optional flags:
 
 `--reset` runs the local reset script with its own smoke checks skipped; the bench scenarios become the verification pass after the reset.
 
-The default scenario set is all eight v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
+The default scenario set is all nine v0 scenarios. Passing `--scenario` one or more times limits the run to the named scenarios. Passing `--models` runs the same selected scenarios once per explicit model candidate. Unless `--no-restore-model` is set, the runner restores the original local Sage model after an explicit candidate comparison.
 
 Focused examples:
 
 ```bash
 python scripts/benches/conversation_model_bench.py --scenario admin_deployment_readiness
+python scripts/benches/conversation_model_bench.py --scenario admin_no_tools_control
 python scripts/benches/conversation_model_bench.py --scenario admin_config_bootstrap
 python scripts/benches/conversation_model_bench.py --scenario admin_config_live_onboarding_prompt
 python scripts/benches/conversation_model_bench.py --scenario admin_database_direct_select
@@ -390,7 +436,7 @@ python3 scripts/benches/conversation_model_bench.py \
 
 Overall result: passed. The local staging stack was reset first, then Sage was verified with `TINFOIL_MODEL=gemma4-31b`. The live Tinfoil model list included `glm-5-2` and did not include `glm-5-1`.
 
-Current product decision: switch the local/staging defaults to `gemma4-31b`, while keeping the expanded benchmark warnings visible before treating it as fully settled.
+Historical product decision at the time: switch the local/staging defaults to `gemma4-31b`, while keeping the expanded benchmark warnings visible before treating it as fully settled. The table below preserves the then-current DB guardrail contract and should not be read as the current natural-language DB behavior.
 
 | Scenario | Result | Warnings | First token | Done |
 | --- | --- | ---: | ---: | ---: |

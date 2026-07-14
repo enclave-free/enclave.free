@@ -31,7 +31,7 @@ frontend
       -> sage (Axum Agent Runtime)
 ```
 
-The public origin stays the same. The browser still talks to `:18000`. The difference is that nginx no longer compensates for auth or browser semantics on Sage-owned routes.
+The public port moves from `:8000` to `:18000`; route ownership remains unchanged. The browser talks to `:18000`, and nginx no longer compensates for auth or browser semantics on Sage-owned routes.
 
 ## Tool And Retrieval Posture
 

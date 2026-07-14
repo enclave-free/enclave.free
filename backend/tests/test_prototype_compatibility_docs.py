@@ -474,8 +474,10 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             if "enclave-api-gateway" not in text:
                 missing.append(f"{path.relative_to(REPO_ROOT)}: gateway container")
-            if "lsof -nP -iTCP:8000 -sTCP:LISTEN" not in text:
+            if "lsof -nP -iTCP:18000 -sTCP:LISTEN" not in text:
                 missing.append(f"{path.relative_to(REPO_ROOT)}: port shadowing check")
+            if "lsof -nP -iTCP:8000 -sTCP:LISTEN" in text:
+                missing.append(f"{path.relative_to(REPO_ROOT)}: obsolete port shadowing check")
 
         self.assertEqual(missing, [])
 

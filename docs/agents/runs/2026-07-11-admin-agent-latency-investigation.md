@@ -33,7 +33,7 @@ The supported local reset script was used to create a fresh disposable instance.
 
 The local ignored `.env` now selects `TINFOIL_MODEL=glm-5-2`. No application source was modified for setup or testing.
 
-The temporary proxy override is `/tmp/enclave-tinfoil-proxy-override.yml`. The running proxy image is `ghcr.io/tinfoilsh/tinfoil-proxy:latest`; the repository still specifies `ghcr.io/tinfoilsh/tinfoil-cli:latest` in `docker-compose.infra.yml`.
+At the time of the July 11 investigation, the temporary override at `/tmp/enclave-tinfoil-proxy-override.yml` ran `ghcr.io/tinfoilsh/tinfoil-proxy:latest`, resolved locally as `ghcr.io/tinfoilsh/tinfoil-proxy@sha256:bd9d6f4dbf82e8d734b2d9dbc60ec79d3c8698b51ab7773ccc937b6d372e1a91`. The repository then still specified `ghcr.io/tinfoilsh/tinfoil-cli:latest` in `docker-compose.infra.yml`; the later implementation slice replaced it.
 
 ## Measurements
 
@@ -215,4 +215,3 @@ python3 scripts/benches/conversation_model_bench.py \
 - The Knowledge and Resources fixtures are deliberately tiny and synthetic, making tool execution easy to isolate. A production-scale corpus may increase retrieval time, but it would need to grow by two orders of magnitude to resemble the observed model delays.
 - Provider conditions vary over time. The exact outlier distribution should be re-measured over a larger sample before setting an SLO.
 - The benchmark admin uses a synthetic public key. Post-answer encrypted session-log persistence warns for that invalid key, but the warning occurs after response generation and was not part of the measured agent-loop latency.
-
