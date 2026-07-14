@@ -15,11 +15,13 @@ import codecs
 import http.client
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,6 +43,7 @@ SLOW_FIRST_ANSWER_WARNING_MS = 30_000.0
 SLOW_TRACE_FEEDBACK_WARNING_MS = 10_000.0
 SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
+    "admin_no_tools_control",
     "admin_config_bootstrap",
     "admin_config_live_onboarding_prompt",
     "admin_deployment_readiness",
@@ -60,6 +63,9 @@ LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS: set[str] = {
     "read_document_access",
     "read_onboarding_status",
 }
+USER_CONVERSATION_TOOL_SET_IDS = frozenset(
+    {"curated-resources", "knowledge-search", "web-search"}
+)
 
 
 @dataclass(frozen=True)
@@ -108,13 +114,19 @@ class BenchEnvironment(Protocol):
     def admin_token(self) -> str:
         ...
 
-    def user_token(self) -> str:
+    def user_token(self, tools: tuple[str, ...] = ()) -> str:
         ...
 
     def seed_knowledge(self) -> dict[str, Any]:
         ...
 
     def seed_resources(self) -> dict[str, Any]:
+        ...
+
+    def database_user_count(self) -> int:
+        ...
+
+    def cleanup_scenario(self) -> None:
         ...
 
     def switch_model(self, model: str) -> None:
@@ -134,8 +146,20 @@ class ConversationClient(Protocol):
     def stream_chat(self, token: str, payload: dict[str, Any], timeout: float) -> StreamResult:
         ...
 
+    def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+        ...
+
 
 SCENARIOS: dict[str, Scenario] = {
+    "admin_no_tools_control": Scenario(
+        id="admin_no_tools_control",
+        actor="admin",
+        message=(
+            "Without using any tools, answer this control question in one short "
+            "sentence: what is two plus two?"
+        ),
+        tools=(),
+    ),
     "admin_config_bootstrap": Scenario(
         id="admin_config_bootstrap",
         actor="admin",
@@ -207,8 +231,9 @@ SCENARIOS: dict[str, Scenario] = {
         id="admin_database_natural_language_guardrail",
         actor="admin",
         message=(
-            "Use the Database Query tool to tell me how many users and curated "
-            "resources are in SQLite, but do not make me write SQL."
+            "Use the Database Query tool to tell me how many users are in SQLite. "
+            "Choose and run a safe read-only SELECT yourself; do not ask me to "
+            "write SQL."
         ),
         tools=("db-query",),
     ),
@@ -333,45 +358,89 @@ def run_scenario(
 ) -> dict[str, Any]:
     knowledge_fixture: dict[str, Any] | None = None
     resource_fixture: dict[str, Any] | None = None
-    if scenario.actor == "admin":
-        token = environment.admin_token()
-    elif scenario.actor == "user":
-        token = environment.user_token()
-        if seed_knowledge and "knowledge-search" in scenario.tools:
-            knowledge_fixture = environment.seed_knowledge()
-        if seed_resources and "curated-resources" in scenario.tools:
-            resource_fixture = environment.seed_resources()
-    else:
-        raise ValueError(f"unsupported actor for current bench slice: {scenario.actor}")
-
-    payload = {
-        "message": scenario.message,
-        "tools": list(scenario.tools),
-    }
-    if knowledge_fixture:
-        job_ids = knowledge_fixture.get("job_ids")
-        if isinstance(job_ids, list) and job_ids:
-            payload["job_ids"] = job_ids
+    database_fixture: dict[str, Any] | None = None
+    cleanup_error: str | None = None
+    session_cleanup_error: str | None = None
+    token: str | None = None
+    requested_session_id = str(uuid.uuid4())
+    stream_dispatched = False
+    stream = failed_stream("scenario setup did not reach the stream")
     try:
+        if scenario.actor == "admin":
+            token = environment.admin_token()
+            if scenario.id == "admin_database_natural_language_guardrail":
+                database_fixture = {
+                    "expected_user_count": environment.database_user_count()
+                }
+        elif scenario.actor == "user":
+            token = environment.user_token(scenario.tools)
+            if seed_knowledge and "knowledge-search" in scenario.tools:
+                knowledge_fixture = environment.seed_knowledge()
+            if seed_resources and "curated-resources" in scenario.tools:
+                resource_fixture = environment.seed_resources()
+        else:
+            raise ValueError(f"unsupported actor for current bench slice: {scenario.actor}")
+
+        payload = {
+            "message": scenario.message,
+            "session_id": requested_session_id,
+            "tools": list(scenario.tools),
+        }
+        if knowledge_fixture:
+            job_ids = knowledge_fixture.get("job_ids")
+            if isinstance(job_ids, list) and job_ids:
+                payload["job_ids"] = job_ids
+        stream_dispatched = True
         stream = client.stream_chat(token, payload, timeout)
     except Exception as exc:
-        stream = StreamResult(
-            answer="",
-            events=[],
-            done={},
-            trace=None,
-            admin_change_set=None,
-            timings={
-                "first_event_ms": None,
-                "first_trace_or_tool_feedback_ms": None,
-                "first_visible_assistant_token_ms": None,
-                "done_ms": None,
-            },
-            error=f"scenario stream failed: {exc}",
-        )
+        stream = failed_stream(f"scenario setup or stream failed: {exc}")
+    finally:
+        observed_session_id = stream_session_id(stream)
+        if stream_dispatched and token:
+            try:
+                client.delete_session(token, requested_session_id, timeout)
+            except Exception as exc:
+                session_cleanup_error = str(exc)
+        if observed_session_id and observed_session_id != requested_session_id:
+            session_cleanup_error = (
+                f"stream returned session_id {observed_session_id}, expected "
+                f"{requested_session_id}"
+            )
+        elif (stream.events or stream.done) and not observed_session_id:
+            session_cleanup_error = "completed stream did not expose a session_id"
+        try:
+            environment.cleanup_scenario()
+        except Exception as exc:
+            cleanup_error = str(exc)
+
     tool_evidence = collect_tool_evidence(stream)
     retrieval_evidence = collect_retrieval_evidence(stream)
-    checks = checks_for_scenario(scenario, stream, tool_evidence)
+    diagnostics = collect_stream_diagnostics(stream)
+    checks = checks_for_scenario(
+        scenario,
+        stream,
+        tool_evidence,
+        diagnostics=diagnostics,
+        knowledge_fixture=knowledge_fixture,
+        resource_fixture=resource_fixture,
+        database_fixture=database_fixture,
+    )
+    checks.append(
+        check(
+            "temporary_session_cleanup_succeeded",
+            session_cleanup_error is None,
+            "hard",
+            session_cleanup_error,
+        )
+    )
+    checks.append(
+        check(
+            "temporary_fixture_cleanup_succeeded",
+            cleanup_error is None,
+            "hard",
+            cleanup_error,
+        )
+    )
     return {
         "id": scenario.id,
         "actor": scenario.actor,
@@ -382,6 +451,7 @@ def run_scenario(
         "fixtures": {
             "knowledge": knowledge_fixture,
             "resources": resource_fixture,
+            "database": database_fixture,
         },
         "response": {
             "answer_preview": truncate(stream.answer, 2000),
@@ -392,11 +462,45 @@ def run_scenario(
         },
         "checks": checks,
         "timing": stream.timings,
+        "diagnostics": diagnostics,
         "tool_evidence": tool_evidence,
         "retrieval_evidence": retrieval_evidence,
         "summary": summarize_checks(checks),
         "notes": [],
     }
+
+
+def failed_stream(error: str) -> StreamResult:
+    return StreamResult(
+        answer="",
+        events=[],
+        done={},
+        trace=None,
+        admin_change_set=None,
+        timings={
+            "first_event_ms": None,
+            "first_trace_or_tool_feedback_ms": None,
+            "first_visible_assistant_token_ms": None,
+            "done_ms": None,
+        },
+        error=error,
+    )
+
+
+def stream_session_id(stream: StreamResult) -> str | None:
+    candidates = [stream.done]
+    candidates.extend(
+        event.get("data") or {}
+        for event in stream.events
+        if isinstance(event, dict)
+    )
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        session_id = str(candidate.get("session_id") or "").strip()
+        if session_id:
+            return session_id
+    return None
 
 
 def scenario_by_id(scenario_id: str) -> Scenario:
@@ -410,12 +514,20 @@ def checks_for_scenario(
     scenario: Scenario,
     stream: StreamResult,
     tool_evidence: list[dict[str, Any]],
+    *,
+    diagnostics: dict[str, Any],
+    knowledge_fixture: dict[str, Any] | None,
+    resource_fixture: dict[str, Any] | None,
+    database_fixture: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     checks = common_stream_checks(stream)
     if scenario.tools:
         checks.extend(trace_feedback_checks(stream))
-    if scenario.id == "admin_config_bootstrap":
+    if scenario.id == "admin_no_tools_control":
+        checks.extend(no_tools_control_checks(stream, tool_evidence, diagnostics))
+    elif scenario.id == "admin_config_bootstrap":
         checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
+        checks.extend(deterministic_bootstrap_diagnostic_checks(diagnostics))
     elif scenario.id == "admin_config_live_onboarding_prompt":
         checks.extend(admin_config_live_onboarding_prompt_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
@@ -423,13 +535,37 @@ def checks_for_scenario(
     elif scenario.id == "admin_database_direct_select":
         checks.extend(admin_database_direct_select_checks(stream, tool_evidence))
     elif scenario.id == "admin_database_natural_language_guardrail":
-        checks.extend(admin_database_natural_language_guardrail_checks(stream, tool_evidence))
+        checks.extend(
+            admin_database_natural_language_guardrail_checks(
+                stream, tool_evidence, database_fixture
+            )
+        )
     elif scenario.id == "user_knowledge_assistance":
-        checks.extend(user_knowledge_assistance_checks(stream, tool_evidence))
+        checks.extend(
+            user_knowledge_assistance_checks(
+                stream, tool_evidence, knowledge_fixture
+            )
+        )
     elif scenario.id == "user_curated_resource_referral":
-        checks.extend(user_curated_resource_referral_checks(stream, tool_evidence))
+        checks.extend(
+            user_curated_resource_referral_checks(
+                stream, tool_evidence, resource_fixture
+            )
+        )
     elif scenario.id == "user_knowledge_and_resource_assistance":
-        checks.extend(user_knowledge_and_resource_assistance_checks(stream, tool_evidence))
+        checks.extend(
+            user_knowledge_and_resource_assistance_checks(
+                stream,
+                tool_evidence,
+                knowledge_fixture,
+                resource_fixture,
+            )
+        )
+    if scenario.id not in {
+        "admin_config_bootstrap",
+        "admin_config_live_onboarding_prompt",
+    }:
+        checks.extend(plain_answer_streaming_checks(diagnostics))
     return checks
 
 
@@ -468,6 +604,162 @@ def common_stream_checks(stream: StreamResult) -> list[dict[str, Any]]:
             done_ms is None or done_ms <= SLOW_COMPLETION_WARNING_MS,
             "warning",
             f"completion took {done_ms}ms" if done_ms is not None else None,
+        ),
+    ]
+
+
+def collect_stream_diagnostics(stream: StreamResult) -> dict[str, Any]:
+    answer_delta_count = 0
+    model_call_count = 0
+    correction_call_count = 0
+    retry_count = 0
+    tool_execution_ms = 0.0
+    timing_phases: list[dict[str, Any]] = []
+
+    for event in stream.events:
+        event_name = str(event.get("event") or "")
+        data = event.get("data") or {}
+        if event_name == "answer_delta" and str(data.get("delta") or ""):
+            answer_delta_count += 1
+        elif event_name == "trace_status":
+            timing = data.get("timing")
+            if isinstance(timing, dict):
+                timing_phases.append(timing)
+        elif event_name == "trace_delta":
+            trace_delta = data.get("trace_delta")
+            if not isinstance(trace_delta, dict):
+                continue
+            kind = str(trace_delta.get("kind") or "")
+            status = str(trace_delta.get("status") or "")
+            if kind == "model_step" and status == "running":
+                model_call_count += 1
+            elif kind == "correction" and status == "running":
+                correction_call_count += 1
+            elif kind == "retry" and status == "running":
+                retry_count += 1
+            elif kind == "tool_result":
+                metadata = trace_delta.get("metadata")
+                duration_ms = metadata.get("duration_ms") if isinstance(metadata, dict) else None
+                if isinstance(duration_ms, (int, float)) and duration_ms >= 0:
+                    tool_execution_ms += float(duration_ms)
+
+    first_event_ms = stream.timings.get("first_event_ms")
+    first_feedback_ms = stream.timings.get("first_trace_or_tool_feedback_ms")
+    first_answer_ms = stream.timings.get("first_visible_assistant_token_ms")
+    done_ms = stream.timings.get("done_ms")
+    phase_durations = {
+        "event_to_tool_feedback_ms": elapsed_between(first_event_ms, first_feedback_ms),
+        "tool_feedback_to_answer_ms": elapsed_between(first_feedback_ms, first_answer_ms),
+        "answer_to_done_ms": elapsed_between(first_answer_ms, done_ms),
+        "total_ms": done_ms,
+    }
+    return {
+        "answer_delta_count": answer_delta_count,
+        "provider_streamed_multiple_answer_deltas": answer_delta_count > 1,
+        "model_call_count": model_call_count,
+        "model_call_telemetry_present": model_call_count > 0,
+        "correction_call_count": correction_call_count,
+        "retry_count": retry_count,
+        "tool_execution_ms": round(tool_execution_ms, 1),
+        "timing_phases": timing_phases,
+        "phase_durations": phase_durations,
+        "background_timing": {
+            "persistence_ms": None,
+            "embedding_ms": None,
+            "availability": (
+                "not exposed by the public stream; deferred persistence and "
+                "embedding behavior is covered by Sage runtime tests"
+            ),
+        },
+    }
+
+
+def elapsed_between(
+    earlier: float | None,
+    later: float | None,
+) -> float | None:
+    if earlier is None or later is None:
+        return None
+    return round(max(0.0, later - earlier), 1)
+
+
+def no_tools_control_checks(
+    stream: StreamResult,
+    tool_evidence: list[dict[str, Any]],
+    diagnostics: dict[str, Any],
+) -> list[dict[str, Any]]:
+    return [
+        check("no_tools_control_used_no_tools", not tool_evidence, "hard"),
+        check(
+            "no_tools_control_single_model_call",
+            diagnostics["model_call_count"] == 1,
+            "hard",
+            f"observed {diagnostics['model_call_count']} model calls",
+        ),
+        check(
+            "no_tools_control_zero_corrections",
+            diagnostics["correction_call_count"] == 0,
+            "hard",
+        ),
+        check(
+            "no_tools_control_zero_retries",
+            diagnostics["retry_count"] == 0,
+            "hard",
+        ),
+        check(
+            "no_tools_control_answer_is_correct",
+            bool(re.search(r"\b(?:4|four)\b", stream.answer, flags=re.IGNORECASE)),
+            "hard",
+        ),
+    ]
+
+
+def deterministic_bootstrap_diagnostic_checks(
+    diagnostics: dict[str, Any],
+) -> list[dict[str, Any]]:
+    telemetry_present = bool(diagnostics["model_call_telemetry_present"])
+    return [
+        check(
+            "bootstrap_has_no_final_model_call",
+            telemetry_present and diagnostics["model_call_count"] == 1,
+            "hard",
+            None
+            if telemetry_present
+            else "model-call telemetry was not emitted by this recorded fixture",
+        ),
+        check(
+            "bootstrap_zero_correction_calls",
+            diagnostics["correction_call_count"] == 0,
+            "hard",
+        ),
+        check(
+            "bootstrap_zero_retry_calls",
+            diagnostics["retry_count"] == 0,
+            "hard",
+        ),
+    ]
+
+
+def plain_answer_streaming_checks(
+    diagnostics: dict[str, Any],
+) -> list[dict[str, Any]]:
+    telemetry_present = bool(diagnostics["model_call_telemetry_present"])
+    return [
+        check(
+            "plain_answer_zero_correction_calls",
+            telemetry_present and diagnostics["correction_call_count"] == 0,
+            "hard",
+            None
+            if telemetry_present
+            else "model-call telemetry was not emitted by this recorded fixture",
+        ),
+        check(
+            "plain_answer_streamed_multiple_deltas",
+            diagnostics["answer_delta_count"] > 1,
+            "hard",
+            None
+            if telemetry_present
+            else "model-call telemetry was not emitted by this recorded fixture",
         ),
     ]
 
@@ -748,25 +1040,60 @@ def admin_config_live_onboarding_prompt_checks(
 def user_knowledge_assistance_checks(
     stream: StreamResult,
     tool_evidence: list[dict[str, Any]],
+    knowledge_fixture: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     retrieval_evidence = collect_retrieval_evidence(stream)
-    return [
+    checks = [
         check(
             "knowledge_search_behavior_recorded",
             any(tool_evidence_matches(evidence, "knowledge-search") for evidence in tool_evidence),
-            "warning",
+            "hard",
         ),
         check(
             "retrieval_evidence_recorded",
             bool(retrieval_evidence),
-            "warning",
+            "hard" if knowledge_fixture else "warning",
         ),
         check(
             "answer_present_with_practical_guidance",
             bool(stream.answer.strip()) and contains_practical_safety_guidance(stream.answer),
-            "warning",
+            "hard",
         ),
     ]
+    if knowledge_fixture:
+        expected_sources = [
+            str(source)
+            for source in knowledge_fixture.get("sources") or []
+            if str(source).strip()
+        ]
+        retrieved_titles = {
+            str(item.get("title") or "") for item in retrieval_evidence
+        }
+        expected_phrases = [
+            str(phrase)
+            for phrase in knowledge_fixture.get("expected_answer_phrases") or []
+            if str(phrase).strip()
+        ]
+        checks.extend(
+            [
+                check(
+                    "seeded_knowledge_source_retrieved",
+                    bool(expected_sources)
+                    and all(source in retrieved_titles for source in expected_sources),
+                    "hard",
+                ),
+                check(
+                    "answer_uses_exact_seeded_knowledge_facts",
+                    bool(expected_phrases)
+                    and all(
+                        phrase.lower() in stream.answer.lower()
+                        for phrase in expected_phrases
+                    ),
+                    "hard",
+                ),
+            ]
+        )
+    return checks
 
 
 def admin_database_direct_select_checks(
@@ -810,23 +1137,37 @@ def admin_database_direct_select_checks(
 def admin_database_natural_language_guardrail_checks(
     stream: StreamResult,
     tool_evidence: list[dict[str, Any]],
+    database_fixture: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
-    answer_lower = stream.answer.lower()
+    expected_count = (
+        database_fixture.get("expected_user_count")
+        if isinstance(database_fixture, dict)
+        else None
+    )
+    normalized_answer = stream.answer.replace(",", "")
     return [
         check(
-            "db_query_guardrail_recorded",
-            any_tool_warning(tool_evidence, "db-query", "direct_select_required"),
+            "db_query_tool_used",
+            any(tool_evidence_matches(evidence, "db-query") for evidence in tool_evidence),
             "hard",
         ),
         check(
-            "db_query_not_executed_from_natural_language",
-            not any_tool_warning(tool_evidence, "db-query", "raw_results_redacted"),
+            "db_query_was_executed_from_natural_language",
+            any_tool_warning(tool_evidence, "db-query", "raw_results_redacted"),
             "hard",
         ),
         check(
-            "answer_directs_admin_to_submit_select",
-            "select" in answer_lower and "database" in answer_lower,
-            "warning",
+            "answer_reports_user_count",
+            isinstance(expected_count, int)
+            and bool(
+                re.search(
+                    rf"\b{expected_count}\b[^.\n]*\busers?\b|\busers?\b[^.\n]*\b{expected_count}\b",
+                    normalized_answer,
+                    flags=re.IGNORECASE,
+                )
+            ),
+            "hard",
+            f"expected the exact SQLite user count {expected_count}",
         ),
     ]
 
@@ -834,8 +1175,10 @@ def admin_database_natural_language_guardrail_checks(
 def user_curated_resource_referral_checks(
     stream: StreamResult,
     tool_evidence: list[dict[str, Any]],
+    resource_fixture: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
-    return [
+    expected_facts = curated_resource_expected_facts(resource_fixture)
+    checks = [
         check(
             "curated_resources_tool_used",
             any(tool_evidence_matches(evidence, "curated-resources") for evidence in tool_evidence),
@@ -844,29 +1187,36 @@ def user_curated_resource_referral_checks(
         check(
             "curated_resource_found",
             not any_tool_warning(tool_evidence, "curated-resources", "no_curated_resources"),
-            "warning",
+            "hard" if resource_fixture else "warning",
         ),
         check(
             "answer_surfaces_vetted_resource",
-            contains_any(
-                stream.answer,
-                [
-                    "Bench Liberty Legal Hotline",
-                    "bench-legal@example.test",
-                    "Signal: +1-000-000-0000",
-                ],
-            ),
-            "warning",
+            (
+                bool(expected_facts)
+                and all(fact.lower() in stream.answer.lower() for fact in expected_facts)
+            )
+            if resource_fixture
+            else contains_any(stream.answer, ["legal", "humanitarian", "resource"]),
+            "hard" if resource_fixture else "warning",
         ),
     ]
+    return checks
 
 
 def user_knowledge_and_resource_assistance_checks(
     stream: StreamResult,
     tool_evidence: list[dict[str, Any]],
+    knowledge_fixture: dict[str, Any] | None,
+    resource_fixture: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
-    checks = user_knowledge_assistance_checks(stream, tool_evidence)
-    checks.extend(user_curated_resource_referral_checks(stream, tool_evidence))
+    checks = user_knowledge_assistance_checks(
+        stream, tool_evidence, knowledge_fixture
+    )
+    checks.extend(
+        user_curated_resource_referral_checks(
+            stream, tool_evidence, resource_fixture
+        )
+    )
     checks.append(
         check(
             "answer_combines_safety_and_referral",
@@ -880,10 +1230,29 @@ def user_knowledge_and_resource_assistance_checks(
                     "humanitarian",
                 ],
             ),
-            "warning",
+            "hard",
         )
     )
     return checks
+
+
+def curated_resource_expected_facts(
+    resource_fixture: dict[str, Any] | None,
+) -> list[str]:
+    if not resource_fixture:
+        return []
+    explicit = resource_fixture.get("expected_answer_facts")
+    if isinstance(explicit, list):
+        return [str(item) for item in explicit if str(item).strip()]
+    resources = resource_fixture.get("resources") or []
+    if not resources or not isinstance(resources[0], dict):
+        return []
+    resource = resources[0]
+    contact = resource.get("contact") or {}
+    values = [resource.get("name")]
+    if isinstance(contact, dict):
+        values.append(contact.get("email"))
+    return [str(item) for item in values if str(item).strip()]
 
 
 def contains_practical_safety_guidance(answer: str) -> bool:
@@ -1254,6 +1623,12 @@ def truncate(value: str, max_chars: int) -> str:
 
 
 class LocalComposeEnvironment:
+    def __init__(self) -> None:
+        self._scenario_user_id: int | None = None
+        self._scenario_user_type_id: int | None = None
+        self._scenario_knowledge_fixture: dict[str, Any] | None = None
+        self._scenario_resource_fixture: dict[str, Any] | None = None
+
     def run_metadata(self) -> dict[str, Any]:
         return {
             "repo": "enclave-free/enclave.free-prototype",
@@ -1297,9 +1672,9 @@ print(auth.create_admin_session_token(admin["id"], admin["pubkey"], int(admin.ge
 """
         return run_backend_python(script, timeout=30).strip()
 
-    def user_token(self) -> str:
+    def user_token(self, tools: tuple[str, ...] = ()) -> str:
         script = """
-import auth, database, time
+import auth, database, json, time
 database.init_schema()
 suffix = str(int(time.time() * 1000))
 email = "conversation-bench-" + suffix + "@example.test"
@@ -1313,16 +1688,43 @@ with database.get_write_cursor() as cursor:
         (email, "Conversation Bench User", user_type_id),
     )
     user_id = cursor.lastrowid
-print(auth.create_session_token(user_id, email))
+print(json.dumps({
+    "token": auth.create_session_token(user_id, email),
+    "user_id": user_id,
+    "user_type_id": user_type_id,
+}))
 """
-        return run_backend_python(script, timeout=30).strip()
+        payload = json.loads(run_backend_python(script, timeout=30).strip())
+        self._scenario_user_id = int(payload["user_id"])
+        self._scenario_user_type_id = int(payload["user_type_id"])
+        configure_sage_user_policy(self._scenario_user_type_id, tools)
+        return str(payload["token"])
 
     def seed_knowledge(self) -> dict[str, Any]:
+        user_type_id = self._scenario_user_type_id
+        if user_type_id is None:
+            raise RuntimeError("seed_knowledge requires a freshly minted benchmark user")
+        suffix = uuid.uuid4().hex[:12]
+        job_id = f"conversation-bench-{suffix}"
+        chunk_id = f"{job_id}_chunk_0000"
+        source_file = f"Conversation Model Bench Post-Release Safety {suffix}.md"
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"chunk:{chunk_id}"))
+        upload_path = f"/uploads/{source_file}"
+        self._scenario_knowledge_fixture = {
+            "job_ids": [job_id],
+            "sources": [source_file],
+            "chunk_id": chunk_id,
+            "point_id": point_id,
+            "user_type_id": user_type_id,
+            "upload_paths": [upload_path],
+            "expected_answer_phrases": [
+                "physically safe place",
+                "contact trusted people",
+            ],
+        }
         script = """
 import json
 import os
-import time
-import uuid
 from pathlib import Path
 
 from qdrant_client.models import PointStruct
@@ -1331,14 +1733,16 @@ import database
 import ingest_db
 import store
 
-job_id = "conversation-bench-" + str(int(time.time() * 1000))
-chunk_id = job_id + "_chunk_0000"
-source_file = "Conversation Model Bench Post-Release Safety.md"
+job_id = __BENCH_JOB_ID__
+chunk_id = __BENCH_CHUNK_ID__
+source_file = __BENCH_SOURCE_FILE__
+point_id = __BENCH_POINT_ID__
 text = (
     "First-day post-release safety guidance: get to a physically safe place, "
     "contact trusted people, document urgent needs, and seek local professional "
     "legal or medical help when needed."
 )
+user_type_id = __BENCH_USER_TYPE_ID__
 upload_dir = Path(os.getenv("UPLOADS_DIR", "/uploads"))
 upload_dir.mkdir(parents=True, exist_ok=True)
 file_path = upload_dir / source_file
@@ -1356,6 +1760,19 @@ ingest_db.create_job(
 )
 ingest_db.update_job_status(job_id, "completed", total_chunks=1, processed_chunks=1)
 database.upsert_document_defaults(job_id, is_available=True, is_default_active=False, display_order=0)
+database.upsert_document_defaults_override(
+    job_id,
+    user_type_id,
+    is_available=True,
+    is_default_active=True,
+    changed_by="",
+)
+database.upsert_ai_config_override(
+    "knowledge_source_default",
+    user_type_id,
+    "selected",
+    changed_by="",
+)
 ingest_db.upsert_retrieval_chunk(
     chunk_id=chunk_id,
     job_id=job_id,
@@ -1366,7 +1783,6 @@ ingest_db.upsert_retrieval_chunk(
 
 store.ensure_qdrant_collection()
 vector = store.embed_texts(["query: first day after release political imprisonment unsafe"])[0]
-point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"chunk:{chunk_id}"))
 store.get_qdrant_client().upsert(
     collection_name=store.COLLECTION_NAME,
     points=[
@@ -1384,50 +1800,146 @@ store.get_qdrant_client().upsert(
     ],
 )
 
-print(json.dumps({"job_ids": [job_id], "sources": [source_file], "chunk_id": chunk_id, "point_id": point_id}))
+print(json.dumps({
+    "job_ids": [job_id],
+    "sources": [source_file],
+    "chunk_id": chunk_id,
+    "point_id": point_id,
+    "user_type_id": user_type_id,
+    "upload_paths": [str(file_path)],
+    "expected_answer_phrases": ["physically safe place", "contact trusted people"],
+}))
 """
+        replacements = {
+            "__BENCH_USER_TYPE_ID__": user_type_id,
+            "__BENCH_JOB_ID__": job_id,
+            "__BENCH_CHUNK_ID__": chunk_id,
+            "__BENCH_SOURCE_FILE__": source_file,
+            "__BENCH_POINT_ID__": point_id,
+        }
+        for marker, value in replacements.items():
+            script = script.replace(marker, json.dumps(value))
         raw = run_backend_python(script, timeout=180)
         try:
-            return json.loads(raw.strip().splitlines()[-1])
+            fixture = json.loads(raw.strip().splitlines()[-1])
+            self._scenario_knowledge_fixture = fixture
+            return fixture
         except (IndexError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"knowledge fixture did not return JSON: {raw[:400]}") from exc
 
     def seed_resources(self) -> dict[str, Any]:
+        suffix = uuid.uuid4().hex[:12]
+        resource_id = f"conversation-bench-global-legal-{suffix}"
+        resource_name = "Bench Liberty Legal Hotline"
+        resource_email = f"bench-legal-{suffix}@example.test"
+        self._scenario_resource_fixture = {
+            "resource_ids": [resource_id],
+            "resources": [],
+            "expected_answer_facts": [resource_name, resource_email],
+        }
         script = """
 import json
 
 import database
 
-resource_id = "conversation-bench-global-legal"
+suffix = __BENCH_SUFFIX__
+resource_id = __BENCH_RESOURCE_ID__
+resource_name = __BENCH_RESOURCE_NAME__
+resource_email = __BENCH_RESOURCE_EMAIL__
 database.init_schema()
-if database.get_resource(resource_id) is None:
-    database.create_resource(
-        resource_id=resource_id,
-        name="Bench Liberty Legal Hotline",
-        resource_type="ngo",
-        description="Synthetic benchmark fixture for vetted legal triage after detention release.",
-        contact={
-            "email": "bench-legal@example.test",
-            "secure_channel": "Signal: +1-000-000-0000",
-            "url": "https://example.test/bench-legal",
-        },
-        languages=["en", "es"],
-        scope_level="global",
-        scope_code=None,
-        help_types=["legal", "humanitarian"],
-        verified_at=database.utc_timestamp_z(),
-        vetted_by="conversation-model-bench",
-        source_note="Synthetic benchmark fixture.",
-        display_order=-100,
-    )
+database.create_resource(
+    resource_id=resource_id,
+    name=resource_name,
+    resource_type="ngo",
+    description="Synthetic benchmark fixture for vetted legal triage after detention release.",
+    contact={
+        "email": resource_email,
+        "secure_channel": "Signal: +1-000-000-0000",
+        "url": "https://example.test/bench-legal/" + suffix,
+    },
+    languages=["en", "es"],
+    scope_level="global",
+    scope_code=None,
+    help_types=["legal", "humanitarian"],
+    verified_at=database.utc_timestamp_z(),
+    vetted_by="conversation-model-bench",
+    source_note="Synthetic benchmark fixture.",
+    display_order=-100,
+)
 resource = database.get_resource(resource_id)
-print(json.dumps({"resource_ids": [resource_id], "resources": [resource]}))
+print(json.dumps({
+    "resource_ids": [resource_id],
+    "resources": [resource],
+    "expected_answer_facts": [resource_name, resource_email],
+}))
 """
+        replacements = {
+            "__BENCH_SUFFIX__": suffix,
+            "__BENCH_RESOURCE_ID__": resource_id,
+            "__BENCH_RESOURCE_NAME__": resource_name,
+            "__BENCH_RESOURCE_EMAIL__": resource_email,
+        }
+        for marker, value in replacements.items():
+            script = script.replace(marker, json.dumps(value))
         raw = run_backend_python(script, timeout=30)
         try:
-            return json.loads(raw.strip().splitlines()[-1])
+            fixture = json.loads(raw.strip().splitlines()[-1])
+            self._scenario_resource_fixture = fixture
+            return fixture
         except (IndexError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"resource fixture did not return JSON: {raw[:400]}") from exc
+
+    def database_user_count(self) -> int:
+        script = """
+import database
+database.init_schema()
+with database.get_cursor() as cursor:
+    cursor.execute("SELECT COUNT(*) AS count FROM users")
+    print(int(cursor.fetchone()["count"]))
+"""
+        return int(run_backend_python(script, timeout=30).strip())
+
+    def cleanup_scenario(self) -> None:
+        user_id = self._scenario_user_id
+        user_type_id = self._scenario_user_type_id
+        knowledge_fixture = self._scenario_knowledge_fixture
+        resource_fixture = self._scenario_resource_fixture
+
+        errors: list[str] = []
+        try:
+            if user_type_id is not None:
+                try:
+                    if user_id is None:
+                        raise RuntimeError(
+                            "benchmark user type exists without its temporary user id"
+                        )
+                    cleanup_sage_user_state(user_id, user_type_id)
+                except Exception as exc:
+                    errors.append(f"Sage Postgres fixture cleanup failed: {exc}")
+            cleanup_payload = {
+                "user_id": user_id,
+                "user_type_id": user_type_id,
+                "knowledge": knowledge_fixture,
+                "resources": resource_fixture,
+            }
+            if any(
+                value is not None
+                for value in (user_id, user_type_id, knowledge_fixture, resource_fixture)
+            ):
+                try:
+                    run_backend_python(
+                        backend_fixture_cleanup_script(cleanup_payload),
+                        timeout=120,
+                    )
+                except Exception as exc:
+                    errors.append(f"backend fixture cleanup failed: {exc}")
+        finally:
+            self._scenario_user_id = None
+            self._scenario_user_type_id = None
+            self._scenario_knowledge_fixture = None
+            self._scenario_resource_fixture = None
+        if errors:
+            raise RuntimeError("; ".join(errors))
 
     def switch_model(self, model: str) -> None:
         env = os.environ.copy()
@@ -1594,6 +2106,10 @@ class HttpConversationClient:
                     if not done:
                         stream_error = f"stream closed before done: {exc}"
                     break
+                except (TimeoutError, OSError, urllib.error.URLError) as exc:
+                    if not done:
+                        stream_error = f"stream read failed before done: {exc}"
+                    break
                 if not raw:
                     break
                 append_raw(raw)
@@ -1618,6 +2134,32 @@ class HttpConversationClient:
             },
             error=stream_error,
         )
+
+    def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+        request = urllib.request.Request(
+            f"{self.api_base}/query/session/{session_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            },
+            method="DELETE",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                body = response.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"session cleanup failed with HTTP {exc.code}: {detail}"
+            ) from exc
+        payload = json.loads(body) if body.strip() else {}
+        deletion = payload.get("deletion") if isinstance(payload, dict) else None
+        if (
+            payload.get("status") != "deleted"
+            or not isinstance(deletion, dict)
+            or deletion.get("status") != "succeeded"
+        ):
+            raise RuntimeError(f"session cleanup returned an unexpected payload: {payload}")
 
 
 def parse_sse_event(block: str) -> tuple[str | None, dict[str, Any]]:
@@ -1646,6 +2188,202 @@ def run_backend_python(script: str, timeout: int = 120) -> str:
         [*COMPOSE_ARGS, "exec", "-T", "core-backend", "python", "-c", script],
         timeout=timeout,
     )
+
+
+def configure_sage_user_policy(user_type_id: int, tool_ids: tuple[str, ...]) -> None:
+    if user_type_id < 1:
+        raise ValueError("user_type_id must be positive")
+    invalid_tool_ids = sorted(set(tool_ids) - USER_CONVERSATION_TOOL_SET_IDS)
+    if invalid_tool_ids:
+        raise ValueError(f"unsupported user conversation tool IDs: {invalid_tool_ids}")
+    normalized_tool_ids = sorted(set(tool_ids))
+    knowledge_scope = "selected" if "knowledge-search" in normalized_tool_ids else "none"
+    defaults_json = json.dumps(normalized_tool_ids, separators=(",", ":"))
+    tool_override_id = uuid.uuid4()
+    knowledge_override_id = uuid.uuid4()
+    sql = f"""
+INSERT INTO ai_config_user_type_overrides (
+    id, ai_config_key, user_type_id, value, updated_at
+) VALUES
+    ('{tool_override_id}', 'user_default_tool_ids', {user_type_id}, '{defaults_json}', NOW()),
+    ('{knowledge_override_id}', 'knowledge_source_default', {user_type_id}, '{knowledge_scope}', NOW())
+ON CONFLICT (ai_config_key, user_type_id) DO UPDATE SET
+    value = EXCLUDED.value,
+    updated_at = NOW();
+"""
+    run_command(
+        [
+            *COMPOSE_ARGS,
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-U",
+            "sage",
+            "-d",
+            "sage",
+            "-c",
+            sql,
+        ],
+        timeout=30,
+    )
+
+
+def cleanup_sage_user_state(user_id: int, user_type_id: int) -> None:
+    if user_id < 1:
+        raise ValueError("user_id must be positive")
+    if user_type_id < 1:
+        raise ValueError("user_type_id must be positive")
+    memory_user_id = f"user:{user_id}"
+    sql = f"""
+BEGIN;
+DELETE FROM messages
+WHERE user_id = '{memory_user_id}'
+   OR agent_id IN (
+       SELECT agent_id FROM web_sessions
+       WHERE owner_type = 'user' AND owner_id = '{user_id}'
+   );
+DELETE FROM blocks
+WHERE agent_id IN (
+    SELECT agent_id::text FROM web_sessions
+    WHERE owner_type = 'user' AND owner_id = '{user_id}'
+);
+DELETE FROM passages
+WHERE agent_id IN (
+    SELECT agent_id::text FROM web_sessions
+    WHERE owner_type = 'user' AND owner_id = '{user_id}'
+);
+DELETE FROM user_preferences
+WHERE agent_id IN (
+    SELECT agent_id FROM web_sessions
+    WHERE owner_type = 'user' AND owner_id = '{user_id}'
+);
+DELETE FROM scheduled_tasks
+WHERE agent_id IN (
+    SELECT agent_id FROM web_sessions
+    WHERE owner_type = 'user' AND owner_id = '{user_id}'
+);
+DELETE FROM summaries
+WHERE agent_id IN (
+    SELECT agent_id FROM web_sessions
+    WHERE owner_type = 'user' AND owner_id = '{user_id}'
+);
+DELETE FROM agents
+WHERE id IN (
+    SELECT agent_id FROM web_sessions
+    WHERE owner_type = 'user' AND owner_id = '{user_id}'
+);
+DELETE FROM web_sessions
+WHERE owner_type = 'user' AND owner_id = '{user_id}';
+DELETE FROM external_identities
+WHERE identity_type = 'user' AND external_id = '{user_id}';
+DELETE FROM chat_contexts
+WHERE signal_identifier = '{memory_user_id}';
+DELETE FROM ai_config_user_type_overrides
+WHERE user_type_id = {user_type_id};
+COMMIT;
+"""
+    run_command(
+        [
+            *COMPOSE_ARGS,
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-U",
+            "sage",
+            "-d",
+            "sage",
+            "-c",
+            sql,
+        ],
+        timeout=30,
+    )
+
+
+def backend_fixture_cleanup_script(payload: dict[str, Any]) -> str:
+    serialized = json.dumps(payload, separators=(",", ":"))
+    return f"""
+import json
+from pathlib import Path
+
+from qdrant_client.models import PointIdsList
+
+import database
+import ingest_db
+import store
+
+payload = json.loads({json.dumps(serialized)})
+errors = []
+knowledge = payload.get("knowledge") or {{}}
+resources = payload.get("resources") or {{}}
+
+point_ids = [str(value) for value in [knowledge.get("point_id")] if value]
+if point_ids:
+    try:
+        collections = store.get_qdrant_client().get_collections().collections
+        if any(collection.name == store.COLLECTION_NAME for collection in collections):
+            store.get_qdrant_client().delete(
+                collection_name=store.COLLECTION_NAME,
+                points_selector=PointIdsList(points=point_ids),
+                wait=True,
+            )
+    except Exception as exc:
+        errors.append("Qdrant: " + str(exc))
+
+for upload_path in knowledge.get("upload_paths") or []:
+    try:
+        Path(upload_path).unlink(missing_ok=True)
+    except Exception as exc:
+        errors.append("upload: " + str(exc))
+
+database.init_schema()
+ingest_db.init_ingest_schema()
+for job_id in knowledge.get("job_ids") or []:
+    try:
+        ingest_db.delete_retrieval_chunks_for_job(str(job_id))
+        ingest_db.delete_job(str(job_id))
+    except Exception as exc:
+        errors.append("knowledge SQLite: " + str(exc))
+
+for resource_id in resources.get("resource_ids") or []:
+    try:
+        database.delete_resource(str(resource_id))
+    except Exception as exc:
+        errors.append("resource SQLite: " + str(exc))
+
+user_id = payload.get("user_id")
+if user_id is not None:
+    try:
+        database.delete_user(int(user_id))
+    except Exception as exc:
+        errors.append("user SQLite: " + str(exc))
+
+user_type_id = payload.get("user_type_id")
+if user_type_id is not None:
+    try:
+        database.delete_ai_config_override(
+            "user_default_tool_ids",
+            int(user_type_id),
+            changed_by="",
+        )
+        database.delete_ai_config_override(
+            "knowledge_source_default",
+            int(user_type_id),
+            changed_by="",
+        )
+        database.delete_user_type(int(user_type_id))
+    except Exception as exc:
+        errors.append("user type SQLite: " + str(exc))
+
+if errors:
+    raise RuntimeError(" | ".join(errors))
+print(json.dumps({{"status": "clean", "errors": []}}))
+"""
 
 
 def run_command(cmd: list[str], timeout: int, env: dict[str, str] | None = None) -> str:

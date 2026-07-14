@@ -1,16 +1,16 @@
 # enclave.free-prototype
 
-Prototype fork of `enclave.free` that keeps the public API at `:8000` while hard-cutting Agent Runtime behavior from the legacy Python path to Sage + Tinfoil.
+Prototype fork of `enclave.free` that keeps the public API at `:18000` while hard-cutting Agent Runtime behavior from the legacy Python path to Sage + Tinfoil.
 
 On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx only routes requests. Sage now owns auth verification, CORS, CSRF, Agent Settings, and the public Agent Runtime route contract directly.
 
 ## System Summary
 
-- `frontend` still talks to `http://localhost:8000`.
+- `frontend` still talks to `http://localhost:18000`.
 - `backend` is an nginx gateway, not the product backend.
 - `core-backend` remains the FastAPI Enclave Control Plane for auth issuance, admin/product APIs, ingest, document access, and the private Sage control-plane contract.
 - `sage` runs the `enclave_web` Axum binary and owns the Agent Runtime: public AI routes, route auth, CSRF, CORS, Agent Settings, and Conversation continuity.
-- `tinfoil-proxy` is the OpenAI-compatible Tinfoil transport used by Sage's preferred Model Provider path.
+- `tinfoil-proxy` is Tinfoil's [supported standalone, OpenAI-compatible transport](https://github.com/tinfoilsh/tinfoil-proxy) used by Sage's preferred Model Provider path.
 - `postgres` stores Sage Session Memory and `web_sessions`.
 - `qdrant` stays the Enclave document retrieval index.
 - `valkey` coordinates shared rate limiting across runtime instances.
@@ -18,7 +18,7 @@ On `proto/dumb-gateway-foundation`, the gateway is intentionally boring: nginx o
 ## Topology
 
 ```text
-frontend -> gateway(:8000) -> { core-backend(:8000 internal), sage(:3000 internal) }
+frontend -> gateway(:18000) -> { core-backend(:18000 internal), sage(:3000 internal) }
 ```
 
 Public route ownership on this branch:
@@ -74,7 +74,7 @@ scripts/reset_local_instance.sh
 
 First startup will:
 
-1. pull Postgres, Tinfoil, Qdrant, Valkey, and SearXNG images
+1. pull Postgres, the standalone Tinfoil proxy, Qdrant, Valkey, and SearXNG images
 2. build the FastAPI backend, Sage runtime, gateway, and frontend
 3. download the embedding model cache
 4. initialize SQLite and Sage Postgres state
@@ -89,18 +89,24 @@ the same seed failure still fails startup.
 
 ```bash
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
-lsof -nP -iTCP:8000 -sTCP:LISTEN
-curl http://localhost:8000/test
-curl http://localhost:8000/health
-curl http://localhost:8000/llm/test
+lsof -nP -iTCP:18000 -sTCP:LISTEN
+curl http://localhost:18000/test
+curl http://localhost:18000/health
+curl http://localhost:18000/llm/test
 ```
 
-The smoke URLs are expected to hit the Compose `enclave-api-gateway` container. If `lsof` shows a local process such as `python3` already listening on `127.0.0.1:8000`, stop it before trusting `localhost:8000`; otherwise the smoke curls may report another server's 404s instead of the gateway result. To bypass host port ambiguity while debugging the stack, run the same checks from inside the gateway container:
+Run `scripts/smoke_test.sh` to execute those gateway checks and a strict
+non-streaming completion through the private `tinfoil-proxy:8089` endpoint. The
+completion check rejects incomplete HTTP bodies, malformed JSON, and responses
+without an OpenAI-compatible assistant message. `scripts/reset_local_instance.sh`
+runs the same smoke suite automatically after rebuilding the stack.
+
+The smoke URLs are expected to hit the Compose `enclave-api-gateway` container. If `lsof` shows a local process such as `python3` already listening on `127.0.0.1:18000`, stop it before trusting `localhost:18000`; otherwise the smoke curls may report another server's 404s instead of the gateway result. To bypass host port ambiguity while debugging the stack, run the same checks from inside the gateway container:
 
 ```bash
-docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test
-docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/health
-docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/llm/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/health
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/llm/test
 ```
 
 Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the explicit diagnostics dashboard at `http://localhost:5173/diagnostics/test-dashboard`. The root frontend route (`http://localhost:5173/`) is the product entry path and redirects based on Instance initiation and authentication state.
@@ -108,13 +114,13 @@ Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the expl
 Only two services are exposed to the host by default:
 
 - frontend: `http://localhost:5173`
-- public API gateway: `http://localhost:8000`
+- public API gateway: `http://localhost:18000`
 
 Everything else stays on the internal Docker network:
 
 - Sage runtime: `http://sage:3000`
-- core backend: `http://core-backend:8000`
-- Tinfoil proxy: `http://tinfoil-proxy:8089/v1`
+- core backend: `http://core-backend:18000`
+- Standalone Tinfoil proxy: `http://tinfoil-proxy:8089/v1`
 - Qdrant: `http://qdrant:6333`
 - Postgres: `postgres://sage:sage@postgres:5432/sage`
 - SearXNG: `http://searxng:8080`
@@ -158,4 +164,4 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml down -v  # removes all Compose volumes, including caches
 ```
 
-For repeatable local smoke tests, prefer `scripts/reset_local_instance.sh`. It removes runtime state volumes (`qdrant_data`, `sage_postgres_data`, `sage_workspace`, and `sqlite_data`), preserves the embedding cache by default, restarts the stack, and verifies `/test` plus `/llm/test` through the gateway. Use `scripts/reset_local_instance.sh --all` only when you also want to discard cached model data.
+For repeatable local smoke tests, prefer `scripts/reset_local_instance.sh`. It removes runtime state volumes (`qdrant_data`, `sage_postgres_data`, `sage_workspace`, and `sqlite_data`), preserves the embedding cache by default, restarts the stack, and verifies gateway health plus strict non-streaming Model Provider response integrity. Use `scripts/reset_local_instance.sh --all` only when you also want to discard cached model data.

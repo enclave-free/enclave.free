@@ -199,7 +199,7 @@ python run_all_be_tests.py --pattern "test_2*"  # Only RAG tests
 Options:
 ```bash
 # Specify API base URL
-python run_all_be_tests.py --api-base http://localhost:8000
+python run_all_be_tests.py --api-base http://127.0.0.1:18000
 
 # Verbose output
 python run_all_be_tests.py --verbose
@@ -219,43 +219,47 @@ python run_all_be_tests.py --pattern "test_2a_*"
 ```bash
 # CRM encryption test (1A)
 cd scripts/tests/CRM
-python test_1a_verify_encryption.py --api-base http://localhost:8000
+python test_1a_verify_encryption.py --api-base http://127.0.0.1:18000
 
 # RAG persistence test (2A)
 cd scripts/tests/RAG
-python test_2a_document_persistence.py --api-base http://localhost:8000
+python test_2a_document_persistence.py --api-base http://127.0.0.1:18000
 
 # AUTH key migration prepare (3A)
 cd scripts/tests/AUTH
-python test_3a_key_migration_prepare.py --api-base http://localhost:8000
+python test_3a_key_migration_prepare.py --api-base http://127.0.0.1:18000
 
 # AUTH key migration execute (3B)
 cd scripts/tests/AUTH
-python test_3b_key_migration_execute.py --api-base http://localhost:8000
+python test_3b_key_migration_execute.py --api-base http://127.0.0.1:18000
 
 # AUTH hardening regression suite (3C)
 cd scripts/tests/AUTH
-python test_3c_auth_hardening_regression.py --api-base http://localhost:8000
+python test_3c_auth_hardening_regression.py --api-base http://127.0.0.1:18000
 
 # Phase 3 config integrity regression (3D)
 cd scripts/tests/AUTH
-python test_3d_phase3_config_integrity.py --api-base http://localhost:8000
+python test_3d_phase3_config_integrity.py --api-base http://127.0.0.1:18000
 
 # Unified admin chat tool parity (4A)
 cd scripts/tests/TOOLS
-python test_4a_unified_chat_tools_parity.py --api-base http://localhost:8000 --admin-token <ADMIN_TOKEN>
+python test_4a_unified_chat_tools_parity.py --api-base http://127.0.0.1:18000 --admin-token <ADMIN_TOKEN>
 
 # Sage route smoke (5B)
 cd scripts/tests/TOOLS
-python test_5b_sage_route_smoke.py --api-base http://localhost:8000 --token <ADMIN_TOKEN>
+python test_5b_sage_route_smoke.py --api-base http://127.0.0.1:18000 --token <ADMIN_TOKEN>
 
 # Chat streaming transport (5C)
 cd scripts/tests/TOOLS
-python test_5c_chat_streaming_transport.py --api-base http://localhost:8000
+python test_5c_chat_streaming_transport.py --api-base http://127.0.0.1:18000
 
 # Chunk retrieval gateway smoke (5D)
 cd scripts/tests/TOOLS
-python test_5d_chunk_retrieval_gateway_smoke.py --api-base http://localhost:8000
+python test_5d_chunk_retrieval_gateway_smoke.py --api-base http://127.0.0.1:18000
+
+# When supplying an existing user token, identify its User Type so the smoke
+# can configure and then restore its authoritative Knowledge policy:
+python test_5d_chunk_retrieval_gateway_smoke.py --token <USER_TOKEN> --user-type-id <USER_TYPE_ID>
 ```
 
 ---
@@ -343,7 +347,7 @@ def test_main(api_base: str, config: dict, **kwargs) -> bool:
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api-base", default="http://localhost:8000")
+    parser.add_argument("--api-base", default="http://127.0.0.1:18000")
     args = parser.parse_args()
     
     config = load_config()
