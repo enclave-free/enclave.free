@@ -26,6 +26,7 @@ import {
 import { adminFetch, ADMIN_RESOURCES_CHANGED_EVENT } from '../utils/adminApi';
 import {
   CoveragePicker,
+  type CoverageLevel,
   type RegionData,
 } from '../components/admin/CoveragePicker';
 
@@ -66,7 +67,7 @@ interface Resource {
   description: string | null;
   contact: ResourceContact;
   languages: string[];
-  scope_level: string | null;
+  scope_level: CoverageLevel | null;
   scope_code: string | null;
   coverage: string | null;
   help_types: string[];
@@ -89,7 +90,7 @@ interface FormState {
   name: string;
   resource_type: string;
   description: string;
-  scope_level: string;
+  scope_level: CoverageLevel;
   scope_code: string;
   help_types: string[];
   languages: string;
@@ -504,7 +505,7 @@ export function AdminResourcesDirectory({
                 label={t('adminResources.coverage', 'Coverage')}
                 description={t(
                   'adminResources.coverageHint',
-                  'Search a country, region, or “Global”. A country also offers its subregion and region.'
+                  'Choose a coverage level, then search for its name or code.'
                 )}
               />
 

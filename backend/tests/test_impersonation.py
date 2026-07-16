@@ -77,6 +77,32 @@ class ImpersonationTest(unittest.TestCase):
         self.assertEqual(result["token"], "token")
         create_token.assert_called_once_with(user_id, expected_email)
 
+    def test_provisioned_test_user_requires_instance_derived_pubkey(self) -> None:
+        user_type_id = self.database.create_user_type("Student")
+        derived_pubkey = self.impersonation.derive_test_user_pubkey(
+            self.admin_pubkey,
+            user_type_id,
+        )
+        test_user_id = self.database.create_user(
+            pubkey=derived_pubkey,
+            email=f"test-user+type{user_type_id}@enclave.test",
+            name="Test User",
+            user_type_id=user_type_id,
+        )
+        ordinary_user_id = self.database.create_user(
+            pubkey=PrivateKey().public_key.format(compressed=True)[1:].hex(),
+            email="test-user+ordinary@enclave.test",
+            name="Ordinary User",
+            user_type_id=user_type_id,
+        )
+
+        self.assertTrue(
+            self.impersonation.is_provisioned_test_user(test_user_id)
+        )
+        self.assertFalse(
+            self.impersonation.is_provisioned_test_user(ordinary_user_id)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

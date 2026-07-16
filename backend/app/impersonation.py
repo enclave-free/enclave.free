@@ -79,16 +79,48 @@ def _test_user_email(user_type_id: Optional[int]) -> str:
     )
 
 
-def is_test_user_email(email: Optional[str]) -> bool:
-    """True if `email` is a reserved, instance-provisioned test-user address
-    (admin "Test as User"). These use the RFC 6761 reserved `.test` TLD, which is
-    non-routable, so no real user can ever hold one — see `_test_user_email`."""
-    if not email:
+def is_provisioned_test_user(user_id: int) -> bool:
+    """Return whether a user is the instance-derived Test as User identity.
+
+    Email shape is not an identity boundary: an ordinary user record can contain
+    a reserved-looking address. The deterministic Nostr pubkey is the invariant
+    enforced when an impersonation token is issued, so ambient-log suppression
+    must use the same invariant.
+    """
+    import database
+    from nostr_keys import normalize_pubkey
+
+    with database.get_cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                users.pubkey AS user_pubkey,
+                users.user_type_id,
+                (SELECT COUNT(*) FROM admins) AS admin_count,
+                (SELECT pubkey FROM admins ORDER BY created_at LIMIT 1) AS admin_pubkey
+            FROM users
+            WHERE users.id = ?
+            """,
+            (user_id,),
+        )
+        identity = cursor.fetchone()
+    if (
+        identity is None
+        or not identity["user_pubkey"]
+        or identity["admin_count"] != 1
+        or not identity["admin_pubkey"]
+    ):
         return False
-    normalized = email.strip().lower()
-    return normalized == "test-user@enclave.test" or (
-        normalized.startswith("test-user+") and normalized.endswith("@enclave.test")
+
+    expected_pubkey = derive_test_user_pubkey(
+        identity["admin_pubkey"],
+        identity["user_type_id"],
     )
+    try:
+        actual_pubkey = normalize_pubkey(identity["user_pubkey"])
+    except ValueError:
+        return False
+    return hmac.compare_digest(actual_pubkey, expected_pubkey)
 
 
 def issue_session_token(*, user_id: int, issued_by_pubkey: str) -> dict[str, Any]:

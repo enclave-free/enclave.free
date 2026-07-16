@@ -8,6 +8,7 @@ import {
   exportSessionLog,
   getSessionLog,
   listSessionLogs,
+  recordSessionLogPlaintextExport,
   setTurnFeedback,
 } from '../../../utils/sessionLogsApi';
 
@@ -21,6 +22,7 @@ vi.mock('../../../utils/sessionLogsApi', () => ({
   exportSessionLog: vi.fn(),
   getSessionLog: vi.fn(),
   listSessionLogs: vi.fn(),
+  recordSessionLogPlaintextExport: vi.fn(),
   setTurnFeedback: vi.fn(),
 }));
 
@@ -30,6 +32,9 @@ const mockDeleteSessionLog = vi.mocked(deleteSessionLog);
 const mockExportSessionLog = vi.mocked(exportSessionLog);
 const mockGetSessionLog = vi.mocked(getSessionLog);
 const mockListSessionLogs = vi.mocked(listSessionLogs);
+const mockRecordSessionLogPlaintextExport = vi.mocked(
+  recordSessionLogPlaintextExport
+);
 const mockSetTurnFeedback = vi.mocked(setTurnFeedback);
 const mockCreateObjectURL = vi.fn(() => 'blob:test-feedback-log-1');
 const mockRevokeObjectURL = vi.fn();
@@ -71,6 +76,7 @@ describe('FeedbackView', () => {
     mockExportSessionLog.mockReset();
     mockGetSessionLog.mockReset();
     mockListSessionLogs.mockReset();
+    mockRecordSessionLogPlaintextExport.mockReset();
     mockSetTurnFeedback.mockReset();
     mockCreateObjectURL.mockClear();
     mockRevokeObjectURL.mockClear();
@@ -93,6 +99,7 @@ describe('FeedbackView', () => {
     mockExportSessionLog.mockResolvedValue(
       new Blob(['zip'], { type: 'application/zip' })
     );
+    mockRecordSessionLogPlaintextExport.mockResolvedValue();
     mockListSessionLogs.mockResolvedValue([
       {
         log_id: 'log-1',
@@ -192,6 +199,7 @@ describe('FeedbackView', () => {
     await waitFor(() => {
       expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     });
+    expect(mockRecordSessionLogPlaintextExport).toHaveBeenCalledWith('log-1');
     // The backend ciphertext (.zip) export is no longer used.
     expect(mockExportSessionLog).not.toHaveBeenCalled();
     expect(mockAnchorClick).toHaveBeenCalled();
@@ -205,6 +213,27 @@ describe('FeedbackView', () => {
     const text = await blob.text();
     expect(text).toContain('Yes, here is a plan.');
     expect(text).toContain('"log_id": "log-1"');
+  });
+
+  it('does not download a plaintext export when audit recording fails', async () => {
+    const user = userEvent.setup();
+    mockRecordSessionLogPlaintextExport.mockRejectedValue(
+      new Error('Export could not be audited')
+    );
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    await user.click(trialButton as HTMLButtonElement);
+    await screen.findByText('Yes, here is a plan.');
+    await user.click(screen.getByRole('button', { name: 'Export' }));
+
+    expect(
+      await screen.findByText('Export could not be audited')
+    ).toBeInTheDocument();
+    expect(mockAnchorClick).not.toHaveBeenCalled();
   });
 
   it('shows saved assistant tool trace metadata after decrypting a transcript', async () => {

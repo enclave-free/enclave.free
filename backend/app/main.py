@@ -2024,6 +2024,27 @@ async def export_session_log_admin(
     )
 
 
+@app.post(
+    "/admin/session-logs/{log_id}/plaintext-export",
+    response_model=SuccessResponse,
+)
+async def record_plaintext_session_log_export_admin(
+    log_id: str,
+    admin: dict = Depends(auth.require_admin),
+) -> SuccessResponse:
+    """Audit a browser-generated decrypted export without receiving plaintext."""
+    filename = f"beta-session-log-{log_id}.json"
+    try:
+        session_logs.record_plaintext_export(
+            log_id,
+            filename=filename,
+            changed_by=admin.get("pubkey"),
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session log not found")
+    return SuccessResponse(success=True, message="Session log export recorded")
+
+
 @app.put(
     "/admin/session-logs/{log_id}/turns/{turn_index}/feedback",
     response_model=SessionLogTurnFeedback,

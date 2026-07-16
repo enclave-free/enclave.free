@@ -1037,9 +1037,10 @@
     "deleteTitle": "Delete resource?",
     "deleteBody": "This removes the directory entry for {{name}}",
     "coverage": "Coverage",
-    "coverageHint": "Search a country, region, or “Global”. A country also offers its subregion and region.",
-    "coveragePlaceholder": "Search a country, region, or “Global”…",
-    "coverageClear": "Clear coverage",
+    "coverageHint": "Choose a coverage level, then search for its name or code.",
+    "coverageCodePlaceholder": "Search by name or code…",
+    "coverageLevelFirst": "Choose a coverage level first",
+    "coverageClear": "Clear coverage code",
     "level": {
       "country": "Country",
       "subregion": "Subregion",

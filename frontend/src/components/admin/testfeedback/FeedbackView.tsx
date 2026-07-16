@@ -16,6 +16,7 @@ import {
   deleteSessionLog,
   getSessionLog,
   listSessionLogs,
+  recordSessionLogPlaintextExport,
   setTurnFeedback,
   type FeedbackRating,
   type SessionLogDetail,
@@ -292,7 +293,7 @@ export function FeedbackView() {
     [selectedId, loadList]
   );
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     if (!selectedId || !detail) return;
     setExportError(null);
     // Export the already client-side-decrypted transcript + feedback as
@@ -338,6 +339,9 @@ export function FeedbackView() {
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: 'application/json',
       });
+      // Plaintext stays in the browser, but the copied export must still leave
+      // audit evidence before the download is allowed to escape active storage.
+      await recordSessionLogPlaintextExport(selectedId);
       downloadBlob(blob, `beta-session-log-${selectedId}.json`);
     } catch (err) {
       setExportError(
