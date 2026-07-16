@@ -79,6 +79,18 @@ def _test_user_email(user_type_id: Optional[int]) -> str:
     )
 
 
+def is_test_user_email(email: Optional[str]) -> bool:
+    """True if `email` is a reserved, instance-provisioned test-user address
+    (admin "Test as User"). These use the RFC 6761 reserved `.test` TLD, which is
+    non-routable, so no real user can ever hold one — see `_test_user_email`."""
+    if not email:
+        return False
+    normalized = email.strip().lower()
+    return normalized == "test-user@enclave.test" or (
+        normalized.startswith("test-user+") and normalized.endswith("@enclave.test")
+    )
+
+
 def issue_session_token(*, user_id: int, issued_by_pubkey: str) -> dict[str, Any]:
     """Mint a real, signed user session token scoped to the test user.
 

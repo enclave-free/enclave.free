@@ -175,7 +175,7 @@ describe('FeedbackView', () => {
     });
   });
 
-  it('exports the selected encrypted session log as a zip download', async () => {
+  it('exports the selected session log as a decrypted plaintext JSON download', async () => {
     const user = userEvent.setup();
 
     render(<FeedbackView />);
@@ -190,13 +190,21 @@ describe('FeedbackView', () => {
     await user.click(screen.getByRole('button', { name: 'Export' }));
 
     await waitFor(() => {
-      expect(mockExportSessionLog).toHaveBeenCalledWith('log-1');
+      expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     });
-    expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    // The backend ciphertext (.zip) export is no longer used.
+    expect(mockExportSessionLog).not.toHaveBeenCalled();
+    expect(mockAnchorClick).toHaveBeenCalled();
     expect(mockRevokeObjectURL).toHaveBeenCalledWith(
       'blob:test-feedback-log-1'
     );
-    expect(mockAnchorClick).toHaveBeenCalled();
+
+    // The download is decrypted plaintext JSON containing the transcript.
+    const blob = (mockCreateObjectURL.mock.calls[0] as unknown as [Blob])[0];
+    expect(blob.type).toBe('application/json');
+    const text = await blob.text();
+    expect(text).toContain('Yes, here is a plan.');
+    expect(text).toContain('"log_id": "log-1"');
   });
 
   it('shows saved assistant tool trace metadata after decrypting a transcript', async () => {

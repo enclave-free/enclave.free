@@ -863,12 +863,23 @@ async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessio
     closed (409) if no admin is configured, so nothing is stored in plaintext.
     """
     import session_logs
+    import impersonation
 
     if payload.actor.type != "user":
         raise HTTPException(
             status_code=403,
             detail="User session logs require a user actor",
         )
+
+    # Admin "Test as User" sessions are captured explicitly as a Test User
+    # Session (source="test") elsewhere. Skip the ambient user-conversation log
+    # for the reserved test-user identity so a trial doesn't also create a
+    # duplicate "User Conversation" log. See issue #494.
+    if impersonation.is_test_user_email(payload.actor.email):
+        logger.info(
+            "Skipping ambient session log for test user %s", payload.actor.email
+        )
+        return InternalSessionLogResponse(log_id="", status="skipped", turn_count=0)
 
     log = None
     created_log = False
