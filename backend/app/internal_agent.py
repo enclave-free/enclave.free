@@ -863,12 +863,26 @@ async def log_user_session(payload: InternalSessionLogRequest) -> InternalSessio
     closed (409) if no admin is configured, so nothing is stored in plaintext.
     """
     import session_logs
+    import impersonation
 
     if payload.actor.type != "user":
         raise HTTPException(
             status_code=403,
             detail="User session logs require a user actor",
         )
+
+    # Admin "Test as User" sessions are captured explicitly as a Test User
+    # Session (source="test") elsewhere. Skip the ambient user-conversation log
+    # only when the persisted user has the instance-derived test-user pubkey, so
+    # an ordinary user with a reserved-looking email remains logged. See #494.
+    with database.dedicated_connection():
+        is_test_user = impersonation.is_provisioned_test_user(payload.actor.id)
+    if is_test_user:
+        logger.info(
+            "Skipping ambient session log for provisioned test user %s",
+            payload.actor.id,
+        )
+        return InternalSessionLogResponse(log_id="", status="skipped", turn_count=0)
 
     log = None
     created_log = False

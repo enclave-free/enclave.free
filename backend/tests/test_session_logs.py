@@ -389,6 +389,28 @@ class SessionLogsTest(unittest.TestCase):
         self.assertEqual(event["target"], "test_feedback_session")
         self.assertEqual(event["log_id"], log["log_id"])
 
+    def test_plaintext_browser_export_is_audited_without_plaintext(self) -> None:
+        log = self.session_logs.create_session_log(title="Readable export")
+        filename = f"beta-session-log-{log['log_id']}.json"
+
+        self.session_logs.record_plaintext_export(
+            log["log_id"],
+            filename=filename,
+            changed_by="admin-pubkey",
+        )
+
+        entries = self.database.get_config_audit_log(
+            limit=1,
+            table_name="data_deletion",
+        )
+        self.assertEqual(entries[0]["config_key"], "copied_export:test_feedback_session")
+        self.assertEqual(entries[0]["changed_by"], "admin-pubkey")
+        event = json.loads(entries[0]["new_value"])
+        self.assertEqual(event["log_id"], log["log_id"])
+        self.assertEqual(event["filename"], filename)
+        self.assertTrue(event["includes_decrypted_browser_values"])
+        self.assertFalse(event["plaintext_contents_received_by_backend"])
+
     def test_delete_keeps_metadata_when_transcript_file_removal_fails(self) -> None:
         log = self.session_logs.create_session_log(title="Synthetic User delete")
         self.session_logs.save_transcript(

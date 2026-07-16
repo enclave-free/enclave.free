@@ -2959,7 +2959,7 @@ def _seed_default_ai_config() -> None:
             VALUES (?, ?, ?, ?, ?)
         """, (
             "knowledge_source_default",
-            "none",
+            "selected",
             "string",
             "default",
             "Knowledge Source scope active by default for User Conversations: none, selected, or all",

@@ -396,6 +396,17 @@ export function AdminAIConfig() {
   const promptSectionMeta = getPromptSectionMeta(t);
   const parameterMeta = getParameterMeta(t);
   const defaultMeta = getDefaultMeta(t);
+  const scopedDocuments =
+    selectedUserTypeId !== null ? userTypeDocuments : documents;
+  const knowledgeSourceScope = aiConfig?.defaults
+    .find((item) => item.key === 'knowledge_source_default')
+    ?.value.trim()
+    .toLowerCase();
+  const hasActiveDefaultDocuments = scopedDocuments.some(
+    (document) => document.is_available && document.is_default_active
+  );
+  const knowledgeSearchDisabledWithActiveDocuments =
+    knowledgeSourceScope === 'none' && hasActiveDefaultDocuments;
 
   // Render a config item editor (supports inheritance display)
   const renderConfigItem = (item: AIConfigItem | AIConfigWithInheritance) => {
@@ -851,6 +862,23 @@ export function AdminAIConfig() {
           <div className="space-y-3">
             {aiConfig?.defaults.map(renderConfigItem)}
           </div>
+
+          {knowledgeSearchDisabledWithActiveDocuments && (
+            <Callout
+              label={t(
+                'adminAI.knowledgeSearchDisabledLabel',
+                'Knowledge Search is off'
+              )}
+              tone="warning"
+            >
+              <p className="text-sm text-text-secondary">
+                {t(
+                  'adminAI.knowledgeSearchDisabledMessage',
+                  'Active default documents will not be used until Knowledge Sources is set to selected default documents or all available documents.'
+                )}
+              </p>
+            </Callout>
+          )}
         </div>
 
         {/* Document Defaults Section */}
@@ -872,12 +900,9 @@ export function AdminAIConfig() {
             )}
           </p>
 
-          {documents.length > 0 ? (
+          {scopedDocuments.length > 0 ? (
             <div className="space-y-2">
-              {(selectedUserTypeId !== null
-                ? userTypeDocuments
-                : documents
-              ).map(
+              {scopedDocuments.map(
                 (doc: DocumentDefaultItem | DocumentDefaultWithInheritance) => {
                   const isOverride = 'is_override' in doc && doc.is_override;
                   return (
