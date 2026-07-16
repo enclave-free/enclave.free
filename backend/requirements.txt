@@ -4,8 +4,8 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 python-multipart>=0.0.27
 
-# Qdrant client
-qdrant-client>=1.9.0,<2.0.0
+# Keep the client on the server minor pinned in docker-compose.infra.yml.
+qdrant-client>=1.12.2,<1.13.0
 
 # Embeddings (CPU-friendly, multilingual)
 sentence-transformers>=5.1.2
