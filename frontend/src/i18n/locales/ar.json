@@ -2533,7 +2533,8 @@
       "thumbUp": "إجابة جيدة",
       "thumbDown": "بحاجة إلى تحسين",
       "notePlaceholder": "ملاحظة اختيارية (تُحفظ مشفّرة)…",
-      "exportNotDecrypted": "افتح نص المحادثة وفك تشفيره قبل التصدير."
+      "exportNotDecrypted": "افتح نص المحادثة وفك تشفيره قبل التصدير.",
+      "exportFeedbackNotDecrypted": "تعذر فك تشفير بعض التعليقات. أعد فتح نص المحادثة ووافق على كل طلبات فك التشفير قبل التصدير."
     }
   },
   "adminResources": {
@@ -2566,6 +2567,7 @@
     "coverageCodePlaceholder": "البحث بالاسم أو الرمز…",
     "coverageLevelFirst": "اختر مستوى التغطية أولاً",
     "coverageClear": "مسح رمز التغطية",
+    "regionDirectoryUnavailable": "دليل المناطق غير متاح. أدخل رمزًا يدويًا.",
     "level": {
       "country": "البلد",
       "subregion": "المنطقة الفرعية",

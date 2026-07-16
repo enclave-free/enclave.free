@@ -73,6 +73,12 @@ function renderUserManager(initialEntry = '/admin/user-manager') {
   );
 }
 
+async function unlockDetails(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole('button', { name: 'Unlock details' })
+  );
+}
+
 function seedRoster() {
   userTypesResponse = [
     { id: 1, name: 'Member', description: 'Community member', icon: 'User' },
@@ -268,6 +274,7 @@ describe('AdminUserManager', () => {
   it('shows an accessible roster table with summary counts and filters', async () => {
     const user = userEvent.setup();
     renderUserManager();
+    await unlockDetails(user);
 
     expect(
       await screen.findByRole('heading', { name: 'User Manager' })
@@ -330,6 +337,7 @@ describe('AdminUserManager', () => {
   it('lets an admin approve a pending user from the table', async () => {
     const user = userEvent.setup();
     renderUserManager();
+    await unlockDetails(user);
 
     const row = await screen.findByRole('row', { name: /Austin Kelsay/i });
     await user.click(
@@ -360,6 +368,7 @@ describe('AdminUserManager', () => {
   it('opens a user detail screen from the roster and shows all fields', async () => {
     const user = userEvent.setup();
     renderUserManager();
+    await unlockDetails(user);
 
     await screen.findAllByText('Jamie Tester');
     await user.click(
@@ -391,6 +400,7 @@ describe('AdminUserManager', () => {
   it('lets an admin approve a pending user from the detail screen', async () => {
     const user = userEvent.setup();
     renderUserManager('/admin/user-manager/7');
+    await unlockDetails(user);
 
     expect(
       await screen.findByRole('heading', { name: 'Austin Kelsay' })
@@ -418,6 +428,7 @@ describe('AdminUserManager', () => {
   });
 
   it('offers unlock on detail screens with encrypted profile fields', async () => {
+    const user = userEvent.setup();
     usersResponse = usersResponse.map((user) =>
       user.id === 42
         ? {
@@ -434,6 +445,13 @@ describe('AdminUserManager', () => {
     expect(
       screen.getByRole('button', { name: 'Unlock details' })
     ).toBeInTheDocument();
+    expect(mockDecryptField).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Unlock details' }));
+
+    await waitFor(() => {
+      expect(mockDecryptField).toHaveBeenCalled();
+    });
   });
 
   it('shows a helpful not-found state for unknown user detail routes', async () => {
@@ -454,6 +472,7 @@ describe('AdminUserManager', () => {
     const user = userEvent.setup();
     failApproval = true;
     renderUserManager();
+    await unlockDetails(user);
 
     const row = await screen.findByRole('row', { name: /Austin Kelsay/i });
     await user.click(
@@ -467,8 +486,10 @@ describe('AdminUserManager', () => {
   });
 
   it('keeps the roster usable when encrypted identity unlock fails', async () => {
+    const user = userEvent.setup();
     mockDecryptField.mockRejectedValue(new Error('Signer rejected decrypt'));
     renderUserManager();
+    await unlockDetails(user);
 
     expect(
       await screen.findAllByText('Encrypted details could not be unlocked.')
@@ -509,6 +530,7 @@ describe('AdminUserManager', () => {
   it('refreshes the roster and exports an audited User Roster Export', async () => {
     const user = userEvent.setup();
     renderUserManager();
+    await unlockDetails(user);
 
     await screen.findAllByText('Austin Kelsay');
     await user.click(screen.getByRole('button', { name: 'Refresh roster' }));
@@ -571,6 +593,7 @@ describe('AdminUserManager', () => {
     const user = userEvent.setup();
     failExportAudit = true;
     renderUserManager();
+    await unlockDetails(user);
 
     await screen.findAllByText('Austin Kelsay');
     await user.click(

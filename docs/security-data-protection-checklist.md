@@ -1,6 +1,6 @@
 # Security and Data Protection Checklist
 
-Last updated: 2026-05-17
+Last updated: 2026-07-16
 Scope: Enclave current repository state (code/config review)
 
 ## Purpose
@@ -428,7 +428,7 @@ Use these guardrails while security fixes are in progress:
 
 ---
 
-## 11. Verification Evidence (2026-02-08 — 2026-05-14)
+## 11. Verification Evidence (2026-02-08 — 2026-07-14)
 
 - Automated regression suite:
   - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3c_auth_hardening_regression.py --api-base http://localhost:18000`

@@ -2505,6 +2505,40 @@ with database.get_cursor() as cursor:
         }
         self.assertIn("temporary_session_cleanup_succeeded", failures)
 
+    def test_session_cleanup_deletes_requested_and_server_returned_ids(self) -> None:
+        observed_session_id = "server-returned-session"
+
+        class MismatchedSessionClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.deleted_sessions: list[str] = []
+
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done={**result.done, "session_id": observed_session_id},
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                    error=result.error,
+                )
+
+            def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+                self.deleted_sessions.append(session_id)
+
+        client = MismatchedSessionClient()
+        run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=client,
+        )
+
+        self.assertCountEqual(
+            client.deleted_sessions,
+            [client.last_payload["session_id"], observed_session_id],
+        )
+
     def test_seeded_knowledge_requires_exact_fixture_facts(self) -> None:
         class UngroundedAnswerClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:

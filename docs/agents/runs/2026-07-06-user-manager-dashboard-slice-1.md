@@ -2,7 +2,7 @@
 
 ## Parent
 
-#477
+[#477](https://github.com/enclave-free/enclave.free/issues/477)
 
 ## What to build
 

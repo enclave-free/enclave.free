@@ -2518,7 +2518,8 @@
       "thumbUp": "Bonne réponse",
       "thumbDown": "À améliorer",
       "notePlaceholder": "Note facultative (enregistrée chiffrée)…",
-      "exportNotDecrypted": "Ouvrez et déchiffrez la transcription avant de l’exporter."
+      "exportNotDecrypted": "Ouvrez et déchiffrez la transcription avant de l’exporter.",
+      "exportFeedbackNotDecrypted": "Certains commentaires n’ont pas pu être déchiffrés. Rouvrez la transcription et approuvez chaque demande de déchiffrement avant l’exportation."
     }
   },
   "adminResources": {
@@ -2551,6 +2552,7 @@
     "coverageCodePlaceholder": "Rechercher par nom ou code…",
     "coverageLevelFirst": "Choisissez d’abord un niveau de couverture",
     "coverageClear": "Effacer le code de couverture",
+    "regionDirectoryUnavailable": "Le répertoire des régions est indisponible. Saisissez un code manuellement.",
     "level": {
       "country": "Pays",
       "subregion": "Sous-région",

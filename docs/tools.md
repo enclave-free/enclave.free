@@ -131,7 +131,7 @@ Admin Database turns may also include **Admin Signer-Decrypted Context** built b
 
 The frontend chooses visible Admin Tool Sets and Tool constraints. For non-admin User Conversations, it consumes `/session-defaults` and sends the configured default Tool Set IDs and Knowledge Source scope without showing Tool controls by default. It must not prefetch admin configuration context for chat, run hidden document retrieval outside configured defaults, or send `client_executed_tools` as a compatibility path. It may build Admin Signer-Decrypted Context only after an authenticated Admin submits a Database-enabled turn.
 
-Admin composers should make Knowledge, Resources, Web, Config, and Database explicit opt-in controls with none selected by default. Knowledge document scope belongs under the Knowledge Tool Set control. User composers show no Tool Set controls by default; Config and Database must only render for server-validated admins.
+Normal Admin Conversation composers should make Knowledge, Resources, Web, Config, and Database explicit opt-in controls with none selected by default. Admin configuration conversations are the exception: `admin-config` is default-active and visible there, while all other Tool Sets remain opt-in. Knowledge document scope belongs under the Knowledge Tool Set control. User composers show no Tool Set controls by default; Config and Database must only render for server-validated admins.
 
 ## Sage Duties
 
