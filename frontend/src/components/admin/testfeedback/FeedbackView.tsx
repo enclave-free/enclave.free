@@ -14,9 +14,9 @@ import { Button, Callout, Card } from '../../ui';
 import { decryptField, hasNip04Support } from '../../../utils/encryption';
 import {
   deleteSessionLog,
-  exportSessionLog,
   getSessionLog,
   listSessionLogs,
+  recordSessionLogPlaintextExport,
   setTurnFeedback,
   type FeedbackRating,
   type SessionLogDetail,
@@ -294,12 +294,55 @@ export function FeedbackView() {
   );
 
   const handleExport = useCallback(async () => {
-    if (!selectedId) return;
-    setExporting(true);
+    if (!selectedId || !detail) return;
     setExportError(null);
+    // Export the already client-side-decrypted transcript + feedback as
+    // readable plaintext. The backend only ever holds NIP-04 ciphertext, so the
+    // decrypted copy is assembled here (encrypted-at-rest is unchanged). See #493.
+    if (!turns) {
+      setExportError(
+        t(
+          'adminTestFeedback.feedback.exportNotDecrypted',
+          'Open and decrypt the transcript before exporting.'
+        )
+      );
+      return;
+    }
+    setExporting(true);
     try {
-      const blob = await exportSessionLog(selectedId);
-      downloadBlob(blob, `beta-session-log-${selectedId}.zip`);
+      const feedback = Object.entries(drafts)
+        .map(([turnIndex, draft]) => ({
+          turn_index: Number(turnIndex),
+          rating: draft.rating ?? null,
+          comment: draft.comment || null,
+        }))
+        .filter((entry) => entry.rating || entry.comment)
+        .sort((a, b) => a.turn_index - b.turn_index);
+
+      const exportData = {
+        log_id: detail.log_id,
+        title: detail.title,
+        source: detail.source,
+        status: detail.status,
+        subject_user_id: detail.subject_user_id,
+        user_type_id: detail.user_type_id,
+        sage_session_id: detail.sage_session_id,
+        turn_count: detail.turn_count,
+        created_at: detail.created_at,
+        completed_at: detail.completed_at,
+        exported_at: new Date().toISOString(),
+        note: 'Decrypted export — plaintext transcript and feedback.',
+        turns,
+        feedback,
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      // Plaintext stays in the browser, but the copied export must still leave
+      // audit evidence before the download is allowed to escape active storage.
+      await recordSessionLogPlaintextExport(selectedId);
+      downloadBlob(blob, `beta-session-log-${selectedId}.json`);
     } catch (err) {
       setExportError(
         err instanceof Error ? err.message : 'Session export failed'
@@ -307,7 +350,7 @@ export function FeedbackView() {
     } finally {
       setExporting(false);
     }
-  }, [selectedId]);
+  }, [selectedId, detail, turns, drafts, t]);
 
   const sourceLabel = useCallback(
     (source: string) => {

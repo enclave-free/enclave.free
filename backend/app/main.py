@@ -1714,6 +1714,56 @@ def _validate_help_type_keys(help_types: Optional[list[str]]) -> None:
         )
 
 
+@app.get("/admin/regions")
+async def list_regions_admin(admin: dict = Depends(auth.require_admin)) -> dict:
+    """Coverage taxonomy for the Resource Directory coverage picker.
+
+    Returns countries (with their subregion/region ancestors), subregions, and
+    regions, all with M49/ISO codes + names, so the UI can offer a type-to-search
+    picker where searching a country also surfaces its subregion and region.
+    """
+    countries = []
+    subregions: dict[str, dict] = {}
+    for (
+        country_code,
+        country_name,
+        subregion_code,
+        subregion_name,
+        region_code,
+        region_name,
+    ) in region_data.iter_country_region_rows():
+        countries.append(
+            {
+                "level": "country",
+                "code": country_code,
+                "name": country_name,
+                "subregion_code": subregion_code,
+                "subregion_name": subregion_name,
+                "region_code": region_code,
+                "region_name": region_name,
+            }
+        )
+        if subregion_code and subregion_code not in subregions:
+            subregions[subregion_code] = {
+                "level": "subregion",
+                "code": subregion_code,
+                "name": subregion_name,
+                "region_code": region_code,
+                "region_name": region_name,
+            }
+
+    regions = [
+        {"level": "region", "code": code, "name": name}
+        for code, name in region_data.REGION_NAMES.items()
+    ]
+
+    return {
+        "countries": sorted(countries, key=lambda c: c["name"]),
+        "subregions": sorted(subregions.values(), key=lambda s: s["name"]),
+        "regions": sorted(regions, key=lambda r: r["name"]),
+    }
+
+
 @app.get("/admin/resources", response_model=ResourceListResponse)
 async def list_resources_admin(
     status: Optional[str] = Query(None),
@@ -1972,6 +2022,27 @@ async def export_session_log_admin(
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.post(
+    "/admin/session-logs/{log_id}/plaintext-export",
+    response_model=SuccessResponse,
+)
+async def record_plaintext_session_log_export_admin(
+    log_id: str,
+    admin: dict = Depends(auth.require_admin),
+) -> SuccessResponse:
+    """Audit a browser-generated decrypted export without receiving plaintext."""
+    filename = f"beta-session-log-{log_id}.json"
+    try:
+        session_logs.record_plaintext_export(
+            log_id,
+            filename=filename,
+            changed_by=admin.get("pubkey"),
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session log not found")
+    return SuccessResponse(success=True, message="Session log export recorded")
 
 
 @app.put(

@@ -918,7 +918,8 @@
       "sourceTest": "Test User Session",
       "thumbUp": "Good answer",
       "thumbDown": "Needs work",
-      "notePlaceholder": "Optional note (saved encrypted)…"
+      "notePlaceholder": "Optional note (saved encrypted)…",
+      "exportNotDecrypted": "Open and decrypt the transcript before exporting."
     }
   },
   "adminGuides": {
@@ -1034,7 +1035,18 @@
     "markVerified": "Mark as verified (ranks first)",
     "archive": "Archive (hide from end users)",
     "deleteTitle": "Delete resource?",
-    "deleteBody": "This removes the directory entry for {{name}}"
+    "deleteBody": "This removes the directory entry for {{name}}",
+    "coverage": "Coverage",
+    "coverageHint": "Choose a coverage level, then search for its name or code.",
+    "coverageCodePlaceholder": "Search by name or code…",
+    "coverageLevelFirst": "Choose a coverage level first",
+    "coverageClear": "Clear coverage code",
+    "level": {
+      "country": "Country",
+      "subregion": "Subregion",
+      "region": "Region",
+      "global": "Global"
+    }
   },
   "adminAI": {
     "title": "Agent Settings",
