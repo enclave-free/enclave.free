@@ -2,7 +2,7 @@
 
 ## Parent
 
-#477
+[#477](https://github.com/enclave-free/enclave.free/issues/477)
 
 ## What to build
 
@@ -21,4 +21,4 @@ Complete the dashboard operations path by letting an **Admin** approve pending *
 
 ## Blocked by
 
-#478
+[#478](https://github.com/enclave-free/enclave.free/issues/478)

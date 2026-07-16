@@ -1019,7 +1019,8 @@
       "thumbUp": "Good answer",
       "thumbDown": "Needs work",
       "notePlaceholder": "Optional note (saved encrypted)…",
-      "exportNotDecrypted": "Open and decrypt the transcript before exporting."
+      "exportNotDecrypted": "Open and decrypt the transcript before exporting.",
+      "exportFeedbackNotDecrypted": "Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting."
     }
   },
   "adminGuides": {
@@ -1339,6 +1340,7 @@
     "coverageCodePlaceholder": "Search by name or code…",
     "coverageLevelFirst": "Choose a coverage level first",
     "coverageClear": "Clear coverage code",
+    "regionDirectoryUnavailable": "Region directory unavailable. Enter a code manually.",
     "level": {
       "country": "Country",
       "subregion": "Subregion",

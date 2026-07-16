@@ -396,18 +396,27 @@ def run_scenario(
         stream = failed_stream(f"scenario setup or stream failed: {exc}")
     finally:
         observed_session_id = stream_session_id(stream)
+        session_cleanup_errors: list[str] = []
         if stream_dispatched and token:
-            try:
-                client.delete_session(token, requested_session_id, timeout)
-            except Exception as exc:
-                session_cleanup_error = str(exc)
+            session_ids = {requested_session_id}
+            if observed_session_id:
+                session_ids.add(observed_session_id)
+            for session_id in session_ids:
+                try:
+                    client.delete_session(token, session_id, timeout)
+                except Exception as exc:
+                    session_cleanup_errors.append(f"{session_id}: {exc}")
         if observed_session_id and observed_session_id != requested_session_id:
-            session_cleanup_error = (
+            session_cleanup_errors.append(
                 f"stream returned session_id {observed_session_id}, expected "
                 f"{requested_session_id}"
             )
         elif (stream.events or stream.done) and not observed_session_id:
-            session_cleanup_error = "completed stream did not expose a session_id"
+            session_cleanup_errors.append(
+                "completed stream did not expose a session_id"
+            )
+        if session_cleanup_errors:
+            session_cleanup_error = "; ".join(session_cleanup_errors)
         try:
             environment.cleanup_scenario()
         except Exception as exc:

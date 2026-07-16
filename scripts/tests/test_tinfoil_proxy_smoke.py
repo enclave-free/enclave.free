@@ -7,6 +7,7 @@ import http.client
 import json
 import os
 import subprocess
+import sys
 import threading
 import unittest
 from contextlib import contextmanager
@@ -63,7 +64,7 @@ def completion_server(
 def run_integrity_smoke(api_base: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
-            "python3",
+            sys.executable,
             str(SMOKE_SCRIPT),
             "--api-base",
             api_base,

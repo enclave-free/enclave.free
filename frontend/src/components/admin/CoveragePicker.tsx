@@ -187,7 +187,12 @@ export function CoveragePicker({
   const searchable = Boolean(
     value.scope_level && value.scope_level !== 'global'
   );
-  const inputValue = editing ? query : committedLabel;
+  const taxonomyAvailable = data !== null;
+  const inputValue = taxonomyAvailable
+    ? editing
+      ? query
+      : committedLabel
+    : value.scope_code;
 
   return (
     <div className="flex flex-col gap-2" ref={containerRef}>
@@ -234,10 +239,12 @@ export function CoveragePicker({
                 id={`${listboxId}-input`}
                 className="input-field text-sm"
                 type="text"
-                role="combobox"
-                aria-expanded={open}
-                aria-autocomplete="list"
-                aria-controls={open ? listboxId : undefined}
+                role={taxonomyAvailable ? 'combobox' : undefined}
+                aria-expanded={taxonomyAvailable ? open : undefined}
+                aria-autocomplete={taxonomyAvailable ? 'list' : undefined}
+                aria-controls={
+                  taxonomyAvailable && open ? listboxId : undefined
+                }
                 aria-activedescendant={
                   open && options[highlightedIndex]
                     ? `${listboxId}-${highlightedIndex}`
@@ -257,12 +264,16 @@ export function CoveragePicker({
                       )
                 }
                 onFocus={() => {
-                  if (!searchable) return;
+                  if (!searchable || !taxonomyAvailable) return;
                   setEditing(true);
                   setQuery('');
                   setOpen(true);
                 }}
                 onChange={(event) => {
+                  if (!taxonomyAvailable) {
+                    onChange({ ...value, scope_code: event.target.value });
+                    return;
+                  }
                   setEditing(true);
                   setQuery(event.target.value);
                   setOpen(true);
@@ -278,18 +289,19 @@ export function CoveragePicker({
                     'Clear coverage code'
                   )}
                   className="shrink-0 text-text-muted transition-colors hover:text-text"
-                  onMouseDown={(event) => {
-                    event.preventDefault();
+                  onClick={() => {
                     onChange({ ...value, scope_code: '' });
                   }}
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-text-muted transition-transform ${open ? 'rotate-180' : ''}`}
-                aria-hidden="true"
-              />
+              {taxonomyAvailable && (
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              )}
             </span>
 
             {open && options.length > 0 && (
@@ -349,6 +361,14 @@ export function CoveragePicker({
           </div>
         </div>
       </div>
+      {!data && searchable && (
+        <p className="text-xs text-text-muted" role="status">
+          {t(
+            'adminResources.regionDirectoryUnavailable',
+            'Region directory unavailable. Enter a code manually.'
+          )}
+        </p>
+      )}
       {description && <p className="text-xs text-text-muted">{description}</p>}
     </div>
   );

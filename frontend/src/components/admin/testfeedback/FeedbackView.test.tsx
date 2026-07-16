@@ -236,6 +236,89 @@ describe('FeedbackView', () => {
     expect(mockAnchorClick).not.toHaveBeenCalled();
   });
 
+  it('blocks plaintext export when an encrypted feedback comment is not decrypted', async () => {
+    const user = userEvent.setup();
+    const sessionLog = await mockGetSessionLog('log-1');
+    mockGetSessionLog.mockResolvedValue({
+      ...sessionLog,
+      feedback: [
+        {
+          turn_index: 1,
+          rating: 'down',
+          comment_ciphertext: 'encrypted-comment',
+          comment_ephemeral_pubkey: 'comment-pubkey',
+          created_by: 'admin',
+          created_at: null,
+          updated_at: null,
+        },
+      ],
+    });
+    mockDecryptField
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          turns: [
+            { role: 'user', content: 'Can you help me?' },
+            { role: 'assistant', content: 'Yes, here is a plan.' },
+          ],
+        })
+      )
+      .mockResolvedValueOnce(null);
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    await user.click(trialButton as HTMLButtonElement);
+    await screen.findByText('Yes, here is a plan.');
+    await user.click(screen.getByRole('button', { name: 'Export' }));
+
+    expect(
+      await screen.findByText(
+        'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
+      )
+    ).toBeInTheDocument();
+    expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
+    expect(mockAnchorClick).not.toHaveBeenCalled();
+  });
+
+  it('blocks plaintext export when encrypted feedback is missing its decryption key', async () => {
+    const user = userEvent.setup();
+    const sessionLog = await mockGetSessionLog('log-1');
+    mockGetSessionLog.mockResolvedValue({
+      ...sessionLog,
+      feedback: [
+        {
+          turn_index: 1,
+          rating: 'down',
+          comment_ciphertext: 'encrypted-comment',
+          comment_ephemeral_pubkey: null,
+          created_by: 'admin',
+          created_at: null,
+          updated_at: null,
+        },
+      ],
+    });
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    await user.click(trialButton as HTMLButtonElement);
+    await screen.findByText('Yes, here is a plan.');
+    await user.click(screen.getByRole('button', { name: 'Export' }));
+
+    expect(
+      await screen.findByText(
+        'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
+      )
+    ).toBeInTheDocument();
+    expect(mockDecryptField).toHaveBeenCalledTimes(1);
+    expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
+    expect(mockAnchorClick).not.toHaveBeenCalled();
+  });
+
   it('shows saved assistant tool trace metadata after decrypting a transcript', async () => {
     const user = userEvent.setup();
     mockDecryptField.mockResolvedValue(

@@ -2515,7 +2515,8 @@
       "thumbUp": "回答不错",
       "thumbDown": "需要改进",
       "notePlaceholder": "可选备注（加密保存）…",
-      "exportNotDecrypted": "请先打开并解密对话记录，然后再导出。"
+      "exportNotDecrypted": "请先打开并解密对话记录，然后再导出。",
+      "exportFeedbackNotDecrypted": "部分反馈评论无法解密。请重新打开对话记录并批准每个解密请求，然后再导出。"
     }
   },
   "adminResources": {
@@ -2548,6 +2549,7 @@
     "coverageCodePlaceholder": "按名称或代码搜索…",
     "coverageLevelFirst": "请先选择覆盖级别",
     "coverageClear": "清除覆盖代码",
+    "regionDirectoryUnavailable": "区域目录不可用。请手动输入代码。",
     "level": {
       "country": "国家",
       "subregion": "次区域",

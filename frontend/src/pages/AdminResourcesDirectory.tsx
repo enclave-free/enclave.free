@@ -79,6 +79,49 @@ interface Resource {
   display_order: number;
 }
 
+function parseRegionData(value: unknown): RegionData | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Partial<RegionData>;
+  if (
+    !Array.isArray(candidate.countries) ||
+    !Array.isArray(candidate.subregions) ||
+    !Array.isArray(candidate.regions)
+  ) {
+    return null;
+  }
+
+  const isNullableString = (field: unknown) =>
+    field === null || typeof field === 'string';
+  const countriesValid = candidate.countries.every(
+    (entry) =>
+      entry?.level === 'country' &&
+      typeof entry.code === 'string' &&
+      typeof entry.name === 'string' &&
+      isNullableString(entry.subregion_code) &&
+      isNullableString(entry.subregion_name) &&
+      isNullableString(entry.region_code) &&
+      isNullableString(entry.region_name)
+  );
+  const subregionsValid = candidate.subregions.every(
+    (entry) =>
+      entry?.level === 'subregion' &&
+      typeof entry.code === 'string' &&
+      typeof entry.name === 'string' &&
+      isNullableString(entry.region_code) &&
+      isNullableString(entry.region_name)
+  );
+  const regionsValid = candidate.regions.every(
+    (entry) =>
+      entry?.level === 'region' &&
+      typeof entry.code === 'string' &&
+      typeof entry.name === 'string'
+  );
+
+  return countriesValid && subregionsValid && regionsValid
+    ? (candidate as RegionData)
+    : null;
+}
+
 interface HelpType {
   key: string;
   label: string;
@@ -165,10 +208,15 @@ export function AdminResourcesDirectory({
     setLoading(true);
     setError(null);
     try {
-      const [resResources, resHelpTypes, resRegions] = await Promise.all([
+      const regionDataPromise = adminFetch('/admin/regions')
+        .then(async (response) =>
+          response.ok ? parseRegionData(await response.json()) : null
+        )
+        .catch(() => null);
+      const [resResources, resHelpTypes, nextRegionData] = await Promise.all([
         adminFetch('/admin/resources'),
         adminFetch('/admin/help-types'),
-        adminFetch('/admin/regions'),
+        regionDataPromise,
       ]);
       if (!resResources.ok) throw new Error('Failed to load resources');
       if (!resHelpTypes.ok) throw new Error('Failed to load help types');
@@ -177,7 +225,7 @@ export function AdminResourcesDirectory({
       setResources(resourcesData.resources ?? []);
       setHelpTypes(helpTypesData.help_types ?? []);
       // Region taxonomy is best-effort; the coverage picker degrades gracefully.
-      if (resRegions.ok) setRegionData((await resRegions.json()) as RegionData);
+      setRegionData(nextRegionData);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load directory');
     } finally {

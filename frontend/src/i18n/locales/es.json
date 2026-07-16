@@ -2520,7 +2520,8 @@
       "thumbUp": "Buena respuesta",
       "thumbDown": "Necesita mejorar",
       "notePlaceholder": "Nota opcional (se guarda cifrada)…",
-      "exportNotDecrypted": "Abre y descifra la transcripción antes de exportarla."
+      "exportNotDecrypted": "Abre y descifra la transcripción antes de exportarla.",
+      "exportFeedbackNotDecrypted": "No se pudieron descifrar algunos comentarios. Vuelve a abrir la transcripción y aprueba cada solicitud de descifrado antes de exportar."
     }
   },
   "adminResources": {
@@ -2553,6 +2554,7 @@
     "coverageCodePlaceholder": "Buscar por nombre o código…",
     "coverageLevelFirst": "Elige primero un nivel de cobertura",
     "coverageClear": "Borrar código de cobertura",
+    "regionDirectoryUnavailable": "El directorio de regiones no está disponible. Introduce un código manualmente.",
     "level": {
       "country": "País",
       "subregion": "Subregión",

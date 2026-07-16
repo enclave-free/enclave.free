@@ -127,6 +127,9 @@ export function FeedbackView() {
   const [detail, setDetail] = useState<SessionLogDetail | null>(null);
   const [turns, setTurns] = useState<TranscriptTurn[] | null>(null);
   const [drafts, setDrafts] = useState<Record<number, TurnDraft>>({});
+  const [undecryptedFeedbackTurns, setUndecryptedFeedbackTurns] = useState<
+    number[]
+  >([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -168,6 +171,7 @@ export function FeedbackView() {
     setDeleteError(null);
     setTurns(null);
     setDrafts({});
+    setUndecryptedFeedbackTurns([]);
     try {
       const full = await getSessionLog(logId);
       if (!isCurrentRequest()) return;
@@ -194,15 +198,28 @@ export function FeedbackView() {
 
       // Hydrate per-turn drafts from existing (decrypted) feedback.
       const nextDrafts: Record<number, TurnDraft> = {};
+      const nextUndecryptedFeedbackTurns: number[] = [];
       await Promise.all(
         full.feedback.map(async (fb) => {
           let comment = '';
-          if (fb.comment_ciphertext && fb.comment_ephemeral_pubkey) {
-            comment =
-              (await decryptField({
-                ciphertext: fb.comment_ciphertext,
-                ephemeral_pubkey: fb.comment_ephemeral_pubkey,
-              })) ?? '';
+          if (fb.comment_ciphertext) {
+            if (!fb.comment_ephemeral_pubkey) {
+              nextUndecryptedFeedbackTurns.push(fb.turn_index);
+            } else {
+              try {
+                const decryptedComment = await decryptField({
+                  ciphertext: fb.comment_ciphertext,
+                  ephemeral_pubkey: fb.comment_ephemeral_pubkey,
+                });
+                if (decryptedComment == null) {
+                  nextUndecryptedFeedbackTurns.push(fb.turn_index);
+                } else {
+                  comment = decryptedComment;
+                }
+              } catch {
+                nextUndecryptedFeedbackTurns.push(fb.turn_index);
+              }
+            }
           }
           nextDrafts[fb.turn_index] = {
             rating: fb.rating,
@@ -213,6 +230,7 @@ export function FeedbackView() {
       );
       if (!isCurrentRequest()) return;
       setDrafts(nextDrafts);
+      setUndecryptedFeedbackTurns(nextUndecryptedFeedbackTurns);
     } catch (err) {
       if (isCurrentRequest()) {
         setDetailError(
@@ -280,6 +298,7 @@ export function FeedbackView() {
           setSelectedId(null);
           setDetail(null);
           setTurns(null);
+          setUndecryptedFeedbackTurns([]);
         }
         await loadList();
       } catch (err) {
@@ -304,6 +323,15 @@ export function FeedbackView() {
         t(
           'adminTestFeedback.feedback.exportNotDecrypted',
           'Open and decrypt the transcript before exporting.'
+        )
+      );
+      return;
+    }
+    if (undecryptedFeedbackTurns.length > 0) {
+      setExportError(
+        t(
+          'adminTestFeedback.feedback.exportFeedbackNotDecrypted',
+          'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
         )
       );
       return;
@@ -350,7 +378,7 @@ export function FeedbackView() {
     } finally {
       setExporting(false);
     }
-  }, [selectedId, detail, turns, drafts, t]);
+  }, [selectedId, detail, turns, drafts, undecryptedFeedbackTurns, t]);
 
   const sourceLabel = useCallback(
     (source: string) => {

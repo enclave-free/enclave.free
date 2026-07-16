@@ -78,7 +78,7 @@ class ConversationHarnessCleanupTest(unittest.TestCase):
     def test_timing_harness_deletes_requested_session_after_connection_loss(self) -> None:
         requests = []
 
-        def urlopen(request, timeout):
+        def urlopen(request: object, timeout: float) -> object:
             requests.append((request, timeout))
             if request.get_method() == "POST":
                 return _ConnectionLostResponse()
@@ -99,6 +99,17 @@ class ConversationHarnessCleanupTest(unittest.TestCase):
         requested_session_id = request_payload["session_id"]
         self.assertTrue(requested_session_id)
         self.assertTrue(requests[1][0].full_url.endswith(f"/{requested_session_id}"))
+
+    def test_timing_cleanup_failure_does_not_mask_stream_failure(self) -> None:
+        def urlopen(request: object, timeout: float) -> object:
+            if request.get_method() == "POST":
+                return _ConnectionLostResponse()
+            raise RuntimeError("cleanup also failed")
+
+        scenario = timing.Scenario("connection_loss", "hello", [])
+        with patch.object(timing.urllib.request, "urlopen", side_effect=urlopen):
+            with self.assertRaisesRegex(ConnectionResetError, "connection lost"):
+                timing.measure_stream("http://gateway.test", "admin-token", scenario)
 
     def test_retrieval_smoke_deletes_requested_session_after_connection_loss(self) -> None:
         post_payload: dict[str, object] = {}

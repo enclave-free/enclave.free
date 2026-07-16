@@ -314,7 +314,16 @@ def measure_stream(api_base: str, token: str, scenario: Scenario) -> dict[str, A
             },
         }
     finally:
-        delete_query_session(api_base, token, session_id)
+        stream_failed = sys.exc_info()[0] is not None
+        try:
+            delete_query_session(api_base, token, session_id)
+        except Exception as exc:
+            if not stream_failed:
+                raise
+            print(
+                f"[WARN] Failed to clean up query session {session_id}: {exc}",
+                file=sys.stderr,
+            )
 
 
 def main() -> int:

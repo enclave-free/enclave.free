@@ -18,6 +18,13 @@ function jsonResponse(body: unknown) {
   } as Response;
 }
 
+async function openAddResourceForm() {
+  const addButtons = await screen.findAllByRole('button', {
+    name: 'Add resource',
+  });
+  fireEvent.click(addButtons[0]);
+}
+
 describe('AdminResourcesDirectory', () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -67,9 +74,7 @@ describe('AdminResourcesDirectory', () => {
       await screen.findByRole('link', { name: 'Back to Admin Dashboard' })
     ).toHaveAttribute('href', '/admin/setup');
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Add resource' })
-    );
+    await openAddResourceForm();
     expect(
       screen.getByRole('dialog', { name: 'Add resource' })
     ).toHaveAttribute('aria-modal', 'true');
@@ -85,5 +90,76 @@ describe('AdminResourcesDirectory', () => {
       screen.getByRole('dialog', { name: 'Delete resource?' })
     ).toHaveAttribute('aria-modal', 'true');
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+  });
+
+  it('keeps core directory data usable when region taxonomy loading fails', async () => {
+    mockAdminFetch.mockImplementation(async (endpoint) => {
+      if (endpoint === '/admin/resources') {
+        return jsonResponse({ resources: [] });
+      }
+      if (endpoint === '/admin/help-types') {
+        return jsonResponse({ help_types: [] });
+      }
+      if (endpoint === '/admin/regions') {
+        throw new Error('Region service unavailable');
+      }
+      throw new Error(`Unexpected endpoint: ${endpoint}`);
+    });
+
+    render(
+      <MemoryRouter>
+        <AdminResourcesDirectory />
+      </MemoryRouter>
+    );
+
+    await openAddResourceForm();
+    fireEvent.change(screen.getByLabelText('Coverage level'), {
+      target: { value: 'country' },
+    });
+    fireEvent.change(screen.getByLabelText('Coverage code'), {
+      target: { value: 'NI' },
+    });
+
+    expect(screen.getByLabelText('Coverage code')).toHaveValue('NI');
+    expect(
+      screen.getByText('Region directory unavailable. Enter a code manually.')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Failed to load directory')
+    ).not.toBeInTheDocument();
+  });
+
+  it('uses manual coverage codes when region taxonomy entries are malformed', async () => {
+    mockAdminFetch.mockImplementation(async (endpoint) => {
+      if (endpoint === '/admin/resources') {
+        return jsonResponse({ resources: [] });
+      }
+      if (endpoint === '/admin/help-types') {
+        return jsonResponse({ help_types: [] });
+      }
+      if (endpoint === '/admin/regions') {
+        return jsonResponse({ countries: [{}], subregions: [], regions: [] });
+      }
+      throw new Error(`Unexpected endpoint: ${endpoint}`);
+    });
+
+    render(
+      <MemoryRouter>
+        <AdminResourcesDirectory />
+      </MemoryRouter>
+    );
+
+    await openAddResourceForm();
+    fireEvent.change(screen.getByLabelText('Coverage level'), {
+      target: { value: 'country' },
+    });
+    fireEvent.change(screen.getByLabelText('Coverage code'), {
+      target: { value: 'NI' },
+    });
+
+    expect(screen.getByLabelText('Coverage code')).toHaveValue('NI');
+    expect(
+      screen.getByText('Region directory unavailable. Enter a code manually.')
+    ).toBeInTheDocument();
   });
 });

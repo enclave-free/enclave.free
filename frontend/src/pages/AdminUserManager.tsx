@@ -511,6 +511,7 @@ export function AdminUserManager() {
     Record<number, IdentityState | undefined>
   >({});
   const [identityDecryptNonce, setIdentityDecryptNonce] = useState(0);
+  const detailsUnlocked = identityDecryptNonce > 0;
   const [approvalUpdatingIds, setApprovalUpdatingIds] = useState<Set<number>>(
     new Set()
   );
@@ -611,6 +612,7 @@ export function AdminUserManager() {
       setIdentities({});
       return;
     }
+    if (!detailsUnlocked) return;
 
     const runId = decryptRunIdRef.current + 1;
     decryptRunIdRef.current = runId;
@@ -674,7 +676,7 @@ export function AdminUserManager() {
         return next;
       });
     });
-  }, [identityDecryptNonce, users]);
+  }, [detailsUnlocked, identityDecryptNonce, users]);
 
   const profileStatuses = useMemo(
     () =>
@@ -770,6 +772,7 @@ export function AdminUserManager() {
       .filter(({ encrypted }) => Boolean(encrypted?.ciphertext));
 
     if (encryptedFields.length === 0) return;
+    if (!detailsUnlocked) return;
 
     const runId = profileDecryptRunIdRef.current + 1;
     profileDecryptRunIdRef.current = runId;
@@ -826,7 +829,7 @@ export function AdminUserManager() {
         return { ...previous, [selectedUser.id]: userValues };
       });
     });
-  }, [identityDecryptNonce, selectedUser, selectedUserFields]);
+  }, [detailsUnlocked, selectedUser, selectedUserFields]);
 
   const handleUnlockIdentities = async () => {
     if (hasNip04Support()) {

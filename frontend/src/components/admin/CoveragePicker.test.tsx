@@ -105,4 +105,49 @@ describe('CoveragePicker', () => {
       scope_code: '',
     });
   });
+
+  it('clears a committed coverage code with keyboard activation', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <CoveragePicker
+        data={regionData}
+        value={{ scope_level: 'country', scope_code: 'NI' }}
+        onChange={onChange}
+      />
+    );
+
+    const clearButton = screen.getByRole('button', {
+      name: 'Clear coverage code',
+    });
+    clearButton.focus();
+    await user.keyboard('{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith({
+      scope_level: 'country',
+      scope_code: '',
+    });
+  });
+
+  it('allows a manual code when the region taxonomy is unavailable', async () => {
+    const user = userEvent.setup();
+
+    function PickerWithoutTaxonomy() {
+      const [value, setValue] = useState<CoverageValue>({
+        scope_level: 'region',
+        scope_code: '',
+      });
+      return <CoveragePicker data={null} value={value} onChange={setValue} />;
+    }
+
+    render(<PickerWithoutTaxonomy />);
+
+    const codeInput = screen.getByLabelText('Coverage code');
+    await user.type(codeInput, '019');
+
+    expect(codeInput).toHaveValue('019');
+    expect(
+      screen.getByText('Region directory unavailable. Enter a code manually.')
+    ).toBeInTheDocument();
+  });
 });
