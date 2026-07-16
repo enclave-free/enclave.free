@@ -180,7 +180,11 @@
       "current": "Discussion actuelle",
       "empty": "Vide",
       "messageCount_one": "{{count}} message",
+      "messageCount_many": "{{count}} messages",
       "messageCount_other": "{{count}} messages",
+      "deleteConfirmTitle": "Supprimer « {{title}} » ?",
+      "rename": "Renommer {{title}}",
+      "delete": "Supprimer {{title}}",
       "resumeInvalid": "Impossible de charger cette Conversation.",
       "renameEmpty": "Le titre de la Conversation est obligatoire.",
       "renameError": "Impossible de renommer la Conversation.",
@@ -333,6 +337,7 @@
       "addUserType": "Ajouter un type d'utilisateur",
       "onboardingFields": "Champs d'intégration utilisateur",
       "optionsCount_one": "{{count}} option",
+      "optionsCount_many": "{{count}} options",
       "optionsCount_other": "{{count}} options",
       "noFields": "Aucun champ personnalisé",
       "addField": "Ajouter un champ",
@@ -378,10 +383,13 @@
       "clickToExpand": "Cliquez pour agrandir",
       "pagination": "Affichage de {{from}} à {{to}} sur {{total}}",
       "tableCount_one": "{{count}} tableau",
+      "tableCount_many": "{{count}} tables",
       "tableCount_other": "{{count}} tables",
       "rowCount_one": "{{count}} ligne",
+      "rowCount_many": "{{count}} lignes",
       "rowCount_other": "{{count}} lignes",
       "rowsInTable_one": "{{count}} ligne dans {{table}}",
+      "rowsInTable_many": "{{count}} lignes dans {{table}}",
       "rowsInTable_other": "{{count}} lignes dans {{table}}",
       "connected": "SQLite connecté",
       "selectTable": "Sélectionnez une table dans la barre latérale",
@@ -825,7 +833,7 @@
       "actionSavedCalloutLabel": "Approbation des utilisateurs mise à jour",
       "actionErrorCalloutLabel": "Échec de la mise à jour de l'approbation des utilisateurs",
       "loadingUsers": "Chargement des utilisateurs...",
-      "emptyState": "Les nouvelles inscriptions apparaîtront ici lorsqu'une approbation manuelle est requise.",
+      "emptyState": "Les nouveaux Utilisateurs en attente d'approbation apparaîtront ici lorsqu'une approbation manuelle est requise.",
       "emailOnFile": "E-mail enregistré",
       "nameOnFile": "Nom enregistré",
       "approveButton": "Approuver",
@@ -1289,6 +1297,8 @@
     "sessionDefaults": "Fonctionnalités par défaut",
     "sessionDefaultsDesc": "Définissez quelles fonctionnalités sont activées par défaut",
     "sessionDefaultsHint": "Contrôlez quelles capacités IA sont activées lorsque les utilisateurs démarrent une nouvelle session de chat.",
+    "knowledgeSearchDisabledLabel": "La Recherche de connaissances est désactivée",
+    "knowledgeSearchDisabledMessage": "Les documents actifs par défaut ne seront pas utilisés tant que Sources de connaissances n'est pas réglé sur les documents par défaut sélectionnés ou sur tous les documents disponibles.",
     "documentDefaults": "Accès aux documents",
     "documentDefaultsDesc": "Contrôlez quels documents l'IA peut référencer",
     "documentDefaultsHint": "Les documents marqués \"Disponible\" peuvent être sélectionnés par les utilisateurs. Les documents marqués \"Actif par défaut\" sont automatiquement inclus dans les nouvelles conversations.",
@@ -2507,7 +2517,8 @@
       "sourceTest": "Session utilisateur de test",
       "thumbUp": "Bonne réponse",
       "thumbDown": "À améliorer",
-      "notePlaceholder": "Note facultative (enregistrée chiffrée)…"
+      "notePlaceholder": "Note facultative (enregistrée chiffrée)…",
+      "exportNotDecrypted": "Ouvrez et déchiffrez la transcription avant de l’exporter."
     }
   },
   "adminResources": {
@@ -2534,7 +2545,18 @@
     "markVerified": "Marquer comme vérifié (classé en premier)",
     "archive": "Archiver (masquer aux utilisateurs finaux)",
     "deleteTitle": "Supprimer la ressource ?",
-    "deleteBody": "Cela supprime l'entrée du répertoire pour {{name}}"
+    "deleteBody": "Cela supprime l'entrée du répertoire pour {{name}}",
+    "coverage": "Couverture",
+    "coverageHint": "Choisissez un niveau de couverture, puis recherchez son nom ou son code.",
+    "coverageCodePlaceholder": "Rechercher par nom ou code…",
+    "coverageLevelFirst": "Choisissez d’abord un niveau de couverture",
+    "coverageClear": "Effacer le code de couverture",
+    "level": {
+      "country": "Pays",
+      "subregion": "Sous-région",
+      "region": "Région",
+      "global": "Monde"
+    }
   },
   "adminUserManager": {
     "backToAdmin": "Retour au tableau de bord d'administration",
@@ -2598,7 +2620,8 @@
     },
     "actions": {
       "approve": "Approuver",
-      "approveUser": "Approuver {{name}}"
+      "approveUser": "Approuver {{name}}",
+      "viewUserDetails": "Afficher les détails de {{name}}"
     },
     "profile": {
       "noQuestions": "Aucune question",
@@ -2653,6 +2676,9 @@
       "publicKey": "Clé publique",
       "noPublicKey": "Aucune clé publique",
       "fieldsTitle": "Champs du profil",
+      "fieldsShown_one": "{{count}} champ s’applique à cet utilisateur.",
+      "fieldsShown_many": "{{count}} champs s’appliquent à cet utilisateur.",
+      "fieldsShown_other": "{{count}} champs s’appliquent à cet utilisateur.",
       "noFields": "Aucun champ d'intégration ne s'applique à cet utilisateur.",
       "required": "Requis",
       "optional": "Facultatif",

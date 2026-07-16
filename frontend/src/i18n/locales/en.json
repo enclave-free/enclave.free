@@ -659,7 +659,7 @@
       "actionSavedCalloutLabel": "User approval updated",
       "actionErrorCalloutLabel": "User approval update failed",
       "loadingUsers": "Loading users...",
-      "emptyState": "New signups will appear here when manual approval is required.",
+      "emptyState": "New Users awaiting approval will appear here when manual approval is required.",
       "emailOnFile": "Email on file",
       "nameOnFile": "Name on file",
       "approveButton": "Approve",
@@ -866,6 +866,9 @@
       "empty": "Empty",
       "messageCount_one": "{{count}} message",
       "messageCount_other": "{{count}} messages",
+      "deleteConfirmTitle": "Delete \"{{title}}\"?",
+      "rename": "Rename {{title}}",
+      "delete": "Delete {{title}}",
       "resumeInvalid": "Unable to load that Conversation.",
       "renameEmpty": "Conversation title is required.",
       "renameError": "Unable to rename Conversation.",
@@ -1356,6 +1359,8 @@
     "sessionDefaults": "Feature Defaults",
     "sessionDefaultsDesc": "Set which features are on by default",
     "sessionDefaultsHint": "Control which Agent Runtime capabilities are enabled when users start a new Conversation.",
+    "knowledgeSearchDisabledLabel": "Knowledge Search is off",
+    "knowledgeSearchDisabledMessage": "Active default documents will not be used until Knowledge Sources is set to selected default documents or all available documents.",
     "documentDefaults": "Document Access",
     "documentDefaultsDesc": "Control which documents the AI can reference",
     "documentDefaultsHint": "Documents marked \"Available\" can be selected by users. Documents marked \"Active by Default\" are automatically included in new conversations.",
@@ -2610,7 +2615,8 @@
     },
     "actions": {
       "approve": "Approve",
-      "approveUser": "Approve {{name}}"
+      "approveUser": "Approve {{name}}",
+      "viewUserDetails": "View {{name}} details"
     },
     "profile": {
       "noQuestions": "No questions",
@@ -2665,6 +2671,8 @@
       "publicKey": "Public key",
       "noPublicKey": "No public key",
       "fieldsTitle": "Profile fields",
+      "fieldsShown_one": "{{count}} field applies to this user.",
+      "fieldsShown_other": "{{count}} fields apply to this user.",
       "noFields": "No onboarding fields apply to this user.",
       "required": "Required",
       "optional": "Optional",

@@ -191,7 +191,11 @@
       "empty": "Vacío",
       "ariaLabel": "Sesiones de chat",
       "messageCount_one": "{{count}} mensaje",
-      "messageCount_other": "{{count}} mensajes"
+      "messageCount_many": "{{count}} mensajes",
+      "messageCount_other": "{{count}} mensajes",
+      "deleteConfirmTitle": "¿Eliminar «{{title}}»?",
+      "rename": "Renombrar {{title}}",
+      "delete": "Eliminar {{title}}"
     },
     "currentChatAria": "Chat actual",
     "newFromCurrent": "Iniciar un chat nuevo",
@@ -346,6 +350,7 @@
       "instanceSectionTitle": "Configuración de la instancia",
       "onboardingFieldsHint": "Crea las preguntas que los usuarios responden durante la incorporación.",
       "optionsCount_one": "{{count}} opción",
+      "optionsCount_many": "{{count}} opciones",
       "optionsCount_other": "{{count}} opciones",
       "userSectionDesc": "Configura los tipos de usuario y las preguntas que los usuarios responden durante la incorporación.",
       "userSectionTitle": "Configuración de usuario"
@@ -417,8 +422,10 @@
       "clickToExpand": "Clic para expandir",
       "pagination": "Mostrando {{from}} a {{to}} de {{total}}",
       "tableCount_one": "{{count}} tabla",
+      "tableCount_many": "{{count}} tablas",
       "tableCount_other": "{{count}} tablas",
       "rowCount_one": "{{count}} fila",
+      "rowCount_many": "{{count}} filas",
       "rowCount_other": "{{count}} filas",
       "rowsInTable": "{{count}} filas en {{table}}",
       "connected": "SQLite conectado",
@@ -472,6 +479,7 @@
       "primaryKeyIcon": "Clave primaria",
       "unlockDecryption": "Desbloquear descifrado",
       "rowsInTable_one": "{{count}} fila en {{table}}",
+      "rowsInTable_many": "{{count}} filas en {{table}}",
       "rowsInTable_other": "{{count}} filas en {{table}}",
       "safeQueryResults": "Resultados de consulta segura",
       "queryError": "Error de consulta",
@@ -827,7 +835,7 @@
       "actionSavedCalloutLabel": "Aprobación de usuarios actualizada",
       "actionErrorCalloutLabel": "Error al actualizar la aprobación de usuarios",
       "loadingUsers": "Cargando usuarios...",
-      "emptyState": "Los nuevos registros aparecerán aquí cuando se requiera aprobación manual.",
+      "emptyState": "Los nuevos Usuarios pendientes de aprobación aparecerán aquí cuando se requiera aprobación manual.",
       "emailOnFile": "Correo electrónico registrado",
       "nameOnFile": "Nombre registrado",
       "approveButton": "Aprobar",
@@ -1172,6 +1180,8 @@
     "sessionDefaults": "Funciones por Defecto",
     "sessionDefaultsDesc": "Establece qué funciones están activas por defecto",
     "sessionDefaultsHint": "Controla qué capacidades de IA están habilitadas cuando los usuarios inician una nueva sesión de chat.",
+    "knowledgeSearchDisabledLabel": "La Búsqueda de conocimiento está desactivada",
+    "knowledgeSearchDisabledMessage": "Los documentos predeterminados activos no se usarán hasta que Fuentes de conocimiento se configure en los documentos predeterminados seleccionados o en todos los documentos disponibles.",
     "documentDefaults": "Acceso a Documentos",
     "documentDefaultsDesc": "Controla qué documentos puede referenciar la IA",
     "documentDefaultsHint": "Los documentos marcados como \"Disponible\" pueden ser seleccionados por los usuarios. Los marcados como \"Activo por defecto\" se incluyen automáticamente en nuevas conversaciones.",
@@ -2509,7 +2519,8 @@
       "sourceTest": "Sesión de usuario de prueba",
       "thumbUp": "Buena respuesta",
       "thumbDown": "Necesita mejorar",
-      "notePlaceholder": "Nota opcional (se guarda cifrada)…"
+      "notePlaceholder": "Nota opcional (se guarda cifrada)…",
+      "exportNotDecrypted": "Abre y descifra la transcripción antes de exportarla."
     }
   },
   "adminResources": {
@@ -2536,7 +2547,18 @@
     "markVerified": "Marcar como verificado (aparece primero)",
     "archive": "Archivar (ocultar a los usuarios finales)",
     "deleteTitle": "¿Eliminar recurso?",
-    "deleteBody": "Esto elimina la entrada del directorio de {{name}}"
+    "deleteBody": "Esto elimina la entrada del directorio de {{name}}",
+    "coverage": "Cobertura",
+    "coverageHint": "Elige un nivel de cobertura y luego busca por nombre o código.",
+    "coverageCodePlaceholder": "Buscar por nombre o código…",
+    "coverageLevelFirst": "Elige primero un nivel de cobertura",
+    "coverageClear": "Borrar código de cobertura",
+    "level": {
+      "country": "País",
+      "subregion": "Subregión",
+      "region": "Región",
+      "global": "Global"
+    }
   },
   "adminUserManager": {
     "backToAdmin": "Volver al panel de administración",
@@ -2600,7 +2622,8 @@
     },
     "actions": {
       "approve": "Aprobar",
-      "approveUser": "Aprobar a {{name}}"
+      "approveUser": "Aprobar a {{name}}",
+      "viewUserDetails": "Ver detalles de {{name}}"
     },
     "profile": {
       "noQuestions": "Sin preguntas",
@@ -2655,6 +2678,9 @@
       "publicKey": "Clave pública",
       "noPublicKey": "Sin clave pública",
       "fieldsTitle": "Campos del perfil",
+      "fieldsShown_one": "{{count}} campo se aplica a este usuario.",
+      "fieldsShown_many": "{{count}} campos se aplican a este usuario.",
+      "fieldsShown_other": "{{count}} campos se aplican a este usuario.",
       "noFields": "No aplican campos de incorporación a este usuario.",
       "required": "Obligatorio",
       "optional": "Opcional",

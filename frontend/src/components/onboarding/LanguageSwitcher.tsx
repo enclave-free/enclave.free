@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, Globe } from 'lucide-react';
-import {
-  LANGUAGES,
-  STORAGE_KEY_LANGUAGE,
-  markLanguageChosen,
-} from '../../utils/languages';
+import { LANGUAGES, saveExplicitLanguageChoice } from '../../utils/languages';
 
 function getCurrentLanguage(language: string) {
   return (
     LANGUAGES.find((lang) => lang.code === language) ??
     LANGUAGES.find((lang) => language.startsWith(`${lang.code}-`)) ??
+    LANGUAGES.find((lang) => lang.code === 'en') ??
     LANGUAGES[0]
   );
 }
@@ -36,9 +33,7 @@ export function LanguageSwitcher() {
   }, [open]);
 
   const handleLanguageChange = (code: string) => {
-    localStorage.setItem(STORAGE_KEY_LANGUAGE, code);
-    // Remember this was an explicit choice so the instance default can't override it.
-    markLanguageChosen();
+    saveExplicitLanguageChoice(code);
     void i18n.changeLanguage(code);
     setOpen(false);
   };

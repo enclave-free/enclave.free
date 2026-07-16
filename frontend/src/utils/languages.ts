@@ -86,8 +86,9 @@ export const STORAGE_KEY_LANGUAGE = 'enclave_language';
 // language must not override an explicit user choice — see InstanceConfigContext.
 export const STORAGE_KEY_LANGUAGE_EXPLICIT = 'enclave_language_explicit';
 
-export function markLanguageChosen(): void {
+export function saveExplicitLanguageChoice(code: string): void {
   try {
+    localStorage.setItem(STORAGE_KEY_LANGUAGE, code);
     localStorage.setItem(STORAGE_KEY_LANGUAGE_EXPLICIT, '1');
   } catch {
     // localStorage may be unavailable (private mode / SSR) — non-fatal.
@@ -96,7 +97,24 @@ export function markLanguageChosen(): void {
 
 export function hasChosenLanguage(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY_LANGUAGE_EXPLICIT) === '1';
+    if (localStorage.getItem(STORAGE_KEY_LANGUAGE_EXPLICIT) === '1') {
+      return true;
+    }
+
+    // Before the explicit marker existed, both onboarding and the language
+    // detector wrote to the same key. Preserve any valid legacy value as a
+    // user preference. The detector no longer auto-caches navigator language,
+    // so unmarked values only occur during this one-way migration.
+    const legacyLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE);
+    if (
+      legacyLanguage === null ||
+      !LANGUAGES.some(({ code }) => code === legacyLanguage)
+    ) {
+      return false;
+    }
+
+    saveExplicitLanguageChoice(legacyLanguage);
+    return true;
   } catch {
     return false;
   }

@@ -4,7 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Search, Check, HelpCircle, ArrowRight } from 'lucide-react';
 import { OnboardingCard } from '../components/onboarding/OnboardingCard';
 import { Button } from '../components/ui';
-import { LANGUAGES, Language, STORAGE_KEY_LANGUAGE } from '../utils/languages';
+import {
+  LANGUAGES,
+  Language,
+  STORAGE_KEY_LANGUAGE,
+  saveExplicitLanguageChoice,
+} from '../utils/languages';
 
 function SearchInput({
   value,
@@ -125,6 +130,7 @@ export function UserOnboarding() {
       return;
     }
 
+    saveExplicitLanguageChoice(storedLanguage);
     if (i18n.language !== storedLanguage) {
       void i18n.changeLanguage(storedLanguage);
     }
@@ -151,7 +157,7 @@ export function UserOnboarding() {
 
   const handleContinue = () => {
     if (selectedLanguage) {
-      localStorage.setItem(STORAGE_KEY_LANGUAGE, selectedLanguage);
+      saveExplicitLanguageChoice(selectedLanguage);
       navigate('/auth');
     }
   };

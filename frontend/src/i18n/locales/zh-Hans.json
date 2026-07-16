@@ -618,7 +618,7 @@
       "actionSavedCalloutLabel": "用户审批已更新",
       "actionErrorCalloutLabel": "用户审批更新失败",
       "loadingUsers": "正在加载用户……",
-      "emptyState": "当需要手动审批时，新注册用户将显示在此处。",
+      "emptyState": "需要手动审批时，等待审批的新用户将显示在此处。",
       "emailOnFile": "存档的电子邮箱",
       "nameOnFile": "存档的姓名",
       "approveButton": "批准",
@@ -845,6 +845,9 @@
       "empty": "空",
       "messageCount_one": "{{count}} 条消息",
       "messageCount_other": "{{count}} 条消息",
+      "deleteConfirmTitle": "删除“{{title}}”？",
+      "rename": "重命名 {{title}}",
+      "delete": "删除 {{title}}",
       "resumeInvalid": "无法加载该对话。",
       "renameEmpty": "对话标题为必填项。",
       "renameError": "无法重命名对话。",
@@ -1206,6 +1209,8 @@
     "sessionDefaults": "功能默认值",
     "sessionDefaultsDesc": "设置默认启用的功能",
     "sessionDefaultsHint": "控制用户开始新聊天时默认启用哪些 AI 功能。",
+    "knowledgeSearchDisabledLabel": "知识搜索已关闭",
+    "knowledgeSearchDisabledMessage": "在将知识来源设为选定的默认文档或所有可用文档之前，不会使用已启用的默认文档。",
     "documentDefaults": "文档访问",
     "documentDefaultsDesc": "控制 AI 可以引用哪些文档",
     "documentDefaultsHint": "标记为「可用」的文档可供用户选择。标记为「默认启用」的文档会自动包含在新对话中。",
@@ -2509,7 +2514,8 @@
       "sourceTest": "测试用户会话",
       "thumbUp": "回答不错",
       "thumbDown": "需要改进",
-      "notePlaceholder": "可选备注（加密保存）…"
+      "notePlaceholder": "可选备注（加密保存）…",
+      "exportNotDecrypted": "请先打开并解密对话记录，然后再导出。"
     }
   },
   "adminResources": {
@@ -2536,7 +2542,18 @@
     "markVerified": "标记为已验证（排在最前）",
     "archive": "归档（对终端用户隐藏）",
     "deleteTitle": "删除资源？",
-    "deleteBody": "这将移除 {{name}} 的目录条目"
+    "deleteBody": "这将移除 {{name}} 的目录条目",
+    "coverage": "覆盖范围",
+    "coverageHint": "选择覆盖级别，然后按名称或代码搜索。",
+    "coverageCodePlaceholder": "按名称或代码搜索…",
+    "coverageLevelFirst": "请先选择覆盖级别",
+    "coverageClear": "清除覆盖代码",
+    "level": {
+      "country": "国家",
+      "subregion": "次区域",
+      "region": "区域",
+      "global": "全球"
+    }
   },
   "adminUserManager": {
     "backToAdmin": "返回管理控制台",
@@ -2600,7 +2617,8 @@
     },
     "actions": {
       "approve": "批准",
-      "approveUser": "批准 {{name}}"
+      "approveUser": "批准 {{name}}",
+      "viewUserDetails": "查看 {{name}} 的详细信息"
     },
     "profile": {
       "noQuestions": "无问题",
@@ -2655,6 +2673,8 @@
       "publicKey": "公钥",
       "noPublicKey": "无公钥",
       "fieldsTitle": "资料字段",
+      "fieldsShown_one": "此用户适用 {{count}} 个字段。",
+      "fieldsShown_other": "此用户适用 {{count}} 个字段。",
       "noFields": "没有适用于该用户的引导字段。",
       "required": "必填",
       "optional": "可选",
