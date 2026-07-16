@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import sys
 import unittest
+from typing import NoReturn
 from unittest.mock import patch
 
 from scripts.tests.TOOLS import measure_admin_conversation_timing as timing
@@ -115,11 +116,15 @@ class ConversationHarnessCleanupTest(unittest.TestCase):
         post_payload: dict[str, object] = {}
         deleted: list[tuple[str, str, str, float]] = []
 
-        def fail_post(_url, **kwargs):
-            post_payload.update(kwargs["json"])
+        def fail_post(_url: str, **kwargs: object) -> NoReturn:
+            payload = kwargs["json"]
+            self.assertIsInstance(payload, dict)
+            post_payload.update(payload)
             raise ConnectionError("connection lost after dispatch")
 
-        def record_delete(api_base, token, session_id, timeout):
+        def record_delete(
+            api_base: str, token: str, session_id: str, timeout: float
+        ) -> None:
             deleted.append((api_base, token, session_id, timeout))
 
         seed = {
