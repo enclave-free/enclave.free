@@ -51,6 +51,7 @@ import {
 } from '../components/chat/DocumentScope';
 import { ExportButton } from '../components/chat/ExportButton';
 import { AppHeader } from '../components/shared/AppHeader';
+import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher';
 import { Message } from '../components/chat/ChatMessage';
 import type {
   ConversationActivityStep,
@@ -2032,6 +2033,7 @@ export function ChatPage() {
 
   const rightActions = (
     <>
+      <LanguageSwitcher />
       {reachoutEnabled && (
         <IconButton
           label={t(

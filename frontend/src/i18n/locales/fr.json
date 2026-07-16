@@ -22,7 +22,8 @@
       "title": "Qu'est-ce qui vous décrit le mieux ?",
       "description": "Sélectionnez l'option qui correspond le mieux à vos besoins",
       "loadError": "Échec du chargement des types d'utilisateurs. Veuillez réessayer.",
-      "selectionLabel": "Sélection du type d'utilisateur"
+      "selectionLabel": "Sélection du type d'utilisateur",
+      "errorLabel": "Erreur de chargement du type d'utilisateur"
     },
     "language": {
       "selectLabel": "Sélectionner une langue",
@@ -65,7 +66,8 @@
       "encryptionBody": "Les champs de profil sont chiffrés par défaut, mais l'administrateur de cette instance contrôle les paramètres au niveau de chaque champ et peut autoriser un stockage ou un partage différent pour certaines données.",
       "adminControlNotice": "Le traitement des données est configuré par l'administrateur de cette instance, y compris ce qui peut être stocké non chiffré ou partagé avec des outils d'IA.",
       "noWarrantyNotice": "Le logiciel Enclave est fourni en l'état, sans garantie. L'utilisation de cette instance est soumise aux politiques de l'administrateur.",
-      "retentionNotice": "Les délais de conservation et de suppression des données sont définis par l'administrateur de cette instance. Contactez l'administrateur pour les demandes d'accès, de correction ou de suppression."
+      "retentionNotice": "Les délais de conservation et de suppression des données sont définis par l'administrateur de cette instance. Contactez l'administrateur pour les demandes d'accès, de correction ou de suppression.",
+      "errorLabel": "Erreur de demande de lien magique"
     },
     "verify": {
       "verifying": "Vérification de votre lien...",
@@ -125,20 +127,28 @@
       "databaseName": "Base de données",
       "knowledgeGraph": "Interroger le graphe de connaissances",
       "config": "Configuration",
-      "configName": "Configuration"
+      "configName": "Configuration",
+      "knowledgeSearch": "Rechercher dans les documents téléversés et les fragments de connaissances",
+      "knowledgeSearchName": "Connaissances",
+      "curatedResources": "Trouver des ressources d'orientation vérifiées par l'administrateur et des organisations de confiance",
+      "curatedResourcesName": "Ressources"
     },
     "documentScope": {
       "title": "Bases de connaissances",
       "description": "Sélectionnez les sources à inclure dans le contexte",
       "noSources": "Aucune source disponible",
       "clearAll": "Tout effacer",
-      "docsLabel": "Documentation"
+      "docsLabel": "Documentation",
+      "clearAllSelectedAria": "Effacer tous les documents sélectionnés",
+      "docsLabelWithCount": "Docs {{count}}"
     },
     "messages": {
       "searching": "🔍 Recherche de \"{{term}}\"...",
       "searchingPrefix": "Recherche",
       "searchResults": "J'ai recherché \"{{term}}\" pour vous :",
-      "newConversation": "Nouvelle conversation"
+      "newConversation": "Nouvelle conversation",
+      "copy": "Copier le message",
+      "copied": "Message copié"
     },
     "code": {
       "copy": "Copier",
@@ -157,7 +167,49 @@
       "roleUser": "Vous",
       "roleAssistant": "Assistant",
       "footer": "Exporté depuis {{instanceName}}",
-      "exportedOn": "Exporté le {{timestamp}}"
+      "exportedOn": "Exporté le {{timestamp}}",
+      "copiedExportNotice": "Cet export quitte le stockage actif du produit et se trouve hors du cycle de vie du stockage actif après téléchargement."
+    },
+    "new": "Nouvelle discussion",
+    "listTitle": "Discussions",
+    "contextTitle": "Contexte",
+    "messageActions": "Actions du message",
+    "composerContextAria": "Contexte de rédaction",
+    "sessions": {
+      "ariaLabel": "Sessions de discussion",
+      "current": "Discussion actuelle",
+      "empty": "Vide",
+      "messageCount_one": "{{count}} message",
+      "messageCount_many": "{{count}} messages",
+      "messageCount_other": "{{count}} messages",
+      "deleteConfirmTitle": "Supprimer « {{title}} » ?",
+      "rename": "Renommer {{title}}",
+      "delete": "Supprimer {{title}}",
+      "resumeInvalid": "Impossible de charger cette Conversation.",
+      "renameEmpty": "Le titre de la Conversation est obligatoire.",
+      "renameError": "Impossible de renommer la Conversation.",
+      "deleteError": "Impossible de supprimer la Conversation.",
+      "loading": "Chargement des discussions...",
+      "error": "Impossible de charger les discussions",
+      "saved": "Discussion enregistrée",
+      "deleteConfirmBody": "Cela supprime la Conversation enregistrée et sa Mémoire de session.",
+      "deleteCancel": "Annuler la suppression de la conversation",
+      "cancel": "Annuler",
+      "deleteConfirm": "Supprimer la conversation",
+      "deleteDeleting": "Suppression...",
+      "renameInput": "Titre de la Conversation",
+      "renameCancel": "Annuler le renommage de la conversation",
+      "renameSave": "Enregistrer le titre de la conversation",
+      "renameSaving": "Renommage..."
+    },
+    "currentChatAria": "Discussion actuelle",
+    "newFromCurrent": "Démarrer une nouvelle discussion",
+    "documentsContextTitle": "Documents",
+    "errors": {
+      "requestLabel": "Erreur de requête de discussion"
+    },
+    "trace": {
+      "finalizing": "Finalisation de la réponse..."
     }
   },
   "common": {
@@ -197,7 +249,13 @@
     "retry": "Réessayer",
     "saved": "Enregistré",
     "sending": "Envoi...",
-    "gotIt": "Compris"
+    "gotIt": "Compris",
+    "send": "Envoyer",
+    "backToAdminDashboard": "Retour au tableau de bord admin",
+    "export": "Exporter",
+    "reset": "Réinitialiser",
+    "exit": "Quitter",
+    "none": "Aucun"
   },
   "settings": {
     "title": "Paramètres",
@@ -220,8 +278,23 @@
       "deploymentConfig": "Configuration de déploiement",
       "deploymentConfigDesc": "Services, SMTP, stockage",
       "userConfig": "Configuration utilisateur",
-      "userConfigDesc": "Types d'utilisateurs et questions d'intégration"
-    }
+      "userConfigDesc": "Types d'utilisateurs et questions d'intégration",
+      "guidedSetup": "Configuration guidée",
+      "guidedSetupDesc": "Parcourez la configuration, les documents, les ressources et les tests.",
+      "guides": "Guides admin",
+      "guidesDesc": "Comprenez ce que les admins configurent et où.",
+      "testUserSession": "Session utilisateur de test",
+      "testUserSessionDesc": "Discutez en tant qu'utilisateur simulé et consultez les retours bêta.",
+      "diagnostics": "Diagnostics",
+      "diagnosticsDesc": "Lancez des vérifications rapides pendant l'analyse des problèmes.",
+      "resourceDirectory": "Répertoire des ressources",
+      "resourceDirectoryDesc": "Sélectionnez manuellement des ressources de référence de confiance."
+    },
+    "diagnostics": "Diagnostics",
+    "adminWorkflows": "Flux de travail admin",
+    "settingsSection": "Paramètres",
+    "dataAndContent": "Données et contenu",
+    "operations": "Opérations"
   },
   "admin": {
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
@@ -241,7 +314,8 @@
       "removeFieldFailed": "Échec de la suppression du champ",
       "reorderFailed": "Échec de la réorganisation du champ",
       "loadUsersFailed": "Échec du chargement des utilisateurs",
-      "updateTypeFailed": "Échec de la mise à jour du type d'utilisateur"
+      "updateTypeFailed": "Échec de la mise à jour du type d'utilisateur",
+      "loadSettingsFailed": "Échec du chargement des paramètres"
     },
     "setup": {
       "backToChat": "Retour au chat",
@@ -263,6 +337,7 @@
       "addUserType": "Ajouter un type d'utilisateur",
       "onboardingFields": "Champs d'intégration utilisateur",
       "optionsCount_one": "{{count}} option",
+      "optionsCount_many": "{{count}} options",
       "optionsCount_other": "{{count}} options",
       "noFields": "Aucun champ personnalisé",
       "addField": "Ajouter un champ",
@@ -308,10 +383,13 @@
       "clickToExpand": "Cliquez pour agrandir",
       "pagination": "Affichage de {{from}} à {{to}} sur {{total}}",
       "tableCount_one": "{{count}} tableau",
+      "tableCount_many": "{{count}} tables",
       "tableCount_other": "{{count}} tables",
       "rowCount_one": "{{count}} ligne",
+      "rowCount_many": "{{count}} lignes",
       "rowCount_other": "{{count}} lignes",
       "rowsInTable_one": "{{count}} ligne dans {{table}}",
+      "rowsInTable_many": "{{count}} lignes dans {{table}}",
       "rowsInTable_other": "{{count}} lignes dans {{table}}",
       "connected": "SQLite connecté",
       "selectTable": "Sélectionnez une table dans la barre latérale",
@@ -362,7 +440,14 @@
       "nip07Unavailable": "Aucune extension Nostr détectée",
       "plaintextFieldIcon": "Champ en texte clair",
       "primaryKeyIcon": "Clé primaire",
-      "unlockDecryption": "Déverrouiller le déchiffrement"
+      "unlockDecryption": "Déverrouiller le déchiffrement",
+      "safeQueryResults": "Résultats de requête sécurisée",
+      "queryError": "Erreur de requête",
+      "writeResult": "Résultat d'écriture en base de données",
+      "emptyQueryResult": "Résultat de requête vide",
+      "readOnly": "Lecture seule",
+      "tableLoadError": "Erreur de chargement de la table",
+      "readOnlyHint": "Les modifications directes de la base de données sont désactivées ; utilisez les flux admin audités pour apporter des modifications."
     },
     "fields": {
       "nameRequired": "Le nom du champ est requis",
@@ -473,7 +558,10 @@
       "emailEncryptedHint": "E-mail (chiffré)",
       "nameEncryptedHint": "Nom (chiffré)",
       "noUsersHint": "Essayez de modifier le filtre ci-dessus ou d'actualiser.",
-      "pubkeyPresent": "Clé publique Nostr présente"
+      "pubkeyPresent": "Clé publique Nostr présente",
+      "usersErrorLabel": "Erreur des utilisateurs lors de la migration de type d'utilisateur",
+      "errorLabel": "Erreur de migration de type d'utilisateur",
+      "summaryLabel": "Résumé de la migration de type d'utilisateur"
     },
     "configAssistant": {
       "openAria": "Ouvrir l’assistant admin",
@@ -511,8 +599,38 @@
         "restartRequiredFor": "Redémarrage requis pour : {{keys}}.",
         "restartRequiredNo": "Redémarrage requis : non.",
         "restartCheckFailedHttp": "Échec de la vérification de redémarrage requis (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Échec de la vérification de redémarrage requis (erreur réseau)."
-      }
+        "restartCheckFailedNetwork": "Échec de la vérification de redémarrage requis (erreur réseau).",
+        "pageRefreshRecommended": "Actualisez cette page pour voir les mises à jour du thème."
+      },
+      "onboardingWelcome": "Bienvenue — configurons votre espace. Répondez à autant de ces questions que vous le souhaitez dans un seul message (numérotez-les et ignorez tout ce dont vous n'êtes pas sûr) :\n\n1. **Nom** — comment devons-nous appeler cet espace ? (s'affiche dans l'en-tête et l'onglet du navigateur)\n2. **Description** — une phrase sur son objectif (une note privée, non visible par les utilisateurs)\n3. **Nom de l'assistant** — comment l'assistant IA doit-il être appelé ?\n4. **Couleur d'accent** — la couleur de mise en évidence des boutons et liens (un nom comme bleu/turquoise, ou un code hex comme #3B82F6)\n5. **Thème** — clair, sombre ou système (correspond à l'appareil) ?\n6. **Langue par défaut** — par ex. Anglais ou Espagnol (facultatif)\n7. **Slogan** — une courte phrase pour l'en-tête (facultatif)\n8. **Nouveaux utilisateurs** — les laisser entrer immédiatement, ou approuver chaque personne ?\n9. **Types d'utilisateurs** — quels types de personnes non-admin utiliseront ceci ? (par ex. Enseignant et Élève) — je créerai chacun d'eux pour vous\n\nExemple : « 9. Enseignant et Élève ». Je sauvegarderai tout en une seule étape — et vous pouvez passer à la configuration manuelle à tout moment.",
+      "collapseSidebar": "Réduire la barre latérale de l'assistant",
+      "expandSidebar": "Ouvrir la barre latérale de l'assistant admin",
+      "resize": "Redimensionner le panneau de l'assistant admin",
+      "railLabel": "Assistant",
+      "shareSecretsHint": "Désactivé par défaut. Activez d'abord l'outil Config. Une fois activées, les valeurs de configuration secrètes du déploiement sont révélées côté client et envoyées à Sage pour ce flux de prototype.",
+      "applyIntentUsePanel": "Utilisez le panneau des modifications en attente ci-dessous et cliquez sur Appliquer pour confirmer ces mises à jour de configuration.",
+      "applyIntentNoPending": "Il n'y a aucune modification de configuration en attente à appliquer. Demandez d'abord à l'assistant de proposer un ensemble de modifications.",
+      "startNewConversation": "Démarrer une nouvelle conversation avec l'assistant",
+      "reducedContextNoticeLabel": "Avis de contexte réduit",
+      "sessionMemoryNoticeLabel": "Avis de compactage de la Mémoire de session",
+      "sessionMemoryNotice": "Le contexte plus ancien a été résumé pour poursuivre cette conversation.",
+      "reducedContextNotice": "Une partie du contexte a été réduite pour respecter le budget du Model Provider ({{sections}}). Les réponses peuvent être moins complètes jusqu'à ce que vous démarriez une nouvelle conversation avec l'assistant.",
+      "reducedContextSections": {
+        "recentConversation": "historique récent de la conversation"
+      },
+      "approvalCardTitle": "Approuver les modifications de configuration",
+      "applying": "Application en cours",
+      "applied": "Appliqué",
+      "rejected": "Rejeté",
+      "failed": "Échoué",
+      "superseded": "Remplacé",
+      "hideDetails": "Masquer les détails",
+      "reviewDetails": "Examiner les détails",
+      "reject": "Rejeter",
+      "approve": "Approuver",
+      "applyErrorLabel": "Erreur d'application de la configuration",
+      "onboardingTitle": "Chat de configuration guidée",
+      "onboardingContext": "Conversation de configuration ciblée"
     },
     "reachout": {
       "badgeDefault": "Par défaut",
@@ -679,7 +797,16 @@
       "typographyTitle": "Typographie",
       "userIconLabel": "Icône d'utilisateur",
       "userLabelLabel": "Libellé utilisateur",
-      "userLabelPlaceholder": "ex: Vous"
+      "userLabelPlaceholder": "ex: Vous",
+      "publicEmailDisplayNameLabel": "Nom d'affichage public de l'e-mail (facultatif)",
+      "publicEmailDisplayNameHint": "Utilisé dans les e-mails de connexion par lien magique. Laissez vide pour utiliser le nom de l'instance.",
+      "defaultsTitle": "Valeurs par défaut de l'instance",
+      "defaultsDesc": "Définissez la langue et le thème de base utilisés avant l'application des contrôles locaux du navigateur.",
+      "defaultLanguageLabel": "Langue par défaut",
+      "defaultThemeLabel": "Thème par défaut",
+      "themeSystem": "Système",
+      "themeLight": "Clair",
+      "themeDark": "Sombre"
     },
     "userConfig": {
       "subtitle": "Configurez les types d'utilisateurs et les questions auxquelles les utilisateurs répondent lors de l'intégration.",
@@ -687,6 +814,44 @@
       "typeDescription": "Descriptif",
       "typeIcon": "Icône de type",
       "typeName": "Nom du type"
+    },
+    "userApproval": {
+      "updateFailed": "Échec de la mise à jour de l'approbation de l'utilisateur.",
+      "approvedUser": "Utilisateur n°{{id}} approuvé.",
+      "revokedUser": "Utilisateur n°{{id}} remis en attente.",
+      "title": "Approbation des utilisateurs",
+      "subtitle": "Choisissez si les nouveaux utilisateurs authentifiés peuvent accéder immédiatement au chat ou attendre l'approbation de l'admin.",
+      "requireManualLabel": "Exiger une approbation manuelle pour les nouveaux utilisateurs",
+      "requireManualHint": "Une fois activé, les nouveaux utilisateurs arrivent sur l'écran d'approbation en attente jusqu'à ce qu'un admin les approuve.",
+      "loadingHint": "Chargement...",
+      "saveButton": "Enregistrer l'approbation des utilisateurs",
+      "savedCalloutLabel": "Approbation des utilisateurs enregistrée",
+      "errorCalloutLabel": "Erreur d'approbation des utilisateurs",
+      "pendingTitle": "Approbations en attente",
+      "pendingCount": "{{count}} utilisateur nécessite une approbation avant d'accéder au chat.",
+      "nonePending": "Aucun utilisateur n'attend d'approbation.",
+      "actionSavedCalloutLabel": "Approbation des utilisateurs mise à jour",
+      "actionErrorCalloutLabel": "Échec de la mise à jour de l'approbation des utilisateurs",
+      "loadingUsers": "Chargement des utilisateurs...",
+      "emptyState": "Les nouveaux Utilisateurs en attente d'approbation apparaîtront ici lorsqu'une approbation manuelle est requise.",
+      "emailOnFile": "E-mail enregistré",
+      "nameOnFile": "Nom enregistré",
+      "approveButton": "Approuver",
+      "revokeButton": "Révoquer"
+    },
+    "userRosterExport": {
+      "auditFailed": "L'export de la liste des utilisateurs n'a pas pu être audité. Le tableur n'a pas été téléchargé.",
+      "success": "Tableur de la liste des utilisateurs téléchargé.",
+      "failed": "Échec de l'export de la liste des utilisateurs.",
+      "button": "Exporter les utilisateurs",
+      "successLabel": "Export de la liste des utilisateurs prêt",
+      "errorLabel": "Échec de l'export de la liste des utilisateurs"
+    },
+    "userIdentity": {
+      "decrypting": "Déchiffrement du nom/e-mail...",
+      "decryptFailed": "Impossible de déchiffrer le nom/e-mail",
+      "unlockDetails": "Déverrouiller pour afficher le nom/e-mail",
+      "unlockButton": "Déverrouiller les détails"
     }
   },
   "adminOnboarding": {
@@ -767,7 +932,8 @@
       "processing": "En cours",
       "chunked": "Découpé",
       "complete": "Terminé",
-      "failed": "Échoué"
+      "failed": "Échoué",
+      "completedWithErrors": "Terminé avec des erreurs"
     },
     "chunks": "{{processed}}/{{total}} fragments",
     "deleteDocument": "Supprimer le document",
@@ -816,11 +982,222 @@
     "serverBusy": "Le serveur est occupé",
     "tryRefresh": "Réessayer",
     "uploadedSuccess": "Téléchargement réussi — traitement démarré",
-    "uploadingStatus": "Téléchargement vers le serveur..."
+    "uploadingStatus": "Téléchargement vers le serveur...",
+    "documentDeletionError": "Erreur de suppression du document",
+    "navigationWarning": "Votre document est encore en cours de transfert. Ne quittez qu'une fois le traitement démarré, sinon le téléversement risque de ne pas être enregistré.",
+    "duplicateInBatch": "Nom de document en double dans ce lot",
+    "documentsSelected": "{{count}} documents",
+    "queueSummary": "{{valid}} prêts, {{rejected}} ignorés",
+    "skipped": "Ignoré",
+    "uploadedPartialSuccess": "{{count}} en file d'attente, {{rejected}} ignorés",
+    "chooseFiles": "Choisir des fichiers",
+    "chooseFolder": "Choisir un dossier",
+    "uploadDocuments": "Téléverser des documents",
+    "replacingDocument": "Remplacement de {{filename}}",
+    "recentDocumentsShowing": "Affichage de {{shown}} documents sur {{total}}",
+    "showMore": "Afficher plus"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Les admins peuvent"
+    },
+    "summary": {
+      "brand": {
+        "title": "Personnaliser la marque de l'instance",
+        "body": "Nom, logo, thème, identité de l'assistant et affichage public de l'e-mail."
+      },
+      "people": {
+        "title": "Gérer les personnes",
+        "body": "Types d'utilisateur, questions d'intégration, approbations, migration et accès."
+      },
+      "agent": {
+        "title": "Façonner Sage",
+        "body": "Règles d'instructions, paramètres de réponse, accès aux documents et outils par défaut."
+      },
+      "launch": {
+        "title": "Lancer en toute sécurité",
+        "body": "E-mail, domaines, CORS, HTTPS, routage des modèles, santé et environnement d'exécution."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Marque",
+        "title": "Identité et apparence",
+        "body": "Faites en sorte que l'instance ressemble à votre organisation.",
+        "detail1": "Nom, slogan, nom de l'assistant et libellé d'utilisateur.",
+        "detail2": "Logo, favicon, icône, couleur d'accentuation, thème, typographie et style de discussion.",
+        "detail3": "Langue par défaut et nom d'affichage public de l'e-mail.",
+        "link": "Ouvrir les paramètres de l'instance"
+      },
+      "people": {
+        "eyebrow": "Accès",
+        "title": "Personnes et accès",
+        "body": "Décidez qui utilise l'instance et ce que vous leur demandez.",
+        "detail1": "Types d'utilisateur pour des groupes comme le personnel, les membres ou les clients.",
+        "detail2": "Champs d'intégration, questions obligatoires, options, textes d'exemple et champs par type.",
+        "detail3": "Approbation manuelle, migration des utilisateurs, révocation d'accès et suppression.",
+        "link": "Ouvrir les paramètres des utilisateurs"
+      },
+      "agent": {
+        "eyebrow": "Comportement",
+        "title": "Comportement de l'agent",
+        "body": "Définissez la façon dont Sage répond et quels outils sont activés par défaut.",
+        "detail1": "Modèle d'instruction, règles de comportement, sujets interdits et paramètres de réponse.",
+        "detail2": "Valeurs par défaut des fonctionnalités pour les outils Connaissances, Ressources, Web, Config et Base de données.",
+        "detail3": "Paramètres globaux et remplacements par type d'utilisateur.",
+        "link": "Ouvrir les paramètres de l'agent"
+      },
+      "docs": {
+        "eyebrow": "Connaissances",
+        "title": "Connaissances documentaires",
+        "body": "Fournissez à l'agent une matière source qu'il peut consulter.",
+        "detail1": "Téléversez des PDF, des politiques, des FAQ, des manuels et des guides.",
+        "detail2": "Les documents sont découpés, vectorisés et rendus consultables.",
+        "detail3": "L'accès aux documents contrôle ce qui peut être sélectionné ou actif par défaut.",
+        "link": "Ouvrir le téléversement de documents"
+      },
+      "resources": {
+        "eyebrow": "Orientations",
+        "title": "Ressources vérifiées",
+        "body": "Ajoutez des orientations de confiance que l'agent peut recommander.",
+        "detail1": "Noms, descriptions, type de ressource, langues, couverture et types d'aide.",
+        "detail2": "Téléphone, e-mail, URL, canal sécurisé, adresse et notes.",
+        "detail3": "Les ressources vérifiées apparaissent en premier. Les ressources archivées restent masquées pour les utilisateurs.",
+        "link": "Ouvrir l'annuaire des ressources"
+      },
+      "ops": {
+        "eyebrow": "Opérations",
+        "title": "Opérations et exécution",
+        "body": "Maintenez l'instance connectée, joignable et en bonne santé.",
+        "detail1": "SMTP pour les liens magiques par e-mail, domaines, CORS, HTTPS et URL publiques.",
+        "detail2": "Fournisseur de modèle, modèle d'embedding, recherche, stockage et santé des services.",
+        "detail3": "Export de l'environnement d'exécution, préparation, paramètres obsolètes et migration de la clé admin.",
+        "link": "Ouvrir les paramètres de déploiement"
+      },
+      "title": "Ce que les admins configurent",
+      "body": "Voici les principales surfaces de contrôle. Vous pouvez utiliser les pages directement ou demander à l'assistant admin de préparer des modifications."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Demander",
+        "title": "Assistant admin",
+        "body": "Posez des questions sur la configuration actuelle et demandez des modifications de config.",
+        "detail1": "Les lectures de config inspectent l'état réel de l'instance au lieu de deviner.",
+        "detail2": "Les modifications proposées sont préparées pour révision.",
+        "detail3": "Appliquer exécute les points d'accès admin approuvés sans nouveau tour du modèle.",
+        "link": "Ouvrir l'assistant admin"
+      },
+      "guided": {
+        "eyebrow": "Démarrer",
+        "title": "Configuration guidée",
+        "body": "Utilisez un seul chat guidé pour créer une première configuration utile.",
+        "detail1": "Identité, assistant, langue, politique d'accès, types d'utilisateur, questions et règles de comportement.",
+        "detail2": "Ensuite, téléversez des documents, ajoutez des ressources et testez.",
+        "link": "Ouvrir la configuration guidée"
+      },
+      "test": {
+        "eyebrow": "Valider",
+        "title": "Test et retours",
+        "body": "Essayez l'agent du point de vue d'un utilisateur avant le lancement.",
+        "detail1": "Choisissez un type d'utilisateur, démarrez une session de test et enregistrez l'essai.",
+        "detail2": "Consultez les journaux bêta chiffrés et évaluez les réponses.",
+        "link": "Ouvrir la session utilisateur de test"
+      },
+      "database": {
+        "eyebrow": "Inspecter",
+        "title": "Explorateur de base de données",
+        "body": "Inspectez les données SQLite stockées lors du débogage.",
+        "detail1": "Utilisez des requêtes SELECT en lecture seule pour l'inspection.",
+        "detail2": "Ne l'utilisez pas comme voie de mutation du produit.",
+        "link": "Ouvrir l'explorateur de base de données"
+      },
+      "title": "Flux de travail admin courants",
+      "body": "Utilisez-les lorsque vous configurez, vérifiez la qualité ou examinez des données."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Exécution",
+        "title": "Une seule exécution de conversation",
+        "body": "Connaissances, Ressources, Web, Config et Base de données sont des ensembles d'outils visibles, pas des systèmes de chat distincts.",
+        "detail1": "Le modèle peut appeler les outils activés lorsqu'ils sont utiles.",
+        "detail2": "Config et Base de données n'apparaissent que pour les admins validés côté serveur."
+      },
+      "auth": {
+        "eyebrow": "Connexion",
+        "title": "Différentes voies de connexion",
+        "body": "Les admins utilisent NIP-07. Les utilisateurs utilisent des liens magiques par e-mail.",
+        "detail1": "Les clés privées des admins restent dans le signataire du navigateur.",
+        "detail2": "Le SMTP doit fonctionner avant que les liens magiques des utilisateurs fonctionnent en production."
+      },
+      "data": {
+        "eyebrow": "Confidentialité",
+        "title": "Les limites de données comptent",
+        "body": "Les champs de profil chiffrés restent en dehors du contexte du chat.",
+        "detail1": "Seuls les champs non chiffrés peuvent être marqués pour le contexte de chat de l'IA.",
+        "detail2": "Les secrets de déploiement sont stockés chiffrés et affichés masqués par défaut."
+      },
+      "ops": {
+        "eyebrow": "Ops",
+        "title": "Certaines modifications nécessitent des opérateurs",
+        "body": "L'application peut enregistrer les paramètres d'exécution souhaités ; elle ne redémarre pas les services en silence.",
+        "detail1": "Exportez l'environnement d'exécution après des modifications de fournisseur, d'origine, de CORS ou de recherche.",
+        "detail2": "Utilisez la préparation et la santé des services pour confirmer ce qui fonctionne réellement."
+      },
+      "title": "Vérités du produit à retenir",
+      "body": "Ces règles garantissent une configuration honnête et évitent les débordements accidentels."
+    },
+    "ask": {
+      "prompt1": "Que manque-t-il encore avant que cette instance soit prête pour les utilisateurs ?",
+      "prompt2": "Passez en revue les types d'utilisateur, les questions d'intégration, les documents et les ressources actuels.",
+      "prompt3": "Préparez des modifications pour révision : définissez le ton de l'assistant et la langue par défaut.",
+      "title": "Bonnes choses à demander à l'assistant admin",
+      "body": "Demandez une révision avant de demander des modifications. Il peut inspecter la configuration et préparer un ensemble de modifications."
+    },
+    "hero": {
+      "eyebrow": "Carte de contrôle admin",
+      "shortVersion": {
+        "title": "Version courte",
+        "body": "Les admins définissent l'identité, les utilisateurs, les connaissances, les outils et les paramètres de lancement. Certaines modifications d'exécution nécessitent encore un redémarrage par un opérateur."
+      }
+    },
+    "title": "Guides admin",
+    "subtitle": "Une carte simple de ce que les admins configurent, de ce que le produit peut faire et de ce qui demande de l'attention avant le lancement.",
+    "quickStart": {
+      "title": "Commencez ici",
+      "body": "Faites d'abord la petite configuration utile. Peaufinez-la après avoir testé avec de vraies questions."
+    },
+    "safety": {
+      "title": "Bases de sécurité",
+      "body": "Les admins contrôlent l'accès, les données, le comportement et les paramètres d'exécution. Allez lentement avec les modifications risquées.",
+      "items": {
+        "0": "Les admins se connectent avec NIP-07. Les utilisateurs se connectent avec des liens magiques par e-mail.",
+        "1": "Les champs des utilisateurs sont chiffrés par défaut. Seuls les champs en texte clair peuvent être partagés avec le chat.",
+        "2": "Les secrets restent masqués sauf si vous les partagez pour la session admin en cours.",
+        "3": "Les modifications de l'assistant sont des propositions. Vous les révisez et cliquez sur Appliquer.",
+        "4": "Les paramètres de déploiement enregistrent les valeurs d'exécution souhaitées. Les opérateurs exportent toujours l'environnement et redémarrent les services au besoin."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Connectez-vous en tant qu'admin",
+        "body": "Utilisez la clé admin NIP-07. Gardez-la privée."
+      },
+      "1": {
+        "title": "Définissez les bases",
+        "body": "Nommez l'instance, choisissez l'apparence et définissez l'identité de l'assistant."
+      },
+      "2": {
+        "title": "Définissez vos utilisateurs",
+        "body": "Créez des types d'utilisateur, des questions d'intégration et des règles d'approbation."
+      },
+      "3": {
+        "title": "Ajoutez des connaissances de confiance",
+        "body": "Téléversez des documents et ajoutez des ressources vérifiées."
+      },
+      "4": {
+        "title": "Testez avant le lancement",
+        "body": "Discutez en tant qu'utilisateur, examinez les retours, puis invitez de vraies personnes."
+      }
     }
   },
   "adminDashboard": {
@@ -857,7 +1234,55 @@
     "securityStep3Primary": "Lancer la validation de configuration",
     "securityStep3Secondary": "Examiner les données stockées",
     "user": "Configuration utilisateur",
-    "userDesc": "Définir les types d'utilisateurs et les questions d'intégration"
+    "userDesc": "Définir les types d'utilisateurs et les questions d'intégration",
+    "subtitleSimple": "Choisissez où vous voulez travailler sur cette instance.",
+    "workflowsSectionLabel": "Flux de travail d'administration",
+    "adminAssistant": "Assistant d'administration",
+    "adminAssistantDesc": "Utilisez le chat d'administration pour obtenir de l'aide à la configuration et examiner les modifications.",
+    "guidedSetup": "Configuration guidée",
+    "guidedSetupDesc": "Parcourez la configuration, les documents, les ressources et les tests.",
+    "guides": "Guides d'administration",
+    "guidesDesc": "Comprenez ce que les administrateurs configurent et où.",
+    "testUserSession": "Session utilisateur de test",
+    "testUserSessionDesc": "Discutez en tant qu'utilisateur simulé et examinez les journaux bêta enregistrés.",
+    "aiSetupTitle": "Configurer avec l'assistant IA",
+    "aiSetupBody": "Laissez l'assistant recueillir les bases pour nommer et configurer votre instance en une seule fois. Vous pouvez passer à la configuration manuelle à tout moment.",
+    "aiSetupAction": "Démarrer la configuration guidée",
+    "readinessTitle": "Préparation au déploiement",
+    "readinessDesc": "Examinez la préparation avant d'inviter des utilisateurs. Vérifiez les bloqueurs, les avertissements, les modifications nécessitant un redémarrage et la posture de récupération, le tout au même endroit.",
+    "readinessPrimary": "Ouvrir la revue de préparation",
+    "firstRunPathTitle": "Parcours de première utilisation de l'administrateur",
+    "firstRunStep1Title": "Configurer la base de référence de l'instance",
+    "firstRunStep1Body": "Définissez l'image de marque, la langue, le thème, les champs utilisateur et les paramètres de l'agent avant la revue.",
+    "firstRunStep1Action": "Ouvrir les paramètres de l'instance",
+    "firstRunStep2Title": "Examiner la préparation au déploiement",
+    "firstRunStep2Body": "Vérifiez les bloqueurs, les avertissements, les modifications nécessitant un redémarrage et la posture de récupération avant d'inviter des utilisateurs.",
+    "firstRunStep2Action": "Ouvrir l'assistant de déploiement",
+    "firstRunStep3Title": "N'utiliser les diagnostics que lors d'une investigation",
+    "firstRunStep3Body": "Gardez les tests de fumée et les diagnostics accessibles sans en faire le parcours principal du produit.",
+    "firstRunStep3Action": "Ouvrir les diagnostics",
+    "instanceDescSimple": "Nom, identité de courriel publique, thème et contrôles de marque.",
+    "aiDescSimple": "Instructions, comportement du modèle et valeurs par défaut des documents.",
+    "deploymentDescSimple": "Paramètres d'exécution, état de santé et détails de préparation.",
+    "resources": "Répertoire de ressources",
+    "resourcesDesc": "Sélectionnez des avocats, des ONG et des ressources de référence de confiance",
+    "resourcesDescSimple": "Sélectionnez manuellement des ressources de référence de confiance.",
+    "testFeedback": "Test et retours",
+    "testFeedbackDesc": "Discutez en tant qu'utilisateur de test et évaluez les réponses pour affiner votre configuration",
+    "diagnosticsSectionLabel": "Diagnostics",
+    "operationsSectionLabel": "Opérations",
+    "testDashboard": "Diagnostics",
+    "testDashboardDesc": "Exécutez des tests de fumée de développement et inspectez les modules de diagnostic",
+    "testDashboardDescSimple": "Exécutez des tests de fumée lors de l'investigation d'un problème.",
+    "iaChecklistTitle": "Liste de contrôle de la revue de l'IA d'administration",
+    "iaChecklistBody": "Gardez distincts, lors de la revue humaine, les paramètres de déploiement, les paramètres de l'instance, les paramètres de l'agent, la préparation du cycle de vie, la préparation au déploiement et les surfaces de diagnostic.",
+    "humanReviewTitle": "Transfert de la revue humaine",
+    "humanReviewStatus": "Support de déploiement personnalisé requis",
+    "humanReviewBody": "L'application de l'environnement d'exécution reste explicite : exportez les artefacts, appliquez-les avec le support d'un opérateur, redémarrez les services concernés et vérifiez les preuves de préparation.",
+    "humanReviewAction": "Examiner la préparation au déploiement",
+    "settingsSectionLabel": "Paramètres",
+    "userManager": "Gestionnaire d'utilisateurs",
+    "userManagerDesc": "Examinez les utilisateurs, vérifiez leur statut, exportez les listes des utilisateurs et approuvez les accès."
   },
   "adminAI": {
     "title": "Configuration IA",
@@ -872,6 +1297,8 @@
     "sessionDefaults": "Fonctionnalités par défaut",
     "sessionDefaultsDesc": "Définissez quelles fonctionnalités sont activées par défaut",
     "sessionDefaultsHint": "Contrôlez quelles capacités IA sont activées lorsque les utilisateurs démarrent une nouvelle session de chat.",
+    "knowledgeSearchDisabledLabel": "La Recherche de connaissances est désactivée",
+    "knowledgeSearchDisabledMessage": "Les documents actifs par défaut ne seront pas utilisés tant que Sources de connaissances n'est pas réglé sur les documents par défaut sélectionnés ou sur tous les documents disponibles.",
     "documentDefaults": "Accès aux documents",
     "documentDefaultsDesc": "Contrôlez quels documents l'IA peut référencer",
     "documentDefaultsHint": "Les documents marqués \"Disponible\" peuvent être sélectionnés par les utilisateurs. Les documents marqués \"Actif par défaut\" sont automatiquement inclus dans les nouvelles conversations.",
@@ -942,7 +1369,12 @@
       "userInfoPlaceholder": "{user_info} — remplacé par les champs de profil de l'utilisateur actuel, si disponibles"
     },
     "revert": "Rétablir",
-    "revertToGlobal": "Rétablir les paramètres globaux"
+    "revertToGlobal": "Rétablir les paramètres globaux",
+    "assembledPromptOutput": "Sortie de l'instruction assemblée",
+    "loadErrorLabel": "Erreur de chargement des paramètres de l'agent",
+    "previewErrorLabel": "Erreur d'aperçu des paramètres de l'agent",
+    "documentToggleErrorLabel": "Erreur de bascule de document des paramètres de l'agent",
+    "documentDefaultsHintV2": "Les documents marqués « Disponible » peuvent être utilisés par la recherche de connaissances. Les documents marqués « Actif par défaut » sont inclus lorsque les sources de connaissances sont définies sur les documents par défaut sélectionnés."
   },
   "adminDeployment": {
     "title": "Configuration du déploiement",
@@ -1045,7 +1477,9 @@
       "unknown": "Inconnu",
       "usersMigrated": "Utilisateurs migrés",
       "usersToMigrate": "Utilisateurs à migrer",
-      "warning": "Ceci est une opération avancée. Une migration incorrecte peut vous bloquer l'accès aux données chiffrées. Ne continuez que si vous comprenez les implications."
+      "warning": "Ceci est une opération avancée. Une migration incorrecte peut vous bloquer l'accès aux données chiffrées. Ne continuez que si vous comprenez les implications.",
+      "inputWarningLabel": "Avertissement de migration de clé d'administration",
+      "destructiveWarningLabel": "Avertissement destructeur de migration de clé d'administration"
     },
     "revealFailed": "Impossible de révéler la valeur. Vérifiez la connexion de votre extension Nostr.",
     "searchHelp": {
@@ -1076,7 +1510,8 @@
       "overviewDesc": "Les paramètres de sécurité contrôlent l'authentification, la gestion des sessions et les raccourcis de développement. Les valeurs par défaut sont configurées pour le développement local.",
       "overviewNote": "En production, assurez-vous que les options de simulation sont désactivées et que FRONTEND_URL correspond à votre vrai domaine.",
       "overviewTitle": "Vue d'ensemble de la sécurité",
-      "overviewWhen": "Passez en revue ces paramètres avant de déployer sur un serveur accessible au public."
+      "overviewWhen": "Passez en revue ces paramètres avant de déployer sur un serveur accessible au public.",
+      "devNote": "Utilisez MOCK_EMAIL pour les tests d'e-mail en local ; les sessions utilisateur et administrateur nécessitent toujours le flux de vérification normal."
     },
     "sslHelp": {
       "ariaLabel": "Aide à la configuration SSL et HTTPS",
@@ -1172,7 +1607,179 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Dossier de téléchargements",
       "vector_database_eb5526": "Base de données vectorielle"
-    }
+    },
+    "exportSageRuntimeEnv": "Exporter l'env Sage",
+    "readiness": {
+      "title": "Préparation au déploiement",
+      "statusTitle": "Préparation au déploiement : {{status}}",
+      "description": "Examinez les preuves nécessaires avant que ce déploiement à instance unique soit prêt pour un fonctionnement normal.",
+      "openWizard": "Ouvrir la revue de préparation",
+      "blockerCount": "{{count}} bloqueurs",
+      "warningCount": "{{count}} avertissements",
+      "readyCount": "{{count}} prêts",
+      "empty": "Aucune vérification de préparation au déploiement n'est disponible pour l'instant.",
+      "conversationBlocking": "Bloque les Conversations normales",
+      "blocker": "Bloqueur",
+      "warning": "Avertissement",
+      "ready": "Prêt",
+      "reviewInferenceVerification": "Examiner la vérification de l'inférence",
+      "reviewDataLifecycleStatus": "Examiner l'état du cycle de vie des données",
+      "reviewDeploymentValidation": "Examiner les paramètres de déploiement",
+      "reviewRestartRequired": "Examiner le redémarrage requis",
+      "reviewOperationalReadiness": "Examiner la préparation opérationnelle",
+      "reviewServiceHealth": "Examiner l'état de santé des services",
+      "reviewRuntimeEnv": "Examiner l'export de l'env d'exécution"
+    },
+    "wizard": {
+      "title": "Assistant de déploiement",
+      "step": "Étape {{current}} sur {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Préparation opérationnelle",
+      "description": "Examinez les exercices de sauvegarde, de restauration, de surveillance et de récupération avant un fonctionnement normal."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — votre clé API Tinfoil pour le proxy local.",
+      "apiKeyLabel": "Clé API Tinfoil",
+      "ariaLabel": "Aide à la configuration de l'exécution de Sage",
+      "exampleConfig": "Exemple de configuration",
+      "goToPage": "Aller à la page",
+      "sageExtra": "Définissez LLM_API_KEY sur votre clé Tinfoil depuis {{tinfoilSignupUrl}}. La pile la mappe vers Sage et le proxy Tinfoil local.",
+      "sageHint": "Ce prototype achemine le trafic de l'exécution de l'agent via Sage et Tinfoil. LLM_API_KEY est la clé canonique du fournisseur de modèle.",
+      "modelField": "TINFOIL_MODEL — identifiant du modèle Tinfoil que Sage doit utiliser (par exemple : gemma4-31b).",
+      "overviewDesc": "Ce prototype utilise Sage comme Agent Runtime public et Tinfoil comme transport du fournisseur de modèle. Configurez le fournisseur de modèle via les paramètres de déploiement LLM_* ; la pile les mappe vers le runtime Tinfoil de Sage.",
+      "overviewTitle": "Aperçu du runtime Sage",
+      "providerField": "LLM_PROVIDER — définissez-le sur « sage » pour ce prototype."
+    },
+    "inferenceVerification": {
+      "current": "Actuel",
+      "missing": "Manquant",
+      "expired": "Expiré",
+      "failed": "Échec",
+      "success": "Réussi",
+      "statusLoadFailed": "Échec du chargement de l'état de vérification d'inférence",
+      "historyLoadFailed": "Échec du chargement de l'historique de vérification d'inférence",
+      "loadFailed": "Échec du chargement de la vérification d'inférence",
+      "manualFailed": "Échec de la vérification manuelle",
+      "manualSucceeded": "Vérification manuelle réussie",
+      "detailLoadFailed": "Échec du chargement du détail de l'attestation",
+      "ariaLabel": "Vérification d'inférence",
+      "title": "Vérification d'inférence",
+      "summary": "Preuve réservée aux administrateurs que l'inférence protégée s'exécute sur le fournisseur de modèle attendu.",
+      "verifyNow": "Vérifier maintenant",
+      "status": "État",
+      "checkedAt": "Vérifié",
+      "expiresAt": "Expire",
+      "expectedClaims": "Revendications attendues",
+      "expectedClaimsValue": "Revendications attendues : {{fingerprint}}",
+      "providerClaims": "Revendications du fournisseur",
+      "provider": "Fournisseur",
+      "model": "Modèle",
+      "endpoint": "Point de terminaison",
+      "history": "Historique de vérification",
+      "emptyHistory": "Aucun enregistrement de vérification pour l'instant.",
+      "recordTitle": "Enregistrement n° {{id}}",
+      "inspectAttestation": "Inspecter l'attestation",
+      "fullAttestation": "Matériel d'attestation complet"
+    },
+    "lifecycle": {
+      "notStarted": "Non démarré",
+      "notConfigured": "Non configuré",
+      "plaintextByOperatorChoice": "Texte en clair par choix de l'opérateur",
+      "allTombstones": "Tous",
+      "allTombstonesLabel": "Tous les marqueurs de suppression",
+      "incompleteTombstonesFilter": "Incomplets",
+      "incompleteTombstonesLabel": "Marqueurs de suppression incomplets",
+      "completedTombstonesFilter": "Terminés",
+      "completedTombstonesLabel": "Marqueurs de suppression terminés",
+      "title": "État du cycle de vie des données",
+      "description": "Couverture actuelle de la confidentialité contrôlée par l'opérateur pour les données de l'instance.",
+      "scopeExcludes": "Exclut : {{excludes}}",
+      "secureEraseStatus": "Effacement sécurisé : {{status}}",
+      "readinessStatus": "Préparation du cycle de vie : {{status}}",
+      "readinessNonBlocking": "Les conversations des utilisateurs ne sont pas bloquées par les avertissements de préparation du cycle de vie dans la v1.",
+      "readinessStaleReason": "Raison : {{reason}}",
+      "contentEncryptionKey": "Clé de chiffrement du contenu : {{status}}",
+      "artifactEncryptionPosture": "Posture de chiffrement des artéfacts : {{status}}",
+      "artifactPostureLabel": "Posture de chiffrement des artéfacts",
+      "artifactPostureRequired": "Requise",
+      "artifactPostureDisabled": "Désactivée",
+      "retentionSchedulerStatus": "Planificateur de rétention : {{status}}",
+      "schedulerObservation": "Observation : {{status}}",
+      "schedulerEnabledClasses": "Classes activées du planificateur : {{classes}}",
+      "schedulerLastRunStatus": "État de la dernière exécution : {{status}}",
+      "schedulerLastRun": "Dernière exécution : {{trigger}} par {{actor}}",
+      "previewRetention": "Aperçu de la rétention",
+      "runScheduledRetention": "Exécuter planifié",
+      "previewRetentionResult": "Aperçu : {{conversations}} conversations, {{artifacts}} artéfacts de document, {{skipped}} classes ignorées.",
+      "scheduledRetentionResult": "Exécution planifiée : {{status}} avec {{retries}} nouvelles tentatives de marqueur de suppression.",
+      "scheduledRetentionStatus": "Classes planifiées : {{classes}}",
+      "auditCoverageStatus": "Couverture d'audit : {{audited}} audités, {{exceptions}} exceptions, {{missing}} manquants.",
+      "owner": "Propriétaire : {{owner}}",
+      "deletion": "Suppression : {{status}}",
+      "retention": "Rétention : {{status}}",
+      "audit": "Audit : {{status}}",
+      "confidentiality": "Confidentialité : {{status}}",
+      "incompleteTombstones": "Marqueurs de suppression incomplets : {{count}}",
+      "completedTombstones": "Marqueurs de suppression terminés : {{count}}",
+      "retentionEnabled": "Activée",
+      "retentionWindow": "Fenêtre",
+      "retentionDays": "jours",
+      "scheduledEnforcement": "Planifiée",
+      "saveRetentionPolicy": "Enregistrer la politique",
+      "empty": "L'état du cycle de vie n'est pas disponible.",
+      "retentionPolicySaveFailed": "Impossible d'enregistrer la politique de rétention.",
+      "retentionPreviewFailed": "Impossible d'afficher l'aperçu de la rétention.",
+      "scheduledRetentionFailed": "Impossible d'exécuter la rétention planifiée.",
+      "artifactPostureFailed": "Impossible de mettre à jour la posture de chiffrement des artéfacts.",
+      "unsupportedSurfacesTitle": "Surfaces de déploiement non prises en charge",
+      "unsupportedSurfacesDescription": "Ces traces opérationnelles sont divulguées ici mais restent en dehors du contrôle du cycle de vie du produit.",
+      "unsupportedSurfaceAckFailed": "Impossible de mettre à jour l'accusé de réception.",
+      "acknowledgedSurface": "Accusée de réception",
+      "acknowledgeSurface": "Accuser réception",
+      "tombstonesTitle": "Marqueurs de suppression",
+      "tombstonesDescription": "Réessayez les suppressions de cycle de vie incomplètes sans exposer le contenu supprimé.",
+      "tombstoneStatusFilter": "Filtre d'état des marqueurs de suppression",
+      "tombstoneRetryFailed": "Échec de la nouvelle tentative.",
+      "tombstonesFetchFailed": "Impossible de charger les marqueurs de suppression.",
+      "tombstoneClass": "Classe : {{className}}",
+      "tombstoneSource": "Source : {{source}}",
+      "tombstoneRetries": "Nouvelles tentatives : {{count}}",
+      "tombstoneUpdated": "Mis à jour : {{updated}}",
+      "retryTombstoneLabel": "Réessayer le marqueur de suppression {{id}}",
+      "retry": "Réessayer",
+      "tombstonesEmpty": "Aucun marqueur de suppression n'attend de nouvelle tentative."
+    },
+    "runtimeEnv": {
+      "unknown": "Inconnu",
+      "title": "Alignement de la configuration du runtime",
+      "description": "Compare les paramètres de déploiement souhaités, l'environnement Sage généré et l'état d'exécution observable.",
+      "desired": "Souhaité",
+      "configuredKeys": "{{count}} clés configurées sur {{total}}",
+      "generated": "Généré",
+      "exportedAt": "Exporté {{time}}",
+      "notExported": "Aucune exportation d'environnement Sage enregistrée",
+      "running": "En cours d'exécution",
+      "runningUnknown": "L'état d'exécution n'est pas encore directement inspecté.",
+      "coreBackend": "Backend principal",
+      "coreBackendHint": "Alignement de l'environnement du processus backend",
+      "coreDesired": "Cœur souhaité",
+      "coreConfiguredKeys": "Backend principal : {{count}} clés sur {{total}} configurées",
+      "coreGenerated": "Cœur généré",
+      "coreNotExported": "Aucune exportation d'environnement du backend principal enregistrée",
+      "coreRunning": "Cœur en cours d'exécution",
+      "coreRunningUnknown": "L'état d'exécution du backend principal n'est pas encore directement inspecté.",
+      "coreExportedTitle": "Environnement du backend principal exporté",
+      "coreSensitiveArtifact": "Traitez core-backend.env comme du matériel de déploiement sensible.",
+      "coreExportDoesNotApply": "L'exportation de l'artefact ne modifie pas le processus backend en cours d'exécution tant qu'un Opérateur ne l'a pas appliqué et n'a pas redémarré core-backend.",
+      "exportedTitle": "Environnement Sage exporté",
+      "sensitiveArtifact": "Traitez sage.env comme du matériel de déploiement sensible.",
+      "exportDoesNotApply": "L'exportation de l'artefact ne modifie pas le processus Sage en cours d'exécution tant qu'un Opérateur ne l'a pas appliqué et n'a pas redémarré Sage."
+    },
+    "categorySettingsAria": "Paramètres {{category}}",
+    "exportCoreBackendRuntimeEnv": "Exporter l'environnement core-backend",
+    "restartCurrent": "Aucun redémarrage requis",
+    "restartCurrentDesc": "Aucun paramètre de déploiement nécessitant un redémarrage n'a changé depuis le démarrage du service."
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +1821,11 @@
       "description": "Configurer les certificats SSL et les paramètres HTTPS",
       "hint": "Configurez les paramètres TLS et de proxy lors du service via HTTPS. Les valeurs par défaut sont sûres pour le développement local ; activez HTTPS uniquement après le montage des certificats.",
       "label": "SSL et sécurité"
+    },
+    "llm": {
+      "label": "Environnement d'exécution de l'agent Sage",
+      "description": "Configurer l'inférence Sage + Tinfoil",
+      "hint": "Ce prototype achemine le trafic de l'environnement d'exécution de l'agent via Sage et utilise Tinfoil comme transport du fournisseur de modèle. Les modifications nécessitent un redémarrage."
     }
   },
   "promptSections": {
@@ -1240,6 +1852,12 @@
       "description": "Comment l'IA structure ses réponses",
       "hint": "Contrôle les préférences de formatage comme l'utilisation de puces, d'en-têtes ou de paragraphes conversationnels. Cela affecte la présentation visuelle des réponses.",
       "placeholder": "Utilisez des puces pour les listes, des titres pour les sections..."
+    },
+    "prompt_system": {
+      "label": "Instruction système",
+      "description": "Identité fondamentale et instructions de fonctionnement de l'IA",
+      "hint": "Utilisez ceci pour l'identité de l'assistant, sa mission et les limites de haut niveau qui doivent s'appliquer avant le ton, les règles, les outils ou le contexte des documents. Les modifications affectent les nouvelles conversations.",
+      "placeholder": "Vous êtes Sage, un assistant privé pour cette instance..."
     }
   },
   "parameters": {
@@ -1252,6 +1870,11 @@
       "label": "Profondeur des connaissances",
       "description": "Combien de sections de documents à référencer",
       "hint": "Lors de la réponse aux questions, l'IA recherche dans vos documents téléchargés et extrait les sections pertinentes. Des nombres plus élevés signifient plus de contexte mais des réponses plus lentes. Des nombres plus bas sont plus rapides mais peuvent manquer des informations pertinentes. Par défaut : 5"
+    },
+    "max_tokens": {
+      "label": "Nombre maximal de jetons",
+      "description": "Longueur maximale de chaque réponse de l'IA",
+      "hint": "Limite la longueur d'une réponse. Des valeurs plus faibles gardent les réponses brèves et réduisent les coûts ; des valeurs plus élevées permettent des explications plus longues. Par défaut : 2048"
     }
   },
   "defaults": {
@@ -1259,6 +1882,21 @@
       "label": "Recherche web",
       "description": "Permettre à l'IA de rechercher sur Internet",
       "hint": "Lorsqu'elle est activée, l'IA peut rechercher sur le web des informations actuelles qui ne sont pas dans vos documents. Désactivez ceci si vous voulez que les réponses proviennent uniquement de votre base de connaissances."
+    },
+    "knowledgeSource": {
+      "none": "Aucune",
+      "selected": "Documents par défaut sélectionnés",
+      "all": "Tous les documents disponibles"
+    },
+    "knowledge_source_default": {
+      "label": "Sources de connaissances",
+      "description": "Choisissez quelles sources de connaissances téléversées sont actives dans les Conversations des utilisateurs",
+      "hint": "Utilisez « none » pour aucune connaissance téléversée par défaut, « selected » pour les documents marqués comme actifs par défaut, ou « all » pour tous les documents disponibles."
+    },
+    "user_default_tool_ids": {
+      "label": "Ensembles d'outils utilisateur",
+      "description": "Ensembles d'outils actifs par défaut dans les Conversations des utilisateurs",
+      "hint": "Tableau JSON utilisant l'un des éléments « curated-resources », « knowledge-search » et « web-search ». La recherche de connaissances est également contrôlée par les Sources de connaissances."
     }
   },
   "colors": {
@@ -1437,6 +2075,51 @@
       "description": "URL de base du rappel Webhook",
       "hint": "URL de base utilisée pour construire les rappels Webhook. Exemple : https://api.example.com/webhooks. Par défaut : http://localhost:8000.",
       "label": "URL de webhook"
+    },
+    "LLM_PROVIDER": {
+      "label": "Fournisseur de modèle",
+      "description": "Libellé du fournisseur de modèle côté Python",
+      "hint": "Utilisez « sage » pour ce prototype. Ce paramètre de déploiement prend en charge les diagnostics côté Python et les métadonnées de vérification."
+    },
+    "LLM_MODEL": {
+      "label": "Nom du modèle",
+      "description": "Nom/identifiant du modèle",
+      "hint": "L'identifiant de modèle Tinfoil que Sage doit utiliser (par ex. « gemma4-31b »)."
+    },
+    "LLM_API_URL": {
+      "label": "Point de terminaison de l'API",
+      "description": "URL de base de l'API du fournisseur de modèle",
+      "hint": "URL de base du proxy Tinfoil. Par défaut : http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "Clé API",
+      "description": "Clé API Tinfoil (secret)",
+      "hint": "Laissez vide pour conserver le secret des paramètres de déploiement actuels."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Limite de débit du chat",
+      "description": "Requêtes de chat par minute",
+      "hint": "Nombre maximal de requêtes /llm/chat par minute par utilisateur stable, administrateur, jeton ou adresse IP client. Nécessite un redémarrage. Par défaut : 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Limite de débit des requêtes de récupération",
+      "description": "Requêtes de récupération par minute",
+      "hint": "Nombre maximal de requêtes /query par minute par utilisateur stable, jeton ou adresse IP client. Nécessite un redémarrage. Par défaut : 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Limite de débit du téléversement",
+      "description": "Requêtes de téléversement de documents par minute",
+      "hint": "Nombre maximal de requêtes de téléversement de documents par minute par administrateur stable, jeton ou adresse IP client. Nécessite un redémarrage. Par défaut : 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Limite de débit de la recherche vectorielle",
+      "description": "Requêtes de recherche vectorielle par minute",
+      "hint": "Nombre maximal de requêtes de recherche vectorielle par minute par utilisateur stable, jeton ou adresse IP client. Nécessite un redémarrage. Par défaut : 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Limite de débit de l'exportation de configuration",
+      "description": "Exportations de configuration de déploiement par heure",
+      "hint": "Nombre maximal d'exportations .env par heure par session administrateur ou adresse IP client. Nécessite un redémarrage. Par défaut : 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2156,11 @@
       "title": "Prêt à se connecter"
     },
     "subtitle": "Configurez votre base de connaissances privée en quelques étapes.",
-    "title": "Bienvenue sur Enclave"
+    "title": "Bienvenue sur Enclave",
+    "keySafety": {
+      "title": "Utilisez une clé Nostr spécifique à l'instance",
+      "body": "N'utilisez pas votre clé Nostr personnelle. Créez ou choisissez une clé administrateur dédiée à cette instance pour réduire le risque de surveillance et garder l'accès opérationnel séparé."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2168,8 @@
       "notConfigured": "Cette fonctionnalité n'est pas configurée.",
       "rateLimited": "Trop de messages. Veuillez réessayer plus tard.",
       "required": "Le message est requis.",
-      "unavailable": "La prise de contact n'est pas disponible."
+      "unavailable": "La prise de contact n'est pas disponible.",
+      "formErrorLabel": "Erreur du formulaire de prise de contact"
     },
     "form": {
       "messageLabel": "Communication",
@@ -1489,7 +2177,8 @@
       "send": "Envoyer"
     },
     "status": {
-      "success": "Merci. Votre message a été envoyé."
+      "success": "Merci. Votre message a été envoyé.",
+      "successLabel": "Prise de contact réussie"
     },
     "mode": {
       "feedback": {
@@ -1738,7 +2427,264 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Vérifier un jeton de lien magique et obtenir les informations de session (session basée sur les cookies).",
       "verify_magic_link_token_183cf5": "Vérifier le jeton de lien magique",
       "view_all_users_manage_approval_status_and_delete_03feec": "Afficher tous les utilisateurs, gérer le statut d'approbation et supprimer les utilisateurs.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Afficher et mettre à jour les paramètres de configuration de l'instance."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Afficher et mettre à jour les paramètres de configuration de l'instance.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Teste la connectivité au chemin du fournisseur de modèle configuré."
+    },
+    "labels": {
+      "themePreference": "Préférence de thème",
+      "endpointGuidance": "Conseils sur le point de terminaison",
+      "healthResponseOutput": "Sortie de la réponse de santé",
+      "jobs": "Tâches",
+      "chunks": "Fragments",
+      "rateLimitTestType": "Type de test de limite de débit",
+      "successfulRequests": "Requêtes réussies",
+      "successful": "Réussi",
+      "blockedRequests": "Requêtes bloquées"
+    }
+  },
+  "language": {
+    "english": "Anglais",
+    "spanish": "Espagnol",
+    "french": "Français",
+    "german": "Allemand",
+    "portuguese": "Portugais"
+  },
+  "adminGuidedSetup": {
+    "title": "Configurez votre instance",
+    "subtitle": "Votre assistant recueillera l'essentiel en une seule fois.",
+    "manual": "Configurer manuellement à la place",
+    "finish": "Terminer et commencer les tests",
+    "comingSoon": "Cette phase arrive bientôt et est développée séparément.",
+    "steps": {
+      "initialize": {
+        "label": "Initialiser",
+        "title": "Initialiser",
+        "subtitle": "Couvrons les bases de votre espace pour que votre agent démarre sur des fondations solides."
+      },
+      "docs": {
+        "label": "Téléverser des docs",
+        "title": "Téléversez votre guide de terrain",
+        "subtitle": "Ajoutez le matériel source à partir duquel votre agent répond — livres, guides et documents de référence."
+      },
+      "resources": {
+        "label": "Ressources sélectionnées",
+        "title": "Ressources sélectionnées",
+        "subtitle": "Ajoutez des ressources concrètes de confiance — contacts clés, avocats, soutien éducatif et en santé mentale — vers lesquelles l'agent peut orienter les personnes."
+      },
+      "test": {
+        "label": "Tester en tant qu'utilisateur",
+        "title": "Tester en tant qu'utilisateur",
+        "subtitle": "Bientôt disponible — essayez l'assistant en tant que l'un de vos types d'utilisateur et évaluez les réponses."
+      },
+      "feedback": {
+        "label": "Retours",
+        "title": "Boucle de retours",
+        "subtitle": "Bientôt disponible — examinez la qualité des réponses et affinez votre configuration."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Test et retours",
+    "subtitle": "Lancez une session utilisateur de test, puis examinez les journaux bêta chiffrés et les retours des conversations enregistrées.",
+    "tabs": {
+      "test": "Tester en tant qu'utilisateur",
+      "feedback": "Retours"
+    },
+    "test": {
+      "pickPersona": "Choisissez un persona à tester",
+      "pickPersonaBody": "Provisionnez un utilisateur de test pour l'un de vos types d'utilisateur, puis discutez en tant que celui-ci. La session est enregistrée comme un essai chiffré que vous pouvez évaluer sous Retours.",
+      "userType": "Type d'utilisateur",
+      "genericUser": "Utilisateur générique (sans type)",
+      "start": "Démarrer la session",
+      "admin": "Admin",
+      "testUserId": "Utilisateur de test",
+      "endSave": "Terminer et enregistrer l'essai",
+      "previewNotice": "Mode aperçu — la véritable usurpation d'identité n'est pas encore intégrée, donc cette discussion s'exécute sous votre session admin. La transcription est tout de même enregistrée pour examen.",
+      "chatEmpty": "Envoyez un message en tant que cet utilisateur pour commencer l'essai.",
+      "inputPlaceholder": "Écrivez à l'assistant en tant que cet utilisateur…",
+      "saved": "Essai enregistré (chiffré). Examinez-le sous Retours.",
+      "testingAs": "Test en tant que {{persona}}"
+    },
+    "feedback": {
+      "trials": "Journaux bêta",
+      "untitled": "Conversation sans titre",
+      "turns": "tours",
+      "turn": "Tour",
+      "empty": "Aucun journal bêta enregistré pour l'instant. Lancez une session utilisateur de test ou attendez des conversations d'utilisateurs.",
+      "selectPrompt": "Sélectionnez un journal bêta pour examiner sa transcription et évaluer chaque tour.",
+      "noNip04": "Connectez une extension Nostr (Alby, nos2x) pour déchiffrer les transcriptions — elles sont chiffrées avec votre clé admin.",
+      "sourceUser": "Conversation d'utilisateur",
+      "sourceTest": "Session utilisateur de test",
+      "thumbUp": "Bonne réponse",
+      "thumbDown": "À améliorer",
+      "notePlaceholder": "Note facultative (enregistrée chiffrée)…",
+      "exportNotDecrypted": "Ouvrez et déchiffrez la transcription avant de l’exporter."
+    }
+  },
+  "adminResources": {
+    "title": "Répertoire de ressources",
+    "subtitle": "Maintenez manuellement des ressources de référence vérifiées que l'assistant peut mentionner lorsqu'une conversation s'intensifie. Seules les ressources « prêtes » sont affichées aux utilisateurs finaux.",
+    "add": "Ajouter une ressource",
+    "addTitle": "Ajouter une ressource",
+    "editTitle": "Modifier la ressource",
+    "empty": "Aucune ressource pour l'instant. Ajoutez-en une manuellement lorsque vous avez une référence vérifiée.",
+    "verified": "vérifié",
+    "missing": "Éléments manquants pour la mise en ligne",
+    "name": "Nom",
+    "type": "Type de ressource",
+    "languages": "Langues (codes ISO séparés par des virgules)",
+    "description": "Description",
+    "descriptionHint": "Ce que l'assistant doit dire à la personne au sujet de cette ressource.",
+    "scopeLevel": "Niveau de couverture",
+    "scopeCode": "Code de couverture",
+    "scopeCodeHint": "Pays : code ISO (NI). Sous-région/région : code UN M49 (013 = Amérique centrale). Mondial : laisser vide.",
+    "helpTypes": "Types d'aide",
+    "contact": "Méthodes de contact",
+    "vettedBy": "Vérifié par",
+    "sourceNote": "Note de source",
+    "markVerified": "Marquer comme vérifié (classé en premier)",
+    "archive": "Archiver (masquer aux utilisateurs finaux)",
+    "deleteTitle": "Supprimer la ressource ?",
+    "deleteBody": "Cela supprime l'entrée du répertoire pour {{name}}",
+    "coverage": "Couverture",
+    "coverageHint": "Choisissez un niveau de couverture, puis recherchez son nom ou son code.",
+    "coverageCodePlaceholder": "Rechercher par nom ou code…",
+    "coverageLevelFirst": "Choisissez d’abord un niveau de couverture",
+    "coverageClear": "Effacer le code de couverture",
+    "level": {
+      "country": "Pays",
+      "subregion": "Sous-région",
+      "region": "Région",
+      "global": "Monde"
+    }
+  },
+  "adminUserManager": {
+    "backToAdmin": "Retour au tableau de bord d'administration",
+    "eyebrow": "Opérations d'administration",
+    "title": "Gestionnaire d'utilisateurs",
+    "subtitle": "Passez en revue les utilisateurs, comprenez leur statut et approuvez l'accès depuis un seul tableau de bord simple.",
+    "unlockDetails": "Déverrouiller les détails",
+    "refreshRoster": "Actualiser la liste des utilisateurs",
+    "exportVisible": "Exporter la liste des utilisateurs visible",
+    "rosterTitle": "Liste des utilisateurs",
+    "rosterShown": "{{shown}} affichés sur {{total}} au total.",
+    "tableLabel": "Liste des utilisateurs",
+    "tableRowsLabel": "Lignes de la liste des utilisateurs",
+    "loadingLabel": "Chargement de la liste des utilisateurs",
+    "loadingUsers": "Chargement des utilisateurs...",
+    "loadRetry": "La liste des utilisateurs n'a pas pu se charger. Utilisez Actualiser la liste des utilisateurs pour réessayer.",
+    "emptyNoUsers": "Aucun utilisateur pour l'instant. Les nouveaux utilisateurs authentifiés apparaîtront ici.",
+    "emptyFiltered": "Aucun utilisateur ne correspond à ces filtres.",
+    "noUserType": "Aucun type d'utilisateur",
+    "unknown": "Inconnu",
+    "userFallback": "Utilisateur n° {{id}}",
+    "approvalSuccess": "{{name}} approuvé.",
+    "exportSuccess": "Feuille de calcul de la liste des utilisateurs téléchargée.",
+    "metrics": {
+      "total": "Nombre total d'utilisateurs",
+      "totalDetail": "dans la liste des utilisateurs",
+      "pendingApproval": "En attente d'approbation",
+      "pendingDetail": "{{count}} en attente",
+      "approved": "Approuvés",
+      "approvedDetail": "peuvent accéder au chat",
+      "incompleteProfiles": "Profils incomplets",
+      "incompleteDetail": "nécessitent des réponses requises"
+    },
+    "callouts": {
+      "loadFailed": "Échec du chargement de la liste des utilisateurs",
+      "approvalUpdated": "Approbation de l'utilisateur mise à jour",
+      "approvalFailed": "Échec de la mise à jour de l'approbation de l'utilisateur",
+      "exportReady": "Export de la liste des utilisateurs prêt",
+      "exportFailed": "Échec de l'export de la liste des utilisateurs"
+    },
+    "filters": {
+      "search": "Rechercher des utilisateurs",
+      "searchPlaceholder": "Nom, e-mail, clé publique ou #ID",
+      "approvalStatus": "Statut d'approbation",
+      "allApprovalStates": "Tous les statuts d'approbation",
+      "pendingApproval": "En attente d'approbation",
+      "approved": "Approuvés",
+      "allUserTypes": "Tous les types d'utilisateur"
+    },
+    "columns": {
+      "user": "Utilisateur",
+      "approval": "Approbation",
+      "userType": "Type d'utilisateur",
+      "userProfile": "Profil utilisateur",
+      "joined": "Inscrit le",
+      "action": "Action"
+    },
+    "status": {
+      "approved": "Approuvé",
+      "pending": "En attente"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "approveUser": "Approuver {{name}}",
+      "viewUserDetails": "Afficher les détails de {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Aucune question",
+      "noQuestionsDetail": "Aucune question d'intégration ne s'applique.",
+      "needsProfile": "Profil requis",
+      "missingRequiredOne": "1 réponse requise manquante",
+      "missingRequiredMany": "{{count}} réponses requises manquantes",
+      "noProfileYet": "Aucun profil pour l'instant",
+      "noAnswersSaved": "Aucune réponse enregistrée.",
+      "ready": "Profil prêt",
+      "answersSavedOne": "1 réponse enregistrée",
+      "answersSavedMany": "{{count}} réponses enregistrées"
+    },
+    "identity": {
+      "decrypting": "Déchiffrement du nom et de l'e-mail...",
+      "failed": "Les informations chiffrées n'ont pas pu être déverrouillées.",
+      "unavailable": "Les informations chiffrées nécessitent un signataire de navigateur.",
+      "locked": "Les informations chiffrées sont verrouillées."
+    },
+    "errors": {
+      "loadUsers": "Échec du chargement des utilisateurs.",
+      "loadUserTypes": "Échec du chargement des types d'utilisateur.",
+      "loadQuestions": "Échec du chargement des questions d'intégration.",
+      "approvalUpdate": "L'approbation de l'utilisateur n'a pas pu être mise à jour.",
+      "exportAudit": "L'export de la liste des utilisateurs n'a pas pu être audité.",
+      "exportRoster": "Échec de l'export de la liste des utilisateurs."
+    },
+    "detail": {
+      "booleanYes": "Oui",
+      "booleanNo": "Non",
+      "fieldUnlocked": "Réponse chiffrée déverrouillée dans ce navigateur.",
+      "decryptingField": "Déchiffrement de la réponse...",
+      "encryptedFieldUnavailable": "La réponse chiffrée nécessite un signataire de navigateur.",
+      "encryptedFieldFailed": "La réponse chiffrée n'a pas pu être déverrouillée.",
+      "encryptedFieldLocked": "La réponse chiffrée est verrouillée.",
+      "notAnswered": "Sans réponse",
+      "requiredMissing": "Réponse requise manquante.",
+      "backToUserManager": "Retour au gestionnaire d'utilisateurs",
+      "backToRoster": "Retour à la liste des utilisateurs",
+      "eyebrow": "Détails de l'utilisateur",
+      "notFoundTitle": "Utilisateur introuvable",
+      "notFoundBody": "Cet utilisateur ne figure pas dans la liste des utilisateurs administrateur actuelle.",
+      "subtitle": "Consultez le statut de cet utilisateur, ses réponses de profil et ses détails d'accès.",
+      "approvalStatus": "Statut d'approbation",
+      "waitingApproval": "en attente d'approbation",
+      "identityTitle": "Identité",
+      "name": "Nom",
+      "nameUnavailable": "Non disponible",
+      "email": "E-mail",
+      "emailUnavailable": "Non disponible",
+      "userId": "ID utilisateur",
+      "publicKey": "Clé publique",
+      "noPublicKey": "Aucune clé publique",
+      "fieldsTitle": "Champs du profil",
+      "fieldsShown_one": "{{count}} champ s’applique à cet utilisateur.",
+      "fieldsShown_many": "{{count}} champs s’appliquent à cet utilisateur.",
+      "fieldsShown_other": "{{count}} champs s’appliquent à cet utilisateur.",
+      "noFields": "Aucun champ d'intégration ne s'applique à cet utilisateur.",
+      "required": "Requis",
+      "optional": "Facultatif",
+      "encrypted": "Chiffré",
+      "plain": "En clair",
+      "chatContext": "Contexte du chat"
     }
   }
 }

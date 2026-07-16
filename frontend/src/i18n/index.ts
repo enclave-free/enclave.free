@@ -81,7 +81,9 @@ i18n
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'enclave_language',
-      caches: ['localStorage'],
+      // Explicit language choices are persisted by the onboarding/switcher
+      // helper. Do not cache navigator detection into the same preference key.
+      caches: [],
     },
   })
 

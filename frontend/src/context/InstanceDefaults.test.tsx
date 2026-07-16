@@ -78,6 +78,32 @@ describe('Instance defaults', () => {
     expect(changeLanguage).not.toHaveBeenCalledWith('   ')
   })
 
+  it('keeps an explicit user language over the public Instance default', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) =>
+        key === 'enclave_language_explicit' ? '1' : null
+      ),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    })
+    const changeLanguage = vi.spyOn(i18n, 'changeLanguage')
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(Response.json({
+      settings: {
+        default_language: 'es',
+      },
+    }))))
+
+    render(
+      <InstanceConfigProvider>
+        <CurrentInstanceDefaults />
+      </InstanceConfigProvider>
+    )
+
+    await waitFor(() => expect(screen.getByText('es')).toBeInTheDocument())
+    expect(i18n.language).toBe('en')
+    expect(changeLanguage).not.toHaveBeenCalledWith('es')
+  })
+
   it('applies public Instance theme defaults when they load', async () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(Response.json({
       settings: {

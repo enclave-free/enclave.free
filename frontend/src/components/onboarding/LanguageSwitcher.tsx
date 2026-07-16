@@ -1,40 +1,42 @@
-import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, Globe } from 'lucide-react'
-import { LANGUAGES, STORAGE_KEY_LANGUAGE } from '../../utils/languages'
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, Globe } from 'lucide-react';
+import { LANGUAGES, saveExplicitLanguageChoice } from '../../utils/languages';
 
 function getCurrentLanguage(language: string) {
   return (
     LANGUAGES.find((lang) => lang.code === language) ??
     LANGUAGES.find((lang) => language.startsWith(`${lang.code}-`)) ??
+    LANGUAGES.find((lang) => lang.code === 'en') ??
     LANGUAGES[0]
-  )
+  );
 }
 
 export function LanguageSwitcher() {
-  const { i18n, t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const currentLang = getCurrentLanguage(i18n.language)
+  const { i18n, t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const currentLang = getCurrentLanguage(i18n.language);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
+        setOpen(false);
       }
     }
 
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [open])
+  }, [open]);
 
   const handleLanguageChange = (code: string) => {
-    localStorage.setItem(STORAGE_KEY_LANGUAGE, code)
-    void i18n.changeLanguage(code)
-    setOpen(false)
-  }
+    saveExplicitLanguageChoice(code);
+    void i18n.changeLanguage(code);
+    setOpen(false);
+  };
 
   return (
     <div ref={ref} className="relative">
@@ -77,12 +79,15 @@ export function LanguageSwitcher() {
               </span>
               <span>{lang.nativeName}</span>
               {lang.code === currentLang.code && (
-                <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
+                <Check
+                  className="ml-auto h-3.5 w-3.5 shrink-0 text-accent"
+                  aria-hidden="true"
+                />
               )}
             </button>
           ))}
         </div>
       )}
     </div>
-  )
+  );
 }
