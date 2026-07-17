@@ -40,21 +40,32 @@ def main() -> int:
     if app_path.is_dir():
         sys.path.insert(0, str(app_path))
 
-    torch = importlib.import_module("torch")
     failures: list[str] = []
 
-    installed_versions = {
-        package: Version(importlib.metadata.version(package))
-        for package in EXPECTED_VERSIONS
-    }
+    try:
+        torch = importlib.import_module("torch")
+    except Exception as error:  # pragma: no cover - exercised in broken artifacts
+        torch = None
+        failures.append(f"failed to import torch: {error}")
+
+    installed_versions: dict[str, Version] = {}
+    for package in EXPECTED_VERSIONS:
+        try:
+            installed_versions[package] = Version(
+                importlib.metadata.version(package)
+            )
+        except importlib.metadata.PackageNotFoundError:
+            failures.append(f"{package} is not installed")
+
     for package, expected in EXPECTED_VERSIONS.items():
-        if Version(installed_versions[package].public) != expected:
+        installed = installed_versions.get(package)
+        if installed is not None and Version(installed.public) != expected:
             failures.append(
-                f"{package} must be {expected}, found {installed_versions[package]}"
+                f"{package} must be {expected}, found {installed}"
             )
 
-    cuda_runtime = torch.version.cuda
-    cuda_available = torch.cuda.is_available()
+    cuda_runtime = torch.version.cuda if torch is not None else None
+    cuda_available = torch.cuda.is_available() if torch is not None else None
     if cuda_runtime is not None:
         failures.append(f"torch exposes CUDA runtime {cuda_runtime}")
     if cuda_available:
@@ -90,8 +101,16 @@ def main() -> int:
         "cuda_runtime": cuda_runtime,
         "forbidden_distributions": runtime_distributions,
         "imports": imported,
-        "torch": str(installed_versions["torch"]),
-        "torchvision": str(installed_versions["torchvision"]),
+        "torch": (
+            str(installed_versions["torch"])
+            if "torch" in installed_versions
+            else None
+        ),
+        "torchvision": (
+            str(installed_versions["torchvision"])
+            if "torchvision" in installed_versions
+            else None
+        ),
     }
     print(json.dumps(evidence, indent=2, sort_keys=True))
 

@@ -24,7 +24,7 @@
 - Red evidence: Torch 2.13.0 exposed CUDA 13.0 and 18 CUDA/NVIDIA distributions
 - Green evidence: Torch 2.8.0+cpu, torchvision 0.23.0, no CUDA runtime/distributions, required imports, `pip check`, security audit, health, shared store, and 768-dimension vector smoke passed
 - Full suite command: Apple Container execution of `python -m unittest discover -s backend/tests` (387 tests passed)
-- Image evidence: Apple image payload reduced from 3,300,590,209 bytes to 526,223,983 bytes (84.1%); compare with the separately observed 9.4 GB v0.4.0 release baseline
+- Image evidence: the `variants[].size` field from `container image list --format json` reduced from 3,300,590,209 bytes for prior Apple image `apple/enclavefree-core-backend:dev` (`e84b6c0f5a70b564b388c851b4bf1b933bbf658a0b80295016c7ed868078dac0`) to 526,230,016 bytes for the round-1 image `enclavefree-core-backend:cpu` (`a59fd5f8bebddbe86cf998a685f75451de7049c99fe41b7d67a9783435de123f`), an 84.1% like-for-like reduction; the separately observed 9.4 GB v0.4.0 release image is context, not the percentage denominator
 
 ## Review
 

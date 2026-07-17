@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy dependency contracts first for caching
 COPY requirements.txt requirements-cpu.txt ./
-COPY scripts/install_dependencies.sh /usr/local/bin/install_backend_dependencies
+COPY --chmod=755 scripts/install_dependencies.sh /usr/local/bin/install_backend_dependencies
 
 # Install the pinned CPU stack before the general dependency graph so pip keeps
 # the official PyTorch CPU wheels instead of resolving CUDA-enabled wheels.

@@ -30,7 +30,8 @@ verifier correctness, POSIX shell portability, workflow parsing, executable
 modes, scope, and test coverage. A focused check against the exact Apple image
 also confirmed Torch `2.8.0+cpu`, torchvision `0.23.0`, no CUDA runtime or
 CUDA/NVIDIA distributions, all required imports, the preserved `enclave` user
-and startup command, and a 526,223,983-byte image payload.
+and startup command, and the pre-PR 526,223,983-byte image payload. The round-1
+review image measured 526,230,016 bytes after verifier-only changes.
 
 ## Hosted Review
 

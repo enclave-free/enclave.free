@@ -25,8 +25,14 @@ Docker-based CI or deployment hosts can run the same artifact check explicitly:
 CONTAINER_RUNTIME=docker scripts/verify_cpu_backend_image.sh enclavefree-core-backend:cpu
 ```
 
-Record the image size from the runtime's image inspection output when preparing
-a release. Compare it with the 9.4 GB v0.4.0 backend image baseline; the release
-evidence should show a material reduction, but the verifier intentionally has no
-permanent byte threshold because harmless base-image and dependency layer changes
+Record like-for-like Apple image sizes with `container image list --format json`
+and compare the `variants[].size` values. The implementation run compared the
+prior Apple image `apple/enclavefree-core-backend:dev`
+(`e84b6c0f5a70b564b388c851b4bf1b933bbf658a0b80295016c7ed868078dac0`,
+3,300,590,209 bytes) with `enclavefree-core-backend:cpu`
+(`a59fd5f8bebddbe86cf998a685f75451de7049c99fe41b7d67a9783435de123f`,
+526,230,016 bytes), an 84.1% reduction using the same Apple Containers field.
+The separately observed 9.4 GB v0.4.0 release image is useful deployment context,
+not the denominator for that percentage. The verifier intentionally has no
+permanent byte threshold because harmless base-image and dependency-layer changes
 can change the exact size.

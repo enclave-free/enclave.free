@@ -9,7 +9,7 @@
 - Feature branch: `feature/cpu-only-backend-image`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: non-draft staging PR ready; all CI checks pass and the required unavailable-CodeRabbit fallback review passes
+- Current status: hosted CodeRabbit round 1 fixes verified locally; CI and round 2 pending
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -28,7 +28,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 - Review packets: `docs/agents/runs/2026-07-17-cpu-only-backend-image-review-509.md`
 - Local CodeRabbit report: `docs/agents/runs/2026-07-17-cpu-only-backend-image-coderabbit-local-509.md` — CLI unavailable due a 23-minute organization rate limit; required fresh Codex fallback passed with no findings against the same 11-file `origin/staging...HEAD` diff
 - PR URL: [#512](https://github.com/enclave-free/enclave.free/pull/512)
-- Hosted CodeRabbit: command issued; organization review limit prevented analysis and returned a passing/skipped status, with no findings; fresh fallback review is the substantive review evidence
+- Hosted CodeRabbit round 1: one minor and four trivial comments; the image-baseline documentation, missing-package failure path, audit venv path, and Docker copy mode were fixed; the `Distribution.name` suggestion was rejected because Python 3.11 `PathDistribution` does not expose that property
 
 ## Commands
 
@@ -42,21 +42,21 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 
 ## Ticket Ledger
 
-| Issue | Type | Status | Review thread | Fixes needed | Verified |
-| --- | --- | --- | --- | --- | --- |
-| #509 | AFK | complete | Standards pass; Spec pass; fresh local fallback pass | none | yes |
+| Issue | Type | Status   | Review thread                                                                  | Fixes needed    | Verified |
+| ----- | ---- | -------- | ------------------------------------------------------------------------------ | --------------- | -------- |
+| #509  | AFK  | complete | Standards pass; Spec pass; fresh local fallback pass; hosted round 1 addressed | round 2 pending | yes      |
 
 ## Parked HITL Slices
 
 | Issue | Why parked | Blocks | Required human action | Final PR decision |
-| --- | --- | --- | --- | --- |
-| none | n/a | none | none | n/a |
+| ----- | ---------- | ------ | --------------------- | ----------------- |
+| none  | n/a        | none   | none                  | n/a               |
 
 ## Issue Session Ledger
 
-| Issue | Fixed point | Worker session | Commit | Review result | Checks |
-| --- | --- | --- | --- | --- | --- |
-| #509 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/backend_cpu_worker` plus `/root/cpu_509_coderabbit_fallback` | `f29e0b6`, `579b2d0` | Standards pass; Spec pass; fallback implementation review pass | artifact verifier, 387 tests, runtime smoke, current staging diff review |
+| Issue | Fixed point                                | Worker session                                                      | Commit                                        | Review result                                                      | Checks                                                                                                      |
+| ----- | ------------------------------------------ | ------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| #509  | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/backend_cpu_worker` plus `/root/cpu_509_coderabbit_fallback` | `f29e0b6`, `579b2d0` plus hosted-review fixes | Standards pass; Spec pass; fallback pass; hosted round 1 addressed | artifact verifier, 387 tests, runtime smoke, missing-package failure test, rebuilt Apple image, `pip check` |
 
 ## Open Questions
 
