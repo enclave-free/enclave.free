@@ -59,7 +59,8 @@ cp .env.example .env
 Compose is split into infrastructure and app layers:
 
 - `docker-compose.infra.yml`: `postgres`, `tinfoil-proxy`, `qdrant`, `valkey`, `searxng`
-- `docker-compose.app.yml`: `core-backend`, `sage`, `backend` gateway, `frontend`
+- `docker-compose.app.yml`: `core-backend`, `sage`, `backend` gateway, and the production static `frontend`
+- `docker-compose.frontend-dev.yml`: opt-in Vite hot reload and frontend source mounts for contributor development
 
 ```bash
 # full startup
@@ -67,6 +68,13 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build 
 
 # rebuild only the app layer
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d core-backend sage backend frontend
+
+# opt into the Vite development frontend
+docker compose \
+  -f docker-compose.infra.yml \
+  -f docker-compose.app.yml \
+  -f docker-compose.frontend-dev.yml \
+  up --build -d
 
 # reset local runtime state, rebuild, and smoke test through the gateway
 scripts/reset_local_instance.sh
@@ -78,6 +86,13 @@ First startup will:
 2. build the FastAPI backend, Sage runtime, gateway, and frontend
 3. download the embedding model cache
 4. initialize SQLite and Sage Postgres state
+
+The default frontend image compiles the Vite bundle and serves it with Nginx.
+It keeps the public `http://localhost:5173` contract, supports direct SPA route
+navigation, and does not own `/api` routing. In a public Deployment, the
+deployment reverse proxy remains responsible for routing `/api` to the Gateway.
+Use the explicit development override above only when Vite hot reload and the
+frontend source bind mount are wanted.
 
 In local development, a transient embedding provider quota or context-limit
 failure during Qdrant smoke-test seeding no longer blocks the stack from
@@ -110,6 +125,16 @@ docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/llm/test
 ```
 
 Validate changes via smoke test endpoints (`/test` and `/llm/test`) and the explicit diagnostics dashboard at `http://localhost:5173/diagnostics/test-dashboard`. The root frontend route (`http://localhost:5173/`) is the product entry path and redirects based on Instance initiation and authentication state.
+
+Verify the production frontend packaging and HTTP contract with:
+
+```bash
+python3 scripts/tests/DEPLOYMENT/test_frontend_compose_contract.py
+scripts/test_frontend_runtime.sh docker
+
+# On supported macOS hosts, use Apple's OCI runtime instead:
+scripts/test_frontend_runtime.sh apple
+```
 
 Only two services are exposed to the host by default:
 
