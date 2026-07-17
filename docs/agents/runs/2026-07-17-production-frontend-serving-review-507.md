@@ -48,7 +48,7 @@ SPEC_FINDINGS:
 
 ## Local CodeRabbit
 
-- Round: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md`
-- Result: four findings addressed; none dismissed
+- Rounds: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md` and `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-2-507.md`
+- Result: five findings addressed across two rounds; none dismissed
 - Major fix: all frontend health paths now use the BusyBox-compatible `wget -q --spider` probe and the rebuilt Apple image passes it in-container
-- Minor fixes: asset 404s no longer receive immutable caching; the dev command contract is exact; the bind-mount documentation names `frontend/`
+- Minor fixes: asset 404s no longer receive immutable caching; the dev command contract is exact; the bind-mount documentation names `frontend/`; the issue session records the exact reproducible three-file Compose validation command

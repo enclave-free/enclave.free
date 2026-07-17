@@ -12,18 +12,18 @@
 
 ## Findings To Address
 
-| Finding | Severity | Decision | Notes |
-| --- | --- | --- | --- |
-| Production frontend health probes used BusyBox-unsupported `wget --no-verbose --tries=1` flags | major | addressed | Replaced frontend image, production/development Compose, and runtime probes with `wget -q --spider`; rebuilt through Apple Containers and passed the exact in-container probe. |
-| Immutable asset cache header used `always`, applying it to missing-asset errors | minor | addressed | Removed `always` from the `/assets/` header and added a live HTTP regression proving asset 404s are not immutable. |
-| Development Compose contract asserted only the command prefix | minor | addressed | The contract now asserts the complete `npm run dev -- --host 0.0.0.0` command. |
-| Frontend guide said “this directory” for the development bind mount | minor | addressed | Documentation now names the `frontend/` bind-mount source explicitly. |
+| Finding                                                                                        | Severity | Decision  | Notes                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Production frontend health probes used BusyBox-unsupported `wget --no-verbose --tries=1` flags | major    | addressed | Replaced frontend image, production/development Compose, and runtime probes with `wget -q --spider`; rebuilt through Apple Containers and passed the exact in-container probe. |
+| Immutable asset cache header used `always`, applying it to missing-asset errors                | minor    | addressed | Removed `always` from the `/assets/` header and added a live HTTP regression proving asset 404s are not immutable.                                                             |
+| Development Compose contract asserted only the command prefix                                  | minor    | addressed | The contract now asserts the complete `npm run dev -- --host 0.0.0.0` command.                                                                                                 |
+| Frontend guide said “this directory” for the development bind mount                            | minor    | addressed | Documentation now names the `frontend/` bind-mount source explicitly.                                                                                                          |
 
 ## Findings Not Addressed
 
-| Finding | Reason |
-| --- | --- |
-| None | All four verified findings were worthy and addressed. |
+| Finding | Reason                                                |
+| ------- | ----------------------------------------------------- |
+| None    | All four verified findings were worthy and addressed. |
 
 ## Result
 
