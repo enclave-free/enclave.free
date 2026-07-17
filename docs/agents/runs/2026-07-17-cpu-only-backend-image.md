@@ -9,7 +9,7 @@
 - Feature branch: `feature/cpu-only-backend-image`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: hosted CodeRabbit round 1 fixes verified locally; CI and round 2 pending
+- Current status: two hosted CodeRabbit rounds complete; all worthy feedback addressed and ready to merge to staging
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -29,6 +29,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 - Local CodeRabbit report: `docs/agents/runs/2026-07-17-cpu-only-backend-image-coderabbit-local-509.md` — CLI unavailable due a 23-minute organization rate limit; required fresh Codex fallback passed with no findings against the same 11-file `origin/staging...HEAD` diff
 - PR URL: [#512](https://github.com/enclave-free/enclave.free/pull/512)
 - Hosted CodeRabbit round 1: one minor and four trivial comments; the image-baseline documentation, missing-package failure path, audit venv path, and Docker copy mode were fixed; the `Distribution.name` suggestion was rejected because Python 3.11 `PathDistribution` does not expose that property
+- Hosted CodeRabbit round 2: zero new issues; the round-1 inline thread remains resolved
 
 ## Commands
 
@@ -42,9 +43,9 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 
 ## Ticket Ledger
 
-| Issue | Type | Status   | Review thread                                                                  | Fixes needed    | Verified |
-| ----- | ---- | -------- | ------------------------------------------------------------------------------ | --------------- | -------- |
-| #509  | AFK  | complete | Standards pass; Spec pass; fresh local fallback pass; hosted round 1 addressed | round 2 pending | yes      |
+| Issue | Type | Status   | Review thread                                                                    | Fixes needed | Verified |
+| ----- | ---- | -------- | -------------------------------------------------------------------------------- | ------------ | -------- |
+| #509  | AFK  | complete | Standards pass; Spec pass; fresh local fallback pass; two hosted rounds complete | none         | yes      |
 
 ## Parked HITL Slices
 
