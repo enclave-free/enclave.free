@@ -77,7 +77,7 @@ jobs:
           {
             echo "# Enclave Free ${version}"
             echo
-            echo "Initial demo release checkpoint for customer-facing beta/demo deployments."
+            echo "Customer-facing beta/demo release checkpoint."
             echo
             echo "## Release Inputs"
             echo
