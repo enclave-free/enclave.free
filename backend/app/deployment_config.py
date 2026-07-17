@@ -7,7 +7,9 @@ import os
 import time
 import json
 import hashlib
+import ipaddress
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Final, Mapping, Optional
 from urllib.parse import ParseResult, urlparse
@@ -628,12 +630,13 @@ def validate_and_normalize_deployment_config_value(key: str, value: str) -> str:
     if key not in ENV_CONFIG_MAP:
         raise HTTPException(status_code=400, detail=f"Unknown config key: {key}")
 
-    meta = ENV_CONFIG_MAP[key]
+    if ENV_CONFIG_MAP[key].get("is_secret") and value.strip() == "********":
+        raise HTTPException(
+            status_code=400,
+            detail="Masked secret placeholders cannot be saved as secret values",
+        )
+
     normalized = value
-    if meta.get("is_secret") and (not normalized or not normalized.strip()):
-        existing_value = database.get_deployment_config_value(key)
-        if existing_value:
-            normalized = existing_value
 
     if key in ("SMTP_PORT", "QDRANT_PORT") and normalized:
         try:
@@ -658,13 +661,23 @@ def validate_and_normalize_deployment_config_value(key: str, value: str) -> str:
                 status_code=400,
                 detail="SMTP_HOST must be a hostname only (e.g., smtp.example.com) without protocol or path",
             )
-        if normalized.count(":") == 1:
-            host_part, port_part = normalized.rsplit(":", 1)
-            if host_part and port_part.isdigit():
-                raise HTTPException(
-                    status_code=400,
-                    detail="SMTP_HOST should not include a port. Put the port in SMTP_PORT instead.",
-                )
+        try:
+            ipaddress.ip_address(normalized.strip("[]"))
+            valid_host = True
+        except ValueError:
+            labels = normalized.split(".")
+            valid_host = bool(labels) and all(
+                1 <= len(label) <= 63
+                and re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?", label)
+                for label in labels
+            )
+        if not valid_host:
+            detail = (
+                "SMTP_HOST should not include a port. Put the port in SMTP_PORT instead."
+                if ":" in normalized
+                else "SMTP_HOST must be a valid hostname or IP address"
+            )
+            raise HTTPException(status_code=400, detail=detail)
 
     if key == "RAG_TOP_K" and normalized:
         try:
@@ -687,22 +700,40 @@ def validate_and_normalize_deployment_config_value(key: str, value: str) -> str:
         if normalized not in {"memory", "valkey"}:
             raise HTTPException(status_code=400, detail="RATE_LIMIT_BACKEND must be memory or valkey")
 
-    url_keys = {
+    http_url_keys = {
         "INSTANCE_URL",
         "API_BASE_URL",
         "ADMIN_BASE_URL",
         "CUSTOM_SEARXNG_URL",
         "WEBHOOK_BASE_URL",
         "MONITORING_URL",
+        "LLM_API_URL",
+        "EMBEDDING_API_URL",
+        "SEARXNG_URL",
+        "FRONTEND_URL",
     }
-    if key in url_keys and normalized:
-        from urllib.parse import urlparse
-
-        parsed = urlparse(normalized)
-        if not parsed.scheme or not parsed.netloc:
+    allowed_url_schemes = (
+        {"redis", "rediss"}
+        if key == "RATE_LIMIT_VALKEY_URL"
+        else {"http", "https"}
+    )
+    if key in http_url_keys.union({"RATE_LIMIT_VALKEY_URL"}) and normalized:
+        try:
+            parsed = urlparse(normalized)
+            parsed.port
+            valid_url = (
+                parsed.scheme.lower() in allowed_url_schemes
+                and bool(parsed.hostname)
+            )
+        except ValueError:
+            valid_url = False
+        if not valid_url:
             raise HTTPException(
                 status_code=400,
-                detail=f"{key} must be a valid URL with protocol (e.g., https://example.com)",
+                detail=(
+                    f"{key} must be a valid URL using "
+                    f"{', '.join(sorted(allowed_url_schemes))}"
+                ),
             )
 
     if key in {"BASE_DOMAIN", "EMAIL_DOMAIN"} and normalized:
@@ -2075,6 +2106,8 @@ async def get_audit_log(
                 old_value=e.get("old_value"),
                 new_value=e.get("new_value"),
                 changed_by=e["changed_by"],
+                action_source=e["action_source"],
+                conversation_id=e.get("conversation_id"),
                 changed_at=e["changed_at"],
             )
             for e in entries

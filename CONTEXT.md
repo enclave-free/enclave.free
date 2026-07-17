@@ -789,11 +789,11 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
 - An **Admin Conversation** may have a **Subject User**
 - An **Admin Conversation** may directly perform supported Admin Config writes through **Admin Config Write Tools**
-- **Sage** should ask for **Conversational Confirmation** before calling an **Admin Config Write Tool**
+- **Sage** should ask for **Conversational Confirmation** before calling an **Admin Config Write Tool**; this is an advisory model-behavior expectation, not a server-enforced authority precondition
 - For one coherent Admin Config task, **Sage** should briefly summarize the intended changes, ask once for **Conversational Confirmation**, then use all needed write **Tools** without reconfirming each call
 - If the intended Admin Config scope changes materially after confirmation, **Sage** should ask for fresh **Conversational Confirmation**; deciding whether a change is material remains trusted model judgment
 - **Sage** may correct and retry rejected Tool arguments without reconfirming when the intended Admin Config change is unchanged
-- **Conversational Confirmation** for Admin Config is prompt-guided model behavior; the runtime should not require a proposal, Apply card, confirmation token, intent classifier, or forced Tool call
+- **Conversational Confirmation** for Admin Config is advisory, prompt-guided model behavior; the runtime should not require a proposal, Apply card, confirmation token, intent classifier, forced Tool call, or stored confirmation state
 - The Admin Config direct-write transition is a hard cut: proposal Tools, executable change-set payloads, Apply cards, pending or superseded proposal state, proposal prose parsing, and client-side apply-language interception should be removed without compatibility fallback
 - The **Admin** and **Sage** are trusted to conduct Admin Config confirmation naturally inside the **Conversation**
 - **Admin Config Write Tools** still enforce Admin authentication, supported operations, argument validation, secret handling, and **Audit Log** requirements at their authority boundary

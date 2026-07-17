@@ -2,6 +2,8 @@
 
 Sage will receive direct Admin Config write Tools and may apply supported configuration after asking the Admin for natural-language Conversational Confirmation. Confirmation is trusted model behavior guided by a basic system prompt, not a runtime gate: Admin Config writes will not require proposal Tools, Executable Change Sets, Apply cards, confirmation tokens, intent classifiers, or forced Tool calls. This deliberately favors a simple, agent-owned Tool model over deterministic confirmation enforcement; the Tool boundary still enforces Admin authentication, supported operations, argument validation, secret handling, and Audit Log requirements.
 
+Risk acceptance: the product owner explicitly accepts that Conversational Confirmation is advisory behavior rather than an independently enforceable authorization artifact. Compensating controls are approved-Admin authentication, fixed product-level Tool contracts, allowlisted operations and fields, complete-call validation, atomic writes, authoritative results, affected-area refreshes, and tamper-evident actor/action-source/Conversation audit provenance. These controls constrain what Sage may do and make outcomes reviewable; they intentionally do not prove that a confirmation utterance occurred.
+
 This authority covers Instance Settings, Agent Settings, Deployment Settings, User Types, Onboarding Questions, and Document Access defaults. Destructive User and Document operations remain outside this direct-write boundary.
 
 Curated Resource Directory entries and help-type management also remain outside this boundary because they are managed content rather than Admin Config. Their existing admin UI remains available; a future agent-owned resource Tool requires a separate design.
@@ -47,6 +49,8 @@ Sage-originated entries should include the originating Conversation identifier f
 Sage may write an explicitly supplied secret Deployment Setting. It may repeat the secret value in the assistant answer only when the Admin explicitly asks to see it, and should not echo secrets automatically after writes.
 
 An explicitly requested secret in an assistant answer is normal Conversation Content and may persist in Session Memory and conversation exports. Activity, Conversation Trace, and Audit Log details should avoid duplicating secret values unnecessarily.
+
+The product owner explicitly accepts this encrypted Conversation-content disclosure posture without a separate step-up challenge. Only an authenticated approved Admin Conversation can receive the privileged read Tool; ordinary reads remain masked, the request must name a readable secret and carry the real Conversation identifier, the read is audited without the value, and Activity, Conversation Trace, Tool results shown outside the answer, and Audit Log metadata remain redacted. Conversation exports retain their existing Admin-scoped access boundary.
 
 Admin Config Tool Activity should briefly show the Tool name, outcome, and changed configuration names while always omitting secret values. Sage's natural answer remains the human-facing explanation.
 

@@ -2,7 +2,7 @@
  * React hooks for Admin Configuration System
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminFetch } from '../utils/adminApi';
 import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import type {
@@ -45,9 +45,11 @@ export function useAIConfig(userTypeId?: number | null) {
     useState<AIConfigUserTypeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchRunIdRef = useRef(0);
 
   // Fetch global config or user-type-specific config
   const fetchConfig = useCallback(async () => {
+    const runId = ++fetchRunIdRef.current;
     try {
       setLoading(true);
       setError(null);
@@ -61,6 +63,7 @@ export function useAIConfig(userTypeId?: number | null) {
           throw new Error('errors.failedToFetchAIConfig');
         }
         const data: AIConfigUserTypeResponse = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
         setUserTypeConfig(data);
         // Pass the full user-type items directly to preserve is_override and override_user_type_id
         // This allows the UI to show override badges and revert actions
@@ -76,15 +79,17 @@ export function useAIConfig(userTypeId?: number | null) {
           throw new Error('errors.failedToFetchAIConfig');
         }
         const data = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
         setConfig(data);
         setUserTypeConfig(null);
       }
     } catch (err) {
+      if (runId !== fetchRunIdRef.current) return;
       setError(
         err instanceof Error ? err.message : 'errors.failedToFetchAIConfig'
       );
     } finally {
-      setLoading(false);
+      if (runId === fetchRunIdRef.current) setLoading(false);
     }
   }, [userTypeId]);
 
@@ -249,8 +254,10 @@ export function useDocumentDefaults(userTypeId?: number | null) {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchRunIdRef = useRef(0);
 
   const fetchDefaults = useCallback(async () => {
+    const runId = ++fetchRunIdRef.current;
     try {
       setLoading(true);
       setError(null);
@@ -264,6 +271,7 @@ export function useDocumentDefaults(userTypeId?: number | null) {
           throw new Error(`errors.failedToFetchDocumentDefaults`);
         }
         const data: DocumentDefaultsUserTypeResponse = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
         setUserTypeDocuments(data.documents);
         // Also convert to DocumentDefaultItem format for compatibility
         // Note: We spread full items to preserve is_override metadata for UI badges/revert actions
@@ -275,17 +283,19 @@ export function useDocumentDefaults(userTypeId?: number | null) {
           throw new Error(`errors.failedToFetchDocumentDefaults`);
         }
         const data: DocumentDefaultsResponse = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
         setDocuments(data.documents);
         setUserTypeDocuments([]);
       }
     } catch (err) {
+      if (runId !== fetchRunIdRef.current) return;
       setError(
         err instanceof Error
           ? err.message
           : 'errors.failedToFetchDocumentDefaults'
       );
     } finally {
-      setLoading(false);
+      if (runId === fetchRunIdRef.current) setLoading(false);
     }
   }, [userTypeId]);
 
@@ -451,8 +461,10 @@ export function useDeploymentConfig() {
   const [config, setConfig] = useState<DeploymentConfigResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchRunIdRef = useRef(0);
 
   const fetchConfig = useCallback(async () => {
+    const runId = ++fetchRunIdRef.current;
     try {
       setLoading(true);
       setError(null);
@@ -461,15 +473,17 @@ export function useDeploymentConfig() {
         throw new Error(`errors.failedToFetchDeploymentConfig`);
       }
       const data = await response.json();
+      if (runId !== fetchRunIdRef.current) return;
       setConfig(data);
     } catch (err) {
+      if (runId !== fetchRunIdRef.current) return;
       setError(
         err instanceof Error
           ? err.message
           : 'errors.failedToFetchDeploymentConfig'
       );
     } finally {
-      setLoading(false);
+      if (runId === fetchRunIdRef.current) setLoading(false);
     }
   }, []);
 

@@ -803,6 +803,8 @@ class ConfigAuditLogEntry(BaseModel):
     old_value: Optional[str] = None
     new_value: Optional[str] = None
     changed_by: str
+    action_source: str
+    conversation_id: Optional[str] = None
     changed_at: str
 
 

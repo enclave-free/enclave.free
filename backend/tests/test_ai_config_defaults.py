@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -79,6 +80,57 @@ class AIConfigDefaultsTest(unittest.TestCase):
         self.assertTrue(all(rule in rules for rule in self.database.DEFAULT_PROMPT_RULES))
         self.assertFalse(any(rule in rules for rule in self.database.OBSOLETE_DEFAULT_PROMPT_RULES))
         self.assertEqual(system, self.database.DEFAULT_PROMPT_SYSTEM)
+        migration_entries = [
+            entry
+            for entry in self.database.get_config_audit_log(
+                limit=None,
+                table_name="ai_config",
+            )
+            if entry["action_source"] == "migration:admin_config_prompt_defaults"
+        ]
+        self.assertEqual(
+            {entry["config_key"] for entry in migration_entries},
+            {"prompt_rules", "prompt_system"},
+        )
+        self.assertTrue(
+            all(entry["changed_by"] == "system:migration" for entry in migration_entries)
+        )
+        self.assertTrue(self.database.verify_config_audit_log_chain()["valid"])
+
+    def test_seed_preserves_custom_rule_list_without_obsolete_defaults(self) -> None:
+        custom_rules = ["Only this operator-authored rule should remain."]
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE ai_config SET value = ? WHERE key = 'prompt_rules'",
+                (json.dumps(custom_rules),),
+            )
+
+        self.database._seed_default_ai_config()
+
+        self.assertEqual(
+            json.loads(self.database.get_ai_config("prompt_rules")["value"]),
+            custom_rules,
+        )
+
+    def test_global_onboarding_question_names_are_unique(self) -> None:
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO user_field_definitions (field_name, field_type, user_type_id)
+                VALUES (?, ?, NULL)
+                """,
+                ("Shared question", "text"),
+            )
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            with self.database.get_cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO user_field_definitions (field_name, field_type, user_type_id)
+                    VALUES (?, ?, NULL)
+                    """,
+                    ("Shared question", "text"),
+                )
 
 
 if __name__ == "__main__":

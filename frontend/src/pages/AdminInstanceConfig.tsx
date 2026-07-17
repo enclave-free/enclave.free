@@ -50,6 +50,7 @@ export function AdminInstanceConfig() {
   const [publicEmailDisplayName, setPublicEmailDisplayName] = useState('');
   const publicEmailDisplayNameTouchedRef = useRef(false);
   const publicEmailDisplayNameLoadedRef = useRef(false);
+  const publicEmailDisplayNameRunIdRef = useRef(0);
   // Preview state - only applies on save, not immediately
   const [previewAccentColor, setPreviewAccentColor] = useState<AccentColor>(
     config.accentColor
@@ -99,6 +100,13 @@ export function AdminInstanceConfig() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [hasExternalConflict, setHasExternalConflict] = useState(false);
+  const isDirtyRef = useRef(false);
+  const previousConfigRef = useRef(config);
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
 
   // Check if admin is logged in
   useEffect(() => {
@@ -111,12 +119,16 @@ export function AdminInstanceConfig() {
     let cancelled = false;
 
     async function loadPublicEmailDisplayName() {
+      const runId = ++publicEmailDisplayNameRunIdRef.current;
       try {
         const response = await adminFetch('/admin/settings');
         if (!response.ok) return;
         const data = await response.json();
+        if (cancelled || runId !== publicEmailDisplayNameRunIdRef.current) {
+          return;
+        }
         publicEmailDisplayNameLoadedRef.current = true;
-        if (!cancelled && !publicEmailDisplayNameTouchedRef.current) {
+        if (!publicEmailDisplayNameTouchedRef.current) {
           setPublicEmailDisplayName(
             data.settings?.public_email_display_name ?? ''
           );
@@ -130,6 +142,7 @@ export function AdminInstanceConfig() {
     const unsubscribe = subscribeAdminConfigChanges(
       ['instance_settings'],
       () => {
+        if (isDirtyRef.current) setHasExternalConflict(true);
         void loadPublicEmailDisplayName();
       }
     );
@@ -142,6 +155,10 @@ export function AdminInstanceConfig() {
 
   // Sync config (only on initial load or external changes, skip if user has made edits)
   useEffect(() => {
+    if (previousConfigRef.current !== config && isDirty) {
+      setHasExternalConflict(true);
+    }
+    previousConfigRef.current = config;
     if (!isDirty) {
       setInstanceName(config.name);
       setPreviewAccentColor(config.accentColor);
@@ -163,6 +180,7 @@ export function AdminInstanceConfig() {
       setPreviewTypographyPreset(config.typographyPreset);
       setPreviewDefaultLanguage(config.defaultLanguage);
       setPreviewDefaultTheme(config.defaultTheme);
+      setHasExternalConflict(false);
     }
   }, [config, isDirty]);
 
@@ -263,6 +281,15 @@ export function AdminInstanceConfig() {
   };
 
   const handleSave = async () => {
+    if (hasExternalConflict) {
+      setSaveError(
+        t(
+          'admin.errors.externalConfigConflict',
+          'Sage or another admin changed these settings while you were editing. Reload this page before saving so you do not overwrite the newer values.'
+        )
+      );
+      return;
+    }
     // Save instance config to local context (for immediate UI updates)
     const name = instanceName.trim() || t('admin.setup.defaultName');
 
@@ -1033,6 +1060,16 @@ export function AdminInstanceConfig() {
             <p className="text-sm text-error">{saveError}</p>
           </Callout>
         )}
+        {hasExternalConflict && !saveError && (
+          <Callout label={t('common.warning', 'Warning')} tone="warning">
+            <p className="text-sm">
+              {t(
+                'admin.errors.externalConfigConflict',
+                'Sage or another admin changed these settings while you were editing. Reload this page before saving so you do not overwrite the newer values.'
+              )}
+            </p>
+          </Callout>
+        )}
 
         {/* Navigation */}
         <div className="flex gap-3">
@@ -1045,7 +1082,7 @@ export function AdminInstanceConfig() {
           </Link>
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || hasExternalConflict}
             className="flex-1 disabled:opacity-50"
             leadingIcon={
               isSaving ? (

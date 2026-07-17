@@ -6,6 +6,7 @@ import types
 import unittest
 from pathlib import Path
 from typing import Optional
+from unittest import mock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -356,6 +357,126 @@ class AdminConfigToolContractTest(unittest.TestCase):
         self.assertEqual(reveal.json()["tool"], "read_deployment_secret")
         self.assertEqual(reveal.json()["secret_policy"], {"mode": "explicit_secret"})
         self.assertEqual(reveal.json()["data"], {"key": "LLM_API_KEY", "value": secret})
+        reveal_audit = [
+            entry
+            for entry in self.database.get_config_audit_log(
+                limit=None,
+                table_name="deployment_config_secret_reads",
+            )
+            if entry.get("conversation_id") == "conversation-secret-read"
+        ]
+        self.assertEqual(len(reveal_audit), 1)
+        self.assertEqual(reveal_audit[0]["config_key"], "LLM_API_KEY")
+        self.assertEqual(reveal_audit[0]["action_source"], "sage_conversation")
+        self.assertNotIn(secret, repr(reveal_audit))
+
+        blank_conversation = self.client.post(
+            "/internal/agent/admin-config/read-deployment-secret",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "   ",
+                "key": "LLM_API_KEY",
+            },
+        )
+        self.assertEqual(blank_conversation.status_code, 422)
+
+    def test_update_deployment_settings_preserves_runtime_side_effects(self) -> None:
+        self.database.upsert_deployment_config(
+            key="SMTP_LAST_TEST_SUCCESS",
+            value="true",
+            category="email",
+            description="Whether last SMTP test was successful",
+        )
+        invalidations: list[bool] = []
+        config_loader = types.SimpleNamespace(
+            invalidate_cache=lambda: invalidations.append(True)
+        )
+
+        with mock.patch.dict(sys.modules, {"config_loader": config_loader}):
+            response = self.client.post(
+                "/internal/agent/admin-config/update-deployment-settings",
+                headers=self.headers,
+                json={
+                    "actor": self.admin_actor,
+                    "conversation_id": "conversation-smtp-write",
+                    "settings": {"SMTP_HOST": "smtp.example.test"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(
+            self.database.get_deployment_config_value("SMTP_LAST_TEST_SUCCESS"),
+            "false",
+        )
+        self.assertEqual(invalidations, [True])
+
+        failing_loader = types.SimpleNamespace(
+            invalidate_cache=lambda: (_ for _ in ()).throw(RuntimeError("cache unavailable"))
+        )
+        with mock.patch.dict(sys.modules, {"config_loader": failing_loader}):
+            committed = self.client.post(
+                "/internal/agent/admin-config/update-deployment-settings",
+                headers=self.headers,
+                json={
+                    "actor": self.admin_actor,
+                    "conversation_id": "conversation-cache-failure",
+                    "settings": {"LLM_MODEL": "cache-failure-still-commits"},
+                },
+            )
+        self.assertEqual(committed.status_code, 200, committed.text)
+        self.assertTrue(committed.json()["warnings"])
+        self.assertIn("may remain stale", committed.json()["warnings"][0])
+        self.assertEqual(
+            self.database.get_deployment_config_value("LLM_MODEL"),
+            "cache-failure-still-commits",
+        )
+
+    def test_update_deployment_settings_rejects_unsafe_url_schemes(self) -> None:
+        cases = [
+            ("LLM_API_URL", "javascript://example.test/payload"),
+            ("EMBEDDING_API_URL", "file://example.test/tmp/model"),
+            ("SEARXNG_URL", "ftp://example.test/search"),
+            ("FRONTEND_URL", "data://example.test/value"),
+            ("RATE_LIMIT_VALKEY_URL", "https://example.test/not-redis"),
+            ("FRONTEND_URL", "https://[broken-host"),
+            ("FRONTEND_URL", "https://example.test:notaport"),
+            ("SMTP_HOST", "smtp.example.test:notaport"),
+        ]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                response = self.client.post(
+                    "/internal/agent/admin-config/update-deployment-settings",
+                    headers=self.headers,
+                    json={
+                        "actor": self.admin_actor,
+                        "conversation_id": f"conversation-invalid-url-{key}",
+                        "settings": {key: value},
+                    },
+                )
+                self.assertEqual(response.status_code, 422, response.text)
+
+    def test_update_deployment_settings_rejects_masked_secret_placeholder(self) -> None:
+        self.database.upsert_deployment_config(
+            "LLM_API_KEY",
+            "real-secret",
+            is_secret=True,
+            category="llm",
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/update-deployment-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-masked-secret",
+                "settings": {"LLM_API_KEY": "********"},
+            },
+        )
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertEqual(
+            self.database.get_deployment_config_value("LLM_API_KEY"),
+            "real-secret",
+        )
 
     def test_update_deployment_settings_rejects_invalid_batch_without_mutation(self) -> None:
         original_model = self.database.get_deployment_config_value("LLM_MODEL")
@@ -378,6 +499,69 @@ class AdminConfigToolContractTest(unittest.TestCase):
             entry.get("conversation_id") == "conversation-invalid-deployment-write"
             for entry in self.database.get_config_audit_log(limit=None)
         ))
+
+    def test_empty_secret_update_preserves_latest_value_inside_write_transaction(self) -> None:
+        self.database.upsert_deployment_config(
+            "LLM_API_KEY",
+            "preserve-this-secret",
+            is_secret=True,
+            category="llm",
+        )
+
+        response = self.client.post(
+            "/internal/agent/admin-config/update-deployment-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-preserve-secret",
+                "settings": {"LLM_API_KEY": ""},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(
+            self.database.get_deployment_config_value("LLM_API_KEY"),
+            "preserve-this-secret",
+        )
+        self.assertNotIn("preserve-this-secret", response.text)
+
+    def test_deployment_batch_detects_metadata_changes_and_masks_secret_transition(self) -> None:
+        self.database.upsert_deployment_config(
+            "LLM_API_KEY",
+            "same-value",
+            is_secret=False,
+            requires_restart=False,
+            category="general",
+            description="Old metadata",
+        )
+
+        result = self.database.update_deployment_configs_with_audit(
+            {
+                "LLM_API_KEY": {
+                    "value": "same-value",
+                    "is_secret": True,
+                    "requires_restart": True,
+                    "category": "llm",
+                    "description": "Model provider API key",
+                }
+            },
+            changed_by="abc123",
+            action_source="sage_conversation",
+            conversation_id="conversation-secret-transition",
+        )
+
+        self.assertEqual(result["changed_names"], ["LLM_API_KEY"])
+        entry = next(
+            item
+            for item in self.database.get_config_audit_log(
+                limit=None,
+                table_name="deployment_config",
+            )
+            if item.get("conversation_id") == "conversation-secret-transition"
+        )
+        self.assertEqual(entry["old_value"], "********")
+        self.assertEqual(entry["new_value"], "********")
+        self.assertNotIn("same-value", repr(entry))
 
     def test_read_agent_settings_returns_global_and_user_type_effective_values(self) -> None:
         user_type_id = self.database.create_user_type(
@@ -493,6 +677,16 @@ class AdminConfigToolContractTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 422)
         self.assertEqual(self.database.get_ai_config("temperature")["value"], original_temperature)
+
+        with self.assertRaisesRegex(LookupError, "Unknown Agent Setting"):
+            self.database.update_agent_settings_with_audit(
+                {"not_a_real_setting": "value"},
+                revert_keys=[],
+                user_type_id=None,
+                changed_by="abc123",
+                action_source="sage_conversation",
+                conversation_id="conversation-unknown-agent-setting",
+            )
         self.assertFalse(any(
             entry.get("conversation_id") == "conversation-invalid-agent-write"
             for entry in self.database.get_config_audit_log(limit=None)
@@ -559,7 +753,7 @@ class AdminConfigToolContractTest(unittest.TestCase):
                 "actor": self.admin_actor,
                 "conversation_id": "conversation-user-type-create",
                 "operation": "create",
-                "name": "Legal Teams",
+                "name": "  Legal Teams  ",
                 "description": "Legal support organizations",
                 "icon": "Scale",
                 "display_order": 4,
@@ -597,6 +791,15 @@ class AdminConfigToolContractTest(unittest.TestCase):
         )
         self.assertEqual(delete.status_code, 200, delete.text)
         self.assertEqual(delete.json()["data"]["deleted_user_type_id"], created["id"])
+        self.assertEqual(
+            delete.json()["data"]["affected_areas"],
+            [
+                "user_types",
+                "onboarding_questions",
+                "agent_settings",
+                "document_access",
+            ],
+        )
         self.assertIsNone(self.database.get_user_type(created["id"]))
 
         audit_entries = self.database.get_config_audit_log(limit=None, table_name="user_types")
@@ -630,6 +833,34 @@ class AdminConfigToolContractTest(unittest.TestCase):
             len([item for item in self.database.list_user_types() if item["name"] == "Families"]),
             1,
         )
+
+    def test_manage_user_types_rejects_whitespace_only_name(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-blank-user-type",
+                "operation": "create",
+                "name": "   ",
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.list_user_types(), [])
+
+        existing_id = self.database.create_user_type("Existing Type")
+        null_name = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-null-user-type",
+                "operation": "update",
+                "user_type_id": existing_id,
+                "name": None,
+            },
+        )
+        self.assertEqual(null_name.status_code, 422)
 
     def test_manage_onboarding_questions_supports_full_lifecycle(self) -> None:
         user_type_id = self.database.create_user_type("Families")
@@ -821,6 +1052,28 @@ class AdminConfigToolContractTest(unittest.TestCase):
         self.assertEqual(global_update.status_code, 200, global_update.text)
         self.assertFalse(self.database.get_document_defaults("doc-direct")["is_default_active"])
 
+        no_op = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-document-no-op",
+                "updates": [{
+                    "job_id": "doc-direct",
+                    "is_available": True,
+                    "is_default_active": False,
+                    "display_order": 6,
+                }],
+            },
+        )
+        self.assertEqual(no_op.status_code, 200, no_op.text)
+        self.assertEqual(no_op.json()["data"]["changed_names"], [])
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-document-no-op"
+            and entry.get("table_name") == "document_defaults"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
         override = self.client.post(
             "/internal/agent/admin-config/update-document-access",
             headers=self.headers,
@@ -868,6 +1121,28 @@ class AdminConfigToolContractTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 422)
         self.assertIsNone(self.database.get_document_defaults("missing-document"))
+
+    def test_update_document_access_rejects_duplicate_jobs_without_mutation(self) -> None:
+        self.ingest_db.create_job(
+            "doc-duplicate",
+            "Duplicate.pdf",
+            "/uploads/duplicate.pdf",
+            "default",
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-duplicate-document",
+                "updates": [
+                    {"job_id": "doc-duplicate", "is_available": False},
+                    {"job_id": "doc-duplicate", "is_available": True},
+                ],
+            },
+        )
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertIsNone(self.database.get_document_defaults("doc-duplicate"))
 
     def test_configure_instance_applies_guided_setup_atomically_with_audit(self) -> None:
         response = self.client.post(
@@ -1035,6 +1310,29 @@ class AdminConfigToolContractTest(unittest.TestCase):
             entry.get("conversation_id") == "conversation-guided-rollback"
             for entry in self.database.get_config_audit_log(limit=None)
         ))
+
+    def test_configure_instance_rejects_whitespace_only_user_type_name(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/configure-instance",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-blank-guided-user-type",
+                "settings": {
+                    "instance_name": "Freedom Network",
+                    "assistant_name": "Sage Ally",
+                    "header_tagline": "Trusted support",
+                    "description": "Private coordination and support resources.",
+                    "primary_color": "#6d28d9",
+                    "default_theme": "dark",
+                    "default_language": "en",
+                    "auto_approve_users": False,
+                },
+                "user_types": [{"reference": "blank", "name": "   "}],
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.list_user_types(), [])
 
     def test_configure_instance_rejects_non_admin_actor(self) -> None:
         response = self.client.post(

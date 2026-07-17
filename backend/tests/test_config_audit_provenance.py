@@ -105,6 +105,25 @@ class ConfigAuditProvenanceTest(unittest.TestCase):
         self.assertIsNone(entry["conversation_id"])
         self.assertTrue(database.verify_config_audit_log_chain()["valid"])
 
+    def test_tool_outcome_preserves_absent_conversation_as_null(self) -> None:
+        database = self._reload_database()
+        database.init_schema()
+        with database.get_write_cursor() as cursor:
+            database._insert_admin_config_tool_audit(
+                cursor,
+                tool_name="update_instance_settings",
+                changed_names=[],
+                affected_areas=["instance_settings"],
+                changed_by="admin-pubkey",
+                action_source="ordinary_product_flow",
+                conversation_id=None,
+            )
+
+        entry = database.get_config_audit_log(limit=1)[0]
+        self.assertEqual(entry["table_name"], "admin_config_tools")
+        self.assertIsNone(entry["conversation_id"])
+        self.assertTrue(database.verify_config_audit_log_chain()["valid"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -228,6 +228,11 @@ export function AdminUserConfig() {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [configRefreshNonce, setConfigRefreshNonce] = useState(0);
+  const [instanceSettingsRefreshNonce, setInstanceSettingsRefreshNonce] =
+    useState(0);
+  const [userConfigExternalConflict, setUserConfigExternalConflict] =
+    useState(false);
+  const userConfigDraftRef = useRef(false);
 
   // User Approval settings
   const [userApprovalLoaded, setUserApprovalLoaded] = useState(false);
@@ -239,6 +244,10 @@ export function AdminUserConfig() {
   const [userApprovalSaveSuccess, setUserApprovalSaveSuccess] = useState<
     string | null
   >(null);
+  const [userApprovalDirty, setUserApprovalDirty] = useState(false);
+  const [userApprovalExternalConflict, setUserApprovalExternalConflict] =
+    useState(false);
+  const userApprovalDirtyRef = useRef(false);
   const [approvalUpdatingUserIds, setApprovalUpdatingUserIds] = useState<
     Set<number>
   >(new Set());
@@ -276,6 +285,10 @@ export function AdminUserConfig() {
   const [reachoutSaveSuccess, setReachoutSaveSuccess] = useState<string | null>(
     null
   );
+  const [reachoutDirty, setReachoutDirty] = useState(false);
+  const [reachoutExternalConflict, setReachoutExternalConflict] =
+    useState(false);
+  const reachoutDirtyRef = useRef(false);
 
   // User types & fields help modal state
   const [showUserHelpModal, setShowUserHelpModal] = useState(false);
@@ -298,12 +311,65 @@ export function AdminUserConfig() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    userConfigDraftRef.current =
+      isEditing || isAddingType || editingTypeId !== null;
+  }, [editingTypeId, isAddingType, isEditing]);
+
+  useEffect(() => {
+    userApprovalDirtyRef.current = userApprovalDirty;
+  }, [userApprovalDirty]);
+
+  useEffect(() => {
+    reachoutDirtyRef.current = reachoutDirty;
+  }, [reachoutDirty]);
+
   useEffect(
     () =>
-      subscribeAdminConfigChanges(['user_types', 'onboarding_questions'], () =>
-        setConfigRefreshNonce((value) => value + 1)
+      subscribeAdminConfigChanges(
+        ['user_types', 'onboarding_questions'],
+        () => {
+          if (userConfigDraftRef.current) {
+            setUserConfigExternalConflict(true);
+            setLoadError(
+              t(
+                'admin.errors.externalUserConfigConflict',
+                'Sage or another admin changed User Types or Onboarding Questions while you were editing. Reload this page before saving your draft.'
+              )
+            );
+            return;
+          }
+          setUserConfigExternalConflict(false);
+          setConfigRefreshNonce((value) => value + 1);
+        }
       ),
-    []
+    [t]
+  );
+
+  useEffect(
+    () =>
+      subscribeAdminConfigChanges(['instance_settings'], () => {
+        if (userApprovalDirtyRef.current) {
+          setUserApprovalExternalConflict(true);
+          setUserApprovalSaveError(
+            t(
+              'admin.errors.externalSettingsConflict',
+              'Sage or another admin changed these settings while you were editing. Reload this page before saving.'
+            )
+          );
+        }
+        if (reachoutDirtyRef.current) {
+          setReachoutExternalConflict(true);
+          setReachoutSaveError(
+            t(
+              'admin.errors.externalSettingsConflict',
+              'Sage or another admin changed these settings while you were editing. Reload this page before saving.'
+            )
+          );
+        }
+        setInstanceSettingsRefreshNonce((value) => value + 1);
+      }),
+    [t]
   );
 
   // Load user types and fields from API
@@ -433,35 +499,41 @@ export function AdminUserConfig() {
 
         if (isCancelled) return;
 
-        setAutoApproveUsers(
-          String(s.auto_approve_users ?? 'true').toLowerCase() !== 'false'
-        );
-        setUserApprovalLoaded(true);
-        setReachoutEnabled(
-          String(s.reachout_enabled ?? 'false').toLowerCase() === 'true'
-        );
-        const mode = String(s.reachout_mode ?? 'support').toLowerCase();
-        if (mode === 'feedback' || mode === 'help' || mode === 'support') {
-          setReachoutMode(mode);
-        } else {
-          setReachoutMode('support');
+        if (!userApprovalDirtyRef.current) {
+          setAutoApproveUsers(
+            String(s.auto_approve_users ?? 'true').toLowerCase() !== 'false'
+          );
+          setUserApprovalLoaded(true);
+          setUserApprovalExternalConflict(false);
         }
-        setReachoutToEmail(String(s.reachout_to_email ?? ''));
-        setReachoutSubjectPrefix(String(s.reachout_subject_prefix ?? ''));
-        setReachoutRateLimitPerHour(
-          String(s.reachout_rate_limit_per_hour ?? '3')
-        );
-        setReachoutRateLimitPerDay(
-          String(s.reachout_rate_limit_per_day ?? '10')
-        );
-        setReachoutTitle(String(s.reachout_title ?? ''));
-        setReachoutDescription(String(s.reachout_description ?? ''));
-        setReachoutButtonLabel(String(s.reachout_button_label ?? ''));
-        setReachoutSuccessMessage(String(s.reachout_success_message ?? ''));
-        setReachoutIncludeIp(
-          String(s.reachout_include_ip ?? 'false').toLowerCase() === 'true'
-        );
-        setReachoutLoaded(true);
+        if (!reachoutDirtyRef.current) {
+          setReachoutEnabled(
+            String(s.reachout_enabled ?? 'false').toLowerCase() === 'true'
+          );
+          const mode = String(s.reachout_mode ?? 'support').toLowerCase();
+          if (mode === 'feedback' || mode === 'help' || mode === 'support') {
+            setReachoutMode(mode);
+          } else {
+            setReachoutMode('support');
+          }
+          setReachoutToEmail(String(s.reachout_to_email ?? ''));
+          setReachoutSubjectPrefix(String(s.reachout_subject_prefix ?? ''));
+          setReachoutRateLimitPerHour(
+            String(s.reachout_rate_limit_per_hour ?? '3')
+          );
+          setReachoutRateLimitPerDay(
+            String(s.reachout_rate_limit_per_day ?? '10')
+          );
+          setReachoutTitle(String(s.reachout_title ?? ''));
+          setReachoutDescription(String(s.reachout_description ?? ''));
+          setReachoutButtonLabel(String(s.reachout_button_label ?? ''));
+          setReachoutSuccessMessage(String(s.reachout_success_message ?? ''));
+          setReachoutIncludeIp(
+            String(s.reachout_include_ip ?? 'false').toLowerCase() === 'true'
+          );
+          setReachoutLoaded(true);
+          setReachoutExternalConflict(false);
+        }
       } catch (err) {
         console.warn('Failed to fetch admin settings:', err);
         if (!isCancelled) {
@@ -484,9 +556,10 @@ export function AdminUserConfig() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [instanceSettingsRefreshNonce, t]);
 
   const handleSaveUserApproval = async () => {
+    if (userApprovalExternalConflict) return;
     setUserApprovalSaveError(null);
     setUserApprovalSaveSuccess(null);
     setUserApprovalSaving(true);
@@ -513,6 +586,7 @@ export function AdminUserConfig() {
       }
 
       setUserApprovalSaveSuccess(t('common.saved', 'Saved'));
+      setUserApprovalDirty(false);
       setTimeout(() => setUserApprovalSaveSuccess(null), 2000);
     } catch (err) {
       setUserApprovalSaveError(
@@ -529,6 +603,7 @@ export function AdminUserConfig() {
   };
 
   const handleSaveReachout = async () => {
+    if (reachoutExternalConflict) return;
     setReachoutSaveError(null);
     setReachoutSaveSuccess(null);
 
@@ -603,6 +678,7 @@ export function AdminUserConfig() {
       }
 
       setReachoutSaveSuccess(t('common.saved', 'Saved'));
+      setReachoutDirty(false);
       // Keep a short-lived success indicator without introducing new i18n keys.
       setTimeout(() => setReachoutSaveSuccess(null), 2000);
     } catch (err) {
@@ -621,6 +697,7 @@ export function AdminUserConfig() {
 
   // User Type handlers
   const handleAddUserType = async () => {
+    if (userConfigExternalConflict) return;
     if (!newTypeName.trim()) return;
 
     setIsAddingTypeLoading(true);
@@ -683,6 +760,7 @@ export function AdminUserConfig() {
   };
 
   const handleUpdateUserType = async () => {
+    if (userConfigExternalConflict) return;
     if (!editingTypeId || !editingTypeName.trim()) return;
 
     setIsEditingTypeLoading(true);
@@ -724,6 +802,7 @@ export function AdminUserConfig() {
   };
 
   const handleRemoveUserType = async (typeId: number) => {
+    if (userConfigExternalConflict) return;
     if (deletingTypeIdsRef.current.has(typeId)) return;
 
     // Count fields that will be deleted
@@ -789,6 +868,7 @@ export function AdminUserConfig() {
   };
 
   const handleAddField = async (field: CustomField) => {
+    if (userConfigExternalConflict) return;
     setFieldSaving(true);
     setFieldError(null);
 
@@ -848,6 +928,7 @@ export function AdminUserConfig() {
   };
 
   const handleUpdateField = async (field: CustomField) => {
+    if (userConfigExternalConflict) return;
     setFieldSaving(true);
     setFieldError(null);
 
@@ -904,6 +985,7 @@ export function AdminUserConfig() {
   };
 
   const handleRemoveField = async (id: string) => {
+    if (userConfigExternalConflict) return;
     const field = fields.find((f) => f.id === id);
     const fieldName = field?.name || t('common.unknown', 'Unknown');
 
@@ -943,6 +1025,7 @@ export function AdminUserConfig() {
   };
 
   const handleMoveField = async (index: number, direction: 'up' | 'down') => {
+    if (userConfigExternalConflict) return;
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= fields.length) return;
 
@@ -1820,6 +1903,11 @@ export function AdminUserConfig() {
     >
       {isEditing ? (
         <div className="space-y-4">
+          {userConfigExternalConflict && loadError && (
+            <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+              <p className="text-sm text-error">{loadError}</p>
+            </div>
+          )}
           {fieldError && (
             <div className="bg-error/10 border border-error/20 rounded-lg p-3">
               <p className="text-xs text-error">{fieldError}</p>
@@ -1872,6 +1960,7 @@ export function AdminUserConfig() {
                   disabled={!userApprovalLoaded}
                   onChange={(e) => {
                     setAutoApproveUsers(!e.target.checked);
+                    setUserApprovalDirty(true);
                     setUserApprovalSaveError(null);
                     setUserApprovalSaveSuccess(null);
                   }}
@@ -1901,7 +1990,11 @@ export function AdminUserConfig() {
               <div className="flex items-center gap-3">
                 <Button
                   onClick={handleSaveUserApproval}
-                  disabled={userApprovalSaving || !userApprovalLoaded}
+                  disabled={
+                    userApprovalSaving ||
+                    !userApprovalLoaded ||
+                    userApprovalExternalConflict
+                  }
                   leadingIcon={
                     userApprovalSaving ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -2220,7 +2313,9 @@ export function AdminUserConfig() {
                         <button
                           onClick={handleUpdateUserType}
                           disabled={
-                            !editingTypeName.trim() || isEditingTypeLoading
+                            !editingTypeName.trim() ||
+                            isEditingTypeLoading ||
+                            userConfigExternalConflict
                           }
                           className="flex-1 bg-accent text-accent-text rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
@@ -2265,7 +2360,10 @@ export function AdminUserConfig() {
                         </button>
                         <button
                           onClick={() => handleRemoveUserType(userType.id)}
-                          disabled={deletingTypeIds.has(userType.id)}
+                          disabled={
+                            deletingTypeIds.has(userType.id) ||
+                            userConfigExternalConflict
+                          }
                           className={`p-1 transition-colors ${
                             deletingTypeIds.has(userType.id)
                               ? 'text-text-muted/50 cursor-not-allowed'
@@ -2338,7 +2436,11 @@ export function AdminUserConfig() {
                   </button>
                   <button
                     onClick={handleAddUserType}
-                    disabled={!newTypeName.trim() || isAddingTypeLoading}
+                    disabled={
+                      !newTypeName.trim() ||
+                      isAddingTypeLoading ||
+                      userConfigExternalConflict
+                    }
                     className="flex-1 bg-accent text-accent-text rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isAddingTypeLoading && (
@@ -2452,7 +2554,11 @@ export function AdminUserConfig() {
                         {/* Move Up */}
                         <button
                           onClick={() => handleMoveField(index, 'up')}
-                          disabled={isReordering || index === 0}
+                          disabled={
+                            isReordering ||
+                            index === 0 ||
+                            userConfigExternalConflict
+                          }
                           className="p-1 text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           title={t('common.moveUp')}
                         >
@@ -2461,7 +2567,11 @@ export function AdminUserConfig() {
                         {/* Move Down */}
                         <button
                           onClick={() => handleMoveField(index, 'down')}
-                          disabled={isReordering || index === fields.length - 1}
+                          disabled={
+                            isReordering ||
+                            index === fields.length - 1 ||
+                            userConfigExternalConflict
+                          }
                           className="p-1 text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           title={t('common.moveDown')}
                         >
@@ -2478,6 +2588,7 @@ export function AdminUserConfig() {
                         {/* Remove */}
                         <button
                           onClick={() => handleRemoveField(field.id)}
+                          disabled={userConfigExternalConflict}
                           className="p-1 text-text-muted hover:text-error transition-colors"
                           title={t('common.remove')}
                         >
@@ -2526,7 +2637,11 @@ export function AdminUserConfig() {
               )}
             </p>
 
-            <fieldset disabled={!reachoutLoaded} className="space-y-4">
+            <fieldset
+              disabled={!reachoutLoaded}
+              className="space-y-4"
+              onChangeCapture={() => setReachoutDirty(true)}
+            >
               <label className="flex items-center gap-2 text-sm text-text">
                 <input
                   type="checkbox"
@@ -2556,7 +2671,10 @@ export function AdminUserConfig() {
                     <button
                       key={mode}
                       type="button"
-                      onClick={() => setReachoutMode(mode)}
+                      onClick={() => {
+                        setReachoutMode(mode);
+                        setReachoutDirty(true);
+                      }}
                       className={optionButtonClass(reachoutMode === mode)}
                       aria-pressed={reachoutMode === mode}
                     >
@@ -3056,7 +3174,11 @@ export function AdminUserConfig() {
                 <button
                   type="button"
                   onClick={handleSaveReachout}
-                  disabled={reachoutSaving || !reachoutLoaded}
+                  disabled={
+                    reachoutSaving ||
+                    !reachoutLoaded ||
+                    reachoutExternalConflict
+                  }
                   className="inline-flex items-center gap-2 bg-accent text-accent-text rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {reachoutSaving && (

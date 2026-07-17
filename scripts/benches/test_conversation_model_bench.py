@@ -24,6 +24,7 @@ from scripts.benches.conversation_model_bench import (
     LocalComposeEnvironment,
     SCENARIOS,
     StreamResult,
+    asks_for_confirmation,
     backend_fixture_cleanup_script,
     cleanup_sage_user_state,
     collect_stream_diagnostics,
@@ -105,6 +106,7 @@ class FakeEnvironment:
         return 3
 
     def prepare_admin_config_confirmation_fixture(self) -> dict:
+        self.admin_config_evidence_calls = 0
         return {
             "target": self.admin_config_target,
             "original": "Original description",
@@ -826,6 +828,10 @@ class ConnectionLostStreamResponse(IncompleteStreamResponse):
 
 
 class ConversationModelBenchTest(unittest.TestCase):
+    def test_confirmation_recognition_rejects_unrelated_questions(self) -> None:
+        self.assertFalse(asks_for_confirmation("Which setting did you mean?"))
+        self.assertTrue(asks_for_confirmation("Shall I apply that change now?"))
+
     def test_bench_docs_match_direct_write_runner_contract(self) -> None:
         docs = (REPO_ROOT / "docs" / "conversation-model-bench.md").read_text(
             encoding="utf-8"
@@ -1007,6 +1013,10 @@ class ConversationModelBenchTest(unittest.TestCase):
         seed_source = inspect.getsource(LocalComposeEnvironment.seed_knowledge)
         self.assertIn('changed_by=""', seed_source)
         self.assertNotIn('changed_by="conversation-model-bench"', seed_source)
+
+        cleanup_source = inspect.getsource(LocalComposeEnvironment.cleanup_scenario)
+        self.assertIn("current == target", cleanup_source)
+        self.assertIn("refusing to overwrite", cleanup_source)
 
     def test_sage_cleanup_removes_temporary_identity_conversation_and_agent_state(self) -> None:
         with patch(
@@ -1437,6 +1447,64 @@ with database.get_cursor() as cursor:
         self.assertEqual(
             checks["confirmed_turn_returns_instance_refresh_hint"], "passed"
         )
+
+    def test_admin_config_follow_up_is_not_sent_after_failed_confirmation_stream(self) -> None:
+        class FailedConfirmationClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def _stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                self.calls += 1
+                result = super()._stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done=result.done,
+                    trace=result.trace,
+                    timings=result.timings,
+                    error="provider stream failed",
+                )
+
+        environment = FakeEnvironment()
+        client = FailedConfirmationClient()
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
+            environment=environment,
+            client=client,
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        self.assertEqual(client.calls, 1)
+        self.assertEqual(environment.admin_config_evidence_calls, 1)
+        self.assertEqual(len(scenario["turns"]), 1)
+        self.assertEqual(artifact["summary"]["status"], "failed")
+
+    def test_admin_config_records_failed_follow_up_as_its_own_attempt(self) -> None:
+        class FailedFollowUpClient(FakeConversationClient):
+            def _stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                if payload["message"].startswith(
+                    "Yes, apply that exact Instance Description"
+                ):
+                    raise RuntimeError("follow-up provider failure")
+                return super()._stream_chat(token, payload, timeout)
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
+            environment=FakeEnvironment(),
+            client=FailedFollowUpClient(),
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        self.assertEqual(len(scenario["turns"]), 2)
+        self.assertIn(
+            "follow-up provider failure",
+            scenario["turns"][1]["response"]["stream_error"],
+        )
+        self.assertEqual(artifact["summary"]["status"], "failed")
 
     def test_admin_config_update_fails_on_premature_write(self) -> None:
         class FakePrematureWriteClient(FakeConversationClient):

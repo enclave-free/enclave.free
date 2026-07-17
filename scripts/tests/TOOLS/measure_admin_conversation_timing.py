@@ -265,6 +265,28 @@ def measure_stream(api_base: str, token: str, scenario: Scenario) -> dict[str, A
             raise RuntimeError(
                 f"{scenario.name}: stream did not preserve requested session_id"
             )
+        if scenario.name == "config_setup_summary":
+            direct_write_ids = {
+                "admin-config:configure_instance",
+                "admin-config:update_instance_settings",
+                "admin-config:update_deployment_settings",
+                "admin-config:update_agent_settings",
+                "admin-config:manage_user_types",
+                "admin-config:manage_onboarding_questions",
+                "admin-config:update_document_access",
+            }
+            invoked_write_ids = sorted(
+                {
+                    str(item.get("id") or "")
+                    for item in tool_statuses
+                    if str(item.get("id") or "") in direct_write_ids
+                }
+            )
+            if invoked_write_ids:
+                raise RuntimeError(
+                    "config_setup_summary invoked write Tools: "
+                    + ", ".join(invoked_write_ids)
+                )
 
         return {
             "scenario": scenario.name,
@@ -284,10 +306,12 @@ def measure_stream(api_base: str, token: str, scenario: Scenario) -> dict[str, A
             "correction_call_count": correction_call_count,
             "retry_count": retry_count,
             "tool_execution_ms": round(tool_execution_ms, 1),
-            "terminal_prose_zero_corrections": correction_call_count == 0,
+            "terminal_prose_zero_corrections": (
+                correction_call_count == 0 and retry_count == 0
+            ),
             "deterministic_terminal_no_final_model_call": (
                 model_call_count == 1
-                if scenario.name == "config_bootstrap_proposal"
+                if scenario.name == "config_setup_summary"
                 else None
             ),
             "model": done_payload.get("model"),

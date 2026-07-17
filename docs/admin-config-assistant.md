@@ -42,7 +42,7 @@ Read Tools:
 - `read_document_access`
 - `read_onboarding_status`
 
-Direct Tools:
+Direct-write Tools:
 
 - `configure_instance`
 - `update_instance_settings`
@@ -51,11 +51,14 @@ Direct Tools:
 - `manage_user_types`
 - `manage_onboarding_questions`
 - `update_document_access`
+
+Privileged read Tool:
+
 - `read_deployment_secret` for an explicit Admin request
 
 `configure_instance` atomically applies one coherent guided first-time setup. The smaller product-area Tools handle later edits.
 
-Each Tool has product-level arguments and a fixed private Enclave Control Plane endpoint. The model cannot choose a request path or submit raw Admin API JSON. Each Tool call validates and commits atomically. Separate Tool calls are not one transaction: an earlier success remains applied if a later call fails, and Sage should report that partial outcome honestly.
+Each Tool has product-level arguments and a fixed private Enclave Control Plane endpoint. The model cannot choose a request path or submit raw Admin API JSON. Each write Tool call validates and commits atomically. Separate write Tool calls are not one transaction: an earlier success remains applied if a later call fails, and Sage should report that partial outcome honestly.
 
 ## Runtime Flow
 
@@ -127,7 +130,7 @@ Expected matches are limited to explicit migration strings or negative regressio
 Focused deterministic verification:
 
 ```bash
-python -m unittest \
+python3.11 -m unittest \
   backend.tests.test_admin_config_tool_contract \
   backend.tests.test_config_audit_provenance
 

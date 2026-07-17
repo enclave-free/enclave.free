@@ -1163,6 +1163,8 @@ async def admin_config_configure_instance(
     if len(references) != len(set(references)):
         raise HTTPException(status_code=422, detail="User Type references must be unique")
     names = [str(item["name"]).strip() for item in user_types]
+    if any(not name for name in names):
+        raise HTTPException(status_code=422, detail="User Type names must not be blank")
     if len({name.casefold() for name in names}) != len(names):
         raise HTTPException(status_code=422, detail="User Type names must be unique")
     for item, name in zip(user_types, names):
@@ -1284,12 +1286,41 @@ async def admin_config_update_deployment_settings(
             "description": str(meta.get("description") or ""),
         }
 
+    smtp_keys = {"SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"}
+    if smtp_keys.intersection(validated):
+        meta = ENV_CONFIG_MAP["SMTP_LAST_TEST_SUCCESS"]
+        validated["SMTP_LAST_TEST_SUCCESS"] = {
+            "value": "false",
+            "is_secret": False,
+            "requires_restart": bool(meta.get("requires_restart")),
+            "category": str(meta.get("category") or "general"),
+            "description": str(meta.get("description") or ""),
+        }
+
     result = database.update_deployment_configs_with_audit(
         validated,
         changed_by=payload.actor.pubkey or str(payload.actor.id),
         action_source="sage_conversation",
         conversation_id=conversation_id,
     )
+    warnings: list[str] = []
+    try:
+        from config_loader import invalidate_cache
+
+        invalidate_cache()
+    except ImportError as exc:
+        logger.debug("config_loader not available, skipping cache invalidation: %s", exc)
+        warnings.append(
+            "Deployment settings were saved, but runtime config cache invalidation is unavailable."
+        )
+    except Exception:
+        logger.exception(
+            "Deployment settings were saved, but config cache invalidation failed"
+        )
+        warnings.append(
+            "Deployment settings were saved, but runtime config cache invalidation failed; "
+            "runtime values may remain stale."
+        )
     restart_required_keys = sorted(
         key
         for key in result["changed_names"]
@@ -1306,6 +1337,7 @@ async def admin_config_update_deployment_settings(
             "restart_required": bool(restart_required_keys),
             "restart_required_keys": restart_required_keys,
         },
+        warnings=warnings,
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -1321,6 +1353,9 @@ async def admin_config_read_deployment_secret(
     _require_admin_actor(payload.actor)
     from deployment_config import ENV_CONFIG_MAP, FORBIDDEN_KEYS
 
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
     key = payload.key.strip()
     meta = ENV_CONFIG_MAP.get(key)
     if key in FORBIDDEN_KEYS or not meta or not meta.get("is_secret"):
@@ -1328,6 +1363,15 @@ async def admin_config_read_deployment_secret(
     value = database.get_deployment_config_value(key)
     if value is None:
         raise HTTPException(status_code=404, detail="Deployment secret is not configured")
+    database.log_config_audit_event(
+        table_name="deployment_config_secret_reads",
+        config_key=key,
+        old_value=None,
+        new_value='{"outcome":"succeeded","secret":"redacted"}',
+        changed_by=payload.actor.pubkey or str(payload.actor.id),
+        action_source="sage_conversation",
+        conversation_id=conversation_id,
+    )
     return InternalAdminConfigToolResponse(
         tool="read_deployment_secret",
         data={"key": key, "value": value},
@@ -1465,6 +1509,13 @@ async def admin_config_manage_user_types(
         for key, value in payload.model_dump(exclude_unset=True).items()
         if key not in excluded
     }
+    if "name" in values:
+        if values["name"] is None:
+            raise HTTPException(status_code=422, detail="name must not be null")
+        normalized_name = str(values["name"]).strip()
+        if not normalized_name:
+            raise HTTPException(status_code=422, detail="name must not be blank")
+        values["name"] = normalized_name
     try:
         result = database.manage_user_type_with_audit(
             payload.operation,
@@ -1488,7 +1539,7 @@ async def admin_config_manage_user_types(
             "user_type": result["user_type"],
             "deleted_user_type_id": result["deleted_user_type_id"],
             "changed_names": changed_names,
-            "affected_areas": ["user_types"],
+            "affected_areas": result["affected_areas"],
         },
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -1621,6 +1672,11 @@ async def admin_config_update_document_access(
     updates: dict[str, dict[str, object]] = {}
     for item in payload.updates:
         job_id = item.job_id.strip()
+        if job_id in updates:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Document appears more than once in updates: {job_id}",
+            )
         if not ingest_db.get_job(job_id):
             raise HTTPException(status_code=422, detail=f"Document not found: {job_id}")
         values = item.model_dump(exclude={"job_id"}, exclude_none=True)
