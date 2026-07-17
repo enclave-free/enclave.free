@@ -97,6 +97,9 @@ Direct-write Tools are:
 - `manage_user_types`
 - `manage_onboarding_questions`
 - `update_document_access`
+
+The privileged read Tool is:
+
 - `read_deployment_secret` for an explicit Admin secret-read request
 
 Reads happen within Admin Conversation authority. Broad setup, status, and readiness questions should use `read_admin_setup_summary` first because it compacts readiness, missing setup, and next actions. Before a write, Sage should briefly summarize one coherent intended change and ask once for natural Conversational Confirmation. After confirmation, Sage chooses and calls the needed direct Tools. This is prompt-guided model behavior, not a confirmation token, proposal contract, Apply card, or runtime intent classifier.

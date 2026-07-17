@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { redactSecrets } from './secretRedaction';
 
 describe('redactSecrets', () => {
-  it('redacts known long secrets without touching short ordinary values', () => {
+  it('redacts every known non-empty secret, including short values', () => {
     expect(
-      redactSecrets('token=long-secret-value status=ok', [
+      redactSecrets('token=long-secret-value status=xy', [
         'long-secret-value',
-        'ok',
+        'xy',
       ])
-    ).toBe('token=[REDACTED] status=ok');
+    ).toBe('token=[REDACTED] status=[REDACTED]');
   });
 
   it('redacts longer overlapping values first', () => {

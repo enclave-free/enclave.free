@@ -102,6 +102,8 @@ class UserAuditCoverageTest(unittest.TestCase):
         self.assertEqual(entry["old_value"], "true")
         self.assertEqual(entry["new_value"], "false")
         self.assertEqual(entry["changed_by"], "admin-pubkey")
+        self.assertEqual(entry["action_source"], "ordinary_product_flow")
+        self.assertIsNone(entry["conversation_id"])
         verify = self.client.get("/admin/deployment/audit-log/verify?table_name=user_approval")
         self.assertEqual(verify.status_code, 200)
         self.assertTrue(verify.json()["valid"])

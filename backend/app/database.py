@@ -704,6 +704,7 @@ def init_schema():
     _migrate_add_field_metadata_columns()  # Add placeholder and options columns
     _migrate_add_encryption_enabled_column()  # Add encryption_enabled column for optional field encryption
     _migrate_add_include_in_chat_column()  # Add include_in_chat column for AI chat context
+    _migrate_enforce_user_field_definition_uniqueness()  # Include global fields in the uniqueness invariant
     _migrate_add_user_type_icon_column()  # Add icon column to user_types table
     _migrate_encrypt_deployment_config_secrets()  # Encrypt plaintext deployment secrets at rest
     _migrate_add_config_audit_provenance_columns()  # Attribute UI, Sage, and legacy audit events
@@ -901,6 +902,44 @@ def _migrate_add_include_in_chat_column() -> None:
     # Create index for efficient lookups of fields to include in chat
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_field_definitions_include_in_chat ON user_field_definitions(include_in_chat)")
 
+    conn.commit()
+    cursor.close()
+
+
+def _migrate_enforce_user_field_definition_uniqueness() -> None:
+    """Enforce one field name per scope, including the global NULL scope.
+
+    Existing ambiguous duplicates are not merged or deleted automatically because
+    either action could discard distinct onboarding configuration or user values.
+    Startup fails with an actionable error until an operator resolves them.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT field_name, COUNT(*) AS duplicate_count
+        FROM user_field_definitions
+        WHERE user_type_id IS NULL
+        GROUP BY field_name
+        HAVING COUNT(*) > 1
+        ORDER BY field_name
+        """
+    )
+    duplicates = cursor.fetchall()
+    if duplicates:
+        names = ", ".join(str(row["field_name"]) for row in duplicates)
+        cursor.close()
+        raise RuntimeError(
+            "Migration cannot enforce unique global onboarding question names; "
+            f"resolve duplicate field definitions first: {names}"
+        )
+
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_field_definitions_scope_name
+        ON user_field_definitions(field_name, COALESCE(user_type_id, -1))
+        """
+    )
     conn.commit()
     cursor.close()
 
@@ -1355,7 +1394,7 @@ def _insert_admin_config_tool_audit(
     affected_areas: list[str],
     changed_by: str,
     action_source: str,
-    conversation_id: str,
+    conversation_id: str | None,
     metadata: dict[str, object] | None = None,
 ) -> dict:
     """Record a redacted authoritative outcome for one direct Admin Config call."""
@@ -2084,7 +2123,7 @@ def update_settings_with_audit(
             affected_areas=["instance_settings"],
             changed_by=changed_by,
             action_source=action_source,
-            conversation_id=conversation_id or "unknown",
+            conversation_id=conversation_id,
         )
 
     return {
@@ -2312,11 +2351,21 @@ def manage_user_type_with_audit(
             conversation_id=conversation_id,
         )
         changed_names = ["deleted"] if operation == "delete" else sorted(values)
+        affected_areas = (
+            [
+                "user_types",
+                "onboarding_questions",
+                "agent_settings",
+                "document_access",
+            ]
+            if operation == "delete"
+            else ["user_types"]
+        )
         _insert_admin_config_tool_audit(
             cursor,
             tool_name="manage_user_types",
             changed_names=changed_names,
-            affected_areas=["user_types"],
+            affected_areas=affected_areas,
             changed_by=changed_by,
             action_source=action_source,
             conversation_id=conversation_id,
@@ -2325,6 +2374,7 @@ def manage_user_type_with_audit(
         return {
             "user_type": new_record,
             "deleted_user_type_id": resolved_id if operation == "delete" else None,
+            "affected_areas": affected_areas,
         }
 
 
@@ -3509,7 +3559,7 @@ def _seed_default_ai_config() -> None:
         ("user_trace_visibility", "minimal", "string", "default", "Conversation Trace visibility for User Conversations"),
     ]
 
-    with get_cursor() as cursor:
+    with get_write_cursor() as cursor:
         for key, value, value_type, category, description in defaults:
             cursor.execute("""
                 INSERT OR IGNORE INTO ai_config (key, value, value_type, category, description)
@@ -3526,18 +3576,32 @@ def _seed_default_ai_config() -> None:
             if isinstance(existing_rules, list) and all(
                 isinstance(rule, str) for rule in existing_rules
             ):
-                merged_rules = [
-                    rule
+                has_obsolete_default = any(
+                    rule in OBSOLETE_DEFAULT_PROMPT_RULES
                     for rule in existing_rules
-                    if rule not in OBSOLETE_DEFAULT_PROMPT_RULES
-                ]
-                for rule in DEFAULT_PROMPT_RULES:
-                    if rule not in merged_rules:
-                        merged_rules.append(rule)
-                if merged_rules != existing_rules:
+                )
+                if has_obsolete_default:
+                    old_rules = prompt_rules_row["value"]
+                    merged_rules = [
+                        rule
+                        for rule in existing_rules
+                        if rule not in OBSOLETE_DEFAULT_PROMPT_RULES
+                    ]
+                    for rule in DEFAULT_PROMPT_RULES:
+                        if rule not in merged_rules:
+                            merged_rules.append(rule)
                     cursor.execute(
                         "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
                         (json.dumps(merged_rules), "prompt_rules"),
+                    )
+                    _insert_config_audit_log(
+                        cursor,
+                        "ai_config",
+                        "prompt_rules",
+                        old_rules,
+                        json.dumps(merged_rules),
+                        "system:migration",
+                        action_source="migration:admin_config_prompt_defaults",
                     )
 
         cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("prompt_system",))
@@ -3546,9 +3610,19 @@ def _seed_default_ai_config() -> None:
             prompt_system_row
             and prompt_system_row["value"] in OBSOLETE_DEFAULT_PROMPT_SYSTEMS
         ):
+            old_system = prompt_system_row["value"]
             cursor.execute(
                 "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
                 (DEFAULT_PROMPT_SYSTEM, "prompt_system"),
+            )
+            _insert_config_audit_log(
+                cursor,
+                "ai_config",
+                "prompt_system",
+                old_system,
+                DEFAULT_PROMPT_SYSTEM,
+                "system:migration",
+                action_source="migration:admin_config_prompt_defaults",
             )
 
         cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("web_search_default",))
@@ -3729,7 +3803,9 @@ def update_agent_settings_with_audit(
             if user_type_id is None:
                 cursor.execute("SELECT value FROM ai_config WHERE key = ?", (key,))
                 row = cursor.fetchone()
-                old_value = row["value"] if row else None
+                if not row:
+                    raise LookupError(f"Unknown Agent Setting: {key}")
+                old_value = row["value"]
                 cursor.execute(
                     "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
                     (value, key),
@@ -4162,10 +4238,25 @@ def update_document_access_with_audit(
             if user_type_id is None:
                 cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (job_id,))
                 row = cursor.fetchone()
-                old_value = dict(row) if row else None
+                old_value = (
+                    {
+                        "is_available": bool(row["is_available"]),
+                        "is_default_active": bool(row["is_default_active"]),
+                        "display_order": int(row["display_order"]),
+                    }
+                    if row
+                    else None
+                )
                 final_available = bool(values.get("is_available", bool(row["is_available"]) if row else True))
                 final_active = bool(values.get("is_default_active", bool(row["is_default_active"]) if row else True))
                 final_order = int(values.get("display_order", row["display_order"] if row else 0))
+                new_value = {
+                    "is_available": final_available,
+                    "is_default_active": final_active,
+                    "display_order": final_order,
+                }
+                if old_value == new_value:
+                    continue
                 cursor.execute(
                     """
                     INSERT INTO document_defaults (job_id, is_available, is_default_active, display_order)
@@ -4178,11 +4269,6 @@ def update_document_access_with_audit(
                     """,
                     (job_id, int(final_available), int(final_active), final_order),
                 )
-                new_value = {
-                    "is_available": final_available,
-                    "is_default_active": final_active,
-                    "display_order": final_order,
-                }
                 table_name = "document_defaults"
                 config_key = job_id
             else:
@@ -4194,7 +4280,22 @@ def update_document_access_with_audit(
                     (job_id, user_type_id),
                 )
                 row = cursor.fetchone()
-                old_value = dict(row) if row else None
+                old_value = (
+                    {
+                        "is_available": (
+                            bool(row["is_available"])
+                            if row["is_available"] is not None
+                            else None
+                        ),
+                        "is_default_active": (
+                            bool(row["is_default_active"])
+                            if row["is_default_active"] is not None
+                            else None
+                        ),
+                    }
+                    if row
+                    else None
+                )
                 final_available = values.get(
                     "is_available",
                     bool(row["is_available"]) if row and row["is_available"] is not None else None,
@@ -4203,6 +4304,12 @@ def update_document_access_with_audit(
                     "is_default_active",
                     bool(row["is_default_active"]) if row and row["is_default_active"] is not None else None,
                 )
+                new_value = {
+                    "is_available": final_available,
+                    "is_default_active": final_active,
+                }
+                if old_value == new_value:
+                    continue
                 cursor.execute(
                     """
                     INSERT INTO document_defaults_user_type_overrides (
@@ -4220,10 +4327,6 @@ def update_document_access_with_audit(
                         int(bool(final_active)) if final_active is not None else None,
                     ),
                 )
-                new_value = {
-                    "is_available": final_available,
-                    "is_default_active": final_active,
-                }
                 table_name = "document_defaults_user_type_overrides"
                 config_key = f"{job_id}:type_{user_type_id}"
 
@@ -4487,8 +4590,14 @@ def update_deployment_configs_with_audit(
             item = settings[key]
             value = str(item["value"])
             is_secret = bool(item.get("is_secret"))
+            requires_restart = bool(item.get("requires_restart"))
+            category = str(item.get("category") or "general")
+            description = str(item.get("description") or "")
             cursor.execute(
-                "SELECT value, is_secret FROM deployment_config WHERE key = ?",
+                """
+                SELECT value, is_secret, requires_restart, category, description
+                FROM deployment_config WHERE key = ?
+                """,
                 (key,),
             )
             old_row = cursor.fetchone()
@@ -4499,6 +4608,31 @@ def update_deployment_configs_with_audit(
                     if old_row["is_secret"] and old_row["value"]
                     else old_row["value"]
                 )
+
+            if is_secret and not value.strip() and old_row:
+                value = str(old_plain or "")
+
+            new_semantics = {
+                "value": value,
+                "is_secret": is_secret,
+                "requires_restart": requires_restart,
+                "category": category,
+                "description": description,
+            }
+            old_semantics = (
+                {
+                    "value": old_plain,
+                    "is_secret": bool(old_row["is_secret"]),
+                    "requires_restart": bool(old_row["requires_restart"]),
+                    "category": str(old_row["category"] or "general"),
+                    "description": str(old_row["description"] or ""),
+                }
+                if old_row
+                else None
+            )
+            saved_values[key] = "********" if is_secret and value else value
+            if old_semantics == new_semantics:
+                continue
 
             value_to_store = _encrypt_deployment_secret_value(value) if is_secret and value else value
             cursor.execute(
@@ -4518,24 +4652,23 @@ def update_deployment_configs_with_audit(
                     key,
                     value_to_store,
                     int(is_secret),
-                    int(bool(item.get("requires_restart"))),
-                    str(item.get("category") or "general"),
-                    str(item.get("description") or ""),
+                    int(requires_restart),
+                    category,
+                    description,
                 ),
             )
-            saved_values[key] = "********" if is_secret and value else value
-            if old_plain != value:
-                changed_names.append(key)
-                _insert_config_audit_log(
-                    cursor,
-                    "deployment_config",
-                    key,
-                    "********" if old_row and old_row["is_secret"] and old_plain else old_plain,
-                    "********" if is_secret and value else value,
-                    changed_by,
-                    action_source=action_source,
-                    conversation_id=conversation_id,
-                )
+            changed_names.append(key)
+            secret_transition = bool(is_secret or (old_row and old_row["is_secret"]))
+            _insert_config_audit_log(
+                cursor,
+                "deployment_config",
+                key,
+                "********" if secret_transition and old_row else old_plain,
+                "********" if secret_transition else value,
+                changed_by,
+                action_source=action_source,
+                conversation_id=conversation_id,
+            )
 
         _insert_admin_config_tool_audit(
             cursor,
@@ -4568,7 +4701,13 @@ def upsert_deployment_config(
         cursor.execute("SELECT value, is_secret FROM deployment_config WHERE key = ?", (key,))
         old_row = cursor.fetchone()
         old_value = "********" if (old_row and old_row["is_secret"]) else (old_row["value"] if old_row else None)
-        value_to_store = _encrypt_deployment_secret_value(value) if is_secret and value else value
+        if is_secret and not value.strip() and old_row:
+            if old_row["is_secret"]:
+                value_to_store = old_row["value"]
+            else:
+                value_to_store = _encrypt_deployment_secret_value(old_row["value"])
+        else:
+            value_to_store = _encrypt_deployment_secret_value(value) if is_secret and value else value
 
         cursor.execute("""
             INSERT INTO deployment_config (key, value, is_secret, requires_restart, category, description)

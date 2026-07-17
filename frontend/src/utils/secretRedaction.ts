@@ -5,7 +5,7 @@ export function redactSecrets(text: string, secrets: string[]): string {
   const sorted = [...secrets].sort((a, b) => b.length - a.length);
   let output = text;
   for (const secret of sorted) {
-    if (!secret || secret.length < 6 || !output.includes(secret)) continue;
+    if (!secret || !output.includes(secret)) continue;
     output = output.split(secret).join('[REDACTED]');
   }
   return output;

@@ -8,6 +8,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -213,6 +214,7 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfigState] = useState<InstanceConfig>(
     DEFAULT_INSTANCE_CONFIG
   );
+  const fetchRunIdRef = useRef(0);
 
   // Load config: first from localStorage (immediate), then fetch from backend
   useEffect(() => {
@@ -228,10 +230,12 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
 
     // Then fetch from backend to get the latest
     async function fetchSettings() {
+      const runId = ++fetchRunIdRef.current;
       try {
         const response = await fetch(`${API_BASE}/settings/public`);
         if (response.ok) {
           const data = await response.json();
+          if (runId !== fetchRunIdRef.current) return;
           const settings = data.settings || {};
 
           const newConfig: InstanceConfig = {
@@ -347,6 +351,7 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
+        if (runId !== fetchRunIdRef.current) return;
         console.warn(
           'Failed to fetch instance settings, using cached config:',
           error
