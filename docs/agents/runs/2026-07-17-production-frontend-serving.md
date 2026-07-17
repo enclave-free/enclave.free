@@ -9,7 +9,7 @@
 - Feature branch: `feature/production-frontend-serving`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: non-draft staging PR open; PR review and checks in progress
+- Current status: non-draft staging PR open; all CI checks pass and the first PR CodeRabbit finding is addressed pending confirmation
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -28,6 +28,7 @@ Replace the deployed Vite development server with production static frontend ser
 - Review packets: `docs/agents/runs/2026-07-17-production-frontend-serving-review-507.md`
 - Local CodeRabbit reports: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md`, `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-2-507.md`, and `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-3-507.md` — six findings addressed across three completed rounds; round 3 corrected an earlier broad comparison by pinning `origin/staging`
 - PR URL: [#510](https://github.com/enclave-free/enclave.free/pull/510)
+- PR CodeRabbit round 1: one valid trivial timeout finding addressed with bounded `curl` and BusyBox-compatible `wget` probes; generic docstring coverage warning dismissed as inapplicable to the repository's shell/test conventions
 
 ## Commands
 
@@ -41,7 +42,7 @@ Replace the deployed Vite development server with production static frontend ser
 
 | Issue | Type | Status   | Review thread                                             | Fixes needed | Verified                                                                                                                |
 | ----- | ---- | -------- | --------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| #507  | AFK  | complete | Standards pass; Spec pass; local CodeRabbit 6/6 addressed | none         | Apple HTTP, health, Compose, typecheck, build, full suite, browser verification, and three local CodeRabbit rounds pass |
+| #507  | AFK  | complete | Standards pass; Spec pass; local CodeRabbit 6/6 addressed; PR round 1 addressed | none | Apple HTTP, health, Compose, typecheck, build, full suite, browser verification, and three local CodeRabbit rounds pass |
 
 ## Parked HITL Slices
 

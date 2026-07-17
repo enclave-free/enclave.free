@@ -29,7 +29,7 @@ case "$runtime" in
     }
     verify_container_health() {
       container exec "$container_name" \
-        wget -q --spider http://127.0.0.1/
+        wget -q -T 2 --spider http://127.0.0.1/
     }
     ;;
   docker)
@@ -45,7 +45,7 @@ case "$runtime" in
     }
     verify_container_health() {
       docker exec "$container_name" \
-        wget -q --spider http://127.0.0.1/
+        wget -q -T 2 --spider http://127.0.0.1/
       for _ in {1..60}; do
         health_status="$(docker inspect --format '{{.State.Health.Status}}' "$container_name")"
         if [[ "$health_status" == "healthy" ]]; then
@@ -74,13 +74,15 @@ build_image
 start_container
 
 for _ in {1..60}; do
-  if curl --fail --silent --show-error "http://127.0.0.1:${host_port}/" >/dev/null 2>&1; then
+  if curl --fail --silent --show-error --max-time 2 \
+    "http://127.0.0.1:${host_port}/" >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
 
-curl --fail --silent --show-error "http://127.0.0.1:${host_port}/" >/dev/null
+curl --fail --silent --show-error --max-time 2 \
+  "http://127.0.0.1:${host_port}/" >/dev/null
 FRONTEND_RUNTIME_URL="http://127.0.0.1:${host_port}" \
   python3 "$repo_root/scripts/tests/DEPLOYMENT/test_frontend_http.py"
 verify_container_health
