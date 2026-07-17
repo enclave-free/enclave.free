@@ -10,11 +10,15 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for caching
-COPY requirements.txt .
+# Copy dependency contracts first for caching
+COPY requirements.txt requirements-cpu.txt ./
+COPY scripts/install_dependencies.sh /usr/local/bin/install_backend_dependencies
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install the pinned CPU stack before the general dependency graph so pip keeps
+# the official PyTorch CPU wheels instead of resolving CUDA-enabled wheels.
+RUN /usr/local/bin/install_backend_dependencies /app
+
+COPY scripts/verify_cpu_runtime.py /usr/local/bin/verify_cpu_runtime.py
 
 RUN adduser --system --group --home /home/enclave enclave \
     && mkdir -p /data /uploads /home/enclave/.cache/huggingface \
