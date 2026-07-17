@@ -73,7 +73,7 @@ class AIConfigMaxTokensTest(unittest.TestCase):
 
         self.assertEqual(by_key["user_default_tool_ids"]["value"], "[]")
         self.assertEqual(by_key["user_default_tool_ids"]["value_type"], "json")
-        self.assertEqual(by_key["knowledge_source_default"]["value"], "none")
+        self.assertEqual(by_key["knowledge_source_default"]["value"], "selected")
         self.assertEqual(by_key["knowledge_source_default"]["value_type"], "string")
 
     def test_user_default_tool_ids_rejects_admin_only_tools(self) -> None:

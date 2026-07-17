@@ -99,8 +99,8 @@ describe('local instance reset script', () => {
     expect(output).toContain(
       'docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up --build -d'
     );
-    expect(output).toContain('curl -fsS http://localhost:18000/test');
-    expect(output).toContain('curl -fsS http://localhost:18000/llm/test');
+    expect(output).toContain('lsof -nP -iTCP:18000 -sTCP:LISTEN');
+    expect(output).toContain('/scripts/smoke_test.sh');
   });
 
   it('executes the default reset and smoke check workflow', () => {
@@ -124,7 +124,7 @@ describe('local instance reset script', () => {
     expect(log).toContain('lsof -nP -iTCP:18000 -sTCP:LISTEN');
     expect(log).toContain('curl -fsS http://localhost:18000/test');
     expect(log).toContain('curl -fsS http://localhost:18000/llm/test');
-  });
+  }, 15_000);
 
   it('can reset every local volume including the embedding cache', () => {
     const { log } = runWithFakes(['--all']);

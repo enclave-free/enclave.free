@@ -22,7 +22,8 @@
       "title": "¿Qué te describe mejor?",
       "description": "Selecciona la opción que mejor se adapte a tus necesidades",
       "loadError": "Error al cargar los tipos de usuario. Por favor, inténtalo de nuevo.",
-      "selectionLabel": "Selección de tipo de usuario"
+      "selectionLabel": "Selección de tipo de usuario",
+      "errorLabel": "Error al cargar el tipo de usuario"
     },
     "language": {
       "selectLabel": "Selecciona un idioma",
@@ -65,7 +66,8 @@
       "encryptionBody": "Los campos de perfil se cifran por defecto, pero el administrador de esta instancia controla la configuración por campo y puede permitir que ciertos datos se almacenen o compartan de forma diferente.",
       "adminControlNotice": "El tratamiento de datos lo configura el administrador de esta instancia, incluido qué puede almacenarse sin cifrar o compartirse con herramientas de IA.",
       "noWarrantyNotice": "El software Enclave se proporciona tal cual, sin garantía. El uso de esta instancia está sujeto a las políticas del administrador.",
-      "retentionNotice": "Los plazos de retención y eliminación de datos son establecidos por el administrador de esta instancia. Contacta con ellos para solicitudes de acceso, corrección o eliminación."
+      "retentionNotice": "Los plazos de retención y eliminación de datos son establecidos por el administrador de esta instancia. Contacta con ellos para solicitudes de acceso, corrección o eliminación.",
+      "errorLabel": "Error en la solicitud del enlace mágico"
     },
     "verify": {
       "verifying": "Verificando tu enlace...",
@@ -125,20 +127,28 @@
       "config": "Configuración",
       "configName": "Configuración",
       "databaseName": "Base de datos",
-      "webSearchName": "Web"
+      "webSearchName": "Web",
+      "knowledgeSearchName": "Conocimiento",
+      "knowledgeSearch": "Busca en documentos subidos y fragmentos de conocimiento",
+      "curatedResourcesName": "Recursos",
+      "curatedResources": "Encuentra recursos de referencia verificados por el administrador y organizaciones de confianza"
     },
     "documentScope": {
       "title": "Bases de conocimientos",
       "description": "Selecciona fuentes para incluir en el contexto",
       "noSources": "No hay fuentes disponibles",
       "clearAll": "Limpiar todo",
-      "docsLabel": "Documentos"
+      "docsLabel": "Documentos",
+      "clearAllSelectedAria": "Borrar todos los documentos seleccionados",
+      "docsLabelWithCount": "Documentos {{count}}"
     },
     "messages": {
       "searching": "🔍 Buscando \"{{term}}\"...",
       "searchingPrefix": "Buscando",
       "searchResults": "Busqué \"{{term}}\" para ti:",
-      "newConversation": "Nueva conversación"
+      "newConversation": "Nueva conversación",
+      "copy": "Copiar mensaje",
+      "copied": "Mensaje copiado"
     },
     "code": {
       "copy": "Copiar",
@@ -157,8 +167,50 @@
       "roleUser": "Tú",
       "roleAssistant": "Asistente",
       "footer": "Exportado desde {{instanceName}}",
-      "exportedOn": "Exportado el {{timestamp}}"
-    }
+      "exportedOn": "Exportado el {{timestamp}}",
+      "copiedExportNotice": "Esta exportación sale del almacenamiento activo del producto y queda fuera del Ciclo de vida del almacenamiento activo después de descargarse."
+    },
+    "sessions": {
+      "resumeInvalid": "No se pudo cargar esa conversación.",
+      "renameEmpty": "El título de la conversación es obligatorio.",
+      "renameError": "No se pudo cambiar el nombre de la conversación.",
+      "deleteError": "No se pudo eliminar la conversación.",
+      "loading": "Cargando chats...",
+      "error": "No se pudieron cargar los chats",
+      "saved": "Chat guardado",
+      "deleteConfirmBody": "Esto elimina la conversación guardada y su memoria de sesión.",
+      "deleteCancel": "Cancelar eliminación de la conversación",
+      "cancel": "Cancelar",
+      "deleteConfirm": "Eliminar conversación",
+      "deleteDeleting": "Eliminando...",
+      "renameInput": "Título de la conversación",
+      "renameCancel": "Cancelar cambio de nombre de la conversación",
+      "renameSave": "Guardar título de la conversación",
+      "renameSaving": "Cambiando el nombre...",
+      "current": "Chat actual",
+      "empty": "Vacío",
+      "ariaLabel": "Sesiones de chat",
+      "messageCount_one": "{{count}} mensaje",
+      "messageCount_many": "{{count}} mensajes",
+      "messageCount_other": "{{count}} mensajes",
+      "deleteConfirmTitle": "¿Eliminar «{{title}}»?",
+      "rename": "Renombrar {{title}}",
+      "delete": "Eliminar {{title}}"
+    },
+    "currentChatAria": "Chat actual",
+    "newFromCurrent": "Iniciar un chat nuevo",
+    "documentsContextTitle": "Documentos",
+    "errors": {
+      "requestLabel": "Error en la solicitud del chat"
+    },
+    "trace": {
+      "finalizing": "Finalizando la respuesta..."
+    },
+    "new": "Chat nuevo",
+    "listTitle": "Chats",
+    "composerContextAria": "Contexto del redactor",
+    "contextTitle": "Contexto",
+    "messageActions": "Acciones del mensaje"
   },
   "common": {
     "adminQuestion": "¿Eres administrador?",
@@ -197,7 +249,13 @@
     "retry": "Reintentar",
     "saved": "Guardado",
     "sending": "Enviando...",
-    "gotIt": "Entendido"
+    "gotIt": "Entendido",
+    "send": "Enviar",
+    "backToAdminDashboard": "Volver al panel de administración",
+    "export": "Exportar",
+    "reset": "Restablecer",
+    "exit": "Salir",
+    "none": "Ninguno"
   },
   "settings": {
     "title": "Configuración",
@@ -220,8 +278,23 @@
       "deploymentConfig": "Configuración de despliegue",
       "deploymentConfigDesc": "Servicios, SMTP, almacenamiento",
       "userConfig": "Configuración de usuario",
-      "userConfigDesc": "Tipos de usuario y preguntas de incorporación"
-    }
+      "userConfigDesc": "Tipos de usuario y preguntas de incorporación",
+      "guidedSetup": "Configuración guiada",
+      "guidedSetupDesc": "Recorre la configuración, los documentos, los recursos y las pruebas.",
+      "guides": "Guías de administración",
+      "guidesDesc": "Comprende qué configuran los administradores y dónde.",
+      "testUserSession": "Sesión de usuario de prueba",
+      "testUserSessionDesc": "Chatea como usuario simulado y revisa los comentarios de la beta.",
+      "diagnostics": "Diagnósticos",
+      "diagnosticsDesc": "Ejecuta comprobaciones básicas mientras investigas problemas.",
+      "resourceDirectory": "Directorio de recursos",
+      "resourceDirectoryDesc": "Cura manualmente recursos de referencia confiables."
+    },
+    "diagnostics": "Diagnósticos",
+    "adminWorkflows": "Flujos de trabajo de administración",
+    "settingsSection": "Configuración",
+    "dataAndContent": "Datos y contenido",
+    "operations": "Operaciones"
   },
   "admin": {
     "confirmDelete": "¿Estás seguro de que deseas eliminar este registro?",
@@ -241,7 +314,8 @@
       "updateFieldFailed": "Error al actualizar el campo",
       "removeFieldFailed": "Error al eliminar el campo",
       "reorderFailed": "Error al reordenar el campo",
-      "updateTypeFailed": "Fallo al actualizar el tipo de usuario"
+      "updateTypeFailed": "Fallo al actualizar el tipo de usuario",
+      "loadSettingsFailed": "No se pudo cargar la configuración"
     },
     "setup": {
       "backToChat": "Volver al chat",
@@ -276,6 +350,7 @@
       "instanceSectionTitle": "Configuración de la instancia",
       "onboardingFieldsHint": "Crea las preguntas que los usuarios responden durante la incorporación.",
       "optionsCount_one": "{{count}} opción",
+      "optionsCount_many": "{{count}} opciones",
       "optionsCount_other": "{{count}} opciones",
       "userSectionDesc": "Configura los tipos de usuario y las preguntas que los usuarios responden durante la incorporación.",
       "userSectionTitle": "Configuración de usuario"
@@ -313,7 +388,10 @@
       "emailEncryptedHint": "Correo electrónico (cifrado)",
       "nameEncryptedHint": "Nombre (cifrado)",
       "noUsersHint": "Intenta cambiar el filtro de arriba o actualizar.",
-      "pubkeyPresent": "Nostr pubkey presente"
+      "pubkeyPresent": "Nostr pubkey presente",
+      "usersErrorLabel": "Error de usuarios en la migración de tipo de usuario",
+      "errorLabel": "Error en la migración de tipo de usuario",
+      "summaryLabel": "Resumen de la migración de tipo de usuario"
     },
     "database": {
       "backToSetup": "Volver a configuración de admin",
@@ -344,8 +422,10 @@
       "clickToExpand": "Clic para expandir",
       "pagination": "Mostrando {{from}} a {{to}} de {{total}}",
       "tableCount_one": "{{count}} tabla",
+      "tableCount_many": "{{count}} tablas",
       "tableCount_other": "{{count}} tablas",
       "rowCount_one": "{{count}} fila",
+      "rowCount_many": "{{count}} filas",
       "rowCount_other": "{{count}} filas",
       "rowsInTable": "{{count}} filas en {{table}}",
       "connected": "SQLite conectado",
@@ -399,7 +479,15 @@
       "primaryKeyIcon": "Clave primaria",
       "unlockDecryption": "Desbloquear descifrado",
       "rowsInTable_one": "{{count}} fila en {{table}}",
-      "rowsInTable_other": "{{count}} filas en {{table}}"
+      "rowsInTable_many": "{{count}} filas en {{table}}",
+      "rowsInTable_other": "{{count}} filas en {{table}}",
+      "safeQueryResults": "Resultados de consulta segura",
+      "queryError": "Error de consulta",
+      "writeResult": "Resultado de escritura en la base de datos",
+      "emptyQueryResult": "Resultado de consulta vacío",
+      "readOnly": "Solo lectura",
+      "tableLoadError": "Error al cargar la tabla",
+      "readOnlyHint": "Las ediciones directas de la base de datos están deshabilitadas; usa flujos de administrador auditados para realizar cambios."
     },
     "fields": {
       "nameRequired": "El nombre del campo es obligatorio",
@@ -513,8 +601,38 @@
         "restartRequiredFor": "Reinicio requerido para: {{keys}}.",
         "restartRequiredNo": "Reinicio requerido: no.",
         "restartCheckFailedHttp": "La comprobación de reinicio requerido falló (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "La comprobación de reinicio requerido falló (error de red)."
-      }
+        "restartCheckFailedNetwork": "La comprobación de reinicio requerido falló (error de red).",
+        "pageRefreshRecommended": "Actualiza esta página para ver los cambios del tema."
+      },
+      "approvalCardTitle": "Aprobar cambios de configuración",
+      "applying": "Aplicando",
+      "applied": "Aplicado",
+      "rejected": "Rechazado",
+      "failed": "Fallido",
+      "superseded": "Reemplazado",
+      "hideDetails": "Ocultar detalles",
+      "reviewDetails": "Revisar detalles",
+      "reject": "Rechazar",
+      "approve": "Aprobar",
+      "applyErrorLabel": "Error al aplicar la configuración",
+      "applyIntentUsePanel": "Usa la tarjeta de aprobación de abajo y haz clic en Aprobar para confirmar estas actualizaciones de configuración.",
+      "applyIntentNoPending": "No hay cambios de configuración pendientes por aplicar. Pide primero al asistente que proponga un conjunto de cambios.",
+      "sessionMemoryNotice": "El contexto anterior se resumió para mantener esta conversación.",
+      "sessionMemoryNoticeLabel": "Aviso de compactación de la memoria de sesión",
+      "reducedContextNotice": "Se redujo parte del contexto para ajustarse al presupuesto del proveedor del modelo ({{sections}}). Las respuestas pueden ser menos completas hasta que inicies una nueva conversación con el asistente.",
+      "reducedContextNoticeLabel": "Aviso de contexto reducido",
+      "reducedContextSections": {
+        "recentConversation": "historial de conversación reciente"
+      },
+      "onboardingWelcome": "Bienvenido — vamos a configurar tu espacio. Responde tantas de estas como quieras en un solo mensaje (numéralas y omite lo que no tengas claro):\n\n1. **Nombre** — ¿cómo llamamos a este espacio? (aparece en el encabezado y en la pestaña del navegador)\n2. **Descripción** — una oración sobre para qué sirve (una nota privada, no visible para los usuarios)\n3. **Nombre del asistente** — ¿cómo se debería llamar el asistente de IA?\n4. **Color de acento** — el color de resalte para botones y enlaces (un nombre como azul/verde azulado, o un hex como #3B82F6)\n5. **Tema** — ¿claro, oscuro o sistema (según el dispositivo)?\n6. **Idioma predeterminado** — p. ej. inglés o español (opcional)\n7. **Eslogan** — una línea breve para el encabezado (opcional)\n8. **Nuevos usuarios** — ¿dejarlos entrar de inmediato o aprobar a cada persona?\n9. **Tipos de usuario** — ¿qué clases de personas no administradoras usarán esto? (p. ej. Docente y Estudiante) — crearé cada uno por ti\n\nEjemplo: \"9. Docente y Estudiante\". Guardaré todo en un solo paso — y puedes cambiar a la configuración manual cuando quieras.",
+      "collapseSidebar": "Contraer la barra lateral del asistente",
+      "expandSidebar": "Abrir la barra lateral del asistente de administración",
+      "resize": "Redimensionar el panel del asistente de administración",
+      "railLabel": "Asistente",
+      "shareSecretsHint": "Desactivado de forma predeterminada. Primero habilita la herramienta de configuración. Cuando está activado, los valores secretos de configuración del despliegue se revelan del lado del cliente y se envían a Sage para este flujo de prototipo.",
+      "startNewConversation": "Iniciar una nueva conversación con el asistente",
+      "onboardingTitle": "Chat de configuración guiada",
+      "onboardingContext": "Conversación de configuración enfocada"
     },
     "reachout": {
       "badgeDefault": "Predeterminado",
@@ -681,7 +799,16 @@
       "typographyTitle": "Tipografía",
       "userIconLabel": "Icono de usuario",
       "userLabelLabel": "Etiqueta de usuario",
-      "userLabelPlaceholder": "p. ej., Tú"
+      "userLabelPlaceholder": "p. ej., Tú",
+      "publicEmailDisplayNameLabel": "Nombre visible del correo público (opcional)",
+      "publicEmailDisplayNameHint": "Se usa en los correos de inicio de sesión con enlace mágico. Déjalo en blanco para usar el nombre de la instancia.",
+      "defaultsTitle": "Valores predeterminados de la instancia",
+      "defaultsDesc": "Define el idioma y el tema base que se usan antes de aplicar cualquier control local del navegador.",
+      "defaultLanguageLabel": "Idioma predeterminado",
+      "defaultThemeLabel": "Tema predeterminado",
+      "themeSystem": "Sistema",
+      "themeLight": "Claro",
+      "themeDark": "Oscuro"
     },
     "userConfig": {
       "subtitle": "Configura los tipos de usuario y las preguntas que los usuarios responden durante la incorporación.",
@@ -689,6 +816,49 @@
       "typeDescription": "Descripción",
       "typeIcon": "Icono de tipo",
       "typeName": "Nombre del tipo"
+    },
+    "userApproval": {
+      "updateFailed": "No se pudo actualizar la aprobación del usuario.",
+      "approvedUser": "Usuario n.º {{id}} aprobado.",
+      "revokedUser": "Usuario n.º {{id}} devuelto a pendiente.",
+      "title": "Aprobación de usuarios",
+      "subtitle": "Elige si los nuevos usuarios autenticados pueden entrar al chat de inmediato o esperar la aprobación del administrador.",
+      "requireManualLabel": "Requerir aprobación manual para nuevos usuarios",
+      "requireManualHint": "Cuando está activado, los nuevos usuarios llegan a la pantalla de aprobación pendiente hasta que un administrador los aprueba.",
+      "loadingHint": "Cargando...",
+      "saveButton": "Guardar aprobación de usuarios",
+      "savedCalloutLabel": "Aprobación de usuarios guardada",
+      "errorCalloutLabel": "Error de aprobación de usuarios",
+      "pendingTitle": "Aprobaciones pendientes",
+      "pendingCount_zero": "{{count}} usuarios necesitan aprobación antes de acceder al chat.",
+      "pendingCount_one": "{{count}} usuario necesita aprobación antes de acceder al chat.",
+      "pendingCount_two": "{{count}} usuarios necesitan aprobación antes de acceder al chat.",
+      "pendingCount_few": "{{count}} usuarios necesitan aprobación antes de acceder al chat.",
+      "pendingCount_many": "{{count}} usuarios necesitan aprobación antes de acceder al chat.",
+      "pendingCount_other": "{{count}} usuarios necesitan aprobación antes de acceder al chat.",
+      "nonePending": "Ningún usuario está esperando aprobación.",
+      "actionSavedCalloutLabel": "Aprobación de usuarios actualizada",
+      "actionErrorCalloutLabel": "Error al actualizar la aprobación de usuarios",
+      "loadingUsers": "Cargando usuarios...",
+      "emptyState": "Los nuevos Usuarios pendientes de aprobación aparecerán aquí cuando se requiera aprobación manual.",
+      "emailOnFile": "Correo electrónico registrado",
+      "nameOnFile": "Nombre registrado",
+      "approveButton": "Aprobar",
+      "revokeButton": "Revocar"
+    },
+    "userRosterExport": {
+      "auditFailed": "No se pudo auditar la exportación de la lista de usuarios. La hoja de cálculo no se descargó.",
+      "success": "Hoja de cálculo de la lista de usuarios descargada.",
+      "failed": "No se pudo exportar la lista de usuarios.",
+      "button": "Exportar usuarios",
+      "successLabel": "Exportación de la lista de usuarios lista",
+      "errorLabel": "Error en la exportación de la lista de usuarios"
+    },
+    "userIdentity": {
+      "decrypting": "Descifrando nombre/correo electrónico...",
+      "decryptFailed": "No se pudo descifrar el nombre/correo electrónico",
+      "unlockDetails": "Desbloquea para mostrar el nombre/correo electrónico",
+      "unlockButton": "Desbloquear datos"
     }
   },
   "adminOnboarding": {
@@ -718,6 +888,204 @@
   "adminGuides": {
     "card": {
       "adminsCan": "Los administradores pueden"
+    },
+    "summary": {
+      "brand": {
+        "title": "Personaliza la marca de la instancia",
+        "body": "Nombre, logotipo, tema, identidad del asistente y visualización del correo electrónico público."
+      },
+      "people": {
+        "title": "Controla a las personas",
+        "body": "Tipos de usuario, preguntas de incorporación, aprobaciones, migración y acceso."
+      },
+      "agent": {
+        "title": "Configura a Sage",
+        "body": "Reglas de instrucciones, configuración de respuestas, acceso a documentos y valores predeterminados de herramientas."
+      },
+      "launch": {
+        "title": "Lanza de forma segura",
+        "body": "Correo electrónico, dominios, CORS, HTTPS, enrutamiento de modelos, estado y entorno de ejecución."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Marca",
+        "title": "Identidad y apariencia",
+        "body": "Haz que la instancia se sienta como tu organización.",
+        "detail1": "Nombre, eslogan, nombre del asistente y etiqueta de usuario.",
+        "detail2": "Logotipo, favicon, icono, color de acento, tema, tipografía y estilo del chat.",
+        "detail3": "Idioma predeterminado y nombre para mostrar del correo electrónico público.",
+        "link": "Abrir Configuración de la instancia"
+      },
+      "people": {
+        "eyebrow": "Acceso",
+        "title": "Personas y acceso",
+        "body": "Decide quién usa la instancia y qué les pides.",
+        "detail1": "Tipos de usuario para grupos como personal, miembros o clientes.",
+        "detail2": "Campos de incorporación, preguntas obligatorias, opciones, textos de ejemplo y campos por tipo.",
+        "detail3": "Aprobación manual, migración de usuarios, revocación de acceso y eliminación.",
+        "link": "Abrir Configuración de usuarios"
+      },
+      "agent": {
+        "eyebrow": "Comportamiento",
+        "title": "Comportamiento del agente",
+        "body": "Configura cómo responde Sage y qué herramientas están activadas de forma predeterminada.",
+        "detail1": "Plantilla de instrucciones, reglas de comportamiento, temas prohibidos y configuración de respuestas.",
+        "detail2": "Valores predeterminados de funciones para las herramientas de Conocimiento, Recursos, Web, Configuración y Base de datos.",
+        "detail3": "Configuración global más anulaciones por tipo de usuario.",
+        "link": "Abrir configuración del agente"
+      },
+      "docs": {
+        "eyebrow": "Conocimiento",
+        "title": "Conocimiento de documentos",
+        "body": "Dale al agente material de origen que pueda buscar.",
+        "detail1": "Sube PDF, políticas, preguntas frecuentes, manuales y guías.",
+        "detail2": "Los documentos se dividen en fragmentos, se incrustan y se vuelven buscables.",
+        "detail3": "El acceso a documentos controla qué puede seleccionarse o estar activo de forma predeterminada.",
+        "link": "Abrir subida de documentos"
+      },
+      "resources": {
+        "eyebrow": "Referencias",
+        "title": "Recursos verificados",
+        "body": "Agrega recursos de referencia confiables que el agente pueda recomendar.",
+        "detail1": "Nombres, descripciones, tipo de recurso, idiomas, cobertura y tipos de ayuda.",
+        "detail2": "Teléfono, correo electrónico, URL, canal seguro, dirección y notas.",
+        "detail3": "Los recursos verificados aparecen primero. Los recursos archivados permanecen ocultos para los usuarios.",
+        "link": "Abrir directorio de recursos"
+      },
+      "ops": {
+        "eyebrow": "Operaciones",
+        "title": "Operaciones y tiempo de ejecución",
+        "body": "Mantén la instancia conectada, accesible y en buen estado.",
+        "detail1": "SMTP para enlaces mágicos por correo, dominios, CORS, HTTPS y URL públicas.",
+        "detail2": "Proveedor de modelo, modelo de incrustación, búsqueda, almacenamiento y estado del servicio.",
+        "detail3": "Exportación del entorno de ejecución, preparación, configuración obsoleta y migración de clave de administrador.",
+        "link": "Abrir configuración de despliegue"
+      },
+      "title": "Qué configuran los administradores",
+      "body": "Estas son las principales superficies de control. Puedes usar las páginas directamente o pedirle al Asistente de administración que prepare los cambios."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Preguntar",
+        "title": "Asistente de administración",
+        "body": "Haz preguntas sobre la configuración actual y solicita cambios de configuración.",
+        "detail1": "Las lecturas de configuración inspeccionan el estado real de la instancia en lugar de adivinar.",
+        "detail2": "Los cambios propuestos se preparan para su revisión.",
+        "detail3": "Aplicar ejecuta los endpoints de administración aprobados sin otro turno del modelo.",
+        "link": "Abrir asistente de administración"
+      },
+      "guided": {
+        "eyebrow": "Comenzar",
+        "title": "Configuración guiada",
+        "body": "Usa un chat guiado para crear una primera configuración útil.",
+        "detail1": "Identidad, asistente, idioma, política de acceso, tipos de usuario, preguntas y reglas de comportamiento.",
+        "detail2": "Luego sube documentos, agrega recursos y prueba.",
+        "link": "Abrir configuración guiada"
+      },
+      "test": {
+        "eyebrow": "Validar",
+        "title": "Prueba y comentarios",
+        "body": "Prueba el agente desde el punto de vista de un usuario antes del lanzamiento.",
+        "detail1": "Elige un tipo de usuario, inicia una sesión de prueba y guarda el ensayo.",
+        "detail2": "Revisa los registros beta cifrados y califica las respuestas.",
+        "link": "Abrir sesión de usuario de prueba"
+      },
+      "database": {
+        "eyebrow": "Inspeccionar",
+        "title": "Explorador de base de datos",
+        "body": "Inspecciona los datos almacenados en SQLite al depurar.",
+        "detail1": "Usa consultas SELECT de solo lectura para la inspección.",
+        "detail2": "No lo uses como una vía de modificación del producto.",
+        "link": "Abrir explorador de base de datos"
+      },
+      "title": "Flujos de trabajo comunes del administrador",
+      "body": "Úsalos cuando estés configurando, revisando la calidad o investigando datos."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Tiempo de ejecución",
+        "title": "Un solo tiempo de ejecución de conversación",
+        "body": "Conocimiento, Recursos, Web, Configuración y Base de datos son conjuntos de herramientas visibles, no sistemas de chat separados.",
+        "detail1": "El modelo puede llamar a las herramientas habilitadas cuando resultan útiles.",
+        "detail2": "Configuración y Base de datos solo aparecen para administradores validados por el servidor."
+      },
+      "auth": {
+        "eyebrow": "Inicio de sesión",
+        "title": "Distintas vías de inicio de sesión",
+        "body": "Los administradores usan NIP-07. Los usuarios usan enlaces mágicos por correo.",
+        "detail1": "Las claves privadas de administrador permanecen en el firmante del navegador.",
+        "detail2": "SMTP debe funcionar antes de que los enlaces mágicos de usuario funcionen en producción."
+      },
+      "data": {
+        "eyebrow": "Privacidad",
+        "title": "Los límites de datos importan",
+        "body": "Los campos de perfil cifrados permanecen fuera del contexto del chat.",
+        "detail1": "Solo los campos sin cifrar pueden marcarse para el contexto de chat de IA.",
+        "detail2": "Los secretos de despliegue se almacenan cifrados y se muestran enmascarados de forma predeterminada."
+      },
+      "ops": {
+        "eyebrow": "Operaciones",
+        "title": "Algunos cambios requieren operadores",
+        "body": "La app puede guardar la configuración de ejecución deseada; no reinicia servicios de forma silenciosa.",
+        "detail1": "Exporta el entorno de ejecución tras cambios de proveedor, origen, CORS o búsqueda.",
+        "detail2": "Usa la preparación y el estado del servicio para confirmar qué se está ejecutando realmente."
+      },
+      "title": "Verdades del producto que debes recordar",
+      "body": "Estas reglas mantienen la configuración honesta y evitan excesos accidentales."
+    },
+    "ask": {
+      "prompt1": "¿Qué falta todavía antes de que esta instancia esté lista para los usuarios?",
+      "prompt2": "Revisa los tipos de usuario, las preguntas de incorporación, los documentos y los recursos actuales.",
+      "prompt3": "Prepara los cambios para revisión: define el tono del asistente y el idioma predeterminado.",
+      "title": "Buenas cosas que pedirle al Asistente de administración",
+      "body": "Pide una revisión antes de pedir cambios. Puede inspeccionar la configuración y preparar un conjunto de cambios."
+    },
+    "hero": {
+      "eyebrow": "Mapa de control del administrador",
+      "shortVersion": {
+        "title": "Versión corta",
+        "body": "Los administradores definen la identidad, los usuarios, el conocimiento, las herramientas y la configuración de lanzamiento. Algunos cambios en tiempo de ejecución aún requieren que un operador reinicie."
+      }
+    },
+    "title": "Guías de administración",
+    "subtitle": "Un mapa sencillo de lo que configuran los administradores, lo que puede hacer el producto y lo que requiere cuidado antes del lanzamiento.",
+    "quickStart": {
+      "title": "Empieza aquí",
+      "body": "Haz primero la configuración pequeña y útil. Púlela después de probar con preguntas reales."
+    },
+    "safety": {
+      "title": "Conceptos básicos de seguridad",
+      "body": "Los administradores controlan el acceso, los datos, el comportamiento y la configuración en tiempo de ejecución. Ve despacio con los cambios riesgosos.",
+      "items": {
+        "0": "Los administradores inician sesión con NIP-07. Los usuarios inician sesión con enlaces mágicos por correo.",
+        "1": "Los campos de usuario están cifrados de forma predeterminada. Solo los campos en texto plano se pueden compartir con el chat.",
+        "2": "Los secretos permanecen ocultos a menos que los compartas para la sesión de administrador actual.",
+        "3": "Los cambios del asistente son propuestas. Tú los revisas y haces clic en Aplicar.",
+        "4": "La configuración de despliegue guarda los valores de ejecución deseados. Los operadores aún exportan el entorno y reinician los servicios cuando es necesario."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Inicia sesión como administrador",
+        "body": "Usa la clave NIP-07 de administrador. Mantenla en privado."
+      },
+      "1": {
+        "title": "Configura lo básico",
+        "body": "Nombra la instancia, elige la apariencia y define la identidad del asistente."
+      },
+      "2": {
+        "title": "Define tus usuarios",
+        "body": "Crea tipos de usuario, preguntas de incorporación y reglas de aprobación."
+      },
+      "3": {
+        "title": "Agrega conocimiento confiable",
+        "body": "Sube documentos y agrega recursos verificados."
+      },
+      "4": {
+        "title": "Prueba antes de lanzar",
+        "body": "Chatea como usuario, revisa los comentarios y luego invita a personas reales."
+      }
     }
   },
   "adminDashboard": {
@@ -754,7 +1122,55 @@
     "securityStep3Primary": "Ejecutar validación de configuración",
     "securityStep3Secondary": "Revisar datos almacenados",
     "user": "Configuración de usuario",
-    "userDesc": "Configura los tipos de usuario y las preguntas de incorporación"
+    "userDesc": "Configura los tipos de usuario y las preguntas de incorporación",
+    "subtitleSimple": "Elige dónde quieres trabajar en esta instancia.",
+    "workflowsSectionLabel": "Flujos de trabajo de administración",
+    "adminAssistant": "Asistente de administración",
+    "adminAssistantDesc": "Usa el chat de administración para obtener ayuda con la configuración y la revisión de cambios.",
+    "guidedSetup": "Configuración guiada",
+    "guidedSetupDesc": "Recorre la configuración, los documentos, los recursos y las pruebas.",
+    "guides": "Guías de administración",
+    "guidesDesc": "Comprende qué configuran los administradores y dónde.",
+    "testUserSession": "Sesión de usuario de prueba",
+    "testUserSessionDesc": "Chatea como un usuario simulado y revisa los registros beta guardados.",
+    "aiSetupTitle": "Configura con el asistente de IA",
+    "aiSetupBody": "Deja que el asistente recopile lo básico para nombrar y configurar tu instancia en un solo paso. Puedes cambiar a la configuración manual en cualquier momento.",
+    "aiSetupAction": "Iniciar configuración guiada",
+    "readinessTitle": "Preparación del despliegue",
+    "readinessDesc": "Revisa la preparación antes de invitar usuarios. Verifica bloqueantes, advertencias, cambios que requieren reinicio y la postura de recuperación en un solo lugar.",
+    "readinessPrimary": "Abrir revisión de preparación",
+    "firstRunPathTitle": "Ruta de primer arranque del administrador",
+    "firstRunStep1Title": "Configura la base de la instancia",
+    "firstRunStep1Body": "Define la marca, el idioma, el tema, los campos de usuario y la configuración del agente antes de la revisión.",
+    "firstRunStep1Action": "Abrir configuración de la instancia",
+    "firstRunStep2Title": "Revisa la preparación del despliegue",
+    "firstRunStep2Body": "Verifica bloqueantes, advertencias, cambios que requieren reinicio y la postura de recuperación antes de invitar usuarios.",
+    "firstRunStep2Action": "Abrir asistente de despliegue",
+    "firstRunStep3Title": "Usa los diagnósticos solo al investigar",
+    "firstRunStep3Body": "Mantén las pruebas de humo y los diagnósticos accesibles sin convertirlos en la ruta principal del producto.",
+    "firstRunStep3Action": "Abrir diagnósticos",
+    "instanceDescSimple": "Nombre, identidad de correo público, tema y controles de marca.",
+    "aiDescSimple": "Instrucciones, comportamiento del modelo y valores predeterminados de documentos.",
+    "deploymentDescSimple": "Configuración de ejecución, estado y detalles de preparación.",
+    "resources": "Directorio de recursos",
+    "resourcesDesc": "Selecciona abogados, ONG y recursos de referencia confiables",
+    "resourcesDescSimple": "Gestiona manualmente recursos de referencia confiables.",
+    "testFeedback": "Pruebas y comentarios",
+    "testFeedbackDesc": "Chatea como un usuario de prueba y califica respuestas para afinar tu configuración",
+    "diagnosticsSectionLabel": "Diagnósticos",
+    "operationsSectionLabel": "Operaciones",
+    "testDashboard": "Diagnósticos",
+    "testDashboardDesc": "Ejecuta pruebas de humo de desarrollo e inspecciona los módulos de diagnóstico",
+    "testDashboardDescSimple": "Ejecuta pruebas de humo al investigar un problema.",
+    "iaChecklistTitle": "Lista de verificación de revisión de IA del administrador",
+    "iaChecklistBody": "Mantén distintas la configuración de despliegue, la configuración de la instancia, la configuración del agente, la preparación del ciclo de vida, la preparación del despliegue y las superficies de diagnóstico durante la revisión humana.",
+    "humanReviewTitle": "Transferencia a revisión humana",
+    "humanReviewStatus": "Se requiere soporte de despliegue personalizado",
+    "humanReviewBody": "La aplicación del entorno de ejecución sigue siendo explícita: exporta los artefactos, aplícalos con soporte del operador, reinicia los servicios afectados y verifica la evidencia de preparación.",
+    "humanReviewAction": "Revisar preparación del despliegue",
+    "settingsSectionLabel": "Configuración",
+    "userManager": "Gestor de usuarios",
+    "userManagerDesc": "Revisa usuarios, verifica el estado, exporta listas de usuarios y aprueba el acceso."
   },
   "adminAI": {
     "title": "Configuración de IA",
@@ -769,6 +1185,8 @@
     "sessionDefaults": "Funciones por Defecto",
     "sessionDefaultsDesc": "Establece qué funciones están activas por defecto",
     "sessionDefaultsHint": "Controla qué capacidades de IA están habilitadas cuando los usuarios inician una nueva sesión de chat.",
+    "knowledgeSearchDisabledLabel": "La Búsqueda de conocimiento está desactivada",
+    "knowledgeSearchDisabledMessage": "Los documentos predeterminados activos no se usarán hasta que Fuentes de conocimiento se configure en los documentos predeterminados seleccionados o en todos los documentos disponibles.",
     "documentDefaults": "Acceso a Documentos",
     "documentDefaultsDesc": "Controla qué documentos puede referenciar la IA",
     "documentDefaultsHint": "Los documentos marcados como \"Disponible\" pueden ser seleccionados por los usuarios. Los marcados como \"Activo por defecto\" se incluyen automáticamente en nuevas conversaciones.",
@@ -839,7 +1257,12 @@
       "userInfoPlaceholder": "{user_info} — reemplazado con los campos del perfil del usuario actual, si están disponibles"
     },
     "revert": "Revertir",
-    "revertToGlobal": "Revertir a global"
+    "revertToGlobal": "Revertir a global",
+    "assembledPromptOutput": "Salida de las instrucciones ensambladas",
+    "loadErrorLabel": "Error al cargar la Configuración del agente",
+    "previewErrorLabel": "Error de previsualización de la Configuración del agente",
+    "documentToggleErrorLabel": "Error al alternar documento en la Configuración del agente",
+    "documentDefaultsHintV2": "Los documentos marcados como \"Disponible\" pueden usarse en la Búsqueda de conocimiento. Los documentos marcados como \"Activo por defecto\" se incluyen cuando el origen de conocimiento está configurado en documentos predeterminados seleccionados."
   },
   "adminDeployment": {
     "title": "Configuración de Despliegue",
@@ -942,7 +1365,9 @@
       "unknown": "Desconocido",
       "usersMigrated": "Usuarios migrados",
       "usersToMigrate": "Usuarios a migrar",
-      "warning": "Esta es una operación avanzada. Una migración incorrecta puede bloquearte el acceso a datos cifrados. Continúa solo si entiendes las implicaciones."
+      "warning": "Esta es una operación avanzada. Una migración incorrecta puede bloquearte el acceso a datos cifrados. Continúa solo si entiendes las implicaciones.",
+      "inputWarningLabel": "Advertencia de migración de claves de administrador",
+      "destructiveWarningLabel": "Advertencia destructiva de migración de claves de administrador"
     },
     "revealFailed": "Error al revelar el valor. Verifica la conexión de tu extensión Nostr.",
     "searchHelp": {
@@ -973,7 +1398,8 @@
       "overviewDesc": "Los ajustes de seguridad controlan la autenticación, el manejo de sesiones y los atajos de desarrollo. Los valores predeterminados están configurados para desarrollo local.",
       "overviewNote": "En producción, asegúrate de que las banderas de simulación estén desactivadas y que FRONTEND_URL coincida con tu dominio real.",
       "overviewTitle": "Resumen de seguridad",
-      "overviewWhen": "Revisa estos ajustes antes de desplegar en un servidor público."
+      "overviewWhen": "Revisa estos ajustes antes de desplegar en un servidor público.",
+      "devNote": "Usa MOCK_EMAIL para pruebas de correo local; las sesiones de usuario y de administrador aún requieren el flujo de verificación normal."
     },
     "sslHelp": {
       "ariaLabel": "Ayuda de configuración de SSL y HTTPS",
@@ -1069,7 +1495,179 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Carpeta de subidas",
       "vector_database_eb5526": "Base de datos vectorial"
-    }
+    },
+    "exportSageRuntimeEnv": "Exportar entorno de Sage",
+    "readiness": {
+      "title": "Preparación del despliegue",
+      "statusTitle": "Preparación del despliegue: {{status}}",
+      "description": "Revisa la evidencia necesaria antes de que este Despliegue de instancia única esté listo para la operación normal.",
+      "openWizard": "Abrir revisión de preparación",
+      "blockerCount": "{{count}} bloqueantes",
+      "warningCount": "{{count}} advertencias",
+      "readyCount": "{{count}} listos",
+      "empty": "Aún no hay verificaciones de preparación del despliegue disponibles.",
+      "conversationBlocking": "Bloquea las conversaciones normales",
+      "blocker": "Bloqueante",
+      "warning": "Advertencia",
+      "ready": "Listo",
+      "reviewInferenceVerification": "Revisar verificación de inferencia",
+      "reviewDataLifecycleStatus": "Revisar estado del ciclo de vida de los datos",
+      "reviewDeploymentValidation": "Revisar configuración del despliegue",
+      "reviewRestartRequired": "Revisar reinicio requerido",
+      "reviewOperationalReadiness": "Revisar preparación operativa",
+      "reviewServiceHealth": "Revisar estado del servicio",
+      "reviewRuntimeEnv": "Revisar exportación del entorno de ejecución"
+    },
+    "wizard": {
+      "title": "Asistente de despliegue",
+      "step": "Paso {{current}} de {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Preparación operativa",
+      "description": "Revisa las pruebas de respaldo, restauración, monitoreo y recuperación antes de la operación normal."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY: tu clave de API de Tinfoil para el proxy local.",
+      "apiKeyLabel": "Clave de API de Tinfoil",
+      "ariaLabel": "Ayuda de configuración del entorno de ejecución de Sage",
+      "exampleConfig": "Configuración de ejemplo",
+      "goToPage": "Ir a la página",
+      "sageExtra": "Establece LLM_API_KEY con tu clave de Tinfoil de {{tinfoilSignupUrl}}. El stack la asigna a Sage y al proxy local de Tinfoil.",
+      "sageHint": "Este prototipo enruta el tráfico del Agent Runtime a través de Sage y Tinfoil. LLM_API_KEY es la clave canónica del Model Provider.",
+      "modelField": "TINFOIL_MODEL: identificador del modelo de Tinfoil que Sage debe usar (por ejemplo: gemma4-31b).",
+      "overviewDesc": "Este prototipo usa Sage como el Agent Runtime público y Tinfoil como el transporte del Model Provider. Configura el Model Provider a través de la configuración de despliegue LLM_*; el stack los asigna al entorno de ejecución de Tinfoil de Sage.",
+      "overviewTitle": "Resumen del entorno de ejecución de Sage",
+      "providerField": "LLM_PROVIDER: configúralo como \"sage\" para este prototipo."
+    },
+    "inferenceVerification": {
+      "current": "Actual",
+      "missing": "Faltante",
+      "expired": "Vencida",
+      "failed": "Fallida",
+      "success": "Correcta",
+      "statusLoadFailed": "No se pudo cargar el estado de la verificación de inferencia",
+      "historyLoadFailed": "No se pudo cargar el historial de verificación de inferencia",
+      "loadFailed": "No se pudo cargar la verificación de inferencia",
+      "manualFailed": "La verificación manual falló",
+      "manualSucceeded": "La verificación manual se realizó correctamente",
+      "detailLoadFailed": "No se pudo cargar el detalle de la atestación",
+      "ariaLabel": "Verificación de inferencia",
+      "title": "Verificación de inferencia",
+      "summary": "Evidencia solo para administradores de que la inferencia protegida se ejecuta en el proveedor de modelos esperado.",
+      "verifyNow": "Verificar ahora",
+      "status": "Estado",
+      "checkedAt": "Verificado",
+      "expiresAt": "Vence",
+      "expectedClaims": "Afirmaciones esperadas",
+      "expectedClaimsValue": "Afirmaciones esperadas: {{fingerprint}}",
+      "providerClaims": "Afirmaciones del proveedor",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "endpoint": "Endpoint",
+      "history": "Historial de verificación",
+      "emptyHistory": "Aún no hay registros de verificación.",
+      "recordTitle": "Registro n.º {{id}}",
+      "inspectAttestation": "Inspeccionar atestación",
+      "fullAttestation": "Material completo de atestación"
+    },
+    "lifecycle": {
+      "notStarted": "No iniciado",
+      "notConfigured": "No configurado",
+      "plaintextByOperatorChoice": "Texto sin cifrar por elección del operador",
+      "allTombstones": "Todas",
+      "allTombstonesLabel": "Todas las lápidas",
+      "incompleteTombstonesFilter": "Incompletas",
+      "incompleteTombstonesLabel": "Lápidas incompletas",
+      "completedTombstonesFilter": "Completadas",
+      "completedTombstonesLabel": "Lápidas completadas",
+      "title": "Estado del ciclo de vida de los datos",
+      "description": "Cobertura actual de privacidad controlada por el operador en los datos de la instancia.",
+      "scopeExcludes": "Excluye: {{excludes}}",
+      "secureEraseStatus": "Borrado seguro: {{status}}",
+      "readinessStatus": "Preparación del ciclo de vida: {{status}}",
+      "readinessNonBlocking": "Las Conversaciones de usuario no se bloquean por advertencias de Preparación del ciclo de vida en la v1.",
+      "readinessStaleReason": "Motivo: {{reason}}",
+      "contentEncryptionKey": "Clave de cifrado de contenido: {{status}}",
+      "artifactEncryptionPosture": "Postura de cifrado de artefactos: {{status}}",
+      "artifactPostureLabel": "Postura de cifrado de artefactos",
+      "artifactPostureRequired": "Requerido",
+      "artifactPostureDisabled": "Deshabilitado",
+      "retentionSchedulerStatus": "Programador de retención: {{status}}",
+      "schedulerObservation": "Observación: {{status}}",
+      "schedulerEnabledClasses": "Clases habilitadas del programador: {{classes}}",
+      "schedulerLastRunStatus": "Estado de la última ejecución: {{status}}",
+      "schedulerLastRun": "Última ejecución: {{trigger}} por {{actor}}",
+      "previewRetention": "Previsualizar retención",
+      "runScheduledRetention": "Ejecutar retención programada",
+      "previewRetentionResult": "Previsualización: {{conversations}} conversaciones, {{artifacts}} artefactos de documento, {{skipped}} clases omitidas.",
+      "scheduledRetentionResult": "Ejecución programada: {{status}} con {{retries}} reintentos de lápida.",
+      "scheduledRetentionStatus": "Clases programadas: {{classes}}",
+      "auditCoverageStatus": "Cobertura de auditoría: {{audited}} auditadas, {{exceptions}} excepciones, {{missing}} faltantes.",
+      "owner": "Propietario: {{owner}}",
+      "deletion": "Eliminación: {{status}}",
+      "retention": "Retención: {{status}}",
+      "audit": "Auditoría: {{status}}",
+      "confidentiality": "Confidencialidad: {{status}}",
+      "incompleteTombstones": "Lápidas incompletas: {{count}}",
+      "completedTombstones": "Lápidas completadas: {{count}}",
+      "retentionEnabled": "Habilitado",
+      "retentionWindow": "Ventana",
+      "retentionDays": "días",
+      "scheduledEnforcement": "Programado",
+      "saveRetentionPolicy": "Guardar política",
+      "empty": "El estado del ciclo de vida no está disponible.",
+      "retentionPolicySaveFailed": "No se pudo guardar la política de retención.",
+      "retentionPreviewFailed": "No se pudo previsualizar la retención.",
+      "scheduledRetentionFailed": "No se pudo ejecutar la retención programada.",
+      "artifactPostureFailed": "No se pudo actualizar la postura de cifrado de artefactos.",
+      "unsupportedSurfacesTitle": "Superficies de despliegue no admitidas",
+      "unsupportedSurfacesDescription": "Estos rastros operativos se divulgan aquí, pero permanecen fuera del control del ciclo de vida del producto.",
+      "unsupportedSurfaceAckFailed": "No se pudo actualizar la confirmación.",
+      "acknowledgedSurface": "Confirmado",
+      "acknowledgeSurface": "Confirmar",
+      "tombstonesTitle": "Lápidas de eliminación",
+      "tombstonesDescription": "Reintenta eliminaciones incompletas del ciclo de vida sin exponer el contenido eliminado.",
+      "tombstoneStatusFilter": "Filtro de estado de lápidas",
+      "tombstoneRetryFailed": "El reintento falló.",
+      "tombstonesFetchFailed": "No se pudieron cargar las lápidas de eliminación.",
+      "tombstoneClass": "Clase: {{className}}",
+      "tombstoneSource": "Origen: {{source}}",
+      "tombstoneRetries": "Reintentos: {{count}}",
+      "tombstoneUpdated": "Actualizado: {{updated}}",
+      "retryTombstoneLabel": "Reintentar lápida de eliminación {{id}}",
+      "retry": "Reintentar",
+      "tombstonesEmpty": "No hay lápidas de eliminación esperando reintento."
+    },
+    "runtimeEnv": {
+      "unknown": "Desconocido",
+      "title": "Alineación de la configuración de ejecución",
+      "description": "Compara la configuración de despliegue deseada, el entorno de Sage generado y el estado de ejecución observable.",
+      "desired": "Deseado",
+      "configuredKeys": "{{count}} de {{total}} claves configuradas",
+      "generated": "Generado",
+      "exportedAt": "Exportado {{time}}",
+      "notExported": "No se registró ninguna exportación del entorno de Sage",
+      "running": "En ejecución",
+      "runningUnknown": "El estado de ejecución aún no se inspecciona directamente.",
+      "coreBackend": "Core Backend",
+      "coreBackendHint": "Alineación del entorno del proceso del backend",
+      "coreDesired": "Core deseado",
+      "coreConfiguredKeys": "Core backend: {{count}} de {{total}} claves configuradas",
+      "coreGenerated": "Core generado",
+      "coreNotExported": "No se registró ninguna exportación del entorno de core backend",
+      "coreRunning": "Core en ejecución",
+      "coreRunningUnknown": "El estado de ejecución de core backend aún no se inspecciona directamente.",
+      "coreExportedTitle": "Entorno de core-backend exportado",
+      "coreSensitiveArtifact": "Trata core-backend.env como material de despliegue sensible.",
+      "coreExportDoesNotApply": "Exportar el artefacto no cambia el proceso del backend en ejecución hasta que un operador lo aplique y reinicie core-backend.",
+      "exportedTitle": "Entorno de Sage exportado",
+      "sensitiveArtifact": "Trata sage.env como material de despliegue sensible.",
+      "exportDoesNotApply": "Exportar el artefacto no cambia el proceso de Sage en ejecución hasta que un operador lo aplique y reinicie Sage."
+    },
+    "categorySettingsAria": "Configuración de {{category}}",
+    "exportCoreBackendRuntimeEnv": "Exportar entorno de core-backend",
+    "restartCurrent": "No se requiere reinicio",
+    "restartCurrentDesc": "No ha cambiado ninguna configuración de despliegue que requiera reinicio desde el inicio del servicio."
   },
   "upload": {
     "invalidFileType": "Tipo de archivo inválido. Permitidos: {{extensions}}",
@@ -1091,7 +1689,8 @@
       "processing": "Procesando",
       "chunked": "Fragmentado",
       "complete": "Completo",
-      "failed": "Fallido"
+      "failed": "Fallido",
+      "completedWithErrors": "Completado con errores"
     },
     "chunks": "{{processed}}/{{total}} fragmentos",
     "deleteDocument": "Eliminar documento",
@@ -1140,7 +1739,20 @@
     "serverBusy": "Servidor ocupado",
     "tryRefresh": "Intentar de nuevo",
     "uploadedSuccess": "Subido con éxito — procesamiento iniciado",
-    "uploadingStatus": "Subiendo al servidor..."
+    "uploadingStatus": "Subiendo al servidor...",
+    "documentDeletionError": "Error al eliminar el documento",
+    "navigationWarning": "Tu documento todavía se está transfiriendo. Sal solo después de que haya comenzado el procesamiento, o la subida podría no guardarse.",
+    "duplicateInBatch": "Nombre de documento duplicado en este lote",
+    "documentsSelected": "{{count}} documentos",
+    "queueSummary": "{{valid}} listos, {{rejected}} omitidos",
+    "skipped": "Omitido",
+    "uploadedPartialSuccess": "{{count}} en cola, {{rejected}} omitidos",
+    "chooseFiles": "Elegir archivos",
+    "chooseFolder": "Elegir carpeta",
+    "uploadDocuments": "Subir documentos",
+    "replacingDocument": "Reemplazando {{filename}}",
+    "recentDocumentsShowing": "Mostrando {{shown}} de {{total}} documentos",
+    "showMore": "Mostrar más"
   },
   "configCategories": {
     "embedding": {
@@ -1182,6 +1794,11 @@
       "description": "Configurar certificados SSL y ajustes HTTPS",
       "hint": "Configura los ajustes de TLS y proxy al servir a través de HTTPS. Los valores predeterminados son seguros para desarrollo local; habilita HTTPS solo después de que los certificados estén montados.",
       "label": "SSL y Seguridad"
+    },
+    "llm": {
+      "label": "Sage Agent Runtime",
+      "description": "Configura la inferencia de Sage + Tinfoil",
+      "hint": "Este prototipo enruta el tráfico del Agent Runtime a través de Sage y usa Tinfoil como el transporte del Model Provider. Los cambios requieren un reinicio."
     }
   },
   "promptSections": {
@@ -1208,6 +1825,12 @@
       "description": "Cómo la IA estructura sus respuestas",
       "hint": "Controla preferencias de formato como si usar viñetas, encabezados o párrafos conversacionales. Esto afecta cómo se presentan visualmente las respuestas.",
       "placeholder": "Usa viñetas para listas, encabezados para secciones..."
+    },
+    "prompt_system": {
+      "label": "Instrucción del sistema",
+      "description": "Identidad principal e instrucciones de operación de la IA",
+      "hint": "Usa esto para la identidad, la misión y los límites de alto nivel del asistente que deben aplicarse antes que el tono, las reglas, las herramientas o el contexto de documentos. Los cambios afectan a las conversaciones nuevas.",
+      "placeholder": "Eres Sage, un asistente privado para esta instancia..."
     }
   },
   "parameters": {
@@ -1220,6 +1843,11 @@
       "label": "Profundidad de Conocimiento",
       "description": "Cuántas secciones de documentos referenciar",
       "hint": "Al responder preguntas, la IA busca en tus documentos subidos y trae secciones relevantes. Números más altos significan más contexto pero respuestas más lentas. Números más bajos son más rápidos pero pueden perder información relevante. Por defecto: 5"
+    },
+    "max_tokens": {
+      "label": "Máximo de tokens",
+      "description": "Longitud máxima de cada respuesta de la IA",
+      "hint": "Limita cuánto puede extenderse una respuesta. Los valores más bajos mantienen las respuestas breves y reducen el costo; los valores más altos permiten explicaciones más largas. Predeterminado: 2048"
     }
   },
   "defaults": {
@@ -1227,6 +1855,21 @@
       "label": "Búsqueda Web",
       "description": "Permitir que la IA busque en internet",
       "hint": "Cuando está habilitado, la IA puede buscar en la web información actual que no está en tus documentos. Deshabilita esto si quieres que las respuestas solo provengan de tu base de conocimientos."
+    },
+    "knowledgeSource": {
+      "none": "Ninguno",
+      "selected": "Documentos predeterminados seleccionados",
+      "all": "Todos los documentos disponibles"
+    },
+    "knowledge_source_default": {
+      "label": "Fuentes de conocimiento",
+      "description": "Elige qué fuentes de conocimiento subidas están activas en las Conversaciones de usuario",
+      "hint": "Usa \"none\" para no usar conocimiento subido de forma predeterminada, \"selected\" para los documentos marcados como Activos de forma predeterminada, o \"all\" para todos los documentos disponibles."
+    },
+    "user_default_tool_ids": {
+      "label": "Conjuntos de herramientas del usuario",
+      "description": "Conjuntos de herramientas activos de forma predeterminada en las Conversaciones de usuario",
+      "hint": "Arreglo JSON que usa cualquiera de \"curated-resources\", \"knowledge-search\" y \"web-search\". La Búsqueda de conocimiento también se controla mediante las Fuentes de conocimiento."
     }
   },
   "errors": {
@@ -1439,6 +2082,51 @@
       "description": "URL base de devolución de llamada de webhook",
       "hint": "URL base utilizada para construir devoluciones de llamada de webhook. Ejemplo: https://api.example.com/webhooks. Predeterminado: http://localhost:8000.",
       "label": "URL de Webhook"
+    },
+    "LLM_PROVIDER": {
+      "label": "Model Provider",
+      "description": "Etiqueta del Model Provider del lado de Python",
+      "hint": "Usa \"sage\" para este prototipo. Esta configuración de despliegue admite diagnósticos del lado de Python y metadatos de verificación."
+    },
+    "LLM_MODEL": {
+      "label": "Nombre del modelo",
+      "description": "Nombre/identificador del modelo",
+      "hint": "El identificador del modelo de Tinfoil que Sage debe usar (p. ej., \"gemma4-31b\")."
+    },
+    "LLM_API_URL": {
+      "label": "Endpoint de la API",
+      "description": "URL base de la API del proveedor del modelo",
+      "hint": "URL base del proxy de Tinfoil. Predeterminada: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "Clave de API",
+      "description": "Clave de API de Tinfoil (secreto)",
+      "hint": "Déjalo vacío para mantener el secreto actual de la configuración del despliegue."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Límite de tasa de chat",
+      "description": "Solicitudes de chat por minuto",
+      "hint": "Máximo de solicitudes /llm/chat por minuto por usuario estable, administrador, token o IP del cliente. Requiere reinicio. Predeterminado: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Límite de tasa de consultas de recuperación",
+      "description": "Solicitudes de consulta de recuperación por minuto",
+      "hint": "Máximo de solicitudes /query por minuto por usuario estable, token o IP del cliente. Requiere reinicio. Predeterminado: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Límite de tasa de subidas",
+      "description": "Solicitudes de subida de documentos por minuto",
+      "hint": "Máximo de solicitudes de subida de documentos por minuto por administrador estable, token o IP del cliente. Requiere reinicio. Predeterminado: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Límite de tasa de búsqueda vectorial",
+      "description": "Solicitudes de búsqueda vectorial por minuto",
+      "hint": "Máximo de solicitudes de búsqueda vectorial por minuto por usuario estable, token o IP del cliente. Requiere reinicio. Predeterminado: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Límite de tasa de exportación de configuración",
+      "description": "Exportaciones de configuración de despliegue por hora",
+      "hint": "Máximo de exportaciones .env por hora por sesión de administrador o IP del cliente. Requiere reinicio. Predeterminado: 5."
     }
   },
   "instanceInitiation": {
@@ -1475,7 +2163,11 @@
       "title": "Listo para conectar"
     },
     "subtitle": "Configura tu base de conocimientos privada en unos pocos pasos.",
-    "title": "Bienvenido a Enclave"
+    "title": "Bienvenido a Enclave",
+    "keySafety": {
+      "title": "Usa una clave de Nostr específica de la instancia",
+      "body": "No uses tu clave personal de Nostr. Crea o elige una clave de administración dedicada para esta instancia a fin de reducir el riesgo de vigilancia y mantener separado el acceso operativo."
+    }
   },
   "reachout": {
     "errors": {
@@ -1483,7 +2175,8 @@
       "notConfigured": "Esta característica no está configurada.",
       "rateLimited": "Demasiados mensajes. Por favor, inténtalo de nuevo más tarde.",
       "required": "El mensaje es obligatorio.",
-      "unavailable": "Contacto no disponible."
+      "unavailable": "Contacto no disponible.",
+      "formErrorLabel": "Error en el formulario de contacto"
     },
     "form": {
       "messageLabel": "Mensaje",
@@ -1491,7 +2184,8 @@
       "send": "Enviar"
     },
     "status": {
-      "success": "Gracias. Tu mensaje fue enviado."
+      "success": "Gracias. Tu mensaje fue enviado.",
+      "successLabel": "Contacto exitoso"
     },
     "mode": {
       "feedback": {
@@ -1740,7 +2434,266 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Verifique un token de enlace mágico y obtenga información de la sesión (sesión basada en cookies).",
       "verify_magic_link_token_183cf5": "Verificar token de enlace mágico",
       "view_all_users_manage_approval_status_and_delete_03feec": "Ver todos los usuarios, administrar el estado de aprobación y eliminar usuarios.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Ver y actualizar la configuración de la instancia."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Ver y actualizar la configuración de la instancia.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Prueba la conectividad con la ruta del proveedor del modelo configurada."
+    },
+    "labels": {
+      "themePreference": "Preferencia de tema",
+      "endpointGuidance": "Guía de endpoints",
+      "healthResponseOutput": "Salida de la respuesta de estado",
+      "jobs": "Trabajos",
+      "chunks": "Fragmentos",
+      "rateLimitTestType": "Tipo de prueba de límite de tasa",
+      "successfulRequests": "Solicitudes exitosas",
+      "successful": "Exitosas",
+      "blockedRequests": "Solicitudes bloqueadas"
+    }
+  },
+  "language": {
+    "english": "Inglés",
+    "spanish": "Español",
+    "french": "Francés",
+    "german": "Alemán",
+    "portuguese": "Portugués"
+  },
+  "adminGuidedSetup": {
+    "title": "Configura tu instancia",
+    "subtitle": "Tu asistente recopilará lo básico en una sola pasada.",
+    "manual": "Configurar manualmente en su lugar",
+    "finish": "Finalizar y comenzar las pruebas",
+    "comingSoon": "Esta fase estará disponible pronto y se está desarrollando por separado.",
+    "steps": {
+      "initialize": {
+        "label": "Inicializar",
+        "title": "Inicializar",
+        "subtitle": "Cubramos lo básico de tu espacio para que tu agente parta de una buena base."
+      },
+      "docs": {
+        "label": "Subir documentos",
+        "title": "Sube tu guía de campo",
+        "subtitle": "Agrega el material de origen a partir del cual responde tu agente: libros, guías y documentos de referencia."
+      },
+      "resources": {
+        "label": "Recursos curados",
+        "title": "Recursos curados",
+        "subtitle": "Agrega recursos confiables del mundo real —contactos clave, abogados, apoyo educativo y de salud mental— a los que el agente pueda derivar a las personas."
+      },
+      "test": {
+        "label": "Probar como usuario",
+        "title": "Prueba como usuario",
+        "subtitle": "Disponible pronto — prueba el asistente como uno de tus tipos de usuario y califica las respuestas."
+      },
+      "feedback": {
+        "label": "Comentarios",
+        "title": "Ciclo de retroalimentación",
+        "subtitle": "Disponible pronto — revisa la calidad de las respuestas e itera sobre tu configuración."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Pruebas y comentarios",
+    "subtitle": "Ejecuta una sesión de usuario de prueba y luego revisa los registros cifrados de la beta y los comentarios de las conversaciones guardadas.",
+    "tabs": {
+      "test": "Probar como usuario",
+      "feedback": "Comentarios"
+    },
+    "test": {
+      "pickPersona": "Elige un perfil para probar",
+      "pickPersonaBody": "Crea un usuario de prueba para uno de tus tipos de usuario y luego chatea como él. La sesión se guarda como una prueba cifrada que puedes calificar en Comentarios.",
+      "userType": "Tipo de usuario",
+      "genericUser": "Usuario genérico (sin tipo)",
+      "start": "Iniciar sesión",
+      "admin": "Administrador",
+      "testUserId": "Usuario de prueba",
+      "endSave": "Finalizar y guardar prueba",
+      "previewNotice": "Modo de vista previa: la suplantación real aún no está habilitada, por lo que este chat se ejecuta con tu sesión de administrador. La transcripción de todos modos se guarda para revisión.",
+      "chatEmpty": "Envía un mensaje como este usuario para comenzar la prueba.",
+      "inputPlaceholder": "Escribe al asistente como este usuario…",
+      "saved": "Prueba guardada (cifrada). Revísala en Comentarios.",
+      "testingAs": "Probando como {{persona}}"
+    },
+    "feedback": {
+      "trials": "Registros beta",
+      "untitled": "Conversación sin título",
+      "turns": "turnos",
+      "turn": "Turno",
+      "empty": "Aún no hay registros beta guardados. Ejecuta una sesión de usuario de prueba o espera conversaciones de usuarios.",
+      "selectPrompt": "Selecciona un registro beta para revisar su transcripción y calificar cada turno.",
+      "noNip04": "Conecta una extensión de Nostr (Alby, nos2x) para descifrar las transcripciones: están cifradas con tu clave de administrador.",
+      "sourceUser": "Conversación de usuario",
+      "sourceTest": "Sesión de usuario de prueba",
+      "thumbUp": "Buena respuesta",
+      "thumbDown": "Necesita mejorar",
+      "notePlaceholder": "Nota opcional (se guarda cifrada)…",
+      "exportNotDecrypted": "Abre y descifra la transcripción antes de exportarla.",
+      "exportFeedbackNotDecrypted": "No se pudieron descifrar algunos comentarios. Vuelve a abrir la transcripción y aprueba cada solicitud de descifrado antes de exportar."
+    }
+  },
+  "adminResources": {
+    "title": "Directorio de recursos",
+    "subtitle": "Mantén manualmente los recursos de referencia verificados que el asistente puede mencionar cuando una conversación se intensifica. Solo se muestran a los usuarios finales los recursos \"listos\".",
+    "add": "Agregar recurso",
+    "addTitle": "Agregar recurso",
+    "editTitle": "Editar recurso",
+    "empty": "Aún no hay recursos. Agrega uno manualmente cuando tengas una referencia verificada.",
+    "verified": "verificado",
+    "missing": "Falta para publicar",
+    "name": "Nombre",
+    "type": "Tipo de recurso",
+    "languages": "Idiomas (códigos ISO separados por comas)",
+    "description": "Descripción",
+    "descriptionHint": "Lo que el asistente debe decirle a la persona sobre este recurso.",
+    "scopeLevel": "Nivel de cobertura",
+    "scopeCode": "Código de cobertura",
+    "scopeCodeHint": "País: código ISO (NI). Subregión/región: código UN M49 (013 = Centroamérica). Global: déjalo en blanco.",
+    "helpTypes": "Tipos de ayuda",
+    "contact": "Métodos de contacto",
+    "vettedBy": "Verificado por",
+    "sourceNote": "Nota de origen",
+    "markVerified": "Marcar como verificado (aparece primero)",
+    "archive": "Archivar (ocultar a los usuarios finales)",
+    "deleteTitle": "¿Eliminar recurso?",
+    "deleteBody": "Esto elimina la entrada del directorio de {{name}}",
+    "coverage": "Cobertura",
+    "coverageHint": "Elige un nivel de cobertura y luego busca por nombre o código.",
+    "coverageCodePlaceholder": "Buscar por nombre o código…",
+    "coverageLevelFirst": "Elige primero un nivel de cobertura",
+    "coverageClear": "Borrar código de cobertura",
+    "regionDirectoryUnavailable": "El directorio de regiones no está disponible. Introduce un código manualmente.",
+    "level": {
+      "country": "País",
+      "subregion": "Subregión",
+      "region": "Región",
+      "global": "Global"
+    }
+  },
+  "adminUserManager": {
+    "backToAdmin": "Volver al panel de administración",
+    "eyebrow": "Operaciones de administración",
+    "title": "Gestor de usuarios",
+    "subtitle": "Revisa a los usuarios, comprende su estado y aprueba el acceso desde un panel sencillo.",
+    "unlockDetails": "Desbloquear detalles",
+    "refreshRoster": "Actualizar lista de usuarios",
+    "exportVisible": "Exportar lista visible",
+    "rosterTitle": "Lista de usuarios",
+    "rosterShown": "{{shown}} mostrados de {{total}} en total.",
+    "tableLabel": "Lista de usuarios",
+    "tableRowsLabel": "Filas de la lista de usuarios",
+    "loadingLabel": "Cargando lista de usuarios",
+    "loadingUsers": "Cargando usuarios...",
+    "loadRetry": "No se pudo cargar la lista de usuarios. Usa Actualizar lista de usuarios para intentarlo de nuevo.",
+    "emptyNoUsers": "Todavía no hay usuarios. Los nuevos usuarios autenticados aparecerán aquí.",
+    "emptyFiltered": "Ningún usuario coincide con estos filtros.",
+    "noUserType": "Sin tipo de usuario",
+    "unknown": "Desconocido",
+    "userFallback": "Usuario n.º {{id}}",
+    "approvalSuccess": "{{name}} aprobado.",
+    "exportSuccess": "Hoja de cálculo de la lista de usuarios descargada.",
+    "metrics": {
+      "total": "Usuarios totales",
+      "totalDetail": "en la lista de usuarios",
+      "pendingApproval": "Aprobación pendiente",
+      "pendingDetail": "{{count}} pendientes",
+      "approved": "Aprobados",
+      "approvedDetail": "pueden entrar al chat",
+      "incompleteProfiles": "Perfiles incompletos",
+      "incompleteDetail": "necesitan respuestas obligatorias"
+    },
+    "callouts": {
+      "loadFailed": "Error al cargar la lista de usuarios",
+      "approvalUpdated": "Aprobación de usuario actualizada",
+      "approvalFailed": "Error al actualizar la aprobación del usuario",
+      "exportReady": "Exportación de la lista de usuarios lista",
+      "exportFailed": "Error al exportar la lista de usuarios"
+    },
+    "filters": {
+      "search": "Buscar usuarios",
+      "searchPlaceholder": "Nombre, correo, clave pública o n.º de ID",
+      "approvalStatus": "Estado de aprobación",
+      "allApprovalStates": "Todos los estados de aprobación",
+      "pendingApproval": "Aprobación pendiente",
+      "approved": "Aprobados",
+      "allUserTypes": "Todos los tipos de usuario"
+    },
+    "columns": {
+      "user": "Usuario",
+      "approval": "Aprobación",
+      "userType": "Tipo de usuario",
+      "userProfile": "Perfil de usuario",
+      "joined": "Se unió",
+      "action": "Acción"
+    },
+    "status": {
+      "approved": "Aprobado",
+      "pending": "Pendiente"
+    },
+    "actions": {
+      "approve": "Aprobar",
+      "approveUser": "Aprobar a {{name}}",
+      "viewUserDetails": "Ver detalles de {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Sin preguntas",
+      "noQuestionsDetail": "No aplica ninguna pregunta de incorporación.",
+      "needsProfile": "Necesita perfil",
+      "missingRequiredOne": "Falta 1 respuesta obligatoria",
+      "missingRequiredMany": "Faltan {{count}} respuestas obligatorias",
+      "noProfileYet": "Todavía no hay perfil",
+      "noAnswersSaved": "No hay respuestas guardadas.",
+      "ready": "Perfil listo",
+      "answersSavedOne": "1 respuesta guardada",
+      "answersSavedMany": "{{count}} respuestas guardadas"
+    },
+    "identity": {
+      "decrypting": "Descifrando nombre y correo electrónico...",
+      "failed": "No se pudieron desbloquear los datos cifrados.",
+      "unavailable": "Los datos cifrados necesitan un firmante del navegador.",
+      "locked": "Los datos cifrados están bloqueados."
+    },
+    "errors": {
+      "loadUsers": "No se pudieron cargar los usuarios.",
+      "loadUserTypes": "No se pudieron cargar los tipos de usuario.",
+      "loadQuestions": "No se pudieron cargar las preguntas de incorporación.",
+      "approvalUpdate": "No se pudo actualizar la aprobación del usuario.",
+      "exportAudit": "No se pudo auditar la exportación de la lista de usuarios.",
+      "exportRoster": "No se pudo exportar la lista de usuarios."
+    },
+    "detail": {
+      "booleanYes": "Sí",
+      "booleanNo": "No",
+      "fieldUnlocked": "Respuesta cifrada desbloqueada en este navegador.",
+      "decryptingField": "Descifrando respuesta...",
+      "encryptedFieldUnavailable": "La respuesta cifrada necesita un firmante en el navegador.",
+      "encryptedFieldFailed": "No se pudo desbloquear la respuesta cifrada.",
+      "encryptedFieldLocked": "La respuesta cifrada está bloqueada.",
+      "notAnswered": "Sin responder",
+      "requiredMissing": "Falta la respuesta obligatoria.",
+      "backToUserManager": "Volver al Gestor de usuarios",
+      "backToRoster": "Volver a la lista de usuarios",
+      "eyebrow": "Detalles del usuario",
+      "notFoundTitle": "Usuario no encontrado",
+      "notFoundBody": "Este usuario no está en la lista de usuarios de administración actual.",
+      "subtitle": "Revisa el estado, las respuestas del perfil y los detalles de acceso de este usuario.",
+      "approvalStatus": "Estado de aprobación",
+      "waitingApproval": "esperando aprobación",
+      "identityTitle": "Identidad",
+      "name": "Nombre",
+      "nameUnavailable": "No disponible",
+      "email": "Correo electrónico",
+      "emailUnavailable": "No disponible",
+      "userId": "ID de usuario",
+      "publicKey": "Clave pública",
+      "noPublicKey": "Sin clave pública",
+      "fieldsTitle": "Campos del perfil",
+      "fieldsShown_one": "{{count}} campo se aplica a este usuario.",
+      "fieldsShown_many": "{{count}} campos se aplican a este usuario.",
+      "fieldsShown_other": "{{count}} campos se aplican a este usuario.",
+      "noFields": "No aplican campos de incorporación a este usuario.",
+      "required": "Obligatorio",
+      "optional": "Opcional",
+      "encrypted": "Cifrado",
+      "plain": "Sin cifrar",
+      "chatContext": "Contexto del chat"
     }
   }
 }

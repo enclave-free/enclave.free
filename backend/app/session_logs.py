@@ -370,6 +370,39 @@ def export_session_log_zip(
     return f"test_feedback_{log_id}.zip", archive.getvalue()
 
 
+def record_plaintext_export(
+    log_id: str,
+    *,
+    filename: str,
+    changed_by: Optional[str] = None,
+) -> None:
+    """Audit a browser-generated plaintext export without receiving plaintext."""
+    if get_session_log_metadata(log_id) is None:
+        raise KeyError(log_id)
+
+    exported_at = database.utc_timestamp_z()
+    database.log_config_audit_event(
+        table_name="data_deletion",
+        config_key="copied_export:test_feedback_session",
+        old_value=None,
+        new_value=json.dumps(
+            {
+                "workflow": "copied_export",
+                "target": "test_feedback_session",
+                "lifecycle_posture": "outside_active_storage_lifecycle",
+                "log_id": log_id,
+                "filename": filename,
+                "includes_decrypted_browser_values": True,
+                "plaintext_contents_received_by_backend": False,
+                "exported_at": exported_at,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        changed_by=changed_by or "unknown",
+    )
+
+
 def _feedback_to_dict(row: Any) -> dict[str, Any]:
     return {
         "turn_index": row["turn_index"],

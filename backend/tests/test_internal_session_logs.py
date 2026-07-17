@@ -110,6 +110,76 @@ class InternalSessionLogsTest(unittest.TestCase):
         self.assertIn("No admin configured", response.json()["detail"])
         self.assertEqual(self._session_log_count(), 0)
 
+    def test_reserved_looking_email_does_not_suppress_normal_user_log(self) -> None:
+        admin_key = PrivateKey()
+        self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())
+        user_id = self.database.create_user(
+            pubkey=PrivateKey().public_key.format(compressed=True)[1:].hex(),
+            email="test-user+ordinary@enclave.test",
+            name="Ordinary User",
+        )
+
+        response = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {
+                    "id": user_id,
+                    "type": "user",
+                    "approved": True,
+                    "email": "test-user+ordinary@enclave.test",
+                },
+                "turns": [
+                    {"role": "user", "content": "hello"},
+                    {"role": "assistant", "content": "hi"},
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()["status"], "skipped")
+        self.assertEqual(self._session_log_count(), 1)
+
+    def test_instance_derived_test_user_skips_ambient_log(self) -> None:
+        import impersonation
+
+        admin_key = PrivateKey()
+        admin_pubkey = admin_key.public_key.format(compressed=True)[1:].hex()
+        self.database.add_admin(admin_pubkey)
+        user_type_id = self.database.create_user_type("Student")
+        user_id = self.database.create_user(
+            pubkey=impersonation.derive_test_user_pubkey(
+                admin_pubkey,
+                user_type_id,
+            ),
+            email=f"test-user+type{user_type_id}@enclave.test",
+            name="Test User",
+            user_type_id=user_type_id,
+        )
+
+        response = self.client.post(
+            "/internal/agent/session-logs",
+            headers=self._headers(),
+            json={
+                "actor": {
+                    "id": user_id,
+                    "type": "user",
+                    "approved": True,
+                    "email": f"test-user+type{user_type_id}@enclave.test",
+                    "user_type_id": user_type_id,
+                },
+                "turns": [
+                    {"role": "user", "content": "hello"},
+                    {"role": "assistant", "content": "hi"},
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "skipped")
+        self.assertEqual(response.json()["log_id"], "")
+        self.assertEqual(self._session_log_count(), 0)
+
     def test_internal_user_session_log_updates_existing_sage_session_record(self) -> None:
         admin_key = PrivateKey()
         self.database.add_admin(admin_key.public_key.format(compressed=True)[1:].hex())

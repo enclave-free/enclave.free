@@ -178,6 +178,17 @@ export async function exportSessionLog(logId: string): Promise<Blob> {
   return res.blob();
 }
 
+export async function recordSessionLogPlaintextExport(
+  logId: string
+): Promise<void> {
+  await jsonOrThrow<{ success: boolean; message: string }>(
+    await adminFetch(
+      `/admin/session-logs/${encodeURIComponent(logId)}/plaintext-export`,
+      { method: 'POST' }
+    )
+  );
+}
+
 export async function createSessionLog(body: {
   source?: SessionLogSource;
   title?: string | null;

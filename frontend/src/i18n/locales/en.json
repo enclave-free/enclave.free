@@ -38,7 +38,11 @@
     "next": "Next",
     "previous": "Previous",
     "refresh": "Refresh",
-    "retry": "Retry"
+    "retry": "Retry",
+    "export": "Export",
+    "reset": "Reset",
+    "exit": "Exit",
+    "none": "None"
   },
   "language": {
     "english": "English",
@@ -71,14 +75,16 @@
       "send": "Send"
     },
     "status": {
-      "success": "Thanks. Your message was sent."
+      "success": "Thanks. Your message was sent.",
+      "successLabel": "Reachout success"
     },
     "errors": {
       "required": "Message is required.",
       "rateLimited": "Too many messages. Please try again later.",
       "unavailable": "Reachout is unavailable.",
       "notConfigured": "This feature is not configured.",
-      "failed": "Failed to send message. Please try again."
+      "failed": "Failed to send message. Please try again.",
+      "formErrorLabel": "Reachout form error"
     }
   },
   "settings": {
@@ -300,7 +306,20 @@
         "pageRefreshRecommended": "Refresh this page to see theme updates.",
         "restartCheckFailedHttp": "Restart required check: failed (HTTP {{status}}).",
         "restartCheckFailedNetwork": "Restart required check: failed (network error)."
-      }
+      },
+      "approvalCardTitle": "Approve configuration changes",
+      "applying": "Applying",
+      "applied": "Applied",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "superseded": "Superseded",
+      "hideDetails": "Hide details",
+      "reviewDetails": "Review details",
+      "reject": "Reject",
+      "approve": "Approve",
+      "applyErrorLabel": "Config apply error",
+      "onboardingTitle": "Guided Setup Chat",
+      "onboardingContext": "Focused setup conversation"
     },
     "reachout": {
       "title": "User Reachout",
@@ -398,7 +417,10 @@
       "selectUsers": "Select at least one user to migrate.",
       "batchFailed": "Failed to migrate selected users.",
       "batchSummary": "Migration complete. Migrated: {{migrated}}. Failed: {{failed}}.",
-      "anonymizedHint": "This user's data has been anonymized and cannot be decrypted."
+      "anonymizedHint": "This user's data has been anonymized and cannot be decrypted.",
+      "usersErrorLabel": "User type migration users error",
+      "errorLabel": "User type migration error",
+      "summaryLabel": "User type migration summary"
     },
     "database": {
       "backToSetup": "Back to Admin Setup",
@@ -483,7 +505,14 @@
       "nip07Unavailable": "No Nostr extension detected",
       "plaintextFieldIcon": "Plaintext field",
       "primaryKeyIcon": "Primary key",
-      "unlockDecryption": "Unlock Decryption"
+      "unlockDecryption": "Unlock Decryption",
+      "safeQueryResults": "Safe query results",
+      "queryError": "Query error",
+      "writeResult": "Database write result",
+      "emptyQueryResult": "Empty query result",
+      "readOnly": "Read-only",
+      "tableLoadError": "Table load error",
+      "readOnlyHint": "Direct database edits are disabled; use audited admin flows to make changes."
     },
     "fields": {
       "nameRequired": "Field name is required",
@@ -573,7 +602,8 @@
       "addFieldFailed": "Failed to add field",
       "updateFieldFailed": "Failed to update field",
       "removeFieldFailed": "Failed to remove field",
-      "reorderFailed": "Failed to reorder field"
+      "reorderFailed": "Failed to reorder field",
+      "loadSettingsFailed": "Failed to load settings"
     },
     "userHelp": {
       "ariaLabel": "User configuration help",
@@ -610,6 +640,49 @@
       "userTypes": "User Types",
       "userTypesExplain": "Categories that group users together. Each type can have its own set of required fields and permissions.",
       "whenToUse": "When to create user types:"
+    },
+    "userApproval": {
+      "updateFailed": "Failed to update user approval.",
+      "approvedUser": "User #{{id}} approved.",
+      "revokedUser": "User #{{id}} moved back to pending.",
+      "title": "User Approval",
+      "subtitle": "Choose whether new authenticated Users can enter chat immediately or wait for Admin approval.",
+      "requireManualLabel": "Require manual approval for new users",
+      "requireManualHint": "When enabled, new Users land on the pending approval screen until an Admin approves them.",
+      "loadingHint": "Loading...",
+      "saveButton": "Save user approval",
+      "savedCalloutLabel": "User approval saved",
+      "errorCalloutLabel": "User approval error",
+      "pendingTitle": "Pending approvals",
+      "pendingCount_zero": "{{count}} users need approval before chat access.",
+      "pendingCount_one": "{{count}} user needs approval before chat access.",
+      "pendingCount_two": "{{count}} users need approval before chat access.",
+      "pendingCount_few": "{{count}} users need approval before chat access.",
+      "pendingCount_many": "{{count}} users need approval before chat access.",
+      "pendingCount_other": "{{count}} users need approval before chat access.",
+      "nonePending": "No users are waiting for approval.",
+      "actionSavedCalloutLabel": "User approval updated",
+      "actionErrorCalloutLabel": "User approval update failed",
+      "loadingUsers": "Loading users...",
+      "emptyState": "New Users awaiting approval will appear here when manual approval is required.",
+      "emailOnFile": "Email on file",
+      "nameOnFile": "Name on file",
+      "approveButton": "Approve",
+      "revokeButton": "Revoke"
+    },
+    "userRosterExport": {
+      "auditFailed": "User roster export could not be audited. The spreadsheet was not downloaded.",
+      "success": "User roster spreadsheet downloaded.",
+      "failed": "Failed to export user roster.",
+      "button": "Export users",
+      "successLabel": "User roster export ready",
+      "errorLabel": "User roster export failed"
+    },
+    "userIdentity": {
+      "decrypting": "Decrypting name/email...",
+      "decryptFailed": "Could not decrypt name/email",
+      "unlockDetails": "Unlock to show name/email",
+      "unlockButton": "Unlock details"
     }
   },
   "adminOnboarding": {
@@ -659,7 +732,8 @@
       "title": "What describes you best?",
       "description": "Select the option that best fits your needs",
       "loadError": "Failed to load user types. Please try again.",
-      "selectionLabel": "User type selection"
+      "selectionLabel": "User type selection",
+      "errorLabel": "User type loading error"
     },
     "language": {
       "selectLabel": "Select a language",
@@ -702,7 +776,8 @@
       "encryptionBody": "Profile fields are encrypted by default, but this instance administrator controls field-level settings and may allow selected data to be stored or shared differently.",
       "adminControlNotice": "Data handling is configured by this instance administrator, including what may be stored unencrypted or shared with AI tools.",
       "retentionNotice": "Data retention and deletion timelines are set by this instance administrator. Contact them for access, correction, or deletion requests.",
-      "noWarrantyNotice": "Enclave software is provided as-is without warranty. Use of this instance is subject to administrator policies."
+      "noWarrantyNotice": "Enclave software is provided as-is without warranty. Use of this instance is subject to administrator policies.",
+      "errorLabel": "Magic link request error"
     },
     "verify": {
       "verifying": "Verifying your link...",
@@ -795,7 +870,26 @@
       "current": "Current chat",
       "empty": "Empty",
       "messageCount_one": "{{count}} message",
-      "messageCount_other": "{{count}} messages"
+      "messageCount_other": "{{count}} messages",
+      "deleteConfirmTitle": "Delete \"{{title}}\"?",
+      "rename": "Rename {{title}}",
+      "delete": "Delete {{title}}",
+      "resumeInvalid": "Unable to load that Conversation.",
+      "renameEmpty": "Conversation title is required.",
+      "renameError": "Unable to rename Conversation.",
+      "deleteError": "Unable to delete Conversation.",
+      "loading": "Loading chats...",
+      "error": "Unable to load chats",
+      "saved": "Saved chat",
+      "deleteConfirmBody": "This removes the saved Conversation and its Session Memory.",
+      "deleteCancel": "Cancel conversation delete",
+      "cancel": "Cancel",
+      "deleteConfirm": "Delete conversation",
+      "deleteDeleting": "Deleting...",
+      "renameInput": "Conversation title",
+      "renameCancel": "Cancel conversation rename",
+      "renameSave": "Save conversation title",
+      "renameSaving": "Renaming..."
     },
     "code": {
       "copy": "Copy",
@@ -814,7 +908,17 @@
       "roleUser": "You",
       "roleAssistant": "Assistant",
       "footer": "Exported from {{instanceName}}",
-      "exportedOn": "Exported on {{timestamp}}"
+      "exportedOn": "Exported on {{timestamp}}",
+      "copiedExportNotice": "This export leaves active product storage and is outside Active Storage Lifecycle after download."
+    },
+    "currentChatAria": "Current chat",
+    "newFromCurrent": "Start a new chat",
+    "documentsContextTitle": "Documents",
+    "errors": {
+      "requestLabel": "Chat request error"
+    },
+    "trace": {
+      "finalizing": "Finalizing response..."
     }
   },
   "errors": {
@@ -904,7 +1008,8 @@
       "previewNotice": "Preview mode — true impersonation is not wired in yet, so this chat runs under your admin session. The transcript still saves for review.",
       "chatEmpty": "Send a message as this user to begin the trial.",
       "inputPlaceholder": "Message the assistant as this user…",
-      "saved": "Trial saved (encrypted). Review it under Feedback."
+      "saved": "Trial saved (encrypted). Review it under Feedback.",
+      "testingAs": "Testing as {{persona}}"
     },
     "feedback": {
       "trials": "Beta Logs",
@@ -918,12 +1023,212 @@
       "sourceTest": "Test User Session",
       "thumbUp": "Good answer",
       "thumbDown": "Needs work",
-      "notePlaceholder": "Optional note (saved encrypted)…"
+      "notePlaceholder": "Optional note (saved encrypted)…",
+      "exportNotDecrypted": "Open and decrypt the transcript before exporting.",
+      "exportFeedbackNotDecrypted": "Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting."
     }
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Admins can"
+    },
+    "summary": {
+      "brand": {
+        "title": "Brand the instance",
+        "body": "Name, logo, theme, assistant identity, and public email display."
+      },
+      "people": {
+        "title": "Control people",
+        "body": "User types, onboarding questions, approvals, migration, and access."
+      },
+      "agent": {
+        "title": "Shape Sage",
+        "body": "Prompt rules, response settings, document access, and tool defaults."
+      },
+      "launch": {
+        "title": "Launch safely",
+        "body": "Email, domains, CORS, HTTPS, model routing, health, and runtime env."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Brand",
+        "title": "Identity and look",
+        "body": "Make the instance feel like your organization.",
+        "detail1": "Name, tagline, assistant name, and user label.",
+        "detail2": "Logo, favicon, icon, accent color, theme, typography, and chat style.",
+        "detail3": "Default language and public email display name.",
+        "link": "Open Instance Settings"
+      },
+      "people": {
+        "eyebrow": "Access",
+        "title": "People and access",
+        "body": "Decide who uses the instance and what you ask them.",
+        "detail1": "User types for groups like staff, members, or clients.",
+        "detail2": "Onboarding fields, required questions, options, placeholders, and per-type fields.",
+        "detail3": "Manual approval, user migration, revoking access, and deletion.",
+        "link": "Open User Settings"
+      },
+      "agent": {
+        "eyebrow": "Behavior",
+        "title": "Agent behavior",
+        "body": "Shape how Sage answers and which tools are on by default.",
+        "detail1": "Prompt template, behavior rules, forbidden topics, and response settings.",
+        "detail2": "Feature defaults for Knowledge, Resources, Web, Config, and Database tools.",
+        "detail3": "Global settings plus user-type overrides.",
+        "link": "Open Agent Settings"
+      },
+      "docs": {
+        "eyebrow": "Knowledge",
+        "title": "Document knowledge",
+        "body": "Give the agent source material it can search.",
+        "detail1": "Upload PDFs, policies, FAQs, handbooks, and guides.",
+        "detail2": "Documents are chunked, embedded, and made searchable.",
+        "detail3": "Document Access controls what can be selected or active by default.",
+        "link": "Open Document Upload"
+      },
+      "resources": {
+        "eyebrow": "Referrals",
+        "title": "Vetted resources",
+        "body": "Add trusted referrals the agent can recommend.",
+        "detail1": "Names, descriptions, resource type, languages, coverage, and help types.",
+        "detail2": "Phone, email, URL, secure channel, address, and notes.",
+        "detail3": "Verified resources rank first. Archived resources stay hidden from users.",
+        "link": "Open Resource Directory"
+      },
+      "ops": {
+        "eyebrow": "Operations",
+        "title": "Operations and runtime",
+        "body": "Keep the instance connected, reachable, and healthy.",
+        "detail1": "SMTP for email magic links, domains, CORS, HTTPS, and public URLs.",
+        "detail2": "Model provider, embedding model, search, storage, and service health.",
+        "detail3": "Runtime env export, readiness, stale settings, and admin key migration.",
+        "link": "Open Deployment Settings"
+      },
+      "title": "What admins configure",
+      "body": "These are the main control surfaces. You can use the pages directly or ask the Admin Assistant to prepare changes."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Ask",
+        "title": "Admin Assistant",
+        "body": "Ask questions about current setup and request config changes.",
+        "detail1": "Config reads inspect real instance state instead of guessing.",
+        "detail2": "Proposed changes are staged for review.",
+        "detail3": "Apply runs the approved admin endpoints without another model turn.",
+        "link": "Open Admin Assistant"
+      },
+      "guided": {
+        "eyebrow": "Start",
+        "title": "Guided Setup",
+        "body": "Use one guided chat to create a useful first configuration.",
+        "detail1": "Identity, assistant, language, access policy, user types, questions, and behavior rules.",
+        "detail2": "Then upload docs, add resources, and test.",
+        "link": "Open Guided Setup"
+      },
+      "test": {
+        "eyebrow": "Validate",
+        "title": "Test and feedback",
+        "body": "Try the agent from a user point of view before launch.",
+        "detail1": "Pick a user type, start a test session, and save the trial.",
+        "detail2": "Review encrypted beta logs and rate answers.",
+        "link": "Open Test User Session"
+      },
+      "database": {
+        "eyebrow": "Inspect",
+        "title": "Database Explorer",
+        "body": "Inspect stored SQLite data when debugging.",
+        "detail1": "Use read-only SELECT queries for inspection.",
+        "detail2": "Do not use it as a product mutation path.",
+        "link": "Open Database Explorer"
+      },
+      "title": "Common admin workflows",
+      "body": "Use these when you are setting up, checking quality, or investigating data."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Runtime",
+        "title": "One conversation runtime",
+        "body": "Knowledge, Resources, Web, Config, and Database are visible tool sets, not separate chat systems.",
+        "detail1": "The model can call enabled tools when they help.",
+        "detail2": "Config and Database only appear for server-validated admins."
+      },
+      "auth": {
+        "eyebrow": "Sign-in",
+        "title": "Different sign-in paths",
+        "body": "Admins use NIP-07. Users use email magic links.",
+        "detail1": "Admin private keys stay in the browser signer.",
+        "detail2": "SMTP must work before user magic links work in production."
+      },
+      "data": {
+        "eyebrow": "Privacy",
+        "title": "Data boundaries matter",
+        "body": "Encrypted profile fields stay out of chat context.",
+        "detail1": "Only unencrypted fields can be marked for AI chat context.",
+        "detail2": "Deployment secrets are stored encrypted and shown masked by default."
+      },
+      "ops": {
+        "eyebrow": "Ops",
+        "title": "Some changes need operators",
+        "body": "The app can save desired runtime settings; it does not silently restart services.",
+        "detail1": "Export runtime env after provider, origin, CORS, or search changes.",
+        "detail2": "Use readiness and service health to confirm what is actually running."
+      },
+      "title": "Product truths to remember",
+      "body": "These rules keep setup honest and prevent accidental overreach."
+    },
+    "ask": {
+      "prompt1": "What is still missing before this instance is ready for users?",
+      "prompt2": "Review the current user types, onboarding questions, docs, and resources.",
+      "prompt3": "Prepare changes for review: set the assistant tone and default language.",
+      "title": "Good things to ask the Admin Assistant",
+      "body": "Ask for a review before asking for changes. It can inspect setup and prepare a change set."
+    },
+    "hero": {
+      "eyebrow": "Admin control map",
+      "shortVersion": {
+        "title": "Short version",
+        "body": "Admins set the identity, users, knowledge, tools, and launch settings. Some runtime changes still need an operator restart."
+      }
+    },
+    "title": "Admin Guides",
+    "subtitle": "A simple map of what admins configure, what the product can do, and what needs care before launch.",
+    "quickStart": {
+      "title": "Start here",
+      "body": "Do the small useful setup first. Polish it after testing with real questions."
+    },
+    "safety": {
+      "title": "Safety basics",
+      "body": "Admins control access, data, behavior, and runtime settings. Go slow with risky changes.",
+      "items": {
+        "0": "Admins sign in with NIP-07. Users sign in with email magic links.",
+        "1": "User fields are encrypted by default. Only plaintext fields can be shared with chat.",
+        "2": "Secrets stay masked unless you share them for the current admin session.",
+        "3": "Assistant changes are proposals. You still review and click Apply.",
+        "4": "Deployment Settings store desired runtime values. Operators still export env and restart services when needed."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Sign in as admin",
+        "body": "Use the admin NIP-07 key. Keep it private."
+      },
+      "1": {
+        "title": "Set the basics",
+        "body": "Name the instance, choose the look, and set the assistant identity."
+      },
+      "2": {
+        "title": "Define your users",
+        "body": "Create user types, onboarding questions, and approval rules."
+      },
+      "3": {
+        "title": "Add trusted knowledge",
+        "body": "Upload documents and add vetted resources."
+      },
+      "4": {
+        "title": "Test before launch",
+        "body": "Chat as a user, review feedback, then invite real people."
+      }
     }
   },
   "adminDashboard": {
@@ -1006,7 +1311,9 @@
     "humanReviewAction": "Review Deployment Readiness",
     "settingsSectionLabel": "Settings",
     "configSectionLabel": "Admin Settings",
-    "dataSectionLabel": "Data & Content"
+    "dataSectionLabel": "Data & Content",
+    "userManager": "User Manager",
+    "userManagerDesc": "Review users, check status, export rosters, and approve access."
   },
   "adminResources": {
     "title": "Resource Directory",
@@ -1032,7 +1339,19 @@
     "markVerified": "Mark as verified (ranks first)",
     "archive": "Archive (hide from end users)",
     "deleteTitle": "Delete resource?",
-    "deleteBody": "This removes the directory entry for {{name}}"
+    "deleteBody": "This removes the directory entry for {{name}}",
+    "coverage": "Coverage",
+    "coverageHint": "Choose a coverage level, then search for its name or code.",
+    "coverageCodePlaceholder": "Search by name or code…",
+    "coverageLevelFirst": "Choose a coverage level first",
+    "coverageClear": "Clear coverage code",
+    "regionDirectoryUnavailable": "Region directory unavailable. Enter a code manually.",
+    "level": {
+      "country": "Country",
+      "subregion": "Subregion",
+      "region": "Region",
+      "global": "Global"
+    }
   },
   "adminAI": {
     "title": "Agent Settings",
@@ -1047,6 +1366,8 @@
     "sessionDefaults": "Feature Defaults",
     "sessionDefaultsDesc": "Set which features are on by default",
     "sessionDefaultsHint": "Control which Agent Runtime capabilities are enabled when users start a new Conversation.",
+    "knowledgeSearchDisabledLabel": "Knowledge Search is off",
+    "knowledgeSearchDisabledMessage": "Active default documents will not be used until Knowledge Sources is set to selected default documents or all available documents.",
     "documentDefaults": "Document Access",
     "documentDefaultsDesc": "Control which documents the AI can reference",
     "documentDefaultsHint": "Documents marked \"Available\" can be selected by users. Documents marked \"Active by Default\" are automatically included in new conversations.",
@@ -1118,7 +1439,11 @@
       "userInfoPlaceholder": "{user_info} — replaced with the current user's profile fields, if available"
     },
     "revert": "Revert",
-    "revertToGlobal": "Revert To Global"
+    "revertToGlobal": "Revert To Global",
+    "loadErrorLabel": "Agent Settings load error",
+    "previewErrorLabel": "Agent Settings preview error",
+    "documentToggleErrorLabel": "Agent Settings document toggle error",
+    "documentDefaultsHintV2": "Documents marked \"Available\" can be used by Knowledge Search. Documents marked \"Active by Default\" are included when Knowledge Sources is set to selected default documents."
   },
   "adminDeployment": {
     "title": "Deployment Configuration",
@@ -1166,7 +1491,8 @@
       "reviewDeploymentValidation": "Review Deployment Settings",
       "reviewRestartRequired": "Review Restart Required",
       "reviewOperationalReadiness": "Review Operational Readiness",
-      "reviewServiceHealth": "Review Service Health"
+      "reviewServiceHealth": "Review Service Health",
+      "reviewRuntimeEnv": "Review Runtime Env Export"
     },
     "wizard": {
       "title": "Deployment Wizard",
@@ -1283,7 +1609,9 @@
       "unknown": "Unknown",
       "usersMigrated": "Users migrated",
       "usersToMigrate": "Users to migrate",
-      "warning": "This is an advanced operation. Incorrect migration can lock you out of encrypted data. Proceed only if you understand the implications."
+      "warning": "This is an advanced operation. Incorrect migration can lock you out of encrypted data. Proceed only if you understand the implications.",
+      "inputWarningLabel": "Admin key migration warning",
+      "destructiveWarningLabel": "Admin key migration destructive warning"
     },
     "llmHelp": {
       "apiKeyField": "LLM_API_KEY — your Tinfoil API key for the local proxy.",
@@ -1327,7 +1655,8 @@
       "overviewDesc": "Security settings control authentication, session handling, and development shortcuts. Defaults are configured for local development.",
       "overviewNote": "In production, make sure FRONTEND_URL matches your real domain and auth uses real verification.",
       "overviewTitle": "Security Overview",
-      "overviewWhen": "Review these settings before deploying to a public-facing server."
+      "overviewWhen": "Review these settings before deploying to a public-facing server.",
+      "devNote": "Use MOCK_EMAIL for local email testing; user and admin sessions still require the normal verification flow."
     },
     "send": "Send",
     "sendTestEmail": "Send Test Email",
@@ -1390,7 +1719,136 @@
       "searxng_url_http_searxng_8080_ede53c": "SEARXNG_URL=http://searxng:8080",
       "frontend_url_https_app_example_com_05514a": "FRONTEND_URL=https://app.example.com",
       "npub1_or_64_char_hex_b8e906": "npub1... or 64-char hex"
-    }
+    },
+    "inferenceVerification": {
+      "current": "Current",
+      "missing": "Missing",
+      "expired": "Expired",
+      "failed": "Failed",
+      "success": "Success",
+      "statusLoadFailed": "Failed to load inference verification status",
+      "historyLoadFailed": "Failed to load inference verification history",
+      "loadFailed": "Failed to load inference verification",
+      "manualFailed": "Manual verification failed",
+      "manualSucceeded": "Manual verification succeeded",
+      "detailLoadFailed": "Failed to load attestation detail",
+      "ariaLabel": "Inference Verification",
+      "title": "Inference Verification",
+      "summary": "Admin-only evidence that protected inference is running on the expected Model Provider.",
+      "verifyNow": "Verify Now",
+      "status": "Status",
+      "checkedAt": "Checked",
+      "expiresAt": "Expires",
+      "expectedClaims": "Expected claims",
+      "expectedClaimsValue": "Expected claims: {{fingerprint}}",
+      "providerClaims": "Provider Claims",
+      "provider": "Provider",
+      "model": "Model",
+      "endpoint": "Endpoint",
+      "history": "Verification History",
+      "emptyHistory": "No verification records yet.",
+      "recordTitle": "Record #{{id}}",
+      "inspectAttestation": "Inspect Attestation",
+      "fullAttestation": "Full Attestation Material"
+    },
+    "lifecycle": {
+      "notStarted": "Not Started",
+      "notConfigured": "Not Configured",
+      "plaintextByOperatorChoice": "Plaintext by Operator Choice",
+      "allTombstones": "All",
+      "allTombstonesLabel": "All tombstones",
+      "incompleteTombstonesFilter": "Incomplete",
+      "incompleteTombstonesLabel": "Incomplete tombstones",
+      "completedTombstonesFilter": "Completed",
+      "completedTombstonesLabel": "Completed tombstones",
+      "title": "Data Lifecycle Status",
+      "description": "Current Operator-Controlled Privacy coverage across Instance data.",
+      "scopeExcludes": "Excludes: {{excludes}}",
+      "secureEraseStatus": "Secure Erase: {{status}}",
+      "readinessStatus": "Lifecycle Readiness: {{status}}",
+      "readinessNonBlocking": "User Conversations are not blocked by Lifecycle Readiness warnings in v1.",
+      "readinessStaleReason": "Reason: {{reason}}",
+      "contentEncryptionKey": "Content Encryption Key: {{status}}",
+      "artifactEncryptionPosture": "Artifact Encryption Posture: {{status}}",
+      "artifactPostureLabel": "Artifact encryption posture",
+      "artifactPostureRequired": "Required",
+      "artifactPostureDisabled": "Disabled",
+      "retentionSchedulerStatus": "Retention Scheduler: {{status}}",
+      "schedulerObservation": "Observation: {{status}}",
+      "schedulerEnabledClasses": "Scheduler enabled classes: {{classes}}",
+      "schedulerLastRunStatus": "Last run status: {{status}}",
+      "schedulerLastRun": "Last run: {{trigger}} by {{actor}}",
+      "previewRetention": "Preview Retention",
+      "runScheduledRetention": "Run Scheduled",
+      "previewRetentionResult": "Preview: {{conversations}} conversations, {{artifacts}} document artifacts, {{skipped}} skipped classes.",
+      "scheduledRetentionResult": "Scheduled run: {{status}} with {{retries}} tombstone retries.",
+      "scheduledRetentionStatus": "Scheduled classes: {{classes}}",
+      "auditCoverageStatus": "Audit coverage: {{audited}} audited, {{exceptions}} exceptions, {{missing}} missing.",
+      "owner": "Owner: {{owner}}",
+      "deletion": "Deletion: {{status}}",
+      "retention": "Retention: {{status}}",
+      "audit": "Audit: {{status}}",
+      "confidentiality": "Confidentiality: {{status}}",
+      "incompleteTombstones": "Incomplete tombstones: {{count}}",
+      "completedTombstones": "Completed tombstones: {{count}}",
+      "retentionEnabled": "Enabled",
+      "retentionWindow": "Window",
+      "retentionDays": "days",
+      "scheduledEnforcement": "Scheduled",
+      "saveRetentionPolicy": "Save Policy",
+      "empty": "Lifecycle status is not available.",
+      "retentionPolicySaveFailed": "Unable to save retention policy.",
+      "retentionPreviewFailed": "Unable to preview retention.",
+      "scheduledRetentionFailed": "Unable to run scheduled retention.",
+      "artifactPostureFailed": "Unable to update artifact encryption posture.",
+      "unsupportedSurfacesTitle": "Unsupported Deployment Surfaces",
+      "unsupportedSurfacesDescription": "These operational traces are disclosed here but remain outside product lifecycle control.",
+      "unsupportedSurfaceAckFailed": "Unable to update acknowledgement.",
+      "acknowledgedSurface": "Acknowledged",
+      "acknowledgeSurface": "Acknowledge",
+      "tombstonesTitle": "Deletion Tombstones",
+      "tombstonesDescription": "Retry incomplete lifecycle deletions without exposing deleted content.",
+      "tombstoneStatusFilter": "Tombstone status filter",
+      "tombstoneRetryFailed": "Retry failed.",
+      "tombstonesFetchFailed": "Unable to load deletion tombstones.",
+      "tombstoneClass": "Class: {{className}}",
+      "tombstoneSource": "Source: {{source}}",
+      "tombstoneRetries": "Retries: {{count}}",
+      "tombstoneUpdated": "Updated: {{updated}}",
+      "retryTombstoneLabel": "Retry deletion tombstone {{id}}",
+      "retry": "Retry",
+      "tombstonesEmpty": "No deletion tombstones are waiting for retry."
+    },
+    "runtimeEnv": {
+      "unknown": "Unknown",
+      "title": "Runtime Config Alignment",
+      "description": "Compares desired Deployment Settings, generated Sage env, and observable running state.",
+      "desired": "Desired",
+      "configuredKeys": "{{count}} of {{total}} keys configured",
+      "generated": "Generated",
+      "exportedAt": "Exported {{time}}",
+      "notExported": "No Sage env export recorded",
+      "running": "Running",
+      "runningUnknown": "Running state is not directly introspected yet.",
+      "coreBackend": "Core Backend",
+      "coreBackendHint": "Backend process env alignment",
+      "coreDesired": "Core Desired",
+      "coreConfiguredKeys": "Core backend: {{count}} of {{total}} keys configured",
+      "coreGenerated": "Core Generated",
+      "coreNotExported": "No core backend env export recorded",
+      "coreRunning": "Core Running",
+      "coreRunningUnknown": "Core backend running state is not directly introspected yet.",
+      "coreExportedTitle": "Core-backend env exported",
+      "coreSensitiveArtifact": "Treat core-backend.env as sensitive deployment material.",
+      "coreExportDoesNotApply": "Exporting the artifact does not change the running backend process until an Operator applies it and restarts core-backend.",
+      "exportedTitle": "Sage env exported",
+      "sensitiveArtifact": "Treat sage.env as sensitive deployment material.",
+      "exportDoesNotApply": "Exporting the artifact does not change the running Sage process until an Operator applies it and restarts Sage."
+    },
+    "categorySettingsAria": "{{category}} Settings",
+    "exportCoreBackendRuntimeEnv": "Export core-backend env",
+    "restartCurrent": "No restart required",
+    "restartCurrentDesc": "No restart-required Deployment Settings have changed since service start."
   },
   "upload": {
     "invalidFileType": "Invalid file type. Allowed: {{extensions}}",
@@ -1418,7 +1876,8 @@
       "processing": "Processing",
       "chunked": "Chunked",
       "complete": "Complete",
-      "failed": "Failed"
+      "failed": "Failed",
+      "completedWithErrors": "Completed with errors"
     },
     "chunks": "{{processed}}/{{total}} chunks",
     "deleteDocument": "Delete document",
@@ -1462,7 +1921,19 @@
       "troubleshootingDesc": "Common issues and how to fix them.",
       "troubleshootingTitle": "Troubleshooting",
       "txtDesc": ".txt — Plain text files. The simplest format, works reliably with any content."
-    }
+    },
+    "navigationWarning": "Your document is still being transferred. Leave only after processing has started, or the upload may not be saved.",
+    "duplicateInBatch": "Duplicate document name in this batch",
+    "documentsSelected": "{{count}} documents",
+    "queueSummary": "{{valid}} ready, {{rejected}} skipped",
+    "skipped": "Skipped",
+    "uploadedPartialSuccess": "{{count}} queued, {{rejected}} skipped",
+    "chooseFiles": "Choose files",
+    "chooseFolder": "Choose folder",
+    "uploadDocuments": "Upload documents",
+    "replacingDocument": "Replacing {{filename}}",
+    "recentDocumentsShowing": "Showing {{shown}} of {{total}} documents",
+    "showMore": "Show more"
   },
   "configCategories": {
     "llm": {
@@ -1535,6 +2006,12 @@
       "description": "How the AI structures its responses",
       "hint": "Controls formatting preferences like whether to use bullet points, headers, or conversational paragraphs. This affects how answers are visually presented.",
       "placeholder": "Use bullet points for lists, headers for sections..."
+    },
+    "prompt_system": {
+      "label": "System Prompt",
+      "description": "Core identity and operating instructions for the AI",
+      "hint": "Use this for the assistant identity, mission, and top-level boundaries that should apply before tone, rules, tools, or document context. Changes affect new conversations.",
+      "placeholder": "You are Sage, a private assistant for this instance..."
     }
   },
   "parameters": {
@@ -1547,6 +2024,11 @@
       "label": "Knowledge Depth",
       "description": "How many document sections to reference",
       "hint": "When answering questions, the AI searches your uploaded documents and pulls in relevant sections. Higher numbers mean more context but slower responses. Lower numbers are faster but may miss relevant info. Default: 5"
+    },
+    "max_tokens": {
+      "label": "Max Tokens",
+      "description": "Maximum length for each AI response",
+      "hint": "Caps how long a response can be. Lower values keep answers brief and reduce cost; higher values allow longer explanations. Default: 2048"
     }
   },
   "defaults": {
@@ -1554,6 +2036,21 @@
       "label": "Web Search",
       "description": "Allow AI to search the internet",
       "hint": "When enabled, the AI can search the web for current information not in your documents. Disable this if you want responses to only come from your uploaded knowledge base."
+    },
+    "knowledgeSource": {
+      "none": "None",
+      "selected": "Selected default documents",
+      "all": "All available documents"
+    },
+    "knowledge_source_default": {
+      "label": "Knowledge Sources",
+      "description": "Choose which uploaded knowledge sources are active in User Conversations",
+      "hint": "Use \"none\" for no uploaded knowledge by default, \"selected\" for documents marked Active by Default, or \"all\" for all available documents."
+    },
+    "user_default_tool_ids": {
+      "label": "User Tool Sets",
+      "description": "Tool Sets active by default in User Conversations",
+      "hint": "JSON array using any of \"curated-resources\", \"knowledge-search\", and \"web-search\". Knowledge Search is also controlled by Knowledge Sources."
     }
   },
   "deploymentConfigItems": {
@@ -1741,6 +2238,31 @@
       "label": "API Key",
       "description": "Tinfoil API key (secret)",
       "hint": "Leave empty to keep the current Deployment Settings secret."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Chat Rate Limit",
+      "description": "Chat requests per minute",
+      "hint": "Maximum /llm/chat requests per minute per stable user, admin, token, or client IP. Requires restart. Default: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Retrieval Query Rate Limit",
+      "description": "Retrieval query requests per minute",
+      "hint": "Maximum /query requests per minute per stable user, token, or client IP. Requires restart. Default: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Upload Rate Limit",
+      "description": "Document upload requests per minute",
+      "hint": "Maximum document upload requests per minute per stable admin, token, or client IP. Requires restart. Default: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Vector Search Rate Limit",
+      "description": "Vector search requests per minute",
+      "hint": "Maximum vector search requests per minute per stable user, token, or client IP. Requires restart. Default: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Config Export Rate Limit",
+      "description": "Deployment config exports per hour",
+      "hint": "Maximum .env exports per hour per admin session or client IP. Requires restart. Default: 5."
     }
   },
   "colors": {
@@ -1788,7 +2310,11 @@
       "title": "Ready to connect"
     },
     "subtitle": "Set up your private knowledge base in a few steps.",
-    "title": "Welcome to Enclave"
+    "title": "Welcome to Enclave",
+    "keySafety": {
+      "title": "Use an Instance-specific Nostr key",
+      "body": "Do not use your personal Nostr key. Create or choose a dedicated admin key for this Instance to reduce surveillance risk and keep operational access separate."
+    }
   },
   "adminRoute": {
     "extracted": {
@@ -2021,6 +2547,145 @@
       "description_d2b81d": "Description",
       "developer_96882c": "Developer",
       "company_name_2959df": "company_name"
+    },
+    "labels": {
+      "themePreference": "Theme preference",
+      "endpointGuidance": "Endpoint guidance",
+      "healthResponseOutput": "Health response output",
+      "jobs": "Jobs",
+      "chunks": "Chunks",
+      "rateLimitTestType": "Rate limit test type",
+      "successfulRequests": "Successful requests",
+      "successful": "Successful",
+      "blockedRequests": "Blocked requests"
+    }
+  },
+  "adminUserManager": {
+    "backToAdmin": "Back to Admin Dashboard",
+    "eyebrow": "Admin operations",
+    "title": "User Manager",
+    "subtitle": "Review users, understand their status, and approve access from one simple dashboard.",
+    "unlockDetails": "Unlock details",
+    "refreshRoster": "Refresh roster",
+    "exportVisible": "Export visible roster",
+    "rosterTitle": "User roster",
+    "rosterShown": "{{shown}} shown from {{total}} total.",
+    "tableLabel": "User roster",
+    "tableRowsLabel": "User roster rows",
+    "loadingLabel": "Loading user roster",
+    "loadingUsers": "Loading users...",
+    "loadRetry": "User roster could not load. Use Refresh roster to try again.",
+    "emptyNoUsers": "No users yet. New authenticated users will appear here.",
+    "emptyFiltered": "No users match these filters.",
+    "noUserType": "No User Type",
+    "unknown": "Unknown",
+    "userFallback": "User #{{id}}",
+    "approvalSuccess": "{{name}} approved.",
+    "exportSuccess": "User roster spreadsheet downloaded.",
+    "metrics": {
+      "total": "Total users",
+      "totalDetail": "in roster",
+      "pendingApproval": "Pending approval",
+      "pendingDetail": "{{count}} pending",
+      "approved": "Approved",
+      "approvedDetail": "can enter chat",
+      "incompleteProfiles": "Incomplete profiles",
+      "incompleteDetail": "need required answers"
+    },
+    "callouts": {
+      "loadFailed": "User roster load failed",
+      "approvalUpdated": "User approval updated",
+      "approvalFailed": "User approval update failed",
+      "exportReady": "User roster export ready",
+      "exportFailed": "User roster export failed"
+    },
+    "filters": {
+      "search": "Search users",
+      "searchPlaceholder": "Name, email, public key, or #ID",
+      "approvalStatus": "Approval status",
+      "allApprovalStates": "All approval states",
+      "pendingApproval": "Pending approval",
+      "approved": "Approved",
+      "allUserTypes": "All User Types"
+    },
+    "columns": {
+      "user": "User",
+      "approval": "Approval",
+      "userType": "User Type",
+      "userProfile": "User Profile",
+      "joined": "Joined",
+      "action": "Action"
+    },
+    "status": {
+      "approved": "Approved",
+      "pending": "Pending"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveUser": "Approve {{name}}",
+      "viewUserDetails": "View {{name}} details"
+    },
+    "profile": {
+      "noQuestions": "No questions",
+      "noQuestionsDetail": "No onboarding questions apply.",
+      "needsProfile": "Needs profile",
+      "missingRequiredOne": "1 required answer missing",
+      "missingRequiredMany": "{{count}} required answers missing",
+      "noProfileYet": "No profile yet",
+      "noAnswersSaved": "No answers saved.",
+      "ready": "Profile ready",
+      "answersSavedOne": "1 answer saved",
+      "answersSavedMany": "{{count}} answers saved"
+    },
+    "identity": {
+      "decrypting": "Decrypting name and email...",
+      "failed": "Encrypted details could not be unlocked.",
+      "unavailable": "Encrypted details need a browser signer.",
+      "locked": "Encrypted details are locked."
+    },
+    "errors": {
+      "loadUsers": "Failed to load users.",
+      "loadUserTypes": "Failed to load user types.",
+      "loadQuestions": "Failed to load onboarding questions.",
+      "approvalUpdate": "User approval could not be updated.",
+      "exportAudit": "User roster export could not be audited.",
+      "exportRoster": "Failed to export user roster."
+    },
+    "detail": {
+      "booleanYes": "Yes",
+      "booleanNo": "No",
+      "fieldUnlocked": "Encrypted answer unlocked in this browser.",
+      "decryptingField": "Decrypting answer...",
+      "encryptedFieldUnavailable": "Encrypted answer needs a browser signer.",
+      "encryptedFieldFailed": "Encrypted answer could not be unlocked.",
+      "encryptedFieldLocked": "Encrypted answer is locked.",
+      "notAnswered": "Not answered",
+      "requiredMissing": "Required answer missing.",
+      "backToUserManager": "Back to User Manager",
+      "backToRoster": "Back to user roster",
+      "eyebrow": "User details",
+      "notFoundTitle": "User not found",
+      "notFoundBody": "This user is not in the current admin roster.",
+      "subtitle": "Review this user status, profile answers, and access details.",
+      "approvalStatus": "Approval status",
+      "waitingApproval": "waiting for approval",
+      "identityTitle": "Identity",
+      "name": "Name",
+      "nameUnavailable": "Not available",
+      "email": "Email",
+      "emailUnavailable": "Not available",
+      "userId": "User ID",
+      "publicKey": "Public key",
+      "noPublicKey": "No public key",
+      "fieldsTitle": "Profile fields",
+      "fieldsShown_one": "{{count}} field applies to this user.",
+      "fieldsShown_other": "{{count}} fields apply to this user.",
+      "noFields": "No onboarding fields apply to this user.",
+      "required": "Required",
+      "optional": "Optional",
+      "encrypted": "Encrypted",
+      "plain": "Plain",
+      "chatContext": "Chat context"
     }
   }
 }

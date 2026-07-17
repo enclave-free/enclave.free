@@ -5,8 +5,10 @@ from __future__ import annotations
 import http.client
 import inspect
 import json
+import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -22,6 +24,10 @@ from scripts.benches.conversation_model_bench import (
     LocalComposeEnvironment,
     SCENARIOS,
     StreamResult,
+    backend_fixture_cleanup_script,
+    cleanup_sage_user_state,
+    collect_stream_diagnostics,
+    configure_sage_user_policy,
     parse_args,
     run_bench,
     run_command,
@@ -39,6 +45,8 @@ class FakeEnvironment:
         self.health_waits = 0
         self.reset_count = 0
         self.operations: list[str] = []
+        self.requested_user_tools: list[tuple[str, ...]] = []
+        self.cleanup_count = 0
 
     def run_metadata(self) -> dict:
         return {"repo": "test-repo", "git": {"prototype": "abc123"}}
@@ -59,7 +67,8 @@ class FakeEnvironment:
     def admin_token(self) -> str:
         return "admin-token"
 
-    def user_token(self) -> str:
+    def user_token(self, tools: tuple[str, ...] = ()) -> str:
+        self.requested_user_tools.append(tools)
         return "user-token"
 
     def seed_knowledge(self) -> dict:
@@ -67,6 +76,10 @@ class FakeEnvironment:
         return {
             "job_ids": ["bench-knowledge-fixture"],
             "sources": ["Post-Release First Day Safety.md"],
+            "expected_answer_phrases": [
+                "physically safe place",
+                "contact trusted people",
+            ],
         }
 
     def seed_resources(self) -> dict:
@@ -77,9 +90,20 @@ class FakeEnvironment:
                 {
                     "resource_id": "conversation-bench-global-legal",
                     "name": "Bench Liberty Legal Hotline",
+                    "contact": {"email": "bench-legal@example.test"},
                 }
             ],
+            "expected_answer_facts": [
+                "Bench Liberty Legal Hotline",
+                "bench-legal@example.test",
+            ],
         }
+
+    def database_user_count(self) -> int:
+        return 3
+
+    def cleanup_scenario(self) -> None:
+        self.cleanup_count += 1
 
     def switch_model(self, model: str) -> None:
         self.switched_models.append(model)
@@ -97,6 +121,51 @@ class FakeEnvironment:
 
 class FakeConversationClient:
     def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+        result = self._stream_chat(token, payload, timeout)
+        events = [
+            {
+                "event": "trace_delta",
+                "elapsed_ms": 5.0,
+                "data": {
+                    "trace_delta": {"kind": "model_step", "status": "running"}
+                },
+            },
+            *result.events,
+        ]
+        answer_indexes = [
+            index
+            for index, event in enumerate(events)
+            if event.get("event") == "answer_delta"
+        ]
+        if len(answer_indexes) == 1:
+            insert_at = answer_indexes[0] + 1
+            split_at = max(1, len(result.answer) // 2)
+            events[answer_indexes[0]] = {
+                **events[answer_indexes[0]],
+                "data": {"delta": result.answer[:split_at]},
+            }
+            events.insert(
+                insert_at,
+                {
+                    "event": "answer_delta",
+                    "elapsed_ms": events[answer_indexes[0]].get("elapsed_ms", 0),
+                    "data": {"delta": result.answer[split_at:]},
+                },
+            )
+        return StreamResult(
+            answer=result.answer,
+            events=events,
+            done={**result.done, "session_id": payload["session_id"]},
+            trace=result.trace,
+            admin_change_set=result.admin_change_set,
+            timings=result.timings,
+            error=result.error,
+        )
+
+    def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+        self.deleted_session = (token, session_id, timeout)
+
+    def _stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
         self.last_token = token
         self.last_payload = payload
         message = payload["message"]
@@ -172,12 +241,9 @@ class FakeConversationClient:
                     "done_ms": 110.0,
                 },
             )
-        if "do not make me write SQL" in message:
+        if "do not ask me to write SQL" in message:
             return StreamResult(
-                answer=(
-                    "The Database Query tool only runs direct read-only SELECT "
-                    "statements. Submit a SELECT query to inspect database counts."
-                ),
+                answer="There are 3 users in SQLite.",
                 events=[
                     {
                         "event": "activity_step",
@@ -186,15 +252,14 @@ class FakeConversationClient:
                             "activity_step": {
                                 "id": "db-query",
                                 "title": "Database Query",
-                                "status": "guarded",
-                                "warnings": ["direct_select_required"],
+                                "status": "completed",
                             }
                         },
                     },
                     {
                         "event": "answer_delta",
                         "elapsed_ms": 90.0,
-                        "data": {"delta": "The Database Query tool only runs SELECT."},
+                        "data": {"delta": "There are 3 users in SQLite."},
                     },
                     {
                         "event": "done",
@@ -206,9 +271,8 @@ class FakeConversationClient:
                                 {
                                     "tool_id": "db-query",
                                     "tool_name": "Database Query",
-                                    "output_summary": "Submit a direct read-only SELECT to run it.",
-                                    "warnings": ["direct_select_required"],
-                                    "guarded": True,
+                                    "output_summary": "Database results were redacted from the trace.",
+                                    "warnings": ["raw_results_redacted"],
                                 }
                             ],
                         },
@@ -221,9 +285,8 @@ class FakeConversationClient:
                         {
                             "tool_id": "db-query",
                             "tool_name": "Database Query",
-                            "output_summary": "Submit a direct read-only SELECT to run it.",
-                            "warnings": ["direct_select_required"],
-                            "guarded": True,
+                            "output_summary": "Database results were redacted from the trace.",
+                            "warnings": ["raw_results_redacted"],
                         }
                     ],
                 },
@@ -232,8 +295,7 @@ class FakeConversationClient:
                         {
                             "id": "db-query",
                             "name": "Database Query",
-                            "warnings": ["direct_select_required"],
-                            "guarded": True,
+                            "warnings": ["raw_results_redacted"],
                         }
                     ]
                 },
@@ -800,9 +862,21 @@ class FakeWarningOnlyClient:
             answer="They should make a simple plan today and stay calm.",
             events=[
                 {
+                    "event": "trace_delta",
+                    "elapsed_ms": 10.0,
+                    "data": {
+                        "trace_delta": {"kind": "model_step", "status": "running"}
+                    },
+                },
+                {
                     "event": "answer_delta",
                     "elapsed_ms": 80.0,
                     "data": {"delta": "They should make a simple plan today."},
+                },
+                {
+                    "event": "answer_delta",
+                    "elapsed_ms": 85.0,
+                    "data": {"delta": " Stay calm."},
                 },
                 {
                     "event": "done",
@@ -810,7 +884,12 @@ class FakeWarningOnlyClient:
                     "data": {"model": "kimi-k2-6", "provider": "sage", "tools_used": []},
                 },
             ],
-            done={"model": "kimi-k2-6", "provider": "sage", "tools_used": []},
+            done={
+                "model": "kimi-k2-6",
+                "provider": "sage",
+                "tools_used": [],
+                "session_id": payload["session_id"],
+            },
             trace={"tools": [], "retrieval": []},
             admin_change_set=None,
             timings={
@@ -820,6 +899,9 @@ class FakeWarningOnlyClient:
                 "done_ms": 100.0,
             },
         )
+
+    def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+        self.deleted_session = (token, session_id, timeout)
 
 
 class FakeGenericFailureAnswerClient(FakeConversationClient):
@@ -871,7 +953,11 @@ class FakeSlowTraceFeedbackClient(FakeConversationClient):
 
 class FakeFailingClient:
     def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+        self.payload = payload
         raise RuntimeError("connection closed")
+
+    def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+        self.deleted_session = (token, session_id, timeout)
 
 
 class IncompleteStreamResponse:
@@ -891,6 +977,15 @@ class IncompleteStreamResponse:
             self.offset += len(chunk)
             return chunk
         raise http.client.IncompleteRead(b"")
+
+
+class ConnectionLostStreamResponse(IncompleteStreamResponse):
+    def read(self, size: int) -> bytes:
+        if self.offset < len(self.body):
+            chunk = self.body[self.offset : self.offset + size]
+            self.offset += len(chunk)
+            return chunk
+        raise ConnectionResetError("connection lost")
 
 
 class ConversationModelBenchTest(unittest.TestCase):
@@ -913,6 +1008,7 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(
             options.scenarios,
             (
+                "admin_no_tools_control",
                 "admin_config_bootstrap",
                 "admin_config_live_onboarding_prompt",
                 "admin_deployment_readiness",
@@ -933,11 +1029,287 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertTrue(options.seed_resources)
         self.assertFalse(options.restore_model)
 
+    def test_no_tools_control_requires_one_model_call_and_streamed_answer(self) -> None:
+        class NoToolsClient:
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                self.payload = payload
+                return StreamResult(
+                    answer="Four.",
+                    events=[
+                        {
+                            "event": "trace_delta",
+                            "elapsed_ms": 10.0,
+                            "data": {"trace_delta": {"kind": "model_step", "status": "running"}},
+                        },
+                        {"event": "answer_delta", "elapsed_ms": 20.0, "data": {"delta": "Fo"}},
+                        {"event": "answer_delta", "elapsed_ms": 25.0, "data": {"delta": "ur."}},
+                        {
+                            "event": "done",
+                            "elapsed_ms": 30.0,
+                            "data": {
+                                "model": "kimi-k2-6",
+                                "provider": "sage",
+                                "session_id": payload["session_id"],
+                            },
+                        },
+                    ],
+                    done={
+                        "model": "kimi-k2-6",
+                        "provider": "sage",
+                        "session_id": payload["session_id"],
+                    },
+                    trace={"tools": []},
+                    admin_change_set=None,
+                    timings={
+                        "first_event_ms": 10.0,
+                        "first_trace_or_tool_feedback_ms": 10.0,
+                        "first_visible_assistant_token_ms": 20.0,
+                        "done_ms": 30.0,
+                    },
+                )
+
+            def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+                self.deleted_session = (token, session_id, timeout)
+
+        env = FakeEnvironment()
+        client = NoToolsClient()
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_no_tools_control",)),
+            environment=env,
+            client=client,
+        )
+
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        self.assertEqual(artifact["summary"]["status"], "passed")
+        self.assertEqual(client.payload["tools"], [])
+        self.assertEqual(scenario["diagnostics"]["model_call_count"], 1)
+        self.assertEqual(scenario["diagnostics"]["answer_delta_count"], 2)
+        self.assertEqual(env.cleanup_count, 1)
+        self.assertEqual(
+            client.deleted_session[:2],
+            ("admin-token", client.payload["session_id"]),
+        )
+
+    def test_stream_diagnostics_capture_model_retry_correction_tool_and_phases(self) -> None:
+        stream = StreamResult(
+            answer="Ready now.",
+            events=[
+                {
+                    "event": "trace_status",
+                    "data": {"timing": {"phase": "preparing_tools", "elapsed_ms": 4}},
+                },
+                {
+                    "event": "trace_delta",
+                    "data": {"trace_delta": {"kind": "model_step", "status": "running"}},
+                },
+                {
+                    "event": "trace_delta",
+                    "data": {"trace_delta": {"kind": "retry", "status": "running"}},
+                },
+                {
+                    "event": "trace_delta",
+                    "data": {"trace_delta": {"kind": "correction", "status": "running"}},
+                },
+                {
+                    "event": "trace_delta",
+                    "data": {
+                        "trace_delta": {
+                            "kind": "tool_result",
+                            "status": "completed",
+                            "metadata": {"duration_ms": 12.6},
+                        }
+                    },
+                },
+                {"event": "answer_delta", "data": {"delta": "Ready "}},
+                {"event": "answer_delta", "data": {"delta": "now."}},
+            ],
+            done={"model": "test", "provider": "sage"},
+            trace=None,
+            admin_change_set=None,
+            timings={
+                "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 20.0,
+                "first_visible_assistant_token_ms": 50.0,
+                "done_ms": 70.0,
+            },
+        )
+
+        diagnostics = collect_stream_diagnostics(stream)
+
+        self.assertEqual(diagnostics["answer_delta_count"], 2)
+        self.assertEqual(diagnostics["model_call_count"], 1)
+        self.assertEqual(diagnostics["retry_count"], 1)
+        self.assertEqual(diagnostics["correction_call_count"], 1)
+        self.assertEqual(diagnostics["tool_execution_ms"], 12.6)
+        self.assertEqual(
+            diagnostics["phase_durations"],
+            {
+                "event_to_tool_feedback_ms": 10.0,
+                "tool_feedback_to_answer_ms": 30.0,
+                "answer_to_done_ms": 20.0,
+                "total_ms": 70.0,
+            },
+        )
+        self.assertEqual(diagnostics["timing_phases"][0]["phase"], "preparing_tools")
+
+    def test_cleanup_script_covers_all_temporary_stores(self) -> None:
+        source = backend_fixture_cleanup_script(
+            {
+                "user_id": 1,
+                "user_type_id": 2,
+                "knowledge": {"point_id": "point", "job_ids": ["job"]},
+                "resources": {"resource_ids": ["resource"]},
+            }
+        )
+
+        self.assertIn("store.get_qdrant_client().delete", source)
+        self.assertIn("ingest_db.delete_retrieval_chunks_for_job", source)
+        self.assertIn("ingest_db.delete_job", source)
+        self.assertIn("database.delete_resource", source)
+        self.assertIn("database.delete_user", source)
+        self.assertIn("database.delete_user_type", source)
+        self.assertNotIn("conversation-model-bench-cleanup", source)
+
+        seed_source = inspect.getsource(LocalComposeEnvironment.seed_knowledge)
+        self.assertIn('changed_by=""', seed_source)
+        self.assertNotIn('changed_by="conversation-model-bench"', seed_source)
+
+    def test_sage_cleanup_removes_temporary_identity_conversation_and_agent_state(self) -> None:
+        with patch(
+            "scripts.benches.conversation_model_bench.run_command",
+            return_value="",
+        ) as run:
+            cleanup_sage_user_state(42, 7)
+
+        command = run.call_args.args[0]
+        sql = command[-1]
+        self.assertIn("DELETE FROM messages", sql)
+        self.assertIn("user:42", sql)
+        self.assertIn("DELETE FROM web_sessions", sql)
+        self.assertIn("owner_id = '42'", sql)
+        self.assertIn("DELETE FROM external_identities", sql)
+        self.assertIn("DELETE FROM blocks", sql)
+        self.assertIn("DELETE FROM passages", sql)
+        self.assertIn("DELETE FROM summaries", sql)
+        self.assertIn("DELETE FROM agents", sql)
+        self.assertIn("WHERE user_type_id = 7", sql)
+
+    def test_resource_fixture_identity_is_unique_per_scenario(self) -> None:
+        source = inspect.getsource(LocalComposeEnvironment.seed_resources)
+
+        self.assertIn("uuid.uuid4().hex", source)
+        self.assertIn('resource_id = f"conversation-bench-global-legal-{suffix}"', source)
+        self.assertIn("expected_answer_facts", source)
+
+    def test_ingest_job_cleanup_cascades_document_defaults_and_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sqlite_path = str(Path(tmpdir) / "bench-cleanup.db")
+            script = """
+import database
+import ingest_db
+
+database.init_schema()
+ingest_db.init_ingest_schema()
+user_type_id = database.create_user_type("Bench Cleanup Type")
+ingest_db.create_job(
+    job_id="bench-cleanup-job",
+    filename="bench.md",
+    file_path="/tmp/bench.md",
+    ontology_id="default",
+)
+database.upsert_document_defaults(
+    "bench-cleanup-job",
+    is_available=True,
+    is_default_active=False,
+)
+database.upsert_document_defaults_override(
+    "bench-cleanup-job",
+    user_type_id,
+    is_available=True,
+    is_default_active=True,
+)
+assert ingest_db.delete_job("bench-cleanup-job")
+with database.get_cursor() as cursor:
+    cursor.execute("SELECT COUNT(*) FROM document_defaults WHERE job_id = ?", ("bench-cleanup-job",))
+    assert cursor.fetchone()[0] == 0
+    cursor.execute("SELECT COUNT(*) FROM document_defaults_user_type_overrides WHERE job_id = ?", ("bench-cleanup-job",))
+    assert cursor.fetchone()[0] == 0
+"""
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                cwd=REPO_ROOT,
+                env={
+                    **os.environ,
+                    "PYTHONPATH": str(REPO_ROOT / "backend" / "app"),
+                    "SQLITE_PATH": sqlite_path,
+                },
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_cleanup_runs_when_stream_fails(self) -> None:
+        env = FakeEnvironment()
+        client = FakeFailingClient()
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=env,
+            client=client,
+        )
+
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(env.cleanup_count, 1)
+        self.assertEqual(
+            client.deleted_session[:2],
+            ("admin-token", client.payload["session_id"]),
+        )
+
+    def test_cleanup_runs_when_fixture_seeding_fails(self) -> None:
+        class FailingSeedEnvironment(FakeEnvironment):
+            def seed_knowledge(self) -> dict:
+                raise RuntimeError("seed failed")
+
+        env = FailingSeedEnvironment()
+        artifact = run_bench(
+            BenchOptions(
+                scenarios=("user_knowledge_assistance",),
+                seed_knowledge=True,
+            ),
+            environment=env,
+            client=FakeConversationClient(),
+        )
+        scenario = artifact["candidates"][0]["scenarios"][0]
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertIn("seed failed", scenario["response"]["stream_error"])
+        self.assertEqual(env.cleanup_count, 1)
+
     def test_runtime_config_fingerprint_uses_internal_agent_token_header(self) -> None:
         command = runtime_config_fingerprint_command("test-token")
 
         self.assertIn("X-Internal-Agent-Token: test-token", command)
         self.assertNotIn("Authorization: Bearer test-token", command)
+
+    def test_configure_sage_user_policy_sets_authoritative_tools_and_scope(self) -> None:
+        with patch(
+            "scripts.benches.conversation_model_bench.run_command",
+            return_value="",
+        ) as command:
+            configure_sage_user_policy(
+                42,
+                ("knowledge-search", "curated-resources", "curated-resources"),
+            )
+
+        argv = command.call_args.args[0]
+        sql = argv[-1]
+        self.assertIn("'user_default_tool_ids', 42", sql)
+        self.assertIn('["curated-resources","knowledge-search"]', sql)
+        self.assertIn("'knowledge_source_default', 42, 'selected'", sql)
+
+    def test_configure_sage_user_policy_rejects_unknown_tool(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported user conversation tool IDs"):
+            configure_sage_user_policy(42, ("admin-config",))
 
     def test_run_command_redacts_internal_agent_token_on_failure(self) -> None:
         with patch(
@@ -1043,6 +1415,23 @@ class ConversationModelBenchTest(unittest.TestCase):
         )
         self.assertEqual(result.done, {})
         self.assertIn("stream closed before done", result.error or "")
+
+    def test_stream_client_preserves_partial_events_after_connection_loss(self) -> None:
+        body = b'event: answer_delta\ndata: {"delta":"partial"}\n\n'
+
+        with patch(
+            "urllib.request.urlopen",
+            return_value=ConnectionLostStreamResponse(body),
+        ):
+            result = HttpConversationClient("http://example.test").stream_chat(
+                "token",
+                {"message": "hello"},
+                timeout=1,
+            )
+
+        self.assertEqual(result.answer, "partial")
+        self.assertEqual([event["event"] for event in result.events], ["answer_delta"])
+        self.assertIn("stream read failed before done", result.error or "")
 
     def test_stream_client_preserves_multibyte_answer_text(self) -> None:
         answer_data = json.dumps({"delta": "Get safe — today."}, ensure_ascii=False)
@@ -1793,7 +2182,7 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["db_query_was_executed"], "passed")
         self.assertEqual(checks["db_query_results_redacted_from_trace"], "passed")
 
-    def test_admin_database_natural_language_request_records_guardrail(self) -> None:
+    def test_admin_database_natural_language_request_runs_model_chosen_select(self) -> None:
         artifact = run_bench(
             BenchOptions(
                 api_base="http://127.0.0.1:18000",
@@ -1808,8 +2197,8 @@ class ConversationModelBenchTest(unittest.TestCase):
 
         self.assertEqual(scenario["id"], "admin_database_natural_language_guardrail")
         self.assertEqual(artifact["summary"]["status"], "passed")
-        self.assertEqual(checks["db_query_guardrail_recorded"], "passed")
-        self.assertEqual(checks["db_query_not_executed_from_natural_language"], "passed")
+        self.assertEqual(checks["db_query_tool_used"], "passed")
+        self.assertEqual(checks["db_query_was_executed_from_natural_language"], "passed")
 
     def test_curated_resource_referral_seeds_resource_fixture(self) -> None:
         env = FakeEnvironment()
@@ -1829,6 +2218,7 @@ class ConversationModelBenchTest(unittest.TestCase):
         checks = {check["name"]: check["status"] for check in scenario["checks"]}
 
         self.assertTrue(env.seeded_resources)
+        self.assertEqual(env.requested_user_tools, [("curated-resources",)])
         self.assertEqual(client.last_token, "user-token")
         self.assertEqual(client.last_payload["tools"], ["curated-resources"])
         self.assertEqual(
@@ -1860,6 +2250,10 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertTrue(env.seeded_knowledge)
         self.assertTrue(env.seeded_resources)
         self.assertEqual(
+            env.requested_user_tools,
+            [("knowledge-search", "curated-resources")],
+        )
+        self.assertEqual(
             client.last_payload["tools"],
             ["knowledge-search", "curated-resources"],
         )
@@ -1868,7 +2262,7 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertEqual(checks["curated_resources_tool_used"], "passed")
         self.assertEqual(checks["answer_combines_safety_and_referral"], "passed")
 
-    def test_warning_only_user_findings_do_not_fail_the_run(self) -> None:
+    def test_missing_required_knowledge_tool_and_guidance_fail_the_run(self) -> None:
         artifact = run_bench(
             BenchOptions(
                 scenarios=("user_knowledge_assistance",),
@@ -1880,16 +2274,21 @@ class ConversationModelBenchTest(unittest.TestCase):
 
         scenario = artifact["candidates"][0]["scenarios"][0]
 
-        self.assertEqual(scenario["summary"]["status"], "passed")
-        self.assertEqual(artifact["candidates"][0]["summary"]["status"], "passed")
-        self.assertEqual(artifact["summary"]["status"], "passed")
+        self.assertEqual(scenario["summary"]["status"], "failed")
+        self.assertEqual(artifact["candidates"][0]["summary"]["status"], "failed")
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(
+            {failure["name"] for failure in artifact["summary"]["hard_failures"]},
+            {
+                "knowledge_search_behavior_recorded",
+                "answer_present_with_practical_guidance",
+            },
+        )
         self.assertEqual(
             {warning["name"] for warning in artifact["summary"]["warnings"]},
             {
                 "first_trace_or_tool_feedback_present",
-                "knowledge_search_behavior_recorded",
                 "retrieval_evidence_recorded",
-                "answer_present_with_practical_guidance",
             },
         )
 
@@ -1952,6 +2351,260 @@ class ConversationModelBenchTest(unittest.TestCase):
             {warning["name"] for warning in scenario["summary"]["warnings"]},
             {"first_trace_or_tool_feedback_under_10s"},
         )
+
+    def test_bootstrap_rejects_an_extra_final_model_call(self) -> None:
+        class ExtraModelCallClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                model_events = [
+                    {
+                        "event": "trace_delta",
+                        "elapsed_ms": 5.0,
+                        "data": {
+                            "trace_delta": {"kind": "model_step", "status": "running"}
+                        },
+                    },
+                    {
+                        "event": "trace_delta",
+                        "elapsed_ms": 80.0,
+                        "data": {
+                            "trace_delta": {"kind": "model_step", "status": "running"}
+                        },
+                    },
+                ]
+                return StreamResult(
+                    answer=result.answer,
+                    events=[*model_events, *result.events],
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_config_bootstrap",)),
+            environment=FakeEnvironment(),
+            client=ExtraModelCallClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("bootstrap_has_no_final_model_call", failures)
+
+    def test_bootstrap_rejects_a_retry_call(self) -> None:
+        class RetryClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=[
+                        *result.events,
+                        {
+                            "event": "trace_delta",
+                            "elapsed_ms": 80.0,
+                            "data": {
+                                "trace_delta": {"kind": "retry", "status": "running"}
+                            },
+                        },
+                    ],
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_config_bootstrap",)),
+            environment=FakeEnvironment(),
+            client=RetryClient(),
+        )
+
+        failures = {item["name"] for item in artifact["summary"]["hard_failures"]}
+        self.assertIn("bootstrap_zero_retry_calls", failures)
+
+    def test_plain_answer_with_model_telemetry_requires_multiple_deltas(self) -> None:
+        class SingleDeltaClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                kept_answer_delta = False
+                events = []
+                for event in result.events:
+                    if event.get("event") == "answer_delta":
+                        if kept_answer_delta:
+                            continue
+                        kept_answer_delta = True
+                    events.append(event)
+                return StreamResult(
+                    answer=result.answer,
+                    events=events,
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=SingleDeltaClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("plain_answer_streamed_multiple_deltas", failures)
+
+    def test_plain_answer_requires_model_telemetry_to_prove_zero_corrections(self) -> None:
+        class MissingTelemetryClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=[
+                        event
+                        for event in result.events
+                        if not (
+                            event.get("event") == "trace_delta"
+                            and (event.get("data") or {})
+                            .get("trace_delta", {})
+                            .get("kind")
+                            == "model_step"
+                        )
+                    ],
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=MissingTelemetryClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("plain_answer_zero_correction_calls", failures)
+
+    def test_session_cleanup_failure_is_a_hard_scenario_failure(self) -> None:
+        class FailedSessionCleanupClient(FakeConversationClient):
+            def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+                raise RuntimeError("session lifecycle cleanup failed")
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=FailedSessionCleanupClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("temporary_session_cleanup_succeeded", failures)
+
+    def test_session_cleanup_deletes_requested_and_server_returned_ids(self) -> None:
+        observed_session_id = "server-returned-session"
+
+        class MismatchedSessionClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.deleted_sessions: list[str] = []
+
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer=result.answer,
+                    events=result.events,
+                    done={**result.done, "session_id": observed_session_id},
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                    error=result.error,
+                )
+
+            def delete_session(self, token: str, session_id: str, timeout: float) -> None:
+                self.deleted_sessions.append(session_id)
+
+        client = MismatchedSessionClient()
+        run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=FakeEnvironment(),
+            client=client,
+        )
+
+        self.assertCountEqual(
+            client.deleted_sessions,
+            [client.last_payload["session_id"], observed_session_id],
+        )
+
+    def test_seeded_knowledge_requires_exact_fixture_facts(self) -> None:
+        class UngroundedAnswerClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer="Get to a physically safe place and document urgent needs.",
+                    events=result.events,
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(
+                scenarios=("user_knowledge_assistance",),
+                seed_knowledge=True,
+            ),
+            environment=FakeEnvironment(),
+            client=UngroundedAnswerClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("answer_uses_exact_seeded_knowledge_facts", failures)
+
+    def test_database_answer_requires_exact_fixture_count(self) -> None:
+        class WrongCountClient(FakeConversationClient):
+            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
+                result = super().stream_chat(token, payload, timeout)
+                return StreamResult(
+                    answer="There are 4 users in SQLite.",
+                    events=result.events,
+                    done=result.done,
+                    trace=result.trace,
+                    admin_change_set=result.admin_change_set,
+                    timings=result.timings,
+                )
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_database_natural_language_guardrail",)),
+            environment=FakeEnvironment(),
+            client=WrongCountClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("answer_reports_user_count", failures)
+
+    def test_cleanup_failure_is_a_hard_scenario_failure(self) -> None:
+        class CleanupFailureEnvironment(FakeEnvironment):
+            def cleanup_scenario(self) -> None:
+                raise RuntimeError("cleanup unavailable")
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
+            environment=CleanupFailureEnvironment(),
+            client=FakeConversationClient(),
+        )
+
+        failures = {
+            item["name"] for item in artifact["summary"]["hard_failures"]
+        }
+        self.assertIn("temporary_fixture_cleanup_succeeded", failures)
 
     def test_explicit_model_candidates_switch_verify_and_restore_local_sage(self) -> None:
         env = FakeEnvironment()

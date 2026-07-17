@@ -1,6 +1,6 @@
 # Security and Data Protection Checklist
 
-Last updated: 2026-05-17
+Last updated: 2026-07-16
 Scope: Enclave current repository state (code/config review)
 
 ## Purpose
@@ -336,8 +336,8 @@ Run from repo root with stack running:
 
 ```bash
 # S4-1/S4-2: Unauthenticated requests should fail on protected endpoints
-curl -i http://localhost:8000/ingest/pending
-curl -i -X POST http://localhost:8000/vector-search \
+curl -i http://localhost:18000/ingest/pending
+curl -i -X POST http://localhost:18000/vector-search \
   -H 'Content-Type: application/json' \
   -d '{"query":"test","top_k":1}'
 
@@ -345,16 +345,16 @@ curl -i -X POST http://localhost:8000/vector-search \
 # Replace SESSION_ID with a Sage-owned query session created by OWNER_TOKEN
 # through POST /query. The public query-session resource is:
 #   /query/session/{SESSION_ID}
-curl -i -X DELETE "http://localhost:8000/query/session/${SESSION_ID}" \
+curl -i -X DELETE "http://localhost:18000/query/session/${SESSION_ID}" \
   -H "Authorization: Bearer ${OTHER_AGENT_TOKEN}"
 # Expected: 403 Forbidden. Body is the gateway auth error; no deletion summary.
 
-curl -i -X DELETE "http://localhost:8000/query/session/${SESSION_ID}" \
+curl -i -X DELETE "http://localhost:18000/query/session/${SESSION_ID}" \
   -H "Authorization: Bearer ${OWNER_TOKEN}"
 # Expected: 200 OK with {"status":"deleted","deletion":{"status":"succeeded",...}}
 # and sanitized lifecycle results including delete_session_record.
 
-python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base http://localhost:8000
+python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base http://localhost:18000
 # Expected: owner delete succeeds; non-owner delete is forbidden; the deleted
 # session cannot be resumed and disappears from /query/sessions. Python-side
 # lifecycle evidence is reported through backend/app/lifecycle.py
@@ -363,26 +363,26 @@ python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base 
 # tombstone retry reporting.
 
 # S4-4: CORS should reject disallowed origins
-curl -i -X OPTIONS http://localhost:8000/health \
+curl -i -X OPTIONS http://localhost:18000/health \
   -H 'Origin: https://evil.example.com' \
   -H 'Access-Control-Request-Method: GET'
 
 # S4-7: Verify only expected ports are published
 docker compose -f docker-compose.infra.yml -f docker-compose.app.yml ps --format 'table {{.Name}}\t{{.Ports}}'
-lsof -nP -iTCP:8000 -sTCP:LISTEN
+lsof -nP -iTCP:18000 -sTCP:LISTEN
 
 # Smoke checks expected to remain available
-curl -i http://localhost:8000/test
-curl -i http://localhost:8000/llm/test
-docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/test
-docker exec enclave-api-gateway wget -qO- http://127.0.0.1:8000/llm/test
+curl -i http://localhost:18000/test
+curl -i http://localhost:18000/llm/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/test
+docker exec enclave-api-gateway wget -qO- http://127.0.0.1:18000/llm/test
 ```
 
 Expected outcome:
 - Protected endpoints return `401` or `403` when unauthenticated.
 - CORS preflight for disallowed origins does not return `Access-Control-Allow-Origin`.
 - Published ports match least-privilege expectations (no `0.0.0.0` binds on internal services).
-- Health/smoke endpoints continue to return successful responses from the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:8000`, stop it before trusting host `localhost:8000` smoke results.
+- Health/smoke endpoints continue to return successful responses from the Compose `enclave-api-gateway` container. If `lsof` shows another local process bound to `127.0.0.1:18000`, stop it before trusting host `localhost:18000` smoke results.
 
 **Note:** S4-5 (localStorage token removal) and S4-6 (query-param token removal) require browser DevTools inspection — verify that `localStorage` no longer stores session tokens and that auth flows do not pass tokens in URL query strings.
 
@@ -428,12 +428,12 @@ Use these guardrails while security fixes are in progress:
 
 ---
 
-## 11. Verification Evidence (2026-02-08 — 2026-05-14)
+## 11. Verification Evidence (2026-02-08 — 2026-07-14)
 
 - Automated regression suite:
-  - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3c_auth_hardening_regression.py --api-base http://localhost:8000`
+  - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3c_auth_hardening_regression.py --api-base http://localhost:18000`
     - Result: `OVERALL RESULT: PASSED`
-  - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3d_phase3_config_integrity.py --api-base http://localhost:8000`
+  - `PYTHONPATH=.vendorpy python3 scripts/tests/AUTH/test_3d_phase3_config_integrity.py --api-base http://localhost:18000`
     - Result: `OVERALL RESULT: PASSED`
 - Manual Section 7.1 checks:
   - `GET /ingest/pending` unauthenticated: `401`
@@ -441,7 +441,7 @@ Use these guardrails while security fixes are in progress:
   - Public query-session ownership: replay against Sage-owned `/query/session/{SESSION_ID}`:
     `DELETE /query/session/${SESSION_ID}` with `Authorization: Bearer ${OTHER_AGENT_TOKEN}` -> `403 Forbidden`, gateway auth error, no deletion summary.
     `DELETE /query/session/${SESSION_ID}` with `Authorization: Bearer ${OWNER_TOKEN}` -> `200 OK`, `{"status":"deleted","deletion":{"status":"succeeded",...}}` with sanitized lifecycle results including `delete_session_record`.
-  - Python lifecycle evidence: run `python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base http://localhost:8000`.
+  - Python lifecycle evidence: run `python3 scripts/tests/TOOLS/test_5g_conversation_delete_lifecycle.py --api-base http://localhost:18000`.
     Expected tombstone lifecycle outcome: owner delete succeeds, non-owner delete is forbidden, the deleted session cannot be resumed and disappears from `/query/sessions`; `backend/app/lifecycle.py::post_sage_session_memory_delete()` is the Agent Runtime gateway client used for Sage Session Memory deletion and tombstone retry reporting through `/internal/lifecycle/session-memory/delete`.
   - Disallowed CORS preflight (`Origin: https://evil.example.com`): rejected (`400 Disallowed CORS origin`, no allow-origin echo)
   - Published ports: `enclave-backend` and `enclave-frontend` bound to `127.0.0.1`, no `0.0.0.0` exposure

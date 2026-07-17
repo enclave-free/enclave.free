@@ -24,6 +24,11 @@ import {
   Textarea,
 } from '../components/ui';
 import { adminFetch, ADMIN_RESOURCES_CHANGED_EVENT } from '../utils/adminApi';
+import {
+  CoveragePicker,
+  type CoverageLevel,
+  type RegionData,
+} from '../components/admin/CoveragePicker';
 
 const RESOURCE_TYPES = [
   'lawyer',
@@ -35,7 +40,6 @@ const RESOURCE_TYPES = [
   'hotline',
   'other',
 ] as const;
-const SCOPE_LEVELS = ['country', 'subregion', 'region', 'global'] as const;
 const CONTACT_KEYS = [
   'phone',
   'email',
@@ -63,7 +67,7 @@ interface Resource {
   description: string | null;
   contact: ResourceContact;
   languages: string[];
-  scope_level: string | null;
+  scope_level: CoverageLevel | null;
   scope_code: string | null;
   coverage: string | null;
   help_types: string[];
@@ -73,6 +77,49 @@ interface Resource {
   vetted_by: string | null;
   source_note: string | null;
   display_order: number;
+}
+
+function parseRegionData(value: unknown): RegionData | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Partial<RegionData>;
+  if (
+    !Array.isArray(candidate.countries) ||
+    !Array.isArray(candidate.subregions) ||
+    !Array.isArray(candidate.regions)
+  ) {
+    return null;
+  }
+
+  const isNullableString = (field: unknown) =>
+    field === null || typeof field === 'string';
+  const countriesValid = candidate.countries.every(
+    (entry) =>
+      entry?.level === 'country' &&
+      typeof entry.code === 'string' &&
+      typeof entry.name === 'string' &&
+      isNullableString(entry.subregion_code) &&
+      isNullableString(entry.subregion_name) &&
+      isNullableString(entry.region_code) &&
+      isNullableString(entry.region_name)
+  );
+  const subregionsValid = candidate.subregions.every(
+    (entry) =>
+      entry?.level === 'subregion' &&
+      typeof entry.code === 'string' &&
+      typeof entry.name === 'string' &&
+      isNullableString(entry.region_code) &&
+      isNullableString(entry.region_name)
+  );
+  const regionsValid = candidate.regions.every(
+    (entry) =>
+      entry?.level === 'region' &&
+      typeof entry.code === 'string' &&
+      typeof entry.name === 'string'
+  );
+
+  return countriesValid && subregionsValid && regionsValid
+    ? (candidate as RegionData)
+    : null;
 }
 
 interface HelpType {
@@ -86,7 +133,7 @@ interface FormState {
   name: string;
   resource_type: string;
   description: string;
-  scope_level: string;
+  scope_level: CoverageLevel;
   scope_code: string;
   help_types: string[];
   languages: string;
@@ -155,14 +202,21 @@ export function AdminResourcesDirectory({
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null);
+  const [regionData, setRegionData] = useState<RegionData | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [resResources, resHelpTypes] = await Promise.all([
+      const regionDataPromise = adminFetch('/admin/regions')
+        .then(async (response) =>
+          response.ok ? parseRegionData(await response.json()) : null
+        )
+        .catch(() => null);
+      const [resResources, resHelpTypes, nextRegionData] = await Promise.all([
         adminFetch('/admin/resources'),
         adminFetch('/admin/help-types'),
+        regionDataPromise,
       ]);
       if (!resResources.ok) throw new Error('Failed to load resources');
       if (!resHelpTypes.ok) throw new Error('Failed to load help types');
@@ -170,6 +224,8 @@ export function AdminResourcesDirectory({
       const helpTypesData = await resHelpTypes.json();
       setResources(resourcesData.resources ?? []);
       setHelpTypes(helpTypesData.help_types ?? []);
+      // Region taxonomy is best-effort; the coverage picker degrades gracefully.
+      setRegionData(nextRegionData);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load directory');
     } finally {
@@ -481,40 +537,25 @@ export function AdminResourcesDirectory({
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label={t('adminResources.scopeLevel', 'Coverage level')}
-                  value={form.scope_level}
-                  onChange={(e) =>
-                    setForm({ ...form, scope_level: e.target.value })
-                  }
-                >
-                  <option value="">—</option>
-                  {SCOPE_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </SelectField>
-                <TextField
-                  label={t('adminResources.scopeCode', 'Coverage code')}
-                  value={form.scope_code}
-                  onChange={(e) =>
-                    setForm({ ...form, scope_code: e.target.value })
-                  }
-                  disabled={form.scope_level === 'global'}
-                  placeholder={
-                    form.scope_level === 'subregion' ||
-                    form.scope_level === 'region'
-                      ? 'M49 e.g. 013'
-                      : 'ISO e.g. NI'
-                  }
-                  description={t(
-                    'adminResources.scopeCodeHint',
-                    'Country: ISO code (NI). Subregion/region: UN M49 code (013 = Central America). Global: leave blank.'
-                  )}
-                />
-              </div>
+              <CoveragePicker
+                data={regionData}
+                value={{
+                  scope_level: form.scope_level,
+                  scope_code: form.scope_code,
+                }}
+                onChange={(v) =>
+                  setForm({
+                    ...form,
+                    scope_level: v.scope_level,
+                    scope_code: v.scope_code,
+                  })
+                }
+                label={t('adminResources.coverage', 'Coverage')}
+                description={t(
+                  'adminResources.coverageHint',
+                  'Choose a coverage level, then search for its name or code.'
+                )}
+              />
 
               <div>
                 <div className="mb-1 text-sm font-medium text-text">

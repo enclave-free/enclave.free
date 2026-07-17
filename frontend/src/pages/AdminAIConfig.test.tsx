@@ -227,6 +227,51 @@ describe('AdminAIConfig', () => {
     expect(knowledgeSourceCard).toHaveTextContent('All available documents')
   })
 
+  it('warns when active default documents cannot be searched', async () => {
+    aiConfigResponse = {
+      ...baseAIConfigResponse,
+      defaults: [
+        {
+          key: 'knowledge_source_default',
+          value: 'none',
+          value_type: 'string',
+          category: 'default',
+          description: 'Knowledge source scope for new user sessions',
+        },
+      ],
+    }
+    documentDefaultsResponse = {
+      documents: [
+        {
+          job_id: 'doc-1',
+          filename: 'ops-guide.pdf',
+          total_chunks: 12,
+          status: 'completed',
+          is_available: true,
+          is_default_active: true,
+          display_order: 0,
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/admin/ai']}>
+        <Routes>
+          <Route path="/admin/ai" element={<AdminAIConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(
+      await screen.findByRole('note', { name: 'Knowledge Search is off' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Active default documents will not be used until Knowledge Sources is set to selected default documents or all available documents.'
+      )
+    ).toBeInTheDocument()
+  })
+
   it('lets an admin configure the AI System Prompt', async () => {
     aiConfigResponse = {
       ...baseAIConfigResponse,

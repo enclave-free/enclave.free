@@ -4,8 +4,14 @@
  * Fetches instance settings from the backend and caches in localStorage.
  * Settings include: instance name, accent color, and icon choices (configured by admin)
  */
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import i18n from '../i18n'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import i18n from '../i18n';
 import {
   InstanceConfig,
   DEFAULT_INSTANCE_CONFIG,
@@ -32,30 +38,40 @@ import {
   DEFAULT_THEMES,
   applySurfaceStyle,
   applyTypographyPreset,
-} from '../types/instance'
-import { API_BASE } from '../types/onboarding'
+} from '../types/instance';
+import { API_BASE } from '../types/onboarding';
+import { hasChosenLanguage } from '../utils/languages';
 
 interface InstanceConfigContextValue {
-  config: InstanceConfig
-  setConfig: (config: InstanceConfig) => void
-  updateConfig: (updates: Partial<InstanceConfig>) => void
+  config: InstanceConfig;
+  setConfig: (config: InstanceConfig) => void;
+  updateConfig: (updates: Partial<InstanceConfig>) => void;
 }
 
-const InstanceConfigContext = createContext<InstanceConfigContextValue | undefined>(undefined)
+const InstanceConfigContext = createContext<
+  InstanceConfigContextValue | undefined
+>(undefined);
 
 /**
  * Map backend primary_color (hex or name) to frontend AccentColor.
  * Returns undefined for invalid/missing values to allow fallback to cached config.
  */
 function hexToAccentColor(value: string | undefined): AccentColor | undefined {
-  if (!value) return undefined
+  if (!value) return undefined;
 
-  const normalized = value.trim().toLowerCase()
+  const normalized = value.trim().toLowerCase();
 
   // If it's already a valid accent color name, return it directly
-  const validColors: AccentColor[] = ['blue', 'purple', 'green', 'orange', 'pink', 'teal']
+  const validColors: AccentColor[] = [
+    'blue',
+    'purple',
+    'green',
+    'orange',
+    'pink',
+    'teal',
+  ];
   if (validColors.includes(normalized as AccentColor)) {
-    return normalized as AccentColor
+    return normalized as AccentColor;
   }
 
   // Otherwise try to match hex values
@@ -67,30 +83,36 @@ function hexToAccentColor(value: string | undefined): AccentColor | undefined {
     '#ea580c': 'orange',
     '#db2777': 'pink',
     '#0d9488': 'teal',
-  }
+  };
 
   if (colorMap[normalized]) {
-    return colorMap[normalized]
+    return colorMap[normalized];
   }
 
-  return undefined
+  return undefined;
 }
 
-function applyPrimaryColorFromSetting(primaryColor: string | undefined, fallback: AccentColor) {
+function applyPrimaryColorFromSetting(
+  primaryColor: string | undefined,
+  fallback: AccentColor
+) {
   // If it's a preset name, keep using the class-based themes.
-  const preset = hexToAccentColor(primaryColor)
+  const preset = hexToAccentColor(primaryColor);
   if (preset) {
-    applyAccentColor(preset)
-    return
+    applyAccentColor(preset);
+    return;
   }
 
   // If it's a custom hex color, apply it directly.
-  if (typeof primaryColor === 'string' && applyCustomAccentColor(primaryColor)) {
-    return
+  if (
+    typeof primaryColor === 'string' &&
+    applyCustomAccentColor(primaryColor)
+  ) {
+    return;
   }
 
   // Fallback to a known preset.
-  applyAccentColor(fallback)
+  applyAccentColor(fallback);
 }
 
 /**
@@ -98,96 +120,136 @@ function applyPrimaryColorFromSetting(primaryColor: string | undefined, fallback
  * Returns undefined for invalid/missing values to allow fallback to cached config.
  */
 function validateIcon(value: string | undefined): string | undefined {
-  if (!value) return undefined
+  if (!value) return undefined;
 
-  const normalizedValue = value.trim().toLowerCase()
+  const normalizedValue = value.trim().toLowerCase();
   const matchedIcon = CURATED_ICONS.find(
-    icon => icon.toLowerCase() === normalizedValue
-  )
+    (icon) => icon.toLowerCase() === normalizedValue
+  );
   if (matchedIcon) {
-    return matchedIcon
+    return matchedIcon;
   }
 
-  return undefined
+  return undefined;
 }
 
-function parseBoolean(value: string | number | boolean | undefined): boolean | undefined {
-  if (typeof value === 'boolean') return value
-  if (typeof value === 'number') return value === 1 ? true : value === 0 ? false : undefined
-  if (!value) return undefined
-  const normalized = value.trim().toLowerCase()
-  if (['true', '1', 'yes', 'on'].includes(normalized)) return true
-  if (['false', '0', 'no', 'off'].includes(normalized)) return false
-  return undefined
+function parseBoolean(
+  value: string | number | boolean | undefined
+): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number')
+    return value === 1 ? true : value === 0 ? false : undefined;
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  return undefined;
 }
 
-function validateHeaderLayout(value: string | undefined): HeaderLayout | undefined {
-  if (!value) return undefined
-  return HEADER_LAYOUTS.includes(value as HeaderLayout) ? (value as HeaderLayout) : undefined
+function validateHeaderLayout(
+  value: string | undefined
+): HeaderLayout | undefined {
+  if (!value) return undefined;
+  return HEADER_LAYOUTS.includes(value as HeaderLayout)
+    ? (value as HeaderLayout)
+    : undefined;
 }
 
-function validateChatBubbleStyle(value: string | undefined): ChatBubbleStyle | undefined {
-  if (!value) return undefined
-  return CHAT_BUBBLE_STYLES.includes(value as ChatBubbleStyle) ? (value as ChatBubbleStyle) : undefined
+function validateChatBubbleStyle(
+  value: string | undefined
+): ChatBubbleStyle | undefined {
+  if (!value) return undefined;
+  return CHAT_BUBBLE_STYLES.includes(value as ChatBubbleStyle)
+    ? (value as ChatBubbleStyle)
+    : undefined;
 }
 
-function validateSurfaceStyle(value: string | undefined): SurfaceStyle | undefined {
-  if (!value) return undefined
-  return SURFACE_STYLES.includes(value as SurfaceStyle) ? (value as SurfaceStyle) : undefined
+function validateSurfaceStyle(
+  value: string | undefined
+): SurfaceStyle | undefined {
+  if (!value) return undefined;
+  return SURFACE_STYLES.includes(value as SurfaceStyle)
+    ? (value as SurfaceStyle)
+    : undefined;
 }
 
-function validateStatusIconSet(value: string | undefined): StatusIconSet | undefined {
-  if (!value) return undefined
-  return STATUS_ICON_SETS.includes(value as StatusIconSet) ? (value as StatusIconSet) : undefined
+function validateStatusIconSet(
+  value: string | undefined
+): StatusIconSet | undefined {
+  if (!value) return undefined;
+  return STATUS_ICON_SETS.includes(value as StatusIconSet)
+    ? (value as StatusIconSet)
+    : undefined;
 }
 
-function validateTypographyPreset(value: string | undefined): TypographyPreset | undefined {
-  if (!value) return undefined
-  return TYPOGRAPHY_PRESETS.includes(value as TypographyPreset) ? (value as TypographyPreset) : undefined
+function validateTypographyPreset(
+  value: string | undefined
+): TypographyPreset | undefined {
+  if (!value) return undefined;
+  return TYPOGRAPHY_PRESETS.includes(value as TypographyPreset)
+    ? (value as TypographyPreset)
+    : undefined;
 }
 
-function validateDefaultTheme(value: string | undefined): DefaultTheme | undefined {
-  if (!value) return undefined
-  return DEFAULT_THEMES.includes(value as DefaultTheme) ? (value as DefaultTheme) : undefined
+function validateDefaultTheme(
+  value: string | undefined
+): DefaultTheme | undefined {
+  if (!value) return undefined;
+  return DEFAULT_THEMES.includes(value as DefaultTheme)
+    ? (value as DefaultTheme)
+    : undefined;
 }
 
-function normalizeDefaultLanguage(value: string | undefined): string | undefined {
-  if (typeof value !== 'string') return undefined
-  const trimmed = value.trim()
-  return trimmed ? trimmed : undefined
+function normalizeDefaultLanguage(
+  value: string | undefined
+): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 export function InstanceConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfigState] = useState<InstanceConfig>(DEFAULT_INSTANCE_CONFIG)
+  const [config, setConfigState] = useState<InstanceConfig>(
+    DEFAULT_INSTANCE_CONFIG
+  );
 
   // Load config: first from localStorage (immediate), then fetch from backend
   useEffect(() => {
     // Immediately apply cached config
-    const stored = getInstanceConfig()
-    setConfigState(stored)
-    applyPrimaryColorFromSetting(stored.primaryColor, stored.accentColor)
-    applySurfaceStyle(stored.surfaceStyle)
-    applyTypographyPreset(stored.typographyPreset)
-    applyDocumentTitle(stored.name)
-    applyFavicon(stored.faviconUrl)
-    applyAppleTouchIcon(stored.appleTouchIconUrl)
+    const stored = getInstanceConfig();
+    setConfigState(stored);
+    applyPrimaryColorFromSetting(stored.primaryColor, stored.accentColor);
+    applySurfaceStyle(stored.surfaceStyle);
+    applyTypographyPreset(stored.typographyPreset);
+    applyDocumentTitle(stored.name);
+    applyFavicon(stored.faviconUrl);
+    applyAppleTouchIcon(stored.appleTouchIconUrl);
 
     // Then fetch from backend to get the latest
     async function fetchSettings() {
       try {
-        const response = await fetch(`${API_BASE}/settings/public`)
+        const response = await fetch(`${API_BASE}/settings/public`);
         if (response.ok) {
-          const data = await response.json()
-          const settings = data.settings || {}
-          
+          const data = await response.json();
+          const settings = data.settings || {};
+
           const newConfig: InstanceConfig = {
-            name: settings.instance_name || stored.name || DEFAULT_INSTANCE_CONFIG.name,
+            name:
+              settings.instance_name ||
+              stored.name ||
+              DEFAULT_INSTANCE_CONFIG.name,
             accentColor:
               hexToAccentColor(settings.primary_color) ??
               stored.accentColor ??
               DEFAULT_INSTANCE_CONFIG.accentColor,
-            primaryColor: typeof settings.primary_color === 'string' ? settings.primary_color : undefined,
-            icon: validateIcon(settings.icon) ?? stored.icon ?? DEFAULT_INSTANCE_CONFIG.icon,
+            primaryColor:
+              typeof settings.primary_color === 'string'
+                ? settings.primary_color
+                : undefined,
+            icon:
+              validateIcon(settings.icon) ??
+              stored.icon ??
+              DEFAULT_INSTANCE_CONFIG.icon,
             logoUrl:
               typeof settings.logo_url === 'string'
                 ? settings.logo_url
@@ -199,7 +261,8 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
             appleTouchIconUrl:
               typeof settings.apple_touch_icon_url === 'string'
                 ? settings.apple_touch_icon_url
-                : (stored.appleTouchIconUrl ?? DEFAULT_INSTANCE_CONFIG.appleTouchIconUrl),
+                : (stored.appleTouchIconUrl ??
+                  DEFAULT_INSTANCE_CONFIG.appleTouchIconUrl),
             assistantIcon:
               validateIcon(settings.assistant_icon) ??
               stored.assistantIcon ??
@@ -211,7 +274,8 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
             assistantName:
               typeof settings.assistant_name === 'string'
                 ? settings.assistant_name
-                : (stored.assistantName ?? DEFAULT_INSTANCE_CONFIG.assistantName),
+                : (stored.assistantName ??
+                  DEFAULT_INSTANCE_CONFIG.assistantName),
             userLabel:
               typeof settings.user_label === 'string'
                 ? settings.user_label
@@ -223,7 +287,8 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
             headerTagline:
               typeof settings.header_tagline === 'string'
                 ? settings.header_tagline
-                : (stored.headerTagline ?? DEFAULT_INSTANCE_CONFIG.headerTagline),
+                : (stored.headerTagline ??
+                  DEFAULT_INSTANCE_CONFIG.headerTagline),
             chatBubbleStyle:
               validateChatBubbleStyle(settings.chat_bubble_style) ??
               stored.chatBubbleStyle ??
@@ -252,70 +317,89 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
               validateDefaultTheme(settings.default_theme) ??
               stored.defaultTheme ??
               DEFAULT_INSTANCE_CONFIG.defaultTheme,
-          }
-          
-          setConfigState(newConfig)
-          saveInstanceConfig(newConfig)
-          applyPrimaryColorFromSetting(settings.primary_color, newConfig.accentColor)
-          applySurfaceStyle(newConfig.surfaceStyle)
-          applyTypographyPreset(newConfig.typographyPreset)
-          applyDocumentTitle(newConfig.name)
-          applyFavicon(newConfig.faviconUrl)
-          applyAppleTouchIcon(newConfig.appleTouchIconUrl)
-          if (newConfig.defaultLanguage && i18n.language !== newConfig.defaultLanguage) {
+          };
+
+          setConfigState(newConfig);
+          saveInstanceConfig(newConfig);
+          applyPrimaryColorFromSetting(
+            settings.primary_color,
+            newConfig.accentColor
+          );
+          applySurfaceStyle(newConfig.surfaceStyle);
+          applyTypographyPreset(newConfig.typographyPreset);
+          applyDocumentTitle(newConfig.name);
+          applyFavicon(newConfig.faviconUrl);
+          applyAppleTouchIcon(newConfig.appleTouchIconUrl);
+          // Apply the instance default language only when the user has NOT made
+          // an explicit choice; an explicit selection must always win.
+          if (
+            newConfig.defaultLanguage &&
+            !hasChosenLanguage() &&
+            i18n.language !== newConfig.defaultLanguage
+          ) {
             i18n.changeLanguage(newConfig.defaultLanguage).catch((error) => {
-              console.error('Failed to apply instance default language:', error)
-            })
+              console.error(
+                'Failed to apply instance default language:',
+                error
+              );
+            });
           }
         }
       } catch (error) {
-        console.warn('Failed to fetch instance settings, using cached config:', error)
+        console.warn(
+          'Failed to fetch instance settings, using cached config:',
+          error
+        );
       }
     }
 
-    fetchSettings()
-  }, [])
+    fetchSettings();
+  }, []);
 
   const setConfig = (newConfig: InstanceConfig) => {
-    setConfigState(newConfig)
-    saveInstanceConfig(newConfig)
-    applyPrimaryColorFromSetting(newConfig.primaryColor, newConfig.accentColor)
-    applySurfaceStyle(newConfig.surfaceStyle)
-    applyTypographyPreset(newConfig.typographyPreset)
-    applyDocumentTitle(newConfig.name)
-    applyFavicon(newConfig.faviconUrl)
-    applyAppleTouchIcon(newConfig.appleTouchIconUrl)
-  }
+    setConfigState(newConfig);
+    saveInstanceConfig(newConfig);
+    applyPrimaryColorFromSetting(newConfig.primaryColor, newConfig.accentColor);
+    applySurfaceStyle(newConfig.surfaceStyle);
+    applyTypographyPreset(newConfig.typographyPreset);
+    applyDocumentTitle(newConfig.name);
+    applyFavicon(newConfig.faviconUrl);
+    applyAppleTouchIcon(newConfig.appleTouchIconUrl);
+  };
 
   const updateConfig = (updates: Partial<InstanceConfig>) => {
-    const newConfig = { ...config, ...updates }
-    setConfig(newConfig)
-  }
+    const newConfig = { ...config, ...updates };
+    setConfig(newConfig);
+  };
 
   return (
     <InstanceConfigContext.Provider value={{ config, setConfig, updateConfig }}>
       {children}
     </InstanceConfigContext.Provider>
-  )
+  );
 }
 
-let hasWarnedMissingProvider = false
+let hasWarnedMissingProvider = false;
 
 export function useInstanceConfig(): InstanceConfigContextValue {
-  const context = useContext(InstanceConfigContext)
+  const context = useContext(InstanceConfigContext);
   if (!context) {
     if (import.meta.env.DEV) {
       if (!hasWarnedMissingProvider) {
-        console.warn('useInstanceConfig used without InstanceConfigProvider (dev fallback enabled).')
-        hasWarnedMissingProvider = true
+        console.warn(
+          'useInstanceConfig used without InstanceConfigProvider (dev fallback enabled).'
+        );
+        hasWarnedMissingProvider = true;
       }
       return {
         config: DEFAULT_INSTANCE_CONFIG,
         setConfig: () => {},
         updateConfig: () => {},
-      }
+      };
     }
-    throw new Error('useInstanceConfig must be used within an InstanceConfigProvider')
+    throw new Error(
+      'useInstanceConfig must be used within an InstanceConfigProvider'
+    );
   }
-  return context
+  return context;
 }

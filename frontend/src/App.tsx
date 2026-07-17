@@ -47,6 +47,11 @@ const AdminUserConfig = lazy(() =>
     default: module.AdminUserConfig,
   }))
 );
+const AdminUserManager = lazy(() =>
+  import('./pages/AdminUserManager').then((module) => ({
+    default: module.AdminUserManager,
+  }))
+);
 const AdminAIConfig = lazy(() =>
   import('./pages/AdminAIConfig').then((module) => ({
     default: module.AdminAIConfig,
@@ -226,6 +231,26 @@ function App() {
             <AdminRoute>
               <LazyPage>
                 <AdminInstanceConfig />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/user-manager"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminUserManager />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/user-manager/:userId"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminUserManager />
               </LazyPage>
             </AdminRoute>
           }

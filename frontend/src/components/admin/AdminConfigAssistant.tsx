@@ -221,9 +221,9 @@ export function AdminConfigAssistant({
     generatedAtIso: string;
   } | null>(null);
   const [applyState, setApplyState] = useState<ApplyState>({ state: 'idle' });
-  const [selectedTools, setSelectedTools] = useState<string[]>([
-    CONFIG_TOOL_ID,
-  ]);
+  const [selectedTools, setSelectedTools] = useState<string[]>(
+    isOnboarding ? [CONFIG_TOOL_ID] : []
+  );
 
   const secretsForRedactionRef = useRef<string[]>([]);
   const deploymentSecretKeysRef = useRef<Set<string>>(new Set());
@@ -598,7 +598,7 @@ export function AdminConfigAssistant({
                   );
                 }
               } else if (event === 'trace_final' && streamMessageId) {
-                if (!structuredChangeSet) {
+                if (hasConfigTool && !structuredChangeSet) {
                   structuredChangeSet =
                     stageStructuredAdminChangeSet(
                       data.admin_change_set,
@@ -614,7 +614,7 @@ export function AdminConfigAssistant({
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
-                if (!structuredChangeSet) {
+                if (hasConfigTool && !structuredChangeSet) {
                   structuredChangeSet =
                     stageStructuredAdminChangeSet(
                       data.admin_change_set,
@@ -766,10 +766,9 @@ export function AdminConfigAssistant({
           };
           setMessages((prev) => [...prev, assistantMessage]);
 
-          structuredChangeSet = stageStructuredAdminChangeSet(
-            data.admin_change_set,
-            setApplyState
-          );
+          structuredChangeSet = hasConfigTool
+            ? stageStructuredAdminChangeSet(data.admin_change_set, setApplyState)
+            : null;
         }
 
         if (

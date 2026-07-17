@@ -36,7 +36,13 @@
     "retry": "重试",
     "saved": "已保存",
     "sending": "正在发送...",
-    "gotIt": "知道了"
+    "gotIt": "知道了",
+    "send": "发送",
+    "backToAdminDashboard": "返回管理员仪表板",
+    "export": "导出",
+    "reset": "重置",
+    "exit": "退出",
+    "none": "无"
   },
   "settings": {
     "title": "设置",
@@ -59,8 +65,23 @@
       "deploymentConfig": "部署配置",
       "deploymentConfigDesc": "服务、SMTP、存储",
       "userConfig": "用户配置",
-      "userConfigDesc": "用户类型和入职问题"
-    }
+      "userConfigDesc": "用户类型和入职问题",
+      "guidedSetup": "引导式设置",
+      "guidedSetupDesc": "逐步完成设置、文档、资源和测试。",
+      "guides": "管理员指南",
+      "guidesDesc": "了解管理员配置的内容及配置位置。",
+      "testUserSession": "测试用户会话",
+      "testUserSessionDesc": "以模拟用户身份聊天并查看 Beta 反馈。",
+      "diagnostics": "诊断",
+      "diagnosticsDesc": "在排查问题时运行冒烟检查。",
+      "resourceDirectory": "资源目录",
+      "resourceDirectoryDesc": "手动整理可信的转介资源。"
+    },
+    "diagnostics": "诊断",
+    "adminWorkflows": "管理员工作流",
+    "settingsSection": "设置",
+    "dataAndContent": "数据与内容",
+    "operations": "运营"
   },
   "admin": {
     "confirmDelete": "你确定要删除此记录吗？",
@@ -189,7 +210,14 @@
       "nip07Unavailable": "未检测到 Nostr 扩展",
       "plaintextFieldIcon": "明文字段",
       "primaryKeyIcon": "主键",
-      "unlockDecryption": "解锁解密"
+      "unlockDecryption": "解锁解密",
+      "safeQueryResults": "安全查询结果",
+      "queryError": "查询错误",
+      "writeResult": "数据库写入结果",
+      "emptyQueryResult": "查询结果为空",
+      "readOnly": "只读",
+      "tableLoadError": "表加载错误",
+      "readOnlyHint": "直接编辑数据库已禁用；请使用经审计的管理员流程进行更改。"
     },
     "fields": {
       "nameRequired": "字段名称为必填",
@@ -279,7 +307,8 @@
       "removeFieldFailed": "移除字段失败",
       "reorderFailed": "重新排序字段失败",
       "loadUsersFailed": "加载用户失败",
-      "updateTypeFailed": "更新用户类型失败"
+      "updateTypeFailed": "更新用户类型失败",
+      "loadSettingsFailed": "加载设置失败"
     },
     "userMigration": {
       "title": "用户类型迁移",
@@ -314,7 +343,10 @@
       "emailEncryptedHint": "电子邮件（加密）",
       "nameEncryptedHint": "名称（加密）",
       "noUsersHint": "尝试更改上方过滤器或刷新。",
-      "pubkeyPresent": "Nostr 公钥存在"
+      "pubkeyPresent": "Nostr 公钥存在",
+      "usersErrorLabel": "用户类型迁移用户错误",
+      "errorLabel": "用户类型迁移错误",
+      "summaryLabel": "用户类型迁移摘要"
     },
     "configAssistant": {
       "openAria": "打开管理员助手",
@@ -352,8 +384,38 @@
         "restartRequiredFor": "以下项需要重启：{{keys}}。",
         "restartRequiredNo": "无需重启。",
         "restartCheckFailedHttp": "重启需求检查失败（HTTP {{status}}）。",
-        "restartCheckFailedNetwork": "重启需求检查失败（网络错误）。"
-      }
+        "restartCheckFailedNetwork": "重启需求检查失败（网络错误）。",
+        "pageRefreshRecommended": "刷新此页面以查看主题更新。"
+      },
+      "onboardingWelcome": "欢迎——让我们来设置你的空间。你可以在一条消息中回答尽可能多的问题（请编号，不确定的可以跳过）：\n\n1. **名称** — 我们该如何称呼这个空间？（显示在页眉和浏览器标签页中）\n2. **描述** — 用一句话说明它的用途（一条私密备注，不向用户显示）\n3. **助手名称** — AI 助手应该叫什么名字？\n4. **强调色** — 按钮和链接的高亮颜色（可用名称如 blue/teal，或十六进制如 #3B82F6）\n5. **主题** — 浅色、深色还是跟随系统（匹配设备）？\n6. **默认语言** — 例如英语或西班牙语（可选）\n7. **标语** — 页眉的一句简短语（可选）\n8. **新用户** — 让他们立即进入，还是逐个批准每个人？\n9. **用户类型** — 哪些非管理员人员会使用它？（例如教师和学生）——我会为你逐个创建\n\n示例：\"9. 教师和学生\"。我会一步保存所有内容——你随时可以切换到手动设置。",
+      "collapseSidebar": "折叠助手侧边栏",
+      "expandSidebar": "打开管理员助手侧边栏",
+      "resize": "调整管理员助手面板大小",
+      "railLabel": "助手",
+      "shareSecretsHint": "默认关闭。请先启用 Config 工具。启用后，机密部署配置值将在客户端显示，并在此原型流程中发送给 Sage。",
+      "applyIntentUsePanel": "使用下方的待处理更改面板并点击「应用」以确认这些配置更新。",
+      "applyIntentNoPending": "没有可应用的待处理配置更改。请先让助手提出一组更改。",
+      "startNewConversation": "开始新的助手对话",
+      "reducedContextNoticeLabel": "上下文缩减通知",
+      "sessionMemoryNoticeLabel": "会话记忆压缩通知",
+      "sessionMemoryNotice": "为使本次对话得以继续，较早的上下文已被摘要。",
+      "reducedContextNotice": "为适配模型提供方的预算（{{sections}}），部分上下文已被缩减。在你开始新的助手对话前，回答可能不够完整。",
+      "reducedContextSections": {
+        "recentConversation": "近期对话历史"
+      },
+      "approvalCardTitle": "批准配置更改",
+      "applying": "正在应用",
+      "applied": "已应用",
+      "rejected": "已拒绝",
+      "failed": "失败",
+      "superseded": "已被取代",
+      "hideDetails": "隐藏详情",
+      "reviewDetails": "查看详情",
+      "reject": "拒绝",
+      "approve": "批准",
+      "applyErrorLabel": "配置应用错误",
+      "onboardingTitle": "引导式设置聊天",
+      "onboardingContext": "专注的设置对话"
     },
     "reachout": {
       "badgeDefault": "默认",
@@ -520,7 +582,16 @@
       "typographyTitle": "排版",
       "userIconLabel": "用户图标",
       "userLabelLabel": "用户标签",
-      "userLabelPlaceholder": "例如，您"
+      "userLabelPlaceholder": "例如，您",
+      "publicEmailDisplayNameLabel": "公开邮件显示名称（可选）",
+      "publicEmailDisplayNameHint": "用于魔法链接登录邮件。留空则使用实例名称。",
+      "defaultsTitle": "实例默认值",
+      "defaultsDesc": "设置在任何本地浏览器控制生效前使用的基准语言和主题。",
+      "defaultLanguageLabel": "默认语言",
+      "defaultThemeLabel": "默认主题",
+      "themeSystem": "跟随系统",
+      "themeLight": "浅色",
+      "themeDark": "深色"
     },
     "userConfig": {
       "subtitle": "配置用户类型和用户在入职期间回答的问题。",
@@ -528,6 +599,49 @@
       "typeDescription": "描述",
       "typeIcon": "类型图标",
       "typeName": "类型名称"
+    },
+    "userApproval": {
+      "updateFailed": "更新用户审批失败。",
+      "approvedUser": "用户 #{{id}} 已批准。",
+      "revokedUser": "用户 #{{id}} 已移回待处理状态。",
+      "title": "用户审批",
+      "subtitle": "选择新的已认证用户是立即进入聊天，还是等待管理员批准。",
+      "requireManualLabel": "对新用户要求手动审批",
+      "requireManualHint": "启用后，新用户将停留在待审批界面，直到管理员批准他们。",
+      "loadingHint": "加载中……",
+      "saveButton": "保存用户审批",
+      "savedCalloutLabel": "用户审批已保存",
+      "errorCalloutLabel": "用户审批错误",
+      "pendingTitle": "待处理审批",
+      "pendingCount_zero": "{{count}} 名用户需要批准后才能访问聊天。",
+      "pendingCount_one": "{{count}} 名用户需要批准后才能访问聊天。",
+      "pendingCount_two": "{{count}} 名用户需要批准后才能访问聊天。",
+      "pendingCount_few": "{{count}} 名用户需要批准后才能访问聊天。",
+      "pendingCount_many": "{{count}} 名用户需要批准后才能访问聊天。",
+      "pendingCount_other": "{{count}} 名用户需要批准后才能访问聊天。",
+      "nonePending": "没有用户在等待批准。",
+      "actionSavedCalloutLabel": "用户审批已更新",
+      "actionErrorCalloutLabel": "用户审批更新失败",
+      "loadingUsers": "正在加载用户……",
+      "emptyState": "需要手动审批时，等待审批的新用户将显示在此处。",
+      "emailOnFile": "存档的电子邮箱",
+      "nameOnFile": "存档的姓名",
+      "approveButton": "批准",
+      "revokeButton": "撤销"
+    },
+    "userRosterExport": {
+      "auditFailed": "用户名单导出无法通过审计。电子表格未下载。",
+      "success": "用户名单电子表格已下载。",
+      "failed": "导出用户名单失败。",
+      "button": "导出用户",
+      "successLabel": "用户名单导出就绪",
+      "errorLabel": "用户名单导出失败"
+    },
+    "userIdentity": {
+      "decrypting": "正在解密姓名/电子邮箱……",
+      "decryptFailed": "无法解密姓名/电子邮箱",
+      "unlockDetails": "解锁以显示姓名/电子邮箱",
+      "unlockButton": "解锁详情"
     }
   },
   "adminOnboarding": {
@@ -577,7 +691,8 @@
       "title": "哪个最能描述你？",
       "description": "选择最符合你需求的选项",
       "loadError": "加载用户类型失败。请重试。",
-      "selectionLabel": "用户类型选择"
+      "selectionLabel": "用户类型选择",
+      "errorLabel": "用户类型加载错误"
     },
     "language": {
       "selectLabel": "选择语言",
@@ -620,7 +735,8 @@
       "encryptionBody": "个人资料字段默认加密，但此实例管理员控制字段级设置，可能会允许部分数据以不同方式存储或共享。",
       "adminControlNotice": "数据处理方式由此实例管理员配置，包括哪些数据可能以未加密形式存储或与 AI 工具共享。",
       "noWarrantyNotice": "Enclave 软件按原样提供，不附带任何保证。使用此实例须遵守管理员的相关政策。",
-      "retentionNotice": "数据保留和删除时间表由该实例管理员设置。请联系他们以进行访问、更正或删除请求。"
+      "retentionNotice": "数据保留和删除时间表由该实例管理员设置。请联系他们以进行访问、更正或删除请求。",
+      "errorLabel": "魔法链接请求错误"
     },
     "verify": {
       "verifying": "正在验证你的链接...",
@@ -680,20 +796,28 @@
       "databaseName": "数据库",
       "knowledgeGraph": "查询知识图谱",
       "config": "配置",
-      "configName": "配置"
+      "configName": "配置",
+      "knowledgeSearch": "搜索已上传的文档和知识片段",
+      "knowledgeSearchName": "知识",
+      "curatedResources": "查找经管理员已审核的转介资源和可信机构",
+      "curatedResourcesName": "资源"
     },
     "documentScope": {
       "title": "知识库",
       "description": "选择要包含在上下文中的来源",
       "noSources": "没有可用的来源",
       "clearAll": "清除全部",
-      "docsLabel": "文档"
+      "docsLabel": "文档",
+      "clearAllSelectedAria": "清除所有已选文档",
+      "docsLabelWithCount": "文档 {{count}}"
     },
     "messages": {
       "searching": "正在搜索「{{term}}」...",
       "searchingPrefix": "搜索中",
       "searchResults": "我为你搜索了「{{term}}」：",
-      "newConversation": "新对话"
+      "newConversation": "新对话",
+      "copy": "复制消息",
+      "copied": "已复制消息"
     },
     "code": {
       "copy": "复制",
@@ -712,7 +836,48 @@
       "roleUser": "你",
       "roleAssistant": "助手",
       "footer": "从{{instanceName}}导出",
-      "exportedOn": "导出时间：{{timestamp}}"
+      "exportedOn": "导出时间：{{timestamp}}",
+      "copiedExportNotice": "此导出内容将离开活动产品存储，下载后不再受活动存储生命周期管理。"
+    },
+    "new": "新建对话",
+    "listTitle": "对话",
+    "contextTitle": "上下文",
+    "messageActions": "消息操作",
+    "composerContextAria": "编辑器上下文",
+    "sessions": {
+      "ariaLabel": "对话会话",
+      "current": "当前对话",
+      "empty": "空",
+      "messageCount_one": "{{count}} 条消息",
+      "messageCount_other": "{{count}} 条消息",
+      "deleteConfirmTitle": "删除“{{title}}”？",
+      "rename": "重命名 {{title}}",
+      "delete": "删除 {{title}}",
+      "resumeInvalid": "无法加载该对话。",
+      "renameEmpty": "对话标题为必填项。",
+      "renameError": "无法重命名对话。",
+      "deleteError": "无法删除对话。",
+      "loading": "正在加载对话…",
+      "error": "无法加载对话",
+      "saved": "已保存的对话",
+      "deleteConfirmBody": "此操作将删除已保存的对话及其会话记忆。",
+      "deleteCancel": "取消删除对话",
+      "cancel": "取消",
+      "deleteConfirm": "删除对话",
+      "deleteDeleting": "正在删除…",
+      "renameInput": "对话标题",
+      "renameCancel": "取消重命名对话",
+      "renameSave": "保存对话标题",
+      "renameSaving": "正在重命名…"
+    },
+    "currentChatAria": "当前对话",
+    "newFromCurrent": "开始新对话",
+    "documentsContextTitle": "文档",
+    "errors": {
+      "requestLabel": "对话请求错误"
+    },
+    "trace": {
+      "finalizing": "正在生成回复…"
     }
   },
   "errors": {
@@ -752,6 +917,204 @@
   "adminGuides": {
     "card": {
       "adminsCan": "管理员可以"
+    },
+    "summary": {
+      "brand": {
+        "title": "为实例打造品牌",
+        "body": "名称、徽标、主题、助手身份及公开邮箱显示。"
+      },
+      "people": {
+        "title": "管理人员",
+        "body": "用户类型、引导问题、审批、迁移和访问权限。"
+      },
+      "agent": {
+        "title": "塑造 Sage",
+        "body": "提示规则、响应设置、文档访问和工具默认设置。"
+      },
+      "launch": {
+        "title": "安全启动",
+        "body": "邮箱、域名、CORS、HTTPS、模型路由、健康状况和运行时环境。"
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "品牌",
+        "title": "身份与外观",
+        "body": "让实例呈现出你所在组织的气质。",
+        "detail1": "名称、标语、助手名称和用户标签。",
+        "detail2": "徽标、网站图标、图标、强调色、主题、字体排印和对话样式。",
+        "detail3": "默认语言和公开邮箱显示名称。",
+        "link": "打开实例设置"
+      },
+      "people": {
+        "eyebrow": "访问权限",
+        "title": "人员与访问权限",
+        "body": "决定谁使用该实例以及你向他们询问什么。",
+        "detail1": "面向员工、成员或客户等群体的用户类型。",
+        "detail2": "引导字段、必填问题、选项、占位符和按类型区分的字段。",
+        "detail3": "手动审批、用户迁移、撤销访问权限和删除。",
+        "link": "打开用户设置"
+      },
+      "agent": {
+        "eyebrow": "行为",
+        "title": "助手行为",
+        "body": "塑造 Sage 的回答方式以及默认启用哪些工具。",
+        "detail1": "提示模板、行为规则、禁止话题和响应设置。",
+        "detail2": "知识、资源、Web、配置和数据库工具的功能默认值。",
+        "detail3": "全局设置以及用户类型覆盖项。",
+        "link": "打开助手设置"
+      },
+      "docs": {
+        "eyebrow": "知识",
+        "title": "文档知识",
+        "body": "为助手提供可供检索的源材料。",
+        "detail1": "上传 PDF、政策、常见问题、手册和指南。",
+        "detail2": "文档会被切块、嵌入并可供检索。",
+        "detail3": "文档访问控制决定默认可选择或启用哪些内容。",
+        "link": "打开文档上传"
+      },
+      "resources": {
+        "eyebrow": "转介",
+        "title": "已审核资源",
+        "body": "添加助手可以推荐的可信转介。",
+        "detail1": "名称、描述、资源类型、语言、覆盖范围和帮助类型。",
+        "detail2": "电话、电子邮件、URL、安全渠道、地址和备注。",
+        "detail3": "已验证的资源排名靠前。已归档的资源对用户保持隐藏。",
+        "link": "打开资源目录"
+      },
+      "ops": {
+        "eyebrow": "运维",
+        "title": "运维与运行时",
+        "body": "保持实例连接畅通、可访问且健康。",
+        "detail1": "用于电子邮件魔法链接的 SMTP、域名、CORS、HTTPS 和公开 URL。",
+        "detail2": "模型提供方、嵌入模型、搜索、存储和服务健康状况。",
+        "detail3": "运行时环境导出、就绪情况、过时设置和管理员密钥迁移。",
+        "link": "打开部署设置"
+      },
+      "title": "管理员配置的内容",
+      "body": "这些是主要的控制界面。你可以直接使用这些页面，也可以请管理员助手准备变更。"
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "询问",
+        "title": "管理员助手",
+        "body": "询问有关当前设置的问题并请求配置变更。",
+        "detail1": "配置读取会检查真实的实例状态，而非猜测。",
+        "detail2": "拟议的变更会被暂存以供审查。",
+        "detail3": "应用会运行已批准的管理员端点，无需再次经过模型处理。",
+        "link": "打开管理员助手"
+      },
+      "guided": {
+        "eyebrow": "开始",
+        "title": "引导式设置",
+        "body": "使用一次引导式对话来创建实用的初始配置。",
+        "detail1": "身份、助手、语言、访问策略、用户类型、问题和行为规则。",
+        "detail2": "然后上传文档、添加资源并进行测试。",
+        "link": "打开引导式设置"
+      },
+      "test": {
+        "eyebrow": "验证",
+        "title": "测试与反馈",
+        "body": "在发布前从用户视角试用助手。",
+        "detail1": "选择一种用户类型，开始测试会话，并保存该试用。",
+        "detail2": "审查加密的测试版日志并对回答评分。",
+        "link": "打开测试用户会话"
+      },
+      "database": {
+        "eyebrow": "检查",
+        "title": "数据库浏览器",
+        "body": "在调试时检查存储的 SQLite 数据。",
+        "detail1": "使用只读 SELECT 查询进行检查。",
+        "detail2": "不要将其用作产品数据变更途径。",
+        "link": "打开数据库浏览器"
+      },
+      "title": "常见管理员工作流",
+      "body": "在你进行设置、检查质量或调查数据时使用这些。"
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "运行时",
+        "title": "单一对话运行时",
+        "body": "知识、资源、Web、配置和数据库是可见的工具集，而不是独立的聊天系统。",
+        "detail1": "当有帮助时，模型可以调用已启用的工具。",
+        "detail2": "配置和数据库仅对经过服务器验证的管理员显示。"
+      },
+      "auth": {
+        "eyebrow": "登录",
+        "title": "不同的登录路径",
+        "body": "管理员使用 NIP-07。用户使用电子邮件魔法链接。",
+        "detail1": "管理员私钥保留在浏览器签名器中。",
+        "detail2": "在生产环境中，SMTP 必须正常工作，用户魔法链接才能生效。"
+      },
+      "data": {
+        "eyebrow": "隐私",
+        "title": "数据边界很重要",
+        "body": "加密的个人资料字段不会进入聊天上下文。",
+        "detail1": "只有未加密的字段才能被标记为用于 AI 聊天上下文。",
+        "detail2": "部署密钥以加密方式存储，默认以掩码形式显示。"
+      },
+      "ops": {
+        "eyebrow": "运维",
+        "title": "某些变更需要运维人员",
+        "body": "应用可以保存期望的运行时设置；它不会悄悄重启服务。",
+        "detail1": "在提供方、来源、CORS 或搜索发生变更后导出运行时环境。",
+        "detail2": "使用就绪情况和服务健康状况来确认实际运行的内容。"
+      },
+      "title": "需牢记的产品事实",
+      "body": "这些规则让设置保持真实，并防止意外越权。"
+    },
+    "ask": {
+      "prompt1": "在这个实例可供用户使用之前，还缺少什么？",
+      "prompt2": "审查当前的用户类型、引导问题、文档和资源。",
+      "prompt3": "准备变更以供审查：设置助手语气和默认语言。",
+      "title": "适合向管理员助手询问的问题",
+      "body": "在请求变更之前先请求一次审查。它可以检查设置并准备一份变更集。"
+    },
+    "hero": {
+      "eyebrow": "管理员控制图",
+      "shortVersion": {
+        "title": "简短版本",
+        "body": "管理员设置身份、用户、知识、工具和发布设置。某些运行时变更仍需运维人员重启。"
+      }
+    },
+    "title": "管理员指南",
+    "subtitle": "一份简明的图示，说明管理员配置什么、产品能做什么，以及发布前需要注意什么。",
+    "quickStart": {
+      "title": "从这里开始",
+      "body": "先完成小而实用的设置。在用真实问题测试之后再打磨。"
+    },
+    "safety": {
+      "title": "安全基础",
+      "body": "管理员控制访问、数据、行为和运行时设置。进行有风险的变更时要慢慢来。",
+      "items": {
+        "0": "管理员使用 NIP-07 登录。用户使用电子邮件魔法链接登录。",
+        "1": "用户字段默认加密。只有明文字段才能与聊天共享。",
+        "2": "除非你在当前管理员会话中共享，否则密钥保持掩码状态。",
+        "3": "助手的变更是提议。你仍需审查并点击应用。",
+        "4": "部署设置存储期望的运行时值。运维人员在需要时仍需导出环境并重启服务。"
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "以管理员身份登录",
+        "body": "使用管理员 NIP-07 密钥。请妥善保管。"
+      },
+      "1": {
+        "title": "设置基础项",
+        "body": "命名实例、选择外观并设置助手身份。"
+      },
+      "2": {
+        "title": "定义你的用户",
+        "body": "创建用户类型、引导问题和审批规则。"
+      },
+      "3": {
+        "title": "添加可信知识",
+        "body": "上传文档并添加已审核的资源。"
+      },
+      "4": {
+        "title": "发布前测试",
+        "body": "以用户身份聊天、审查反馈，然后邀请真实用户。"
+      }
     }
   },
   "adminDashboard": {
@@ -788,7 +1151,55 @@
     "securityStep3Primary": "运行配置验证",
     "securityStep3Secondary": "审查已存储数据",
     "user": "用户配置",
-    "userDesc": "定义用户类型和入职问题"
+    "userDesc": "定义用户类型和入职问题",
+    "subtitleSimple": "选择你想在这个实例上进行操作的位置。",
+    "workflowsSectionLabel": "管理员工作流",
+    "adminAssistant": "管理员助手",
+    "adminAssistantDesc": "使用管理员聊天获取配置帮助和变更审查。",
+    "guidedSetup": "引导式设置",
+    "guidedSetupDesc": "逐步完成设置、文档、资源和测试。",
+    "guides": "管理员指南",
+    "guidesDesc": "了解管理员配置的内容和位置。",
+    "testUserSession": "测试用户会话",
+    "testUserSessionDesc": "以模拟用户身份聊天并查看已保存的测试版日志。",
+    "aiSetupTitle": "使用 AI 助手进行设置",
+    "aiSetupBody": "让助手一次性收集为你的实例命名和配置的基本信息。你可以随时切换到手动设置。",
+    "aiSetupAction": "开始引导式设置",
+    "readinessTitle": "部署就绪情况",
+    "readinessDesc": "在邀请用户之前查看就绪情况。在一处检查阻塞项、警告、需要重启的变更和恢复状态。",
+    "readinessPrimary": "打开就绪情况审查",
+    "firstRunPathTitle": "管理员首次运行路径",
+    "firstRunStep1Title": "配置实例基线",
+    "firstRunStep1Body": "在审查之前设置品牌、语言、主题、用户字段和 Agent 设置。",
+    "firstRunStep1Action": "打开实例设置",
+    "firstRunStep2Title": "审查部署就绪情况",
+    "firstRunStep2Body": "在邀请用户之前检查阻塞项、警告、需要重启的变更和恢复状态。",
+    "firstRunStep2Action": "打开部署向导",
+    "firstRunStep3Title": "仅在排查问题时使用诊断",
+    "firstRunStep3Body": "保持冒烟测试和诊断可访问，但不要将其作为主要产品路径。",
+    "firstRunStep3Action": "打开诊断",
+    "instanceDescSimple": "名称、公开电子邮件标识、主题和品牌控制。",
+    "aiDescSimple": "提示、模型行为和文档默认值。",
+    "deploymentDescSimple": "运行时设置、健康状况和就绪情况详情。",
+    "resources": "资源目录",
+    "resourcesDesc": "策划可信的律师、非政府组织和转介资源",
+    "resourcesDescSimple": "手动策划可信的转介资源。",
+    "testFeedback": "测试与反馈",
+    "testFeedbackDesc": "以测试用户身份聊天并对回答评分，以完善你的设置",
+    "diagnosticsSectionLabel": "诊断",
+    "operationsSectionLabel": "运维",
+    "testDashboard": "诊断",
+    "testDashboardDesc": "运行开发冒烟检查并检视诊断模块",
+    "testDashboardDescSimple": "在排查问题时运行冒烟检查。",
+    "iaChecklistTitle": "管理员 IA 审查清单",
+    "iaChecklistBody": "在人工审查期间保持部署设置、实例设置、Agent 设置、生命周期就绪情况、部署就绪情况和诊断界面各自独立。",
+    "humanReviewTitle": "人工审查交接",
+    "humanReviewStatus": "需要白手套部署支持",
+    "humanReviewBody": "运行时环境应用保持显式：导出工件、在运维人员支持下应用它们、重启受影响的服务并验证就绪情况证据。",
+    "humanReviewAction": "审查部署就绪情况",
+    "settingsSectionLabel": "设置",
+    "userManager": "用户管理器",
+    "userManagerDesc": "审查用户、检查状态、导出用户名单并批准访问。"
   },
   "adminAI": {
     "title": "AI 配置",
@@ -803,6 +1214,8 @@
     "sessionDefaults": "功能默认值",
     "sessionDefaultsDesc": "设置默认启用的功能",
     "sessionDefaultsHint": "控制用户开始新聊天时默认启用哪些 AI 功能。",
+    "knowledgeSearchDisabledLabel": "知识搜索已关闭",
+    "knowledgeSearchDisabledMessage": "在将知识来源设为选定的默认文档或所有可用文档之前，不会使用已启用的默认文档。",
     "documentDefaults": "文档访问",
     "documentDefaultsDesc": "控制 AI 可以引用哪些文档",
     "documentDefaultsHint": "标记为「可用」的文档可供用户选择。标记为「默认启用」的文档会自动包含在新对话中。",
@@ -873,7 +1286,12 @@
       "userInfoPlaceholder": "{user_info}——替换为当前用户的个人资料字段（如果可用）"
     },
     "revert": "恢复",
-    "revertToGlobal": "恢复为全局"
+    "revertToGlobal": "恢复为全局",
+    "assembledPromptOutput": "已组装的提示输出",
+    "loadErrorLabel": "Agent 设置加载错误",
+    "previewErrorLabel": "Agent 设置预览错误",
+    "documentToggleErrorLabel": "Agent 设置文档切换错误",
+    "documentDefaultsHintV2": "标记为\"可用\"的文档可供知识搜索使用。当知识来源设置为选定的默认文档时，标记为\"默认启用\"的文档将被包含在内。"
   },
   "adminDeployment": {
     "title": "部署配置",
@@ -971,7 +1389,9 @@
       "unknown": "未知",
       "usersMigrated": "已迁移用户",
       "usersToMigrate": "待迁移用户",
-      "warning": "这是一个高级操作。错误的迁移可能导致你无法访问加密数据。仅在你理解其后果时才继续。"
+      "warning": "这是一个高级操作。错误的迁移可能导致你无法访问加密数据。仅在你理解其后果时才继续。",
+      "inputWarningLabel": "管理员密钥迁移警告",
+      "destructiveWarningLabel": "管理员密钥迁移破坏性警告"
     },
     "revealFailed": "显示值失败。请检查你的 Nostr 扩展连接。",
     "searchHelp": {
@@ -1002,7 +1422,8 @@
       "overviewDesc": "安全设置控制认证、会话处理和开发快捷方式。默认值配置为本地开发使用。",
       "overviewNote": "在生产环境中，确保模拟标志已关闭，且 FRONTEND_URL 与你的真实域名匹配。",
       "overviewTitle": "安全概述",
-      "overviewWhen": "在部署到面向公众的服务器之前，请检查这些设置。"
+      "overviewWhen": "在部署到面向公众的服务器之前，请检查这些设置。",
+      "devNote": "在本地邮件测试中使用 MOCK_EMAIL；用户和管理员会话仍需要正常的验证流程。"
     },
     "sslHelp": {
       "ariaLabel": "SSL 和 HTTPS 配置帮助",
@@ -1103,7 +1524,179 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "上传文件夹",
       "vector_database_eb5526": "向量数据库"
-    }
+    },
+    "exportSageRuntimeEnv": "导出 Sage 环境",
+    "readiness": {
+      "title": "部署就绪情况",
+      "statusTitle": "部署就绪情况：{{status}}",
+      "description": "在此单实例部署可正常运行之前，查看所需的证据。",
+      "openWizard": "打开就绪情况审查",
+      "blockerCount": "{{count}} 个阻塞项",
+      "warningCount": "{{count}} 个警告",
+      "readyCount": "{{count}} 个就绪",
+      "empty": "尚无可用的部署就绪情况检查。",
+      "conversationBlocking": "阻塞正常对话",
+      "blocker": "阻塞项",
+      "warning": "警告",
+      "ready": "就绪",
+      "reviewInferenceVerification": "审查推理验证",
+      "reviewDataLifecycleStatus": "审查数据生命周期状态",
+      "reviewDeploymentValidation": "审查部署设置",
+      "reviewRestartRequired": "审查需要重启项",
+      "reviewOperationalReadiness": "审查运维就绪情况",
+      "reviewServiceHealth": "审查服务健康状况",
+      "reviewRuntimeEnv": "审查运行时环境导出"
+    },
+    "wizard": {
+      "title": "部署向导",
+      "step": "第 {{current}} 步，共 {{total}} 步"
+    },
+    "operationalReadiness": {
+      "title": "运维就绪情况",
+      "description": "在正常运行之前，查看备份、恢复、监控和恢复演练。"
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — 用于本地代理的 Tinfoil API 密钥。",
+      "apiKeyLabel": "Tinfoil API 密钥",
+      "ariaLabel": "Sage 运行时配置帮助",
+      "exampleConfig": "示例配置",
+      "goToPage": "转到页面",
+      "sageExtra": "将 LLM_API_KEY 设置为来自 {{tinfoilSignupUrl}} 的 Tinfoil 密钥。技术栈会将其映射到 Sage 和本地 Tinfoil 代理。",
+      "sageHint": "此原型通过 Sage 和 Tinfoil 路由 Agent 运行时流量。LLM_API_KEY 是规范的模型提供方密钥。",
+      "modelField": "TINFOIL_MODEL — Sage 应使用的 Tinfoil 模型标识符（例如：gemma4-31b）。",
+      "overviewDesc": "此原型使用 Sage 作为公共代理运行时，并使用 Tinfoil 作为模型提供方传输层。通过 LLM_* 部署设置来配置模型提供方；技术栈会将它们映射到 Sage 的 Tinfoil 运行时。",
+      "overviewTitle": "Sage 运行时概览",
+      "providerField": "LLM_PROVIDER — 在此原型中设置为 \"sage\"。"
+    },
+    "inferenceVerification": {
+      "current": "当前",
+      "missing": "缺失",
+      "expired": "已过期",
+      "failed": "失败",
+      "success": "成功",
+      "statusLoadFailed": "加载推理验证状态失败",
+      "historyLoadFailed": "加载推理验证历史记录失败",
+      "loadFailed": "加载推理验证失败",
+      "manualFailed": "手动验证失败",
+      "manualSucceeded": "手动验证成功",
+      "detailLoadFailed": "加载认证详情失败",
+      "ariaLabel": "推理验证",
+      "title": "推理验证",
+      "summary": "仅供管理员查看的证据，表明受保护的推理正在预期的模型提供方上运行。",
+      "verifyNow": "立即验证",
+      "status": "状态",
+      "checkedAt": "已检查",
+      "expiresAt": "过期时间",
+      "expectedClaims": "预期声明",
+      "expectedClaimsValue": "预期声明：{{fingerprint}}",
+      "providerClaims": "提供方声明",
+      "provider": "提供方",
+      "model": "模型",
+      "endpoint": "端点",
+      "history": "验证历史记录",
+      "emptyHistory": "暂无验证记录。",
+      "recordTitle": "记录 #{{id}}",
+      "inspectAttestation": "检查认证",
+      "fullAttestation": "完整认证材料"
+    },
+    "lifecycle": {
+      "notStarted": "未开始",
+      "notConfigured": "未配置",
+      "plaintextByOperatorChoice": "由运营方选择的明文",
+      "allTombstones": "全部",
+      "allTombstonesLabel": "所有墓碑标记",
+      "incompleteTombstonesFilter": "未完成",
+      "incompleteTombstonesLabel": "未完成的墓碑标记",
+      "completedTombstonesFilter": "已完成",
+      "completedTombstonesLabel": "已完成的墓碑标记",
+      "title": "数据生命周期状态",
+      "description": "实例数据当前的运营方控制隐私覆盖情况。",
+      "scopeExcludes": "不包括：{{excludes}}",
+      "secureEraseStatus": "安全擦除：{{status}}",
+      "readinessStatus": "生命周期就绪情况：{{status}}",
+      "readinessNonBlocking": "在 v1 中，用户对话不会因生命周期就绪情况警告而被阻塞。",
+      "readinessStaleReason": "原因：{{reason}}",
+      "contentEncryptionKey": "内容加密密钥：{{status}}",
+      "artifactEncryptionPosture": "工件加密态势：{{status}}",
+      "artifactPostureLabel": "工件加密态势",
+      "artifactPostureRequired": "必需",
+      "artifactPostureDisabled": "已禁用",
+      "retentionSchedulerStatus": "留存调度器：{{status}}",
+      "schedulerObservation": "观察：{{status}}",
+      "schedulerEnabledClasses": "调度器启用的类别：{{classes}}",
+      "schedulerLastRunStatus": "上次运行状态：{{status}}",
+      "schedulerLastRun": "上次运行：由 {{actor}} 通过 {{trigger}}",
+      "previewRetention": "预览留存",
+      "runScheduledRetention": "运行计划任务",
+      "previewRetentionResult": "预览：{{conversations}} 个对话，{{artifacts}} 个文档工件，{{skipped}} 个跳过的类别。",
+      "scheduledRetentionResult": "计划运行：{{status}}，包含 {{retries}} 次墓碑标记重试。",
+      "scheduledRetentionStatus": "计划类别：{{classes}}",
+      "auditCoverageStatus": "审计覆盖：{{audited}} 个已审计，{{exceptions}} 个例外，{{missing}} 个缺失。",
+      "owner": "所有者：{{owner}}",
+      "deletion": "删除：{{status}}",
+      "retention": "留存：{{status}}",
+      "audit": "审计：{{status}}",
+      "confidentiality": "机密性：{{status}}",
+      "incompleteTombstones": "未完成的墓碑标记：{{count}}",
+      "completedTombstones": "已完成的墓碑标记：{{count}}",
+      "retentionEnabled": "已启用",
+      "retentionWindow": "时间窗口",
+      "retentionDays": "天",
+      "scheduledEnforcement": "已计划",
+      "saveRetentionPolicy": "保存策略",
+      "empty": "生命周期状态不可用。",
+      "retentionPolicySaveFailed": "无法保存留存策略。",
+      "retentionPreviewFailed": "无法预览留存。",
+      "scheduledRetentionFailed": "无法运行计划留存任务。",
+      "artifactPostureFailed": "无法更新工件加密态势。",
+      "unsupportedSurfacesTitle": "不受支持的部署面",
+      "unsupportedSurfacesDescription": "这些运营痕迹在此披露，但仍不在产品生命周期控制范围之内。",
+      "unsupportedSurfaceAckFailed": "无法更新确认。",
+      "acknowledgedSurface": "已确认",
+      "acknowledgeSurface": "确认",
+      "tombstonesTitle": "删除墓碑标记",
+      "tombstonesDescription": "在不暴露已删除内容的情况下重试未完成的生命周期删除。",
+      "tombstoneStatusFilter": "墓碑标记状态筛选器",
+      "tombstoneRetryFailed": "重试失败。",
+      "tombstonesFetchFailed": "无法加载删除墓碑标记。",
+      "tombstoneClass": "类别：{{className}}",
+      "tombstoneSource": "来源：{{source}}",
+      "tombstoneRetries": "重试次数：{{count}}",
+      "tombstoneUpdated": "更新时间：{{updated}}",
+      "retryTombstoneLabel": "重试删除墓碑标记 {{id}}",
+      "retry": "重试",
+      "tombstonesEmpty": "没有等待重试的删除墓碑标记。"
+    },
+    "runtimeEnv": {
+      "unknown": "未知",
+      "title": "运行时配置对齐",
+      "description": "比较期望的部署设置、生成的 Sage 环境变量以及可观察的运行状态。",
+      "desired": "期望",
+      "configuredKeys": "已配置 {{total}} 个键中的 {{count}} 个",
+      "generated": "已生成",
+      "exportedAt": "导出于 {{time}}",
+      "notExported": "未记录 Sage 环境变量导出",
+      "running": "运行中",
+      "runningUnknown": "运行状态尚未直接内省。",
+      "coreBackend": "核心后端",
+      "coreBackendHint": "后端进程环境变量对齐",
+      "coreDesired": "核心期望值",
+      "coreConfiguredKeys": "核心后端：已配置 {{total}} 个键中的 {{count}} 个",
+      "coreGenerated": "核心已生成",
+      "coreNotExported": "未记录核心后端环境变量导出",
+      "coreRunning": "核心运行中",
+      "coreRunningUnknown": "核心后端的运行状态尚未直接自省。",
+      "coreExportedTitle": "核心后端环境变量已导出",
+      "coreSensitiveArtifact": "请将 core-backend.env 视为敏感的部署材料。",
+      "coreExportDoesNotApply": "在操作员应用并重启核心后端之前，导出该产物不会改变正在运行的后端进程。",
+      "exportedTitle": "Sage 环境变量已导出",
+      "sensitiveArtifact": "请将 sage.env 视为敏感的部署材料。",
+      "exportDoesNotApply": "在操作员应用并重启 Sage 之前，导出该产物不会改变正在运行的 Sage 进程。"
+    },
+    "categorySettingsAria": "{{category}} 设置",
+    "exportCoreBackendRuntimeEnv": "导出核心后端环境变量",
+    "restartCurrent": "无需重启",
+    "restartCurrentDesc": "自服务启动以来，没有需要重启的部署设置发生变更。"
   },
   "upload": {
     "invalidFileType": "无效的文件类型。允许: {{extensions}}",
@@ -1125,7 +1718,8 @@
       "processing": "处理中",
       "chunked": "已分块",
       "complete": "完成",
-      "failed": "失败"
+      "failed": "失败",
+      "completedWithErrors": "完成但有错误"
     },
     "chunks": "{{processed}}/{{total}} 块",
     "deleteDocument": "删除文档",
@@ -1174,7 +1768,20 @@
     "serverBusy": "服务器正忙",
     "tryRefresh": "重试",
     "uploadedSuccess": "上传成功 — 开始处理",
-    "uploadingStatus": "正在上传到服务器..."
+    "uploadingStatus": "正在上传到服务器...",
+    "documentDeletionError": "文档删除错误",
+    "navigationWarning": "您的文档仍在传输中。请在处理开始后再离开，否则上传可能不会被保存。",
+    "duplicateInBatch": "此批次中存在重复的文档名称",
+    "documentsSelected": "{{count}} 个文档",
+    "queueSummary": "{{valid}} 个就绪，{{rejected}} 个已跳过",
+    "skipped": "已跳过",
+    "uploadedPartialSuccess": "{{count}} 个已排队，{{rejected}} 个已跳过",
+    "chooseFiles": "选择文件",
+    "chooseFolder": "选择文件夹",
+    "uploadDocuments": "上传文档",
+    "replacingDocument": "正在替换 {{filename}}",
+    "recentDocumentsShowing": "正在显示 {{total}} 个文档中的 {{shown}} 个",
+    "showMore": "显示更多"
   },
   "configCategories": {
     "embedding": {
@@ -1216,6 +1823,11 @@
       "description": "配置 SSL 证书和 HTTPS 设置",
       "hint": "配置 TLS 和代理设置，以通过 HTTPS 提供服务。默认设置对于本地开发是安全的；仅在安装证书后才启用 HTTPS。",
       "label": "SSL 与安全"
+    },
+    "llm": {
+      "label": "Sage 代理运行时",
+      "description": "配置 Sage + Tinfoil 推理",
+      "hint": "此原型将代理运行时流量通过 Sage 路由，并使用 Tinfoil 作为模型提供方的传输通道。更改需要重启。"
     }
   },
   "promptSections": {
@@ -1242,6 +1854,12 @@
       "description": "AI 如何组织其响应",
       "hint": "控制格式偏好，如是否使用项目符号、标题或对话式段落。这会影响答案的视觉呈现方式。",
       "placeholder": "列表使用项目符号，章节使用标题..."
+    },
+    "prompt_system": {
+      "label": "系统提示",
+      "description": "AI 的核心身份与操作指令",
+      "hint": "用于设定助手的身份、使命以及应在语气、规则、工具或文档上下文之前生效的顶层边界。更改将影响新对话。",
+      "placeholder": "你是 Sage，本实例的私有助手……"
     }
   },
   "parameters": {
@@ -1254,6 +1872,11 @@
       "label": "知识深度",
       "description": "引用多少文档部分",
       "hint": "在回答问题时，AI 会搜索你上传的文档并提取相关部分。较高的数值意味着更多上下文但响应较慢。较低的数值更快但可能遗漏相关信息。默认值：5"
+    },
+    "max_tokens": {
+      "label": "最大令牌数",
+      "description": "每个 AI 响应的最大长度",
+      "hint": "限制响应的最大长度。较低的值可让回答保持简短并降低成本；较高的值允许更长的解释。默认值：2048"
     }
   },
   "defaults": {
@@ -1261,6 +1884,21 @@
       "label": "网络搜索",
       "description": "允许 AI 搜索互联网",
       "hint": "启用后，AI 可以在网络上搜索文档中没有的最新信息。如果你希望响应仅来自上传的知识库，请禁用此功能。"
+    },
+    "knowledgeSource": {
+      "none": "无",
+      "selected": "选定的默认文档",
+      "all": "所有可用文档"
+    },
+    "knowledge_source_default": {
+      "label": "知识来源",
+      "description": "选择在用户对话中启用哪些已上传的知识来源",
+      "hint": "使用 \"none\" 表示默认不使用已上传的知识，使用 \"selected\" 表示标记为默认启用的文档，或使用 \"all\" 表示所有可用文档。"
+    },
+    "user_default_tool_ids": {
+      "label": "用户工具集",
+      "description": "在用户对话中默认启用的工具集",
+      "hint": "使用 \"curated-resources\"、\"knowledge-search\" 和 \"web-search\" 中任意值组成的 JSON 数组。知识搜索还受知识来源的控制。"
     }
   },
   "colors": {
@@ -1439,6 +2077,51 @@
       "description": "Webhook 回调基础 URL",
       "hint": "用于构建 Webhook 回调的基础 URL。示例：https://api.example.com/webhooks。默认值：http://localhost:8000。",
       "label": "Webhook 网址"
+    },
+    "LLM_PROVIDER": {
+      "label": "模型提供方",
+      "description": "Python 侧的模型提供方标签",
+      "hint": "在此原型中使用 \"sage\"。此部署设置支持 Python 侧的诊断与验证元数据。"
+    },
+    "LLM_MODEL": {
+      "label": "模型名称",
+      "description": "模型名称/标识符",
+      "hint": "Sage 应使用的 Tinfoil 模型标识符（例如 \"gemma4-31b\"）。"
+    },
+    "LLM_API_URL": {
+      "label": "API 端点",
+      "description": "模型提供方 API 基础 URL",
+      "hint": "Tinfoil 代理基础 URL。默认值：http://tinfoil-proxy:8089/v1。"
+    },
+    "LLM_API_KEY": {
+      "label": "API 密钥",
+      "description": "Tinfoil API 密钥（机密）",
+      "hint": "留空以保留当前部署设置中的机密。"
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "聊天速率限制",
+      "description": "每分钟聊天请求数",
+      "hint": "每个稳定用户、管理员、令牌或客户端 IP 每分钟最多的 /llm/chat 请求数。需要重启。默认值：120。"
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "检索查询速率限制",
+      "description": "每分钟检索查询请求数",
+      "hint": "每个稳定用户、令牌或客户端 IP 每分钟最多的 /query 请求数。需要重启。默认值：90。"
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "上传速率限制",
+      "description": "每分钟文档上传请求数",
+      "hint": "每个稳定管理员、令牌或客户端 IP 每分钟最多的文档上传请求数。需要重启。默认值：20。"
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "向量搜索速率限制",
+      "description": "每分钟向量搜索请求数",
+      "hint": "每个稳定用户、令牌或客户端 IP 每分钟最多的向量搜索请求数。需要重启。默认值：30。"
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "配置导出速率限制",
+      "description": "每小时部署配置导出数",
+      "hint": "每个管理员会话或客户端 IP 每小时最多的 .env 导出数。需要重启。默认值：5。"
     }
   },
   "instanceInitiation": {
@@ -1475,7 +2158,11 @@
       "title": "准备连接"
     },
     "subtitle": "几个步骤即可设置你的私人知识库。",
-    "title": "欢迎使用 Enclave"
+    "title": "欢迎使用 Enclave",
+    "keySafety": {
+      "title": "使用实例专用的 Nostr 密钥",
+      "body": "请勿使用您的个人 Nostr 密钥。为本实例创建或选择一个专用的管理员密钥，以降低被监视的风险并保持运营访问权限的隔离。"
+    }
   },
   "reachout": {
     "errors": {
@@ -1483,7 +2170,8 @@
       "notConfigured": "此功能未配置。",
       "rateLimited": "消息过多。请稍后重试。",
       "required": "消息不能为空。",
-      "unavailable": "联络不可用。"
+      "unavailable": "联络不可用。",
+      "formErrorLabel": "联系表单错误"
     },
     "form": {
       "messageLabel": "消息",
@@ -1491,7 +2179,8 @@
       "send": "发送"
     },
     "status": {
-      "success": "谢谢。您的消息已发送。"
+      "success": "谢谢。您的消息已发送。",
+      "successLabel": "联系成功"
     },
     "mode": {
       "feedback": {
@@ -1740,7 +2429,265 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— 验证魔术链接令牌并获取会话信息（基于 cookie 的会话）。",
       "verify_magic_link_token_183cf5": "验证魔术链接令牌",
       "view_all_users_manage_approval_status_and_delete_03feec": "查看所有用户，管理批准状态，并删除用户。",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "查看和更新实例范围的配置设置。"
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "查看和更新实例范围的配置设置。",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "测试与已配置的模型提供方路径的连通性。"
+    },
+    "labels": {
+      "themePreference": "主题偏好",
+      "endpointGuidance": "端点指引",
+      "healthResponseOutput": "健康检查响应输出",
+      "jobs": "作业",
+      "chunks": "分块",
+      "rateLimitTestType": "速率限制测试类型",
+      "successfulRequests": "成功的请求",
+      "successful": "成功",
+      "blockedRequests": "被阻止的请求"
+    }
+  },
+  "language": {
+    "english": "英语",
+    "spanish": "西班牙语",
+    "french": "法语",
+    "german": "德语",
+    "portuguese": "葡萄牙语"
+  },
+  "adminGuidedSetup": {
+    "title": "设置你的实例",
+    "subtitle": "你的助手将一次性收集基本信息。",
+    "manual": "改为手动配置",
+    "finish": "完成并开始测试",
+    "comingSoon": "此阶段即将推出，正在单独构建中。",
+    "steps": {
+      "initialize": {
+        "label": "初始化",
+        "title": "初始化",
+        "subtitle": "让我们先了解你空间的基本信息，为你的智能体打好正确的基础。"
+      },
+      "docs": {
+        "label": "上传文档",
+        "title": "上传你的实地指南",
+        "subtitle": "添加智能体作答所依据的源材料——书籍、指南和参考文档。"
+      },
+      "resources": {
+        "label": "精选资源",
+        "title": "精选资源",
+        "subtitle": "添加可信的现实资源——关键联系人、律师、教育和心理健康支持——智能体可将用户转介至此。"
+      },
+      "test": {
+        "label": "以用户身份测试",
+        "title": "以用户身份测试",
+        "subtitle": "即将推出——以你的某个用户类型身份试用助手并对回答进行评分。"
+      },
+      "feedback": {
+        "label": "反馈",
+        "title": "反馈循环",
+        "subtitle": "即将推出——审查回答质量并迭代你的设置。"
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "测试与反馈",
+    "subtitle": "运行一次测试用户会话，然后审查加密的测试版日志和来自已保存对话的反馈。",
+    "tabs": {
+      "test": "以用户身份测试",
+      "feedback": "反馈"
+    },
+    "test": {
+      "pickPersona": "选择一个角色进行测试",
+      "pickPersonaBody": "为你的某个用户类型配置一个测试用户，然后以其身份对话。该会话会保存为一次加密试用，你可在“反馈”中对其评分。",
+      "userType": "用户类型",
+      "genericUser": "通用用户（无类型）",
+      "start": "开始会话",
+      "admin": "管理员",
+      "testUserId": "测试用户",
+      "endSave": "结束并保存试用",
+      "previewNotice": "预览模式——真实的身份模拟尚未接入，因此此对话在你的管理员会话下运行。记录仍会保存以供审查。",
+      "chatEmpty": "以此用户身份发送一条消息以开始试用。",
+      "inputPlaceholder": "以此用户身份向助手发消息…",
+      "saved": "试用已保存（已加密）。请在“反馈”中审查。",
+      "testingAs": "正以 {{persona}} 身份测试"
+    },
+    "feedback": {
+      "trials": "测试版日志",
+      "untitled": "无标题对话",
+      "turns": "轮次",
+      "turn": "轮次",
+      "empty": "尚无已保存的测试版日志。运行一次测试用户会话或等待用户对话。",
+      "selectPrompt": "选择一条测试版日志以审查其记录并对每一轮评分。",
+      "noNip04": "连接一个 Nostr 扩展（Alby、nos2x）以解密记录——它们已用你的管理员密钥加密。",
+      "sourceUser": "用户对话",
+      "sourceTest": "测试用户会话",
+      "thumbUp": "回答不错",
+      "thumbDown": "需要改进",
+      "notePlaceholder": "可选备注（加密保存）…",
+      "exportNotDecrypted": "请先打开并解密对话记录，然后再导出。",
+      "exportFeedbackNotDecrypted": "部分反馈评论无法解密。请重新打开对话记录并批准每个解密请求，然后再导出。"
+    }
+  },
+  "adminResources": {
+    "title": "资源目录",
+    "subtitle": "手动维护已审核的转介资源，助手可在对话升级时提及。仅向终端用户显示\"就绪\"的资源。",
+    "add": "添加资源",
+    "addTitle": "添加资源",
+    "editTitle": "编辑资源",
+    "empty": "尚无资源。当你有已审核的转介时手动添加一个。",
+    "verified": "已验证",
+    "missing": "上线前缺失项",
+    "name": "名称",
+    "type": "资源类型",
+    "languages": "语言（以逗号分隔的 ISO 代码）",
+    "description": "描述",
+    "descriptionHint": "助手应向该人告知有关此资源的哪些信息。",
+    "scopeLevel": "覆盖级别",
+    "scopeCode": "覆盖代码",
+    "scopeCodeHint": "国家：ISO 代码（NI）。次区域/区域：UN M49 代码（013 = 中美洲）。全球：留空。",
+    "helpTypes": "帮助类型",
+    "contact": "联系方式",
+    "vettedBy": "审核方",
+    "sourceNote": "来源备注",
+    "markVerified": "标记为已验证（排在最前）",
+    "archive": "归档（对终端用户隐藏）",
+    "deleteTitle": "删除资源？",
+    "deleteBody": "这将移除 {{name}} 的目录条目",
+    "coverage": "覆盖范围",
+    "coverageHint": "选择覆盖级别，然后按名称或代码搜索。",
+    "coverageCodePlaceholder": "按名称或代码搜索…",
+    "coverageLevelFirst": "请先选择覆盖级别",
+    "coverageClear": "清除覆盖代码",
+    "regionDirectoryUnavailable": "区域目录不可用。请手动输入代码。",
+    "level": {
+      "country": "国家",
+      "subregion": "次区域",
+      "region": "区域",
+      "global": "全球"
+    }
+  },
+  "adminUserManager": {
+    "backToAdmin": "返回管理控制台",
+    "eyebrow": "管理操作",
+    "title": "用户管理器",
+    "subtitle": "在一个简单的控制台中查看用户、了解其状态并批准访问权限。",
+    "unlockDetails": "解锁详情",
+    "refreshRoster": "刷新用户名单",
+    "exportVisible": "导出可见的用户名单",
+    "rosterTitle": "用户名单",
+    "rosterShown": "共 {{total}} 个中显示 {{shown}} 个。",
+    "tableLabel": "用户名单",
+    "tableRowsLabel": "用户名单行",
+    "loadingLabel": "正在加载用户名单",
+    "loadingUsers": "正在加载用户……",
+    "loadRetry": "无法加载用户名单。请使用刷新用户名单重试。",
+    "emptyNoUsers": "暂无用户。新的已认证用户将显示在此处。",
+    "emptyFiltered": "没有用户符合这些筛选条件。",
+    "noUserType": "无用户类型",
+    "unknown": "未知",
+    "userFallback": "用户 #{{id}}",
+    "approvalSuccess": "已批准 {{name}}。",
+    "exportSuccess": "用户名单电子表格已下载。",
+    "metrics": {
+      "total": "用户总数",
+      "totalDetail": "在用户名单中",
+      "pendingApproval": "待审批",
+      "pendingDetail": "{{count}} 个待处理",
+      "approved": "已批准",
+      "approvedDetail": "可进入聊天",
+      "incompleteProfiles": "资料不完整",
+      "incompleteDetail": "需要填写必答项"
+    },
+    "callouts": {
+      "loadFailed": "用户名单加载失败",
+      "approvalUpdated": "用户审批已更新",
+      "approvalFailed": "用户审批更新失败",
+      "exportReady": "用户名单导出已就绪",
+      "exportFailed": "用户名单导出失败"
+    },
+    "filters": {
+      "search": "搜索用户",
+      "searchPlaceholder": "姓名、电子邮件、公钥或 #ID",
+      "approvalStatus": "审批状态",
+      "allApprovalStates": "所有审批状态",
+      "pendingApproval": "待审批",
+      "approved": "已批准",
+      "allUserTypes": "所有用户类型"
+    },
+    "columns": {
+      "user": "用户",
+      "approval": "审批",
+      "userType": "用户类型",
+      "userProfile": "用户资料",
+      "joined": "加入时间",
+      "action": "操作"
+    },
+    "status": {
+      "approved": "已批准",
+      "pending": "待处理"
+    },
+    "actions": {
+      "approve": "批准",
+      "approveUser": "批准 {{name}}",
+      "viewUserDetails": "查看 {{name}} 的详细信息"
+    },
+    "profile": {
+      "noQuestions": "无问题",
+      "noQuestionsDetail": "没有适用的引导问题。",
+      "needsProfile": "需要填写资料",
+      "missingRequiredOne": "缺少 1 项必答项",
+      "missingRequiredMany": "缺少 {{count}} 项必答项",
+      "noProfileYet": "尚无资料",
+      "noAnswersSaved": "未保存任何答案。",
+      "ready": "资料已就绪",
+      "answersSavedOne": "已保存 1 项答案",
+      "answersSavedMany": "已保存 {{count}} 项答案"
+    },
+    "identity": {
+      "decrypting": "正在解密姓名和电子邮件...",
+      "failed": "无法解锁加密的详细信息。",
+      "unavailable": "加密的详细信息需要浏览器签名器。",
+      "locked": "加密的详细信息已锁定。"
+    },
+    "errors": {
+      "loadUsers": "加载用户失败。",
+      "loadUserTypes": "加载用户类型失败。",
+      "loadQuestions": "加载引导问题失败。",
+      "approvalUpdate": "无法更新用户审批。",
+      "exportAudit": "无法审计用户名单导出。",
+      "exportRoster": "导出用户名单失败。"
+    },
+    "detail": {
+      "booleanYes": "是",
+      "booleanNo": "否",
+      "fieldUnlocked": "加密答案已在此浏览器中解锁。",
+      "decryptingField": "正在解密答案...",
+      "encryptedFieldUnavailable": "加密答案需要浏览器签名器。",
+      "encryptedFieldFailed": "无法解锁加密答案。",
+      "encryptedFieldLocked": "加密答案已锁定。",
+      "notAnswered": "未回答",
+      "requiredMissing": "缺少必答项。",
+      "backToUserManager": "返回用户管理器",
+      "backToRoster": "返回用户名单",
+      "eyebrow": "用户详情",
+      "notFoundTitle": "未找到用户",
+      "notFoundBody": "该用户不在当前管理员用户名单中。",
+      "subtitle": "查看该用户的状态、资料答案和访问详情。",
+      "approvalStatus": "审批状态",
+      "waitingApproval": "等待批准",
+      "identityTitle": "身份",
+      "name": "姓名",
+      "nameUnavailable": "不可用",
+      "email": "电子邮件",
+      "emailUnavailable": "不可用",
+      "userId": "用户 ID",
+      "publicKey": "公钥",
+      "noPublicKey": "无公钥",
+      "fieldsTitle": "资料字段",
+      "fieldsShown_one": "此用户适用 {{count}} 个字段。",
+      "fieldsShown_other": "此用户适用 {{count}} 个字段。",
+      "noFields": "没有适用于该用户的引导字段。",
+      "required": "必填",
+      "optional": "可选",
+      "encrypted": "已加密",
+      "plain": "明文",
+      "chatContext": "聊天上下文"
     }
   }
 }

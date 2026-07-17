@@ -14,9 +14,9 @@ import { Button, Callout, Card } from '../../ui';
 import { decryptField, hasNip04Support } from '../../../utils/encryption';
 import {
   deleteSessionLog,
-  exportSessionLog,
   getSessionLog,
   listSessionLogs,
+  recordSessionLogPlaintextExport,
   setTurnFeedback,
   type FeedbackRating,
   type SessionLogDetail,
@@ -127,6 +127,9 @@ export function FeedbackView() {
   const [detail, setDetail] = useState<SessionLogDetail | null>(null);
   const [turns, setTurns] = useState<TranscriptTurn[] | null>(null);
   const [drafts, setDrafts] = useState<Record<number, TurnDraft>>({});
+  const [undecryptedFeedbackTurns, setUndecryptedFeedbackTurns] = useState<
+    number[]
+  >([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -168,6 +171,7 @@ export function FeedbackView() {
     setDeleteError(null);
     setTurns(null);
     setDrafts({});
+    setUndecryptedFeedbackTurns([]);
     try {
       const full = await getSessionLog(logId);
       if (!isCurrentRequest()) return;
@@ -194,15 +198,28 @@ export function FeedbackView() {
 
       // Hydrate per-turn drafts from existing (decrypted) feedback.
       const nextDrafts: Record<number, TurnDraft> = {};
+      const nextUndecryptedFeedbackTurns: number[] = [];
       await Promise.all(
         full.feedback.map(async (fb) => {
           let comment = '';
-          if (fb.comment_ciphertext && fb.comment_ephemeral_pubkey) {
-            comment =
-              (await decryptField({
-                ciphertext: fb.comment_ciphertext,
-                ephemeral_pubkey: fb.comment_ephemeral_pubkey,
-              })) ?? '';
+          if (fb.comment_ciphertext) {
+            if (!fb.comment_ephemeral_pubkey) {
+              nextUndecryptedFeedbackTurns.push(fb.turn_index);
+            } else {
+              try {
+                const decryptedComment = await decryptField({
+                  ciphertext: fb.comment_ciphertext,
+                  ephemeral_pubkey: fb.comment_ephemeral_pubkey,
+                });
+                if (decryptedComment == null) {
+                  nextUndecryptedFeedbackTurns.push(fb.turn_index);
+                } else {
+                  comment = decryptedComment;
+                }
+              } catch {
+                nextUndecryptedFeedbackTurns.push(fb.turn_index);
+              }
+            }
           }
           nextDrafts[fb.turn_index] = {
             rating: fb.rating,
@@ -213,6 +230,7 @@ export function FeedbackView() {
       );
       if (!isCurrentRequest()) return;
       setDrafts(nextDrafts);
+      setUndecryptedFeedbackTurns(nextUndecryptedFeedbackTurns);
     } catch (err) {
       if (isCurrentRequest()) {
         setDetailError(
@@ -280,6 +298,7 @@ export function FeedbackView() {
           setSelectedId(null);
           setDetail(null);
           setTurns(null);
+          setUndecryptedFeedbackTurns([]);
         }
         await loadList();
       } catch (err) {
@@ -294,12 +313,64 @@ export function FeedbackView() {
   );
 
   const handleExport = useCallback(async () => {
-    if (!selectedId) return;
-    setExporting(true);
+    if (!selectedId || !detail) return;
     setExportError(null);
+    // Export the already client-side-decrypted transcript + feedback as
+    // readable plaintext. The backend only ever holds NIP-04 ciphertext, so the
+    // decrypted copy is assembled here (encrypted-at-rest is unchanged). See #493.
+    if (!turns) {
+      setExportError(
+        t(
+          'adminTestFeedback.feedback.exportNotDecrypted',
+          'Open and decrypt the transcript before exporting.'
+        )
+      );
+      return;
+    }
+    if (undecryptedFeedbackTurns.length > 0) {
+      setExportError(
+        t(
+          'adminTestFeedback.feedback.exportFeedbackNotDecrypted',
+          'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
+        )
+      );
+      return;
+    }
+    setExporting(true);
     try {
-      const blob = await exportSessionLog(selectedId);
-      downloadBlob(blob, `beta-session-log-${selectedId}.zip`);
+      const feedback = Object.entries(drafts)
+        .map(([turnIndex, draft]) => ({
+          turn_index: Number(turnIndex),
+          rating: draft.rating ?? null,
+          comment: draft.comment || null,
+        }))
+        .filter((entry) => entry.rating || entry.comment)
+        .sort((a, b) => a.turn_index - b.turn_index);
+
+      const exportData = {
+        log_id: detail.log_id,
+        title: detail.title,
+        source: detail.source,
+        status: detail.status,
+        subject_user_id: detail.subject_user_id,
+        user_type_id: detail.user_type_id,
+        sage_session_id: detail.sage_session_id,
+        turn_count: detail.turn_count,
+        created_at: detail.created_at,
+        completed_at: detail.completed_at,
+        exported_at: new Date().toISOString(),
+        note: 'Decrypted export — plaintext transcript and feedback.',
+        turns,
+        feedback,
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      // Plaintext stays in the browser, but the copied export must still leave
+      // audit evidence before the download is allowed to escape active storage.
+      await recordSessionLogPlaintextExport(selectedId);
+      downloadBlob(blob, `beta-session-log-${selectedId}.json`);
     } catch (err) {
       setExportError(
         err instanceof Error ? err.message : 'Session export failed'
@@ -307,7 +378,7 @@ export function FeedbackView() {
     } finally {
       setExporting(false);
     }
-  }, [selectedId]);
+  }, [selectedId, detail, turns, drafts, undecryptedFeedbackTurns, t]);
 
   const sourceLabel = useCallback(
     (source: string) => {
