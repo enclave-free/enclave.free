@@ -21,6 +21,36 @@ npm run dev
 
 Open http://localhost:5173 in your browser.
 
+## Container Modes
+
+The default application Compose topology builds the frontend bundle and serves
+it from the production Nginx stage on host port 5173:
+
+```bash
+docker compose \
+  -f docker-compose.infra.yml \
+  -f docker-compose.app.yml \
+  up --build -d frontend
+```
+
+Contributor hot reload is explicit. Add the development override to select the
+Node development stage, mount this directory at `/app`, and run Vite on port
+5173:
+
+```bash
+docker compose \
+  -f docker-compose.infra.yml \
+  -f docker-compose.app.yml \
+  -f docker-compose.frontend-dev.yml \
+  up --build -d frontend
+```
+
+Both Dockerfiles stages are ordinary OCI images. The production image can be
+built and smoke-tested with Apple Containers by running
+`scripts/test_frontend_runtime.sh apple` from the repository root. The
+production frontend intentionally does not proxy `/api`; the deployment reverse
+proxy remains the API-routing authority.
+
 ## Routes
 
 | Route | Page | Purpose |

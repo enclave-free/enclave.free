@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build:
+      target: development
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    ports: !override
+      - "127.0.0.1:5173:5173"
+    volumes: !override
+      - ./frontend:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5173/ || exit 1"]
