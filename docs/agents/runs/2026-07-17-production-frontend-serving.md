@@ -9,7 +9,7 @@
 - Feature branch: `feature/production-frontend-serving`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: final hosted CodeRabbit round 1 passed with zero new issues; round 2 pending
+- Current status: two final hosted CodeRabbit rounds passed with zero new issues; ready to merge to staging
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -30,6 +30,7 @@ Replace the deployed Vite development server with production static frontend ser
 - PR URL: [#510](https://github.com/enclave-free/enclave.free/pull/510)
 - PR CodeRabbit round 1: one valid trivial timeout finding addressed with bounded `curl` and BusyBox-compatible `wget` probes; CodeRabbit acknowledged the fix and returned a passing status; generic docstring coverage warning dismissed as inapplicable to the repository's shell/test conventions
 - Final staging-gate round 1: CodeRabbit completed with zero new issues and no unresolved threads
+- Final staging-gate round 2: CodeRabbit completed with zero new issues and no unresolved threads
 
 ## Commands
 
