@@ -82,6 +82,14 @@ class FrontendHttpContractTests(unittest.TestCase):
             fetch("/api/health")
         self.assertEqual(raised.exception.code, 404)
 
+    def test_missing_asset_is_not_cached_as_immutable(self) -> None:
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            fetch("/assets/not-a-production-asset.js")
+        self.assertEqual(raised.exception.code, 404)
+        self.assertNotIn(
+            "immutable", raised.exception.headers.get("Cache-Control", "")
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

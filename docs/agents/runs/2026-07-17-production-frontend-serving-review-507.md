@@ -17,7 +17,7 @@ The default frontend now runs a compiled Vite bundle from a small Nginx runtime 
 - `implement` session: `/root/frontend_prod_worker`
 - `tdd` used: yes, at the pre-agreed built-container HTTP and rendered Compose seams
 - Red test, if applicable: the old default lacked the production build target and development override; its live Apple Container response injected `/@vite/client`, exposed no compiled assets, and proxied `/api`
-- Green implementation, if applicable: both rendered Compose contracts pass; four live HTTP contract checks pass against the Apple-built production image; user and admin routes render without overlays, Vite/HMR scripts, or matching console messages
+- Green implementation, if applicable: both rendered Compose contracts pass; five live HTTP contract checks pass against the Apple-built production image; the BusyBox-compatible health probe passes in-container; user and admin routes render without overlays, Vite/HMR scripts, or matching console messages
 - Refactor, if applicable: none beyond the deployment packaging required by the ticket
 - Commands run: `python3 scripts/tests/DEPLOYMENT/test_frontend_compose_contract.py`; `scripts/test_frontend_runtime.sh apple`; `cd frontend && npx tsc --noEmit`; `cd frontend && npm run build`; `cd frontend && npm test` (76 files, 419 tests); `git diff --check`
 
@@ -45,3 +45,10 @@ SPEC_FINDINGS:
 - None after fixes and primary-session browser verification. The smoke executes the configured probe, verifies Apple running state, and waits for Docker healthy state.
 - Against `enclave-frontend-ticket-507:local`, the language-selection and Admin Setup/Nostr interfaces rendered with no overlay, no `/@vite/client`, one hashed production script, and zero Vite/WebSocket/HMR console messages.
 ```
+
+## Local CodeRabbit
+
+- Round: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md`
+- Result: four findings addressed; none dismissed
+- Major fix: all frontend health paths now use the BusyBox-compatible `wget -q --spider` probe and the rebuilt Apple image passes it in-container
+- Minor fixes: asset 404s no longer receive immutable caching; the dev command contract is exact; the bind-mount documentation names `frontend/`

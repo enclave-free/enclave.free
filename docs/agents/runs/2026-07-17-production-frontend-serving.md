@@ -26,7 +26,7 @@ Replace the deployed Vite development server with production static frontend ser
 - Ticket sessions: `docs/agents/runs/2026-07-17-production-frontend-serving-issue-session-507.md`
 - Agent briefs: worker brief delivered to `/root/frontend_prod_worker`
 - Review packets: `docs/agents/runs/2026-07-17-production-frontend-serving-review-507.md`
-- Local CodeRabbit report: pending
+- Local CodeRabbit report: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md` — four findings addressed
 - PR URL: pending
 
 ## Commands
@@ -41,7 +41,7 @@ Replace the deployed Vite development server with production static frontend ser
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #507 | AFK | complete | Standards pass; Spec pass | none | Apple HTTP, health, Compose, typecheck, build, full suite, and browser verification pass |
+| #507 | AFK | complete | Standards pass; Spec pass; local CodeRabbit 4/4 addressed | none | Apple HTTP, health, Compose, typecheck, build, full suite, browser verification, and local CodeRabbit rerun pass |
 
 ## Parked HITL Slices
 
@@ -53,7 +53,7 @@ Replace the deployed Vite development server with production static frontend ser
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #507 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` plus primary browser verification | `d122b03`, `9a4906d` | Standards pass; Spec pass | Compose contracts; Apple HTTP, probe, and state; typecheck; build; 76 files/419 tests; user/admin browser verification pass |
+| #507 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` plus primary browser and CodeRabbit verification | `d122b03`, `9a4906d`, `4366996` plus local CodeRabbit fixes | Standards pass; Spec pass; local CodeRabbit 4/4 addressed | Compose contracts; Apple HTTP, BusyBox probe, and state; typecheck; build; 76 files/419 tests; user/admin browser verification pass |
 
 ## Open Questions
 

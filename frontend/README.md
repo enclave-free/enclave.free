@@ -36,7 +36,7 @@ docker compose \
 ```
 
 Contributor hot reload is explicit. Add the development override to select the
-Node development stage, mount this directory at `/app`, and run Vite on port
+Node development stage, bind-mount `frontend/` at `/app`, and run Vite on port
 5173:
 
 ```bash

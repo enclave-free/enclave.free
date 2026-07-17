@@ -29,7 +29,7 @@ case "$runtime" in
     }
     verify_container_health() {
       container exec "$container_name" \
-        wget --no-verbose --tries=1 --spider http://127.0.0.1/
+        wget -q --spider http://127.0.0.1/
       container inspect "$container_name" | python3 -c '
 import json
 import sys
@@ -53,7 +53,7 @@ if inspection[0]["status"]["state"] != "running":
     }
     verify_container_health() {
       docker exec "$container_name" \
-        wget --no-verbose --tries=1 --spider http://127.0.0.1/
+        wget -q --spider http://127.0.0.1/
       for _ in {1..60}; do
         health_status="$(docker inspect --format '{{.State.Health.Status}}' "$container_name")"
         if [[ "$health_status" == "healthy" ]]; then

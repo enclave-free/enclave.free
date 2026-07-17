@@ -75,7 +75,10 @@ class FrontendComposeContractTests(unittest.TestCase):
         )
 
         self.assertEqual(frontend["build"]["target"], "development")
-        self.assertEqual(frontend["command"][:3], ["npm", "run", "dev"])
+        self.assertEqual(
+            frontend["command"],
+            ["npm", "run", "dev", "--", "--host", "0.0.0.0"],
+        )
         self.assertEqual(
             frontend["ports"],
             [
