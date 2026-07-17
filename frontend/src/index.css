@@ -524,6 +524,44 @@ input:focus-visible {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* Live reasoning reads as ambient model activity, not another Tool card. */
+.reasoning-live-text {
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    var(--color-text-muted) 0%,
+    var(--color-text-secondary) 38%,
+    color-mix(in srgb, var(--color-accent) 72%, var(--color-text-secondary)) 50%,
+    var(--color-text-secondary) 62%,
+    var(--color-text-muted) 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--color-accent) 24%, transparent);
+  animation: reasoningTextGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes reasoningTextGlow {
+  0%, 100% {
+    background-position: 100% 50%;
+    opacity: 0.68;
+  }
+  50% {
+    background-position: 0% 50%;
+    opacity: 0.95;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reasoning-live-text {
+    color: var(--color-text-secondary);
+    background: none;
+    text-shadow: none;
+    animation: none;
+  }
+}
+
 .animate-shimmer {
   background: linear-gradient(
     90deg,
