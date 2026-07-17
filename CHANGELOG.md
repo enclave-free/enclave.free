@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 - 2026-07-17
+
+- Reduced Admin Conversation latency by streaming plain final answers, deferring Session Memory embeddings, bounding typed Tool planning, and preserving provider reasoning as guarded trace data instead of visible answer text.
+- Expanded Admin Config, Database Query, Knowledge Search, curated-resource, and web-search tool routing with clearer progress, trace, retry, and failure behavior.
+- Added and hardened Admin User Manager workflows for searchable roster review, user details, approvals, encrypted identity unlock, and audited roster export.
+- Added audited plaintext session-log export, removed duplicate trial logs, and replaced free-text curated-resource coverage entry with a searchable region picker.
+- Completed and enforced interface-key parity for the six priority locales, improved language ordering and preference migration, and kept the remaining locale sweep tracked separately.
+- Aligned the Qdrant Python client and server minor versions and strengthened Tinfoil proxy integrity, gateway, security, and deployment smoke coverage.
+
 ## 0.3.0 - 2026-07-06
 
 - Added a dedicated Admin User Manager detail screen so admins can open a user from the roster and review identity, approval, user type, public key, joined date, and all applicable profile fields.
