@@ -39,6 +39,7 @@ import {
   STORAGE_KEYS,
 } from '../types/onboarding';
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
+import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import { decryptField, hasNip04Support } from '../utils/encryption';
 import {
   buildUserRosterWorkbook,
@@ -226,6 +227,7 @@ export function AdminUserConfig() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [reorderError, setReorderError] = useState<string | null>(null);
+  const [configRefreshNonce, setConfigRefreshNonce] = useState(0);
 
   // User Approval settings
   const [userApprovalLoaded, setUserApprovalLoaded] = useState(false);
@@ -295,6 +297,14 @@ export function AdminUserConfig() {
       navigate('/admin');
     }
   }, [navigate]);
+
+  useEffect(
+    () =>
+      subscribeAdminConfigChanges(['user_types', 'onboarding_questions'], () =>
+        setConfigRefreshNonce((value) => value + 1)
+      ),
+    []
+  );
 
   // Load user types and fields from API
   useEffect(() => {
@@ -380,7 +390,7 @@ export function AdminUserConfig() {
 
     fetchData();
     return () => abortController.abort();
-  }, [t]);
+  }, [t, configRefreshNonce]);
 
   // Load reachout settings from admin-only settings endpoint
   useEffect(() => {

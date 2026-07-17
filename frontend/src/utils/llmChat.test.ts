@@ -509,7 +509,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
     });
   });
 
-  it('bridges admin-config apply summaries once Sage owns the session', async () => {
+  it('omits duplicated client history once Sage owns the admin-config session', async () => {
     const encoder = new TextEncoder();
     vi.stubGlobal(
       'fetch',
@@ -553,13 +553,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
       message: 'continue',
       tools: ['admin-config'],
       session_id: 'session-123',
-      conversation_history: [
-        {
-          role: 'assistant',
-          content:
-            'Applied 1/1 change(s). Config validation: valid. Restart required: no.',
-        },
-      ],
     });
   });
 

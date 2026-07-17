@@ -17,10 +17,12 @@ import {
   Search,
   Settings2,
   ShieldAlert,
-  Play,
-  EyeOff,
 } from 'lucide-react';
-import { adminFetch, notifyAdminResourcesChanged } from '../../utils/adminApi';
+import { adminFetch } from '../../utils/adminApi';
+import {
+  notifyAdminConfigChanged,
+  readAdminConfigAffectedAreas,
+} from '../../utils/adminConfigEvents';
 import { ChatInput } from '../chat/ChatInput';
 import {
   ChatMessage,
@@ -29,18 +31,8 @@ import {
 } from '../chat/ChatMessage';
 import { readTraceDelta } from '../chat/SageStreamEventAdapter';
 import { ToolSelector, type Tool } from '../chat/ToolSelector';
-import {
-  coerceAdminAssistantChangeSetPayload,
-  extractAdminAssistantChangeSetStrict,
-  redactAdminDeploymentSecretChangeSets,
-  redactSecrets,
-  validateAdminAssistantChangeSet,
-  type AdminAssistantChangeSet,
-} from '../../utils/adminAssistant';
-import {
-  loadDeploymentSecretKeysFromConfig,
-  refreshAdminConfigRedactionMetadata,
-} from '../../utils/adminConfigContext';
+import { redactSecrets } from '../../utils/secretRedaction';
+import { refreshAdminConfigRedactionMetadata } from '../../utils/adminConfigContext';
 import {
   planAdminPromptBudget,
   formatAdminReducedContextNotice,
@@ -61,14 +53,6 @@ import {
   shouldOfferNewAssistantConversation,
   type ClassifiedProviderError,
 } from '../../utils/providerErrors';
-import { resolveAdminApplyIntent } from '../../utils/adminApplyIntent';
-
-type ApplyState =
-  | { state: 'idle' }
-  | { state: 'review'; changeSet: AdminAssistantChangeSet }
-  | { state: 'applying'; changeSet: AdminAssistantChangeSet }
-  | { state: 'applied'; message: string }
-  | { state: 'error'; message: string };
 
 interface AdminConfigAssistantProps {
   variant?: 'sidebar' | 'drawer';
@@ -133,41 +117,6 @@ function appendAssistantTraceDelta(
   });
 }
 
-function stagePendingAdminChangeSet(
-  content: string,
-  hasConfigTool: boolean,
-  setApplyState: (state: ApplyState) => void
-): void {
-  if (!hasConfigTool || !content.trim()) return;
-  if (!content.includes('```json') || !content.includes('"requests"')) return;
-
-  const extracted = extractAdminAssistantChangeSetStrict(content);
-  if (extracted.ok) {
-    setApplyState({ state: 'review', changeSet: extracted.changeSet });
-  }
-}
-
-function stageStructuredAdminChangeSet(
-  payload: unknown,
-  setApplyState: (state: ApplyState) => void
-): AdminAssistantChangeSet | null {
-  if (payload === undefined || payload === null) return null;
-  const extracted = coerceAdminAssistantChangeSetPayload(payload);
-  if (extracted.ok) {
-    setApplyState({ state: 'review', changeSet: extracted.changeSet });
-    return extracted.changeSet;
-  }
-  setApplyState({ state: 'error', message: extracted.error });
-  return null;
-}
-
-function slugify(value: string): string {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
 async function readErrorDetail(res: Response): Promise<string> {
   let detail = `HTTP ${res.status}`;
   try {
@@ -220,36 +169,13 @@ export function AdminConfigAssistant({
   const [snapshotInfo, setSnapshotInfo] = useState<{
     generatedAtIso: string;
   } | null>(null);
-  const [applyState, setApplyState] = useState<ApplyState>({ state: 'idle' });
-  const [selectedTools, setSelectedTools] = useState<string[]>(
-    isOnboarding ? [CONFIG_TOOL_ID] : []
-  );
+  const [selectedTools, setSelectedTools] = useState<string[]>([
+    CONFIG_TOOL_ID,
+  ]);
 
   const secretsForRedactionRef = useRef<string[]>([]);
-  const deploymentSecretKeysRef = useRef<Set<string>>(new Set());
-  const handleApplyRef = useRef<
-    (changeSet: AdminAssistantChangeSet) => Promise<void>
-  >(async () => {});
-  // Lets handleApply trigger an onboarding auto-advance turn without a dep cycle.
-  const handleSendRef = useRef<
-    (content: string, options?: { hidden?: boolean }) => Promise<void>
-  >(async () => {});
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pendingApplyPanelRef = useRef<HTMLDivElement>(null);
-  const pendingApplyButtonRef = useRef<HTMLButtonElement>(null);
-
-  const focusPendingApplyPanel = useCallback(() => {
-    const focusPanel = () => {
-      pendingApplyPanelRef.current?.scrollIntoView({
-        block: 'nearest',
-        behavior: 'smooth',
-      });
-      pendingApplyButtonRef.current?.focus();
-    };
-    focusPanel();
-    window.setTimeout(focusPanel, 0);
-  }, []);
 
   // Auto-scroll to the latest message. Always scroll when the operator just sent
   // (the newest message is theirs); otherwise only follow the stream if they're
@@ -337,41 +263,13 @@ export function AdminConfigAssistant({
 
   const hasConfigTool = selectedTools.includes(CONFIG_TOOL_ID);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadDeploymentSecretKeys = async () => {
-      try {
-        const secretKeys = await loadDeploymentSecretKeysFromConfig(fetchJson);
-        if (!cancelled) {
-          deploymentSecretKeysRef.current = secretKeys;
-        }
-      } catch {
-        // Keep pessimistic masking when metadata is unavailable.
-      }
-    };
-
-    loadDeploymentSecretKeys();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchJson]);
-
   const handleToolToggle = useCallback(
     (toolId: string) => {
       // During onboarding the toolset is a locked, injected dependency: the
       // assistant must stay in config-only mode (no web/database). Ignore any
       // toggle attempts so web/database can never be enabled mid-onboarding.
-      if (isOnboarding) {
+      if (isOnboarding || toolId === CONFIG_TOOL_ID) {
         return;
-      }
-      if (toolId === CONFIG_TOOL_ID && selectedTools.includes(CONFIG_TOOL_ID)) {
-        setApplyState({ state: 'idle' });
-        setSnapshotInfo(null);
-        setShareSecrets(false);
-        secretsForRedactionRef.current = [];
-        deploymentSecretKeysRef.current = new Set();
       }
       setSelectedTools((prev) =>
         prev.includes(toolId)
@@ -401,66 +299,21 @@ export function AdminConfigAssistant({
     setReducedContextNotice(null);
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
-    deploymentSecretKeysRef.current = new Set();
   }, [isOnboarding, t]);
 
   const handleSend = useCallback(
-    async (content: string, options?: { hidden?: boolean }) => {
-      const hasPendingChangeSet = applyState.state === 'review';
-      const applyIntent = hasConfigTool
-        ? resolveAdminApplyIntent(content, hasPendingChangeSet)
-        : { kind: 'none' as const };
-
-      // `hidden` turns (used to auto-advance onboarding after an Apply) are sent
-      // to the model but not rendered as a user bubble.
-      if (!options?.hidden) {
-        const userMessage: Message = {
-          id: generateMessageId(),
-          role: 'user',
-          content,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, userMessage]);
-      }
+    async (content: string) => {
+      const userMessage: Message = {
+        id: generateMessageId(),
+        role: 'user',
+        content,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
       setError(null);
       setRecoveryError(null);
       setReducedContextNotice(null);
-
-      if (applyIntent.kind === 'needs-panel') {
-        focusPendingApplyPanel();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateMessageId(),
-            role: 'assistant',
-            content: t(
-              'admin.configAssistant.applyIntentUsePanel',
-              'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-            ),
-            timestamp: new Date(),
-          },
-        ]);
-        setIsLoading(false);
-        return;
-      }
-
-      if (applyIntent.kind === 'no-pending') {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateMessageId(),
-            role: 'assistant',
-            content: t(
-              'admin.configAssistant.applyIntentNoPending',
-              'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
-            ),
-            timestamp: new Date(),
-          },
-        ]);
-        setIsLoading(false);
-        return;
-      }
 
       try {
         let boundedConversationHistory = messages.map(
@@ -471,7 +324,6 @@ export function AdminConfigAssistant({
         );
         if (!hasConfigTool) {
           setSnapshotInfo(null);
-          setApplyState({ state: 'idle' });
           setReducedContextNotice(null);
         } else {
           const sessionMemoryPlan = compactAdminSessionMemory({
@@ -513,16 +365,20 @@ export function AdminConfigAssistant({
         let streamReportedError = false;
         let classifiedStreamError: ClassifiedProviderError | null = null;
         let lastDeltaFlushAt = 0;
-        let structuredChangeSet: AdminAssistantChangeSet | null = null;
-        let sawStructuredChangeSetPayload = false;
+        const notifiedAffectedAreas = new Set<string>();
+        const notifyAffectedAreas = (payload: unknown) => {
+          const freshAreas = readAdminConfigAffectedAreas(payload).filter(
+            (area) => !notifiedAffectedAreas.has(area)
+          );
+          freshAreas.forEach((area) => notifiedAffectedAreas.add(area));
+          notifyAdminConfigChanged(freshAreas);
+        };
 
         // Compute the display string from the accumulated stream so far.
-        const computeStreamDisplay = () => {
-          const redacted = redactAdminDeploymentSecretChangeSets(raw);
-          return shareSecrets
-            ? redactSecrets(redacted, secretsForRedactionRef.current)
-            : redacted;
-        };
+        const computeStreamDisplay = () =>
+          shareSecrets
+            ? redactSecrets(raw, secretsForRedactionRef.current)
+            : raw;
         try {
           await sendLlmChatStreamWithUnifiedTools({
             content,
@@ -533,12 +389,7 @@ export function AdminConfigAssistant({
               selectedTools.includes('db-query'),
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
-              if (
-                data.admin_change_set !== undefined &&
-                data.admin_change_set !== null
-              ) {
-                sawStructuredChangeSetPayload = true;
-              }
+              notifyAffectedAreas(data);
               if (event === 'assistant_message_started') {
                 const assistantId =
                   typeof data.message_id === 'string'
@@ -598,13 +449,6 @@ export function AdminConfigAssistant({
                   );
                 }
               } else if (event === 'trace_final' && streamMessageId) {
-                if (hasConfigTool && !structuredChangeSet) {
-                  structuredChangeSet =
-                    stageStructuredAdminChangeSet(
-                      data.admin_change_set,
-                      setApplyState
-                    ) ?? structuredChangeSet;
-                }
                 setMessages((prev) =>
                   patchAssistantMessage(prev, streamMessageId!, {
                     trace: data.trace as Message['trace'],
@@ -614,13 +458,6 @@ export function AdminConfigAssistant({
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
-                if (hasConfigTool && !structuredChangeSet) {
-                  structuredChangeSet =
-                    stageStructuredAdminChangeSet(
-                      data.admin_change_set,
-                      setApplyState
-                    ) ?? structuredChangeSet;
-                }
               } else if (event === 'error') {
                 streamReportedError = true;
                 const classified = classifyProviderError(
@@ -656,10 +493,6 @@ export function AdminConfigAssistant({
           }
           streamed = true;
         } catch (streamError) {
-          if (!sawStructuredChangeSetPayload) {
-            stagePendingAdminChangeSet(raw, hasConfigTool, setApplyState);
-          }
-
           if (streamMessageId && raw.trim()) {
             // Flush whatever streamed before the error so partial output isn't lost.
             const display = computeStreamDisplay();
@@ -737,25 +570,19 @@ export function AdminConfigAssistant({
             message_id?: string;
             session_id?: string;
             trace?: Message['trace'];
-            admin_change_set?: unknown;
+            admin_config_affected_areas?: unknown;
           };
+          notifyAffectedAreas(data);
           if (data.session_id) {
             setConversationSessionId(data.session_id);
-          }
-          if (
-            data.admin_change_set !== undefined &&
-            data.admin_change_set !== null
-          ) {
-            sawStructuredChangeSetPayload = true;
           }
           raw = String(data?.message || '');
 
           const assistantId = data.message_id || generateMessageId();
 
-          const redactedChangeSets = redactAdminDeploymentSecretChangeSets(raw);
           const display = shareSecrets
-            ? redactSecrets(redactedChangeSets, secretsForRedactionRef.current)
-            : redactedChangeSets;
+            ? redactSecrets(raw, secretsForRedactionRef.current)
+            : raw;
 
           const assistantMessage: Message = {
             id: assistantId,
@@ -765,22 +592,6 @@ export function AdminConfigAssistant({
             trace: data.trace ?? null,
           };
           setMessages((prev) => [...prev, assistantMessage]);
-
-          structuredChangeSet = hasConfigTool
-            ? stageStructuredAdminChangeSet(data.admin_change_set, setApplyState)
-            : null;
-        }
-
-        if (
-          hasConfigTool &&
-          !structuredChangeSet &&
-          !sawStructuredChangeSetPayload
-        ) {
-          const extracted = extractAdminAssistantChangeSetStrict(raw);
-          if (extracted.ok)
-            setApplyState({ state: 'review', changeSet: extracted.changeSet });
-          else if (raw.includes('```json') && raw.includes('"requests"'))
-            setApplyState({ state: 'error', message: extracted.error });
         }
       } catch (e) {
         setError(
@@ -791,360 +602,17 @@ export function AdminConfigAssistant({
       }
     },
     [
-      applyState,
       conversationSessionId,
-      focusPendingApplyPanel,
       hasConfigTool,
-      isOnboarding,
       messages,
       selectedTools,
       shareSecrets,
       t,
     ]
   );
-  handleSendRef.current = handleSend;
-
-  const handleApply = useCallback(
-    async (changeSet: AdminAssistantChangeSet) => {
-      setApplyState({ state: 'applying', changeSet });
-      try {
-        // Allow one change set to create user types and then reference them without
-        // guessing IDs. Placeholder syntax: "@type:<slug>" where slug is the
-        // slugified user type name (lowercase, alnum + underscores).
-        //
-        // Examples:
-        // - POST /admin/user-types { "name": "Bitcoin Designer", ... }
-        // - POST /admin/user-fields { ..., "user_type_id": "@type:bitcoin_designer" }
-        // - PUT /admin/ai-config/user-type/@type:bitcoin_designer/top_k { "value": "8" }
-        const userTypeSlugToId = new Map<string, number>();
-        try {
-          const existing = await fetchJson<{
-            types: Array<{ id: number; name: string }>;
-          }>('/admin/user-types');
-          for (const ut of existing.types || []) {
-            userTypeSlugToId.set(slugify(ut.name), ut.id);
-          }
-        } catch {
-          // Best-effort; we'll still fill mapping from POST results below.
-        }
-
-        const resolveUserTypeId = (raw: unknown): number | unknown => {
-          if (typeof raw !== 'string') return raw;
-          if (!raw.startsWith('@type:')) return raw;
-          const slug = raw.slice('@type:'.length);
-          const id = userTypeSlugToId.get(slug);
-          if (id === undefined)
-            throw new Error(`Unknown user type placeholder: ${raw}`);
-          return id;
-        };
-
-        const rewritePath = (path: string): string => {
-          // Replace /user-type/@type:slug/ with /user-type/<id>/
-          const parts = path.split('/');
-          const idx = parts.findIndex((p) => p === 'user-type');
-          if (idx !== -1 && parts[idx + 1]?.startsWith('@type:')) {
-            const seg = parts[idx + 1];
-            const id = resolveUserTypeId(seg);
-            if (typeof id === 'number') parts[idx + 1] = String(id);
-          }
-          // Replace /defaults/user-type/@type:slug (ingest doc defaults overrides)
-          const idx2 = parts.findIndex((p) => p === 'defaults');
-          if (
-            idx2 !== -1 &&
-            parts[idx2 + 1] === 'user-type' &&
-            parts[idx2 + 2]?.startsWith('@type:')
-          ) {
-            const seg = parts[idx2 + 2];
-            const id = resolveUserTypeId(seg);
-            if (typeof id === 'number') parts[idx2 + 2] = String(id);
-          }
-          return parts.join('/');
-        };
-
-        const results: Array<{
-          ok: boolean;
-          method: string;
-          path: string;
-          status?: number;
-          error?: string;
-        }> = [];
-        for (const req of changeSet.requests) {
-          try {
-            const resolvedPath = rewritePath(req.path);
-            const requestValidation = validateAdminAssistantChangeSet({
-              version: 1,
-              requests: [req],
-            });
-            if (!requestValidation.ok) {
-              results.push({
-                ok: false,
-                method: req.method,
-                path: resolvedPath,
-                error: requestValidation.error || 'Invalid request',
-              });
-              continue;
-            }
-            let resolvedBody: unknown = req.body;
-            if (
-              resolvedBody &&
-              typeof resolvedBody === 'object' &&
-              !Array.isArray(resolvedBody)
-            ) {
-              const b = resolvedBody as Record<string, unknown>;
-              if ('user_type_id' in b) {
-                const resolved = resolveUserTypeId(b.user_type_id);
-                resolvedBody = { ...b, user_type_id: resolved };
-              }
-            }
-
-            const res = await adminFetch(resolvedPath, {
-              method: req.method,
-              body: resolvedBody ? JSON.stringify(resolvedBody) : undefined,
-            });
-            if (!res.ok) {
-              const detail = await readErrorDetail(res);
-              results.push({
-                ok: false,
-                method: req.method,
-                path: resolvedPath,
-                status: res.status,
-                error: detail,
-              });
-              continue;
-            }
-
-            // Learn created user type IDs for later placeholder resolution.
-            if (req.method === 'POST' && req.path === '/admin/user-types') {
-              try {
-                const payload = (await res.json()) as {
-                  id?: number;
-                  name?: string;
-                };
-                if (
-                  typeof payload?.id === 'number' &&
-                  typeof payload?.name === 'string'
-                ) {
-                  userTypeSlugToId.set(slugify(payload.name), payload.id);
-                }
-              } catch {
-                // ignore
-              }
-            }
-
-            results.push({
-              ok: true,
-              method: req.method,
-              path: resolvedPath,
-              status: res.status,
-            });
-          } catch (err) {
-            results.push({
-              ok: false,
-              method: req.method,
-              path: req.path,
-              error: err instanceof Error ? err.message : String(err),
-            });
-          }
-        }
-
-        const okCount = results.filter((r) => r.ok).length;
-        const failCount = results.length - okCount;
-
-        // If any resource/help-type write succeeded, tell open admin views (the
-        // Resource Directory table) to refresh so they don't show stale data.
-        if (
-          results.some(
-            (r) => r.ok && /^\/admin\/(resources|help-types)\b/.test(r.path)
-          )
-        ) {
-          notifyAdminResourcesChanged();
-        }
-        const baseSummary = failCount
-          ? t('admin.configAssistant.applySummary.appliedCountsWithFailures', {
-              ok: okCount,
-              total: results.length,
-              failed: failCount,
-            })
-          : t('admin.configAssistant.applySummary.appliedCounts', {
-              ok: okCount,
-              total: results.length,
-            });
-
-        const failedDetails = results
-          .filter((r) => !r.ok)
-          .map(
-            (r) => `${r.method} ${r.path}: ${r.error || `HTTP ${r.status}`}`
-          );
-        const failureSummary = failedDetails.length
-          ? '\n' + failedDetails.join('\n')
-          : '';
-
-        // Post-apply: run deployment config validation + check restart-required keys.
-        let postApplyNotes: string[] = [];
-        try {
-          const validationRes = await adminFetch(
-            '/admin/deployment/config/validate',
-            { method: 'POST' }
-          );
-          if (validationRes.ok) {
-            const v = (await validationRes.json()) as {
-              valid: boolean;
-              errors?: string[];
-              warnings?: string[];
-            };
-            if (v.valid) {
-              const warnings = (v.warnings || []).filter(Boolean);
-              postApplyNotes.push(
-                warnings.length
-                  ? t(
-                      'admin.configAssistant.applySummary.configValidationValidWarnings',
-                      { count: warnings.length }
-                    )
-                  : t(
-                      'admin.configAssistant.applySummary.configValidationValid'
-                    )
-              );
-            } else {
-              const errors = (v.errors || []).filter(Boolean);
-              postApplyNotes.push(
-                t(
-                  'admin.configAssistant.applySummary.configValidationInvalidErrors',
-                  { count: errors.length }
-                )
-              );
-            }
-          } else {
-            postApplyNotes.push(
-              t(
-                'admin.configAssistant.applySummary.configValidationFailedHttp',
-                { status: validationRes.status }
-              )
-            );
-          }
-        } catch {
-          postApplyNotes.push(
-            t(
-              'admin.configAssistant.applySummary.configValidationFailedNetwork'
-            )
-          );
-        }
-
-        try {
-          const rr = await adminFetch('/admin/deployment/restart-required');
-          if (rr.ok) {
-            const data = (await rr.json()) as {
-              restart_required: boolean;
-              changed_keys?: Array<{ key: string }>;
-            };
-            const keys = (data.changed_keys || [])
-              .map((k) => k.key)
-              .filter(Boolean);
-            if (data.restart_required && keys.length) {
-              postApplyNotes.push(
-                t('admin.configAssistant.applySummary.restartRequiredFor', {
-                  keys: keys.join(', '),
-                })
-              );
-            } else {
-              postApplyNotes.push(
-                t('admin.configAssistant.applySummary.restartRequiredNo')
-              );
-            }
-          } else {
-            postApplyNotes.push(
-              t('admin.configAssistant.applySummary.restartCheckFailedHttp', {
-                status: rr.status,
-              })
-            );
-          }
-        } catch {
-          postApplyNotes.push(
-            t('admin.configAssistant.applySummary.restartCheckFailedNetwork')
-          );
-        }
-
-        const needsPageRefresh = results.some(
-          (r) => r.ok && r.path === '/admin/settings'
-        );
-        if (needsPageRefresh && !isOnboarding) {
-          postApplyNotes.push(
-            t('admin.configAssistant.applySummary.pageRefreshRecommended')
-          );
-        }
-
-        const summary =
-          [baseSummary, ...postApplyNotes].join(' ') + failureSummary;
-        setApplyState({ state: 'applied', message: summary });
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateMessageId(),
-            role: 'assistant',
-            content: summary,
-            timestamp: new Date(),
-          },
-        ]);
-
-        // Onboarding: auto-advance. After a successful apply, send a hidden turn
-        // so the assistant confirms and moves to the next checklist item/group
-        // without the operator having to ask "what's next?".
-        if (isOnboarding && okCount > 0) {
-          void handleSendRef.current(
-            'The change set was applied successfully. Briefly confirm what was saved, then continue: ask the next checklist question, or if all chat-configurable baseline items are done, summarize and hand off to Deployment Settings.',
-            { hidden: true }
-          );
-        }
-      } catch (e) {
-        setApplyState({
-          state: 'error',
-          message: e instanceof Error ? e.message : String(e),
-        });
-      }
-    },
-    [fetchJson, isOnboarding, t]
-  );
-  handleApplyRef.current = handleApply;
-
-  const applyPreview = useMemo(() => {
-    if (applyState.state !== 'review' && applyState.state !== 'applying')
-      return null;
-    const changeSet = applyState.changeSet;
-
-    const secretKeys = deploymentSecretKeysRef.current;
-
-    const pretty = changeSet.requests.map((r, idx) => {
-      let bodyDisplay: unknown = r.body;
-      // Mask deployment secrets in preview (even if they exist in body).
-      if (
-        r.method === 'PUT' &&
-        r.path.startsWith('/admin/deployment/config/')
-      ) {
-        const key = r.path.split('/').pop() || '';
-        if (secretKeys.has(key) && r.body && typeof r.body === 'object') {
-          const o = r.body as Record<string, unknown>;
-          if (typeof o.value === 'string' && o.value.length > 0) {
-            bodyDisplay = { ...o, value: '[REDACTED]' };
-          }
-        }
-      }
-      return {
-        idx: idx + 1,
-        method: r.method,
-        path: r.path,
-        body: bodyDisplay,
-      };
-    });
-
-    return {
-      summary: changeSet.summary || '',
-      requests: pretty,
-    };
-  }, [applyState]);
 
   const closeDrawer = () => {
     setError(null);
-    setApplyState({ state: 'idle' });
     // Secrets are opt-in and should not persist beyond the session UI.
     setShareSecrets(false);
     secretsForRedactionRef.current = [];
@@ -1156,6 +624,7 @@ export function AdminConfigAssistant({
       tools={availableTools}
       selectedTools={selectedTools}
       onToggle={handleToolToggle}
+      disabledToolIds={[CONFIG_TOOL_ID]}
       compact
     />
   );
@@ -1211,8 +680,6 @@ export function AdminConfigAssistant({
                   });
                   setSnapshotInfo({ generatedAtIso: new Date().toISOString() });
                   secretsForRedactionRef.current = metadata.secretValues;
-                  deploymentSecretKeysRef.current =
-                    metadata.deploymentSecretKeys;
                 } catch (e) {
                   setError(
                     e instanceof Error
@@ -1285,8 +752,6 @@ export function AdminConfigAssistant({
                     fetchJson,
                   });
                   secretsForRedactionRef.current = metadata.secretValues;
-                  deploymentSecretKeysRef.current =
-                    metadata.deploymentSecretKeys;
                 } catch {
                   secretsForRedactionRef.current = [];
                 }
@@ -1298,7 +763,10 @@ export function AdminConfigAssistant({
                 {t('admin.configAssistant.shareSecretsTitle')}
               </div>
               <div className="text-xs text-text-muted">
-                {t('admin.configAssistant.shareSecretsHint')}
+                {t(
+                  'admin.configAssistant.directShareSecretsHint',
+                  "Optional: include stored deployment secret values in this Conversation's context. Direct secret reads do not require this."
+                )}
               </div>
             </div>
           </label>
@@ -1320,7 +788,10 @@ export function AdminConfigAssistant({
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="text-sm text-text-muted">
-              {t('admin.configAssistant.emptyPrompt')}
+              {t(
+                'admin.configAssistant.directWritePrompt',
+                'Ask about admin configuration. Sage can inspect settings and, after confirming with you in the conversation, apply supported changes directly.'
+              )}
             </div>
           ) : (
             messages.map((m) => <ChatMessage key={m.id} message={m} />)
@@ -1375,72 +846,6 @@ export function AdminConfigAssistant({
             </div>
           )}
 
-          {hasConfigTool && applyState.state === 'error' && (
-            <div className="text-sm text-error bg-error/10 border border-error/20 rounded-xl px-3 py-2">
-              {applyState.message}
-            </div>
-          )}
-
-          {hasConfigTool && applyState.state === 'review' && applyPreview && (
-            <div
-              ref={pendingApplyPanelRef}
-              className="border border-border rounded-2xl bg-surface-raised overflow-hidden"
-            >
-              <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2">
-                <div className="text-sm font-medium text-text truncate">
-                  {applyPreview.summary
-                    ? t('admin.configAssistant.pendingChangesWithSummary', {
-                        summary: applyPreview.summary,
-                      })
-                    : t('admin.configAssistant.pendingChanges')}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setApplyState({ state: 'idle' })}
-                    className="p-2 rounded-xl hover:bg-surface-overlay text-text-muted hover:text-text transition-colors"
-                    title={t('admin.configAssistant.dismiss')}
-                    aria-label={t('admin.configAssistant.dismiss')}
-                  >
-                    <EyeOff className="w-4 h-4" />
-                  </button>
-                  <button
-                    ref={pendingApplyButtonRef}
-                    onClick={() => handleApply(applyState.changeSet)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent text-accent-text hover:bg-accent-hover transition-colors text-sm font-medium"
-                  >
-                    <Play className="w-4 h-4" />
-                    {t('admin.configAssistant.apply')}
-                  </button>
-                </div>
-              </div>
-              <div className="px-3 py-2 text-xs text-text-muted">
-                {t('admin.configAssistant.reviewMaskedSecrets')}
-              </div>
-              <div className="px-3 pb-3 space-y-2">
-                {applyPreview.requests.map((r) => (
-                  <div
-                    key={r.idx}
-                    className="rounded-xl border border-border bg-surface px-3 py-2"
-                  >
-                    <div className="text-xs font-mono text-text-secondary">
-                      {r.method} {r.path}
-                    </div>
-                    {r.body !== undefined && (
-                      <pre className="mt-2 text-xs overflow-x-auto text-text-muted">
-                        {JSON.stringify(r.body, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {hasConfigTool && applyState.state === 'applying' && (
-            <div className="text-sm text-text-muted border border-border rounded-xl px-3 py-2 bg-surface-raised">
-              {t('admin.configAssistant.applyingChanges')}
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
       </div>

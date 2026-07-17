@@ -1,5 +1,7 @@
 # Unified Model-Driven Tool Loop
 
+Status: Still authoritative for the shared model-driven Tool loop. Its Admin Config proposal and Change Confirmation details are superseded by [ADR-0028](0028-sage-owns-direct-admin-config-writes.md).
+
 The Enclave Free Prototype will hard-cut Conversation tool use to one Sage-owned, model-driven tool loop. Visible composer controls enable Tool Sets; each enabled Tool Set exposes concrete agent-callable Tools with explicit contracts. Sage gives those Tool contracts to the model, the model chooses which Tools to call, Sage executes authorized calls, injects Tool results, emits Activity and Conversation Trace metadata, and continues until the model can answer or produce an Executable Change Set.
 
 This replaces preselected context pipelines such as Scoped Config Context, route-specific retrieval magic, and deterministic intent classifiers that decide what configuration or knowledge the model is allowed to inspect before the model sees the available Tools. The model should be encouraged to call enabled Tools proactively when they can answer a factual, configuration, data, availability, or freshness question better than guessing. Deterministic code remains responsible for Tool availability, authorization, redaction, output budgets, read-only validation, loop limits, trace sanitization, and Change Confirmation gates.

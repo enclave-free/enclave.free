@@ -540,33 +540,34 @@ Deployment Setting secret values stay masked (`********` or equivalent). Secret
 metadata such as configured/unconfigured status may be returned. Raw secret
 values are never returned from the default Admin Config Tool endpoints.
 
-`propose_config_change_set` is a Sage-local, model-callable, non-mutating
-proposal Tool. It is not a Python write endpoint and it must not apply changes.
-Sage may propose an Executable Change Set from Tool results, but the
-Conversation UI Surface must validate it and require Change Confirmation before
-ordinary admin endpoints are called.
+Admin Config writes are direct, product-level Tools. Sage does not stage
+proposals or send arbitrary Admin API paths. Each Tool calls one fixed private
+endpoint:
 
-The proposal Tool stages canonical Admin Config write shapes:
+- `POST /internal/agent/admin-config/configure-instance`
+- `POST /internal/agent/admin-config/update-instance-settings`
+- `POST /internal/agent/admin-config/update-deployment-settings`
+- `POST /internal/agent/admin-config/update-agent-settings`
+- `POST /internal/agent/admin-config/manage-user-types`
+- `POST /internal/agent/admin-config/manage-onboarding-questions`
+- `POST /internal/agent/admin-config/update-document-access`
+- `POST /internal/agent/admin-config/read-deployment-secret`
 
-- `PUT /admin/settings` with stored setting keys such as `header_tagline`,
-  `default_language`, `default_theme`, and `auto_approve_users`.
-- `PUT /admin/ai-config/{key}` with `{ "value": "..." }` for Agent Settings.
-  Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules`
-  and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string
-  array, such as
-  `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
-- `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
-- `POST /admin/user-fields` for onboarding questions, plus supported
-  `PUT/DELETE /admin/user-fields...` mutation paths.
-- `PUT /admin/deployment/config/{key}` for deployment config values.
-- `PUT/DELETE /ingest/admin/documents/...` defaults paths for document access.
+Every request carries the authenticated Admin actor and the real Sage
+Conversation identifier. Write endpoints validate the complete Tool call and
+commit all changes in that call or none. They return normalized saved state,
+changed configuration names, validation outcome, affected areas, and restart
+status where relevant.
 
-Sage may normalize only the known small drift at the proposal boundary:
-`/admin/user_types` to `/admin/user-types`, `tagline` to `header_tagline`, and
-supported language labels such as `English` to language codes such as `en`.
-After normalization, the staged `admin_change_set` must contain canonical paths
-and keys. Unknown setting keys or unsupported values are validation errors, not
-partial proposals.
+Write results mask secret values. Ordinary reads expose only secret status.
+`read-deployment-secret` may return a stored secret only for an explicit Admin
+request; Activity, Conversation Trace, and Audit Log metadata must still omit
+the value.
+
+The Enclave Control Plane records `sage_conversation` provenance and the
+Conversation identifier in the Audit Log without copying Conversation Content.
+The browser may refetch returned affected areas, but it never executes or
+repeats the write.
 
 ### Removed Admin Context Endpoints
 

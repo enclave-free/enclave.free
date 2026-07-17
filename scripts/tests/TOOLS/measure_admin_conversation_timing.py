@@ -49,21 +49,11 @@ SCENARIOS = [
         tools=[],
     ),
     Scenario(
-        name="config_bootstrap_proposal",
+        name="config_setup_summary",
         message=(
-            "Set up the instance with these onboarding answers:\n"
-            "1. FreeThem\n"
-            "2. We help political prisoners and their families find support and information.\n"
-            "3. Choose a simple assistant name.\n"
-            "4. Choose the accent color.\n"
-            "5. Dark theme.\n"
-            "6. English.\n"
-            "7. Political prisoner support team.\n"
-            "8. Let new users in right away. Create two user types: families and friends "
-            "of current political prisoners, and former political prisoners with their supporters.\n"
-            "9. Ask what country the user is in and what support they need; include both in chat.\n"
-            "10. Ask where users are before location-specific guidance.\n"
-            "Call propose_admin_config_bootstrap directly and prepare the changes for review."
+            "Check the current instance setup and deployment readiness with Admin "
+            "Config tools. Briefly summarize what is configured and what still needs "
+            "attention. Do not change anything."
         ),
         tools=["admin-config"],
     ),

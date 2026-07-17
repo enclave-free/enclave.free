@@ -59,14 +59,7 @@ async function buildUnifiedChatBody({
   const sageOwnsAdminConfigHistory =
     Boolean(sessionId) && tools.includes('admin-config');
   const recentHistory = normalizedConversationHistory(conversationHistory);
-  if (sageOwnsAdminConfigHistory) {
-    const confirmationHistory = recentHistory
-      .filter(isAdminConfigApplySummary)
-      .slice(-3);
-    if (confirmationHistory.length > 0) {
-      body.conversation_history = confirmationHistory;
-    }
-  } else if (recentHistory.length > 0) {
+  if (!sageOwnsAdminConfigHistory && recentHistory.length > 0) {
     body.conversation_history = recentHistory.slice(-8);
   }
 
@@ -118,18 +111,6 @@ function normalizedConversationHistory(
       role: message.role,
       content: message.content.slice(0, 2000),
     }));
-}
-
-function isAdminConfigApplySummary(
-  message: ConversationHistoryMessage
-): boolean {
-  if (message.role !== 'assistant') return false;
-
-  const content = message.content.trim();
-  return (
-    (content.startsWith('Applied ') && content.includes('change(s)')) ||
-    content.startsWith('The change set was applied successfully')
-  );
 }
 
 export async function sendLlmChatWithUnifiedTools(

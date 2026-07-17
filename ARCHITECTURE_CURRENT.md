@@ -62,7 +62,7 @@ Python does not expose public handlers for `/llm/chat`, `/query`, `/session-defa
 
 ## Model-Driven Tool Loop Ownership
 
-The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into explicit Tool contracts, gives those contracts to the model, executes model-chosen calls, injects Tool results, applies Tool output budgets, emits transparent Activity and Conversation Trace metadata with minimal blocklist protection, and continues until the model can answer or produce an Executable Change Set.
+The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into explicit Tool contracts, gives those contracts to the model, executes model-chosen calls, injects Tool results, applies Tool output budgets, emits transparent Activity and Conversation Trace metadata with minimal blocklist protection, and continues until the model can answer or complete the authorized work.
 
 Python remains the Enclave Control Plane. It exposes private facts/actions through `/internal/agent/*` contracts, enforces authorization and redaction for the data it owns, and does not own public Agent Runtime Tool orchestration or pre-classify turns into prompt-ready context blobs.
 
@@ -104,7 +104,7 @@ ADR-0023 target endpoint family:
 
 | Endpoint | Used for |
 | --- | --- |
-| `POST /internal/agent/admin-config/*` | admin configuration read Tool execution with Enclave Control Plane authorization/redaction |
+| `/internal/agent/admin-config/*` | product-level admin configuration reads and direct writes with Enclave Control Plane authorization, validation, audit provenance, and redaction |
 
 Obsolete compatibility endpoints are not part of the accepted Sage call graph.
 Scoped admin context is not a supported integration path.
@@ -121,10 +121,10 @@ Scoped admin context is not a supported integration path.
 6. Sage expands enabled Tool Sets:
    - `knowledge-search` into Document Library Retrieval Tools with selected Document constraints
    - `web-search` into Web Search Tools
-   - `admin-config` into admin configuration read Tools plus proposal outputs, admin only
+   - `admin-config` into product-level configuration read and direct-write Tools, admin only
    - `db-query` into read-only database inspection Tools, admin only
 7. Sage runs the model-driven Tool loop
-8. Sage returns the answer, Activity, trace metadata, sources, and any pending Executable Change Set
+8. Sage returns the natural answer, Activity, trace metadata, sources, and affected-area refresh hints
 
 The streaming transport uses the same Tool loop and emits live Activity/Trace events while the loop progresses.
 
