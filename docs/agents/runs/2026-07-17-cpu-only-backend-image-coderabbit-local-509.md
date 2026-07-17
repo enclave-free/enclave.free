@@ -31,3 +31,11 @@ modes, scope, and test coverage. A focused check against the exact Apple image
 also confirmed Torch `2.8.0+cpu`, torchvision `0.23.0`, no CUDA runtime or
 CUDA/NVIDIA distributions, all required imports, the preserved `enclave` user
 and startup command, and a 526,223,983-byte image payload.
+
+## Hosted Review
+
+The required `@coderabbit full review` command was also issued on PR #512.
+CodeRabbit reported the organization PR-review limit and a 36-minute retry
+window, then returned a passing/skipped status without review findings. The
+fresh fallback review above is therefore the substantive unavailable-service
+review required by the Feature Dev loop.

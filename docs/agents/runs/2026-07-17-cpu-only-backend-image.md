@@ -9,7 +9,7 @@
 - Feature branch: `feature/cpu-only-backend-image`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: non-draft staging PR open; hosted review and checks in progress
+- Current status: non-draft staging PR ready; all CI checks pass and the required unavailable-CodeRabbit fallback review passes
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -28,6 +28,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 - Review packets: `docs/agents/runs/2026-07-17-cpu-only-backend-image-review-509.md`
 - Local CodeRabbit report: `docs/agents/runs/2026-07-17-cpu-only-backend-image-coderabbit-local-509.md` — CLI unavailable due a 23-minute organization rate limit; required fresh Codex fallback passed with no findings against the same 11-file `origin/staging...HEAD` diff
 - PR URL: [#512](https://github.com/enclave-free/enclave.free/pull/512)
+- Hosted CodeRabbit: command issued; organization review limit prevented analysis and returned a passing/skipped status, with no findings; fresh fallback review is the substantive review evidence
 
 ## Commands
 
