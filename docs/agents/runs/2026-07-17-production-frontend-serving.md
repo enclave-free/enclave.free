@@ -9,7 +9,7 @@
 - Feature branch: `feature/production-frontend-serving`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: non-draft staging PR ready; all CI checks and CodeRabbit pass
+- Current status: final hosted CodeRabbit round 1 passed with zero new issues; round 2 pending
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -29,6 +29,7 @@ Replace the deployed Vite development server with production static frontend ser
 - Local CodeRabbit reports: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md`, `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-2-507.md`, and `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-3-507.md` — six findings addressed across three completed rounds; round 3 corrected an earlier broad comparison by pinning `origin/staging`
 - PR URL: [#510](https://github.com/enclave-free/enclave.free/pull/510)
 - PR CodeRabbit round 1: one valid trivial timeout finding addressed with bounded `curl` and BusyBox-compatible `wget` probes; CodeRabbit acknowledged the fix and returned a passing status; generic docstring coverage warning dismissed as inapplicable to the repository's shell/test conventions
+- Final staging-gate round 1: CodeRabbit completed with zero new issues and no unresolved threads
 
 ## Commands
 
@@ -40,9 +41,9 @@ Replace the deployed Vite development server with production static frontend ser
 
 ## Ticket Ledger
 
-| Issue | Type | Status   | Review thread                                             | Fixes needed | Verified                                                                                                                |
-| ----- | ---- | -------- | --------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| #507  | AFK  | complete | Standards pass; Spec pass; local CodeRabbit 6/6 addressed; PR round 1 addressed | none | Apple HTTP, health, Compose, typecheck, build, full suite, browser verification, and three local CodeRabbit rounds pass |
+| Issue | Type | Status   | Review thread                                                                   | Fixes needed | Verified                                                                                                                |
+| ----- | ---- | -------- | ------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| #507  | AFK  | complete | Standards pass; Spec pass; local CodeRabbit 6/6 addressed; PR round 1 addressed | none         | Apple HTTP, health, Compose, typecheck, build, full suite, browser verification, and three local CodeRabbit rounds pass |
 
 ## Parked HITL Slices
 
@@ -52,8 +53,8 @@ Replace the deployed Vite development server with production static frontend ser
 
 ## Issue Session Ledger
 
-| Issue | Fixed point                                | Worker session                                                                | Commit                                                      | Review result                                             | Checks                                                                                                                      |
-| ----- | ------------------------------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Issue | Fixed point                                | Worker session                                                                | Commit                                                                                 | Review result                                                                   | Checks                                                                                                                                     |
+| ----- | ------------------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | #507  | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` plus primary browser and CodeRabbit verification | `d122b03`, `9a4906d`, `4366996`, `22e1993`, `6ebe340`, `801add3`, `ece03d2`, `5c7f0d1` | Standards pass; Spec pass; local CodeRabbit 6/6 and PR CodeRabbit 1/1 addressed | Compose contracts; Apple HTTP and BusyBox probe; typecheck; build; 76 files/419 tests; user/admin browser verification; all PR checks pass |
 
 ## Open Questions
