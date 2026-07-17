@@ -17,7 +17,7 @@ The default frontend now runs a compiled Vite bundle from a small Nginx runtime 
 - `implement` session: `/root/frontend_prod_worker`
 - `tdd` used: yes, at the pre-agreed built-container HTTP and rendered Compose seams
 - Red test, if applicable: the old default lacked the production build target and development override; its live Apple Container response injected `/@vite/client`, exposed no compiled assets, and proxied `/api`
-- Green implementation, if applicable: both rendered Compose contracts pass; four live HTTP contract checks pass against the Apple-built production image
+- Green implementation, if applicable: both rendered Compose contracts pass; four live HTTP contract checks pass against the Apple-built production image; user and admin routes render without overlays, Vite/HMR scripts, or matching console messages
 - Refactor, if applicable: none beyond the deployment packaging required by the ticket
 - Commands run: `python3 scripts/tests/DEPLOYMENT/test_frontend_compose_contract.py`; `scripts/test_frontend_runtime.sh apple`; `cd frontend && npx tsc --noEmit`; `cd frontend && npm run build`; `cd frontend && npm test` (76 files, 419 tests); `git diff --check`
 
@@ -40,8 +40,8 @@ STANDARDS_STATUS: pass
 STANDARDS_FINDINGS:
 - None after fixes. The frontend guide now identifies the repository-root working directory, and the runtime script validates once before installing one runtime adapter.
 
-SPEC_STATUS: changes_requested
+SPEC_STATUS: pass
 SPEC_FINDINGS:
-- Rendered user/admin content, overlay absence, and browser console/HMR state remain pending in the primary session because this worker environment exposed no automated browser.
-- The prior health finding is resolved: the smoke executes the configured probe, verifies Apple running state, and waits for Docker healthy state.
+- None after fixes and primary-session browser verification. The smoke executes the configured probe, verifies Apple running state, and waits for Docker healthy state.
+- Against `enclave-frontend-ticket-507:local`, the language-selection and Admin Setup/Nostr interfaces rendered with no overlay, no `/@vite/client`, one hashed production script, and zero Vite/WebSocket/HMR console messages.
 ```

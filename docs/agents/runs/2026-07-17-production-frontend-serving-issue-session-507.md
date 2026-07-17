@@ -5,8 +5,8 @@
 - Issue: [#507](https://github.com/enclave-free/enclave.free/issues/507)
 - Fixed point before session: `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500`
 - Worker session: `/root/frontend_prod_worker`
-- Implementation commit: `d122b03`
-- Status: implementation and code review complete; primary-session browser evidence pending
+- Implementation commits: `d122b03`, `9a4906d`
+- Status: complete
 
 ## Inputs
 
@@ -28,10 +28,19 @@
 
 - Review fixed point: `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500`
 - Standards findings: the frontend guide did not identify the repository-root working directory; the runtime smoke duplicated runtime dispatch and allowed an unsupported value to reach Docker cleanup
-- Spec findings: the smoke did not execute the configured health probe or verify runtime health/state; rendered browser and console evidence remains pending
-- Worthy fixes applied: documented the Compose working directory; selected one cleanup/build/start/health adapter after validating the runtime; executed the exact in-container health probe; verified Apple `running` state; made Docker wait for declared `healthy` state
-- Findings ignored with reasons: none; the primary session owns the remaining browser gate because this worker's installed browser runtime exposed no browser
+- Spec findings: the smoke did not execute the configured health probe or verify runtime health/state; initial browser evidence was unavailable in the worker session
+- Worthy fixes applied: documented the Compose working directory; selected one cleanup/build/start/health adapter after validating the runtime; executed the exact in-container health probe; verified Apple `running` state; made Docker wait for declared `healthy` state; completed the user/admin browser gate in the primary session against the exact Apple image
+- Findings ignored with reasons: none
+
+## Browser Verification
+
+- Image and address: `enclave-frontend-ticket-507:local` at `127.0.0.1:15175`
+- User route rendered the language-selection UI (847 visible-text characters); `/admin` rendered Admin Setup/Nostr UI (170 visible-text characters)
+- Neither route had a framework overlay or `/@vite/client`; each loaded exactly the hashed production asset script
+- Zero console messages matched Vite, WebSocket, or HMR
+- `/healthz`, root, and admin probes returned HTTP 200 before browser verification
+- Expected standalone `/instance-status` 404 warnings confirmed that `/api` remains outside the frontend container
 
 ## Risks
 
-- Apple Containers built and served the production image successfully, passed the in-container health probe, and reported `running`, but the local automated browser runtime exposed no available browser. The HTTP contract proves the compiled route and no-HMR-client behavior; rendered-content and console inspection remain a final orchestration gate.
+- None identified within this ticket's deployment-packaging scope.
