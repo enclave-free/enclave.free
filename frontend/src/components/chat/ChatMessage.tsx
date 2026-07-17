@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useId, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -21,6 +21,7 @@ import {
   Pencil,
   RotateCcw,
   Search,
+  Sparkles,
   Square,
   Wrench,
 } from 'lucide-react';
@@ -208,11 +209,13 @@ function ConversationTracePanel({
   activitySteps = [],
   traceDeltas = [],
   liveStatus,
+  isStreaming = false,
 }: {
   trace?: ConversationTrace | null;
   activitySteps?: ConversationActivityStep[];
   traceDeltas?: ConversationTraceDelta[];
   liveStatus?: string | null;
+  isStreaming?: boolean;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const visibility = trace?.visibility;
@@ -221,6 +224,12 @@ function ConversationTracePanel({
   const summary = trace?.reasoning?.summary;
   const combinedActivitySteps =
     activitySteps.length > 0 ? activitySteps : (trace?.activity_steps ?? []);
+  const reasoningDeltas = traceDeltas.filter(
+    (delta) => delta.kind === 'reasoning'
+  );
+  const operationalTraceDeltas = traceDeltas.filter(
+    (delta) => delta.kind !== 'reasoning'
+  );
   const hasActivity = combinedActivitySteps.length > 0;
   const hasTraceDeltas = traceDeltas.length > 0;
   const hasTraceChips = tools.length > 0 || retrieval.length > 0;
@@ -323,9 +332,15 @@ function ConversationTracePanel({
             ))}
           </div>
         )}
-        {hasTraceDeltas && (
+        {reasoningDeltas.length > 0 && (
+          <ReasoningDisclosure
+            deltas={reasoningDeltas}
+            isLive={isStreaming && !trace}
+          />
+        )}
+        {operationalTraceDeltas.length > 0 && (
           <TraceRows label="Trace">
-            {traceDeltas.map((delta) => (
+            {operationalTraceDeltas.map((delta) => (
               <TraceDeltaRow key={delta.id} delta={delta} />
             ))}
           </TraceRows>
@@ -355,6 +370,111 @@ function ConversationTracePanel({
       </div>
     </section>
   );
+}
+
+function ReasoningDisclosure({
+  deltas,
+  isLive,
+}: {
+  deltas: ConversationTraceDelta[];
+  isLive: boolean;
+}) {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const transcriptId = useId();
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const transcript = reasoningTranscript(deltas);
+  const preview = reasoningPreview(transcript);
+  const label = isLive
+    ? t('chat.trace.thinking', 'Thinking')
+    : t('chat.trace.reasoning', 'Reasoning');
+
+  useEffect(() => {
+    if (!isOpen || !transcriptRef.current) return;
+    transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+  }, [isOpen, transcript]);
+
+  if (!transcript) return null;
+
+  return (
+    <div
+      className={`relative isolate overflow-hidden rounded-lg ${
+        isLive ? 'bg-accent/[0.035]' : 'bg-surface-raised/45'
+      }`}
+    >
+      {isLive && (
+        <div
+          className="pointer-events-none absolute -inset-x-8 inset-y-0 -z-10 bg-accent/10 blur-2xl motion-safe:animate-pulse-subtle"
+          aria-hidden="true"
+        />
+      )}
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        aria-controls={transcriptId}
+        aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${label} transcript`}
+        className="group flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left outline-none transition-[background-color,box-shadow,scale] duration-150 ease-out hover:bg-surface-overlay/60 focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-[0.96]"
+      >
+        <Sparkles
+          className={`h-3.5 w-3.5 shrink-0 ${
+            isLive
+              ? 'text-accent motion-safe:animate-pulse-subtle'
+              : 'text-text-muted'
+          }`}
+          aria-hidden="true"
+        />
+        <span className="shrink-0 text-[11px] font-medium text-text-secondary">
+          {label}
+        </span>
+        {!isOpen && (
+          <span
+            className={`min-w-0 flex-1 truncate text-[11px] ${
+              isLive
+                ? 'reasoning-live-text'
+                : 'text-text-muted group-hover:text-text-secondary'
+            }`}
+          >
+            {preview}
+          </span>
+        )}
+        <ChevronDown
+          className={`ml-auto h-3.5 w-3.5 shrink-0 text-text-muted transition-transform duration-150 ease-out ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+          aria-hidden="true"
+        />
+      </button>
+      {isOpen && (
+        <div
+          id={transcriptId}
+          ref={transcriptRef}
+          role="region"
+          aria-label="Reasoning transcript"
+          tabIndex={0}
+          className="mx-2.5 mb-2.5 max-h-64 overflow-y-auto rounded-md bg-surface/55 px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent)] outline-none animate-fade-in focus-visible:ring-2 focus-visible:ring-accent/35"
+        >
+          <p className="whitespace-pre-wrap break-words">{transcript}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function reasoningTranscript(deltas: ConversationTraceDelta[]) {
+  return deltas
+    .map((delta) => delta.content ?? '')
+    .join('')
+    .trim();
+}
+
+function reasoningPreview(transcript: string, maxLength = 180) {
+  const compact = transcript.replace(/\s+/g, ' ').trim();
+  if (compact.length <= maxLength) return compact;
+
+  const tail = compact.slice(-maxLength);
+  const firstSpace = tail.indexOf(' ');
+  return `…${tail.slice(firstSpace >= 0 ? firstSpace + 1 : 0)}`;
 }
 
 function isTraceRenderable(
@@ -771,6 +891,7 @@ function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
                     activitySteps={message.activitySteps}
                     traceDeltas={resolvedTraceDeltas}
                     liveStatus={visibleTraceStatus}
+                    isStreaming={Boolean(message.traceStatus)}
                   />
                   {message.content.trim() && (
                     <div
