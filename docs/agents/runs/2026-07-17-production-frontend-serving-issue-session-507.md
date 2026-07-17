@@ -29,8 +29,8 @@
 - Review fixed point: `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500`
 - Standards findings: the frontend guide did not identify the repository-root working directory; the runtime smoke duplicated runtime dispatch and allowed an unsupported value to reach Docker cleanup
 - Spec findings: the smoke did not execute the configured health probe or verify runtime health/state; initial browser evidence was unavailable in the worker session
-- Local CodeRabbit findings: unsupported BusyBox health flags; immutable cache header on asset 404s; partial dev-command assertion; ambiguous bind-mount wording; incomplete Compose validation command evidence
-- Worthy fixes applied: documented the Compose working directory; selected one cleanup/build/start/health adapter after validating the runtime; executed the exact in-container health probe; verified Apple `running` state; made Docker wait for declared `healthy` state; completed the user/admin browser gate in the primary session against the exact Apple image; addressed all five local CodeRabbit findings, added a missing-asset cache regression, and recorded the exact three-file Compose validation command
+- Local CodeRabbit findings: unsupported BusyBox health flags; immutable cache header on asset 404s; partial dev-command assertion; ambiguous bind-mount wording; incomplete Compose validation command evidence; version-specific Apple inspect parsing
+- Worthy fixes applied: documented the Compose working directory; selected one cleanup/build/start/health adapter after validating the runtime; executed the exact in-container health probe without version-specific Apple state parsing; made Docker wait for declared `healthy` state; completed the user/admin browser gate in the primary session against the exact Apple image; addressed all six local CodeRabbit findings, added a missing-asset cache regression, and recorded the exact three-file Compose validation command
 - Findings ignored with reasons: none
 
 ## Browser Verification
@@ -45,3 +45,8 @@
 ## Risks
 
 - None identified within this ticket's deployment-packaging scope.
+
+## Review Scope Correction
+
+- Earlier local CodeRabbit review used a stale local `staging` reference and covered a broader diff than intended.
+- Round 3 pinned `origin/staging...HEAD`, isolated issue #507, and produced one valid major finding, which was addressed without dismissals.

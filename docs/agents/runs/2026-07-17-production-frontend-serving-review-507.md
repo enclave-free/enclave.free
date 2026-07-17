@@ -42,13 +42,14 @@ STANDARDS_FINDINGS:
 
 SPEC_STATUS: pass
 SPEC_FINDINGS:
-- None after fixes and primary-session browser verification. The smoke executes the configured probe, verifies Apple running state, and waits for Docker healthy state.
+- None after fixes and primary-session browser verification. The smoke executes the configured in-container probe on Apple and waits for Docker healthy state.
 - Against `enclave-frontend-ticket-507:local`, the language-selection and Admin Setup/Nostr interfaces rendered with no overlay, no `/@vite/client`, one hashed production script, and zero Vite/WebSocket/HMR console messages.
 ```
 
 ## Local CodeRabbit
 
-- Rounds: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md` and `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-2-507.md`
-- Result: five findings addressed across two rounds; none dismissed
+- Rounds: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md`, `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-2-507.md`, and `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-3-507.md`
+- Result: six findings addressed across three rounds; none dismissed. Round 3 used the corrected `origin/staging...HEAD` scope after an earlier stale local `staging` reference broadened review.
 - Major fix: all frontend health paths now use the BusyBox-compatible `wget -q --spider` probe and the rebuilt Apple image passes it in-container
+- Major fix: Apple verification no longer parses version-specific `container inspect` JSON; the exact successful in-container HTTP probe is the supported health seam
 - Minor fixes: asset 404s no longer receive immutable caching; the dev command contract is exact; the bind-mount documentation names `frontend/`; the issue session records the exact reproducible three-file Compose validation command

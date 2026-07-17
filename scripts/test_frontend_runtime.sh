@@ -30,14 +30,6 @@ case "$runtime" in
     verify_container_health() {
       container exec "$container_name" \
         wget -q --spider http://127.0.0.1/
-      container inspect "$container_name" | python3 -c '
-import json
-import sys
-
-inspection = json.load(sys.stdin)
-if inspection[0]["status"]["state"] != "running":
-    raise SystemExit("Apple container is not running")
-'
     }
     ;;
   docker)
