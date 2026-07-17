@@ -26,6 +26,8 @@ Open http://localhost:5173 in your browser.
 The default application Compose topology builds the frontend bundle and serves
 it from the production Nginx stage on host port 5173:
 
+Run these Compose commands from the repository root.
+
 ```bash
 docker compose \
   -f docker-compose.infra.yml \

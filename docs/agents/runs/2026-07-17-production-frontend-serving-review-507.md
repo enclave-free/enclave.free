@@ -19,7 +19,7 @@ The default frontend now runs a compiled Vite bundle from a small Nginx runtime 
 - Red test, if applicable: the old default lacked the production build target and development override; its live Apple Container response injected `/@vite/client`, exposed no compiled assets, and proxied `/api`
 - Green implementation, if applicable: both rendered Compose contracts pass; four live HTTP contract checks pass against the Apple-built production image
 - Refactor, if applicable: none beyond the deployment packaging required by the ticket
-- Commands run: `python3 scripts/tests/DEPLOYMENT/test_frontend_compose_contract.py`; `scripts/test_frontend_runtime.sh apple`; `cd frontend && npx tsc --noEmit`; `cd frontend && npm run build`; `git diff --check`
+- Commands run: `python3 scripts/tests/DEPLOYMENT/test_frontend_compose_contract.py`; `scripts/test_frontend_runtime.sh apple`; `cd frontend && npx tsc --noEmit`; `cd frontend && npm run build`; `cd frontend && npm test` (76 files, 419 tests); `git diff --check`
 
 ## Review Instructions
 
@@ -36,11 +36,12 @@ Check:
 ## Reviewer Output
 
 ```text
-STANDARDS_STATUS: pending
+STANDARDS_STATUS: pass
 STANDARDS_FINDINGS:
-- Pending the required two-axis review.
+- None after fixes. The frontend guide now identifies the repository-root working directory, and the runtime script validates once before installing one runtime adapter.
 
-SPEC_STATUS: pending
+SPEC_STATUS: changes_requested
 SPEC_FINDINGS:
-- Pending the required two-axis review.
+- Rendered user/admin content, overlay absence, and browser console/HMR state remain pending in the primary session because this worker environment exposed no automated browser.
+- The prior health finding is resolved: the smoke executes the configured probe, verifies Apple running state, and waits for Docker healthy state.
 ```

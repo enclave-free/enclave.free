@@ -9,7 +9,7 @@
 - Feature branch: `feature/production-frontend-serving`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: implementation review
+- Current status: primary-session browser verification pending
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -41,7 +41,7 @@ Replace the deployed Vite development server with production static frontend ser
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #507 | AFK | in-review | two-axis review pending | pending | Apple HTTP and Compose contracts yes; browser pending |
+| #507 | AFK | in-review | Standards pass; Spec browser evidence pending | rendered browser/console gate | Apple HTTP, health, Compose, typecheck, build, and full suite yes; browser pending |
 
 ## Parked HITL Slices
 
@@ -53,7 +53,7 @@ Replace the deployed Vite development server with production static frontend ser
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #507 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` | pending | pending | Compose contracts, Apple HTTP, typecheck, and build pass |
+| #507 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` | `d122b03` plus review fixes | Standards pass; Spec changes requested only for browser evidence | Compose contracts; Apple HTTP, probe, and state; typecheck; build; 76 files/419 tests pass |
 
 ## Open Questions
 
@@ -61,4 +61,4 @@ Replace the deployed Vite development server with production static frontend ser
 
 ## Escalations
 
-- The installed automated browser runtime reported no available browser, so rendered-content and console inspection cannot run in the worker environment. The Apple Container HTTP checks prove that user/admin SPA routes resolve to compiled content without the Vite client.
+- The installed automated browser runtime reported no available browser, so rendered-content and console inspection cannot run in the worker environment. The primary session will run that final gate against the Apple image. The Apple Container HTTP checks prove that user/admin SPA routes resolve to compiled content without the Vite client, and the exact in-container health probe passes with runtime state `running`.
