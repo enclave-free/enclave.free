@@ -620,8 +620,121 @@ ENV_CONFIG_MAP = {
 # Keys that should never be exposed or editable
 FORBIDDEN_KEYS = {"SECRET_KEY", "DATABASE_URL", "ADMIN_PRIVATE_KEY"}
 
+
+def validate_and_normalize_deployment_config_value(key: str, value: str) -> str:
+    """Validate one operator-supplied Deployment Setting without persisting it."""
+    if key in FORBIDDEN_KEYS:
+        raise HTTPException(status_code=403, detail="This key cannot be modified")
+    if key not in ENV_CONFIG_MAP:
+        raise HTTPException(status_code=400, detail=f"Unknown config key: {key}")
+
+    meta = ENV_CONFIG_MAP[key]
+    normalized = value
+    if meta.get("is_secret") and (not normalized or not normalized.strip()):
+        existing_value = database.get_deployment_config_value(key)
+        if existing_value:
+            normalized = existing_value
+
+    if key in ("SMTP_PORT", "QDRANT_PORT") and normalized:
+        try:
+            port = int(normalized)
+            if port < 1 or port > 65535:
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Port must be between 1 and 65535") from None
+
+    if key in ("SMTP_HOST", "SMTP_USER", "SMTP_FROM"):
+        normalized = normalized.strip()
+        if (
+            len(normalized) >= 2
+            and normalized[0] == normalized[-1]
+            and normalized[0] in ("'", '"')
+        ):
+            normalized = normalized[1:-1].strip()
+
+    if key == "SMTP_HOST" and normalized:
+        if "://" in normalized or "/" in normalized:
+            raise HTTPException(
+                status_code=400,
+                detail="SMTP_HOST must be a hostname only (e.g., smtp.example.com) without protocol or path",
+            )
+        if normalized.count(":") == 1:
+            host_part, port_part = normalized.rsplit(":", 1)
+            if host_part and port_part.isdigit():
+                raise HTTPException(
+                    status_code=400,
+                    detail="SMTP_HOST should not include a port. Put the port in SMTP_PORT instead.",
+                )
+
+    if key == "RAG_TOP_K" and normalized:
+        try:
+            top_k = int(normalized)
+            if top_k < 1 or top_k > 100:
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="RAG_TOP_K must be between 1 and 100") from None
+
+    if key in RATE_LIMIT_KEYS:
+        try:
+            rate_limit = int(normalized)
+            if rate_limit < 1:
+                raise ValueError()
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer") from None
+
+    if key == "RATE_LIMIT_BACKEND":
+        normalized = normalized.strip().lower()
+        if normalized not in {"memory", "valkey"}:
+            raise HTTPException(status_code=400, detail="RATE_LIMIT_BACKEND must be memory or valkey")
+
+    url_keys = {
+        "INSTANCE_URL",
+        "API_BASE_URL",
+        "ADMIN_BASE_URL",
+        "CUSTOM_SEARXNG_URL",
+        "WEBHOOK_BASE_URL",
+        "MONITORING_URL",
+    }
+    if key in url_keys and normalized:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(normalized)
+        if not parsed.scheme or not parsed.netloc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{key} must be a valid URL with protocol (e.g., https://example.com)",
+            )
+
+    if key in {"BASE_DOMAIN", "EMAIL_DOMAIN"} and normalized:
+        domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+        if not re.match(domain_pattern, normalized):
+            raise HTTPException(status_code=400, detail=f"{key} must be a valid domain name")
+
+    if key == "HSTS_MAX_AGE" and normalized:
+        try:
+            if int(normalized) < 0:
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="HSTS_MAX_AGE must be a non-negative integer") from None
+
+    if key == "FORCE_HTTPS" and normalized:
+        if normalized.lower() not in ("true", "false", "1", "0", "yes", "no", "on", "off"):
+            raise HTTPException(
+                status_code=400,
+                detail="FORCE_HTTPS must be a boolean value (true/false, 1/0, yes/no, on/off)",
+            )
+
+    if key == "LLM_PROVIDER":
+        provider = normalized.strip().lower()
+        if provider not in ("", "sage"):
+            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage"')
+        normalized = provider or "sage"
+
+    return normalized
+
 # Allowed table names for audit log queries (prevents SQL injection)
 ALLOWED_AUDIT_TABLES = {
+    "admin_config_tools",
     "deployment_config",
     "ai_config",
     "ai_config_user_type_overrides",
@@ -635,6 +748,7 @@ ALLOWED_AUDIT_TABLES = {
     "user_approval",
     "user_memories",
     "user_types",
+    "user_field_definitions",
 }
 
 RATE_LIMIT_KEYS: Final[set[str]] = {
@@ -1199,114 +1313,8 @@ async def update_deployment_config_value(
     Note: Changes may require service restart to take effect.
     Requires admin authentication.
     """
-    if key in FORBIDDEN_KEYS:
-        raise HTTPException(status_code=403, detail="This key cannot be modified")
-
-    if key not in ENV_CONFIG_MAP:
-        raise HTTPException(status_code=400, detail=f"Unknown config key: {key}")
-
+    value_to_save = validate_and_normalize_deployment_config_value(key, update.value)
     meta = ENV_CONFIG_MAP[key]
-    value_to_save = update.value
-
-    # For secret keys, preserve existing value if new value is empty/whitespace.
-    if meta.get("is_secret") and (not value_to_save or not value_to_save.strip()):
-        existing_value = database.get_deployment_config_value(key)
-        if existing_value:
-            value_to_save = existing_value
-            logger.debug(f"Preserving existing secret value for {key} (empty value submitted)")
-
-    # Validate specific keys (only if we have a real value to validate)
-    if key in ("SMTP_PORT", "QDRANT_PORT") and value_to_save:
-        try:
-            port = int(value_to_save)
-            if port < 1 or port > 65535:
-                raise ValueError()
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Port must be between 1 and 65535")
-
-    # Normalize and validate SMTP hostname-ish fields.
-    # Users often paste `"smtp.example.com"` (quotes become literal in some env loaders)
-    # or `smtp.example.com:587` (port belongs in SMTP_PORT).
-    if key in ("SMTP_HOST", "SMTP_USER", "SMTP_FROM") and isinstance(value_to_save, str):
-        value_to_save = value_to_save.strip()
-        if len(value_to_save) >= 2 and value_to_save[0] == value_to_save[-1] and value_to_save[0] in ("'", '"'):
-            value_to_save = value_to_save[1:-1].strip()
-
-    if key == "SMTP_HOST" and value_to_save:
-        if "://" in value_to_save or "/" in value_to_save:
-            raise HTTPException(
-                status_code=400,
-                detail="SMTP_HOST must be a hostname only (e.g., smtp.example.com) without protocol or path",
-            )
-        # Detect common host:port paste (allow IPv6 which contains multiple colons).
-        if isinstance(value_to_save, str) and value_to_save.count(":") == 1:
-            host_part, port_part = value_to_save.rsplit(":", 1)
-            if host_part and port_part.isdigit():
-                raise HTTPException(
-                    status_code=400,
-                    detail="SMTP_HOST should not include a port. Put the port in SMTP_PORT instead.",
-                )
-
-    if key == "RAG_TOP_K" and value_to_save:
-        try:
-            top_k = int(value_to_save)
-            if top_k < 1 or top_k > 100:
-                raise ValueError()
-        except ValueError:
-            raise HTTPException(status_code=400, detail="RAG_TOP_K must be between 1 and 100")
-
-    if key in RATE_LIMIT_KEYS:
-        if not value_to_save or value_to_save.strip() == "":
-            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer")
-        try:
-            rate_limit = int(value_to_save)
-            if rate_limit < 1:
-                raise ValueError()
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"{key} must be a positive integer") from None
-
-    if key == "RATE_LIMIT_BACKEND":
-        normalized_backend = str(value_to_save or "").strip().lower()
-        if normalized_backend not in {"memory", "valkey"}:
-            raise HTTPException(status_code=400, detail="RATE_LIMIT_BACKEND must be memory or valkey")
-        value_to_save = normalized_backend
-
-    # URL validation for URL-type fields
-    URL_KEYS = {"INSTANCE_URL", "API_BASE_URL", "ADMIN_BASE_URL", "CUSTOM_SEARXNG_URL",
-                "WEBHOOK_BASE_URL", "MONITORING_URL"}
-    if key in URL_KEYS and value_to_save:
-        from urllib.parse import urlparse
-        parsed = urlparse(value_to_save)
-        if not parsed.scheme or not parsed.netloc:
-            raise HTTPException(status_code=400, detail=f"{key} must be a valid URL with protocol (e.g., https://example.com)")
-
-    # Domain validation
-    DOMAIN_KEYS = {"BASE_DOMAIN", "EMAIL_DOMAIN"}
-    if key in DOMAIN_KEYS and value_to_save:
-        import re
-        domain_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
-        if not re.match(domain_pattern, value_to_save):
-            raise HTTPException(status_code=400, detail=f"{key} must be a valid domain name")
-
-    # HSTS max-age validation
-    if key == "HSTS_MAX_AGE" and value_to_save:
-        try:
-            hsts = int(value_to_save)
-            if hsts < 0:
-                raise ValueError()
-        except ValueError:
-            raise HTTPException(status_code=400, detail="HSTS_MAX_AGE must be a non-negative integer")
-
-    # Boolean validation for FORCE_HTTPS
-    if key == "FORCE_HTTPS" and value_to_save:
-        if value_to_save.lower() not in ("true", "false", "1", "0", "yes", "no", "on", "off"):
-            raise HTTPException(status_code=400, detail="FORCE_HTTPS must be a boolean value (true/false, 1/0, yes/no, on/off)")
-
-    if key == "LLM_PROVIDER":
-        normalized = str(value_to_save or "").strip().lower()
-        if normalized not in ("", "sage"):
-            raise HTTPException(status_code=400, detail='LLM_PROVIDER only supports "sage"')
-        value_to_save = normalized or "sage"
 
     # Get admin pubkey for audit log
     admin_pubkey = admin.get("pubkey")

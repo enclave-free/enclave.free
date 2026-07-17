@@ -47,6 +47,8 @@ class FakeEnvironment:
         self.operations: list[str] = []
         self.requested_user_tools: list[tuple[str, ...]] = []
         self.cleanup_count = 0
+        self.admin_config_evidence_calls = 0
+        self.admin_config_target = "Bench direct-write description"
 
     def run_metadata(self) -> dict:
         return {"repo": "test-repo", "git": {"prototype": "abc123"}}
@@ -101,6 +103,30 @@ class FakeEnvironment:
 
     def database_user_count(self) -> int:
         return 3
+
+    def prepare_admin_config_confirmation_fixture(self) -> dict:
+        return {
+            "target": self.admin_config_target,
+            "original": "Original description",
+            "admin_changed_by": "bench-admin-pubkey",
+        }
+
+    def admin_config_confirmation_evidence(
+        self, conversation_id: str, target: str
+    ) -> dict:
+        self.admin_config_evidence_calls += 1
+        if self.admin_config_evidence_calls == 1:
+            return {"target_persisted": False, "matching_audit": None}
+        return {
+            "target_persisted": target == self.admin_config_target,
+            "matching_audit": {
+                "changed_by": "bench-admin-pubkey",
+                "action_source": "sage_conversation",
+                "conversation_id": conversation_id,
+                "config_key": "description",
+                "action": "update",
+            },
+        }
 
     def cleanup_scenario(self) -> None:
         self.cleanup_count += 1
@@ -157,7 +183,6 @@ class FakeConversationClient:
             events=events,
             done={**result.done, "session_id": payload["session_id"]},
             trace=result.trace,
-            admin_change_set=result.admin_change_set,
             timings=result.timings,
             error=result.error,
         )
@@ -233,7 +258,6 @@ class FakeConversationClient:
                         }
                     ]
                 },
-                admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
                     "first_trace_or_tool_feedback_ms": 20.0,
@@ -299,7 +323,6 @@ class FakeConversationClient:
                         }
                     ]
                 },
-                admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
                     "first_trace_or_tool_feedback_ms": 20.0,
@@ -392,7 +415,6 @@ class FakeConversationClient:
                         }
                     ],
                 },
-                admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
                     "first_trace_or_tool_feedback_ms": 20.0,
@@ -451,7 +473,6 @@ class FakeConversationClient:
                     ],
                 },
                 trace={"tools": [{"id": "curated-resources", "name": "Curated Resources"}]},
-                admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
                     "first_trace_or_tool_feedback_ms": 20.0,
@@ -520,7 +541,6 @@ class FakeConversationClient:
                         }
                     ],
                 },
-                admin_change_set=None,
                 timings={
                     "first_event_ms": 20.0,
                     "first_trace_or_tool_feedback_ms": 20.0,
@@ -528,254 +548,76 @@ class FakeConversationClient:
                     "done_ms": 100.0,
                 },
             )
-        if "there are two kinds of users" in message:
-            admin_change_set = {
-                "version": 1,
-                "summary": "Bootstrap FreeThem",
-                "requests": [
-                    {
-                        "method": "PUT",
-                        "path": "/admin/settings",
-                        "body": {
-                            "instance_name": "FreeThem",
-                            "assistant_name": "Liberty",
-                            "header_tagline": "political prisoners support team",
-                            "description": (
-                                "We are the political prisoners support team an arm "
-                                "of the World Liberty Congress"
-                            ),
-                            "primary_color": "#2563EB",
-                            "default_theme": "dark",
-                            "default_language": "en",
-                            "auto_approve_users": True,
-                        },
-                    },
-                    {
-                        "method": "POST",
-                        "path": "/admin/user-types",
-                        "body": {
-                            "name": "Families and Friends of Current Political Prisoners",
-                            "description": (
-                                "Support for people with loved ones currently in the situation."
-                            ),
-                        },
-                    },
-                    {
-                        "method": "POST",
-                        "path": "/admin/user-types",
-                        "body": {
-                            "name": "Friends, Family, and Former Political Prisoners",
-                            "description": (
-                                "Support for former political prisoners and people "
-                                "helping after the situation."
-                            ),
-                        },
-                    },
-                ],
-            }
+        if message.startswith("Set the Instance Description to exactly:"):
             return StreamResult(
-                answer="I prepared these setup changes for review. Use Apply to confirm.",
-                events=[],
-                done={
-                    "model": "kimi-k2-6",
-                    "provider": "sage",
-                    "tools_used": [
-                        {
-                            "tool_id": "admin-config:propose_admin_config_bootstrap",
-                            "tool_name": "Admin Config",
-                            "status": "completed",
-                            "output_summary": "Prepared bootstrap change set: Bootstrap FreeThem",
-                        }
-                    ],
-                    "admin_change_set": admin_change_set,
-                },
-                trace={
-                    "tools": [
-                        {
-                            "id": "admin-config:propose_admin_config_bootstrap",
-                            "name": "Admin Config",
-                            "status": "completed",
-                        },
-                    ]
-                },
-                admin_change_set=admin_change_set,
+                answer=(
+                    "You want me to update the Instance Description to the exact "
+                    "value shown. Shall I apply that change now?"
+                ),
+                events=[
+                    {
+                        "event": "answer_delta",
+                        "elapsed_ms": 70.0,
+                        "data": {"delta": "Shall I apply that change now?"},
+                    }
+                ],
+                done={"model": "kimi-k2-6", "provider": "sage", "tools_used": []},
+                trace={"tools": []},
                 timings={
                     "first_event_ms": 10.0,
                     "first_trace_or_tool_feedback_ms": 10.0,
-                    "first_visible_assistant_token_ms": 90.0,
-                    "done_ms": 110.0,
+                    "first_visible_assistant_token_ms": 70.0,
+                    "done_ms": 90.0,
                 },
             )
-        if "FreeThem" in payload["message"]:
+        if message.startswith("Yes, apply that exact Instance Description"):
             return StreamResult(
-                answer="I prepared these changes for review. Use Apply to confirm.",
-                events=[],
+                answer="The Instance Description has been updated.",
+                events=[
+                    {
+                        "event": "activity_step",
+                        "elapsed_ms": 30.0,
+                        "data": {
+                            "activity_step": {
+                                "id": "admin-config:update_instance_settings",
+                                "title": "Admin Config",
+                                "status": "completed",
+                            }
+                        },
+                    },
+                    {
+                        "event": "answer_delta",
+                        "elapsed_ms": 80.0,
+                        "data": {"delta": "The Instance Description has been updated."},
+                    },
+                ],
                 done={
                     "model": "kimi-k2-6",
                     "provider": "sage",
                     "tools_used": [
                         {
-                            "tool_id": "admin-config:propose_admin_config_bootstrap",
+                            "tool_id": "admin-config:update_instance_settings",
                             "tool_name": "Admin Config",
-                            "output_summary": "Prepared bootstrap change set: Bootstrap FreeThem",
+                            "status": "completed",
+                            "output_summary": "Updated Instance Description.",
                         }
                     ],
-                    "admin_change_set": {
-                        "version": 1,
-                        "summary": "Bootstrap FreeThem",
-                        "requests": [
-                            {
-                                "method": "PUT",
-                                "path": "/admin/settings",
-                                "body": {
-                                    "instance_name": "FreeThem",
-                                    "assistant_name": "Ally",
-                                    "header_tagline": "Political prisoner support team.",
-                                    "description": "We are the Political Prisoners Support Team.",
-                                    "primary_color": "#4F46E5",
-                                    "default_theme": "dark",
-                                    "default_language": "en",
-                                    "auto_approve_users": True,
-                                },
-                            },
-                            {
-                                "method": "POST",
-                                "path": "/admin/user-types",
-                                "body": {
-                                    "name": "Family and Friends of Current Prisoners",
-                                    "description": "For loved ones of people currently imprisoned for political reasons.",
-                                },
-                            },
-                            {
-                                "method": "POST",
-                                "path": "/admin/user-types",
-                                "body": {
-                                    "name": "Former Prisoners and Supporters",
-                                    "description": "For former political prisoners and supporters seeking post-release resources.",
-                                },
-                            },
-                            {
-                                "method": "POST",
-                                "path": "/admin/user-fields",
-                                "body": {
-                                    "field_name": "What country are you in?",
-                                    "field_type": "text",
-                                    "display_order": 1,
-                                    "include_in_chat": True,
-                                },
-                            },
-                            {
-                                "method": "POST",
-                                "path": "/admin/user-fields",
-                                "body": {
-                                    "field_name": "What kind of support do you need?",
-                                    "field_type": "select",
-                                    "display_order": 2,
-                                    "include_in_chat": True,
-                                    "options": [
-                                        "Current prisoner support",
-                                        "Post-release support",
-                                    ],
-                                },
-                            },
-                            {
-                                "method": "PUT",
-                                "path": "/admin/ai-config/prompt_rules",
-                                "body": {
-                                    "value": json.dumps(
-                                        [
-                                            "Ask where users are before giving location-specific guidance."
-                                        ]
-                                    )
-                                },
-                            },
-                        ],
-                    },
+                    "admin_config_affected_areas": ["instance_settings"],
                 },
                 trace={
                     "tools": [
                         {
-                            "id": "admin-config:propose_admin_config_bootstrap",
+                            "id": "admin-config:update_instance_settings",
                             "name": "Admin Config",
-                        },
+                            "status": "completed",
+                        }
                     ]
-                },
-                admin_change_set={
-                    "version": 1,
-                    "summary": "Bootstrap FreeThem",
-                    "requests": [
-                        {
-                            "method": "PUT",
-                            "path": "/admin/settings",
-                            "body": {
-                                "instance_name": "FreeThem",
-                                "assistant_name": "Ally",
-                                "header_tagline": "Political prisoner support team.",
-                                "description": "We are the Political Prisoners Support Team.",
-                                "primary_color": "#4F46E5",
-                                "default_theme": "dark",
-                                "default_language": "en",
-                                "auto_approve_users": True,
-                            },
-                        },
-                        {
-                            "method": "POST",
-                            "path": "/admin/user-types",
-                            "body": {
-                                "name": "Family and Friends of Current Prisoners",
-                                "description": "For loved ones of people currently imprisoned for political reasons.",
-                            },
-                        },
-                        {
-                            "method": "POST",
-                            "path": "/admin/user-types",
-                            "body": {
-                                "name": "Former Prisoners and Supporters",
-                                "description": "For former political prisoners and supporters seeking post-release resources.",
-                            },
-                        },
-                        {
-                            "method": "POST",
-                            "path": "/admin/user-fields",
-                            "body": {
-                                "field_name": "What country are you in?",
-                                "field_type": "text",
-                                "display_order": 1,
-                                "include_in_chat": True,
-                            },
-                        },
-                        {
-                            "method": "POST",
-                            "path": "/admin/user-fields",
-                            "body": {
-                                "field_name": "What kind of support do you need?",
-                                "field_type": "select",
-                                "display_order": 2,
-                                "include_in_chat": True,
-                                "options": [
-                                    "Current prisoner support",
-                                    "Post-release support",
-                                ],
-                            },
-                        },
-                        {
-                            "method": "PUT",
-                            "path": "/admin/ai-config/prompt_rules",
-                            "body": {
-                                "value": json.dumps(
-                                    [
-                                        "Ask where users are before giving location-specific guidance."
-                                    ]
-                                )
-                            },
-                        },
-                    ],
                 },
                 timings={
                     "first_event_ms": 10.0,
-                    "first_trace_or_tool_feedback_ms": 10.0,
-                    "first_visible_assistant_token_ms": 90.0,
-                    "done_ms": 110.0,
+                    "first_trace_or_tool_feedback_ms": 30.0,
+                    "first_visible_assistant_token_ms": 80.0,
+                    "done_ms": 100.0,
                 },
             )
         return StreamResult(
@@ -846,7 +688,6 @@ class FakeConversationClient:
                     }
                 ]
             },
-            admin_change_set=None,
             timings={
                 "first_event_ms": 10.0,
                 "first_trace_or_tool_feedback_ms": 25.0,
@@ -891,7 +732,6 @@ class FakeWarningOnlyClient:
                 "session_id": payload["session_id"],
             },
             trace={"tools": [], "retrieval": []},
-            admin_change_set=None,
             timings={
                 "first_event_ms": 80.0,
                 "first_trace_or_tool_feedback_ms": None,
@@ -912,7 +752,6 @@ class FakeGenericFailureAnswerClient(FakeConversationClient):
             events=result.events,
             done=result.done,
             trace=result.trace,
-            admin_change_set=result.admin_change_set,
             timings=result.timings,
         )
 
@@ -925,7 +764,6 @@ class FakeSlowFirstAnswerClient(FakeConversationClient):
             events=result.events,
             done=result.done,
             trace=result.trace,
-            admin_change_set=result.admin_change_set,
             timings={
                 "first_event_ms": 10.0,
                 "first_trace_or_tool_feedback_ms": 10.0,
@@ -943,7 +781,6 @@ class FakeSlowTraceFeedbackClient(FakeConversationClient):
             events=result.events,
             done=result.done,
             trace=result.trace,
-            admin_change_set=result.admin_change_set,
             timings={
                 **result.timings,
                 "first_trace_or_tool_feedback_ms": 15_000.0,
@@ -989,17 +826,17 @@ class ConnectionLostStreamResponse(IncompleteStreamResponse):
 
 
 class ConversationModelBenchTest(unittest.TestCase):
-    def test_bench_docs_match_v0_runner_contract(self) -> None:
+    def test_bench_docs_match_direct_write_runner_contract(self) -> None:
         docs = (REPO_ROOT / "docs" / "conversation-model-bench.md").read_text(
             encoding="utf-8"
         )
 
         self.assertIn("python scripts/benches/conversation_model_bench.py", docs)
-        self.assertIn("--models gpt-oss-120b,kimi-k2-6", docs)
-        self.assertIn("--no-restore-model", docs)
-        self.assertIn("Hard failures", docs)
-        self.assertIn("Evidence-only warnings", docs)
-        self.assertIn("Browser Apply-Panel Smoke Follow-Up", docs)
+        self.assertIn("--runtime apple", docs)
+        self.assertIn("admin_config_confirmed_instance_update", docs)
+        self.assertIn("same Conversation identifier", docs)
+        self.assertIn("No direct Admin Config write Tool runs", docs)
+        self.assertIn("Audit Log provenance", docs)
         self.assertNotIn("Open Decisions", docs)
 
     def test_cli_defaults_to_all_v0_scenarios(self) -> None:
@@ -1009,8 +846,7 @@ class ConversationModelBenchTest(unittest.TestCase):
             options.scenarios,
             (
                 "admin_no_tools_control",
-                "admin_config_bootstrap",
-                "admin_config_live_onboarding_prompt",
+                "admin_config_confirmed_instance_update",
                 "admin_deployment_readiness",
                 "admin_database_direct_select",
                 "admin_database_natural_language_guardrail",
@@ -1059,7 +895,6 @@ class ConversationModelBenchTest(unittest.TestCase):
                         "session_id": payload["session_id"],
                     },
                     trace={"tools": []},
-                    admin_change_set=None,
                     timings={
                         "first_event_ms": 10.0,
                         "first_trace_or_tool_feedback_ms": 10.0,
@@ -1125,7 +960,6 @@ class ConversationModelBenchTest(unittest.TestCase):
             ],
             done={"model": "test", "provider": "sage"},
             trace=None,
-            admin_change_set=None,
             timings={
                 "first_event_ms": 10.0,
                 "first_trace_or_tool_feedback_ms": 20.0,
@@ -1536,604 +1370,205 @@ with database.get_cursor() as cursor:
             25.0,
         )
 
-    def test_admin_readiness_fails_when_change_set_tool_is_staged(self) -> None:
-        class FakeStagedChangeSetClient(FakeConversationClient):
+    def test_admin_readiness_rejects_direct_write_tool_use(self) -> None:
+        class FakeWriteDuringReadinessClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
                 result = super().stream_chat(token, payload, timeout)
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done={
-                        **result.done,
-                        "tools_used": [
-                            *result.done.get("tools_used", []),
-                            {
-                                "tool_id": "admin_change_set",
-                                "tool_name": "Admin Change Set",
-                            },
-                        ],
-                    },
-                    trace=result.trace,
-                    admin_change_set=result.admin_change_set,
-                    timings=result.timings,
-                    error=result.error,
-                )
-
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_deployment_readiness",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeStagedChangeSetClient(),
-        )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check for check in scenario["checks"]}
-
-        self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["admin_change_set_not_staged"]["severity"], "hard")
-        self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
-
-    def test_admin_readiness_requires_setup_summary_tool(self) -> None:
-        class FakeLowLevelReadFanoutClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                low_level_tools = [
-                    {
-                        "tool_id": "admin-config:read_deployment_readiness",
-                        "tool_name": "Admin Config",
-                        "output_summary": "Read read_deployment_readiness.",
-                    },
-                    {
-                        "tool_id": "admin-config:read_instance_settings",
-                        "tool_name": "Admin Config",
-                        "output_summary": "Read read_instance_settings.",
-                    },
-                    {
-                        "tool_id": "admin-config:read_user_types",
-                        "tool_name": "Admin Config",
-                        "output_summary": "Read read_user_types.",
-                    },
-                ]
-                return StreamResult(
-                    answer=result.answer,
-                    events=[
+                done = {
+                    **result.done,
+                    "tools_used": [
+                        *(result.done.get("tools_used") or []),
                         {
-                            "event": "activity_step",
-                            "elapsed_ms": 25.0,
-                            "data": {
-                                "activity_step": {
-                                    "id": "admin-config:read_deployment_readiness",
-                                    "title": "Admin Config",
-                                    "status": "completed",
-                                }
-                            },
-                        },
-                        {
-                            "event": "answer_delta",
-                            "elapsed_ms": 100.0,
-                            "data": {"delta": "FreeThem is mostly configured."},
-                        },
-                        {
-                            "event": "done",
-                            "elapsed_ms": 120.0,
-                            "data": {
-                                "model": "kimi-k2-6",
-                                "provider": "sage",
-                                "tools_used": low_level_tools,
-                            },
+                            "tool_id": "admin-config:update_instance_settings",
+                            "tool_name": "Admin Config",
+                            "status": "completed",
                         },
                     ],
-                    done={**result.done, "tools_used": low_level_tools},
-                    trace={
-                        "tools": [
-                            {"id": tool["tool_id"], "name": "Admin Config"}
-                            for tool in low_level_tools
-                        ]
-                    },
-                    admin_change_set=result.admin_change_set,
-                    timings=result.timings,
-                    error=result.error,
-                )
-
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_deployment_readiness",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeLowLevelReadFanoutClient(),
-        )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check for check in scenario["checks"]}
-
-        self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["admin_setup_summary_tool_used"]["severity"], "hard")
-        self.assertEqual(checks["admin_setup_summary_tool_used"]["status"], "failed")
-        self.assertEqual(
-            checks["broad_status_avoids_low_level_read_fanout"]["status"],
-            "failed",
-        )
-
-    def test_admin_readiness_fails_when_stream_change_set_payload_is_staged(self) -> None:
-        class FakeStagedChangeSetClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done=result.done,
-                    trace=result.trace,
-                    admin_change_set={"requests": [{"path": "/admin/settings"}]},
-                    timings=result.timings,
-                    error=result.error,
-                )
-
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_deployment_readiness",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeStagedChangeSetClient(),
-        )
-
-        checks = {
-            check["name"]: check
-            for check in artifact["candidates"][0]["scenarios"][0]["checks"]
-        }
-
-        self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
-
-    def test_admin_readiness_fails_when_done_change_set_payload_is_staged(self) -> None:
-        class FakeStagedChangeSetClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done={
-                        **result.done,
-                        "admin_change_set": {"requests": [{"path": "/admin/settings"}]},
-                    },
-                    trace=result.trace,
-                    admin_change_set=result.admin_change_set,
-                    timings=result.timings,
-                    error=result.error,
-                )
-
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_deployment_readiness",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeStagedChangeSetClient(),
-        )
-
-        checks = {
-            check["name"]: check
-            for check in artifact["candidates"][0]["scenarios"][0]["checks"]
-        }
-
-        self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["admin_change_set_not_staged"]["status"], "failed")
-
-    def test_admin_config_bootstrap_scenario_requires_canonical_change_set(self) -> None:
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_bootstrap",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeConversationClient(),
-        )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
-        scenario_prompt = SCENARIOS["admin_config_bootstrap"].message
-
-        self.assertEqual(scenario["id"], "admin_config_bootstrap")
-        self.assertEqual(artifact["summary"]["status"], "passed")
-        self.assertIn("propose_admin_config_bootstrap directly", scenario_prompt)
-        self.assertNotIn("Read the current Admin Config first", scenario_prompt)
-        self.assertEqual(checks["admin_change_set_present"], "passed")
-        self.assertEqual(checks["admin_change_set_uses_canonical_paths"], "passed")
-        self.assertEqual(checks["baseline_settings_present"], "passed")
-        self.assertEqual(checks["user_types_present"], "passed")
-        self.assertEqual(checks["typed_bootstrap_tool_used"], "passed")
-        self.assertEqual(
-            checks["bootstrap_uses_only_typed_bootstrap_tool"], "passed"
-        )
-        self.assertEqual(checks["onboarding_fields_present"], "passed")
-        self.assertEqual(checks["behavior_rules_present"], "passed")
-        self.assertEqual(
-            scenario["response"]["admin_change_set"]["requests"][1]["path"],
-            "/admin/user-types",
-        )
-
-    def test_admin_config_live_onboarding_prompt_accepts_current_ui_answer_format(self) -> None:
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_live_onboarding_prompt",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeConversationClient(),
-        )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
-        severities = {check["name"]: check["severity"] for check in scenario["checks"]}
-        requests = scenario["response"]["admin_change_set"]["requests"]
-
-        self.assertEqual(scenario["id"], "admin_config_live_onboarding_prompt")
-        self.assertEqual(artifact["summary"]["status"], "passed")
-        self.assertIn("- 1. FreeThem", scenario["request"]["message_preview"])
-        self.assertEqual(
-            [request["path"] for request in requests],
-            ["/admin/settings", "/admin/user-types", "/admin/user-types"],
-        )
-        self.assertEqual(checks["typed_bootstrap_tool_used"], "passed")
-        self.assertEqual(checks["live_onboarding_bootstrap_not_rejected"], "passed")
-        self.assertEqual(checks["live_onboarding_baseline_settings_present"], "passed")
-        self.assertEqual(checks["live_onboarding_instance_name_preserved"], "passed")
-        self.assertEqual(checks["live_onboarding_dark_theme_preserved"], "passed")
-        self.assertEqual(
-            checks["live_onboarding_default_language_normalized"], "passed"
-        )
-        self.assertEqual(checks["live_onboarding_auto_approval_enabled"], "passed")
-        self.assertEqual(checks["live_onboarding_user_types_present"], "passed")
-        self.assertEqual(severities["live_onboarding_user_type_content_present"], "hard")
-        self.assertEqual(checks["live_onboarding_does_not_create_user_fields"], "passed")
-        self.assertEqual(checks["live_onboarding_does_not_create_behavior_rules"], "passed")
-
-    def test_admin_config_live_onboarding_prompt_requires_language_normalization(
-        self,
-    ) -> None:
-        class FakeEnglishLanguageClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                admin_change_set = dict(result.admin_change_set or {})
-                requests = list(admin_change_set.get("requests") or [])
-                settings = dict(requests[0])
-                settings["body"] = {
-                    **settings.get("body", {}),
-                    "default_language": "english",
                 }
-                requests[0] = settings
-                admin_change_set["requests"] = requests
-                done = dict(result.done)
-                done["admin_change_set"] = admin_change_set
                 return StreamResult(
                     answer=result.answer,
                     events=result.events,
                     done=done,
                     trace=result.trace,
-                    admin_change_set=admin_change_set,
                     timings=result.timings,
+                    error=result.error,
                 )
 
         artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_live_onboarding_prompt",),
-            ),
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
             environment=FakeEnvironment(),
-            client=FakeEnglishLanguageClient(),
+            client=FakeWriteDuringReadinessClient(),
         )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        checks = {
+            item["name"]: item
+            for item in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
 
         self.assertEqual(artifact["summary"]["status"], "failed")
         self.assertEqual(
-            checks["live_onboarding_default_language_normalized"], "failed"
+            checks["admin_config_readiness_did_not_write"]["status"], "failed"
         )
 
-    def test_admin_config_live_onboarding_prompt_rejects_forbidden_agent_config_writes(
-        self,
-    ) -> None:
-        class FakeForbiddenRulesClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                admin_change_set = dict(result.admin_change_set or {})
-                admin_change_set["requests"] = [
-                    *(admin_change_set.get("requests") or []),
-                    {
-                        "method": "PUT",
-                        "path": "/admin/ai-config/prompt_forbidden",
-                        "body": {"value": json.dumps(["Never discuss legal help."])},
-                    },
-                ]
-                done = dict(result.done)
-                done["admin_change_set"] = admin_change_set
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done=done,
-                    trace=result.trace,
-                    admin_change_set=admin_change_set,
-                    timings=result.timings,
-                )
-
+    def test_confirmed_admin_config_update_is_verified_end_to_end(self) -> None:
+        environment = FakeEnvironment()
         artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_live_onboarding_prompt",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeForbiddenRulesClient(),
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
+            environment=environment,
+            client=FakeConversationClient(),
         )
 
         scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        checks = {item["name"]: item["status"] for item in scenario["checks"]}
 
-        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(artifact["summary"]["status"], "passed")
+        self.assertEqual(len(scenario["turns"]), 2)
         self.assertEqual(
-            checks["live_onboarding_does_not_create_behavior_rules"], "failed"
+            scenario["turns"][0]["response"]["session_id"],
+            scenario["turns"][1]["response"]["session_id"],
+        )
+        self.assertEqual(checks["confirmation_turn_did_not_write"], "passed")
+        self.assertEqual(
+            checks["confirmed_turn_uses_update_instance_settings"], "passed"
+        )
+        self.assertEqual(checks["target_persisted_after_confirmation"], "passed")
+        self.assertEqual(
+            checks["audit_records_sage_conversation_source"], "passed"
+        )
+        self.assertEqual(
+            checks["confirmed_turn_returns_instance_refresh_hint"], "passed"
         )
 
-    def test_admin_config_live_onboarding_prompt_requires_separate_user_type_entries(
-        self,
-    ) -> None:
-        class FakeCombinedUserTypeClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                admin_change_set = dict(result.admin_change_set or {})
-                admin_change_set["requests"] = [
-                    {
-                        "method": "PUT",
-                        "path": "/admin/settings",
-                        "body": {
-                            "instance_name": "FreeThem",
-                            "assistant_name": "Liberty",
-                            "header_tagline": "political prisoners support team",
-                            "description": "World Liberty Congress support team",
-                            "primary_color": "#2563EB",
-                            "default_theme": "dark",
-                            "default_language": "en",
-                            "auto_approve_users": True,
+    def test_admin_config_update_fails_on_premature_write(self) -> None:
+        class FakePrematureWriteClient(FakeConversationClient):
+            def _stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                result = super()._stream_chat(token, payload, timeout)
+                if payload["message"].startswith(
+                    "Set the Instance Description to exactly:"
+                ):
+                    return StreamResult(
+                        answer="I changed it before asking.",
+                        events=result.events,
+                        done={
+                            **result.done,
+                            "tools_used": [
+                                {
+                                    "tool_id": "admin-config:update_instance_settings",
+                                    "tool_name": "Admin Config",
+                                    "status": "completed",
+                                }
+                            ],
                         },
-                    },
-                    {
-                        "method": "POST",
-                        "path": "/admin/user-types",
-                        "body": {
-                            "name": "Families, current prisoners, former prisoners, and aftercare",
-                            "description": "Combined malformed catch-all type.",
-                        },
-                    },
-                    {
-                        "method": "POST",
-                        "path": "/admin/user-types",
-                        "body": {
-                            "name": "General Supporter",
-                            "description": "Unrelated second type.",
-                        },
-                    },
-                ]
-                done = dict(result.done)
-                done["admin_change_set"] = admin_change_set
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done=done,
-                    trace=result.trace,
-                    admin_change_set=admin_change_set,
-                    timings=result.timings,
-                )
+                        trace=result.trace,
+                        timings=result.timings,
+                    )
+                return result
 
         artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_live_onboarding_prompt",),
-            ),
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
             environment=FakeEnvironment(),
-            client=FakeCombinedUserTypeClient(),
+            client=FakePrematureWriteClient(),
         )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        checks = {
+            item["name"]: item["status"]
+            for item in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
 
         self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["live_onboarding_user_type_content_present"], "failed")
+        self.assertEqual(checks["confirmation_turn_did_not_write"], "failed")
 
-    def test_admin_config_live_onboarding_prompt_fails_when_bootstrap_is_rejected(self) -> None:
-        class FakeRejectedBootstrapClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                return StreamResult(
-                    answer="I apologize, but I wasn't able to generate a response.",
-                    events=result.events,
-                    done={
-                        "model": "kimi-k2-6",
-                        "provider": "sage",
-                        "tools_used": [
-                            {
-                                "tool_id": "admin-config:propose_admin_config_bootstrap",
-                                "tool_name": "Admin Config",
-                                "status": "guarded",
-                                "output_summary": (
-                                    "Invalid bootstrap proposal: setup_notes must "
-                                    "include numbered setup answer 1."
-                                ),
-                                "warnings": ["invalid_admin_config_bootstrap"],
-                                "guarded": True,
-                            }
-                        ],
-                    },
-                    trace={
-                        "tools": [
-                            {
-                                "id": "admin-config:propose_admin_config_bootstrap",
-                                "name": "Admin Config",
-                                "status": "guarded",
-                                "warnings": ["invalid_admin_config_bootstrap"],
-                                "guarded": True,
-                            }
-                        ]
-                    },
-                    admin_change_set=None,
-                    timings=result.timings,
+    def test_admin_config_update_fails_without_persistence(self) -> None:
+        class FakeNoPersistenceEnvironment(FakeEnvironment):
+            def admin_config_confirmation_evidence(
+                self, conversation_id: str, target: str
+            ) -> dict:
+                evidence = super().admin_config_confirmation_evidence(
+                    conversation_id, target
                 )
+                if self.admin_config_evidence_calls > 1:
+                    return {**evidence, "target_persisted": False}
+                return evidence
 
         artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_live_onboarding_prompt",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeRejectedBootstrapClient(),
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
+            environment=FakeNoPersistenceEnvironment(),
+            client=FakeConversationClient(),
         )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        checks = {
+            item["name"]: item["status"]
+            for item in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
 
         self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["live_onboarding_bootstrap_not_rejected"], "failed")
-        self.assertEqual(checks["admin_change_set_present"], "failed")
+        self.assertEqual(checks["target_persisted_after_confirmation"], "failed")
 
-    def test_admin_config_bootstrap_scenario_fails_without_typed_bootstrap_tool(self) -> None:
-        class FakeGenericBootstrapClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                done = dict(result.done)
-                done["tools_used"] = [
-                    {
-                        "tool_id": "admin-config:propose_config_change_set",
-                        "tool_name": "Admin Config",
-                        "output_summary": "Proposed change set: Bootstrap FreeThem",
+    def test_admin_config_update_fails_on_wrong_audit_provenance(self) -> None:
+        class FakeWrongProvenanceEnvironment(FakeEnvironment):
+            def admin_config_confirmation_evidence(
+                self, conversation_id: str, target: str
+            ) -> dict:
+                evidence = super().admin_config_confirmation_evidence(
+                    conversation_id, target
+                )
+                if self.admin_config_evidence_calls > 1:
+                    return {
+                        **evidence,
+                        "matching_audit": {
+                            **(evidence.get("matching_audit") or {}),
+                            "action_source": "unknown",
+                            "conversation_id": "wrong-conversation",
+                        },
                     }
-                ]
-                trace = {
-                    "tools": [
-                        {
-                            "id": "admin-config:propose_config_change_set",
-                            "name": "Admin Config",
-                        }
-                    ]
-                }
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done=done,
-                    trace=trace,
-                    admin_change_set=result.admin_change_set,
-                    timings=result.timings,
-                )
+                return evidence
 
         artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_bootstrap",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeGenericBootstrapClient(),
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
+            environment=FakeWrongProvenanceEnvironment(),
+            client=FakeConversationClient(),
         )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
-
-        self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["typed_bootstrap_tool_used"], "failed")
-        self.assertEqual(
-            checks["generic_change_set_tool_not_used_for_bootstrap"], "failed"
-        )
-
-    def test_admin_config_bootstrap_scenario_rejects_read_before_write_fanout(
-        self,
-    ) -> None:
-        class FakeReadFanoutBootstrapClient(FakeConversationClient):
-            def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
-                result = super().stream_chat(token, payload, timeout)
-                done = dict(result.done)
-                done["tools_used"] = [
-                    {
-                        "tool_id": "admin-config:read_instance_settings",
-                        "tool_name": "Admin Config",
-                        "output_summary": "Read read_instance_settings.",
-                    },
-                    *(done.get("tools_used") or []),
-                ]
-                trace = dict(result.trace or {})
-                trace["tools"] = [
-                    {"id": "admin-config:read_instance_settings", "name": "Admin Config"},
-                    *(trace.get("tools") or []),
-                ]
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done=done,
-                    trace=trace,
-                    admin_change_set=result.admin_change_set,
-                    timings=result.timings,
-                )
-
-        artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_bootstrap",),
-            ),
-            environment=FakeEnvironment(),
-            client=FakeReadFanoutBootstrapClient(),
-        )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        checks = {
+            item["name"]: item["status"]
+            for item in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
 
         self.assertEqual(artifact["summary"]["status"], "failed")
         self.assertEqual(
-            checks["bootstrap_uses_only_typed_bootstrap_tool"], "failed"
+            checks["audit_records_sage_conversation_source"], "failed"
         )
-        self.assertEqual(checks["typed_bootstrap_tool_used"], "passed")
+        self.assertEqual(
+            checks["audit_records_originating_conversation"], "failed"
+        )
 
-    def test_admin_config_bootstrap_scenario_rejects_malformed_agent_rules(
-        self,
-    ) -> None:
-        class FakeMalformedRulesBootstrapClient(FakeConversationClient):
+    def test_admin_config_update_rejects_obsolete_proposal_metadata(self) -> None:
+        class FakeProposalMetadataClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
                 result = super().stream_chat(token, payload, timeout)
-                admin_change_set = dict(result.admin_change_set or {})
-                requests = []
-                for request in admin_change_set.get("requests") or []:
-                    if request.get("path") == "/admin/ai-config/prompt_rules":
-                        request = {
-                            **request,
-                            "body": {
-                                "value": "Ask where users are before location-specific guidance."
-                            },
-                        }
-                    requests.append(request)
-                admin_change_set["requests"] = requests
-                done = dict(result.done)
-                done["admin_change_set"] = admin_change_set
-                return StreamResult(
-                    answer=result.answer,
-                    events=result.events,
-                    done=done,
-                    trace=result.trace,
-                    admin_change_set=admin_change_set,
-                    timings=result.timings,
-                )
+                if payload["message"].startswith("Yes, apply that exact"):
+                    return StreamResult(
+                        answer=result.answer,
+                        events=result.events,
+                        done={**result.done, "admin_change_set": {"requests": []}},
+                        trace=result.trace,
+                        timings=result.timings,
+                    )
+                return result
 
         artifact = run_bench(
-            BenchOptions(
-                api_base="http://127.0.0.1:18000",
-                scenarios=("admin_config_bootstrap",),
-            ),
+            BenchOptions(scenarios=("admin_config_confirmed_instance_update",)),
             environment=FakeEnvironment(),
-            client=FakeMalformedRulesBootstrapClient(),
+            client=FakeProposalMetadataClient(),
         )
-
-        scenario = artifact["candidates"][0]["scenarios"][0]
-        checks = {check["name"]: check["status"] for check in scenario["checks"]}
+        checks = {
+            item["name"]: item["status"]
+            for item in artifact["candidates"][0]["scenarios"][0]["checks"]
+        }
 
         self.assertEqual(artifact["summary"]["status"], "failed")
-        self.assertEqual(checks["behavior_rules_present"], "failed")
+        self.assertEqual(
+            checks["confirmed_write_has_no_obsolete_proposal_metadata"], "failed"
+        )
+
 
     def test_user_knowledge_assistance_records_retrieval_evidence(self) -> None:
         env = FakeEnvironment()
@@ -2310,7 +1745,7 @@ with database.get_cursor() as cursor:
 
     def test_generic_generation_failure_answer_fails_even_with_valid_payload(self) -> None:
         artifact = run_bench(
-            BenchOptions(scenarios=("admin_config_bootstrap",)),
+            BenchOptions(scenarios=("admin_deployment_readiness",)),
             environment=FakeEnvironment(),
             client=FakeGenericFailureAnswerClient(),
         )
@@ -2320,7 +1755,6 @@ with database.get_cursor() as cursor:
 
         self.assertEqual(artifact["summary"]["status"], "failed")
         self.assertIn("does_not_emit_generic_generation_failure", hard_failures)
-        self.assertTrue(scenario["response"]["admin_change_set"])
 
     def test_slow_first_answer_is_warning_only(self) -> None:
         artifact = run_bench(
@@ -2352,7 +1786,7 @@ with database.get_cursor() as cursor:
             {"first_trace_or_tool_feedback_under_10s"},
         )
 
-    def test_bootstrap_rejects_an_extra_final_model_call(self) -> None:
+    def test_no_tools_control_rejects_an_extra_model_call(self) -> None:
         class ExtraModelCallClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
                 result = super().stream_chat(token, payload, timeout)
@@ -2377,12 +1811,11 @@ with database.get_cursor() as cursor:
                     events=[*model_events, *result.events],
                     done=result.done,
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                 )
 
         artifact = run_bench(
-            BenchOptions(scenarios=("admin_config_bootstrap",)),
+            BenchOptions(scenarios=("admin_no_tools_control",)),
             environment=FakeEnvironment(),
             client=ExtraModelCallClient(),
         )
@@ -2390,9 +1823,9 @@ with database.get_cursor() as cursor:
         failures = {
             item["name"] for item in artifact["summary"]["hard_failures"]
         }
-        self.assertIn("bootstrap_has_no_final_model_call", failures)
+        self.assertIn("no_tools_control_single_model_call", failures)
 
-    def test_bootstrap_rejects_a_retry_call(self) -> None:
+    def test_no_tools_control_rejects_a_retry_call(self) -> None:
         class RetryClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
                 result = super().stream_chat(token, payload, timeout)
@@ -2410,18 +1843,17 @@ with database.get_cursor() as cursor:
                     ],
                     done=result.done,
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                 )
 
         artifact = run_bench(
-            BenchOptions(scenarios=("admin_config_bootstrap",)),
+            BenchOptions(scenarios=("admin_no_tools_control",)),
             environment=FakeEnvironment(),
             client=RetryClient(),
         )
 
         failures = {item["name"] for item in artifact["summary"]["hard_failures"]}
-        self.assertIn("bootstrap_zero_retry_calls", failures)
+        self.assertIn("no_tools_control_zero_retries", failures)
 
     def test_plain_answer_with_model_telemetry_requires_multiple_deltas(self) -> None:
         class SingleDeltaClient(FakeConversationClient):
@@ -2440,7 +1872,6 @@ with database.get_cursor() as cursor:
                     events=events,
                     done=result.done,
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                 )
 
@@ -2474,7 +1905,6 @@ with database.get_cursor() as cursor:
                     ],
                     done=result.done,
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                 )
 
@@ -2519,7 +1949,6 @@ with database.get_cursor() as cursor:
                     events=result.events,
                     done={**result.done, "session_id": observed_session_id},
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                     error=result.error,
                 )
@@ -2548,7 +1977,6 @@ with database.get_cursor() as cursor:
                     events=result.events,
                     done=result.done,
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                 )
 
@@ -2575,7 +2003,6 @@ with database.get_cursor() as cursor:
                     events=result.events,
                     done=result.done,
                     trace=result.trace,
-                    admin_change_set=result.admin_change_set,
                     timings=result.timings,
                 )
 

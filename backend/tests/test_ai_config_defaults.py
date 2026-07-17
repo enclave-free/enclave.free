@@ -49,16 +49,36 @@ class AIConfigDefaultsTest(unittest.TestCase):
         self.assertIn("Admin Conversations", system_value)
         self.assertIn("first-party context", system_value)
         self.assertIn("reasonable defaults", system_value)
-        self.assertIn("Change Confirmation", system_value)
-        self.assertTrue(any("group related" in rule for rule in rules_value))
-        self.assertTrue(any("propose_config_change_set" in rule for rule in rules_value))
-        self.assertTrue(any("PUT /admin/deployment/config/{key}" in rule for rule in rules_value))
-        self.assertTrue(any("PUT /admin/ai-config/prompt_rules" in rule for rule in rules_value))
-        self.assertTrue(any("PUT /admin/ai-config/prompt_forbidden" in rule for rule in rules_value))
-        self.assertTrue(any("POST/PUT/DELETE /admin/user-fields" in rule for rule in rules_value))
-        self.assertTrue(any("/ingest/admin/documents/..." in rule for rule in rules_value))
+        self.assertIn("direct Admin Config Tools", system_value)
+        self.assertTrue(any("ask once for conversational confirmation" in rule for rule in rules_value))
+        self.assertTrue(any("use all needed direct Admin Config Tools" in rule for rule in rules_value))
+        self.assertTrue(any("scope materially changes" in rule for rule in rules_value))
+        self.assertTrue(any("correcting Tool arguments" in rule for rule in rules_value))
+        self.assertFalse(any("propose_config_change_set" in rule for rule in rules_value))
+        self.assertFalse(any("Apply to confirm" in rule for rule in rules_value))
         self.assertTrue(any("do not surface them merely because a topic matches" in rule for rule in rules_value))
         self.assertFalse(any(rule == "ONE action per response when providing step-by-step guidance" for rule in rules_value))
+
+    def test_seed_migrates_only_known_legacy_admin_config_prompt_defaults(self) -> None:
+        custom_rule = "Always preserve this operator-authored rule."
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "UPDATE ai_config SET value = ? WHERE key = 'prompt_rules'",
+                (json.dumps([custom_rule, *self.database.OBSOLETE_DEFAULT_PROMPT_RULES]),),
+            )
+            cursor.execute(
+                "UPDATE ai_config SET value = ? WHERE key = 'prompt_system'",
+                (self.database.OBSOLETE_DEFAULT_PROMPT_SYSTEMS[0],),
+            )
+
+        self.database._seed_default_ai_config()
+
+        rules = json.loads(self.database.get_ai_config("prompt_rules")["value"])
+        system = self.database.get_ai_config("prompt_system")["value"]
+        self.assertEqual(rules[0], custom_rule)
+        self.assertTrue(all(rule in rules for rule in self.database.DEFAULT_PROMPT_RULES))
+        self.assertFalse(any(rule in rules for rule in self.database.OBSOLETE_DEFAULT_PROMPT_RULES))
+        self.assertEqual(system, self.database.DEFAULT_PROMPT_SYSTEM)
 
 
 if __name__ == "__main__":

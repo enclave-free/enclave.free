@@ -14,7 +14,7 @@ export type AdminSessionValidationState =
 
 /**
  * Fired when the curated resource directory (or its help-type vocabulary) is
- * mutated — e.g. when the admin applies a change set from the assistant panel.
+ * mutated by an Admin action.
  * Open admin views (the Resource Directory table) listen for this to refresh
  * without a manual reload.
  */

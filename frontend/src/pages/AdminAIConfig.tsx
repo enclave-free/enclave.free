@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,6 +24,7 @@ import {
 import { OnboardingCard } from '../components/onboarding/OnboardingCard';
 import { Callout, CodeBlockSurface } from '../components/ui';
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi';
+import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import { useAIConfig, useDocumentDefaults } from '../hooks/useAdminConfig';
 import type {
   AIConfigItem,
@@ -86,24 +87,27 @@ export function AdminAIConfig() {
   );
   const [userTypesLoading, setUserTypesLoading] = useState(true);
 
-  // Fetch user types on mount
-  useEffect(() => {
-    const fetchUserTypes = async () => {
-      try {
-        setUserTypesLoading(true);
-        const response = await adminFetch('/admin/user-types');
-        if (response.ok) {
-          const data = await response.json();
-          setUserTypes(data.types || []);
-        }
-      } catch {
-        // Silently fail - user types are optional
-      } finally {
-        setUserTypesLoading(false);
+  const fetchUserTypes = useCallback(async () => {
+    try {
+      setUserTypesLoading(true);
+      const response = await adminFetch('/admin/user-types');
+      if (response.ok) {
+        const data = await response.json();
+        setUserTypes(data.types || []);
       }
-    };
-    fetchUserTypes();
+    } catch {
+      // Silently fail - user types are optional
+    } finally {
+      setUserTypesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchUserTypes();
+    return subscribeAdminConfigChanges(['user_types'], () => {
+      void fetchUserTypes();
+    });
+  }, [fetchUserTypes]);
 
   // Hooks for config data - pass selectedUserTypeId
   const {

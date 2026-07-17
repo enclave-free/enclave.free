@@ -1,5 +1,7 @@
 # Use assistant-ui for the Conversation UI Surface
 
+Status: Still authoritative for the shared assistant-ui Conversation Surface. Its Admin Config Change Confirmation cards are superseded and removed by [ADR-0028](0028-sage-owns-direct-admin-config-writes.md).
+
 The Enclave Free Prototype will use assistant-ui as the shared Conversation UI Surface for Admin Conversations and User Conversations, starting with a thin adapter around Sage-owned Conversation Streaming Transport. The first slice should replace the custom message thread and prompt input, render Sage-emitted Conversation Activity Steps as a progressive turn timeline before the final answer is complete, and preserve Enclave-specific controls such as Tool Set selection, Knowledge Search document constraints, reachout, export, final Conversation Trace rendering, and Admin Change Confirmation. ADR-0024 updates the trace posture: the live activity experience should render reasoning and tool-call details transparently as assistant-ui-style message parts while Sage still protects the minimal credential and authority-bearing blocklist. This favors a configurable open-source chat UI layer without moving Agent Runtime ownership, streaming semantics, Tool behavior, memory, or inference boundaries out of Sage.
 
 ## Refined Product Direction

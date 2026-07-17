@@ -392,16 +392,16 @@ _Avoid_: debug mode, logging level, actor-specific trace policy
 A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
 _Avoid_: endpoint, fuzzy context category, hidden prompt blob
 
-**Typed Proposal Tool**:
-A model-callable **Admin Config Tool Set** contract whose arguments describe admin write intent in product terms and whose deterministic implementation returns an **Executable Change Set**. It keeps canonical **Enclave Control Plane** request construction out of model-authored free-form JSON.
-_Avoid_: raw change-set JSON tool, request JSON proposal, hidden serializer prompt
+**Admin Config Write Tool**:
+A model-callable **Admin Config Tool Set** contract that lets **Sage** directly apply a supported configuration change using product-level arguments. It is agent-owned write authority, not a proposal or pending UI artifact.
+_Avoid_: proposal tool, raw change-set JSON tool, Apply-card action
 
 **Tool Set**:
 A visible **Conversation UI Surface** control that enables a related set of **Tools** for the submitted turn.
 _Avoid_: route mode, hidden classifier, prompt context toggle
 
 **Model-Driven Tool Loop**:
-The Sage-owned loop where the model sees enabled **Tool** contracts, chooses calls, receives **Tool** results, and continues until it can answer or produce an **Executable Change Set**.
+The Sage-owned loop where the model sees enabled **Tool** contracts, chooses calls, receives **Tool** results, and continues until it can answer or complete the authorized work.
 _Avoid_: preselected context pipeline, provider-native function-calling dependency
 
 **Ordinary Product Flow**:
@@ -409,20 +409,12 @@ A non-agent UI or API path where a **User** or **Admin** performs an action dire
 _Avoid_: tool, conversation action
 
 **Change Confirmation**:
-The explicit **Admin** approval required before state-changing actions proposed during an **Admin Conversation** are applied. Executable approval is represented by **Conversation UI State** for a valid pending change set, not by free-form conversational acknowledgement alone.
-_Avoid_: review-only workflow, chat-only confirmation
+An explicit structured approval artifact used when a state-changing **Admin Conversation** action is outside Sage's direct **Admin Config Tool Set** authority. It is not required for supported Admin Config writes.
+_Avoid_: conversational confirmation, Apply card for Admin Config
 
-**Superseded Change Confirmation**:
-A prior pending **Change Confirmation** that is no longer actionable because a later assistant turn produced a newer **Executable Change Set**.
-_Avoid_: duplicate pending approval, stale apply button
-
-**Executable Change Set**:
-A structured state-change proposal from **Sage** that the **Conversation UI Surface** can validate, preview, and place into **Change Confirmation**. Prose-only recommendations are not executable change sets.
-_Avoid_: prose proposal, suggested edits, assistant recommendation
-
-**Change Set Recovery Turn**:
-An **Admin Conversation** turn where the **Admin** indicates they want to apply prior guidance but no valid pending **Executable Change Set** exists. The turn should continue to **Sage** so Sage can produce an **Executable Change Set** or ask a focused follow-up.
-_Avoid_: no pending changes error, frontend apply failure
+**Conversational Confirmation**:
+The natural-language confirmation **Sage** asks an **Admin** for before using an **Admin Config Write Tool**. It is trusted model behavior guided by a basic system prompt, not a runtime gate, confirmation token, or pending UI state.
+_Avoid_: Change Confirmation, Apply card, confirmation contract
 
 **User Conversation**:
 A **Conversation** between a **User** and **Sage** for assistance inside an **Instance**.
@@ -441,7 +433,7 @@ An admin-only **Admin Conversation** surface for configuration questions and con
 _Avoid_: support widget, floating chat bubble
 
 **Admin Config Tool Set**:
-The admin-only **Tool Set** that exposes configuration read **Tools** and configuration proposal **Tools** to **Sage** during an **Admin Conversation**.
+The admin-only **Tool Set** that exposes configuration read **Tools** and direct **Admin Config Write Tools** to **Sage** during an **Admin Conversation**.
 _Avoid_: scoped config context, config dump, manual context switch
 
 ## Relationships
@@ -769,7 +761,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - During streaming turns, the **Conversation UI Surface** should render meaningful **Conversation Activity Steps** in order before the final assistant response is complete
 - **Conversation Activity Steps** should remain scannable after completion rather than being packed only into a dense trace blob
 - During streaming turns, **Conversation Activity Steps** must be emitted by **Sage**, and the prototype should bias toward showing enough activity to make the agent loop inspectable
-- **Activity** may explain that **Sage** prepared an **Executable Change Set**, but **Change Confirmation** should remain a separate approval artifact because it authorizes state-changing action
+- **Activity** may explain that **Sage** called an **Admin Config Write Tool** and report its actual result; **Change Confirmation** remains separate for actions outside direct Admin Config authority
 - During streaming turns, the chat UI should create the assistant turn when the backend announces the stable assistant message identifier, append answer deltas to that turn, attach live trace status and **Trace Deltas** to that turn, and attach the final **Conversation Trace** when it arrives
 - Streaming live status and Activity should use the same transparent trace posture for **Admin Conversations** and **User Conversations**
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
@@ -777,7 +769,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
 - **Conversation Streaming Transport** should support the same **Model-Driven Tool Loop** as non-streaming **Conversations** rather than preserving separate assistant-style and retrieval-first tool paths
 - **Conversation Streaming Transport** should remain tool-aware so configuration, database, web, and knowledge-assisted **Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
-- **Sage** should expose enabled **Tool** contracts to the model, execute model-chosen calls, inject **Tool** results, and continue until the model can answer or produce an **Executable Change Set**
+- **Sage** should expose enabled **Tool** contracts to the model, execute model-chosen calls, inject **Tool** results, and continue until the model can answer or complete the authorized work
 - **Sage** should not pre-classify a user turn into a scoped prompt context before the model sees available **Tools**
 - The **Model-Driven Tool Loop** should stay provider-portable and should not depend on provider-native function-calling support
 - Individual **Tools** and retrieval steps should emit trace material for their own work, and **Sage** should compose that material into the final **Conversation Trace** while protecting the minimal blocklist
@@ -796,15 +788,43 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
 - An **Admin Conversation** may have a **Subject User**
-- An **Admin Conversation** may directly perform **Enclave Control Plane** actions after **Change Confirmation**
-- Every admin-conversation write that changes **Instance** or **Agent Runtime** state requires **Change Confirmation**
-- **Sage** must express state-changing admin proposals as an **Executable Change Set** before the **Conversation UI Surface** can place them into **Change Confirmation**
-- The **Conversation UI Surface** should treat admin apply language without a valid pending **Executable Change Set** as a **Change Set Recovery Turn**, not as a failed local apply attempt
-- **Change Confirmation** should render inline with the assistant turn that produced the related **Executable Change Set**, so the explanation, **Activity**, and approval artifact remain together
-- Pending **Change Confirmation** should not block ordinary follow-up turns in the **Admin Conversation**
-- The **Conversation UI Surface** should allow only one actionable pending **Change Confirmation** at a time; a later pending **Executable Change Set** should make the earlier card a **Superseded Change Confirmation**
-- **Change Confirmation** is the only approval artifact defined for **Conversations** in the current prototype and is scoped to **Admin Conversations**
-- The **Admin Configuration Assistant** uses the **Admin Config Tool Set** so the model can call explicit configuration read **Tools** while preserving **Change Confirmation** for writes
+- An **Admin Conversation** may directly perform supported Admin Config writes through **Admin Config Write Tools**
+- **Sage** should ask for **Conversational Confirmation** before calling an **Admin Config Write Tool**
+- For one coherent Admin Config task, **Sage** should briefly summarize the intended changes, ask once for **Conversational Confirmation**, then use all needed write **Tools** without reconfirming each call
+- If the intended Admin Config scope changes materially after confirmation, **Sage** should ask for fresh **Conversational Confirmation**; deciding whether a change is material remains trusted model judgment
+- **Sage** may correct and retry rejected Tool arguments without reconfirming when the intended Admin Config change is unchanged
+- **Conversational Confirmation** for Admin Config is prompt-guided model behavior; the runtime should not require a proposal, Apply card, confirmation token, intent classifier, or forced Tool call
+- The Admin Config direct-write transition is a hard cut: proposal Tools, executable change-set payloads, Apply cards, pending or superseded proposal state, proposal prose parsing, and client-side apply-language interception should be removed without compatibility fallback
+- The **Admin** and **Sage** are trusted to conduct Admin Config confirmation naturally inside the **Conversation**
+- **Admin Config Write Tools** still enforce Admin authentication, supported operations, argument validation, secret handling, and **Audit Log** requirements at their authority boundary
+- **Admin Config Write Tools** return authoritative results, and **Sage** should report those results naturally rather than using a hardcoded success sentence or response-rewriting layer
+- A successful **Admin Config Write Tool** should return normalized saved values, validation status, restart-required status when relevant, and enough authoritative detail for **Sage** to answer without another read call
+- After a successful direct Admin Config write, both Admin **Conversation UI Surfaces** should refetch the affected configuration area from the **Enclave Control Plane** so visible settings stay current; the client should not perform or repeat the write
+- Each **Admin Config Write Tool** call should validate all requested changes and apply them atomically; an invalid change makes that Tool call apply nothing
+- Separate **Admin Config Write Tool** calls are not one cross-Tool transaction; earlier successful calls remain applied if a later call fails, and **Sage** should report the partial result honestly
+- **Audit Log** entries for direct Admin Config writes should identify the **Admin** as the authority and Sage/**Admin Conversation** as the action source
+- **Audit Log** should store action source explicitly so direct Sage writes are distinguishable from **Ordinary Product Flow** writes and historical entries of unknown source are not falsely relabeled
+- Sage-originated direct Admin Config **Audit Log** entries should include the originating **Conversation** identifier without copying **Conversation Content** into the log
+- Direct Admin Config **Audit Log** entries should record changed configuration names and outcomes without storing secret values
+- **Admin Config Write Tools** should be a small set grouped by product configuration area, not one raw request-JSON Tool or one Tool per individual setting
+- Each product-level **Admin Config Write Tool** should map to its own private **Enclave Control Plane** endpoint with a purpose-built argument contract; there should be no generic path-and-JSON write dispatcher
+- Guided first-time setup should use one high-level direct `configure_instance` **Admin Config Write Tool** for the confirmed setup, while smaller product-area Tools handle later edits
+- The direct Admin Config Tool surface consists of `configure_instance`, `update_instance_settings`, `update_deployment_settings`, `update_agent_settings`, `manage_user_types`, `manage_onboarding_questions`, `update_document_access`, and the explicit Admin-only `read_deployment_secret`
+- Direct Admin Config Tools are always available in the **Admin Configuration Assistant** and are available in a general **Admin Conversation** only when its Config **Tool Set** is enabled
+- Apply-like conversational language should travel to **Sage** as an ordinary Admin message rather than being intercepted by the **Conversation UI Surface**
+- An **Admin Config Write Tool** may write a secret **Deployment Setting** that the **Admin** explicitly supplies
+- An Admin-only Admin Config read **Tool** may retrieve a stored secret when the **Admin** explicitly asks to see it
+- **Sage** may repeat a secret value in its answer only when the **Admin** explicitly asks to see it; secret values should not be echoed automatically after a write
+- An explicitly requested secret in a Sage answer is normal **Conversation Content** and may remain in **Session Memory** and conversation exports
+- **Activity**, **Conversation Trace**, and **Audit Log** details should avoid duplicating secret values unnecessarily
+- Admin Config Tool **Activity** should briefly show the Tool name, outcome, and changed configuration names while omitting secret values
+- Direct Admin Config write authority covers **Instance Settings**, **Agent Settings**, **Deployment Settings**, **User Types**, **Onboarding Questions**, and **Document Access** defaults
+- Direct Admin Config write authority includes creating, updating, and deleting configuration definitions such as **User Types** and **Onboarding Questions** after **Conversational Confirmation**
+- Direct Admin Config write authority does not include destructive User or Document operations
+- Direct Admin Config write authority does not include Curated Resource Directory entries or help-type management; those remain managed content rather than Admin Config
+- An **Admin Config Write Tool** may save a restart-required **Deployment Setting**, but it should report the required restart rather than restarting a service
+- **Change Confirmation** may still protect state-changing **Admin Conversation** actions outside the direct Admin Config authority boundary
+- The **Admin Configuration Assistant** uses the **Admin Config Tool Set** so the model can naturally choose configuration read and write **Tools**
 - A **User Conversation** must not perform admin-only **Enclave Control Plane** actions
 - **User Conversations** are read/assistive in the current prototype and do not have general write-capable tool authority
 - **Ordinary Product Flows** may still let **Users** or **Admins** change data directly through the product outside a **Conversation**
@@ -980,19 +1000,19 @@ _Avoid_: scoped config context, config dump, manual context switch
 > **Domain expert:** "No. A **Tool** is any action or information source **Sage** can invoke during a **Conversation**. Its authority depends on the conversation type."
 
 > **Dev:** "Can Sage apply admin configuration changes itself?"
-> **Domain expert:** "Yes, and that is often ideal for admins, but Sage must ask for **Change Confirmation** before applying configuration or control-plane changes."
+> **Domain expert:** "Yes. Sage should ask for **Conversational Confirmation**, then call its **Admin Config Write Tool** and report the actual result."
 
 > **Dev:** "Which admin tool actions need confirmation?"
-> **Domain expert:** "Every write that changes **Instance** or **Agent Runtime** state needs **Change Confirmation**. Reads can happen within the authority of the **Admin Conversation**."
+> **Domain expert:** "Sage should naturally ask before direct Admin Config writes. That behavior belongs in its basic system prompt, not a runtime confirmation gate. Destructive User and Document operations are outside this direct-write boundary."
 
 > **Dev:** "Can Sage read uploaded Documents during an Admin Conversation when the Admin asks it to configure the Instance from those materials?"
-> **Domain expert:** "Yes. Uploaded **Documents** are first-party **Instance** context. Sage may read **Document Library** and **Retrieval** context in an **Admin Conversation** to make better configuration decisions, while writes still require **Change Confirmation**."
+> **Domain expert:** "Yes. Uploaded **Documents** are first-party **Instance** context. Sage may read **Document Library** and **Retrieval** context, ask for **Conversational Confirmation**, and directly apply supported Admin Config writes. Destructive Document operations remain outside that authority."
 >
 > **Dev:** "Should the Admin have to manually enable config context before asking Sage to configure the Instance?"
-> **Domain expert:** "No. In admin configuration contexts, the **Admin Config Tool Set** should be enabled by default. The model should call explicit configuration read **Tools** when useful, while any resulting writes still require **Change Confirmation**."
+> **Domain expert:** "No. In admin configuration contexts, the **Admin Config Tool Set** should be enabled by default, and the model should naturally choose its read and write **Tools**."
 >
 > **Dev:** "Should Sage ask the Admin to specify every missing preference before configuring the Instance?"
-> **Domain expert:** "No. When the Admin delegates a configuration task, Sage should inspect available first-party context, choose reasonable defaults for unspecified details, state important assumptions briefly, and present any writes for **Change Confirmation**."
+> **Domain expert:** "No. Sage should inspect available first-party context, choose reasonable defaults, state important assumptions briefly, ask for **Conversational Confirmation**, and then apply the supported configuration itself."
 >
 > **Dev:** "Should this stronger action bias apply to normal User Conversations too?"
 > **Domain expert:** "No. The stronger action bias is for **Admin Conversations** because the Admin has operator authority. **User Conversations** should remain helpful and direct, but they should not inherit admin-style configuration or write-preparation behavior."
@@ -1001,13 +1021,13 @@ _Avoid_: scoped config context, config dump, manual context switch
 > **Domain expert:** "No. When an Admin configuration request refers to uploaded materials, instance theming, copy, or content, Sage should automatically use relevant **Retrieval** over the **Document Library** before choosing defaults or preparing changes."
 >
 > **Dev:** "Should Sage prepare one broad Change Confirmation for a coherent admin configuration task, or split every setting into separate confirmations?"
-> **Domain expert:** "Use one reviewable **Change Confirmation** for a coherent delegated task. For example, an instance theming request may include name, tagline, colors, typography, icons, chat bubble style, and copy defaults in one changeset."
+> **Domain expert:** "Ask once about a coherent delegated task, then use the needed **Admin Config Write Tools**. For example, an instance theming task may include name, tagline, colors, typography, icons, chat bubble style, and copy defaults."
 >
 > **Dev:** "Should the one-action guidance prevent Sage from configuring several related settings at once?"
-> **Domain expert:** "No. For ordinary step-by-step guidance, Sage should keep actions focused. For delegated **Admin Conversation** configuration tasks, Sage should group related settings into one reviewable **Change Confirmation**."
+> **Domain expert:** "No. For a coherent delegated Admin Config task, Sage may confirm and apply several related settings together."
 >
 > **Dev:** "Should Sage receive secret Deployment Setting values by default in Admin Conversations?"
-> **Domain expert:** "No. Admin configuration **Tools** may return non-secret values and secret status metadata by default, but secret values require explicit Admin sharing and should remain redacted in chat."
+> **Domain expert:** "No. Admin Config **Tools** should return non-secret values and secret status metadata by default. When the **Admin** explicitly asks for a stored secret, an Admin-only Tool may retrieve it and Sage may show it as **Conversation Content**."
 
 > **Dev:** "Can users ask Sage to change things for them?"
 > **Domain expert:** "Not as a general tool authority model in the current prototype. **User Conversations** are read/assistive, except for user-owned actions handled by ordinary product flows."
@@ -1079,18 +1099,17 @@ _Avoid_: scoped config context, config dump, manual context switch
 - "delete query session" is too narrow; resolved: use **Session Memory Deletion** for removing Sage-owned memory associated with a **Conversation**.
 - "query session" is implementation/API language; resolved: use **Conversation** for the product/domain concept.
 - "user message" is too narrow for privacy discussions; resolved: use **Conversation Content** for the full inference payload sent to a **Model Provider**.
-- "proposal-only admin assistant" is too weak; resolved: Sage may directly apply configuration or control-plane changes during an **Admin Conversation** after **Change Confirmation**.
-- "admin document access" can be mistaken for a write authority escalation; resolved: Sage may autonomously read uploaded **Documents** as first-party **Instance** context in an **Admin Conversation**, but changing **Instance Settings**, **Agent Settings**, **Deployment Settings**, or document governance still requires **Change Confirmation**.
+- "proposal-only admin assistant" is too weak; resolved: Sage owns direct **Admin Config Write Tools** and may apply supported configuration after prompt-guided **Conversational Confirmation**.
+- "admin document access" can be mistaken for destructive write authority; resolved: Sage may read uploaded **Documents** and directly update supported **Document Access** defaults, while destructive Document operations remain outside the Admin Config direct-write boundary.
 - "config tool access" should not require the Admin to pre-debug the right context switch in admin configuration flows; resolved: the **Admin Config Tool Set** is enabled by default in admin configuration **Conversations**, and the model chooses explicit read **Tools**.
-- "ask before choosing" is too timid for delegated admin configuration; resolved: Sage should choose reasonable defaults from first-party context and present writes for **Change Confirmation** rather than making the Admin supply every preference.
+- "ask before choosing" is too timid for delegated admin configuration; resolved: Sage should choose reasonable defaults from first-party context, ask for **Conversational Confirmation**, and use its direct write **Tools** rather than making the Admin supply every preference.
 - "sovereign Sage" can overreach if applied globally; resolved: stronger action bias is scoped to **Admin Conversations**, not normal **User Conversations**.
 - "uploaded document available" is too passive for admin configuration; resolved: when an **Admin Conversation** refers to uploaded materials, theming, copy, or content, Sage should proactively call the Knowledge **Tool Set** when it is enabled and relevant.
-- "one action per response" should not force fragmented admin setup; resolved: a coherent delegated admin configuration task can be presented as one reviewable **Change Confirmation** containing multiple related writes.
-- "ONE action per response" is too broad when applied to delegated admin setup; resolved: ordinary guidance should stay focused, while related admin configuration writes can be grouped into one **Change Confirmation**.
-- "prose Change Confirmation" is not executable; resolved: Sage may explain proposed changes in prose, but only an **Executable Change Set** can enter **Change Confirmation**.
-- "no pending changes" is a poor recovery for apply language after prose-only guidance; resolved: treat it as a **Change Set Recovery Turn** so Sage can generate the missing **Executable Change Set**.
+- "one action per response" should not force fragmented admin setup; resolved: Sage may confirm and directly apply a coherent group of related Admin Config writes.
+- "confirmation" is overloaded; resolved: supported Admin Config writes use prompt-guided **Conversational Confirmation**, while **Change Confirmation** is reserved for structured approval outside Sage's direct Admin Config authority.
+- "no pending changes" belongs to the retired Admin Config proposal flow; resolved: there is no pending Apply state for direct Admin Config writes, and the obsolete proposal path should not remain as compatibility behavior.
 - "compaction" is not inherently a failure; resolved: ordinary **Session Memory Compaction** should be quiet continuity machinery, while **Reduced Conversation Context** is the user-visible degradation.
-- "config access" should not imply secret exposure; resolved: Admin Config **Tools** may expose non-secret configuration and secret status metadata by default, while secret values require explicit Admin sharing and stay redacted in chat.
+- "config access" should not imply automatic secret exposure; resolved: Admin Config **Tools** expose non-secret values and secret status metadata by default, while stored secret values may be retrieved and shown only on an explicit **Admin** request.
 - User-agent write authority is not defined yet; resolved for now: **User Conversations** are read/assistive and should not receive general write-capable tools.
 - **Ordinary Product Flow** exists to distinguish direct product actions from Sage tool authority inside a **Conversation**.
 - Future control model may introduce delegated or multiple administrators; unresolved until that design is discussed.

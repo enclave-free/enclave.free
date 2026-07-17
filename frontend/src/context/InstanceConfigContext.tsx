@@ -41,6 +41,7 @@ import {
 } from '../types/instance';
 import { API_BASE } from '../types/onboarding';
 import { hasChosenLanguage } from '../utils/languages';
+import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 
 interface InstanceConfigContextValue {
   config: InstanceConfig;
@@ -353,7 +354,10 @@ export function InstanceConfigProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    fetchSettings();
+    void fetchSettings();
+    return subscribeAdminConfigChanges(['instance_settings'], () => {
+      void fetchSettings();
+    });
   }, []);
 
   const setConfig = (newConfig: InstanceConfig) => {

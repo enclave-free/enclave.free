@@ -17,10 +17,11 @@ from typing import Any, Optional, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 import database
 import ingest_db
+from models import FieldDefinitionCreate, FieldDefinitionUpdate, InstanceSettings
 from query import _build_context, _build_search_query, _process_search_results
 from sql_safety import validate_sql_allowed_tables
 from store import embed_texts, COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT
@@ -187,8 +188,106 @@ class InternalAdminConfigToolRequest(BaseModel):
     actor: InternalActorContext
 
 
+class InternalUpdateInstanceSettingsRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    settings: InstanceSettings
+
+
+class InternalConfigureUserType(BaseModel):
+    reference: str = Field(min_length=1, max_length=80, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    name: str = Field(min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+    icon: str | None = Field(default=None, max_length=80)
+    display_order: int = 0
+
+
+class InternalConfigureOnboardingQuestion(BaseModel):
+    field_name: str = Field(min_length=1, max_length=120)
+    field_type: str = Field(min_length=1, max_length=40)
+    required: bool = False
+    display_order: int = 0
+    user_type_reference: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[a-z0-9][a-z0-9_-]*$",
+    )
+    placeholder: str | None = Field(default=None, max_length=240)
+    options: list[str] | None = Field(default=None, max_length=100)
+    encryption_enabled: bool = True
+    include_in_chat: bool = False
+
+
+class InternalConfigureInstanceRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    settings: InstanceSettings
+    user_types: list[InternalConfigureUserType] = Field(default_factory=list, max_length=5)
+    onboarding_questions: list[InternalConfigureOnboardingQuestion] = Field(
+        default_factory=list,
+        max_length=10,
+    )
+    behavior_rules: list[str] = Field(default_factory=list, max_length=8)
+    forbidden_topics: list[str] = Field(default_factory=list, max_length=8)
+
+
+class InternalUpdateDeploymentSettingsRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    settings: dict[str, str] = Field(min_length=1)
+
+
+class InternalReadDeploymentSecretRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    key: str = Field(min_length=1, max_length=255)
+
+
+class InternalUpdateAgentSettingsRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    user_type_id: int | None = None
+    updates: dict[str, str] = Field(default_factory=dict)
+    revert_keys: list[str] = Field(default_factory=list)
+
+
+class InternalManageUserTypesRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    operation: Literal["create", "update", "delete"]
+    user_type_id: int | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+    icon: str | None = Field(default=None, max_length=80)
+    display_order: int | None = None
+
+
+class InternalManageOnboardingQuestionsRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    operation: Literal["create", "update", "delete"]
+    question_id: int | None = None
+    field_name: str | None = Field(default=None, min_length=1, max_length=120)
+    field_type: str | None = Field(default=None, min_length=1, max_length=40)
+    required: bool | None = None
+    display_order: int | None = None
+    user_type_id: int | None = None
+    placeholder: str | None = Field(default=None, max_length=240)
+    options: list[str] | None = Field(default=None, max_length=100)
+    encryption_enabled: bool | None = None
+    include_in_chat: bool | None = None
+
+
+class InternalDocumentAccessUpdate(BaseModel):
+    job_id: str = Field(min_length=1, max_length=255)
+    is_available: bool | None = None
+    is_default_active: bool | None = None
+    display_order: int | None = None
+
+
+class InternalUpdateDocumentAccessRequest(InternalAdminConfigToolRequest):
+    conversation_id: str = Field(min_length=1, max_length=255)
+    user_type_id: int | None = None
+    updates: list[InternalDocumentAccessUpdate] = Field(default_factory=list)
+    revert_job_ids: list[str] = Field(default_factory=list)
+
+
 class InternalAdminConfigSecretPolicy(BaseModel):
-    mode: Literal["masked"] = "masked"
+    mode: Literal["masked", "explicit_secret"] = "masked"
 
 
 class InternalAdminConfigToolResponse(BaseModel):
@@ -984,6 +1083,158 @@ async def admin_config_instance_settings(
 
 
 @router.post(
+    "/admin-config/update-instance-settings",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_update_instance_settings(
+    payload: InternalUpdateInstanceSettingsRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+
+    settings = payload.settings.model_dump(exclude_unset=True)
+    if not settings:
+        raise HTTPException(status_code=422, detail="At least one Instance Setting is required")
+
+    result = database.update_settings_with_audit(
+        settings,
+        changed_by=payload.actor.pubkey or str(payload.actor.id),
+        action_source="sage_conversation",
+        conversation_id=conversation_id,
+    )
+    return InternalAdminConfigToolResponse(
+        tool="update_instance_settings",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "saved_values": result["saved_values"],
+            "changed_names": result["changed_names"],
+            "affected_areas": ["instance_settings"],
+        },
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/configure-instance",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_configure_instance(
+    payload: InternalConfigureInstanceRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+
+    required_settings = {
+        "instance_name",
+        "assistant_name",
+        "header_tagline",
+        "description",
+        "primary_color",
+        "default_theme",
+        "default_language",
+        "auto_approve_users",
+    }
+    missing_settings = sorted(required_settings - payload.settings.model_fields_set)
+    if missing_settings:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Guided setup requires Instance Settings: {', '.join(missing_settings)}",
+        )
+    settings = payload.settings.model_dump(exclude_unset=True)
+    for key in ("instance_name", "assistant_name", "header_tagline", "description"):
+        value = settings.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise HTTPException(status_code=422, detail=f"{key} must not be blank")
+        settings[key] = value.strip()
+    primary_color = str(settings.get("primary_color") or "").strip()
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", primary_color):
+        raise HTTPException(status_code=422, detail="primary_color must be a #RRGGBB hex color")
+    settings["primary_color"] = primary_color
+
+    user_types = [item.model_dump() for item in payload.user_types]
+    references = [item["reference"] for item in user_types]
+    if len(references) != len(set(references)):
+        raise HTTPException(status_code=422, detail="User Type references must be unique")
+    names = [str(item["name"]).strip() for item in user_types]
+    if len({name.casefold() for name in names}) != len(names):
+        raise HTTPException(status_code=422, detail="User Type names must be unique")
+    for item, name in zip(user_types, names):
+        item["name"] = name
+
+    questions: list[dict[str, object]] = []
+    known_references = set(references)
+    for item in payload.onboarding_questions:
+        raw = item.model_dump()
+        reference = raw.pop("user_type_reference")
+        if reference is not None and reference not in known_references:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unknown User Type reference: {reference}",
+            )
+        try:
+            validated = FieldDefinitionCreate(**raw).model_dump()
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if validated["encryption_enabled"] and validated["include_in_chat"]:
+            raise HTTPException(
+                status_code=422,
+                detail="Encrypted Onboarding Questions cannot be included in chat context",
+            )
+        validated["user_type_reference"] = reference
+        questions.append(validated)
+
+    def _normalize_rules(values: list[str], label: str) -> list[str]:
+        normalized = [str(value).strip() for value in values]
+        if any(not value for value in normalized):
+            raise HTTPException(status_code=422, detail=f"{label} cannot contain blank values")
+        return normalized
+
+    behavior_rules = _normalize_rules(payload.behavior_rules, "behavior_rules")
+    forbidden_topics = _normalize_rules(payload.forbidden_topics, "forbidden_topics")
+
+    try:
+        result = database.configure_instance_with_audit(
+            settings=settings,
+            user_types=user_types,
+            onboarding_questions=questions,
+            behavior_rules=behavior_rules,
+            forbidden_topics=forbidden_topics,
+            changed_by=payload.actor.pubkey or str(payload.actor.id),
+            action_source="sage_conversation",
+            conversation_id=conversation_id,
+        )
+    except sqlite3.IntegrityError as exc:
+        detail = "Guided setup contains a duplicate User Type or Onboarding Question"
+        raise HTTPException(status_code=422, detail=detail) from exc
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return InternalAdminConfigToolResponse(
+        tool="configure_instance",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "saved_setup": result["saved_setup"],
+            "changed_names": result["changed_names"],
+            "affected_areas": [
+                "instance_settings",
+                "agent_settings",
+                "user_types",
+                "onboarding_questions",
+            ],
+        },
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
     "/admin-config/deployment-settings",
     response_model=InternalAdminConfigToolResponse,
     dependencies=[Depends(_require_internal_token)],
@@ -1001,6 +1252,91 @@ async def admin_config_deployment_settings(
 
 
 @router.post(
+    "/admin-config/update-deployment-settings",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_update_deployment_settings(
+    payload: InternalUpdateDeploymentSettingsRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+
+    from deployment_config import (
+        ENV_CONFIG_MAP,
+        validate_and_normalize_deployment_config_value,
+    )
+
+    validated: dict[str, dict[str, object]] = {}
+    for key, value in payload.settings.items():
+        try:
+            normalized = validate_and_normalize_deployment_config_value(key, value)
+        except HTTPException as exc:
+            raise HTTPException(status_code=422, detail=exc.detail) from exc
+        meta = ENV_CONFIG_MAP[key]
+        validated[key] = {
+            "value": normalized,
+            "is_secret": bool(meta.get("is_secret")),
+            "requires_restart": bool(meta.get("requires_restart")),
+            "category": str(meta.get("category") or "general"),
+            "description": str(meta.get("description") or ""),
+        }
+
+    result = database.update_deployment_configs_with_audit(
+        validated,
+        changed_by=payload.actor.pubkey or str(payload.actor.id),
+        action_source="sage_conversation",
+        conversation_id=conversation_id,
+    )
+    restart_required_keys = sorted(
+        key
+        for key in result["changed_names"]
+        if bool(validated[key].get("requires_restart"))
+    )
+    return InternalAdminConfigToolResponse(
+        tool="update_deployment_settings",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "saved_values": result["saved_values"],
+            "changed_names": result["changed_names"],
+            "affected_areas": ["deployment_settings"],
+            "restart_required": bool(restart_required_keys),
+            "restart_required_keys": restart_required_keys,
+        },
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/read-deployment-secret",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_read_deployment_secret(
+    payload: InternalReadDeploymentSecretRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    from deployment_config import ENV_CONFIG_MAP, FORBIDDEN_KEYS
+
+    key = payload.key.strip()
+    meta = ENV_CONFIG_MAP.get(key)
+    if key in FORBIDDEN_KEYS or not meta or not meta.get("is_secret"):
+        raise HTTPException(status_code=422, detail="Requested Deployment Setting is not a readable secret")
+    value = database.get_deployment_config_value(key)
+    if value is None:
+        raise HTTPException(status_code=404, detail="Deployment secret is not configured")
+    return InternalAdminConfigToolResponse(
+        tool="read_deployment_secret",
+        data={"key": key, "value": value},
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        secret_policy=InternalAdminConfigSecretPolicy(mode="explicit_secret"),
+    )
+
+
+@router.post(
     "/admin-config/agent-settings",
     response_model=InternalAdminConfigToolResponse,
     dependencies=[Depends(_require_internal_token)],
@@ -1013,6 +1349,78 @@ async def admin_config_agent_settings(
     return InternalAdminConfigToolResponse(
         tool="read_agent_settings",
         data=_agent_settings_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/update-agent-settings",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_update_agent_settings(
+    payload: InternalUpdateAgentSettingsRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+    if not payload.updates and not payload.revert_keys:
+        raise HTTPException(status_code=422, detail="At least one Agent Setting operation is required")
+    if payload.user_type_id is None and payload.revert_keys:
+        raise HTTPException(status_code=422, detail="Only User Type overrides can be reverted")
+    if set(payload.updates).intersection(payload.revert_keys):
+        raise HTTPException(status_code=422, detail="A setting cannot be updated and reverted together")
+    if payload.user_type_id is not None and not database.get_user_type(payload.user_type_id):
+        raise HTTPException(status_code=422, detail="User Type not found")
+
+    from ai_config import validate_ai_config_value
+
+    validated: dict[str, str] = {}
+    for key, value in payload.updates.items():
+        config = database.get_ai_config(key)
+        if not config:
+            raise HTTPException(status_code=422, detail=f"Unknown Agent Setting: {key}")
+        try:
+            validated[key] = validate_ai_config_value(
+                key,
+                value,
+                str(config["value_type"]),
+                f"direct Admin Config value for {key}",
+            )
+        except HTTPException as exc:
+            raise HTTPException(status_code=422, detail=exc.detail) from exc
+
+    for key in payload.revert_keys:
+        if not database.get_ai_config(key):
+            raise HTTPException(status_code=422, detail=f"Unknown Agent Setting: {key}")
+
+    result = database.update_agent_settings_with_audit(
+        validated,
+        revert_keys=payload.revert_keys,
+        user_type_id=payload.user_type_id,
+        changed_by=payload.actor.pubkey or str(payload.actor.id),
+        action_source="sage_conversation",
+        conversation_id=conversation_id,
+    )
+    rows = (
+        database.get_effective_ai_config(payload.user_type_id)
+        if payload.user_type_id is not None
+        else database.get_all_ai_config()
+    )
+    values = {str(row["key"]): str(row["value"]) for row in rows}
+    requested_keys = sorted(set(validated).union(payload.revert_keys))
+    return InternalAdminConfigToolResponse(
+        tool="update_agent_settings",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "saved_values": {key: values[key] for key in requested_keys},
+            "changed_names": result["changed_names"],
+            "reverted_keys": result["reverted_keys"],
+            "user_type_id": payload.user_type_id,
+            "affected_areas": ["agent_settings"],
+        },
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -1035,6 +1443,148 @@ async def admin_config_user_types(
 
 
 @router.post(
+    "/admin-config/manage-user-types",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_manage_user_types(
+    payload: InternalManageUserTypesRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+    if payload.operation == "create" and payload.name is None:
+        raise HTTPException(status_code=422, detail="name is required to create a User Type")
+    if payload.operation in {"update", "delete"} and payload.user_type_id is None:
+        raise HTTPException(status_code=422, detail="user_type_id is required")
+
+    excluded = {"actor", "conversation_id", "operation", "user_type_id"}
+    values = {
+        key: value
+        for key, value in payload.model_dump(exclude_unset=True).items()
+        if key not in excluded
+    }
+    try:
+        result = database.manage_user_type_with_audit(
+            payload.operation,
+            user_type_id=payload.user_type_id,
+            values=values,
+            changed_by=payload.actor.pubkey or str(payload.actor.id),
+            action_source="sage_conversation",
+            conversation_id=conversation_id,
+        )
+    except (sqlite3.IntegrityError, LookupError, ValueError) as exc:
+        detail = "User Type name already exists" if "UNIQUE constraint" in str(exc) else str(exc)
+        raise HTTPException(status_code=422, detail=detail) from exc
+
+    changed_names = sorted(values) if payload.operation != "delete" else ["deleted"]
+    return InternalAdminConfigToolResponse(
+        tool="manage_user_types",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "operation": payload.operation,
+            "user_type": result["user_type"],
+            "deleted_user_type_id": result["deleted_user_type_id"],
+            "changed_names": changed_names,
+            "affected_areas": ["user_types"],
+        },
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/manage-onboarding-questions",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_manage_onboarding_questions(
+    payload: InternalManageOnboardingQuestionsRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+    if payload.operation in {"update", "delete"} and payload.question_id is None:
+        raise HTTPException(status_code=422, detail="question_id is required")
+
+    excluded = {"actor", "conversation_id", "operation", "question_id"}
+    raw_values = {
+        key: value
+        for key, value in payload.model_dump(exclude_unset=True).items()
+        if key not in excluded
+    }
+    try:
+        if payload.operation == "create":
+            values = FieldDefinitionCreate(**raw_values).model_dump()
+            existing = None
+        elif payload.operation == "update":
+            if not raw_values:
+                raise ValueError("At least one Onboarding Question field is required")
+            values = FieldDefinitionUpdate(**raw_values).model_dump(exclude_unset=True)
+            existing = database.get_field_definition_by_id(payload.question_id or 0)
+            if not existing:
+                raise LookupError("Onboarding Question not found")
+        else:
+            values = {}
+            existing = database.get_field_definition_by_id(payload.question_id or 0)
+            if not existing:
+                raise LookupError("Onboarding Question not found")
+    except (ValidationError, ValueError, LookupError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    target_user_type = values.get(
+        "user_type_id",
+        existing.get("user_type_id") if existing else None,
+    )
+    if target_user_type is not None and not database.get_user_type(int(target_user_type)):
+        raise HTTPException(status_code=422, detail="User Type not found")
+
+    effective_encryption = values.get(
+        "encryption_enabled",
+        bool(existing.get("encryption_enabled")) if existing else True,
+    )
+    effective_include = values.get(
+        "include_in_chat",
+        bool(existing.get("include_in_chat")) if existing else False,
+    )
+    if effective_encryption and effective_include:
+        raise HTTPException(
+            status_code=422,
+            detail="Encrypted Onboarding Questions cannot be included in chat context",
+        )
+
+    try:
+        result = database.manage_onboarding_question_with_audit(
+            payload.operation,
+            question_id=payload.question_id,
+            values=values,
+            changed_by=payload.actor.pubkey or str(payload.actor.id),
+            action_source="sage_conversation",
+            conversation_id=conversation_id,
+        )
+    except (sqlite3.IntegrityError, LookupError, ValueError) as exc:
+        detail = "Question name already exists for this User Type" if "UNIQUE constraint" in str(exc) else str(exc)
+        raise HTTPException(status_code=422, detail=detail) from exc
+
+    changed_names = sorted(values) if payload.operation != "delete" else ["deleted"]
+    return InternalAdminConfigToolResponse(
+        tool="manage_onboarding_questions",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "operation": payload.operation,
+            "onboarding_question": result["onboarding_question"],
+            "deleted_question_id": result["deleted_question_id"],
+            "changed_names": changed_names,
+            "affected_areas": ["onboarding_questions"],
+        },
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
     "/admin-config/document-access",
     response_model=InternalAdminConfigToolResponse,
     dependencies=[Depends(_require_internal_token)],
@@ -1047,6 +1597,73 @@ async def admin_config_document_access(
     return InternalAdminConfigToolResponse(
         tool="read_document_access",
         data=_document_access_tool_data(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@router.post(
+    "/admin-config/update-document-access",
+    response_model=InternalAdminConfigToolResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+async def admin_config_update_document_access(
+    payload: InternalUpdateDocumentAccessRequest,
+) -> InternalAdminConfigToolResponse:
+    _require_admin_actor(payload.actor)
+    conversation_id = payload.conversation_id.strip()
+    if not conversation_id:
+        raise HTTPException(status_code=422, detail="conversation_id must not be blank")
+    if not payload.updates and not payload.revert_job_ids:
+        raise HTTPException(status_code=422, detail="At least one Document Access operation is required")
+    if payload.user_type_id is not None and not database.get_user_type(payload.user_type_id):
+        raise HTTPException(status_code=422, detail="User Type not found")
+
+    updates: dict[str, dict[str, object]] = {}
+    for item in payload.updates:
+        job_id = item.job_id.strip()
+        if not ingest_db.get_job(job_id):
+            raise HTTPException(status_code=422, detail=f"Document not found: {job_id}")
+        values = item.model_dump(exclude={"job_id"}, exclude_none=True)
+        if not values:
+            raise HTTPException(status_code=422, detail=f"No access values supplied for {job_id}")
+        if payload.user_type_id is not None and "display_order" in values:
+            raise HTTPException(status_code=422, detail="display_order is global Document Access configuration")
+        updates[job_id] = values
+
+    revert_job_ids = [job_id.strip() for job_id in payload.revert_job_ids]
+    if set(updates).intersection(revert_job_ids):
+        raise HTTPException(status_code=422, detail="A Document cannot be updated and reverted together")
+    for job_id in revert_job_ids:
+        if not ingest_db.get_job(job_id):
+            raise HTTPException(status_code=422, detail=f"Document not found: {job_id}")
+
+    result = database.update_document_access_with_audit(
+        updates,
+        revert_job_ids=revert_job_ids,
+        user_type_id=payload.user_type_id,
+        changed_by=payload.actor.pubkey or str(payload.actor.id),
+        action_source="sage_conversation",
+        conversation_id=conversation_id,
+    )
+    effective = {
+        str(item["job_id"]): item
+        for item in database.get_effective_document_defaults(payload.user_type_id)
+    }
+    requested_job_ids = sorted(set(updates).union(revert_job_ids))
+    return InternalAdminConfigToolResponse(
+        tool="update_document_access",
+        data={
+            "outcome": "succeeded",
+            "validation": {"status": "valid"},
+            "saved_values": {
+                job_id: effective.get(job_id)
+                for job_id in requested_job_ids
+            },
+            "changed_names": result["changed_names"],
+            "reverted_job_ids": result["reverted_job_ids"],
+            "user_type_id": payload.user_type_id,
+            "affected_areas": ["document_access"],
+        },
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
 

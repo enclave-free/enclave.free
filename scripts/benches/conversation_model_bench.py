@@ -5,7 +5,8 @@ Conversation Model Bench.
 This is an opt-in evidence runner for real Sage Conversation behavior. The
 public interface is the CLI and the `run_bench` function; local Docker/HTTP
 details live behind small adapters so deterministic checks can be tested without
-live Model Provider calls.
+live Model Provider calls. Local execution supports Docker Compose and Apple
+Containers explicitly; selecting one never shells into the other.
 """
 
 from __future__ import annotations
@@ -38,14 +39,15 @@ COMPOSE_ARGS = [
     "docker-compose.app.yml",
 ]
 DEFAULT_API_BASE = "http://127.0.0.1:18000"
+DEFAULT_APPLE_API_BASE = "http://127.0.0.1:18001"
+DEFAULT_APPLE_PROFILE = "apple-enclavefree-prototype"
 DEFAULT_TIMEOUT_SECONDS = 180.0
 SLOW_FIRST_ANSWER_WARNING_MS = 30_000.0
 SLOW_TRACE_FEEDBACK_WARNING_MS = 10_000.0
 SLOW_COMPLETION_WARNING_MS = 90_000.0
 DEFAULT_SCENARIOS = (
     "admin_no_tools_control",
-    "admin_config_bootstrap",
-    "admin_config_live_onboarding_prompt",
+    "admin_config_confirmed_instance_update",
     "admin_deployment_readiness",
     "admin_database_direct_select",
     "admin_database_natural_language_guardrail",
@@ -66,6 +68,17 @@ LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS: set[str] = {
 USER_CONVERSATION_TOOL_SET_IDS = frozenset(
     {"curated-resources", "knowledge-search", "web-search"}
 )
+ADMIN_CONFIG_DIRECT_WRITE_TOOLS = frozenset(
+    {
+        "configure_instance",
+        "update_instance_settings",
+        "update_deployment_settings",
+        "update_agent_settings",
+        "manage_user_types",
+        "manage_onboarding_questions",
+        "update_document_access",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -80,6 +93,8 @@ class BenchOptions:
     seed_resources: bool = False
     restore_model: bool = True
     verbose: bool = False
+    runtime: str = "docker"
+    apple_profile: str = DEFAULT_APPLE_PROFILE
 
 
 @dataclass(frozen=True)
@@ -88,6 +103,7 @@ class Scenario:
     actor: str
     message: str
     tools: tuple[str, ...]
+    follow_up_message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -96,7 +112,6 @@ class StreamResult:
     events: list[dict[str, Any]]
     done: dict[str, Any]
     trace: dict[str, Any] | None
-    admin_change_set: dict[str, Any] | None
     timings: dict[str, float | None]
     error: str | None = None
 
@@ -124,6 +139,14 @@ class BenchEnvironment(Protocol):
         ...
 
     def database_user_count(self) -> int:
+        ...
+
+    def prepare_admin_config_confirmation_fixture(self) -> dict[str, Any]:
+        ...
+
+    def admin_config_confirmation_evidence(
+        self, conversation_id: str, target: str
+    ) -> dict[str, Any]:
         ...
 
     def cleanup_scenario(self) -> None:
@@ -160,42 +183,15 @@ SCENARIOS: dict[str, Scenario] = {
         ),
         tools=(),
     ),
-    "admin_config_bootstrap": Scenario(
-        id="admin_config_bootstrap",
+    "admin_config_confirmed_instance_update": Scenario(
+        id="admin_config_confirmed_instance_update",
         actor="admin",
         message=(
-            "Set up the instance with these onboarding answers:\n"
-            "1. FreeThem\n"
-            "2. We are the Political Prisoners Support Team, an arm of the World Liberty Congress organization that helps former political prisoners and families of political prisoners get support and information and resources.\n"
-            "3. Choose a simple assistant name.\n"
-            "4. Choose the accent color.\n"
-            "5. Dark theme.\n"
-            "6. English.\n"
-            "7. political prisoner support team.\n"
-            "8. Let new users in right away. Create two simple user types: family and friends of current political prisoners, and former political prisoners with their family and friends.\n"
-            "9. Add onboarding questions for what country the user is in and what kind of support they need. Include those answers in chat context.\n"
-            "10. Add a behavior rule to ask where users are before giving location-specific guidance.\n"
-            "Call propose_admin_config_bootstrap directly for this guided setup/bootstrap flow, then prepare the changes for review."
+            "Set the Instance Description to exactly: __BENCH_TARGET__. "
+            "Before changing it, briefly confirm the intended change with me."
         ),
         tools=("admin-config",),
-    ),
-    "admin_config_live_onboarding_prompt": Scenario(
-        id="admin_config_live_onboarding_prompt",
-        actor="admin",
-        message=(
-            "- 1. FreeThem\n"
-            "2. We are the political prisoners support team an arm of the World Liberty Congress\n"
-            "3. Your call\n"
-            "4. Your call\n"
-            "5. dark please\n"
-            "6. english\n"
-            "7. political prisoners support team\n"
-            "8. Yes don't block access\n"
-            "9. there are two kinds of users. families and friends of current political prisoners "
-            "(support those in the situation) and friends/family/former political prisoners "
-            "(support for those after the situation)"
-        ),
-        tools=("admin-config",),
+        follow_up_message="Yes, apply that exact Instance Description change now.",
     ),
     "admin_deployment_readiness": Scenario(
         id="admin_deployment_readiness",
@@ -267,7 +263,10 @@ def run_bench(
     environment: BenchEnvironment | None = None,
     client: ConversationClient | None = None,
 ) -> dict[str, Any]:
-    environment = environment or LocalComposeEnvironment()
+    environment = environment or LocalComposeEnvironment(
+        runtime=options.runtime,
+        apple_profile=options.apple_profile,
+    )
     client = client or HttpConversationClient(options.api_base)
 
     if options.reset:
@@ -359,12 +358,17 @@ def run_scenario(
     knowledge_fixture: dict[str, Any] | None = None
     resource_fixture: dict[str, Any] | None = None
     database_fixture: dict[str, Any] | None = None
+    admin_config_fixture: dict[str, Any] | None = None
+    before_confirmation: dict[str, Any] | None = None
+    after_confirmation: dict[str, Any] | None = None
     cleanup_error: str | None = None
     session_cleanup_error: str | None = None
     token: str | None = None
     requested_session_id = str(uuid.uuid4())
-    stream_dispatched = False
+    dispatched_streams: list[StreamResult] = []
+    turn_messages: list[str] = []
     stream = failed_stream("scenario setup did not reach the stream")
+
     try:
         if scenario.actor == "admin":
             token = environment.admin_token()
@@ -372,6 +376,10 @@ def run_scenario(
                 database_fixture = {
                     "expected_user_count": environment.database_user_count()
                 }
+            if scenario.id == "admin_config_confirmed_instance_update":
+                admin_config_fixture = (
+                    environment.prepare_admin_config_confirmation_fixture()
+                )
         elif scenario.actor == "user":
             token = environment.user_token(scenario.tools)
             if seed_knowledge and "knowledge-search" in scenario.tools:
@@ -379,10 +387,17 @@ def run_scenario(
             if seed_resources and "curated-resources" in scenario.tools:
                 resource_fixture = environment.seed_resources()
         else:
-            raise ValueError(f"unsupported actor for current bench slice: {scenario.actor}")
+            raise ValueError(
+                f"unsupported actor for current bench slice: {scenario.actor}"
+            )
 
-        payload = {
-            "message": scenario.message,
+        message = scenario.message
+        if admin_config_fixture:
+            message = message.replace(
+                "__BENCH_TARGET__", str(admin_config_fixture["target"])
+            )
+        payload: dict[str, Any] = {
+            "message": message,
             "session_id": requested_session_id,
             "tools": list(scenario.tools),
         }
@@ -390,31 +405,60 @@ def run_scenario(
             job_ids = knowledge_fixture.get("job_ids")
             if isinstance(job_ids, list) and job_ids:
                 payload["job_ids"] = job_ids
-        stream_dispatched = True
+
+        turn_messages.append(message)
         stream = client.stream_chat(token, payload, timeout)
+        dispatched_streams.append(stream)
+
+        if admin_config_fixture:
+            before_confirmation = environment.admin_config_confirmation_evidence(
+                requested_session_id, str(admin_config_fixture["target"])
+            )
+
+        if scenario.follow_up_message:
+            follow_up_payload = {
+                "message": scenario.follow_up_message,
+                "session_id": requested_session_id,
+                "tools": list(scenario.tools),
+            }
+            turn_messages.append(scenario.follow_up_message)
+            stream = client.stream_chat(token, follow_up_payload, timeout)
+            dispatched_streams.append(stream)
+            if admin_config_fixture:
+                after_confirmation = (
+                    environment.admin_config_confirmation_evidence(
+                        requested_session_id,
+                        str(admin_config_fixture["target"]),
+                    )
+                )
     except Exception as exc:
         stream = failed_stream(f"scenario setup or stream failed: {exc}")
+        if not dispatched_streams:
+            dispatched_streams.append(stream)
     finally:
-        observed_session_id = stream_session_id(stream)
         session_cleanup_errors: list[str] = []
-        if stream_dispatched and token:
-            session_ids = {requested_session_id}
-            if observed_session_id:
-                session_ids.add(observed_session_id)
-            for session_id in session_ids:
+        observed_session_ids = {
+            session_id
+            for session_id in map(stream_session_id, dispatched_streams)
+            if session_id
+        }
+        if dispatched_streams and token:
+            for session_id in {requested_session_id, *observed_session_ids}:
                 try:
                     client.delete_session(token, session_id, timeout)
                 except Exception as exc:
                     session_cleanup_errors.append(f"{session_id}: {exc}")
-        if observed_session_id and observed_session_id != requested_session_id:
-            session_cleanup_errors.append(
-                f"stream returned session_id {observed_session_id}, expected "
-                f"{requested_session_id}"
-            )
-        elif (stream.events or stream.done) and not observed_session_id:
-            session_cleanup_errors.append(
-                "completed stream did not expose a session_id"
-            )
+        for index, dispatched in enumerate(dispatched_streams, start=1):
+            observed = stream_session_id(dispatched)
+            if observed and observed != requested_session_id:
+                session_cleanup_errors.append(
+                    f"turn {index} returned session_id {observed}, expected "
+                    f"{requested_session_id}"
+                )
+            elif (dispatched.events or dispatched.done) and not observed:
+                session_cleanup_errors.append(
+                    f"turn {index} did not expose a session_id"
+                )
         if session_cleanup_errors:
             session_cleanup_error = "; ".join(session_cleanup_errors)
         try:
@@ -422,60 +466,116 @@ def run_scenario(
         except Exception as exc:
             cleanup_error = str(exc)
 
-    tool_evidence = collect_tool_evidence(stream)
+    final_tool_evidence = collect_tool_evidence(stream)
     retrieval_evidence = collect_retrieval_evidence(stream)
     diagnostics = collect_stream_diagnostics(stream)
-    checks = checks_for_scenario(
-        scenario,
-        stream,
-        tool_evidence,
-        diagnostics=diagnostics,
-        knowledge_fixture=knowledge_fixture,
-        resource_fixture=resource_fixture,
-        database_fixture=database_fixture,
-    )
-    checks.append(
-        check(
-            "temporary_session_cleanup_succeeded",
-            session_cleanup_error is None,
-            "hard",
-            session_cleanup_error,
+    if scenario.id == "admin_config_confirmed_instance_update":
+        first_stream = dispatched_streams[0] if dispatched_streams else failed_stream(
+            "confirmation turn was not dispatched"
         )
-    )
-    checks.append(
-        check(
-            "temporary_fixture_cleanup_succeeded",
-            cleanup_error is None,
-            "hard",
-            cleanup_error,
+        confirmed_stream = (
+            dispatched_streams[1]
+            if len(dispatched_streams) > 1
+            else failed_stream("confirmed write turn was not dispatched")
         )
+        checks = admin_config_confirmation_checks(
+            first_stream,
+            confirmed_stream,
+            before_confirmation or {},
+            after_confirmation or {},
+            admin_config_fixture or {},
+            requested_session_id,
+        )
+    else:
+        checks = checks_for_scenario(
+            scenario,
+            stream,
+            final_tool_evidence,
+            diagnostics=diagnostics,
+            knowledge_fixture=knowledge_fixture,
+            resource_fixture=resource_fixture,
+            database_fixture=database_fixture,
+        )
+    checks.extend(
+        [
+            check(
+                "temporary_session_cleanup_succeeded",
+                session_cleanup_error is None,
+                "hard",
+                session_cleanup_error,
+            ),
+            check(
+                "temporary_fixture_cleanup_succeeded",
+                cleanup_error is None,
+                "hard",
+                cleanup_error,
+            ),
+        ]
     )
+    turns = [
+        serialize_bench_turn(message, dispatched)
+        for message, dispatched in zip(turn_messages, dispatched_streams)
+    ]
     return {
         "id": scenario.id,
         "actor": scenario.actor,
         "request": {
             "tools": list(scenario.tools),
-            "message_preview": truncate(scenario.message, 500),
+            "message_preview": truncate(turn_messages[0] if turn_messages else scenario.message, 500),
         },
         "fixtures": {
             "knowledge": knowledge_fixture,
             "resources": resource_fixture,
             "database": database_fixture,
+            "admin_config": sanitize_admin_config_fixture(admin_config_fixture),
+            "before_confirmation": before_confirmation,
+            "after_confirmation": after_confirmation,
         },
+        "turns": turns,
         "response": {
             "answer_preview": truncate(stream.answer, 2000),
             "model": stream.done.get("model"),
             "provider": stream.done.get("provider"),
-            "admin_change_set": stream.admin_change_set,
+            "session_id": stream_session_id(stream),
+            "affected_areas": stream.done.get("admin_config_affected_areas") or [],
             "stream_error": stream.error,
         },
         "checks": checks,
         "timing": stream.timings,
         "diagnostics": diagnostics,
-        "tool_evidence": tool_evidence,
+        "tool_evidence": final_tool_evidence,
         "retrieval_evidence": retrieval_evidence,
         "summary": summarize_checks(checks),
         "notes": [],
+    }
+
+
+def serialize_bench_turn(message: str, stream: StreamResult) -> dict[str, Any]:
+    return {
+        "request": {"message_preview": truncate(message, 500)},
+        "response": {
+            "answer_preview": truncate(stream.answer, 2000),
+            "model": stream.done.get("model"),
+            "provider": stream.done.get("provider"),
+            "session_id": stream_session_id(stream),
+            "affected_areas": stream.done.get("admin_config_affected_areas") or [],
+            "stream_error": stream.error,
+        },
+        "timing": stream.timings,
+        "diagnostics": collect_stream_diagnostics(stream),
+        "tool_evidence": collect_tool_evidence(stream),
+    }
+
+
+def sanitize_admin_config_fixture(
+    fixture: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not fixture:
+        return None
+    return {
+        "target": fixture.get("target"),
+        "admin_changed_by": fixture.get("admin_changed_by"),
+        "original_was_target": fixture.get("original") == fixture.get("target"),
     }
 
 
@@ -485,7 +585,6 @@ def failed_stream(error: str) -> StreamResult:
         events=[],
         done={},
         trace=None,
-        admin_change_set=None,
         timings={
             "first_event_ms": None,
             "first_trace_or_tool_feedback_ms": None,
@@ -534,11 +633,6 @@ def checks_for_scenario(
         checks.extend(trace_feedback_checks(stream))
     if scenario.id == "admin_no_tools_control":
         checks.extend(no_tools_control_checks(stream, tool_evidence, diagnostics))
-    elif scenario.id == "admin_config_bootstrap":
-        checks.extend(admin_config_bootstrap_checks(stream, tool_evidence))
-        checks.extend(deterministic_bootstrap_diagnostic_checks(diagnostics))
-    elif scenario.id == "admin_config_live_onboarding_prompt":
-        checks.extend(admin_config_live_onboarding_prompt_checks(stream, tool_evidence))
     elif scenario.id == "admin_deployment_readiness":
         checks.extend(admin_deployment_readiness_checks(stream, tool_evidence))
     elif scenario.id == "admin_database_direct_select":
@@ -570,12 +664,154 @@ def checks_for_scenario(
                 resource_fixture,
             )
         )
-    if scenario.id not in {
-        "admin_config_bootstrap",
-        "admin_config_live_onboarding_prompt",
-    }:
-        checks.extend(plain_answer_streaming_checks(diagnostics))
+    checks.extend(plain_answer_streaming_checks(diagnostics))
     return checks
+
+
+def admin_config_confirmation_checks(
+    confirmation: StreamResult,
+    confirmed_write: StreamResult,
+    before_evidence: dict[str, Any],
+    after_evidence: dict[str, Any],
+    fixture: dict[str, Any],
+    conversation_id: str,
+) -> list[dict[str, Any]]:
+    confirmation_tools = collect_tool_evidence(confirmation)
+    confirmed_tools = collect_tool_evidence(confirmed_write)
+    direct_confirmation_tools = invoked_direct_admin_config_tools(
+        confirmation_tools
+    )
+    direct_confirmed_tools = invoked_direct_admin_config_tools(confirmed_tools)
+    audit = after_evidence.get("matching_audit")
+    audit = audit if isinstance(audit, dict) else {}
+    answer_lower = confirmation.answer.lower()
+    asks_confirmation = "?" in confirmation.answer or any(
+        phrase in answer_lower
+        for phrase in ("confirm", "shall i", "should i proceed", "ready for me")
+    )
+    checks: list[dict[str, Any]] = []
+    for prefix, stream in (
+        ("confirmation", confirmation),
+        ("confirmed_write", confirmed_write),
+    ):
+        checks.extend(prefix_checks(prefix, common_stream_checks(stream)))
+        checks.append(
+            check(
+                f"{prefix}_has_no_obsolete_proposal_metadata",
+                not stream_contains_key(stream, "admin_change_set")
+                and not any(
+                    obsolete_admin_config_tool(evidence)
+                    for evidence in collect_tool_evidence(stream)
+                ),
+                "hard",
+            )
+        )
+    checks.extend(
+        [
+            check(
+                "confirmation_is_natural_question",
+                asks_confirmation,
+                "hard",
+                "first turn did not appear to ask for conversational confirmation",
+            ),
+            check(
+                "confirmation_turn_did_not_write",
+                not direct_confirmation_tools,
+                "hard",
+                f"direct write tools used: {sorted(direct_confirmation_tools)}",
+            ),
+            check(
+                "target_not_persisted_before_confirmation",
+                not bool(before_evidence.get("target_persisted")),
+                "hard",
+            ),
+            check(
+                "no_matching_audit_before_confirmation",
+                before_evidence.get("matching_audit") in (None, {}),
+                "hard",
+            ),
+            check(
+                "confirmed_turn_uses_update_instance_settings",
+                direct_confirmed_tools == {"update_instance_settings"},
+                "hard",
+                f"direct write tools used: {sorted(direct_confirmed_tools)}",
+            ),
+            check(
+                "target_persisted_after_confirmation",
+                bool(after_evidence.get("target_persisted")),
+                "hard",
+            ),
+            check(
+                "audit_records_admin_authority",
+                str(audit.get("changed_by") or "")
+                == str(fixture.get("admin_changed_by") or ""),
+                "hard",
+            ),
+            check(
+                "audit_records_sage_conversation_source",
+                audit.get("action_source") == "sage_conversation",
+                "hard",
+            ),
+            check(
+                "audit_records_originating_conversation",
+                audit.get("conversation_id") == conversation_id,
+                "hard",
+            ),
+            check(
+                "audit_records_changed_description",
+                audit.get("config_key") == "description"
+                and audit.get("action") in {"create", "update"},
+                "hard",
+            ),
+            check(
+                "confirmed_turn_returns_instance_refresh_hint",
+                "instance_settings"
+                in (confirmed_write.done.get("admin_config_affected_areas") or []),
+                "hard",
+            ),
+            check(
+                "confirmed_answer_does_not_use_apply_handoff",
+                "use apply to confirm" not in confirmed_write.answer.lower()
+                and "prepared these changes for review"
+                not in confirmed_write.answer.lower(),
+                "hard",
+            ),
+        ]
+    )
+    return checks
+
+
+def prefix_checks(prefix: str, checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{**item, "name": f"{prefix}_{item['name']}"} for item in checks]
+
+
+def invoked_direct_admin_config_tools(
+    evidence: list[dict[str, Any]],
+) -> set[str]:
+    return {
+        tool_name
+        for tool_name in ADMIN_CONFIG_DIRECT_WRITE_TOOLS
+        if any(admin_config_tool_invoked(item, tool_name) for item in evidence)
+    }
+
+
+def obsolete_admin_config_tool(evidence: dict[str, Any]) -> bool:
+    return any(
+        admin_config_tool_invoked(evidence, tool_name)
+        for tool_name in (
+            "propose_admin_config_bootstrap",
+            "propose_config_change_set",
+        )
+    )
+
+
+def stream_contains_key(stream: StreamResult, key: str) -> bool:
+    if key in stream.done:
+        return True
+    return any(
+        isinstance(event.get("data"), dict) and key in event["data"]
+        for event in stream.events
+    )
 
 
 def common_stream_checks(stream: StreamResult) -> list[dict[str, Any]]:
@@ -723,32 +959,6 @@ def no_tools_control_checks(
     ]
 
 
-def deterministic_bootstrap_diagnostic_checks(
-    diagnostics: dict[str, Any],
-) -> list[dict[str, Any]]:
-    telemetry_present = bool(diagnostics["model_call_telemetry_present"])
-    return [
-        check(
-            "bootstrap_has_no_final_model_call",
-            telemetry_present and diagnostics["model_call_count"] == 1,
-            "hard",
-            None
-            if telemetry_present
-            else "model-call telemetry was not emitted by this recorded fixture",
-        ),
-        check(
-            "bootstrap_zero_correction_calls",
-            diagnostics["correction_call_count"] == 0,
-            "hard",
-        ),
-        check(
-            "bootstrap_zero_retry_calls",
-            diagnostics["retry_count"] == 0,
-            "hard",
-        ),
-    ]
-
-
 def plain_answer_streaming_checks(
     diagnostics: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -815,14 +1025,7 @@ def admin_deployment_readiness_checks(
     tool_evidence: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     answer_lower = stream.answer.lower()
-    has_staged_admin_change_set = (
-        any(
-            tool_evidence_matches(evidence, "admin_change_set")
-            for evidence in tool_evidence
-        )
-        or bool(stream.admin_change_set)
-        or bool(stream.done.get("admin_change_set"))
-    )
+    direct_write_tools = invoked_direct_admin_config_tools(tool_evidence)
     manual_check_phrases = [
         "please double-check",
         "you'll need to check",
@@ -852,195 +1055,14 @@ def admin_deployment_readiness_checks(
             f"low-level Admin Config read tools used: {count_low_level_admin_config_reads(tool_evidence)}",
         ),
         check(
-            "admin_change_set_not_staged",
-            not has_staged_admin_change_set,
+            "admin_config_readiness_did_not_write",
+            not direct_write_tools,
             "hard",
+            f"direct write tools used: {sorted(direct_write_tools)}",
         ),
         check(
             "does_not_ask_admin_to_manually_check_available_settings",
             not any(phrase in answer_lower for phrase in manual_check_phrases),
-            "hard",
-        ),
-    ]
-
-
-def admin_config_bootstrap_checks(
-    stream: StreamResult,
-    tool_evidence: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    change_set = stream.admin_change_set
-    requests = change_set.get("requests") if isinstance(change_set, dict) else None
-    request_list = requests if isinstance(requests, list) else []
-    settings_body = settings_request_body(request_list)
-    answer_lower = stream.answer.lower()
-    lack_of_authority_phrases = [
-        "i don't currently have write access",
-        "i do not currently have write access",
-        "i can't apply",
-        "i cannot apply",
-        "you'll need to apply",
-        "you need to apply",
-    ]
-    non_bootstrap_admin_tools = non_bootstrap_admin_config_tools(tool_evidence)
-
-    return [
-        check(
-            "admin_config_tool_used",
-            any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
-            "hard",
-        ),
-        check(
-            "typed_bootstrap_tool_used",
-            any(
-                admin_config_tool_invoked(
-                    evidence, "propose_admin_config_bootstrap"
-                )
-                for evidence in tool_evidence
-            ),
-            "hard",
-        ),
-        check(
-            "bootstrap_uses_only_typed_bootstrap_tool",
-            not non_bootstrap_admin_tools,
-            "hard",
-            (
-                "non-bootstrap Admin Config tools used: "
-                + ", ".join(sorted(non_bootstrap_admin_tools))
-            )
-            if non_bootstrap_admin_tools
-            else None,
-        ),
-        check(
-            "generic_change_set_tool_not_used_for_bootstrap",
-            not any(
-                admin_config_tool_invoked(evidence, "propose_config_change_set")
-                for evidence in tool_evidence
-            ),
-            "warning",
-        ),
-        check("admin_change_set_present", bool(request_list), "hard"),
-        check(
-            "admin_change_set_uses_canonical_paths",
-            admin_change_set_uses_canonical_paths(request_list),
-            "hard",
-        ),
-        check(
-            "baseline_settings_present",
-            BASELINE_SETTING_KEYS <= set(settings_body),
-            "hard",
-        ),
-        check(
-            "user_types_present",
-            count_user_type_requests(request_list) >= 2,
-            "hard",
-        ),
-        check(
-            "onboarding_fields_present",
-            count_user_field_requests(request_list) >= 2,
-            "hard",
-        ),
-        check(
-            "behavior_rules_present",
-            has_agent_rules_request(request_list, "prompt_rules"),
-            "hard",
-        ),
-        check(
-            "does_not_claim_missing_proposal_authority",
-            not any(phrase in answer_lower for phrase in lack_of_authority_phrases),
-            "hard",
-        ),
-    ]
-
-
-def admin_config_live_onboarding_prompt_checks(
-    stream: StreamResult,
-    tool_evidence: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    change_set = stream.admin_change_set
-    requests = change_set.get("requests") if isinstance(change_set, dict) else None
-    request_list = requests if isinstance(requests, list) else []
-    settings_body = settings_request_body(request_list)
-    user_type_texts = [text.lower() for text in user_type_request_texts(request_list)]
-
-    return [
-        check(
-            "admin_config_tool_used",
-            any(tool_evidence_matches(evidence, "admin-config") for evidence in tool_evidence),
-            "hard",
-        ),
-        check(
-            "typed_bootstrap_tool_used",
-            any(
-                admin_config_tool_invoked(
-                    evidence, "propose_admin_config_bootstrap"
-                )
-                for evidence in tool_evidence
-            ),
-            "hard",
-        ),
-        check(
-            "generic_change_set_tool_not_used_for_bootstrap",
-            not any(
-                admin_config_tool_invoked(evidence, "propose_config_change_set")
-                for evidence in tool_evidence
-            ),
-            "warning",
-        ),
-        check(
-            "live_onboarding_bootstrap_not_rejected",
-            not any_admin_config_bootstrap_rejection(tool_evidence),
-            "hard",
-        ),
-        check("admin_change_set_present", bool(request_list), "hard"),
-        check(
-            "admin_change_set_uses_canonical_paths",
-            admin_change_set_uses_canonical_paths(request_list),
-            "hard",
-        ),
-        check(
-            "live_onboarding_baseline_settings_present",
-            BASELINE_SETTING_KEYS <= set(settings_body),
-            "hard",
-        ),
-        check(
-            "live_onboarding_instance_name_preserved",
-            settings_body.get("instance_name") == "FreeThem",
-            "hard",
-        ),
-        check(
-            "live_onboarding_dark_theme_preserved",
-            settings_body.get("default_theme") == "dark",
-            "hard",
-        ),
-        check(
-            "live_onboarding_default_language_normalized",
-            settings_body.get("default_language") == "en",
-            "hard",
-        ),
-        check(
-            "live_onboarding_auto_approval_enabled",
-            settings_body.get("auto_approve_users") is True,
-            "hard",
-        ),
-        check(
-            "live_onboarding_user_types_present",
-            count_user_type_requests(request_list) >= 2,
-            "hard",
-        ),
-        check(
-            "live_onboarding_user_type_content_present",
-            has_separate_live_onboarding_user_types(user_type_texts),
-            "hard",
-        ),
-        check(
-            "live_onboarding_does_not_create_user_fields",
-            count_user_field_requests(request_list) == 0,
-            "hard",
-        ),
-        check(
-            "live_onboarding_does_not_create_behavior_rules",
-            not has_agent_rules_request(request_list, "prompt_rules")
-            and not has_agent_rules_request(request_list, "prompt_forbidden"),
             "hard",
         ),
     ]
@@ -1299,161 +1321,6 @@ def any_tool_warning(
     return False
 
 
-BASELINE_SETTING_KEYS = {
-    "instance_name",
-    "assistant_name",
-    "header_tagline",
-    "description",
-    "primary_color",
-    "default_theme",
-    "default_language",
-    "auto_approve_users",
-}
-
-CANONICAL_ADMIN_CONFIG_WRITES = {
-    ("PUT", "/admin/settings"),
-    ("POST", "/admin/user-types"),
-    ("POST", "/admin/user-fields"),
-    ("PUT", "/admin/ai-config/prompt_rules"),
-    ("PUT", "/admin/ai-config/prompt_forbidden"),
-}
-
-UNSAFE_ADMIN_CONFIG_PATH_PREFIXES = (
-    "/admin/tools/execute",
-    "/admin/deployment/config/reveal",
-    "/admin/export",
-)
-
-
-def settings_request_body(requests: list[Any]) -> dict[str, Any]:
-    for request in requests:
-        if not isinstance(request, dict):
-            continue
-        if request.get("method") == "PUT" and request.get("path") == "/admin/settings":
-            body = request.get("body")
-            return body if isinstance(body, dict) else {}
-    return {}
-
-
-def count_user_type_requests(requests: list[Any]) -> int:
-    return sum(
-        1
-        for request in requests
-        if isinstance(request, dict)
-        and request.get("method") == "POST"
-        and request.get("path") == "/admin/user-types"
-    )
-
-
-def user_type_request_texts(requests: list[Any]) -> list[str]:
-    texts: list[str] = []
-    for request in requests:
-        if not isinstance(request, dict):
-            continue
-        if request.get("method") != "POST" or request.get("path") != "/admin/user-types":
-            continue
-        body = request.get("body")
-        if not isinstance(body, dict):
-            continue
-        values = [
-            str(body.get("name") or ""),
-            str(body.get("description") or ""),
-        ]
-        texts.append(" ".join(value for value in values if value.strip()))
-    return texts
-
-
-def has_separate_live_onboarding_user_types(user_type_texts: list[str]) -> bool:
-    current_family_indexes = {
-        index
-        for index, text in enumerate(user_type_texts)
-        if "famil" in text and "current" in text
-    }
-    former_after_indexes = {
-        index
-        for index, text in enumerate(user_type_texts)
-        if "former" in text or "after" in text
-    }
-    return any(
-        current_index != former_index
-        for current_index in current_family_indexes
-        for former_index in former_after_indexes
-    )
-
-
-def count_user_field_requests(requests: list[Any]) -> int:
-    return sum(
-        1
-        for request in requests
-        if isinstance(request, dict)
-        and request.get("method") == "POST"
-        and request.get("path") == "/admin/user-fields"
-    )
-
-
-def has_agent_rules_request(requests: list[Any], key: str) -> bool:
-    path = f"/admin/ai-config/{key}"
-    for request in requests:
-        if not isinstance(request, dict):
-            continue
-        if request.get("method") != "PUT" or request.get("path") != path:
-            continue
-        body = request.get("body")
-        value = body.get("value") if isinstance(body, dict) else None
-        return is_json_string_array(value)
-    return False
-
-
-def is_json_string_array(value: Any) -> bool:
-    if not isinstance(value, str) or not value.strip():
-        return False
-    try:
-        parsed = json.loads(value)
-    except json.JSONDecodeError:
-        return False
-    return isinstance(parsed, list) and all(
-        isinstance(item, str) and bool(item.strip()) for item in parsed
-    ) and bool(parsed)
-
-
-def any_admin_config_bootstrap_rejection(tool_evidence: list[dict[str, Any]]) -> bool:
-    for evidence in tool_evidence:
-        if not admin_config_tool_invoked(evidence, "propose_admin_config_bootstrap"):
-            continue
-        status = str(evidence.get("status") or "").lower()
-        summary = str(evidence.get("output_summary") or "").lower()
-        warnings = [
-            str(warning).lower()
-            for warning in evidence.get("warnings") or []
-        ]
-        if evidence.get("guarded") or status == "guarded":
-            return True
-        if "invalid_admin_config_bootstrap" in warnings:
-            return True
-        if "invalid bootstrap" in summary or "invalid admin config bootstrap" in summary:
-            return True
-    return False
-
-
-def admin_change_set_uses_canonical_paths(requests: list[Any]) -> bool:
-    if not requests:
-        return False
-    for request in requests:
-        if not isinstance(request, dict):
-            return False
-        method = str(request.get("method") or "").upper()
-        path = str(request.get("path") or "")
-        if path.startswith(UNSAFE_ADMIN_CONFIG_PATH_PREFIXES):
-            return False
-        if (method, path) not in CANONICAL_ADMIN_CONFIG_WRITES:
-            return False
-        body = request.get("body")
-        if path == "/admin/settings" and isinstance(body, dict):
-            if "tagline" in body or "English" in body.values():
-                return False
-    return True
-
-
 def collect_tool_evidence(stream: StreamResult) -> list[dict[str, Any]]:
     evidence: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -1540,27 +1407,6 @@ def admin_config_tool_invoked(evidence: dict[str, Any], tool_name: str) -> bool:
     )
 
 
-def non_bootstrap_admin_config_tools(
-    tool_evidence: list[dict[str, Any]],
-) -> set[str]:
-    non_bootstrap_tools: set[str] = set()
-    for evidence in tool_evidence:
-        if not tool_evidence_matches(evidence, "admin-config"):
-            continue
-        if admin_config_tool_invoked(evidence, "propose_admin_config_bootstrap"):
-            continue
-        tool_id = str(evidence.get("tool_id") or "").strip()
-        if tool_id.startswith("tool-admin-config:"):
-            non_bootstrap_tools.add(tool_id.removeprefix("tool-admin-config:"))
-        elif tool_id.startswith("admin-config:"):
-            non_bootstrap_tools.add(tool_id.removeprefix("admin-config:"))
-        elif tool_id:
-            non_bootstrap_tools.add(tool_id)
-        else:
-            non_bootstrap_tools.add(str(evidence.get("tool_name") or "admin-config"))
-    return non_bootstrap_tools
-
-
 def count_low_level_admin_config_reads(tool_evidence: list[dict[str, Any]]) -> int:
     invoked: set[str] = set()
     for evidence in tool_evidence:
@@ -1632,15 +1478,27 @@ def truncate(value: str, max_chars: int) -> str:
 
 
 class LocalComposeEnvironment:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        runtime: str = "docker",
+        apple_profile: str = DEFAULT_APPLE_PROFILE,
+    ) -> None:
+        if runtime not in {"docker", "apple"}:
+            raise ValueError(f"unsupported local container runtime: {runtime}")
+        self.runtime = runtime
+        self.apple_profile = apple_profile
         self._scenario_user_id: int | None = None
         self._scenario_user_type_id: int | None = None
         self._scenario_knowledge_fixture: dict[str, Any] | None = None
         self._scenario_resource_fixture: dict[str, Any] | None = None
+        self._scenario_admin_config_fixture: dict[str, Any] | None = None
 
     def run_metadata(self) -> dict[str, Any]:
         return {
             "repo": "enclave-free/enclave.free-prototype",
+            "container_runtime": self.runtime,
+            "apple_profile": self.apple_profile if self.runtime == "apple" else None,
             "git": {
                 "prototype": run_command(["git", "rev-parse", "--short", "HEAD"], timeout=10).strip(),
                 "dirty": bool(run_command(["git", "status", "--short"], timeout=10).strip()),
@@ -1657,7 +1515,14 @@ class LocalComposeEnvironment:
         if not token:
             raise RuntimeError("sage container did not expose INTERNAL_AGENT_TOKEN")
         output = run_command(
-            runtime_config_fingerprint_command(token),
+            self.container_command(
+                "sage",
+                "curl",
+                "-fsS",
+                "-H",
+                f"X-Internal-Agent-Token: {token}",
+                "http://127.0.0.1:3000/internal/runtime-config/fingerprint",
+            ),
             timeout=30,
         )
         payload = json.loads(output)
@@ -1679,7 +1544,7 @@ if not admins:
 admin = admins[0]
 print(auth.create_admin_session_token(admin["id"], admin["pubkey"], int(admin.get("session_nonce", 0) or 0)))
 """
-        return run_backend_python(script, timeout=30).strip()
+        return self.run_backend_python(script, timeout=30).strip()
 
     def user_token(self, tools: tuple[str, ...] = ()) -> str:
         script = """
@@ -1703,10 +1568,15 @@ print(json.dumps({
     "user_type_id": user_type_id,
 }))
 """
-        payload = json.loads(run_backend_python(script, timeout=30).strip())
+        payload = json.loads(self.run_backend_python(script, timeout=30).strip())
         self._scenario_user_id = int(payload["user_id"])
         self._scenario_user_type_id = int(payload["user_type_id"])
-        configure_sage_user_policy(self._scenario_user_type_id, tools)
+        configure_sage_user_policy(
+            self._scenario_user_type_id,
+            tools,
+            runtime=self.runtime,
+            apple_profile=self.apple_profile,
+        )
         return str(payload["token"])
 
     def seed_knowledge(self) -> dict[str, Any]:
@@ -1828,7 +1698,7 @@ print(json.dumps({
         }
         for marker, value in replacements.items():
             script = script.replace(marker, json.dumps(value))
-        raw = run_backend_python(script, timeout=180)
+        raw = self.run_backend_python(script, timeout=180)
         try:
             fixture = json.loads(raw.strip().splitlines()[-1])
             self._scenario_knowledge_fixture = fixture
@@ -1890,7 +1760,7 @@ print(json.dumps({
         }
         for marker, value in replacements.items():
             script = script.replace(marker, json.dumps(value))
-        raw = run_backend_python(script, timeout=30)
+        raw = self.run_backend_python(script, timeout=30)
         try:
             fixture = json.loads(raw.strip().splitlines()[-1])
             self._scenario_resource_fixture = fixture
@@ -1906,13 +1776,66 @@ with database.get_cursor() as cursor:
     cursor.execute("SELECT COUNT(*) AS count FROM users")
     print(int(cursor.fetchone()["count"]))
 """
-        return int(run_backend_python(script, timeout=30).strip())
+        return int(self.run_backend_python(script, timeout=30).strip())
+
+    def prepare_admin_config_confirmation_fixture(self) -> dict[str, Any]:
+        target = f"Conversation Bench direct write {uuid.uuid4().hex[:12]}"
+        script = """
+import database, json
+database.init_schema()
+admins = database.list_admins()
+if not admins:
+    raise RuntimeError("benchmark requires an Admin")
+admin = admins[0]
+print(json.dumps({
+    "original": database.get_setting("description"),
+    "target": __TARGET__,
+    "admin_changed_by": admin.get("pubkey") or str(admin["id"]),
+}))
+""".replace("__TARGET__", json.dumps(target))
+        fixture = json.loads(self.run_backend_python(script, timeout=30).strip())
+        self._scenario_admin_config_fixture = fixture
+        return fixture
+
+    def admin_config_confirmation_evidence(
+        self, conversation_id: str, target: str
+    ) -> dict[str, Any]:
+        script = """
+import database, json
+database.init_schema()
+conversation_id = __CONVERSATION_ID__
+target = __TARGET__
+matching = [
+    row for row in database.get_config_audit_log(limit=None, table_name="instance_settings")
+    if row.get("config_key") == "description"
+    and row.get("new_value") == target
+    and row.get("conversation_id") == conversation_id
+]
+row = matching[0] if matching else None
+if row:
+    row = {
+        "config_key": row.get("config_key"),
+        "action": "create" if row.get("old_value") is None else "update",
+        "changed_by": row.get("changed_by"),
+        "action_source": row.get("action_source"),
+        "conversation_id": row.get("conversation_id"),
+    }
+print(json.dumps({
+    "current_value": database.get_setting("description"),
+    "target_persisted": database.get_setting("description") == target,
+    "matching_audit": row,
+}))
+"""
+        script = script.replace("__CONVERSATION_ID__", json.dumps(conversation_id))
+        script = script.replace("__TARGET__", json.dumps(target))
+        return json.loads(self.run_backend_python(script, timeout=30).strip())
 
     def cleanup_scenario(self) -> None:
         user_id = self._scenario_user_id
         user_type_id = self._scenario_user_type_id
         knowledge_fixture = self._scenario_knowledge_fixture
         resource_fixture = self._scenario_resource_fixture
+        admin_config_fixture = self._scenario_admin_config_fixture
 
         errors: list[str] = []
         try:
@@ -1922,7 +1845,12 @@ with database.get_cursor() as cursor:
                         raise RuntimeError(
                             "benchmark user type exists without its temporary user id"
                         )
-                    cleanup_sage_user_state(user_id, user_type_id)
+                    cleanup_sage_user_state(
+                        user_id,
+                        user_type_id,
+                        runtime=self.runtime,
+                        apple_profile=self.apple_profile,
+                    )
                 except Exception as exc:
                     errors.append(f"Sage Postgres fixture cleanup failed: {exc}")
             cleanup_payload = {
@@ -1931,12 +1859,59 @@ with database.get_cursor() as cursor:
                 "knowledge": knowledge_fixture,
                 "resources": resource_fixture,
             }
+            if admin_config_fixture is not None:
+                try:
+                    cleanup_script = """
+import database, json, uuid
+database.init_schema()
+original = __ORIGINAL__
+changed_by = __CHANGED_BY__
+if original is None:
+    with database.get_write_cursor() as cursor:
+        cursor.execute(
+            "SELECT value FROM instance_settings WHERE key = ?",
+            ("description",),
+        )
+        row = cursor.fetchone()
+        if row is not None:
+            cursor.execute(
+                "DELETE FROM instance_settings WHERE key = ?",
+                ("description",),
+            )
+            database._insert_config_audit_log(
+                cursor,
+                "instance_settings",
+                "description",
+                row["value"],
+                None,
+                changed_by,
+                action_source="ordinary_product_flow",
+                conversation_id="bench_cleanup:" + str(uuid.uuid4()),
+            )
+else:
+    database.update_settings_with_audit(
+        {"description": original},
+        changed_by=changed_by,
+        action_source="ordinary_product_flow",
+        conversation_id="bench_cleanup:" + str(uuid.uuid4()),
+    )
+"""
+                    cleanup_script = cleanup_script.replace(
+                        "__ORIGINAL__", json.dumps(admin_config_fixture.get("original"))
+                    )
+                    cleanup_script = cleanup_script.replace(
+                        "__CHANGED_BY__",
+                        json.dumps(admin_config_fixture.get("admin_changed_by") or "bench"),
+                    )
+                    self.run_backend_python(cleanup_script, timeout=30)
+                except Exception as exc:
+                    errors.append(f"Admin Config fixture cleanup failed: {exc}")
             if any(
                 value is not None
                 for value in (user_id, user_type_id, knowledge_fixture, resource_fixture)
             ):
                 try:
-                    run_backend_python(
+                    self.run_backend_python(
                         backend_fixture_cleanup_script(cleanup_payload),
                         timeout=120,
                     )
@@ -1947,10 +1922,16 @@ with database.get_cursor() as cursor:
             self._scenario_user_type_id = None
             self._scenario_knowledge_fixture = None
             self._scenario_resource_fixture = None
+            self._scenario_admin_config_fixture = None
         if errors:
             raise RuntimeError("; ".join(errors))
 
     def switch_model(self, model: str) -> None:
+        if self.runtime == "apple":
+            raise RuntimeError(
+                "model switching is not supported in Apple Containers mode; "
+                "run the currently configured model"
+            )
         env = os.environ.copy()
         env["TINFOIL_MODEL"] = model
         run_command(
@@ -1973,10 +1954,7 @@ with database.get_cursor() as cursor:
             try:
                 result = subprocess.run(
                     [
-                        *COMPOSE_ARGS,
-                        "exec",
-                        "-T",
-                        "sage",
+                        *self.container_command("sage"),
                         "curl",
                         "-fsS",
                         "http://127.0.0.1:3000/health",
@@ -2005,19 +1983,35 @@ with database.get_cursor() as cursor:
         self.wait_for_health()
 
     def reset_state(self) -> None:
+        if self.runtime == "apple":
+            raise RuntimeError(
+                "reset is not supported in Apple Containers mode; use the "
+                "external Apple sidecar explicitly before the bench"
+            )
         run_command(
             ["scripts/reset_local_instance.sh", "--skip-smoke"],
             timeout=900,
         )
 
     def container_env(self, service: str) -> dict[str, str]:
-        output = run_command([*COMPOSE_ARGS, "exec", "-T", service, "env"], timeout=30)
+        output = run_command(self.container_command(service, "env"), timeout=30)
         values: dict[str, str] = {}
         for line in output.splitlines():
             if "=" in line:
                 key, value = line.split("=", 1)
                 values[key] = value
         return values
+
+    def container_command(self, service: str, *args: str) -> list[str]:
+        if self.runtime == "apple":
+            return ["container", "exec", f"{self.apple_profile}-{service}", *args]
+        return [*COMPOSE_ARGS, "exec", "-T", service, *args]
+
+    def run_backend_python(self, script: str, timeout: int = 120) -> str:
+        return run_command(
+            self.container_command("core-backend", "python", "-c", script),
+            timeout=timeout,
+        )
 
 
 class HttpConversationClient:
@@ -2046,7 +2040,6 @@ class HttpConversationClient:
         answer_parts: list[str] = []
         done: dict[str, Any] = {}
         trace: dict[str, Any] | None = None
-        admin_change_set: dict[str, Any] | None = None
         first_event_ms: float | None = None
         first_trace_or_tool_feedback_ms: float | None = None
         first_delta_ms: float | None = None
@@ -2057,7 +2050,7 @@ class HttpConversationClient:
         def process_buffer() -> None:
             nonlocal buffer, first_event_ms, first_trace_or_tool_feedback_ms
             nonlocal first_delta_ms, done_ms
-            nonlocal trace, admin_change_set, done
+            nonlocal trace, done
             while "\n\n" in buffer:
                 block, buffer = buffer.split("\n\n", 1)
                 event_name, data = parse_sse_event(block)
@@ -2086,13 +2079,9 @@ class HttpConversationClient:
                 elif event_name == "trace_final":
                     if isinstance(data.get("trace"), dict):
                         trace = data["trace"]
-                    if isinstance(data.get("admin_change_set"), dict):
-                        admin_change_set = data["admin_change_set"]
                 elif event_name == "done":
                     done = data
                     done_ms = elapsed_ms
-                    if isinstance(data.get("admin_change_set"), dict):
-                        admin_change_set = data["admin_change_set"]
 
         def append_raw(raw: bytes) -> None:
             nonlocal buffer
@@ -2134,7 +2123,6 @@ class HttpConversationClient:
             events=events,
             done=done,
             trace=trace,
-            admin_change_set=admin_change_set,
             timings={
                 "first_event_ms": first_event_ms,
                 "first_trace_or_tool_feedback_ms": first_trace_or_tool_feedback_ms,
@@ -2192,14 +2180,13 @@ def is_trace_or_tool_feedback_event(event_name: str, data: dict[str, Any]) -> bo
     return False
 
 
-def run_backend_python(script: str, timeout: int = 120) -> str:
-    return run_command(
-        [*COMPOSE_ARGS, "exec", "-T", "core-backend", "python", "-c", script],
-        timeout=timeout,
-    )
-
-
-def configure_sage_user_policy(user_type_id: int, tool_ids: tuple[str, ...]) -> None:
+def configure_sage_user_policy(
+    user_type_id: int,
+    tool_ids: tuple[str, ...],
+    *,
+    runtime: str = "docker",
+    apple_profile: str = DEFAULT_APPLE_PROFILE,
+) -> None:
     if user_type_id < 1:
         raise ValueError("user_type_id must be positive")
     invalid_tool_ids = sorted(set(tool_ids) - USER_CONVERSATION_TOOL_SET_IDS)
@@ -2220,12 +2207,14 @@ ON CONFLICT (ai_config_key, user_type_id) DO UPDATE SET
     value = EXCLUDED.value,
     updated_at = NOW();
 """
+    command = (
+        ["container", "exec", f"{apple_profile}-postgres"]
+        if runtime == "apple"
+        else [*COMPOSE_ARGS, "exec", "-T", "postgres"]
+    )
     run_command(
         [
-            *COMPOSE_ARGS,
-            "exec",
-            "-T",
-            "postgres",
+            *command,
             "psql",
             "-v",
             "ON_ERROR_STOP=1",
@@ -2240,7 +2229,13 @@ ON CONFLICT (ai_config_key, user_type_id) DO UPDATE SET
     )
 
 
-def cleanup_sage_user_state(user_id: int, user_type_id: int) -> None:
+def cleanup_sage_user_state(
+    user_id: int,
+    user_type_id: int,
+    *,
+    runtime: str = "docker",
+    apple_profile: str = DEFAULT_APPLE_PROFILE,
+) -> None:
     if user_id < 1:
         raise ValueError("user_id must be positive")
     if user_type_id < 1:
@@ -2294,12 +2289,14 @@ DELETE FROM ai_config_user_type_overrides
 WHERE user_type_id = {user_type_id};
 COMMIT;
 """
+    command = (
+        ["container", "exec", f"{apple_profile}-postgres"]
+        if runtime == "apple"
+        else [*COMPOSE_ARGS, "exec", "-T", "postgres"]
+    )
     run_command(
         [
-            *COMPOSE_ARGS,
-            "exec",
-            "-T",
-            "postgres",
+            *command,
             "psql",
             "-v",
             "ON_ERROR_STOP=1",
@@ -2459,7 +2456,11 @@ def write_artifact(artifact: dict[str, Any], output: str | None) -> Path:
 
 def parse_args(argv: list[str]) -> BenchOptions:
     parser = argparse.ArgumentParser(description="Run the Conversation Model Bench")
-    parser.add_argument("--api-base", default=DEFAULT_API_BASE)
+    parser.add_argument("--api-base")
+    parser.add_argument(
+        "--runtime", choices=("docker", "apple"), default="docker"
+    )
+    parser.add_argument("--apple-profile", default=DEFAULT_APPLE_PROFILE)
     parser.add_argument("--output")
     parser.add_argument("--scenario", action="append", dest="scenarios")
     parser.add_argument("--models")
@@ -2471,7 +2472,8 @@ def parse_args(argv: list[str]) -> BenchOptions:
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
     return BenchOptions(
-        api_base=args.api_base,
+        api_base=args.api_base
+        or (DEFAULT_APPLE_API_BASE if args.runtime == "apple" else DEFAULT_API_BASE),
         output=args.output,
         scenarios=tuple(args.scenarios or DEFAULT_SCENARIOS),
         models=parse_models(args.models),
@@ -2481,6 +2483,8 @@ def parse_args(argv: list[str]) -> BenchOptions:
         seed_resources=args.seed_resources,
         restore_model=not args.no_restore_model,
         verbose=args.verbose,
+        runtime=args.runtime,
+        apple_profile=args.apple_profile,
     )
 
 
@@ -2490,12 +2494,19 @@ def parse_models(raw: str | None) -> tuple[str, ...]:
     return tuple(part.strip() for part in raw.split(",") if part.strip())
 
 
-def runtime_config_fingerprint_command(token: str) -> list[str]:
+def runtime_config_fingerprint_command(
+    token: str,
+    *,
+    runtime: str = "docker",
+    apple_profile: str = DEFAULT_APPLE_PROFILE,
+) -> list[str]:
+    prefix = (
+        ["container", "exec", f"{apple_profile}-sage"]
+        if runtime == "apple"
+        else [*COMPOSE_ARGS, "exec", "-T", "sage"]
+    )
     return [
-        *COMPOSE_ARGS,
-        "exec",
-        "-T",
-        "sage",
+        *prefix,
         "curl",
         "-fsS",
         "-H",
