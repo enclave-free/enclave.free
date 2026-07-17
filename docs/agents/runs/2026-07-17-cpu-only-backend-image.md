@@ -9,7 +9,7 @@
 - Feature branch: `feature/cpu-only-backend-image`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: ticket complete; orchestrator review/PR handoff ready
+- Current status: ticket and fallback local review complete; non-draft staging PR publication in progress
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -26,7 +26,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 - Ticket sessions: `docs/agents/runs/2026-07-17-cpu-only-backend-image-issue-session-509.md`
 - Agent briefs: issue #509 plus the worker task
 - Review packets: `docs/agents/runs/2026-07-17-cpu-only-backend-image-review-509.md`
-- Local CodeRabbit report: pending
+- Local CodeRabbit report: `docs/agents/runs/2026-07-17-cpu-only-backend-image-coderabbit-local-509.md` — CLI unavailable due a 23-minute organization rate limit; required fresh Codex fallback passed with no findings against the same 11-file `origin/staging...HEAD` diff
 - PR URL: pending
 
 ## Commands
@@ -43,7 +43,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #509 | AFK | complete | Standards and Spec review packet | none | yes |
+| #509 | AFK | complete | Standards pass; Spec pass; fresh local fallback pass | none | yes |
 
 ## Parked HITL Slices
 
@@ -55,7 +55,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #509 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/backend_cpu_worker` | `f29e0b6` | Standards pass; Spec pass | artifact verifier, 387 tests, runtime smoke |
+| #509 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/backend_cpu_worker` plus `/root/cpu_509_coderabbit_fallback` | `f29e0b6`, `579b2d0` | Standards pass; Spec pass; fallback implementation review pass | artifact verifier, 387 tests, runtime smoke, current staging diff review |
 
 ## Open Questions
 
