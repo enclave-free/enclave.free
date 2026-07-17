@@ -9,7 +9,7 @@
 - Feature branch: `feature/production-frontend-serving`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: ticket implementation and review complete
+- Current status: non-draft staging PR open; PR review and checks in progress
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -27,7 +27,7 @@ Replace the deployed Vite development server with production static frontend ser
 - Agent briefs: worker brief delivered to `/root/frontend_prod_worker`
 - Review packets: `docs/agents/runs/2026-07-17-production-frontend-serving-review-507.md`
 - Local CodeRabbit reports: `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-507.md`, `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-2-507.md`, and `docs/agents/runs/2026-07-17-production-frontend-serving-coderabbit-local-round-3-507.md` — six findings addressed across three completed rounds; round 3 corrected an earlier broad comparison by pinning `origin/staging`
-- PR URL: pending
+- PR URL: [#510](https://github.com/enclave-free/enclave.free/pull/510)
 
 ## Commands
 
@@ -53,7 +53,7 @@ Replace the deployed Vite development server with production static frontend ser
 
 | Issue | Fixed point                                | Worker session                                                                | Commit                                                      | Review result                                             | Checks                                                                                                                      |
 | ----- | ------------------------------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| #507  | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` plus primary browser and CodeRabbit verification | `d122b03`, `9a4906d`, `4366996` plus local CodeRabbit fixes | Standards pass; Spec pass; local CodeRabbit 6/6 addressed | Compose contracts; Apple HTTP and BusyBox probe; typecheck; build; 76 files/419 tests; user/admin browser verification pass |
+| #507  | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/frontend_prod_worker` plus primary browser and CodeRabbit verification | `d122b03`, `9a4906d`, `4366996`, `22e1993`, `6ebe340`, `801add3` | Standards pass; Spec pass; local CodeRabbit 6/6 addressed | Compose contracts; Apple HTTP and BusyBox probe; typecheck; build; 76 files/419 tests; user/admin browser verification pass |
 
 ## Open Questions
 
