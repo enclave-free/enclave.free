@@ -5,8 +5,8 @@
 - Issue: [#509](https://github.com/enclave-free/enclave.free/issues/509)
 - Fixed point before session: `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500`
 - Worker session: `/root/backend_cpu_worker`
-- Commit: pending review checkpoint
-- Status: implementation complete; review pending
+- Commit: `f29e0b6`
+- Status: complete
 
 ## Inputs
 
@@ -29,10 +29,10 @@
 ## Review
 
 - Review fixed point: `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500`
-- Standards findings: pending
-- Spec findings: pending
-- Worthy fixes applied: pending
-- Findings ignored with reasons: pending
+- Standards findings: none; pass
+- Spec findings: none; pass
+- Worthy fixes applied: none requested by reviewers
+- Findings ignored with reasons: none
 
 ## Risks
 

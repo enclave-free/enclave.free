@@ -9,7 +9,7 @@
 - Feature branch: `feature/cpu-only-backend-image`
 - Human owner: plebdev
 - Started: 2026-07-17
-- Current status: review pending
+- Current status: ticket complete; orchestrator review/PR handoff ready
 - Skill setup status: present; GitHub issue tracker and triage vocabulary documented under `docs/agents/`
 
 ## Goal
@@ -43,7 +43,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #509 | AFK | review pending | two-axis local review | pending | yes |
+| #509 | AFK | complete | Standards and Spec review packet | none | yes |
 
 ## Parked HITL Slices
 
@@ -55,7 +55,7 @@ Prevent CPU deployments from resolving CUDA-enabled Torch packages so the core b
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #509 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/backend_cpu_worker` | pending | pending | artifact verifier, 387 tests, runtime smoke |
+| #509 | `55e5ef4fb1aa3379cedb3923e8480fadb2e6e500` | `/root/backend_cpu_worker` | `f29e0b6` | Standards pass; Spec pass | artifact verifier, 387 tests, runtime smoke |
 
 ## Open Questions
 
