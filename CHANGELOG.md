@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.3 - 2026-07-18
+
+- Prevented runaway search/process narration and provider-token-limit truncation from being accepted or persisted as successful final answers.
+- Bounded and de-duplicated current-turn Tool context, preferred the newest results under pressure, and made the planner's replan hint optional to avoid unnecessary planning retries.
+
 ## 0.4.2 - 2026-07-18
 
 - Prevented GLM internal planning and serialized Tool transcripts from spilling into visible assistant answers by quarantining suspicious final-answer openings and retrying once through the clean-answer path.
