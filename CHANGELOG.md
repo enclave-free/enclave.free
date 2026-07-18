@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 - 2026-07-18
+
+- Replaced the Admin Config proposal/Apply-card workflow with direct Sage-owned configuration tools that write after natural conversational confirmation and return authoritative refresh metadata.
+- Simplified guided onboarding and Admin Config tool contracts with native objects and arrays, structured backend validation feedback, and clearer model guidance for reliable one-pass setup.
+- Hardened direct configuration writes with complete-call validation, atomic persistence, authorization, audit provenance, and safe handling of secrets and user-type deletion.
+- Switched the default frontend runtime to compiled production assets with SPA fallback, explicit cache behavior, stable health probes, and a separate opt-in development override.
+- Reduced the backend production image with CPU-only inference dependencies and fixed reasoning-trace disclosure so provider reasoning remains controlled trace data rather than visible answer text.
+
 ## 0.4.0 - 2026-07-17
 
 - Reduced Admin Conversation latency by streaming plain final answers, deferring Session Memory embeddings, bounding typed Tool planning, and preserving provider reasoning as guarded trace data instead of visible answer text.
