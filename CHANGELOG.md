@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 - 2026-07-18
+
+- Prevented GLM internal planning and serialized Tool transcripts from spilling into visible assistant answers by quarantining suspicious final-answer openings and retrying once through the clean-answer path.
+- Preserved normal direct-answer streaming and kept provider reasoning available only through the separate Conversation Trace UI.
+
 ## 0.4.1 - 2026-07-18
 
 - Replaced the Admin Config proposal/Apply-card workflow with direct Sage-owned configuration tools that write after natural conversational confirmation and return authoritative refresh metadata.
