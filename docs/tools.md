@@ -31,6 +31,7 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 {
   "message": "What does the handbook say?",
   "session_id": "optional-session-id",
+  "conversation_surface": "admin-onboarding",
   "tools": ["knowledge-search", "curated-resources", "web-search"],
   "job_ids": ["doc-handbook", "doc-faq"],
   "conversation_history": [
@@ -41,6 +42,7 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 ```
 
 - `tools` is a list of Tool Set IDs selected by an Admin or resolved by Sage from User Conversation defaults.
+- `conversation_surface` is optional. The browser sends `admin-onboarding` only for the guided Admin setup assistant. Sage uses it only for an authenticated Admin with the `admin-config` Tool Set enabled, adding the lightweight numbered-answer mapping, conversational confirmation, and atomic `configure_instance` guidance. Ordinary Admin and User Conversations omit it.
 - Sage drops or rejects Tool Sets the actor is not authorized to use. For non-admin users, Sage ignores the client-submitted `tools` list for effective resolution and computes the Tool Set list from server-side `/session-defaults`, including the empty or omitted case where configured defaults still apply.
 - `job_ids` is an optional Knowledge Search constraint: it is a list of selected Document Library `job_id` values, not an arbitrary prompt blob.
 - Additional Knowledge filters must be added as explicit request fields before the browser can send them.
@@ -51,13 +53,13 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
 Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only, and normal Admin Conversations do not enable any Tool Set by default. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
 
-| Tool Set ID         | Access                                        | Exposes                                                                                                 |
-| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                            |
-| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory                                              |
-| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service                                                     |
-| `admin-config`      | admins only                                   | product-level admin configuration read and direct-write Tools                                          |
-| `db-query`          | admins only                                   | read-only database inspection Tools                                                                     |
+| Tool Set ID         | Access                                        | Exposes                                                       |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                  |
+| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory    |
+| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service           |
+| `admin-config`      | admins only                                   | product-level admin configuration read and direct-write Tools |
+| `db-query`          | admins only                                   | read-only database inspection Tools                           |
 
 Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
 
@@ -105,6 +107,8 @@ The privileged read Tool is:
 Reads happen within Admin Conversation authority. Broad setup, status, and readiness questions should use `read_admin_setup_summary` first because it compacts readiness, missing setup, and next actions. Before a write, Sage should briefly summarize one coherent intended change and ask once for natural Conversational Confirmation. After confirmation, Sage chooses and calls the needed direct Tools. This is prompt-guided model behavior, not a confirmation token, proposal contract, Apply card, or runtime intent classifier.
 
 Every direct Tool maps to a fixed private Enclave Control Plane endpoint with purpose-built arguments. The model cannot choose an endpoint path or submit raw request JSON. Each Tool call validates and commits atomically; separate Tool calls are not one transaction. Tool results return authoritative normalized state, changed names, validation status, affected areas, and restart requirements where relevant so Sage can report the real outcome naturally.
+
+Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can correct a Tool call instead of receiving a generic failure.
 
 `configure_instance` is the high-level atomic Tool for guided first-time setup. The smaller area Tools handle later edits to Instance Settings, Deployment Settings, Agent Settings, User Types, Onboarding Questions, and Document Access defaults. Destructive User or Document operations, service restarts, and Curated Resource management are outside this authority.
 

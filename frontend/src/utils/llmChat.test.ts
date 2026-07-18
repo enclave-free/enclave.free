@@ -77,6 +77,21 @@ describe('sendLlmChatWithUnifiedTools', () => {
     });
   });
 
+  it('sends the guided onboarding surface without altering the user message', async () => {
+    await sendLlmChatWithUnifiedTools({
+      content: '1. FreeThem, 4. blue',
+      tools: ['admin-config'],
+      conversationSurface: 'admin-onboarding',
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: '1. FreeThem, 4. blue',
+      tools: ['admin-config'],
+      conversation_surface: 'admin-onboarding',
+    });
+  });
+
   it('sends Knowledge Search document constraints through unified chat', async () => {
     await sendLlmChatWithUnifiedTools({
       content: 'Use the uploaded handbook',

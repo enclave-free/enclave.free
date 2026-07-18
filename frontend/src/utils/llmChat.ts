@@ -11,6 +11,7 @@ import {
 interface SendLlmChatOptions {
   content: string;
   tools: string[];
+  conversationSurface?: 'admin-onboarding';
   sessionId?: string | null;
   jobIds?: string[];
   conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -39,6 +40,7 @@ interface SendLlmChatStreamOptions extends SendLlmChatOptions {
 async function buildUnifiedChatBody({
   content,
   tools,
+  conversationSurface,
   sessionId,
   jobIds,
   conversationHistory,
@@ -49,6 +51,9 @@ async function buildUnifiedChatBody({
     message: content,
     tools,
   };
+  if (conversationSurface) {
+    body.conversation_surface = conversationSurface;
+  }
   if (sessionId) {
     body.session_id = sessionId;
   }

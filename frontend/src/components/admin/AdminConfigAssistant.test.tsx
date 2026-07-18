@@ -1,7 +1,10 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AdminConfigAssistant } from './AdminConfigAssistant';
+import {
+  AdminConfigAssistant,
+  ONBOARDING_WELCOME_MESSAGE,
+} from './AdminConfigAssistant';
 import { adminFetch } from '../../utils/adminApi';
 import { ADMIN_CONFIG_CHANGED_EVENT } from '../../utils/adminConfigEvents';
 import {
@@ -275,6 +278,63 @@ describe('AdminConfigAssistant', () => {
     expect(
       screen.queryByRole('button', { name: 'Database' })
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps the guided question numbers aligned with the Sage onboarding contract', () => {
+    expect(
+      Array.from(
+        ONBOARDING_WELCOME_MESSAGE.matchAll(/\d+\. \*\*([^*]+)\*\*/g),
+        (match) => match[1]
+      )
+    ).toEqual([
+      'Name',
+      'Description',
+      'Assistant name',
+      'Accent color',
+      'Theme',
+      'Default language',
+      'Tagline',
+      'New users',
+      'User types',
+    ]);
+  });
+
+  it('marks guided setup turns as admin onboarding for Sage', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      '1. FreeThem, 4. blue, 8. approve each person'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce();
+    });
+    expect(
+      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
+    ).toEqual(
+      expect.objectContaining({
+        content: '1. FreeThem, 4. blue, 8. approve each person',
+        conversationSurface: 'admin-onboarding',
+        tools: ['admin-config'],
+      })
+    );
   });
 
   it('passes previous admin assistant turns into follow-up chat requests', async () => {
@@ -957,7 +1017,9 @@ describe('AdminConfigAssistant', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
-    expect(await screen.findByText('Stream transport failed')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Stream transport failed')
+    ).toBeInTheDocument();
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 

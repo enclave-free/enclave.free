@@ -60,11 +60,13 @@ Privileged read Tool:
 
 Each Tool has product-level arguments and a fixed private Enclave Control Plane endpoint. The model cannot choose a request path or submit raw Admin API JSON. Each write Tool call validates and commits atomically. Separate write Tool calls are not one transaction: an earlier success remains applied if a later call fails, and Sage should report that partial outcome honestly.
 
+Structured Tool arguments stay native end to end: settings are objects and collections such as User Types, Onboarding Questions, rules, and Document updates are arrays. They are never passed as JSON encoded inside strings. When the Enclave Control Plane rejects a call, Sage receives its structured validation field locations and messages so it can make a focused correction.
+
 ## Runtime Flow
 
-1. The browser sends the Admin message, selected Tool Set IDs, session identifier, and optional Knowledge constraints to the Gateway.
+1. The browser sends the Admin message, selected Tool Set IDs, session identifier, and optional Knowledge constraints to the Gateway. Guided setup also sends `conversation_surface: "admin-onboarding"`; other Conversation surfaces omit it.
 2. The Gateway routes the public Conversation request to Sage. Python exposes no public `/llm/chat` handler.
-3. Sage verifies Admin authority, loads Session Memory, and exposes the authorized Tool contracts.
+3. Sage verifies Admin authority, loads Session Memory, and exposes the authorized Tool contracts. For the guided Admin surface with Config enabled, it adds only the exact numbered-answer mapping, a conversational confirmation reminder, and guidance to use the atomic `configure_instance` Tool after confirmation.
 4. The model chooses read or direct-write Tools.
 5. Sage calls fixed `/internal/agent/admin-config/*` contracts with the real Conversation identifier.
 6. The Enclave Control Plane validates and atomically applies each write, records audit provenance, and returns authoritative normalized state.

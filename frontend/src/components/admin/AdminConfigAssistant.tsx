@@ -70,7 +70,7 @@ interface AdminConfigAssistantProps {
 const CONFIG_TOOL_ID = 'admin-config';
 const KNOWLEDGE_TOOL_ID = 'knowledge-search';
 const CURATED_RESOURCES_TOOL_ID = 'curated-resources';
-const ONBOARDING_WELCOME_MESSAGE =
+export const ONBOARDING_WELCOME_MESSAGE =
   "Welcome — let's set up your space. Answer as many of these as you like in one message (number them, and skip anything you're unsure about):\n\n1. **Name** — what should we call this space? (shows in the header & browser tab)\n2. **Description** — one sentence on what it's for (a private note, not shown to users)\n3. **Assistant name** — what should the AI helper be called?\n4. **Accent color** — the highlight color for buttons & links (a name like blue/teal, or a hex like #3B82F6)\n5. **Theme** — light, dark, or system (match the device)?\n6. **Default language** — e.g. English or Spanish (optional)\n7. **Tagline** — a short line for the header (optional)\n8. **New users** — let them in right away, or approve each person?\n9. **User types** — what kinds of non-admin people will use this? (e.g. Teacher and Student) — I'll create each one for you\n\nExample: \"9. Teacher and Student\". I'll save everything in one step — and you can switch to manual setup anytime.";
 
 // How often (in ms) streamed tokens are flushed to the message list while the
@@ -383,6 +383,7 @@ export function AdminConfigAssistant({
           await sendLlmChatStreamWithUnifiedTools({
             content,
             tools: selectedTools,
+            conversationSurface: isOnboarding ? 'admin-onboarding' : undefined,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
             includeAdminSignerDecryptedContext:
@@ -547,6 +548,7 @@ export function AdminConfigAssistant({
           const res = await sendLlmChatWithUnifiedTools({
             content,
             tools: selectedTools,
+            conversationSurface: isOnboarding ? 'admin-onboarding' : undefined,
             sessionId: conversationSessionId,
             conversationHistory: boundedConversationHistory,
             includeAdminSignerDecryptedContext:
@@ -607,6 +609,7 @@ export function AdminConfigAssistant({
     [
       conversationSessionId,
       hasConfigTool,
+      isOnboarding,
       messages,
       selectedTools,
       shareSecrets,
