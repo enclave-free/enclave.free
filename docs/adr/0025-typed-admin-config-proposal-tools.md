@@ -1,5 +1,7 @@
 # Typed Admin Config Proposal Tools
 
+Status: Superseded for Admin Config writes by [ADR-0028](0028-sage-owns-direct-admin-config-writes.md). Typed summary reads remain active guidance. Do not use the historical proposal flow below as current implementation guidance.
+
 Admin Config write intent should prefer Typed Proposal Tools over model-authored raw change-set JSON. Sage still owns the Model-Driven Tool Loop and Change Confirmation, but models should express product-level intent while deterministic code builds canonical Enclave Control Plane request shapes, validates them, and returns an Executable Change Set for the existing Apply flow.
 
 The same product-level contract shape should apply to common read-heavy Admin Config status flows once benchmark evidence shows that raw read-tool fanout makes models slow or brittle. For broad setup, status, or readiness questions, models should prefer compact typed summary Tools such as `read_admin_setup_summary`; low-level read Tools remain available for narrow follow-up inspection.

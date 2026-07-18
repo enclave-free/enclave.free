@@ -1,6 +1,8 @@
 # Conversation UI Surface Review
 
-Status: ready for browser review before full end-to-end smoke
+Status: Historical review of the assistant-ui cutover. Admin Config approval-card findings are superseded by [ADR-0028](adr/0028-sage-owns-direct-admin-config-writes.md); the current surface sends confirmation language to Sage and renders direct Tool Activity. Do not use the superseded approval-card sections below as current implementation guidance.
+
+Historical checkpoint status: ready for browser review before full end-to-end smoke
 
 ## Checkpoint: assistant-ui refactor slices
 

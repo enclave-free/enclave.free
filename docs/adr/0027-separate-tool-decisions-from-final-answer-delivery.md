@@ -1,5 +1,7 @@
 # Separate Tool decisions from final answer delivery
 
+Status: Still authoritative for Tool planning and natural final-answer delivery. Its Admin Config proposal and confirmation references are superseded by [ADR-0028](0028-sage-owns-direct-admin-config-writes.md). Treat those historical references below as decision context, not implementation guidance.
+
 Sage will keep provider-portable typed responses for deciding and executing enabled **Tools**, but it will not require final user-visible prose to round-trip through the typed `AgentResponse` schema or a repair-model call. After the model-selected Tool round completes, **Conversation Streaming Transport** should generate the final answer through a plain completion path and forward real provider chunks as answer deltas; deterministic terminal Tool results may finish without another model call. This accepts a bounded Tool-planning phase in exchange for removing correction calls and fake streaming from the answer critical path while preserving Sage ownership, Tool authorization, trace visibility, and provider portability.
 
 ## Considered Options
@@ -10,4 +12,4 @@ Sage will keep provider-portable typed responses for deciding and executing enab
 
 ## Consequences
 
-The model should select every immediately useful enabled Tool in the bounded planning response. Sage may still finish deterministic proposal Tools without another inference call. Tool execution, authorization, redaction, trace events, and Change Confirmation remain unchanged; only terminal answer generation leaves the typed response contract.
+In each bounded planning response, the model should select every immediately useful enabled Tool; Sage executes that round and continues planning until the model can answer or a deterministic terminal Tool result completes the turn. Tool execution, authorization, validation, persistence, and trace events remain unchanged; only terminal answer generation leaves the typed response contract. Historical proposal-Tool and Change Confirmation behavior from this ADR was superseded by ADR-0028's conversationally confirmed direct writes.

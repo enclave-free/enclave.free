@@ -376,7 +376,7 @@ Example unsafe SQL response:
 }
 ```
 
-### Admin Config Tool Endpoints (ADR-0023 Target)
+### Admin Config Tool Endpoints (ADR-0028)
 
 The `admin-config` Tool Set will be exposed to the model by Sage as concrete Tools.
 Python provides private execution endpoints for the Enclave Control Plane facts
@@ -478,8 +478,9 @@ Field contract:
 - `data`: structured Tool-specific data, not prompt-ready prose
 - `warnings`: non-fatal read failures, reductions, or stale-data notes
 - `generated_at`: ISO-8601 UTC timestamp for the read
-- `secret_policy.mode`: `masked` unless a future explicit secret-sharing flow
-  extends the contract
+- `secret_policy.mode`: `masked` for ordinary reads and writes;
+  `explicit_secret` only for the explicit Admin-only `read_deployment_secret`
+  Tool
 
 Tool-specific `data` contracts:
 
@@ -540,33 +541,64 @@ Deployment Setting secret values stay masked (`********` or equivalent). Secret
 metadata such as configured/unconfigured status may be returned. Raw secret
 values are never returned from the default Admin Config Tool endpoints.
 
-`propose_config_change_set` is a Sage-local, model-callable, non-mutating
-proposal Tool. It is not a Python write endpoint and it must not apply changes.
-Sage may propose an Executable Change Set from Tool results, but the
-Conversation UI Surface must validate it and require Change Confirmation before
-ordinary admin endpoints are called.
+Admin Config writes are direct, product-level Tools. Sage does not stage
+proposals or send arbitrary Admin API paths. Each Tool calls one fixed private
+endpoint:
 
-The proposal Tool stages canonical Admin Config write shapes:
+- `POST /internal/agent/admin-config/configure-instance`
+- `POST /internal/agent/admin-config/update-instance-settings`
+- `POST /internal/agent/admin-config/update-deployment-settings`
+- `POST /internal/agent/admin-config/update-agent-settings`
+- `POST /internal/agent/admin-config/manage-user-types`
+- `POST /internal/agent/admin-config/manage-onboarding-questions`
+- `POST /internal/agent/admin-config/update-document-access`
 
-- `PUT /admin/settings` with stored setting keys such as `header_tagline`,
-  `default_language`, `default_theme`, and `auto_approve_users`.
-- `PUT /admin/ai-config/{key}` with `{ "value": "..." }` for Agent Settings.
-  Behavior rules and forbidden topics use `PUT /admin/ai-config/prompt_rules`
-  and `PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string
-  array, such as
-  `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
-- `POST /admin/user-types` with `{ "name", "description"?, "icon"?, "display_order"? }`.
-- `POST /admin/user-fields` for onboarding questions, plus supported
-  `PUT/DELETE /admin/user-fields...` mutation paths.
-- `PUT /admin/deployment/config/{key}` for deployment config values.
-- `PUT/DELETE /ingest/admin/documents/...` defaults paths for document access.
+The privileged read endpoint is:
 
-Sage may normalize only the known small drift at the proposal boundary:
-`/admin/user_types` to `/admin/user-types`, `tagline` to `header_tagline`, and
-supported language labels such as `English` to language codes such as `en`.
-After normalization, the staged `admin_change_set` must contain canonical paths
-and keys. Unknown setting keys or unsupported values are validation errors, not
-partial proposals.
+- `POST /internal/agent/admin-config/read-deployment-secret`
+
+The authoritative typed request models and common response model live in
+`backend/app/internal_agent.py`: `InternalUpdateInstanceSettingsRequest`,
+`InternalConfigureInstanceRequest`, `InternalUpdateDeploymentSettingsRequest`,
+`InternalUpdateAgentSettingsRequest`, `InternalManageUserTypesRequest`,
+`InternalManageOnboardingQuestionsRequest`,
+`InternalUpdateDocumentAccessRequest`, `InternalReadDeploymentSecretRequest`,
+and `InternalAdminConfigToolResponse`. Sage and Python must update these models
+and the matching Sage Tool schema together.
+
+| Tool | Tool-specific request fields after `actor` and `conversation_id` | Validation and authoritative `affected_areas` |
+| --- | --- | --- |
+| `configure_instance` | typed Instance Settings, up to five typed User Types, up to ten typed Onboarding Questions, behavior rules, forbidden topics | validates the complete guided setup and returns `instance_settings`, `agent_settings`, `user_types`, and `onboarding_questions` |
+| `update_instance_settings` | typed `settings` object | validates supported values as one batch and returns `instance_settings` |
+| `update_deployment_settings` | string-valued `settings` map; secret inputs are ordinary string values and results are masked | validates allowed keys, value types, URLs, and restart metadata and returns `deployment_settings` |
+| `update_agent_settings` | optional `user_type_id`, string-valued `updates`, and `revert_keys` | validates known Agent Settings and inheritance rules and returns `agent_settings` |
+| `manage_user_types` | `operation`, optional `user_type_id`, and typed name/description/icon/order fields | validates lifecycle and uniqueness; returns `user_types`, plus cascading `onboarding_questions`, `agent_settings`, and `document_access` for deletion |
+| `manage_onboarding_questions` | `operation`, optional `question_id`, and typed question fields | validates field types, encryption/include-in-chat, assignment, and uniqueness and returns `onboarding_questions` |
+| `update_document_access` | optional `user_type_id`, typed `updates`, and `revert_job_ids` | validates Documents, scope, and inheritance and returns `document_access` |
+| `read_deployment_secret` | secret Deployment Setting `key` | accepts only an explicitly requested readable secret, returns `secret_policy.mode: explicit_secret`, and has no `affected_areas` because it does not mutate configuration |
+
+All write responses use `InternalAdminConfigToolResponse.data` with
+`outcome`, `validation`, authoritative normalized saved state,
+`changed_names`, and `affected_areas`; Deployment Settings also return
+`restart_required` and `restart_required_keys`. Tool-specific identifiers,
+reverted keys, and deleted IDs are included where relevant.
+
+Every direct write and explicit secret-read request carries the authenticated
+Admin actor and the real Sage Conversation identifier. Ordinary read requests
+need only the actor envelope. Write endpoints validate the complete Tool call
+and commit all changes in that call or none. They return normalized saved
+state, changed configuration names, validation outcome, affected areas, and
+restart status where relevant.
+
+Write results mask secret values. Ordinary reads expose only secret status.
+`read-deployment-secret` may return a stored secret only for an explicit Admin
+request; Activity, Conversation Trace, and Audit Log metadata must still omit
+the value.
+
+The Enclave Control Plane records `sage_conversation` provenance and the
+Conversation identifier in the Audit Log without copying Conversation Content.
+The browser may refetch returned affected areas, but it never executes or
+repeats the write.
 
 ### Removed Admin Context Endpoints
 

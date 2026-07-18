@@ -18,14 +18,6 @@ export {
 } from './ConversationMessageActions';
 export { ConversationSurface } from './ConversationSurface';
 export {
-  createAdminChangeConfirmationState,
-  reduceAdminChangeConfirmationState,
-  buildAdminChangePreview,
-  type AdminChangeConfirmationAction,
-  type AdminChangeConfirmationState,
-  type AdminChangePreview,
-} from './AdminChangeConfirmationState';
-export {
   buildConversationSurfaceTurns,
   type ConversationActivityStep,
   type ConversationSurfaceTurn,

@@ -24,7 +24,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(
             encoding="utf-8"
         )
-        adr = (REPO_ROOT / "docs/adr/0023-unified-model-driven-tool-loop.md").read_text(
+        adr = (REPO_ROOT / "docs/adr/0028-sage-owns-direct-admin-config-writes.md").read_text(
             encoding="utf-8"
         )
         internal_contract = (REPO_ROOT / "docs/internal-agent-contract.md").read_text(
@@ -34,9 +34,9 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
 
         self.assertIn("model-driven Tool loop", tools)
         self.assertIn("selected Tool Sets", tools)
-        self.assertIn("model-callable, non-mutating Tool", tools)
-        self.assertIn("propose_config_change_set", adr)
-        self.assertIn("non-mutating proposal Tool", adr)
+        self.assertIn("product-level admin configuration read and direct-write Tools", tools)
+        self.assertIn("`update_instance_settings`", adr)
+        self.assertIn("Confirmation is trusted model behavior", adr)
         self.assertIn(
             "are removed from the active internal agent contract",
             normalized_internal_contract,
@@ -118,12 +118,12 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
     def test_admin_assistant_docs_describe_gateway_transport_and_active_defaults(self) -> None:
         assistant = (REPO_ROOT / "docs/admin-config-assistant.md").read_text(encoding="utf-8")
 
-        self.assertIn("Gateway routes this request to Sage", assistant)
-        self.assertIn("Sage-owned session defaults", assistant)
-        self.assertIn("`admin-config` is default-on for admin configuration conversations", assistant)
-        self.assertIn("Sage should call Knowledge Search when enabled and relevant", assistant)
-        self.assertIn("Secrets are not included by default", assistant)
-        self.assertIn("Python does not expose public `/llm/chat` or `/session-defaults` handlers", assistant)
+        self.assertIn("Gateway routes the public Conversation request to Sage", assistant)
+        self.assertIn("dedicated Admin Configuration Assistant always has the Config Tool Set enabled", assistant)
+        self.assertIn("General Admin chat receives Config Tools only while its Config control is enabled", assistant)
+        self.assertIn("User Conversations never receive Admin Config Tools", assistant)
+        self.assertIn("Ordinary Admin Config reads return non-secret values", assistant)
+        self.assertIn("Python exposes no public `/llm/chat` handler", assistant)
         self.assertNotIn("Transport: uses `POST /llm/chat`", assistant)
         self.assertNotIn("Reads `/session-defaults`", assistant)
         self.assertIn("no admin configuration `tool_context` prefetch", assistant)
@@ -132,14 +132,16 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         assistant = (REPO_ROOT / "docs/admin-config-assistant.md").read_text(encoding="utf-8")
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
 
-        self.assertIn("Admin Config Tool Set", assistant)
+        self.assertIn("Config Tool Set", assistant)
         self.assertIn("Instance visual identity settings", assistant)
-        self.assertIn("theme requests mean Instance visual identity settings", assistant)
-        self.assertIn("not frontend CSS token or source-code theme edits", assistant)
-        self.assertIn("partial `PUT /admin/settings`", assistant)
-        self.assertIn("Admin Change Confirmation", assistant)
+        self.assertIn("Theme requests mean Instance visual identity settings", assistant)
+        self.assertIn("not frontend CSS token or source-code edits", assistant)
+        self.assertIn("`update_instance_settings`", assistant)
+        self.assertIn("natural-language Conversational Confirmation", assistant)
+        self.assertIn("browser refetches matching settings views", assistant)
         self.assertIn("Instance visual identity settings", tools)
         self.assertNotIn("propose_config_change_set` is one of the initial Tools", assistant)
+        self.assertNotIn("pending change set", assistant.lower())
 
     def test_locale_provider_copy_does_not_teach_maple_aliases(self) -> None:
         locale_dir = REPO_ROOT / "frontend/src/i18n/locales"

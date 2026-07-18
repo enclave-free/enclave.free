@@ -25,6 +25,11 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.benches.conversation_model_bench import ADMIN_CONFIG_DIRECT_WRITE_TOOLS
+
 COMPOSE_ARGS = [
     "docker",
     "compose",
@@ -49,21 +54,11 @@ SCENARIOS = [
         tools=[],
     ),
     Scenario(
-        name="config_bootstrap_proposal",
+        name="config_setup_summary",
         message=(
-            "Set up the instance with these onboarding answers:\n"
-            "1. FreeThem\n"
-            "2. We help political prisoners and their families find support and information.\n"
-            "3. Choose a simple assistant name.\n"
-            "4. Choose the accent color.\n"
-            "5. Dark theme.\n"
-            "6. English.\n"
-            "7. Political prisoner support team.\n"
-            "8. Let new users in right away. Create two user types: families and friends "
-            "of current political prisoners, and former political prisoners with their supporters.\n"
-            "9. Ask what country the user is in and what support they need; include both in chat.\n"
-            "10. Ask where users are before location-specific guidance.\n"
-            "Call propose_admin_config_bootstrap directly and prepare the changes for review."
+            "Check the current instance setup and deployment readiness with Admin "
+            "Config tools. Briefly summarize what is configured and what still needs "
+            "attention. Do not change anything."
         ),
         tools=["admin-config"],
     ),
@@ -275,6 +270,28 @@ def measure_stream(api_base: str, token: str, scenario: Scenario) -> dict[str, A
             raise RuntimeError(
                 f"{scenario.name}: stream did not preserve requested session_id"
             )
+        observed_tools = list(tool_statuses)
+        done_tools = done_payload.get("tools_used")
+        if isinstance(done_tools, list):
+            observed_tools.extend(item for item in done_tools if isinstance(item, dict))
+        if scenario.name == "config_setup_summary":
+            direct_write_ids = {
+                f"admin-config:{tool_name}"
+                for tool_name in ADMIN_CONFIG_DIRECT_WRITE_TOOLS
+            }
+            invoked_write_ids = sorted(
+                {
+                    str(item.get("id") or item.get("tool_id") or "")
+                    for item in observed_tools
+                    if str(item.get("id") or item.get("tool_id") or "")
+                    in direct_write_ids
+                }
+            )
+            if invoked_write_ids:
+                raise RuntimeError(
+                    "config_setup_summary invoked write Tools: "
+                    + ", ".join(invoked_write_ids)
+                )
 
         return {
             "scenario": scenario.name,
@@ -294,10 +311,12 @@ def measure_stream(api_base: str, token: str, scenario: Scenario) -> dict[str, A
             "correction_call_count": correction_call_count,
             "retry_count": retry_count,
             "tool_execution_ms": round(tool_execution_ms, 1),
-            "terminal_prose_zero_corrections": correction_call_count == 0,
+            "terminal_prose_zero_corrections": (
+                correction_call_count == 0 and retry_count == 0
+            ),
             "deterministic_terminal_no_final_model_call": (
                 model_call_count == 1
-                if scenario.name == "config_bootstrap_proposal"
+                if scenario.name == "config_setup_summary"
                 else None
             ),
             "model": done_payload.get("model"),

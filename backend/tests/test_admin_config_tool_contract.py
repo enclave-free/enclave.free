@@ -6,6 +6,7 @@ import types
 import unittest
 from pathlib import Path
 from typing import Optional
+from unittest import mock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -152,6 +153,97 @@ class AdminConfigToolContractTest(unittest.TestCase):
         )
         self.assertNotIn("test-secret", response.text)
 
+    def test_update_instance_settings_applies_atomic_audited_direct_write(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/update-instance-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-instance-write",
+                "settings": {
+                    "instance_name": "Freedom Network",
+                    "default_theme": "DARK",
+                    "auto_approve_users": False,
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["tool"], "update_instance_settings")
+        self.assertEqual(payload["secret_policy"], {"mode": "masked"})
+        self.assertEqual(payload["data"]["outcome"], "succeeded")
+        self.assertEqual(payload["data"]["validation"], {"status": "valid"})
+        self.assertEqual(
+            payload["data"]["saved_values"],
+            {
+                "auto_approve_users": "false",
+                "default_theme": "dark",
+                "instance_name": "Freedom Network",
+            },
+        )
+        self.assertEqual(
+            payload["data"]["changed_names"],
+            ["auto_approve_users", "default_theme", "instance_name"],
+        )
+        self.assertEqual(payload["data"]["affected_areas"], ["instance_settings"])
+
+        settings = self.database.get_all_settings()
+        self.assertEqual(settings["instance_name"], "Freedom Network")
+        self.assertEqual(settings["default_theme"], "dark")
+        self.assertEqual(settings["auto_approve_users"], "false")
+        self.assertTrue(
+            {"instance_name", "default_theme", "auto_approve_users"}.issubset(
+                self.database.get_onboarding_configured_keys()
+            )
+        )
+
+        audit_entries = self.database.get_config_audit_log(
+            limit=None,
+            table_name="instance_settings",
+        )
+        direct_entries = [
+            entry
+            for entry in audit_entries
+            if entry["conversation_id"] == "conversation-instance-write"
+        ]
+        self.assertEqual(
+            {entry["config_key"] for entry in direct_entries},
+            {"instance_name", "default_theme", "auto_approve_users"},
+        )
+        self.assertTrue(
+            all(entry["action_source"] == "sage_conversation" for entry in direct_entries)
+        )
+        self.assertTrue(all(entry["changed_by"] == "abc123" for entry in direct_entries))
+        self.assertNotIn("conversation-instance-write", " ".join(
+            str(entry.get("old_value") or "") + str(entry.get("new_value") or "")
+            for entry in direct_entries
+        ))
+
+    def test_update_instance_settings_rejects_invalid_batch_without_mutation(self) -> None:
+        original_name = self.database.get_setting("instance_name")
+
+        response = self.client.post(
+            "/internal/agent/admin-config/update-instance-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-invalid-instance-write",
+                "settings": {
+                    "instance_name": "Must not persist",
+                    "default_theme": "neon",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.get_setting("instance_name"), original_name)
+        audit_entries = self.database.get_config_audit_log(limit=None)
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-invalid-instance-write"
+            for entry in audit_entries
+        ))
+
     def test_read_deployment_settings_returns_masked_secret_status(self) -> None:
         self.database.upsert_deployment_config(
             "LLM_MODEL",
@@ -206,6 +298,271 @@ class AdminConfigToolContractTest(unittest.TestCase):
         self.assertNotIn("configured-secret", response.text)
         self.assertNotIn("smtp-secret", response.text)
 
+    def test_update_deployment_settings_reports_restart_and_redacts_secret(self) -> None:
+        secret = "deployment-secret-for-direct-tool"
+        response = self.client.post(
+            "/internal/agent/admin-config/update-deployment-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-deployment-write",
+                "settings": {
+                    "LLM_API_URL": "https://inference.example.test/v1",
+                    "LLM_API_KEY": secret,
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["tool"], "update_deployment_settings")
+        self.assertEqual(payload["data"]["outcome"], "succeeded")
+        self.assertTrue(payload["data"]["restart_required"])
+        self.assertEqual(payload["data"]["restart_required_keys"], ["LLM_API_URL"])
+        self.assertEqual(
+            payload["data"]["saved_values"],
+            {
+                "LLM_API_KEY": "********",
+                "LLM_API_URL": "https://inference.example.test/v1",
+            },
+        )
+        self.assertNotIn(secret, response.text)
+        self.assertEqual(self.database.get_deployment_config_value("LLM_API_KEY"), secret)
+
+        audit_entries = self.database.get_config_audit_log(
+            limit=None,
+            table_name="deployment_config",
+        )
+        direct_entries = [
+            entry
+            for entry in audit_entries
+            if entry.get("conversation_id") == "conversation-deployment-write"
+        ]
+        self.assertEqual(
+            {entry["config_key"] for entry in direct_entries},
+            {"LLM_API_KEY", "LLM_API_URL"},
+        )
+        self.assertNotIn(secret, repr(direct_entries))
+
+        reveal = self.client.post(
+            "/internal/agent/admin-config/read-deployment-secret",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-secret-read",
+                "key": "LLM_API_KEY",
+            },
+        )
+        self.assertEqual(reveal.status_code, 200, reveal.text)
+        self.assertEqual(reveal.json()["tool"], "read_deployment_secret")
+        self.assertEqual(reveal.json()["secret_policy"], {"mode": "explicit_secret"})
+        self.assertEqual(reveal.json()["data"], {"key": "LLM_API_KEY", "value": secret})
+        reveal_audit = [
+            entry
+            for entry in self.database.get_config_audit_log(
+                limit=None,
+                table_name="deployment_config_secret_reads",
+            )
+            if entry.get("conversation_id") == "conversation-secret-read"
+        ]
+        self.assertEqual(len(reveal_audit), 1)
+        self.assertEqual(reveal_audit[0]["config_key"], "LLM_API_KEY")
+        self.assertEqual(reveal_audit[0]["action_source"], "sage_conversation")
+        self.assertNotIn(secret, repr(reveal_audit))
+
+        blank_conversation = self.client.post(
+            "/internal/agent/admin-config/read-deployment-secret",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "   ",
+                "key": "LLM_API_KEY",
+            },
+        )
+        self.assertEqual(blank_conversation.status_code, 422)
+
+    def test_update_deployment_settings_preserves_runtime_side_effects(self) -> None:
+        self.database.upsert_deployment_config(
+            key="SMTP_LAST_TEST_SUCCESS",
+            value="true",
+            category="email",
+            description="Whether last SMTP test was successful",
+        )
+        invalidations: list[bool] = []
+        config_loader = types.SimpleNamespace(
+            invalidate_cache=lambda: invalidations.append(True)
+        )
+
+        with mock.patch.dict(sys.modules, {"config_loader": config_loader}):
+            response = self.client.post(
+                "/internal/agent/admin-config/update-deployment-settings",
+                headers=self.headers,
+                json={
+                    "actor": self.admin_actor,
+                    "conversation_id": "conversation-smtp-write",
+                    "settings": {"SMTP_HOST": "smtp.example.test"},
+                },
+            )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(
+            self.database.get_deployment_config_value("SMTP_LAST_TEST_SUCCESS"),
+            "false",
+        )
+        self.assertEqual(invalidations, [True])
+
+        failing_loader = types.SimpleNamespace(
+            invalidate_cache=lambda: (_ for _ in ()).throw(RuntimeError("cache unavailable"))
+        )
+        with mock.patch.dict(sys.modules, {"config_loader": failing_loader}):
+            committed = self.client.post(
+                "/internal/agent/admin-config/update-deployment-settings",
+                headers=self.headers,
+                json={
+                    "actor": self.admin_actor,
+                    "conversation_id": "conversation-cache-failure",
+                    "settings": {"LLM_MODEL": "cache-failure-still-commits"},
+                },
+            )
+        self.assertEqual(committed.status_code, 200, committed.text)
+        self.assertTrue(committed.json()["warnings"])
+        self.assertIn("may remain stale", committed.json()["warnings"][0])
+        self.assertEqual(
+            self.database.get_deployment_config_value("LLM_MODEL"),
+            "cache-failure-still-commits",
+        )
+
+    def test_update_deployment_settings_rejects_unsafe_url_schemes(self) -> None:
+        cases = [
+            ("LLM_API_URL", "javascript://example.test/payload"),
+            ("EMBEDDING_API_URL", "file://example.test/tmp/model"),
+            ("SEARXNG_URL", "ftp://example.test/search"),
+            ("FRONTEND_URL", "data://example.test/value"),
+            ("RATE_LIMIT_VALKEY_URL", "https://example.test/not-redis"),
+            ("FRONTEND_URL", "https://[broken-host"),
+            ("FRONTEND_URL", "https://example.test:notaport"),
+            ("SMTP_HOST", "smtp.example.test:notaport"),
+        ]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                response = self.client.post(
+                    "/internal/agent/admin-config/update-deployment-settings",
+                    headers=self.headers,
+                    json={
+                        "actor": self.admin_actor,
+                        "conversation_id": f"conversation-invalid-url-{key}",
+                        "settings": {key: value},
+                    },
+                )
+                self.assertEqual(response.status_code, 422, response.text)
+
+    def test_update_deployment_settings_rejects_masked_secret_placeholder(self) -> None:
+        self.database.upsert_deployment_config(
+            "LLM_API_KEY",
+            "real-secret",
+            is_secret=True,
+            category="llm",
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/update-deployment-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-masked-secret",
+                "settings": {"LLM_API_KEY": "********"},
+            },
+        )
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertEqual(
+            self.database.get_deployment_config_value("LLM_API_KEY"),
+            "real-secret",
+        )
+
+    def test_update_deployment_settings_rejects_invalid_batch_without_mutation(self) -> None:
+        original_model = self.database.get_deployment_config_value("LLM_MODEL")
+        response = self.client.post(
+            "/internal/agent/admin-config/update-deployment-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-invalid-deployment-write",
+                "settings": {
+                    "LLM_MODEL": "must-not-persist",
+                    "UNKNOWN_SETTING": "invalid",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.get_deployment_config_value("LLM_MODEL"), original_model)
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-invalid-deployment-write"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
+    def test_empty_secret_update_preserves_latest_value_inside_write_transaction(self) -> None:
+        self.database.upsert_deployment_config(
+            "LLM_API_KEY",
+            "preserve-this-secret",
+            is_secret=True,
+            category="llm",
+        )
+
+        response = self.client.post(
+            "/internal/agent/admin-config/update-deployment-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-preserve-secret",
+                "settings": {"LLM_API_KEY": ""},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(
+            self.database.get_deployment_config_value("LLM_API_KEY"),
+            "preserve-this-secret",
+        )
+        self.assertNotIn("preserve-this-secret", response.text)
+
+    def test_deployment_batch_detects_metadata_changes_and_masks_secret_transition(self) -> None:
+        self.database.upsert_deployment_config(
+            "LLM_API_KEY",
+            "same-value",
+            is_secret=False,
+            requires_restart=False,
+            category="general",
+            description="Old metadata",
+        )
+
+        result = self.database.update_deployment_configs_with_audit(
+            {
+                "LLM_API_KEY": {
+                    "value": "same-value",
+                    "is_secret": True,
+                    "requires_restart": True,
+                    "category": "llm",
+                    "description": "Model provider API key",
+                }
+            },
+            changed_by="abc123",
+            action_source="sage_conversation",
+            conversation_id="conversation-secret-transition",
+        )
+
+        self.assertEqual(result["changed_names"], ["LLM_API_KEY"])
+        entry = next(
+            item
+            for item in self.database.get_config_audit_log(
+                limit=None,
+                table_name="deployment_config",
+            )
+            if item.get("conversation_id") == "conversation-secret-transition"
+        )
+        self.assertEqual(entry["old_value"], "********")
+        self.assertEqual(entry["new_value"], "********")
+        self.assertNotIn("same-value", repr(entry))
+
     def test_read_agent_settings_returns_global_and_user_type_effective_values(self) -> None:
         user_type_id = self.database.create_user_type(
             "Advocates",
@@ -257,6 +614,102 @@ class AdminConfigToolContractTest(unittest.TestCase):
         )
         self.assertEqual(data["limits"]["user_types_returned"], 1)
         self.assertNotIn("test-secret", response.text)
+
+    def test_update_agent_settings_manages_override_and_reversion(self) -> None:
+        user_type_id = self.database.create_user_type(
+            "Case Workers",
+            "People providing direct case support",
+        )
+        update = self.client.post(
+            "/internal/agent/admin-config/update-agent-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-agent-override",
+                "user_type_id": user_type_id,
+                "updates": {"temperature": "0.25", "web_search_default": "true"},
+            },
+        )
+
+        self.assertEqual(update.status_code, 200, update.text)
+        self.assertEqual(update.json()["tool"], "update_agent_settings")
+        self.assertEqual(
+            update.json()["data"]["saved_values"],
+            {"temperature": "0.25", "web_search_default": "true"},
+        )
+        self.assertEqual(update.json()["data"]["affected_areas"], ["agent_settings"])
+        self.assertEqual(
+            self.database.get_ai_config_override("temperature", user_type_id)["value"],
+            "0.25",
+        )
+
+        revert = self.client.post(
+            "/internal/agent/admin-config/update-agent-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-agent-revert",
+                "user_type_id": user_type_id,
+                "revert_keys": ["temperature"],
+            },
+        )
+
+        self.assertEqual(revert.status_code, 200, revert.text)
+        self.assertIsNone(self.database.get_ai_config_override("temperature", user_type_id))
+        effective = {
+            row["key"]: row["value"]
+            for row in self.database.get_effective_ai_config(user_type_id)
+        }
+        self.assertEqual(revert.json()["data"]["saved_values"]["temperature"], effective["temperature"])
+        self.assertEqual(revert.json()["data"]["reverted_keys"], ["temperature"])
+
+    def test_update_agent_settings_rejects_invalid_batch_without_mutation(self) -> None:
+        original_temperature = self.database.get_ai_config("temperature")["value"]
+        response = self.client.post(
+            "/internal/agent/admin-config/update-agent-settings",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-invalid-agent-write",
+                "updates": {"temperature": "0.7", "top_k": "not-a-number"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.get_ai_config("temperature")["value"], original_temperature)
+
+        with self.assertRaisesRegex(LookupError, "Unknown Agent Setting"):
+            self.database.update_agent_settings_with_audit(
+                {"not_a_real_setting": "value"},
+                revert_keys=[],
+                user_type_id=None,
+                changed_by="abc123",
+                action_source="sage_conversation",
+                conversation_id="conversation-unknown-agent-setting",
+            )
+        user_type_id = self.database.create_user_type("Unknown Setting Scope")
+        with self.assertRaisesRegex(LookupError, "Unknown Agent Setting"):
+            self.database.update_agent_settings_with_audit(
+                {"not_a_real_setting": "value"},
+                revert_keys=[],
+                user_type_id=user_type_id,
+                changed_by="abc123",
+                action_source="sage_conversation",
+                conversation_id="conversation-unknown-agent-setting",
+            )
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM ai_config_user_type_overrides WHERE ai_config_key = ?",
+                ("not_a_real_setting",),
+            )
+            self.assertIsNone(cursor.fetchone())
+        self.assertFalse(any(
+            entry.get("conversation_id") in {
+                "conversation-invalid-agent-write",
+                "conversation-unknown-agent-setting",
+            }
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
 
     def test_read_user_types_returns_onboarding_questions(self) -> None:
         user_type_id = self.database.create_user_type(
@@ -310,6 +763,336 @@ class AdminConfigToolContractTest(unittest.TestCase):
         self.assertTrue(question["include_in_chat"])
         self.assertEqual(data["limits"]["user_types_returned"], 1)
         self.assertEqual(data["limits"]["onboarding_questions_returned"], 1)
+
+    def test_manage_user_types_supports_audited_lifecycle(self) -> None:
+        create = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-create",
+                "operation": "create",
+                "name": "  Legal Teams  ",
+                "description": "Legal support organizations",
+                "icon": "Scale",
+                "display_order": 4,
+            },
+        )
+        self.assertEqual(create.status_code, 200, create.text)
+        created = create.json()["data"]["user_type"]
+        self.assertEqual(created["name"], "Legal Teams")
+        self.assertEqual(create.json()["data"]["affected_areas"], ["user_types"])
+
+        update = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-update",
+                "operation": "update",
+                "user_type_id": created["id"],
+                "name": "Legal Advocates",
+                "display_order": 2,
+            },
+        )
+        self.assertEqual(update.status_code, 200, update.text)
+        self.assertEqual(update.json()["data"]["user_type"]["name"], "Legal Advocates")
+
+        delete = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-delete",
+                "operation": "delete",
+                "user_type_id": created["id"],
+            },
+        )
+        self.assertEqual(delete.status_code, 200, delete.text)
+        self.assertEqual(delete.json()["data"]["deleted_user_type_id"], created["id"])
+        self.assertEqual(
+            delete.json()["data"]["affected_areas"],
+            [
+                "user_types",
+                "onboarding_questions",
+                "agent_settings",
+                "document_access",
+            ],
+        )
+        self.assertIsNone(self.database.get_user_type(created["id"]))
+
+        audit_entries = self.database.get_config_audit_log(limit=None, table_name="user_types")
+        self.assertEqual(
+            {
+                entry["conversation_id"]
+                for entry in audit_entries
+                if entry["action_source"] == "sage_conversation"
+            },
+            {
+                "conversation-user-type-create",
+                "conversation-user-type-update",
+                "conversation-user-type-delete",
+            },
+        )
+
+    def test_manage_user_types_rejects_duplicate_without_partial_create(self) -> None:
+        self.database.create_user_type("Families")
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-duplicate-user-type",
+                "operation": "create",
+                "name": "Families",
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(
+            len([item for item in self.database.list_user_types() if item["name"] == "Families"]),
+            1,
+        )
+
+    def test_manage_user_types_rejects_whitespace_only_name(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-blank-user-type",
+                "operation": "create",
+                "name": "   ",
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.list_user_types(), [])
+
+        existing_id = self.database.create_user_type("Existing Type")
+        null_name = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-null-user-type",
+                "operation": "update",
+                "user_type_id": existing_id,
+                "name": None,
+            },
+        )
+        self.assertEqual(null_name.status_code, 422)
+
+    def test_manage_user_types_skips_no_op_update_audit_and_refresh(self) -> None:
+        user_type_id = self.database.create_user_type(
+            "Families",
+            "Family support",
+            icon="Heart",
+            display_order=2,
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-no-op",
+                "operation": "update",
+                "user_type_id": user_type_id,
+                "name": "Families",
+                "description": "Family support",
+                "icon": "Heart",
+                "display_order": 2,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["data"]["changed_names"], [])
+        self.assertEqual(response.json()["data"]["affected_areas"], [])
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-user-type-no-op"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
+    def test_manage_user_types_preserves_question_answers_on_delete(self) -> None:
+        user_type_id = self.database.create_user_type("Families")
+        question_id = self.database.create_field_definition(
+            "case_note",
+            "text",
+            user_type_id=user_type_id,
+            encryption_enabled=False,
+        )
+        with self.database.get_write_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (pubkey, approved, user_type_id) VALUES (?, ?, ?)",
+                ("user-type-saved-answer", 1, user_type_id),
+            )
+            user_id = int(cursor.lastrowid)
+            cursor.execute(
+                "INSERT INTO user_field_values (user_id, field_id, value) VALUES (?, ?, ?)",
+                (user_id, question_id, "Keep this answer"),
+            )
+
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-delete-with-answer",
+                "operation": "delete",
+                "user_type_id": user_type_id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertIn("saved user answers", response.json()["detail"])
+        self.assertIsNotNone(self.database.get_user_type(user_type_id))
+        self.assertIsNotNone(self.database.get_field_definition_by_id(question_id))
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT value FROM user_field_values WHERE user_id = ? AND field_id = ?",
+                (user_id, question_id),
+            )
+            self.assertEqual(cursor.fetchone()["value"], "Keep this answer")
+
+    def test_manage_onboarding_questions_supports_full_lifecycle(self) -> None:
+        user_type_id = self.database.create_user_type("Families")
+        create = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-create",
+                "operation": "create",
+                "field_name": "preferred_language",
+                "field_type": "select",
+                "required": True,
+                "display_order": 3,
+                "user_type_id": user_type_id,
+                "placeholder": "Choose a language",
+                "options": ["English", "Spanish"],
+                "encryption_enabled": False,
+                "include_in_chat": True,
+            },
+        )
+        self.assertEqual(create.status_code, 200, create.text)
+        question = create.json()["data"]["onboarding_question"]
+        self.assertEqual(question["options"], ["English", "Spanish"])
+        self.assertTrue(question["include_in_chat"])
+
+        update = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-update",
+                "operation": "update",
+                "question_id": question["id"],
+                "display_order": 1,
+                "options": ["English", "Spanish", "French"],
+            },
+        )
+        self.assertEqual(update.status_code, 200, update.text)
+        self.assertEqual(update.json()["data"]["onboarding_question"]["display_order"], 1)
+
+        delete = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-delete",
+                "operation": "delete",
+                "question_id": question["id"],
+            },
+        )
+        self.assertEqual(delete.status_code, 200, delete.text)
+        self.assertIsNone(self.database.get_field_definition_by_id(question["id"]))
+
+    def test_manage_onboarding_questions_rejects_encrypted_chat_field(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-invalid-question",
+                "operation": "create",
+                "field_name": "private_case_note",
+                "field_type": "text",
+                "encryption_enabled": True,
+                "include_in_chat": True,
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIsNone(self.database.get_field_definition_by_name("private_case_note"))
+
+    def test_manage_onboarding_questions_skips_no_op_update(self) -> None:
+        question_id = self.database.create_field_definition(
+            "preferred_language",
+            "select",
+            required=True,
+            display_order=3,
+            options=["English", "Spanish"],
+            encryption_enabled=False,
+            include_in_chat=True,
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-no-op",
+                "operation": "update",
+                "question_id": question_id,
+                "required": True,
+                "display_order": 3,
+                "options": ["English", "Spanish"],
+                "encryption_enabled": False,
+                "include_in_chat": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["data"]["changed_names"], [])
+        self.assertEqual(response.json()["data"]["affected_areas"], [])
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-question-no-op"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
+    def test_manage_onboarding_questions_preserves_saved_answers_on_delete(self) -> None:
+        question_id = self.database.create_field_definition(
+            "case_note",
+            "text",
+            encryption_enabled=False,
+        )
+        with self.database.get_write_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (pubkey, approved) VALUES (?, ?)",
+                ("saved-answer-user", 1),
+            )
+            user_id = int(cursor.lastrowid)
+            cursor.execute(
+                "INSERT INTO user_field_values (user_id, field_id, value) VALUES (?, ?, ?)",
+                (user_id, question_id, "Keep this answer"),
+            )
+
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-delete-with-answer",
+                "operation": "delete",
+                "question_id": question_id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertIn("saved user answers", response.json()["detail"])
+        self.assertIsNotNone(self.database.get_field_definition_by_id(question_id))
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT value FROM user_field_values WHERE user_id = ? AND field_id = ?",
+                (user_id, question_id),
+            )
+            self.assertEqual(cursor.fetchone()["value"], "Keep this answer")
 
     def test_read_document_access_returns_global_and_user_type_effective_state(self) -> None:
         user_type_id = self.database.create_user_type(
@@ -403,6 +1186,343 @@ class AdminConfigToolContractTest(unittest.TestCase):
         self.assertTrue(effective_optional["is_default_active"])
         self.assertEqual(data["limits"]["documents_returned"], 2)
         self.assertEqual(data["limits"]["user_types_returned"], 1)
+
+    def test_update_document_access_supports_batch_override_and_revert(self) -> None:
+        user_type_id = self.database.create_user_type("Advocates")
+        self.ingest_db.create_job("doc-direct", "Direct Guide.pdf", "/uploads/direct.pdf", "default")
+        self.ingest_db.update_job_status(
+            "doc-direct",
+            "completed",
+            total_chunks=1,
+            processed_chunks=1,
+        )
+
+        global_update = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-document-global",
+                "updates": [{
+                    "job_id": "doc-direct",
+                    "is_available": True,
+                    "is_default_active": False,
+                    "display_order": 6,
+                }],
+            },
+        )
+        self.assertEqual(global_update.status_code, 200, global_update.text)
+        self.assertFalse(self.database.get_document_defaults("doc-direct")["is_default_active"])
+
+        no_op = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-document-no-op",
+                "updates": [{
+                    "job_id": "doc-direct",
+                    "is_available": True,
+                    "is_default_active": False,
+                    "display_order": 6,
+                }],
+            },
+        )
+        self.assertEqual(no_op.status_code, 200, no_op.text)
+        self.assertEqual(no_op.json()["data"]["changed_names"], [])
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-document-no-op"
+            and entry.get("table_name") == "document_defaults"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
+        override = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-document-override",
+                "user_type_id": user_type_id,
+                "updates": [{
+                    "job_id": "doc-direct",
+                    "is_default_active": True,
+                }],
+            },
+        )
+        self.assertEqual(override.status_code, 200, override.text)
+        self.assertTrue(
+            self.database.get_document_defaults_override("doc-direct", user_type_id)["is_default_active"]
+        )
+
+        revert = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-document-revert",
+                "user_type_id": user_type_id,
+                "revert_job_ids": ["doc-direct"],
+            },
+        )
+        self.assertEqual(revert.status_code, 200, revert.text)
+        self.assertIsNone(self.database.get_document_defaults_override("doc-direct", user_type_id))
+        self.assertEqual(revert.json()["data"]["reverted_job_ids"], ["doc-direct"])
+
+    def test_update_document_access_rejects_unknown_document_without_mutation(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-invalid-document-access",
+                "updates": [{
+                    "job_id": "missing-document",
+                    "is_available": True,
+                }],
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIsNone(self.database.get_document_defaults("missing-document"))
+
+    def test_update_document_access_rejects_duplicate_jobs_without_mutation(self) -> None:
+        self.ingest_db.create_job(
+            "doc-duplicate",
+            "Duplicate.pdf",
+            "/uploads/duplicate.pdf",
+            "default",
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/update-document-access",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-duplicate-document",
+                "updates": [
+                    {"job_id": "doc-duplicate", "is_available": False},
+                    {"job_id": "doc-duplicate", "is_available": True},
+                ],
+            },
+        )
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertIsNone(self.database.get_document_defaults("doc-duplicate"))
+
+    def test_configure_instance_applies_guided_setup_atomically_with_audit(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/configure-instance",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-guided-setup",
+                "settings": {
+                    "instance_name": "Freedom Network",
+                    "assistant_name": "Sage Ally",
+                    "header_tagline": "Support for political prisoners and their families",
+                    "description": "Private coordination and trusted support resources.",
+                    "primary_color": "#6d28d9",
+                    "default_theme": "dark",
+                    "default_language": "en",
+                    "auto_approve_users": False,
+                    "chat_bubble_style": "rounded",
+                    "chat_bubble_shadow": True,
+                    "surface_style": "soft",
+                    "status_icon_set": "minimal",
+                    "typography_preset": "humanist",
+                },
+                "user_types": [{
+                    "reference": "families",
+                    "name": "Families",
+                    "description": "Family members seeking support",
+                    "icon": "Heart",
+                    "display_order": 1,
+                }],
+                "onboarding_questions": [{
+                    "field_name": "Preferred language",
+                    "field_type": "select",
+                    "required": True,
+                    "display_order": 1,
+                    "user_type_reference": "families",
+                    "placeholder": "Choose a language",
+                    "options": ["English", "Spanish"],
+                    "encryption_enabled": False,
+                    "include_in_chat": True,
+                }],
+                "behavior_rules": [
+                    "Prioritize practical, verified support steps.",
+                    "State uncertainty plainly.",
+                ],
+                "forbidden_topics": ["Never invent organizations or contact details."],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["tool"], "configure_instance")
+        self.assertEqual(payload["data"]["outcome"], "succeeded")
+        self.assertEqual(payload["data"]["validation"], {"status": "valid"})
+        self.assertEqual(
+            payload["data"]["affected_areas"],
+            [
+                "instance_settings",
+                "agent_settings",
+                "user_types",
+                "onboarding_questions",
+            ],
+        )
+        self.assertEqual(
+            payload["data"]["saved_setup"]["settings"]["primary_color"],
+            "#6d28d9",
+        )
+        created_type = payload["data"]["saved_setup"]["user_types"][0]
+        self.assertEqual(created_type["reference"], "families")
+        self.assertEqual(created_type["name"], "Families")
+        created_question = payload["data"]["saved_setup"]["onboarding_questions"][0]
+        self.assertEqual(created_question["user_type_id"], created_type["id"])
+        self.assertEqual(created_question["options"], ["English", "Spanish"])
+        self.assertEqual(
+            payload["data"]["saved_setup"]["behavior_rules"],
+            [
+                "Prioritize practical, verified support steps.",
+                "State uncertainty plainly.",
+            ],
+        )
+
+        self.assertEqual(self.database.get_setting("instance_name"), "Freedom Network")
+        self.assertEqual(self.database.get_user_type(created_type["id"])["name"], "Families")
+        self.assertEqual(
+            self.database.get_field_definition_by_id(created_question["id"])["field_name"],
+            "Preferred language",
+        )
+        self.assertEqual(
+            self.database.get_ai_config("prompt_rules")["value"],
+            '["Prioritize practical, verified support steps.", "State uncertainty plainly."]',
+        )
+        self.assertEqual(
+            self.database.get_ai_config("prompt_forbidden")["value"],
+            '["Never invent organizations or contact details."]',
+        )
+
+        audit_entries = [
+            entry
+            for entry in self.database.get_config_audit_log(limit=None)
+            if entry.get("conversation_id") == "conversation-guided-setup"
+        ]
+        self.assertGreaterEqual(len(audit_entries), 5)
+        self.assertTrue(all(entry["changed_by"] == "abc123" for entry in audit_entries))
+        self.assertTrue(
+            all(entry["action_source"] == "sage_conversation" for entry in audit_entries)
+        )
+        self.assertNotIn(
+            "conversation-guided-setup",
+            " ".join(
+                str(entry.get("old_value") or "") + str(entry.get("new_value") or "")
+                for entry in audit_entries
+            ),
+        )
+
+    def test_configure_instance_rolls_back_every_area_on_late_relational_failure(self) -> None:
+        original_name = self.database.get_setting("instance_name")
+        original_rules = self.database.get_ai_config("prompt_rules")["value"]
+        response = self.client.post(
+            "/internal/agent/admin-config/configure-instance",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-guided-rollback",
+                "settings": {
+                    "instance_name": "Must Roll Back",
+                    "assistant_name": "Rollback Ally",
+                    "header_tagline": "This must not persist",
+                    "description": "This entire setup should roll back.",
+                    "primary_color": "#123456",
+                    "default_theme": "light",
+                    "default_language": "en",
+                    "auto_approve_users": True,
+                },
+                "user_types": [{
+                    "reference": "duplicate-scope",
+                    "name": "Must Not Exist",
+                }],
+                "onboarding_questions": [
+                    {
+                        "field_name": "Duplicate question",
+                        "field_type": "text",
+                        "user_type_reference": "duplicate-scope",
+                    },
+                    {
+                        "field_name": "Duplicate question",
+                        "field_type": "textarea",
+                        "user_type_reference": "duplicate-scope",
+                    },
+                ],
+                "behavior_rules": ["Must not persist"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertEqual(self.database.get_setting("instance_name"), original_name)
+        self.assertEqual(self.database.get_ai_config("prompt_rules")["value"], original_rules)
+        self.assertFalse(any(
+            user_type["name"] == "Must Not Exist"
+            for user_type in self.database.list_user_types()
+        ))
+        self.assertIsNone(
+            self.database.get_field_definition_by_name("Duplicate question")
+        )
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-guided-rollback"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
+    def test_configure_instance_rejects_whitespace_only_user_type_name(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/configure-instance",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-blank-guided-user-type",
+                "settings": {
+                    "instance_name": "Freedom Network",
+                    "assistant_name": "Sage Ally",
+                    "header_tagline": "Trusted support",
+                    "description": "Private coordination and support resources.",
+                    "primary_color": "#6d28d9",
+                    "default_theme": "dark",
+                    "default_language": "en",
+                    "auto_approve_users": False,
+                },
+                "user_types": [{"reference": "blank", "name": "   "}],
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(self.database.list_user_types(), [])
+
+    def test_configure_instance_rejects_non_admin_actor(self) -> None:
+        response = self.client.post(
+            "/internal/agent/admin-config/configure-instance",
+            headers=self.headers,
+            json={
+                "actor": {
+                    "id": 99,
+                    "type": "user",
+                    "approved": True,
+                    "pubkey": "user-pubkey",
+                },
+                "conversation_id": "conversation-unauthorized-setup",
+                "settings": {
+                    "instance_name": "Blocked",
+                    "assistant_name": "Blocked",
+                    "header_tagline": "Blocked",
+                    "description": "Blocked",
+                    "primary_color": "#123456",
+                    "default_theme": "light",
+                    "default_language": "en",
+                    "auto_approve_users": False,
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertNotEqual(self.database.get_setting("instance_name"), "Blocked")
 
     def test_read_onboarding_status_returns_setup_flags_and_guided_checklist(self) -> None:
         user_type_id = self.database.create_user_type(

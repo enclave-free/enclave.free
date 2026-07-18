@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import re
 import contextvars
-from typing import Iterator
+from typing import Iterable, Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
 from datetime import datetime, timedelta, timezone
@@ -51,6 +51,9 @@ _dedicated_connection: contextvars.ContextVar[sqlite3.Connection | None] = conte
 )
 _deployment_secret_key = None
 _audit_hmac_key = None
+
+AUDIT_HASH_FORMAT_PIPE_V1 = "pipe_v1"
+AUDIT_HASH_FORMAT_JSON_V2 = "json_v2"
 
 # Deployment secret encryption format:
 # enc::v1::<base64_nonce>:<base64_tag>:<base64_ciphertext>
@@ -417,7 +420,10 @@ def init_schema():
             old_value TEXT,
             new_value TEXT,
             changed_by TEXT NOT NULL,
+            action_source TEXT NOT NULL DEFAULT 'unknown',
+            conversation_id TEXT,
             changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            hash_format TEXT NOT NULL DEFAULT 'json_v2',
             prev_hash TEXT,
             entry_hash TEXT
         )
@@ -702,8 +708,11 @@ def init_schema():
     _migrate_add_field_metadata_columns()  # Add placeholder and options columns
     _migrate_add_encryption_enabled_column()  # Add encryption_enabled column for optional field encryption
     _migrate_add_include_in_chat_column()  # Add include_in_chat column for AI chat context
+    _migrate_enforce_user_field_definition_uniqueness()  # Include global fields in the uniqueness invariant
     _migrate_add_user_type_icon_column()  # Add icon column to user_types table
     _migrate_encrypt_deployment_config_secrets()  # Encrypt plaintext deployment secrets at rest
+    _migrate_add_config_audit_provenance_columns()  # Attribute UI, Sage, and legacy audit events
+    _migrate_add_config_audit_hash_format_column()  # Preserve legacy hashes while using canonical payloads for new events
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
     _migrate_enforce_single_admin()  # Enforce the single-admin product invariant at the DB layer
@@ -898,6 +907,44 @@ def _migrate_add_include_in_chat_column() -> None:
     # Create index for efficient lookups of fields to include in chat
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_field_definitions_include_in_chat ON user_field_definitions(include_in_chat)")
 
+    conn.commit()
+    cursor.close()
+
+
+def _migrate_enforce_user_field_definition_uniqueness() -> None:
+    """Enforce one field name per scope, including the global NULL scope.
+
+    Existing ambiguous duplicates are not merged or deleted automatically because
+    either action could discard distinct onboarding configuration or user values.
+    Startup fails with an actionable error until an operator resolves them.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT field_name, COUNT(*) AS duplicate_count
+        FROM user_field_definitions
+        WHERE user_type_id IS NULL
+        GROUP BY field_name
+        HAVING COUNT(*) > 1
+        ORDER BY field_name
+        """
+    )
+    duplicates = cursor.fetchall()
+    if duplicates:
+        names = ", ".join(str(row["field_name"]) for row in duplicates)
+        cursor.close()
+        raise RuntimeError(
+            "Migration cannot enforce unique global onboarding question names; "
+            f"resolve duplicate field definitions first: {names}"
+        )
+
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_field_definitions_scope_name
+        ON user_field_definitions(field_name, COALESCE(user_type_id, -1))
+        """
+    )
     conn.commit()
     cursor.close()
 
@@ -1264,6 +1311,9 @@ def _audit_hash_payload(
     new_value: str | None,
     changed_by: str,
     changed_at: str,
+    action_source: str = "ordinary_product_flow",
+    conversation_id: str | None = None,
+    hash_format: str = AUDIT_HASH_FORMAT_JSON_V2,
 ) -> str:
     """Build deterministic payload for audit hash chain."""
     parts = [
@@ -1273,9 +1323,19 @@ def _audit_hash_payload(
         old_value or "",
         new_value or "",
         changed_by,
+        action_source,
+        conversation_id or "",
         changed_at,
     ]
-    return "|".join(parts)
+    if hash_format == AUDIT_HASH_FORMAT_PIPE_V1:
+        return "|".join(parts)
+    if hash_format == AUDIT_HASH_FORMAT_JSON_V2:
+        return json.dumps(
+            [hash_format, *parts],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+    raise ValueError(f"Unsupported audit hash format: {hash_format}")
 
 
 def _insert_config_audit_log(
@@ -1285,6 +1345,9 @@ def _insert_config_audit_log(
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
+    *,
+    action_source: str = "ordinary_product_flow",
+    conversation_id: str | None = None,
 ) -> dict:
     """
     Insert tamper-evident audit event with hash-chain linkage.
@@ -1300,19 +1363,74 @@ def _insert_config_audit_log(
     prev_row = cursor.fetchone()
     prev_hash = prev_row["entry_hash"] if prev_row and prev_row["entry_hash"] else ""
 
-    payload = _audit_hash_payload(prev_hash, table_name, config_key, old_value, new_value, changed_by, changed_at)
+    payload = _audit_hash_payload(
+        prev_hash,
+        table_name,
+        config_key,
+        old_value,
+        new_value,
+        changed_by,
+        changed_at,
+        action_source,
+        conversation_id,
+        AUDIT_HASH_FORMAT_JSON_V2,
+    )
     entry_hash = _compute_audit_entry_hash(payload)
 
     cursor.execute(
         """
         INSERT INTO config_audit_log (
-            table_name, config_key, old_value, new_value, changed_by, changed_at, prev_hash, entry_hash
+            table_name, config_key, old_value, new_value, changed_by,
+            action_source, conversation_id, changed_at, hash_format, prev_hash, entry_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (table_name, config_key, old_value, new_value, changed_by, changed_at, prev_hash, entry_hash),
+        (
+            table_name,
+            config_key,
+            old_value,
+            new_value,
+            changed_by,
+            action_source,
+            conversation_id,
+            changed_at,
+            AUDIT_HASH_FORMAT_JSON_V2,
+            prev_hash,
+            entry_hash,
+        ),
     )
     return {"id": int(cursor.lastrowid), "entry_hash": entry_hash}
+
+
+def _insert_admin_config_tool_audit(
+    cursor: sqlite3.Cursor,
+    *,
+    tool_name: str,
+    changed_names: list[str],
+    affected_areas: list[str],
+    changed_by: str,
+    action_source: str,
+    conversation_id: str | None,
+    metadata: dict[str, object] | None = None,
+) -> dict:
+    """Record a redacted authoritative outcome for one direct Admin Config call."""
+    outcome = {
+        "outcome": "succeeded",
+        "changed_names": sorted(set(changed_names)),
+        "affected_areas": affected_areas,
+    }
+    if metadata:
+        outcome.update(metadata)
+    return _insert_config_audit_log(
+        cursor,
+        "admin_config_tools",
+        tool_name,
+        None,
+        json.dumps(outcome, sort_keys=True, default=str),
+        changed_by,
+        action_source=action_source,
+        conversation_id=conversation_id,
+    )
 
 
 def log_config_audit_event(
@@ -1321,6 +1439,9 @@ def log_config_audit_event(
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
+    *,
+    action_source: str = "ordinary_product_flow",
+    conversation_id: str | None = None,
 ) -> dict:
     """
     Public helper for writing tamper-evident config audit events.
@@ -1330,7 +1451,16 @@ def log_config_audit_event(
     from forking the hash chain.
     """
     with get_write_cursor() as cursor:
-        return _insert_config_audit_log(cursor, table_name, config_key, old_value, new_value, changed_by)
+        return _insert_config_audit_log(
+            cursor,
+            table_name,
+            config_key,
+            old_value,
+            new_value,
+            changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+        )
 
 
 def create_retention_run_record(
@@ -1601,6 +1731,52 @@ def update_deletion_tombstone_after_retry(
     return get_deletion_tombstone(tombstone_id)
 
 
+def _migrate_add_config_audit_provenance_columns() -> None:
+    """Add durable action provenance without inventing a source for legacy rows."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(config_audit_log)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if "action_source" not in columns:
+        cursor.execute(
+            "ALTER TABLE config_audit_log "
+            "ADD COLUMN action_source TEXT NOT NULL DEFAULT 'unknown'"
+        )
+        logger.info("Migration: Added 'action_source' column to config_audit_log")
+
+    if "conversation_id" not in columns:
+        cursor.execute("ALTER TABLE config_audit_log ADD COLUMN conversation_id TEXT")
+        logger.info("Migration: Added 'conversation_id' column to config_audit_log")
+
+    cursor.execute(
+        """
+        UPDATE config_audit_log
+        SET action_source = 'unknown'
+        WHERE action_source IS NULL OR TRIM(action_source) = ''
+        """
+    )
+    conn.commit()
+    cursor.close()
+
+
+def _migrate_add_config_audit_hash_format_column() -> None:
+    """Label existing pipe-delimited hashes while new rows use canonical JSON."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(config_audit_log)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "hash_format" not in columns:
+        cursor.execute(
+            "ALTER TABLE config_audit_log "
+            "ADD COLUMN hash_format TEXT NOT NULL DEFAULT 'pipe_v1'"
+        )
+        logger.info("Migration: Added legacy hash format to config_audit_log")
+    conn.commit()
+    cursor.close()
+
+
 def _migrate_add_config_audit_hash_columns() -> None:
     """Add hash-chain columns to config_audit_log and backfill existing rows."""
     conn = get_connection()
@@ -1619,7 +1795,8 @@ def _migrate_add_config_audit_hash_columns() -> None:
 
     # Backfill/repair hash chain deterministically across full history.
     cursor.execute("""
-        SELECT id, table_name, config_key, old_value, new_value, changed_by, changed_at
+        SELECT id, table_name, config_key, old_value, new_value, changed_by,
+               action_source, conversation_id, changed_at, hash_format
         FROM config_audit_log
         ORDER BY id
     """)
@@ -1636,6 +1813,9 @@ def _migrate_add_config_audit_hash_columns() -> None:
             new_value=row["new_value"],
             changed_by=row["changed_by"],
             changed_at=changed_at,
+            action_source=row["action_source"] or "unknown",
+            conversation_id=row["conversation_id"],
+            hash_format=row["hash_format"] or AUDIT_HASH_FORMAT_PIPE_V1,
         )
         entry_hash = _compute_audit_entry_hash(payload)
         cursor.execute(
@@ -1726,32 +1906,40 @@ def get_onboarding_configured_keys() -> set[str]:
         return set()
 
 
-def mark_onboarding_configured_keys(keys) -> None:
-    """Record that the operator explicitly set these instance-settings keys."""
+def _mark_onboarding_configured_keys_tx(
+    cursor: sqlite3.Cursor,
+    keys: Iterable[object],
+) -> None:
+    """Record explicitly configured keys using the caller's transaction."""
     incoming = {str(k) for k in keys if k and str(k) != ONBOARDING_CONFIGURED_KEYS_SETTING}
     if not incoming:
         return
+    cursor.execute(
+        "SELECT value FROM instance_settings WHERE key = ?",
+        (ONBOARDING_CONFIGURED_KEYS_SETTING,),
+    )
+    row = cursor.fetchone()
+    existing: set[str] = set()
+    if row and row["value"]:
+        try:
+            parsed = json.loads(row["value"])
+            existing = set(parsed) if isinstance(parsed, list) else set()
+        except (json.JSONDecodeError, TypeError):
+            existing = set()
+    updated = existing | incoming
+    cursor.execute(
+        """
+        INSERT INTO instance_settings (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """,
+        (ONBOARDING_CONFIGURED_KEYS_SETTING, json.dumps(sorted(updated))),
+    )
+
+
+def mark_onboarding_configured_keys(keys: Iterable[object]) -> None:
+    """Record that the operator explicitly set these instance-settings keys."""
     with get_cursor() as cursor:
-        cursor.execute(
-            "SELECT value FROM instance_settings WHERE key = ?",
-            (ONBOARDING_CONFIGURED_KEYS_SETTING,),
-        )
-        row = cursor.fetchone()
-        existing: set[str] = set()
-        if row and row["value"]:
-            try:
-                parsed = json.loads(row["value"])
-                existing = set(parsed) if isinstance(parsed, list) else set()
-            except (json.JSONDecodeError, TypeError):
-                existing = set()
-        updated = existing | incoming
-        cursor.execute(
-            """
-            INSERT INTO instance_settings (key, value) VALUES (?, ?)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value
-            """,
-            (ONBOARDING_CONFIGURED_KEYS_SETTING, json.dumps(sorted(updated))),
-        )
+        _mark_onboarding_configured_keys_tx(cursor, keys)
 
 
 # --- Admin Operations ---
@@ -1869,6 +2057,20 @@ def get_all_settings() -> dict:
         return {row["key"]: row["value"] for row in cursor.fetchall()}
 
 
+def _coerce_instance_setting_value(value: object) -> str:
+    """Convert a validated Instance Setting into its canonical TEXT representation."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value)
+        except (TypeError, ValueError):
+            return str(value)
+    return str(value)
+
+
 def update_setting(key: str, value: str):
     """Update or insert a setting"""
     with get_cursor() as cursor:
@@ -1905,25 +2107,73 @@ def update_setting_with_audit(key: str, value: str, *, changed_by: str) -> None:
             )
 
 
+def update_settings_with_audit(
+    settings: dict[str, object],
+    *,
+    changed_by: str,
+    action_source: str,
+    conversation_id: str | None,
+) -> dict:
+    """Atomically update and audit a validated batch of Instance Settings."""
+    normalized = {
+        key: _coerce_instance_setting_value(value)
+        for key, value in settings.items()
+        if value is not None
+    }
+    changed_names: list[str] = []
+
+    with get_write_cursor() as cursor:
+        for key in sorted(normalized):
+            value = normalized[key]
+            cursor.execute("SELECT value FROM instance_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            old_value = row["value"] if row else None
+            cursor.execute(
+                """
+                INSERT INTO instance_settings (key, value, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (key, value),
+            )
+            if old_value != value:
+                changed_names.append(key)
+                _insert_config_audit_log(
+                    cursor,
+                    table_name="instance_settings",
+                    config_key=key,
+                    old_value=old_value,
+                    new_value=value,
+                    changed_by=changed_by,
+                    action_source=action_source,
+                    conversation_id=conversation_id,
+                )
+
+        _mark_onboarding_configured_keys_tx(cursor, normalized.keys())
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="update_instance_settings",
+            changed_names=changed_names,
+            affected_areas=["instance_settings"],
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+        )
+
+    return {
+        "saved_values": {key: normalized[key] for key in sorted(normalized)},
+        "changed_names": changed_names,
+    }
+
+
 def update_settings(settings: dict[str, object]) -> None:
     """Update multiple settings at once"""
-    def _coerce_setting_value(value: object) -> str:
-        # Instance settings are persisted as TEXT. Keep a consistent representation.
-        if isinstance(value, bool):
-            return "true" if value else "false"
-        if isinstance(value, (int, float)):
-            return str(value)
-        if isinstance(value, (dict, list)):
-            try:
-                return json.dumps(value)
-            except (TypeError, ValueError):
-                return str(value)
-        return str(value)
-
     for key, value in settings.items():
         if value is None:
             continue
-        update_setting(key, _coerce_setting_value(value))
+        update_setting(key, _coerce_instance_setting_value(value))
 
 
 def get_auto_approve_users() -> bool:
@@ -2063,6 +2313,135 @@ def delete_user_type(type_id: int) -> bool:
     with get_cursor() as cursor:
         cursor.execute("DELETE FROM user_types WHERE id = ?", (type_id,))
         return cursor.rowcount > 0
+
+
+def manage_user_type_with_audit(
+    operation: str,
+    *,
+    user_type_id: int | None,
+    values: dict[str, object],
+    changed_by: str,
+    action_source: str,
+    conversation_id: str,
+) -> dict:
+    """Atomically create, update, or delete one User Type with provenance."""
+    with get_write_cursor() as cursor:
+        changed_names: list[str]
+        if operation == "create":
+            cursor.execute(
+                """
+                INSERT INTO user_types (name, description, icon, display_order)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    values["name"],
+                    values.get("description"),
+                    values.get("icon"),
+                    int(values.get("display_order") or 0),
+                ),
+            )
+            resolved_id = int(cursor.lastrowid)
+            old_record = None
+            changed_names = sorted(values)
+        else:
+            if user_type_id is None:
+                raise ValueError("user_type_id is required")
+            cursor.execute("SELECT * FROM user_types WHERE id = ?", (user_type_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise LookupError("User Type not found")
+            old_record = dict(row)
+            resolved_id = user_type_id
+
+            if operation == "update":
+                assignments = []
+                params: list[object] = []
+                changed_names = []
+                for key in ("name", "description", "icon", "display_order"):
+                    if key in values and old_record.get(key) != values[key]:
+                        assignments.append(f"{key} = ?")
+                        params.append(values[key])
+                        changed_names.append(key)
+                if not values:
+                    raise ValueError("At least one User Type field is required")
+                if assignments:
+                    params.append(resolved_id)
+                    cursor.execute(
+                        f"UPDATE user_types SET {', '.join(assignments)} WHERE id = ?",
+                        params,
+                    )
+            elif operation == "delete":
+                cursor.execute(
+                    """
+                    SELECT 1
+                    FROM user_field_values AS answers
+                    JOIN user_field_definitions AS questions
+                      ON questions.id = answers.field_id
+                    WHERE questions.user_type_id = ?
+                    LIMIT 1
+                    """,
+                    (resolved_id,),
+                )
+                if cursor.fetchone():
+                    raise ValueError(
+                        "User Type has Onboarding Questions with saved user answers "
+                        "and cannot be deleted"
+                    )
+                cursor.execute("DELETE FROM user_types WHERE id = ?", (resolved_id,))
+                changed_names = ["deleted"]
+            else:
+                raise ValueError("Unsupported User Type operation")
+
+        if operation == "delete":
+            new_record = None
+        else:
+            cursor.execute("SELECT * FROM user_types WHERE id = ?", (resolved_id,))
+            new_record = dict(cursor.fetchone())
+
+        if operation == "update" and not changed_names:
+            return {
+                "user_type": new_record,
+                "deleted_user_type_id": None,
+                "changed_names": [],
+                "affected_areas": [],
+            }
+
+        _insert_config_audit_log(
+            cursor,
+            "user_types",
+            f"user_type:{resolved_id}:{operation}",
+            json.dumps(old_record, sort_keys=True, default=str) if old_record else None,
+            json.dumps(new_record, sort_keys=True, default=str) if new_record else None,
+            changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+        )
+        affected_areas = (
+            [
+                "user_types",
+                "onboarding_questions",
+                "agent_settings",
+                "document_access",
+            ]
+            if operation == "delete"
+            else ["user_types"]
+        )
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="manage_user_types",
+            changed_names=changed_names,
+            affected_areas=affected_areas,
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+            metadata={"operation": operation, "user_type_id": resolved_id},
+        )
+        return {
+            "user_type": new_record,
+            "deleted_user_type_id": resolved_id if operation == "delete" else None,
+            "changed_names": changed_names,
+            "affected_areas": affected_areas,
+        }
 
 
 # --- User Field Definition Operations ---
@@ -2260,6 +2639,334 @@ def delete_field_definition(field_id: int) -> bool:
     with get_cursor() as cursor:
         cursor.execute("DELETE FROM user_field_definitions WHERE id = ?", (field_id,))
         return cursor.rowcount > 0
+
+
+def manage_onboarding_question_with_audit(
+    operation: str,
+    *,
+    question_id: int | None,
+    values: dict[str, object],
+    changed_by: str,
+    action_source: str,
+    conversation_id: str,
+) -> dict:
+    """Atomically create, update, or delete an Onboarding Question definition."""
+    with get_write_cursor() as cursor:
+        changed_names: list[str]
+        if operation == "create":
+            cursor.execute(
+                """
+                INSERT INTO user_field_definitions (
+                    field_name, field_type, required, display_order, user_type_id,
+                    placeholder, options, encryption_enabled, include_in_chat
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    values["field_name"],
+                    values["field_type"],
+                    int(bool(values.get("required", False))),
+                    int(values.get("display_order") or 0),
+                    values.get("user_type_id"),
+                    values.get("placeholder"),
+                    json.dumps(values.get("options")) if values.get("options") is not None else None,
+                    int(bool(values.get("encryption_enabled", True))),
+                    int(bool(values.get("include_in_chat", False))),
+                ),
+            )
+            resolved_id = int(cursor.lastrowid)
+            old_record = None
+            changed_names = sorted(values)
+        else:
+            if question_id is None:
+                raise ValueError("question_id is required")
+            cursor.execute("SELECT * FROM user_field_definitions WHERE id = ?", (question_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise LookupError("Onboarding Question not found")
+            old_record = _parse_field_definition_row(row)
+            resolved_id = question_id
+
+            if operation == "update":
+                assignments = []
+                params: list[object] = []
+                changed_names = []
+                for key in (
+                    "field_name",
+                    "field_type",
+                    "required",
+                    "display_order",
+                    "user_type_id",
+                    "placeholder",
+                    "options",
+                    "encryption_enabled",
+                    "include_in_chat",
+                ):
+                    if key not in values:
+                        continue
+                    value = values[key]
+                    if key in {"required", "encryption_enabled", "include_in_chat"}:
+                        value = int(bool(value))
+                    elif key == "options":
+                        if old_record.get(key) == value:
+                            continue
+                        value = json.dumps(value) if value is not None else None
+                    if key != "options" and old_record.get(key) == value:
+                        continue
+                    assignments.append(f"{key} = ?")
+                    params.append(value)
+                    changed_names.append(key)
+                if not values:
+                    raise ValueError("At least one Onboarding Question field is required")
+                if assignments:
+                    params.append(resolved_id)
+                    cursor.execute(
+                        f"UPDATE user_field_definitions SET {', '.join(assignments)} WHERE id = ?",
+                        params,
+                    )
+            elif operation == "delete":
+                cursor.execute(
+                    "SELECT 1 FROM user_field_values WHERE field_id = ? LIMIT 1",
+                    (resolved_id,),
+                )
+                if cursor.fetchone():
+                    raise ValueError(
+                        "Onboarding Question has saved user answers and cannot be deleted"
+                    )
+                cursor.execute("DELETE FROM user_field_definitions WHERE id = ?", (resolved_id,))
+                changed_names = ["deleted"]
+            else:
+                raise ValueError("Unsupported Onboarding Question operation")
+
+        if operation == "delete":
+            new_record = None
+        else:
+            cursor.execute("SELECT * FROM user_field_definitions WHERE id = ?", (resolved_id,))
+            new_record = _parse_field_definition_row(cursor.fetchone())
+
+        if operation == "update" and not changed_names:
+            return {
+                "onboarding_question": new_record,
+                "deleted_question_id": None,
+                "changed_names": [],
+                "affected_areas": [],
+            }
+
+        _insert_config_audit_log(
+            cursor,
+            "user_field_definitions",
+            f"onboarding_question:{resolved_id}:{operation}",
+            json.dumps(old_record, sort_keys=True, default=str) if old_record else None,
+            json.dumps(new_record, sort_keys=True, default=str) if new_record else None,
+            changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+        )
+        affected_areas = ["onboarding_questions"]
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="manage_onboarding_questions",
+            changed_names=changed_names,
+            affected_areas=affected_areas,
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+            metadata={"operation": operation, "question_id": resolved_id},
+        )
+        return {
+            "onboarding_question": new_record,
+            "deleted_question_id": resolved_id if operation == "delete" else None,
+            "changed_names": changed_names,
+            "affected_areas": affected_areas,
+        }
+
+
+def configure_instance_with_audit(
+    *,
+    settings: dict[str, object],
+    user_types: list[dict[str, object]],
+    onboarding_questions: list[dict[str, object]],
+    behavior_rules: list[str],
+    forbidden_topics: list[str],
+    changed_by: str,
+    action_source: str,
+    conversation_id: str,
+) -> dict:
+    """Apply one guided Instance setup as a single audited transaction."""
+    normalized_settings = {
+        key: _coerce_instance_setting_value(value)
+        for key, value in settings.items()
+        if value is not None
+    }
+    agent_updates = {
+        "prompt_rules": json.dumps(behavior_rules),
+        "prompt_forbidden": json.dumps(forbidden_topics),
+    }
+    changed_names: list[str] = []
+    created_user_types: list[dict] = []
+    created_questions: list[dict] = []
+
+    with get_write_cursor() as cursor:
+        for key in sorted(normalized_settings):
+            value = normalized_settings[key]
+            cursor.execute("SELECT value FROM instance_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            old_value = row["value"] if row else None
+            cursor.execute(
+                """
+                INSERT INTO instance_settings (key, value, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (key, value),
+            )
+            if old_value != value:
+                changed_names.append(f"instance_settings.{key}")
+                _insert_config_audit_log(
+                    cursor,
+                    "instance_settings",
+                    key,
+                    old_value,
+                    value,
+                    changed_by,
+                    action_source=action_source,
+                    conversation_id=conversation_id,
+                )
+        _mark_onboarding_configured_keys_tx(cursor, normalized_settings.keys())
+
+        for key in sorted(agent_updates):
+            value = agent_updates[key]
+            cursor.execute("SELECT value FROM ai_config WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            if not row:
+                raise LookupError(f"Unknown Agent Setting: {key}")
+            old_value = row["value"]
+            cursor.execute(
+                "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
+                (value, key),
+            )
+            if old_value != value:
+                changed_names.append(f"agent_settings.{key}")
+                _insert_config_audit_log(
+                    cursor,
+                    "ai_config",
+                    key,
+                    old_value,
+                    value,
+                    changed_by,
+                    action_source=action_source,
+                    conversation_id=conversation_id,
+                )
+
+        user_type_ids: dict[str, int] = {}
+        for item in user_types:
+            reference = str(item["reference"])
+            cursor.execute(
+                """
+                INSERT INTO user_types (name, description, icon, display_order)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    item["name"],
+                    item.get("description"),
+                    item.get("icon"),
+                    int(item.get("display_order") or 0),
+                ),
+            )
+            user_type_id = int(cursor.lastrowid)
+            user_type_ids[reference] = user_type_id
+            cursor.execute("SELECT * FROM user_types WHERE id = ?", (user_type_id,))
+            record = dict(cursor.fetchone())
+            record["reference"] = reference
+            created_user_types.append(record)
+            changed_names.append(f"user_types.{item['name']}")
+            _insert_config_audit_log(
+                cursor,
+                "user_types",
+                f"user_type:{user_type_id}:create",
+                None,
+                json.dumps({key: value for key, value in record.items() if key != "reference"}, sort_keys=True, default=str),
+                changed_by,
+                action_source=action_source,
+                conversation_id=conversation_id,
+            )
+
+        for item in onboarding_questions:
+            reference = item.get("user_type_reference")
+            user_type_id = user_type_ids[str(reference)] if reference is not None else None
+            cursor.execute(
+                """
+                INSERT INTO user_field_definitions (
+                    field_name, field_type, required, display_order, user_type_id,
+                    placeholder, options, encryption_enabled, include_in_chat
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    item["field_name"],
+                    item["field_type"],
+                    int(bool(item.get("required", False))),
+                    int(item.get("display_order") or 0),
+                    user_type_id,
+                    item.get("placeholder"),
+                    json.dumps(item.get("options")) if item.get("options") is not None else None,
+                    int(bool(item.get("encryption_enabled", True))),
+                    int(bool(item.get("include_in_chat", False))),
+                ),
+            )
+            question_id = int(cursor.lastrowid)
+            cursor.execute(
+                "SELECT * FROM user_field_definitions WHERE id = ?",
+                (question_id,),
+            )
+            record = _parse_field_definition_row(cursor.fetchone())
+            if record is None:
+                raise RuntimeError("Created Onboarding Question could not be reloaded")
+            record["user_type_reference"] = reference
+            created_questions.append(record)
+            changed_names.append(f"onboarding_questions.{item['field_name']}")
+            audit_record = {
+                key: value
+                for key, value in record.items()
+                if key != "user_type_reference"
+            }
+            _insert_config_audit_log(
+                cursor,
+                "user_field_definitions",
+                f"onboarding_question:{question_id}:create",
+                None,
+                json.dumps(audit_record, sort_keys=True, default=str),
+                changed_by,
+                action_source=action_source,
+                conversation_id=conversation_id,
+            )
+
+        affected_areas = [
+            "instance_settings",
+            "agent_settings",
+            "user_types",
+            "onboarding_questions",
+        ]
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="configure_instance",
+            changed_names=changed_names,
+            affected_areas=affected_areas,
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+        )
+
+    return {
+        "saved_setup": {
+            "settings": {key: normalized_settings[key] for key in sorted(normalized_settings)},
+            "user_types": created_user_types,
+            "onboarding_questions": created_questions,
+            "behavior_rules": behavior_rules,
+            "forbidden_topics": forbidden_topics,
+        },
+        "changed_names": sorted(changed_names),
+    }
 
 
 # --- User Operations ---
@@ -2901,14 +3608,28 @@ def delete_user(user_id: int) -> bool:
 
 # --- Agent Settings Operations ---
 
+DEFAULT_PROMPT_SYSTEM = "You are a helpful, knowledgeable assistant for this private Enclave instance. In Admin Conversations, inspect available first-party context, choose reasonable defaults for unspecified configuration details, state important assumptions briefly, and use direct Admin Config Tools after conversational confirmation. Report authoritative Tool results honestly."
+OBSOLETE_DEFAULT_PROMPT_SYSTEMS = [
+    "You are a helpful, knowledgeable assistant for this private Enclave instance. In Admin Conversations, inspect available first-party context, choose reasonable defaults for unspecified configuration details, state important assumptions briefly, and present writes for Change Confirmation.",
+]
 DEFAULT_PROMPT_RULES = [
-    "For ordinary step-by-step guidance, keep actions focused; for delegated Admin Conversation configuration tasks, group related settings into one executable change set for Change Confirmation.",
+    "For a coherent Admin Config write task, briefly summarize the intended changes and ask once for conversational confirmation before calling direct Admin Config write Tools.",
+    "After the Admin confirms, use all needed direct Admin Config Tools and report their authoritative results honestly. Ask again only if the intended scope materially changes; correcting Tool arguments for unchanged intent does not require reconfirmation.",
     "For broad Admin Config setup, status, or readiness questions, call read_admin_setup_summary first. It already includes deployment readiness, missing setup, and next actions; use low-level read Tools only for narrow follow-up inspection.",
-    "For Admin Conversation guided setup or bootstrap write intent, call propose_admin_config_bootstrap directly with empty args or a short summary instead of calling read tools first, copying setup answers, hand-authoring requests_json, or decomposing every field yourself; confirmed Apply remains an admin UI action.",
-    "Use propose_config_change_set only for supported Admin Config writes that do not yet have a typed proposal Tool. Generic change sets must use canonical request paths, including PUT /admin/settings, PUT /admin/deployment/config/{key}, PUT /admin/ai-config/{key} such as PUT /admin/ai-config/prompt_rules or PUT /admin/ai-config/prompt_forbidden, PUT /admin/ai-config/user-type/{id-or-@type:slug}/{key}, POST/PUT/DELETE /admin/user-types..., POST/PUT/DELETE /admin/user-fields..., and PUT/DELETE /ingest/admin/documents/... defaults paths. For PUT /admin/settings, setting keys belong in the request body, not the path; supported keys include instance_name, assistant_name, header_tagline, description, primary_color, default_theme, default_language using codes such as en, and auto_approve_users. If a proposal Tool succeeds, answer only: I prepared these changes for review. Use Apply to confirm. If a proposal Tool rejects a supported change, correct the request and call the best matching proposal Tool again instead of telling the admin to configure it manually.",
     "Use curated resources as priority admin-vetted referrals when the user needs real-world help, contacts, or organizations; do not surface them merely because a topic matches if the right next step is ordinary explanation, triage, or a clarifying question.",
     "NEVER invent sources, organization names, or contact information",
     "If asked about topics outside your knowledge base, acknowledge limitations",
+]
+OBSOLETE_DEFAULT_PROMPT_RULES = [
+    "For ordinary step-by-step guidance, keep actions focused; for delegated Admin Conversation configuration tasks, group related settings into one executable change set for Change Confirmation.",
+    "For Admin Conversation guided setup or bootstrap write intent, call propose_admin_config_bootstrap directly with empty args or a short summary instead of calling read tools first, copying setup answers, hand-authoring requests_json, or decomposing every field yourself; confirmed Apply remains an admin UI action.",
+    "Use propose_config_change_set only for supported Admin Config writes that do not yet have a typed proposal Tool. Generic change sets must use canonical request paths, including PUT /admin/settings, PUT /admin/deployment/config/{key}, PUT /admin/ai-config/{key} such as PUT /admin/ai-config/prompt_rules or PUT /admin/ai-config/prompt_forbidden, PUT /admin/ai-config/user-type/{id-or-@type:slug}/{key}, POST/PUT/DELETE /admin/user-types..., POST/PUT/DELETE /admin/user-fields..., and PUT/DELETE /ingest/admin/documents/... defaults paths. For PUT /admin/settings, setting keys belong in the request body, not the path; supported keys include instance_name, assistant_name, header_tagline, description, primary_color, default_theme, default_language using codes such as en, and auto_approve_users. If a proposal Tool succeeds, answer only: I prepared these changes for review. Use Apply to confirm. If a proposal Tool rejects a supported change, correct the request and call the best matching proposal Tool again instead of telling the admin to configure it manually.",
+    "For Admin Conversation write intent, call propose_config_change_set instead of putting raw JSON in messages; confirmed Apply remains an admin UI action.",
+    "Admin Config proposals must use canonical paths and keys: POST /admin/user-types, PUT /admin/settings, PUT /admin/ai-config/prompt_rules, header_tagline, default_language codes such as en. If propose_config_change_set succeeds, answer only: I prepared these changes for review. Use Apply to confirm. If propose_config_change_set rejects a supported change, correct the request and call the tool again instead of telling the admin to configure it manually.",
+    "For Admin Conversation guided setup or bootstrap write intent, call propose_admin_config_bootstrap directly with setup_notes copied from the Admin's guided answers instead of calling read tools first, hand-authoring requests_json, or decomposing every field yourself; confirmed Apply remains an admin UI action.",
+    "For broad Admin Config setup, status, or readiness questions, call read_admin_setup_summary first instead of manually fanning out across low-level Admin Config read Tools; use low-level read Tools only for narrow follow-up inspection.",
+    "Use propose_config_change_set only for supported Admin Config writes that do not yet have a typed proposal Tool. Generic change sets must use canonical paths and keys: POST /admin/user-types, POST /admin/user-fields, PUT /admin/settings, PUT /admin/ai-config/prompt_rules, header_tagline, default_language codes such as en. If a proposal Tool succeeds, answer only: I prepared these changes for review. Use Apply to confirm. If propose_config_change_set rejects a supported change, correct the request and call the best matching proposal Tool again instead of telling the admin to configure it manually.",
+    "Use propose_config_change_set only for supported Admin Config writes that do not yet have a typed proposal Tool. Generic change sets must use canonical request paths: POST /admin/user-types, POST /admin/user-fields, PUT /admin/settings, or PUT /admin/ai-config/{key} such as PUT /admin/ai-config/prompt_rules. For PUT /admin/settings, setting keys belong in the request body, not the path; supported keys include instance_name, assistant_name, header_tagline, description, primary_color, default_theme, default_language using codes such as en, and auto_approve_users. If a proposal Tool succeeds, answer only: I prepared these changes for review. Use Apply to confirm. If propose_config_change_set rejects a supported change, correct the request and call the best matching proposal Tool again instead of telling the admin to configure it manually.",
 ]
 
 
@@ -2917,7 +3638,7 @@ def _seed_default_ai_config() -> None:
     prompt_rules = json.dumps(DEFAULT_PROMPT_RULES)
     defaults = [
         # Prompt sections
-        ("prompt_system", "You are a helpful, knowledgeable assistant for this private Enclave instance. In Admin Conversations, inspect available first-party context, choose reasonable defaults for unspecified configuration details, state important assumptions briefly, and present writes for Change Confirmation.", "string", "prompt_section", "Core system prompt"),
+        ("prompt_system", DEFAULT_PROMPT_SYSTEM, "string", "prompt_section", "Core system prompt"),
         ("prompt_tone", "Be helpful, concise, and professional. Acknowledge the user's question before answering.", "string", "prompt_section", "Voice and personality instructions"),
         ("prompt_rules", prompt_rules, "json", "prompt_section", "Array of behavioral rules"),
         ("prompt_forbidden", '[]', "json", "prompt_section", "Topics to avoid or redirect"),
@@ -2932,12 +3653,71 @@ def _seed_default_ai_config() -> None:
         ("user_trace_visibility", "minimal", "string", "default", "Conversation Trace visibility for User Conversations"),
     ]
 
-    with get_cursor() as cursor:
+    with get_write_cursor() as cursor:
         for key, value, value_type, category, description in defaults:
             cursor.execute("""
                 INSERT OR IGNORE INTO ai_config (key, value, value_type, category, description)
                 VALUES (?, ?, ?, ?, ?)
             """, (key, value, value_type, category, description))
+
+        cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("prompt_rules",))
+        prompt_rules_row = cursor.fetchone()
+        if prompt_rules_row:
+            try:
+                existing_rules = json.loads(prompt_rules_row["value"])
+            except (TypeError, ValueError, json.JSONDecodeError):
+                existing_rules = None
+            if isinstance(existing_rules, list) and all(
+                isinstance(rule, str) for rule in existing_rules
+            ):
+                has_obsolete_default = any(
+                    rule in OBSOLETE_DEFAULT_PROMPT_RULES
+                    for rule in existing_rules
+                )
+                if has_obsolete_default:
+                    old_rules = prompt_rules_row["value"]
+                    merged_rules = [
+                        rule
+                        for rule in existing_rules
+                        if rule not in OBSOLETE_DEFAULT_PROMPT_RULES
+                    ]
+                    for rule in DEFAULT_PROMPT_RULES:
+                        if rule not in merged_rules:
+                            merged_rules.append(rule)
+                    cursor.execute(
+                        "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
+                        (json.dumps(merged_rules), "prompt_rules"),
+                    )
+                    _insert_config_audit_log(
+                        cursor,
+                        "ai_config",
+                        "prompt_rules",
+                        old_rules,
+                        json.dumps(merged_rules),
+                        "system:migration",
+                        action_source="migration:admin_config_prompt_defaults",
+                    )
+
+        cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("prompt_system",))
+        prompt_system_row = cursor.fetchone()
+        if (
+            prompt_system_row
+            and prompt_system_row["value"] in OBSOLETE_DEFAULT_PROMPT_SYSTEMS
+        ):
+            old_system = prompt_system_row["value"]
+            cursor.execute(
+                "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
+                (DEFAULT_PROMPT_SYSTEM, "prompt_system"),
+            )
+            _insert_config_audit_log(
+                cursor,
+                "ai_config",
+                "prompt_system",
+                old_system,
+                DEFAULT_PROMPT_SYSTEM,
+                "system:migration",
+                action_source="migration:admin_config_prompt_defaults",
+            )
 
         cursor.execute("SELECT value FROM ai_config WHERE key = ?", ("web_search_default",))
         web_search_row = cursor.fetchone()
@@ -3097,6 +3877,118 @@ def delete_ai_config_override(key: str, user_type_id: int, changed_by: str = "")
             )
 
         return deleted
+
+
+def update_agent_settings_with_audit(
+    updates: dict[str, str],
+    *,
+    revert_keys: list[str],
+    user_type_id: int | None,
+    changed_by: str,
+    action_source: str,
+    conversation_id: str,
+) -> dict:
+    """Atomically update global Agent Settings or one User Type's overrides."""
+    changed_names: list[str] = []
+    reverted_keys: list[str] = []
+    with get_write_cursor() as cursor:
+        for key in sorted(updates):
+            value = updates[key]
+            cursor.execute("SELECT value FROM ai_config WHERE key = ?", (key,))
+            global_row = cursor.fetchone()
+            if not global_row:
+                raise LookupError(f"Unknown Agent Setting: {key}")
+            if user_type_id is None:
+                old_value = global_row["value"]
+                cursor.execute(
+                    "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
+                    (value, key),
+                )
+                audit_table = "ai_config"
+                audit_key = key
+            else:
+                cursor.execute(
+                    """
+                    SELECT value FROM ai_config_user_type_overrides
+                    WHERE ai_config_key = ? AND user_type_id = ?
+                    """,
+                    (key, user_type_id),
+                )
+                row = cursor.fetchone()
+                old_value = row["value"] if row else None
+                cursor.execute(
+                    """
+                    INSERT INTO ai_config_user_type_overrides (ai_config_key, user_type_id, value)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(ai_config_key, user_type_id) DO UPDATE SET
+                        value = excluded.value,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (key, user_type_id, value),
+                )
+                audit_table = "ai_config_user_type_overrides"
+                audit_key = f"{key}:type_{user_type_id}"
+
+            if old_value != value:
+                changed_names.append(key)
+                _insert_config_audit_log(
+                    cursor,
+                    audit_table,
+                    audit_key,
+                    old_value,
+                    value,
+                    changed_by,
+                    action_source=action_source,
+                    conversation_id=conversation_id,
+                )
+
+        if user_type_id is not None:
+            for key in sorted(set(revert_keys)):
+                cursor.execute(
+                    """
+                    SELECT value FROM ai_config_user_type_overrides
+                    WHERE ai_config_key = ? AND user_type_id = ?
+                    """,
+                    (key, user_type_id),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    continue
+                cursor.execute(
+                    """
+                    DELETE FROM ai_config_user_type_overrides
+                    WHERE ai_config_key = ? AND user_type_id = ?
+                    """,
+                    (key, user_type_id),
+                )
+                reverted_keys.append(key)
+                changed_names.append(key)
+                _insert_config_audit_log(
+                    cursor,
+                    "ai_config_user_type_overrides",
+                    f"{key}:type_{user_type_id}",
+                    row["value"],
+                    "(reverted to global)",
+                    changed_by,
+                    action_source=action_source,
+                    conversation_id=conversation_id,
+                )
+
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="update_agent_settings",
+            changed_names=changed_names,
+            affected_areas=["agent_settings"],
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+            metadata={"user_type_id": user_type_id, "reverted_keys": reverted_keys},
+        )
+
+    return {
+        "changed_names": sorted(set(changed_names)),
+        "reverted_keys": reverted_keys,
+    }
 
 
 def get_effective_ai_config(user_type_id: int | None = None) -> list[dict]:
@@ -3422,6 +4314,185 @@ def delete_document_defaults_override(job_id: str, user_type_id: int, changed_by
         return deleted
 
 
+def update_document_access_with_audit(
+    updates: dict[str, dict[str, object]],
+    *,
+    revert_job_ids: list[str],
+    user_type_id: int | None,
+    changed_by: str,
+    action_source: str,
+    conversation_id: str,
+) -> dict:
+    """Atomically update or revert Document Access defaults for one scope."""
+    changed_names: list[str] = []
+    reverted_job_ids: list[str] = []
+    with get_write_cursor() as cursor:
+        for job_id in sorted(updates):
+            values = updates[job_id]
+            if user_type_id is None:
+                cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (job_id,))
+                row = cursor.fetchone()
+                old_value = (
+                    {
+                        "is_available": bool(row["is_available"]),
+                        "is_default_active": bool(row["is_default_active"]),
+                        "display_order": int(row["display_order"]),
+                    }
+                    if row
+                    else None
+                )
+                final_available = bool(values.get("is_available", bool(row["is_available"]) if row else True))
+                final_active = bool(values.get("is_default_active", bool(row["is_default_active"]) if row else True))
+                final_order = int(values.get("display_order", row["display_order"] if row else 0))
+                new_value = {
+                    "is_available": final_available,
+                    "is_default_active": final_active,
+                    "display_order": final_order,
+                }
+                if old_value == new_value:
+                    continue
+                cursor.execute(
+                    """
+                    INSERT INTO document_defaults (job_id, is_available, is_default_active, display_order)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(job_id) DO UPDATE SET
+                        is_available = excluded.is_available,
+                        is_default_active = excluded.is_default_active,
+                        display_order = excluded.display_order,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (job_id, int(final_available), int(final_active), final_order),
+                )
+                table_name = "document_defaults"
+                config_key = job_id
+            else:
+                cursor.execute(
+                    """
+                    SELECT * FROM document_defaults_user_type_overrides
+                    WHERE job_id = ? AND user_type_id = ?
+                    """,
+                    (job_id, user_type_id),
+                )
+                row = cursor.fetchone()
+                old_value = (
+                    {
+                        "is_available": (
+                            bool(row["is_available"])
+                            if row["is_available"] is not None
+                            else None
+                        ),
+                        "is_default_active": (
+                            bool(row["is_default_active"])
+                            if row["is_default_active"] is not None
+                            else None
+                        ),
+                    }
+                    if row
+                    else None
+                )
+                final_available = values.get(
+                    "is_available",
+                    bool(row["is_available"]) if row and row["is_available"] is not None else None,
+                )
+                final_active = values.get(
+                    "is_default_active",
+                    bool(row["is_default_active"]) if row and row["is_default_active"] is not None else None,
+                )
+                new_value = {
+                    "is_available": final_available,
+                    "is_default_active": final_active,
+                }
+                if old_value == new_value:
+                    continue
+                cursor.execute(
+                    """
+                    INSERT INTO document_defaults_user_type_overrides (
+                        job_id, user_type_id, is_available, is_default_active
+                    ) VALUES (?, ?, ?, ?)
+                    ON CONFLICT(job_id, user_type_id) DO UPDATE SET
+                        is_available = excluded.is_available,
+                        is_default_active = excluded.is_default_active,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (
+                        job_id,
+                        user_type_id,
+                        int(bool(final_available)) if final_available is not None else None,
+                        int(bool(final_active)) if final_active is not None else None,
+                    ),
+                )
+                table_name = "document_defaults_user_type_overrides"
+                config_key = f"{job_id}:type_{user_type_id}"
+
+            changed_names.append(job_id)
+            _insert_config_audit_log(
+                cursor,
+                table_name,
+                config_key,
+                json.dumps(old_value, sort_keys=True, default=str) if old_value else None,
+                json.dumps(new_value, sort_keys=True, default=str),
+                changed_by,
+                action_source=action_source,
+                conversation_id=conversation_id,
+            )
+
+        for job_id in sorted(set(revert_job_ids)):
+            if user_type_id is None:
+                table_name = "document_defaults"
+                config_key = job_id
+                cursor.execute("SELECT * FROM document_defaults WHERE job_id = ?", (job_id,))
+                row = cursor.fetchone()
+                cursor.execute("DELETE FROM document_defaults WHERE job_id = ?", (job_id,))
+            else:
+                table_name = "document_defaults_user_type_overrides"
+                config_key = f"{job_id}:type_{user_type_id}"
+                cursor.execute(
+                    """
+                    SELECT * FROM document_defaults_user_type_overrides
+                    WHERE job_id = ? AND user_type_id = ?
+                    """,
+                    (job_id, user_type_id),
+                )
+                row = cursor.fetchone()
+                cursor.execute(
+                    """
+                    DELETE FROM document_defaults_user_type_overrides
+                    WHERE job_id = ? AND user_type_id = ?
+                    """,
+                    (job_id, user_type_id),
+                )
+            if not row:
+                continue
+            reverted_job_ids.append(job_id)
+            changed_names.append(job_id)
+            _insert_config_audit_log(
+                cursor,
+                table_name,
+                config_key,
+                json.dumps(dict(row), sort_keys=True, default=str),
+                "(reverted to inherited defaults)",
+                changed_by,
+                action_source=action_source,
+                conversation_id=conversation_id,
+            )
+
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="update_document_access",
+            changed_names=changed_names,
+            affected_areas=["document_access"],
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+            metadata={"user_type_id": user_type_id, "reverted_job_ids": reverted_job_ids},
+        )
+
+    return {
+        "changed_names": sorted(set(changed_names)),
+        "reverted_job_ids": reverted_job_ids,
+    }
+
+
 def get_effective_document_defaults(user_type_id: int | None = None) -> list[dict]:
     """
     Get all document defaults with inheritance applied.
@@ -3597,6 +4668,118 @@ def update_deployment_config(key: str, value: str, changed_by: str) -> bool:
         return False
 
 
+def update_deployment_configs_with_audit(
+    settings: dict[str, dict[str, object]],
+    *,
+    changed_by: str,
+    action_source: str,
+    conversation_id: str,
+) -> dict:
+    """Atomically upsert a validated batch of Deployment Settings."""
+    saved_values: dict[str, str] = {}
+    changed_names: list[str] = []
+
+    with get_write_cursor() as cursor:
+        for key in sorted(settings):
+            item = settings[key]
+            value = str(item["value"])
+            is_secret = bool(item.get("is_secret"))
+            requires_restart = bool(item.get("requires_restart"))
+            category = str(item.get("category") or "general")
+            description = str(item.get("description") or "")
+            cursor.execute(
+                """
+                SELECT value, is_secret, requires_restart, category, description
+                FROM deployment_config WHERE key = ?
+                """,
+                (key,),
+            )
+            old_row = cursor.fetchone()
+            old_plain = None
+            if old_row:
+                old_plain = (
+                    _decrypt_deployment_secret_value(old_row["value"])
+                    if old_row["is_secret"] and old_row["value"]
+                    else old_row["value"]
+                )
+
+            if is_secret and not value.strip() and old_row:
+                value = str(old_plain or "")
+
+            new_semantics = {
+                "value": value,
+                "is_secret": is_secret,
+                "requires_restart": requires_restart,
+                "category": category,
+                "description": description,
+            }
+            old_semantics = (
+                {
+                    "value": old_plain,
+                    "is_secret": bool(old_row["is_secret"]),
+                    "requires_restart": bool(old_row["requires_restart"]),
+                    "category": str(old_row["category"] or "general"),
+                    "description": str(old_row["description"] or ""),
+                }
+                if old_row
+                else None
+            )
+            saved_values[key] = "********" if is_secret and value else value
+            if old_semantics == new_semantics:
+                continue
+
+            value_to_store = _encrypt_deployment_secret_value(value) if is_secret and value else value
+            cursor.execute(
+                """
+                INSERT INTO deployment_config (
+                    key, value, is_secret, requires_restart, category, description
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    is_secret = excluded.is_secret,
+                    requires_restart = excluded.requires_restart,
+                    category = excluded.category,
+                    description = excluded.description,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    key,
+                    value_to_store,
+                    int(is_secret),
+                    int(requires_restart),
+                    category,
+                    description,
+                ),
+            )
+            changed_names.append(key)
+            secret_transition = bool(is_secret or (old_row and old_row["is_secret"]))
+            _insert_config_audit_log(
+                cursor,
+                "deployment_config",
+                key,
+                "********" if secret_transition and old_row else old_plain,
+                "********" if secret_transition else value,
+                changed_by,
+                action_source=action_source,
+                conversation_id=conversation_id,
+            )
+
+        _insert_admin_config_tool_audit(
+            cursor,
+            tool_name="update_deployment_settings",
+            changed_names=changed_names,
+            affected_areas=["deployment_settings"],
+            changed_by=changed_by,
+            action_source=action_source,
+            conversation_id=conversation_id,
+        )
+
+    return {
+        "saved_values": saved_values,
+        "changed_names": changed_names,
+    }
+
+
 def upsert_deployment_config(
     key: str,
     value: str,
@@ -3612,7 +4795,13 @@ def upsert_deployment_config(
         cursor.execute("SELECT value, is_secret FROM deployment_config WHERE key = ?", (key,))
         old_row = cursor.fetchone()
         old_value = "********" if (old_row and old_row["is_secret"]) else (old_row["value"] if old_row else None)
-        value_to_store = _encrypt_deployment_secret_value(value) if is_secret and value else value
+        if is_secret and not value.strip() and old_row:
+            if old_row["is_secret"]:
+                value_to_store = old_row["value"]
+            else:
+                value_to_store = _encrypt_deployment_secret_value(old_row["value"])
+        else:
+            value_to_store = _encrypt_deployment_secret_value(value) if is_secret and value else value
 
         cursor.execute("""
             INSERT INTO deployment_config (key, value, is_secret, requires_restart, category, description)
@@ -3968,7 +5157,8 @@ def compact_config_audit_log_before(cutoff_iso: str, *, changed_by: str) -> dict
 
         cursor.execute(
             """
-            SELECT id, table_name, config_key, old_value, new_value, changed_by, changed_at
+            SELECT id, table_name, config_key, old_value, new_value, changed_by,
+                   action_source, conversation_id, changed_at, hash_format
             FROM config_audit_log
             ORDER BY id
             """
@@ -3984,6 +5174,9 @@ def compact_config_audit_log_before(cutoff_iso: str, *, changed_by: str) -> dict
                 new_value=row["new_value"],
                 changed_by=row["changed_by"],
                 changed_at=row["changed_at"] or "",
+                action_source=row["action_source"] or "unknown",
+                conversation_id=row["conversation_id"],
+                hash_format=row["hash_format"] or AUDIT_HASH_FORMAT_PIPE_V1,
             )
             entry_hash = _compute_audit_entry_hash(payload)
             cursor.execute(
@@ -4024,7 +5217,9 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
     """
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT id, table_name, config_key, old_value, new_value, changed_by, changed_at, prev_hash, entry_hash
+            SELECT id, table_name, config_key, old_value, new_value, changed_by,
+                   action_source, conversation_id, changed_at, hash_format,
+                   prev_hash, entry_hash
             FROM config_audit_log
             ORDER BY id
         """)
@@ -4046,6 +5241,9 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
             new_value=row["new_value"],
             changed_by=row["changed_by"],
             changed_at=changed_at,
+            action_source=row["action_source"] or "unknown",
+            conversation_id=row["conversation_id"],
+            hash_format=row["hash_format"] or AUDIT_HASH_FORMAT_PIPE_V1,
         )
         expected_entry_hash = _compute_audit_entry_hash(payload)
 

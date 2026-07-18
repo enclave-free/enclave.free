@@ -5,10 +5,7 @@ import {
   useMemo,
   useReducer,
   useRef,
-  type Dispatch,
   type FormEvent,
-  type Ref,
-  type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +13,6 @@ import {
   AlertCircle,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
   Database,
   EyeOff,
   LifeBuoy,
@@ -26,7 +22,6 @@ import {
   Search,
   Settings2,
   MessageSquare,
-  ShieldCheck,
   Trash2,
   X,
 } from 'lucide-react';
@@ -36,12 +31,8 @@ import { buildConversationSurfaceTurns } from '../components/chat/ConversationSu
 import {
   adaptSageStreamEvent,
   readTraceDelta,
-  buildAdminChangePreview,
-  createAdminChangeConfirmationState,
   createConversationUiState,
-  reduceAdminChangeConfirmationState,
   reduceConversationUiState,
-  type AdminChangeConfirmationAction,
   type ConversationUiTurn,
 } from '../components/chat';
 import { ToolSelector, Tool } from '../components/chat/ToolSelector';
@@ -74,25 +65,20 @@ import {
   validateAdminSession,
 } from '../utils/adminApi';
 import {
+  notifyAdminConfigChanged,
+  readAdminConfigAffectedAreas,
+} from '../utils/adminConfigEvents';
+import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../utils/llmChat';
 import { Button, Callout, IconButton } from '../components/ui';
-import {
-  coerceAdminAssistantChangeSetPayload,
-  extractAdminAssistantChangeSetStrict,
-  redactAdminDeploymentSecretChangeSets,
-  redactSecrets,
-  stripAdminAssistantChangeSetJson,
-  validateAdminAssistantChangeSet,
-  type AdminAssistantChangeSet,
-} from '../utils/adminAssistant';
+import { redactSecrets } from '../utils/secretRedaction';
 import {
   classifyProviderError,
   formatClassifiedProviderError,
   shouldOfferNewAssistantConversation,
 } from '../utils/providerErrors';
-import { resolveAdminApplyIntent } from '../utils/adminApplyIntent';
 import { compactAdminSessionMemory } from '../utils/sessionMemoryCompaction';
 import {
   formatAdminReducedContextNotice,
@@ -156,13 +142,6 @@ interface ConversationSessionView {
   id: string;
   title: string | null;
   turns: ConversationUiTurn[];
-}
-
-function slugify(value: string): string {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
 }
 
 function conversationHistorySummaryFromApi(
@@ -374,208 +353,6 @@ function formatProviderResponseError(
   return formatClassifiedProviderError(classified);
 }
 
-function stagePendingAdminChangeSet(
-  content: string,
-  hasConfigTool: boolean,
-  dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
-): AdminAssistantChangeSet | null {
-  if (!hasConfigTool || !content.trim()) return null;
-  if (!content.includes('"requests"')) return null;
-
-  const extracted = extractAdminAssistantChangeSetStrict(content);
-  if (extracted.ok) {
-    dispatchAdminApply({
-      type: 'changeSetReadyForReview',
-      changeSet: extracted.changeSet,
-    });
-    return extracted.changeSet;
-  }
-  return null;
-}
-
-function stageStructuredAdminChangeSet(
-  payload: unknown,
-  dispatchAdminApply: Dispatch<AdminChangeConfirmationAction>
-): AdminAssistantChangeSet | null {
-  if (payload === undefined || payload === null) return null;
-  const extracted = coerceAdminAssistantChangeSetPayload(payload);
-  if (extracted.ok) {
-    dispatchAdminApply({
-      type: 'changeSetReadyForReview',
-      changeSet: extracted.changeSet,
-    });
-    return extracted.changeSet;
-  }
-  dispatchAdminApply({
-    type: 'parseFailed',
-    message: extracted.error,
-  });
-  return null;
-}
-
-function prepareAssistantContentForDisplay(
-  content: string,
-  hasConfigTool: boolean
-): string {
-  const redacted = redactAdminDeploymentSecretChangeSets(content);
-  return hasConfigTool ? stripAdminAssistantChangeSetJson(redacted) : redacted;
-}
-
-function AdminChangeApprovalCard({
-  preview,
-  state,
-  message,
-  onApprove,
-  onReject,
-  cardRef,
-  approveButtonRef,
-}: {
-  preview: ReturnType<typeof buildAdminChangePreview>;
-  state:
-    | 'review'
-    | 'applying'
-    | 'applied'
-    | 'rejected'
-    | 'error'
-    | 'superseded';
-  message?: string;
-  onApprove: () => void;
-  onReject: () => void;
-  cardRef?: Ref<HTMLDivElement>;
-  approveButtonRef?: Ref<HTMLButtonElement>;
-}) {
-  const { t } = useTranslation();
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const isApplying = state === 'applying';
-  const isFinal =
-    state === 'applied' ||
-    state === 'rejected' ||
-    state === 'error' ||
-    state === 'superseded';
-
-  return (
-    <div
-      ref={cardRef}
-      role="group"
-      aria-label="Admin Change Confirmation"
-      className="mb-4 ml-10 max-w-[min(100%,48rem)] overflow-hidden rounded-xl border border-warning/25 bg-surface-raised shadow-sm"
-    >
-      <div className="flex items-start gap-3 px-4 py-3">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
-          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-text">
-              {t(
-                'admin.configAssistant.approvalCardTitle',
-                'Approve configuration changes'
-              )}
-            </h3>
-            {isApplying && (
-              <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
-                {t('admin.configAssistant.applying', 'Applying')}
-              </span>
-            )}
-            {state === 'applied' && (
-              <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                {t('admin.configAssistant.applied', 'Applied')}
-              </span>
-            )}
-            {state === 'rejected' && (
-              <span className="rounded-full bg-surface-overlay px-2 py-0.5 text-[11px] font-medium text-text-secondary">
-                {t('admin.configAssistant.rejected', 'Rejected')}
-              </span>
-            )}
-            {state === 'error' && (
-              <span className="rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-medium text-error">
-                {t('admin.configAssistant.failed', 'Failed')}
-              </span>
-            )}
-            {state === 'superseded' && (
-              <span className="rounded-full bg-surface-overlay px-2 py-0.5 text-[11px] font-medium text-text-secondary">
-                {t('admin.configAssistant.superseded', 'Superseded')}
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-sm text-text-secondary">
-            {preview.summary ||
-              t(
-                'admin.configAssistant.pendingChanges',
-                'Pending configuration changes'
-              )}
-          </p>
-          {message && <p className="mt-2 text-xs text-text-muted">{message}</p>}
-          <p className="mt-2 text-xs text-text-muted">
-            {t('admin.configAssistant.reviewMaskedSecrets')}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 px-4 py-3">
-        <button
-          type="button"
-          onClick={() => setDetailsOpen((open) => !open)}
-          aria-expanded={detailsOpen}
-          className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text"
-        >
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
-            aria-hidden="true"
-          />
-          {detailsOpen
-            ? t('admin.configAssistant.hideDetails', 'Hide details')
-            : t('admin.configAssistant.reviewDetails', 'Review details')}
-        </button>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={onReject}
-            variant="ghost"
-            size="sm"
-            disabled={isApplying || isFinal}
-            aria-label="Reject changes"
-          >
-            {t('admin.configAssistant.reject', 'Reject')}
-          </Button>
-          <Button
-            ref={approveButtonRef}
-            onClick={onApprove}
-            variant="primary"
-            size="sm"
-            disabled={isApplying || isFinal}
-            aria-label="Approve changes"
-            leadingIcon={
-              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-            }
-          >
-            {t('admin.configAssistant.approve', 'Approve')}
-          </Button>
-        </div>
-      </div>
-
-      {detailsOpen && (
-        <div className="space-y-2 border-t border-border/70 bg-surface px-4 py-3">
-          {preview.requests.map((request) => (
-            <div
-              key={request.idx}
-              className="rounded-lg border border-border bg-surface-raised px-3 py-2"
-            >
-              <div className="text-xs font-mono text-text-secondary">
-                {request.method} {request.path}
-              </div>
-              {request.body !== undefined && (
-                <pre className="mt-2 max-h-40 overflow-auto text-xs text-text-muted">
-                  {JSON.stringify(request.body, null, 2)}
-                </pre>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ChatPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -593,30 +370,9 @@ export function ChatPage() {
         selectedTools: [],
       })
   );
-  const [adminApplyState, dispatchAdminApply] = useReducer(
-    reduceAdminChangeConfirmationState,
-    undefined,
-    () => createAdminChangeConfirmationState()
-  );
-  const [adminApprovalTurnId, setAdminApprovalTurnId] = useState<string | null>(
-    null
-  );
-  const [supersededAdminApprovals, setSupersededAdminApprovals] = useState<
-    Array<{
-      turnId: string;
-      changeSet: AdminAssistantChangeSet;
-    }>
-  >([]);
-  const adminApprovalCardRef = useRef<HTMLDivElement | null>(null);
-  const adminApprovalApproveButtonRef = useRef<HTMLButtonElement | null>(null);
   const [documents, setDocuments] = useState<DocumentSource[]>([]);
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false);
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([]);
-  const [deploymentSecretKeys, setDeploymentSecretKeys] = useState<Set<string>>(
-    new Set()
-  );
-  const [deploymentSecretKeysLoaded, setDeploymentSecretKeysLoaded] =
-    useState(false);
   const [shareSecrets, setShareSecrets] = useState(false);
   const [secretsForRedaction, setSecretsForRedaction] = useState<string[]>([]);
   const messages = useMemo(
@@ -727,41 +483,6 @@ export function ChatPage() {
   >('idle');
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-
-    let cancelled = false;
-    async function fetchDeploymentSecretKeys() {
-      setDeploymentSecretKeys(new Set());
-      setDeploymentSecretKeysLoaded(false);
-      try {
-        const res = await adminFetch('/admin/deployment/config');
-        if (!res.ok) return;
-        const payload = await res.json();
-        const secretKeys = new Set<string>();
-        for (const value of Object.values(payload || {})) {
-          if (!Array.isArray(value)) continue;
-          for (const item of value) {
-            const configItem = item as { is_secret?: boolean; key?: unknown };
-            if (configItem.is_secret && typeof configItem.key === 'string')
-              secretKeys.add(configItem.key);
-          }
-        }
-        if (!cancelled) {
-          setDeploymentSecretKeys(secretKeys);
-          setDeploymentSecretKeysLoaded(true);
-        }
-      } catch {
-        // Keep pessimistic masking when metadata is unavailable.
-      }
-    }
-
-    fetchDeploymentSecretKeys();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAdmin]);
-
   // Build available tools list - db-query only visible to admins
   const availableTools = useMemo<Tool[]>(() => {
     const tools: Tool[] = [
@@ -837,8 +558,6 @@ export function ChatPage() {
           fetchJson,
         });
         setSecretsForRedaction(metadata.secretValues);
-        setDeploymentSecretKeys(metadata.deploymentSecretKeys);
-        setDeploymentSecretKeysLoaded(true);
       } catch {
         setSecretsForRedaction([]);
       }
@@ -1130,16 +849,9 @@ export function ChatPage() {
     (toolId: string) => {
       if (!isAdmin && ADMIN_ONLY_TOOL_IDS.has(toolId)) return;
 
-      const selectedAfterToggle = !selectedTools.includes(toolId);
-      if (toolId === CONFIG_TOOL_ID) {
-        dispatchAdminApply({
-          type: 'adminConfigToolToggled',
-          selectedAfterToggle,
-        });
-        if (!selectedAfterToggle) {
-          setShareSecrets(false);
-          setSecretsForRedaction([]);
-        }
+      if (toolId === CONFIG_TOOL_ID && selectedTools.includes(toolId)) {
+        setShareSecrets(false);
+        setSecretsForRedaction([]);
       }
       dispatchConversation({ type: 'toolToggled', toolId });
     },
@@ -1198,8 +910,6 @@ export function ChatPage() {
           turns: view.turns,
         });
         setActiveConversationTitle(view.title ?? conversation.title);
-        dispatchAdminApply({ type: 'newConversationStarted' });
-        setSupersededAdminApprovals([]);
         setSessionMemoryNotice(null);
         setReducedContextNotice(null);
         setRenameDraft(null);
@@ -1306,8 +1016,6 @@ export function ChatPage() {
       );
       if (conversationSessionId === deleteDraft.id) {
         dispatchConversation({ type: 'newConversationStarted' });
-        dispatchAdminApply({ type: 'newConversationStarted' });
-        setSupersededAdminApprovals([]);
         setSessionMemoryNotice(null);
         setReducedContextNotice(null);
         setActiveConversationTitle(null);
@@ -1338,85 +1046,14 @@ export function ChatPage() {
     return action;
   };
 
-  const stageAdminChangeSetForTurn = useCallback(
-    (turnId: string | null | undefined) => {
-      if (!turnId) return;
-      if (
-        (adminApplyState.state === 'review' ||
-          adminApplyState.state === 'applying') &&
-        adminApprovalTurnId
-      ) {
-        setSupersededAdminApprovals((existing) => {
-          if (
-            existing.some((approval) => approval.turnId === adminApprovalTurnId)
-          )
-            return existing;
-          return [
-            ...existing,
-            {
-              turnId: adminApprovalTurnId,
-              changeSet: adminApplyState.changeSet,
-            },
-          ];
-        });
-      }
-      setAdminApprovalTurnId(turnId);
-    },
-    [adminApplyState, adminApprovalTurnId]
-  );
-
-  const focusPendingAdminApproval = useCallback(() => {
-    const focusApproval = () => {
-      adminApprovalCardRef.current?.scrollIntoView({
-        block: 'nearest',
-        behavior: 'smooth',
-      });
-      adminApprovalApproveButtonRef.current?.focus();
-    };
-
-    focusApproval();
-    window.setTimeout(focusApproval, 0);
-  }, []);
-
   const handleSend = async (content: string) => {
     const hasConfigTool = configToolEnabled;
-    const hasPendingChangeSet = adminApplyState.state === 'review';
-    const applyIntent = hasConfigTool
-      ? resolveAdminApplyIntent(content, hasPendingChangeSet)
-      : { kind: 'none' as const };
 
     dispatchConversation({
       type: 'userTurnSubmitted',
       id: generateMessageId(),
       content,
     });
-
-    if (applyIntent.kind === 'needs-panel') {
-      focusPendingAdminApproval();
-      dispatchConversation({
-        type: 'assistantTurnAppended',
-        id: generateMessageId(),
-        content: t(
-          'admin.configAssistant.applyIntentUsePanel',
-          'Use the approval card below and click Approve to confirm these configuration updates.'
-        ),
-      });
-      dispatchConversation({ type: 'assistantTurnFinished' });
-      return;
-    }
-
-    if (applyIntent.kind === 'no-pending') {
-      dispatchConversation({
-        type: 'assistantTurnAppended',
-        id: generateMessageId(),
-        content: t(
-          'admin.configAssistant.applyIntentNoPending',
-          'There are no pending configuration changes to apply. Ask the assistant to propose a change set first.'
-        ),
-      });
-      dispatchConversation({ type: 'assistantTurnFinished' });
-      return;
-    }
 
     try {
       const backendTools = actorScopedSelectedTools;
@@ -1486,18 +1123,13 @@ export function ChatPage() {
         let streamContent = '';
         let streamSessionId: string | null = null;
         let streamReportedError = false;
-        let structuredChangeSet: AdminAssistantChangeSet | null = null;
-        const stageStructuredForCurrentTurn = (payload: unknown) => {
-          if (!hasConfigTool) return;
-          if (structuredChangeSet) return;
-          const staged = stageStructuredAdminChangeSet(
-            payload,
-            dispatchAdminApply
+        const notifiedAffectedAreas = new Set<string>();
+        const notifyAffectedAreas = (payload: unknown) => {
+          const freshAreas = readAdminConfigAffectedAreas(payload).filter(
+            (area) => !notifiedAffectedAreas.has(area)
           );
-          if (staged) {
-            structuredChangeSet = staged;
-            stageAdminChangeSetForTurn(streamMessageId);
-          }
+          freshAreas.forEach((area) => notifiedAffectedAreas.add(area));
+          notifyAdminConfigChanged(freshAreas);
         };
         try {
           await sendLlmChatStreamWithUnifiedTools({
@@ -1510,6 +1142,7 @@ export function ChatPage() {
               isAdmin && backendTools.includes('db-query'),
             onEvent: (event, payload) => {
               const data = payload as Record<string, unknown>;
+              notifyAffectedAreas(data);
               if (event === 'assistant_message_started') {
                 if (typeof data.message_id !== 'string')
                   data.message_id = generateMessageId();
@@ -1531,20 +1164,23 @@ export function ChatPage() {
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
                 streamContent += delta;
-                dispatchConversation({
-                  type: 'assistantContentReplaced',
-                  assistantTurnId: streamMessageId,
-                  content: prepareAssistantContentForDisplay(
-                    shareSecrets
-                      ? redactSecrets(streamContent, secretsForThisRequest)
-                      : streamContent,
-                    hasConfigTool
-                  ),
-                });
+                if (!shareSecrets) {
+                  dispatchConversation({
+                    type: 'assistantContentReplaced',
+                    assistantTurnId: streamMessageId,
+                    content: streamContent,
+                  });
+                }
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
-                stageStructuredForCurrentTurn(data.admin_change_set);
+                if (streamMessageId && shareSecrets) {
+                  dispatchConversation({
+                    type: 'assistantContentReplaced',
+                    assistantTurnId: streamMessageId,
+                    content: redactSecrets(streamContent, secretsForThisRequest),
+                  });
+                }
                 dispatchStreamEvent(event, data, streamMessageId);
               } else if (event === 'error') {
                 streamReportedError = true;
@@ -1556,7 +1192,6 @@ export function ChatPage() {
                   )
                 );
               } else if (streamMessageId) {
-                stageStructuredForCurrentTurn(data.admin_change_set);
                 dispatchStreamEvent(event, data, streamMessageId);
               }
             },
@@ -1571,37 +1206,12 @@ export function ChatPage() {
               type: 'assistantTurnFinished',
               sessionId: streamSessionId,
             });
-          if (hasConfigTool && !structuredChangeSet) {
-            const extracted =
-              extractAdminAssistantChangeSetStrict(streamContent);
-            if (extracted.ok) {
-              stageAdminChangeSetForTurn(streamMessageId);
-              dispatchAdminApply({
-                type: 'changeSetReadyForReview',
-                changeSet: extracted.changeSet,
-              });
-            } else if (streamContent.includes('"requests"')) {
-              dispatchAdminApply({
-                type: 'parseFailed',
-                message: extracted.error,
-              });
-            }
-          } else if (!hasConfigTool) {
-            dispatchAdminApply({ type: 'dismissed' });
-          }
           streamed = true;
         } catch (streamError) {
           const errorMessage =
             streamError instanceof Error
               ? streamError.message
               : t('errors.failedToSendMessage');
-
-          const stagedChangeSet = stagePendingAdminChangeSet(
-            streamContent,
-            hasConfigTool,
-            dispatchAdminApply
-          );
-          if (stagedChangeSet) stageAdminChangeSetForTurn(streamMessageId);
 
           if (streamMessageId && streamContent.trim()) {
             dispatchConversation({
@@ -1635,6 +1245,9 @@ export function ChatPage() {
               message: errorMessage,
             });
             dispatchConversation({ type: 'requestErrorDismissed' });
+          }
+          if (hasConfigTool) {
+            throw streamError;
           }
           console.warn(
             'Streaming chat failed; falling back to non-streaming chat:',
@@ -1680,6 +1293,7 @@ export function ChatPage() {
       }
 
       const data = await response.json();
+      notifyAdminConfigChanged(readAdminConfigAffectedAreas(data));
 
       const responseContent = data.message;
       if (data.session_id) {
@@ -1689,50 +1303,15 @@ export function ChatPage() {
         });
       }
 
-      if (hasConfigTool) {
-        const structuredChangeSet = stageStructuredAdminChangeSet(
-          data.admin_change_set,
-          dispatchAdminApply
-        );
-        if (structuredChangeSet) {
-          stageAdminChangeSetForTurn(
-            typeof data.message_id === 'string' ? data.message_id : null
-          );
-        }
-        const raw = String(data.message || '');
-        if (hasConfigTool && !structuredChangeSet) {
-          const extracted = extractAdminAssistantChangeSetStrict(raw);
-          if (extracted.ok) {
-            stageAdminChangeSetForTurn(
-              typeof data.message_id === 'string' ? data.message_id : null
-            );
-            dispatchAdminApply({
-              type: 'changeSetReadyForReview',
-              changeSet: extracted.changeSet,
-            });
-          } else if (raw.includes('"requests"')) {
-            dispatchAdminApply({
-              type: 'parseFailed',
-              message: extracted.error,
-            });
-          }
-        }
-      } else {
-        dispatchAdminApply({ type: 'dismissed' });
-      }
-
       dispatchConversation({
         type: 'assistantTurnCompleted',
         id:
           typeof data.message_id === 'string'
             ? data.message_id
             : generateMessageId(),
-        content: prepareAssistantContentForDisplay(
-          shareSecrets
-            ? redactSecrets(responseContent, secretsForThisRequest)
-            : responseContent,
-          hasConfigTool
-        ),
+        content: shareSecrets
+          ? redactSecrets(responseContent, secretsForThisRequest)
+          : responseContent,
         trace: data.trace ?? null,
         sessionId:
           typeof data.session_id === 'string' ? data.session_id : undefined,
@@ -1750,274 +1329,8 @@ export function ChatPage() {
     }
   };
 
-  const handleAdminApply = useCallback(
-    async (changeSet: AdminAssistantChangeSet) => {
-      dispatchAdminApply({ type: 'applyStarted' });
-      try {
-        const userTypeSlugToId = new Map<string, number>();
-        try {
-          const existing = await fetchJson<{
-            types: Array<{ id: number; name: string }>;
-          }>('/admin/user-types');
-          for (const ut of existing.types || []) {
-            userTypeSlugToId.set(slugify(ut.name), ut.id);
-          }
-        } catch {
-          // Best-effort; we'll still learn mappings from POST responses below.
-        }
-
-        const resolveUserTypeId = (raw: unknown): number | unknown => {
-          if (typeof raw !== 'string') return raw;
-          if (!raw.startsWith('@type:')) return raw;
-          const slug = raw.slice('@type:'.length);
-          const id = userTypeSlugToId.get(slug);
-          if (id === undefined)
-            throw new Error(`Unknown user type placeholder: ${raw}`);
-          return id;
-        };
-
-        const rewritePath = (path: string): string => {
-          const parts = path.split('/');
-          const idx = parts.findIndex((p) => p === 'user-type');
-          if (idx !== -1 && parts[idx + 1]?.startsWith('@type:')) {
-            const seg = parts[idx + 1];
-            const id = resolveUserTypeId(seg);
-            if (typeof id === 'number') parts[idx + 1] = String(id);
-          }
-          const idx2 = parts.findIndex((p) => p === 'defaults');
-          if (
-            idx2 !== -1 &&
-            parts[idx2 + 1] === 'user-type' &&
-            parts[idx2 + 2]?.startsWith('@type:')
-          ) {
-            const seg = parts[idx2 + 2];
-            const id = resolveUserTypeId(seg);
-            if (typeof id === 'number') parts[idx2 + 2] = String(id);
-          }
-          return parts.join('/');
-        };
-
-        const results: Array<{
-          ok: boolean;
-          method: string;
-          path: string;
-          status?: number;
-          error?: string;
-        }> = [];
-        for (const req of changeSet.requests) {
-          try {
-            const resolvedPath = rewritePath(req.path);
-            const requestValidation = validateAdminAssistantChangeSet({
-              version: 1,
-              requests: [req],
-            });
-            if (!requestValidation.ok) {
-              results.push({
-                ok: false,
-                method: req.method,
-                path: resolvedPath,
-                error: requestValidation.error || 'Invalid request',
-              });
-              continue;
-            }
-            let resolvedBody: unknown = req.body;
-            if (
-              resolvedBody &&
-              typeof resolvedBody === 'object' &&
-              !Array.isArray(resolvedBody)
-            ) {
-              const b = resolvedBody as Record<string, unknown>;
-              if ('user_type_id' in b) {
-                const resolved = resolveUserTypeId(b.user_type_id);
-                resolvedBody = { ...b, user_type_id: resolved };
-              }
-            }
-
-            const res = await adminFetch(resolvedPath, {
-              method: req.method,
-              body: resolvedBody ? JSON.stringify(resolvedBody) : undefined,
-            });
-            if (!res.ok) {
-              const detail = await readErrorDetail(res);
-              results.push({
-                ok: false,
-                method: req.method,
-                path: resolvedPath,
-                status: res.status,
-                error: detail,
-              });
-              continue;
-            }
-
-            if (req.method === 'POST' && req.path === '/admin/user-types') {
-              try {
-                const payload = (await res.json()) as {
-                  id?: number;
-                  name?: string;
-                };
-                if (
-                  typeof payload?.id === 'number' &&
-                  typeof payload?.name === 'string'
-                ) {
-                  userTypeSlugToId.set(slugify(payload.name), payload.id);
-                }
-              } catch {
-                // ignore
-              }
-            }
-
-            results.push({
-              ok: true,
-              method: req.method,
-              path: resolvedPath,
-              status: res.status,
-            });
-          } catch (err) {
-            results.push({
-              ok: false,
-              method: req.method,
-              path: req.path,
-              error: err instanceof Error ? err.message : String(err),
-            });
-          }
-        }
-
-        const okCount = results.filter((r) => r.ok).length;
-        const failCount = results.length - okCount;
-        const baseSummary = failCount
-          ? t('admin.configAssistant.applySummary.appliedCountsWithFailures', {
-              ok: okCount,
-              total: results.length,
-              failed: failCount,
-            })
-          : t('admin.configAssistant.applySummary.appliedCounts', {
-              ok: okCount,
-              total: results.length,
-            });
-
-        const failedDetails = results
-          .filter((r) => !r.ok)
-          .map(
-            (r) => `${r.method} ${r.path}: ${r.error || `HTTP ${r.status}`}`
-          );
-        const failureSummary = failedDetails.length
-          ? '\n' + failedDetails.join('\n')
-          : '';
-
-        const postApplyNotes: string[] = [];
-        try {
-          const validationRes = await adminFetch(
-            '/admin/deployment/config/validate',
-            { method: 'POST' }
-          );
-          if (validationRes.ok) {
-            const v = (await validationRes.json()) as {
-              valid: boolean;
-              errors?: string[];
-              warnings?: string[];
-            };
-            if (v.valid) {
-              const warnings = (v.warnings || []).filter(Boolean);
-              postApplyNotes.push(
-                warnings.length
-                  ? t(
-                      'admin.configAssistant.applySummary.configValidationValidWarnings',
-                      { count: warnings.length }
-                    )
-                  : t(
-                      'admin.configAssistant.applySummary.configValidationValid'
-                    )
-              );
-            } else {
-              const errors = (v.errors || []).filter(Boolean);
-              postApplyNotes.push(
-                t(
-                  'admin.configAssistant.applySummary.configValidationInvalidErrors',
-                  { count: errors.length }
-                )
-              );
-            }
-          } else {
-            postApplyNotes.push(
-              t(
-                'admin.configAssistant.applySummary.configValidationFailedHttp',
-                { status: validationRes.status }
-              )
-            );
-          }
-        } catch {
-          postApplyNotes.push(
-            t(
-              'admin.configAssistant.applySummary.configValidationFailedNetwork'
-            )
-          );
-        }
-
-        try {
-          const rr = await adminFetch('/admin/deployment/restart-required');
-          if (rr.ok) {
-            const data = (await rr.json()) as {
-              restart_required: boolean;
-              changed_keys?: Array<{ key: string }>;
-            };
-            const keys = (data.changed_keys || [])
-              .map((k) => k.key)
-              .filter(Boolean);
-            if (data.restart_required && keys.length) {
-              postApplyNotes.push(
-                t('admin.configAssistant.applySummary.restartRequiredFor', {
-                  keys: keys.join(', '),
-                })
-              );
-            } else {
-              postApplyNotes.push(
-                t('admin.configAssistant.applySummary.restartRequiredNo')
-              );
-            }
-          } else {
-            postApplyNotes.push(
-              t('admin.configAssistant.applySummary.restartCheckFailedHttp', {
-                status: rr.status,
-              })
-            );
-          }
-        } catch {
-          postApplyNotes.push(
-            t('admin.configAssistant.applySummary.restartCheckFailedNetwork')
-          );
-        }
-
-        const needsPageRefresh = results.some(
-          (r) => r.ok && r.path === '/admin/settings'
-        );
-        if (needsPageRefresh) {
-          postApplyNotes.push(
-            t('admin.configAssistant.applySummary.pageRefreshRecommended')
-          );
-        }
-
-        const summary =
-          [baseSummary, ...postApplyNotes].join(' ') + failureSummary;
-        dispatchAdminApply({ type: 'applySucceeded', message: summary });
-        dispatchConversation({
-          type: 'assistantTurnAppended',
-          id: generateMessageId(),
-          content: summary,
-        });
-      } catch (e) {
-        dispatchAdminApply({
-          type: 'applyFailed',
-          message: e instanceof Error ? e.message : String(e),
-        });
-      }
-    },
-    [fetchJson, t]
-  );
-
   const handleNewChat = () => {
     dispatchConversation({ type: 'newConversationStarted' });
-    dispatchAdminApply({ type: 'newConversationStarted' });
-    setSupersededAdminApprovals([]);
     setSessionMemoryNotice(null);
     setReducedContextNotice(null);
     setShareSecrets(false);
@@ -2443,76 +1756,6 @@ export function ChatPage() {
     </section>
   ) : null;
   const conversationTurns = buildConversationSurfaceTurns(messages);
-  const lastAssistantTurnId = useMemo(
-    () =>
-      [...conversationTurns].reverse().find((turn) => turn.role === 'assistant')
-        ?.id ?? null,
-    [conversationTurns]
-  );
-  useEffect(() => {
-    if (adminApplyState.state === 'idle' && adminApprovalTurnId) {
-      setAdminApprovalTurnId(null);
-    }
-  }, [adminApplyState.state, adminApprovalTurnId]);
-  const turnAccessories = useMemo(() => {
-    const isApprovalVisible =
-      adminApplyState.state === 'review' ||
-      adminApplyState.state === 'applying' ||
-      adminApplyState.state === 'applied' ||
-      adminApplyState.state === 'rejected' ||
-      adminApplyState.state === 'error';
-    const cardTurnId = adminApprovalTurnId ?? lastAssistantTurnId;
-    const changeSet =
-      'changeSet' in adminApplyState ? adminApplyState.changeSet : undefined;
-    const accessories: Record<string, ReactNode> = {};
-
-    for (const supersededApproval of supersededAdminApprovals) {
-      const preview = buildAdminChangePreview(supersededApproval.changeSet, {
-        deploymentSecretKeysLoaded,
-        deploymentSecretKeys,
-      });
-      accessories[supersededApproval.turnId] = (
-        <AdminChangeApprovalCard
-          preview={preview}
-          state="superseded"
-          onApprove={() => undefined}
-          onReject={() => undefined}
-        />
-      );
-    }
-
-    if (!isAdmin || !changeSet || !cardTurnId || !isApprovalVisible) {
-      return Object.keys(accessories).length > 0 ? accessories : undefined;
-    }
-
-    const preview = buildAdminChangePreview(changeSet, {
-      deploymentSecretKeysLoaded,
-      deploymentSecretKeys,
-    });
-    accessories[cardTurnId] = (
-      <AdminChangeApprovalCard
-        preview={preview}
-        state={adminApplyState.state}
-        message={
-          'message' in adminApplyState ? adminApplyState.message : undefined
-        }
-        onApprove={() => handleAdminApply(changeSet)}
-        onReject={() => dispatchAdminApply({ type: 'rejected' })}
-        cardRef={adminApprovalCardRef}
-        approveButtonRef={adminApprovalApproveButtonRef}
-      />
-    );
-    return accessories;
-  }, [
-    adminApprovalTurnId,
-    adminApplyState,
-    deploymentSecretKeys,
-    deploymentSecretKeysLoaded,
-    handleAdminApply,
-    isAdmin,
-    lastAssistantTurnId,
-    supersededAdminApprovals,
-  ]);
   const threadNotices = (
     <div className="mt-4 space-y-2">
       {error && (
@@ -2579,17 +1822,6 @@ export function ChatPage() {
             {reducedContextNotice}
           </div>
         )}
-      {isAdmin && adminApplyState.state === 'error' && (
-        <Callout
-          label={t(
-            'admin.configAssistant.applyErrorLabel',
-            'Config apply error'
-          )}
-          tone="error"
-        >
-          {adminApplyState.message}
-        </Callout>
-      )}
     </div>
   );
 
@@ -2612,7 +1844,6 @@ export function ChatPage() {
         isRunning={isLoading}
         placeholder={t('chat.input.placeholder')}
         toolbar={inputToolbar}
-        turnAccessories={turnAccessories}
         notices={threadNotices}
         hasPersistedSession={Boolean(conversationSessionId)}
       />

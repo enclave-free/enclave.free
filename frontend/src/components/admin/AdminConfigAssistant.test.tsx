@@ -1,17 +1,25 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AdminConfigAssistant } from './AdminConfigAssistant';
+import {
+  AdminConfigAssistant,
+  ONBOARDING_WELCOME_MESSAGE,
+} from './AdminConfigAssistant';
 import { adminFetch } from '../../utils/adminApi';
+import { ADMIN_CONFIG_CHANGED_EVENT } from '../../utils/adminConfigEvents';
 import {
   sendLlmChatStreamWithUnifiedTools,
   sendLlmChatWithUnifiedTools,
 } from '../../utils/llmChat';
 import { ThemeProvider } from '../../theme';
 
-vi.mock('../../utils/adminApi', () => ({
-  adminFetch: vi.fn(),
-}));
+vi.mock('../../utils/adminApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/adminApi')>();
+  return {
+    ...actual,
+    adminFetch: vi.fn(),
+  };
+});
 
 vi.mock('../../utils/llmChat', () => ({
   sendLlmChatStreamWithUnifiedTools: vi.fn(),
@@ -163,8 +171,9 @@ describe('AdminConfigAssistant', () => {
     );
     expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
       'aria-pressed',
-      'false'
+      'true'
     );
+    expect(screen.getByRole('button', { name: 'Config' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Database' })).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -179,21 +188,7 @@ describe('AdminConfigAssistant', () => {
           message_id: 'msg-1',
           session_id: 'session-1',
         });
-        onEvent('done', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-          admin_change_set: {
-            version: 1,
-            summary: 'Unexpected default-off change',
-            requests: [
-              {
-                method: 'PUT',
-                path: '/admin/settings',
-                body: { instance_name: 'Unexpected' },
-              },
-            ],
-          },
-        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
       }
     );
 
@@ -219,7 +214,7 @@ describe('AdminConfigAssistant', () => {
     expect(callArgs.tools).toEqual(
       expect.arrayContaining(['knowledge-search'])
     );
-    expect(callArgs.tools).not.toContain('admin-config');
+    expect(callArgs.tools).toContain('admin-config');
   });
 
   it('opts Database-enabled turns into Admin signer-decrypted context', async () => {
@@ -283,6 +278,63 @@ describe('AdminConfigAssistant', () => {
     expect(
       screen.queryByRole('button', { name: 'Database' })
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps the guided question numbers aligned with the Sage onboarding contract', () => {
+    expect(
+      Array.from(
+        ONBOARDING_WELCOME_MESSAGE.matchAll(/\d+\. \*\*([^*]+)\*\*/g),
+        (match) => match[1]
+      )
+    ).toEqual([
+      'Name',
+      'Description',
+      'Assistant name',
+      'Accent color',
+      'Theme',
+      'Default language',
+      'Tagline',
+      'New users',
+      'User types',
+    ]);
+  });
+
+  it('marks guided setup turns as admin onboarding for Sage', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant purpose="onboarding" />
+      </ThemeProvider>
+    );
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      '1. FreeThem, 4. blue, 8. approve each person'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce();
+    });
+    expect(
+      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
+    ).toEqual(
+      expect.objectContaining({
+        content: '1. FreeThem, 4. blue, 8. approve each person',
+        conversationSurface: 'admin-onboarding',
+        tools: ['admin-config'],
+      })
+    );
   });
 
   it('passes previous admin assistant turns into follow-up chat requests', async () => {
@@ -506,76 +558,7 @@ describe('AdminConfigAssistant', () => {
     expect(screen.getByText('I prepared the setup draft.')).toBeInTheDocument();
   });
 
-  it('shows Trace Deltas beside a structured Change Confirmation without applying automatically', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Bootstrap FreeThem',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { instance_name: 'FreeThem' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('trace_delta', {
-          message_id: 'msg-1',
-          trace_delta: {
-            id: 'tool-result-propose-config',
-            kind: 'tool_result',
-            title: 'Admin Config',
-            tool_name: 'propose_config_change_set',
-            status: 'succeeded',
-            content: 'Prepared a non-mutating configuration proposal.',
-          },
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta: 'I prepared these changes for review. Use Apply to confirm.',
-        });
-        onEvent('done', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-          admin_change_set: changeSet,
-        });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant purpose="onboarding" />
-      </ThemeProvider>
-    );
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Set up FreeThem.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(await screen.findByText('Admin Config')).toBeInTheDocument();
-    expect(screen.getByText('propose_config_change_set')).toBeInTheDocument();
-    expect(
-      screen.getByText('Prepared a non-mutating configuration proposal.')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Pending changes: Bootstrap FreeThem')
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/settings',
-      expect.objectContaining({ method: 'PUT' })
-    );
-  });
-
-  it('starts admin config assistant sends with no tools selected', async () => {
+  it('always sends the dedicated Config Tool', async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       'fetch',
@@ -605,7 +588,7 @@ describe('AdminConfigAssistant', () => {
 
     expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
       'aria-pressed',
-      'false'
+      'true'
     );
 
     await user.type(
@@ -620,10 +603,10 @@ describe('AdminConfigAssistant', () => {
 
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
-    expect(callArgs.tools).toEqual([]);
+    expect(callArgs.tools).toEqual(['admin-config']);
     expect(screen.queryByText(/Pending changes:/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Config' }));
+    expect(screen.getByRole('button', { name: 'Config' })).toBeDisabled();
     expect(screen.queryByText(/Pending changes:/)).not.toBeInTheDocument();
   });
 
@@ -651,9 +634,8 @@ describe('AdminConfigAssistant', () => {
 
     expect(screen.getByRole('button', { name: 'Config' })).toHaveAttribute(
       'aria-pressed',
-      'false'
+      'true'
     );
-    await user.click(screen.getByRole('button', { name: 'Config' }));
 
     await user.type(
       screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
@@ -672,7 +654,7 @@ describe('AdminConfigAssistant', () => {
         tools: expect.arrayContaining(['admin-config']),
       })
     );
-    expect(mockAdminFetch).toHaveBeenCalledWith(
+    expect(mockAdminFetch).not.toHaveBeenCalledWith(
       '/admin/deployment/config',
       undefined
     );
@@ -917,479 +899,6 @@ describe('AdminConfigAssistant', () => {
     expect(notice).not.toHaveTextContent('PROMPT BUDGET NOTE');
   });
 
-  it('presents one reviewable Change Confirmation for coherent multi-setting admin changes', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Configure instance theme and assistant voice',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: {
-            instance_name: 'WLC Political Prisoners Resource Hub',
-            primary_color: '#1E3A8A',
-            typography_preset: 'humanist',
-          },
-        },
-        {
-          method: 'PUT',
-          path: '/admin/ai-config/prompt_tone',
-          body: { value: 'Helpful, concise, and direct.' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta: `Here is the reviewable change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
-        });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Update the theme and voice in one pass.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText(
-        'Pending changes: Configure instance theme and assistant voice'
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByText('PUT /admin/settings')).toBeInTheDocument();
-    expect(
-      screen.getByText('PUT /admin/ai-config/prompt_tone')
-    ).toBeInTheDocument();
-    expect(
-      screen.getAllByText(/WLC Political Prisoners Resource Hub/).length
-    ).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
-  });
-
-  it('shows no-pending guidance for confirm language when prior guidance had no executable change set', async () => {
-    const user = userEvent.setup();
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta:
-            'Here is the reviewable Change Confirmation: update the greeting and tone.',
-        });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Style my instance.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-    expect(
-      await screen.findByText(/reviewable Change Confirmation/)
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'I confirm'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
-    });
-    expect(
-      await screen.findByText(/There are no pending configuration changes/)
-    ).toBeInTheDocument();
-  });
-
-  it('shows no-pending guidance for yes-do-it language when prior sidebar guidance had no executable change set', async () => {
-    const user = userEvent.setup();
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta:
-            'Here is the reviewable Change Confirmation: update the greeting and tone.',
-        });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Style my instance.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-    expect(
-      await screen.findByText(/reviewable Change Confirmation/)
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'yes do it'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
-    });
-    expect(
-      await screen.findByText(/There are no pending configuration changes/)
-    ).toBeInTheDocument();
-  });
-
-  it('keeps apply language from executing a pending sidebar change set', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Update instance theme',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
-        });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-    expect(
-      await screen.findByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Apply them'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).toBeInTheDocument();
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/settings',
-      expect.objectContaining({ method: 'PUT' })
-    );
-  });
-
-  it('keeps yes-do-it language from executing a pending sidebar change set', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Update instance theme',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
-        });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-    expect(
-      await screen.findByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'yes do it'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).toBeInTheDocument();
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/settings',
-      expect.objectContaining({ method: 'PUT' })
-    );
-  });
-
-  it('routes bare do-it language to the pending panel and focuses Apply', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Update instance theme',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('done', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-          admin_change_set: changeSet,
-        });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-    expect(
-      await screen.findByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'do it'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).toBeInTheDocument();
-    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(1);
-    expect(mockAdminFetch).not.toHaveBeenCalledWith(
-      '/admin/settings',
-      expect.objectContaining({ method: 'PUT' })
-    );
-    const applyButton = screen.getByRole('button', { name: 'Apply' });
-    expect(applyButton).toHaveFocus();
-    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
-  });
-
-  it('does not fall back to prose JSON when structured proposal payload is invalid', async () => {
-    const user = userEvent.setup();
-    const fallbackChangeSet = {
-      version: 1,
-      summary: 'Fallback theme update',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta: `Here is a fallback.\n\n\`\`\`json\n${JSON.stringify(fallbackChangeSet)}\n\`\`\``,
-        });
-        onEvent('done', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-          admin_change_set: {
-            version: 1,
-            requests: [
-              {
-                method: 'PUT',
-                path: '/admin/settings',
-                body: { made_up_setting: 'nope' },
-              },
-            ],
-          },
-        });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText(/Unsupported instance setting key/)
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/Pending changes:/)).not.toBeInTheDocument();
-  });
-
-  it('lets non-apply confirm questions continue to Sage while a sidebar change set is pending', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Update instance theme',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-    vi.mocked(sendLlmChatStreamWithUnifiedTools)
-      .mockImplementationOnce(async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-1',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-1',
-          delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
-        });
-        onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-      })
-      .mockImplementationOnce(async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'msg-2',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'msg-2',
-          delta: 'The pending primary color is #1E3A8A.',
-        });
-        onEvent('done', { message_id: 'msg-2', session_id: 'session-1' });
-      });
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-    expect(
-      await screen.findByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Can you confirm the current primary color?'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
-    });
-    expect(
-      screen.queryByText(
-        'Use the pending changes panel below and click Apply to confirm these configuration updates.'
-      )
-    ).not.toBeInTheDocument();
-    expect(
-      await screen.findByText('The pending primary color is #1E3A8A.')
-    ).toBeInTheDocument();
-  });
-
   it('does not prefetch scoped deployment config or reveal secrets on send', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
@@ -1485,6 +994,31 @@ describe('AdminConfigAssistant', () => {
       await screen.findByText(
         'Token limit exceeded for this session. Start a new assistant conversation to continue.'
       )
+    ).toBeInTheDocument();
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
+  it('does not replay a Config write turn after an ambiguous stream failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockRejectedValueOnce(
+      new Error('Stream transport failed')
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+    await enableConfigTool(user);
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Apply the confirmed description change.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(
+      await screen.findByText('Stream transport failed')
     ).toBeInTheDocument();
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
@@ -1662,306 +1196,7 @@ describe('AdminConfigAssistant', () => {
     ).toBeInTheDocument();
   });
 
-  it('preserves a pending change set when starting a fresh assistant conversation', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Update instance theme',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-
-    let streamCalls = 0;
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
-      async ({ onEvent }) => {
-        streamCalls += 1;
-        if (streamCalls === 1) {
-          onEvent('assistant_message_started', {
-            message_id: 'msg-1',
-            session_id: 'session-1',
-          });
-          onEvent('answer_delta', {
-            message_id: 'msg-1',
-            delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
-          });
-          onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-          return;
-        }
-
-        onEvent('assistant_message_started', {
-          message_id: 'msg-2',
-          session_id: 'session-1',
-        });
-        onEvent('error', {
-          message_id: 'msg-2',
-          detail:
-            'Token limit exceeded for this session. Please start a new session.',
-        });
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Continue reviewing deployment config.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    await user.click(
-      await screen.findByRole('button', {
-        name: 'Start new assistant conversation',
-      })
-    );
-
-    expect(
-      screen.getByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Token limit exceeded for this session/)
-    ).not.toBeInTheDocument();
-  });
-
-  it('preserves a pending change set after a provider failure and applies it without another model call', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Update instance theme',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { primary_color: '#1E3A8A' },
-        },
-      ],
-    };
-
-    let streamCalls = 0;
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
-      async ({ onEvent }) => {
-        streamCalls += 1;
-        if (streamCalls === 1) {
-          onEvent('assistant_message_started', {
-            message_id: 'msg-1',
-            session_id: 'session-1',
-          });
-          onEvent('answer_delta', {
-            message_id: 'msg-1',
-            delta: `Here is the change.\n\n\`\`\`json\n${JSON.stringify(changeSet, null, 2)}\n\`\`\``,
-          });
-          onEvent('done', { message_id: 'msg-1', session_id: 'session-1' });
-          return;
-        }
-
-        onEvent('assistant_message_started', {
-          message_id: 'msg-2',
-          session_id: 'session-1',
-        });
-        onEvent('error', {
-          message_id: 'msg-2',
-          detail:
-            'Token limit exceeded for this session. Please start a new session.',
-        });
-      }
-    );
-
-    mockAdminFetch.mockImplementation(
-      (endpoint: string, options?: RequestInit) => {
-        if (endpoint === '/admin/settings' && options?.method === 'PUT') {
-          return Promise.resolve(Response.json({ ok: true }));
-        }
-        if (endpoint === '/admin/deployment/config/validate') {
-          return Promise.resolve(Response.json({ valid: true, warnings: [] }));
-        }
-        if (endpoint === '/admin/deployment/restart-required') {
-          return Promise.resolve(
-            Response.json({ restart_required: false, changed_keys: [] })
-          );
-        }
-        if (endpoint === '/admin/settings') {
-          return Promise.resolve(
-            Response.json({ settings: { instance_name: 'Enclave' } })
-          );
-        }
-        if (endpoint === '/admin/deployment/config') {
-          return Promise.resolve(
-            Response.json({
-              llm: [],
-              embedding: [],
-              email: [],
-              storage: [],
-              security: [],
-              search: [],
-              domains: [],
-              ssl: [],
-              general: [],
-            })
-          );
-        }
-        return Promise.resolve(Response.json({}));
-      }
-    );
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant />
-      </ThemeProvider>
-    );
-    await enableConfigTool(user);
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Propose the theme update.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      'Continue reviewing deployment config.'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
-    });
-    expect(
-      await screen.findByText(/Token limit exceeded for this session/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Pending changes: Update instance theme')
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
-
-    await waitFor(() => {
-      expect(mockAdminFetch).toHaveBeenCalledWith(
-        '/admin/settings',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ primary_color: '#1E3A8A' }),
-        })
-      );
-    });
-    expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
-    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
-  });
-
-  it('uses the onboarding guide and auto-advances after applying structured settings', async () => {
-    const user = userEvent.setup();
-    const changeSet = {
-      version: 1,
-      summary: 'Set instance name',
-      requests: [
-        {
-          method: 'PUT',
-          path: '/admin/settings',
-          body: { instance_name: 'Acme Aid' },
-        },
-      ],
-    };
-
-    vi.mocked(sendLlmChatStreamWithUnifiedTools)
-      .mockImplementationOnce(async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'onboarding-msg-1',
-          session_id: 'onboarding-session',
-        });
-        onEvent('answer_delta', {
-          message_id: 'onboarding-msg-1',
-          delta: 'I prepared these changes for review. Use Apply to confirm.',
-        });
-        onEvent('done', {
-          message_id: 'onboarding-msg-1',
-          session_id: 'onboarding-session',
-          admin_change_set: changeSet,
-        });
-      })
-      .mockImplementationOnce(async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'onboarding-msg-2',
-          session_id: 'onboarding-session',
-        });
-        onEvent('answer_delta', {
-          message_id: 'onboarding-msg-2',
-          delta: 'Saved. Here is the next setup item.',
-        });
-        onEvent('done', {
-          message_id: 'onboarding-msg-2',
-          session_id: 'onboarding-session',
-        });
-      });
-
-    render(
-      <ThemeProvider>
-        <AdminConfigAssistant purpose="onboarding" />
-      </ThemeProvider>
-    );
-
-    expect(screen.getByText(/let's set up your space/i)).toBeInTheDocument();
-
-    await user.type(
-      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
-      '1. Acme Aid'
-    );
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
-
-    expect(
-      await screen.findByText('Pending changes: Set instance name')
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
-
-    await waitFor(() => {
-      expect(mockAdminFetch).toHaveBeenCalledWith(
-        '/admin/settings',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ instance_name: 'Acme Aid' }),
-        })
-      );
-    });
-    await waitFor(() => {
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
-    });
-
-    const hiddenTurn = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
-      .calls[1][0];
-    expect(hiddenTurn.content).toContain(
-      'The change set was applied successfully'
-    );
-    expect(
-      screen.queryByText(/The change set was applied successfully/)
-    ).not.toBeInTheDocument();
-    expect(
-      await screen.findByText('Saved. Here is the next setup item.')
-    ).toBeInTheDocument();
-  });
-
-  it('defaults to no tools without web-search', async () => {
+  it('defaults to only the dedicated Config Tool without web-search', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementation(
       async ({ onEvent }) => {
@@ -1995,6 +1230,64 @@ describe('AdminConfigAssistant', () => {
 
     const callArgs = vi.mocked(sendLlmChatStreamWithUnifiedTools).mock
       .calls[0][0];
-    expect(callArgs.tools).toEqual([]);
+    expect(callArgs.tools).toEqual(['admin-config']);
+  });
+
+  it('forwards apply language to Sage and refreshes direct-write areas', async () => {
+    const user = userEvent.setup();
+    const refreshEvents: CustomEvent[] = [];
+    const recordRefresh = (event: Event) =>
+      refreshEvents.push(event as CustomEvent);
+    window.addEventListener(ADMIN_CONFIG_CHANGED_EVENT, recordRefresh);
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+      async ({ onEvent }) => {
+        onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+        });
+        onEvent('answer_delta', { message_id: 'msg-1', delta: 'Updated.' });
+        onEvent('done', {
+          message_id: 'msg-1',
+          session_id: 'session-1',
+          admin_config_affected_areas: [
+            'agent_settings',
+            'onboarding_questions',
+          ],
+        });
+      }
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'apply them'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() =>
+      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce()
+    );
+    expect(
+      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
+    ).toEqual(
+      expect.objectContaining({
+        content: 'apply them',
+        tools: expect.arrayContaining(['admin-config']),
+      })
+    );
+    expect(refreshEvents[refreshEvents.length - 1]?.detail).toEqual({
+      areas: ['agent_settings', 'onboarding_questions'],
+    });
+    expect(mockAdminFetch.mock.calls).not.toContainEqual([
+      expect.any(String),
+      expect.objectContaining({
+        method: expect.stringMatching(/PUT|POST|DELETE/),
+      }),
+    ]);
+    window.removeEventListener(ADMIN_CONFIG_CHANGED_EVENT, recordRefresh);
   });
 });

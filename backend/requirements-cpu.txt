@@ -1,0 +1,5 @@
+--index-url https://download.pytorch.org/whl/cpu
+
+# Canonical CPU inference stack for the supported Single-Instance Deployment.
+torch==2.8.0
+torchvision==0.23.0

@@ -2,8 +2,9 @@
  * React hooks for Admin Configuration System
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { adminFetch } from '../utils/adminApi'
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { adminFetch } from '../utils/adminApi';
+import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import type {
   AIConfigResponse,
   AIConfigResponseWithInheritance,
@@ -32,160 +33,204 @@ import type {
   DecryptedUserData,
   DecryptedFieldValue,
   NostrEvent,
-} from '../types/config'
+} from '../types/config';
 
 // --- Agent Settings Hooks ---
 
 export function useAIConfig(userTypeId?: number | null) {
-  const [config, setConfig] = useState<AIConfigResponse | AIConfigResponseWithInheritance | null>(null)
-  const [userTypeConfig, setUserTypeConfig] = useState<AIConfigUserTypeResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [config, setConfig] = useState<
+    AIConfigResponse | AIConfigResponseWithInheritance | null
+  >(null);
+  const [userTypeConfig, setUserTypeConfig] =
+    useState<AIConfigUserTypeResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fetchRunIdRef = useRef(0);
 
   // Fetch global config or user-type-specific config
   const fetchConfig = useCallback(async () => {
+    const runId = ++fetchRunIdRef.current;
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
       if (userTypeId != null) {
         // Fetch user-type-specific config with inheritance
-        const response = await adminFetch(`/admin/ai-config/user-type/${userTypeId}`)
+        const response = await adminFetch(
+          `/admin/ai-config/user-type/${userTypeId}`
+        );
         if (!response.ok) {
-          throw new Error('errors.failedToFetchAIConfig')
+          throw new Error('errors.failedToFetchAIConfig');
         }
-        const data: AIConfigUserTypeResponse = await response.json()
-        setUserTypeConfig(data)
+        const data: AIConfigUserTypeResponse = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
+        setUserTypeConfig(data);
         // Pass the full user-type items directly to preserve is_override and override_user_type_id
         // This allows the UI to show override badges and revert actions
         setConfig({
           prompt_sections: data.prompt_sections,
           parameters: data.parameters,
           defaults: data.defaults,
-        })
+        });
       } else {
         // Fetch global config
-        const response = await adminFetch('/admin/ai-config')
+        const response = await adminFetch('/admin/ai-config');
         if (!response.ok) {
-          throw new Error('errors.failedToFetchAIConfig')
+          throw new Error('errors.failedToFetchAIConfig');
         }
-        const data = await response.json()
-        setConfig(data)
-        setUserTypeConfig(null)
+        const data = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
+        setConfig(data);
+        setUserTypeConfig(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchAIConfig')
+      if (runId !== fetchRunIdRef.current) return;
+      setError(
+        err instanceof Error ? err.message : 'errors.failedToFetchAIConfig'
+      );
     } finally {
-      setLoading(false)
+      if (runId === fetchRunIdRef.current) setLoading(false);
     }
-  }, [userTypeId])
+  }, [userTypeId]);
 
   useEffect(() => {
-    fetchConfig()
-  }, [fetchConfig])
+    fetchConfig();
+  }, [fetchConfig]);
+
+  useEffect(
+    () => subscribeAdminConfigChanges(['agent_settings'], fetchConfig),
+    [fetchConfig]
+  );
 
   // Update global config
-  const updateConfig = useCallback(async (key: string, value: string): Promise<AIConfigItem | null> => {
-    try {
-      const response = await adminFetch(`/admin/ai-config/${key}`, {
-        method: 'PUT',
-        body: JSON.stringify({ value }),
-      })
-      if (!response.ok) {
-        let detail = `Failed to update: ${response.status}`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response (e.g., HTML error page), use default message
+  const updateConfig = useCallback(
+    async (key: string, value: string): Promise<AIConfigItem | null> => {
+      try {
+        const response = await adminFetch(`/admin/ai-config/${key}`, {
+          method: 'PUT',
+          body: JSON.stringify({ value }),
+        });
+        if (!response.ok) {
+          let detail = `Failed to update: ${response.status}`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response (e.g., HTML error page), use default message
+          }
+          throw new Error(detail);
         }
-        throw new Error(detail)
+        const updated = await response.json();
+        // Refresh full config
+        await fetchConfig();
+        return updated;
+      } catch (err) {
+        throw err;
       }
-      const updated = await response.json()
-      // Refresh full config
-      await fetchConfig()
-      return updated
-    } catch (err) {
-      throw err
-    }
-  }, [fetchConfig])
+    },
+    [fetchConfig]
+  );
 
   // Set override for a user type
-  const setOverride = useCallback(async (key: string, value: string, targetUserTypeId?: number): Promise<AIConfigWithInheritance | null> => {
-    const typeId = targetUserTypeId ?? userTypeId
-    if (!typeId) {
-      throw new Error('User type ID is required for setting overrides')
-    }
-    try {
-      const response = await adminFetch(`/admin/ai-config/user-type/${typeId}/${key}`, {
-        method: 'PUT',
-        body: JSON.stringify({ value }),
-      })
-      if (!response.ok) {
-        let detail = `errors.failedToSetOverride`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response
-        }
-        throw new Error(detail)
+  const setOverride = useCallback(
+    async (
+      key: string,
+      value: string,
+      targetUserTypeId?: number
+    ): Promise<AIConfigWithInheritance | null> => {
+      const typeId = targetUserTypeId ?? userTypeId;
+      if (!typeId) {
+        throw new Error('User type ID is required for setting overrides');
       }
-      const updated = await response.json()
-      // Refresh full config
-      await fetchConfig()
-      return updated
-    } catch (err) {
-      throw err
-    }
-  }, [fetchConfig, userTypeId])
+      try {
+        const response = await adminFetch(
+          `/admin/ai-config/user-type/${typeId}/${key}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({ value }),
+          }
+        );
+        if (!response.ok) {
+          let detail = `errors.failedToSetOverride`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response
+          }
+          throw new Error(detail);
+        }
+        const updated = await response.json();
+        // Refresh full config
+        await fetchConfig();
+        return updated;
+      } catch (err) {
+        throw err;
+      }
+    },
+    [fetchConfig, userTypeId]
+  );
 
   // Revert override to global (delete override)
-  const revertOverride = useCallback(async (key: string, targetUserTypeId?: number): Promise<void> => {
-    const typeId = targetUserTypeId ?? userTypeId
-    if (!typeId) {
-      throw new Error('User type ID is required for reverting overrides')
-    }
-    try {
-      const response = await adminFetch(`/admin/ai-config/user-type/${typeId}/${key}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) {
-        let detail = `errors.failedToRevertOverride`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response
-        }
-        throw new Error(detail)
+  const revertOverride = useCallback(
+    async (key: string, targetUserTypeId?: number): Promise<void> => {
+      const typeId = targetUserTypeId ?? userTypeId;
+      if (!typeId) {
+        throw new Error('User type ID is required for reverting overrides');
       }
-      // Refresh full config
-      await fetchConfig()
-    } catch (err) {
-      throw err
-    }
-  }, [fetchConfig, userTypeId])
+      try {
+        const response = await adminFetch(
+          `/admin/ai-config/user-type/${typeId}/${key}`,
+          {
+            method: 'DELETE',
+          }
+        );
+        if (!response.ok) {
+          let detail = `errors.failedToRevertOverride`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response
+          }
+          throw new Error(detail);
+        }
+        // Refresh full config
+        await fetchConfig();
+      } catch (err) {
+        throw err;
+      }
+    },
+    [fetchConfig, userTypeId]
+  );
 
   // Preview prompt (global or for user type)
-  const previewPrompt = useCallback(async (sampleQuestion?: string, sampleFacts?: Record<string, string>, targetUserTypeId?: number): Promise<PromptPreviewResponse> => {
-    const typeId = targetUserTypeId ?? userTypeId
-    const url = typeId != null
-      ? `/admin/ai-config/user-type/${typeId}/prompts/preview`
-      : '/admin/ai-config/prompts/preview'
+  const previewPrompt = useCallback(
+    async (
+      sampleQuestion?: string,
+      sampleFacts?: Record<string, string>,
+      targetUserTypeId?: number
+    ): Promise<PromptPreviewResponse> => {
+      const typeId = targetUserTypeId ?? userTypeId;
+      const url =
+        typeId != null
+          ? `/admin/ai-config/user-type/${typeId}/prompts/preview`
+          : '/admin/ai-config/prompts/preview';
 
-    const response = await adminFetch(url, {
-      method: 'POST',
-      body: JSON.stringify({
-        sample_question: sampleQuestion,
-        sample_facts: sampleFacts || {},
-      }),
-    })
-    if (!response.ok) {
-      throw new Error(`errors.failedToPreviewPrompt`)
-    }
-    return response.json()
-  }, [userTypeId])
+      const response = await adminFetch(url, {
+        method: 'POST',
+        body: JSON.stringify({
+          sample_question: sampleQuestion,
+          sample_facts: sampleFacts || {},
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`errors.failedToPreviewPrompt`);
+      }
+      return response.json();
+    },
+    [userTypeId]
+  );
 
   return {
     config,
@@ -197,150 +242,205 @@ export function useAIConfig(userTypeId?: number | null) {
     setOverride,
     revertOverride,
     previewPrompt,
-  }
+  };
 }
 
 // --- Document Defaults Hooks ---
 
 export function useDocumentDefaults(userTypeId?: number | null) {
-  const [documents, setDocuments] = useState<DocumentDefaultItem[]>([])
-  const [userTypeDocuments, setUserTypeDocuments] = useState<DocumentDefaultWithInheritance[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [documents, setDocuments] = useState<DocumentDefaultItem[]>([]);
+  const [userTypeDocuments, setUserTypeDocuments] = useState<
+    DocumentDefaultWithInheritance[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fetchRunIdRef = useRef(0);
 
   const fetchDefaults = useCallback(async () => {
+    const runId = ++fetchRunIdRef.current;
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
       if (userTypeId != null) {
         // Fetch user-type-specific document defaults with inheritance
-        const response = await adminFetch(`/ingest/admin/documents/defaults/user-type/${userTypeId}`)
+        const response = await adminFetch(
+          `/ingest/admin/documents/defaults/user-type/${userTypeId}`
+        );
         if (!response.ok) {
-          throw new Error(`errors.failedToFetchDocumentDefaults`)
+          throw new Error(`errors.failedToFetchDocumentDefaults`);
         }
-        const data: DocumentDefaultsUserTypeResponse = await response.json()
-        setUserTypeDocuments(data.documents)
+        const data: DocumentDefaultsUserTypeResponse = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
+        setUserTypeDocuments(data.documents);
         // Also convert to DocumentDefaultItem format for compatibility
         // Note: We spread full items to preserve is_override metadata for UI badges/revert actions
-        setDocuments(data.documents.map(doc => ({ ...doc })))
+        setDocuments(data.documents.map((doc) => ({ ...doc })));
       } else {
         // Fetch global document defaults
-        const response = await adminFetch('/ingest/admin/documents/defaults')
+        const response = await adminFetch('/ingest/admin/documents/defaults');
         if (!response.ok) {
-          throw new Error(`errors.failedToFetchDocumentDefaults`)
+          throw new Error(`errors.failedToFetchDocumentDefaults`);
         }
-        const data: DocumentDefaultsResponse = await response.json()
-        setDocuments(data.documents)
-        setUserTypeDocuments([])
+        const data: DocumentDefaultsResponse = await response.json();
+        if (runId !== fetchRunIdRef.current) return;
+        setDocuments(data.documents);
+        setUserTypeDocuments([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchDocumentDefaults')
+      if (runId !== fetchRunIdRef.current) return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'errors.failedToFetchDocumentDefaults'
+      );
     } finally {
-      setLoading(false)
+      if (runId === fetchRunIdRef.current) setLoading(false);
     }
-  }, [userTypeId])
+  }, [userTypeId]);
 
   useEffect(() => {
-    fetchDefaults()
-  }, [fetchDefaults])
+    fetchDefaults();
+  }, [fetchDefaults]);
+
+  useEffect(
+    () => subscribeAdminConfigChanges(['document_access'], fetchDefaults),
+    [fetchDefaults]
+  );
 
   // Update global document defaults
-  const updateDocument = useCallback(async (
-    jobId: string,
-    update: { is_available?: boolean; is_default_active?: boolean; display_order?: number }
-  ): Promise<DocumentDefaultItem | null> => {
-    try {
-      const response = await adminFetch(`/ingest/admin/documents/${jobId}/defaults`, {
-        method: 'PUT',
-        body: JSON.stringify(update),
-      })
-      if (!response.ok) {
-        throw new Error(`errors.failedToUpdateDocument`)
+  const updateDocument = useCallback(
+    async (
+      jobId: string,
+      update: {
+        is_available?: boolean;
+        is_default_active?: boolean;
+        display_order?: number;
       }
-      const updated = await response.json()
-      // Refresh full list
-      await fetchDefaults()
-      return updated
-    } catch (err) {
-      throw err
-    }
-  }, [fetchDefaults])
+    ): Promise<DocumentDefaultItem | null> => {
+      try {
+        const response = await adminFetch(
+          `/ingest/admin/documents/${jobId}/defaults`,
+          {
+            method: 'PUT',
+            body: JSON.stringify(update),
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`errors.failedToUpdateDocument`);
+        }
+        const updated = await response.json();
+        // Refresh full list
+        await fetchDefaults();
+        return updated;
+      } catch (err) {
+        throw err;
+      }
+    },
+    [fetchDefaults]
+  );
 
   // Set override for a user type
-  const setOverride = useCallback(async (
-    jobId: string,
-    update: { is_available?: boolean; is_default_active?: boolean },
-    targetUserTypeId?: number
-  ): Promise<DocumentDefaultWithInheritance | null> => {
-    const typeId = targetUserTypeId ?? userTypeId
-    if (!typeId) {
-      throw new Error('User type ID is required for setting document overrides')
-    }
-    try {
-      const response = await adminFetch(`/ingest/admin/documents/${jobId}/defaults/user-type/${typeId}`, {
-        method: 'PUT',
-        body: JSON.stringify(update),
-      })
-      if (!response.ok) {
-        let detail = `errors.failedToSetDocOverride`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response
-        }
-        throw new Error(detail)
+  const setOverride = useCallback(
+    async (
+      jobId: string,
+      update: { is_available?: boolean; is_default_active?: boolean },
+      targetUserTypeId?: number
+    ): Promise<DocumentDefaultWithInheritance | null> => {
+      const typeId = targetUserTypeId ?? userTypeId;
+      if (!typeId) {
+        throw new Error(
+          'User type ID is required for setting document overrides'
+        );
       }
-      const updated = await response.json()
-      // Refresh full list
-      await fetchDefaults()
-      return updated
-    } catch (err) {
-      throw err
-    }
-  }, [fetchDefaults, userTypeId])
+      try {
+        const response = await adminFetch(
+          `/ingest/admin/documents/${jobId}/defaults/user-type/${typeId}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify(update),
+          }
+        );
+        if (!response.ok) {
+          let detail = `errors.failedToSetDocOverride`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response
+          }
+          throw new Error(detail);
+        }
+        const updated = await response.json();
+        // Refresh full list
+        await fetchDefaults();
+        return updated;
+      } catch (err) {
+        throw err;
+      }
+    },
+    [fetchDefaults, userTypeId]
+  );
 
   // Revert override to global (delete override)
-  const revertOverride = useCallback(async (jobId: string, targetUserTypeId?: number): Promise<void> => {
-    const typeId = targetUserTypeId ?? userTypeId
-    if (!typeId) {
-      throw new Error('User type ID is required for reverting document overrides')
-    }
-    try {
-      const response = await adminFetch(`/ingest/admin/documents/${jobId}/defaults/user-type/${typeId}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) {
-        let detail = `errors.failedToRevertDocOverride`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response
-        }
-        throw new Error(detail)
+  const revertOverride = useCallback(
+    async (jobId: string, targetUserTypeId?: number): Promise<void> => {
+      const typeId = targetUserTypeId ?? userTypeId;
+      if (!typeId) {
+        throw new Error(
+          'User type ID is required for reverting document overrides'
+        );
       }
-      // Refresh full list
-      await fetchDefaults()
-    } catch (err) {
-      throw err
-    }
-  }, [fetchDefaults, userTypeId])
+      try {
+        const response = await adminFetch(
+          `/ingest/admin/documents/${jobId}/defaults/user-type/${typeId}`,
+          {
+            method: 'DELETE',
+          }
+        );
+        if (!response.ok) {
+          let detail = `errors.failedToRevertDocOverride`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response
+          }
+          throw new Error(detail);
+        }
+        // Refresh full list
+        await fetchDefaults();
+      } catch (err) {
+        throw err;
+      }
+    },
+    [fetchDefaults, userTypeId]
+  );
 
-  const batchUpdate = useCallback(async (
-    updates: Array<{ job_id: string; is_available?: boolean; is_default_active?: boolean; display_order?: number }>
-  ): Promise<void> => {
-    const response = await adminFetch('/ingest/admin/documents/defaults/batch', {
-      method: 'PUT',
-      body: JSON.stringify({ updates }),
-    })
-    if (!response.ok) {
-      throw new Error(`errors.failedToBatchUpdate`)
-    }
-    // Refresh
-    await fetchDefaults()
-  }, [fetchDefaults])
+  const batchUpdate = useCallback(
+    async (
+      updates: Array<{
+        job_id: string;
+        is_available?: boolean;
+        is_default_active?: boolean;
+        display_order?: number;
+      }>
+    ): Promise<void> => {
+      const response = await adminFetch(
+        '/ingest/admin/documents/defaults/batch',
+        {
+          method: 'PUT',
+          body: JSON.stringify({ updates }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`errors.failedToBatchUpdate`);
+      }
+      // Refresh
+      await fetchDefaults();
+    },
+    [fetchDefaults]
+  );
 
   return {
     documents,
@@ -352,104 +452,126 @@ export function useDocumentDefaults(userTypeId?: number | null) {
     setOverride,
     revertOverride,
     batchUpdate,
-  }
+  };
 }
 
 // --- Deployment Configuration Hooks ---
 
 export function useDeploymentConfig() {
-  const [config, setConfig] = useState<DeploymentConfigResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [config, setConfig] = useState<DeploymentConfigResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fetchRunIdRef = useRef(0);
 
   const fetchConfig = useCallback(async () => {
+    const runId = ++fetchRunIdRef.current;
     try {
-      setLoading(true)
-      setError(null)
-      const response = await adminFetch('/admin/deployment/config')
+      setLoading(true);
+      setError(null);
+      const response = await adminFetch('/admin/deployment/config');
       if (!response.ok) {
-        throw new Error(`errors.failedToFetchDeploymentConfig`)
+        throw new Error(`errors.failedToFetchDeploymentConfig`);
       }
-      const data = await response.json()
-      setConfig(data)
+      const data = await response.json();
+      if (runId !== fetchRunIdRef.current) return;
+      setConfig(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchDeploymentConfig')
+      if (runId !== fetchRunIdRef.current) return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'errors.failedToFetchDeploymentConfig'
+      );
     } finally {
-      setLoading(false)
+      if (runId === fetchRunIdRef.current) setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchConfig()
-  }, [fetchConfig])
+    fetchConfig();
+  }, [fetchConfig]);
 
-  const updateConfig = useCallback(async (key: string, value: string): Promise<DeploymentConfigItem | null> => {
-    try {
-      const response = await adminFetch(`/admin/deployment/config/${key}`, {
-        method: 'PUT',
-        body: JSON.stringify({ value }),
-      })
-      if (!response.ok) {
-        let detail = `Failed to update: ${response.status}`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response (e.g., HTML error page), use default message
+  useEffect(
+    () => subscribeAdminConfigChanges(['deployment_settings'], fetchConfig),
+    [fetchConfig]
+  );
+
+  const updateConfig = useCallback(
+    async (
+      key: string,
+      value: string
+    ): Promise<DeploymentConfigItem | null> => {
+      try {
+        const response = await adminFetch(`/admin/deployment/config/${key}`, {
+          method: 'PUT',
+          body: JSON.stringify({ value }),
+        });
+        if (!response.ok) {
+          let detail = `Failed to update: ${response.status}`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response (e.g., HTML error page), use default message
+          }
+          throw new Error(detail);
         }
-        throw new Error(detail)
+        const updated = await response.json();
+        // Refresh full config
+        await fetchConfig();
+        return updated;
+      } catch (err) {
+        throw err;
       }
-      const updated = await response.json()
-      // Refresh full config
-      await fetchConfig()
-      return updated
-    } catch (err) {
-      throw err
-    }
-  }, [fetchConfig])
+    },
+    [fetchConfig]
+  );
 
   const exportEnv = useCallback(async (): Promise<string> => {
-    const response = await adminFetch('/admin/deployment/config/export')
+    const response = await adminFetch('/admin/deployment/config/export');
     if (!response.ok) {
-      throw new Error(`errors.failedToExport`)
+      throw new Error(`errors.failedToExport`);
     }
-    return response.text()
-  }, [])
+    return response.text();
+  }, []);
 
   const exportSageRuntimeEnv = useCallback(async (): Promise<string> => {
-    const response = await adminFetch('/admin/deployment/runtime-env/sage')
+    const response = await adminFetch('/admin/deployment/runtime-env/sage');
     if (!response.ok) {
-      throw new Error(`errors.failedToExport`)
+      throw new Error(`errors.failedToExport`);
     }
-    return response.text()
-  }, [])
+    return response.text();
+  }, []);
 
   const exportCoreBackendRuntimeEnv = useCallback(async (): Promise<string> => {
-    const response = await adminFetch('/admin/deployment/runtime-env/core-backend')
+    const response = await adminFetch(
+      '/admin/deployment/runtime-env/core-backend'
+    );
     if (!response.ok) {
-      throw new Error(`errors.failedToExport`)
+      throw new Error(`errors.failedToExport`);
     }
-    return response.text()
-  }, [])
+    return response.text();
+  }, []);
 
-  const validate = useCallback(async (): Promise<DeploymentValidationResponse> => {
-    const response = await adminFetch('/admin/deployment/config/validate', {
-      method: 'POST',
-    })
-    if (!response.ok) {
-      throw new Error(`errors.failedToValidate`)
-    }
-    return response.json()
-  }, [])
+  const validate =
+    useCallback(async (): Promise<DeploymentValidationResponse> => {
+      const response = await adminFetch('/admin/deployment/config/validate', {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`errors.failedToValidate`);
+      }
+      return response.json();
+    }, []);
 
   const revealSecret = useCallback(async (key: string): Promise<string> => {
-    const response = await adminFetch(`/admin/deployment/config/${key}/reveal`)
+    const response = await adminFetch(`/admin/deployment/config/${key}/reveal`);
     if (!response.ok) {
-      throw new Error(`errors.failedToRevealSecret`)
+      throw new Error(`errors.failedToRevealSecret`);
     }
-    const data = await response.json()
-    return data.value || ''
-  }, [])
+    const data = await response.json();
+    return data.value || '';
+  }, []);
 
   return {
     config,
@@ -462,122 +584,160 @@ export function useDeploymentConfig() {
     exportCoreBackendRuntimeEnv,
     validate,
     revealSecret,
-  }
+  };
 }
 
 // --- Data Lifecycle Hook ---
 
 export function useLifecycleStatus() {
-  const [status, setStatus] = useState<LifecycleStatusResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<LifecycleStatusResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await adminFetch('/admin/lifecycle/status')
+      setLoading(true);
+      setError(null);
+      const response = await adminFetch('/admin/lifecycle/status');
       if (!response.ok) {
-        throw new Error('errors.failedToFetchLifecycleStatus')
+        throw new Error('errors.failedToFetchLifecycleStatus');
       }
-      const data = await response.json()
-      setStatus(data)
+      const data = await response.json();
+      setStatus(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchLifecycleStatus')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'errors.failedToFetchLifecycleStatus'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchStatus()
-  }, [fetchStatus])
+    fetchStatus();
+  }, [fetchStatus]);
 
-  const acknowledgeUnsupportedSurface = useCallback(async (key: string, acknowledged: boolean) => {
-    const response = await adminFetch(`/admin/lifecycle/unsupported-deployment-surfaces/${key}/acknowledgement`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acknowledged }),
-    })
-    if (!response.ok) {
-      throw new Error('errors.failedToAcknowledgeUnsupportedSurface')
-    }
-    await fetchStatus()
-  }, [fetchStatus])
+  const acknowledgeUnsupportedSurface = useCallback(
+    async (key: string, acknowledged: boolean) => {
+      const response = await adminFetch(
+        `/admin/lifecycle/unsupported-deployment-surfaces/${key}/acknowledgement`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acknowledged }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error('errors.failedToAcknowledgeUnsupportedSurface');
+      }
+      await fetchStatus();
+    },
+    [fetchStatus]
+  );
 
-  const acknowledgeUnsupportedSurfaceCategory = useCallback(async (category: string, acknowledged: boolean) => {
-    const response = await adminFetch(`/admin/lifecycle/unsupported-deployment-surface-categories/${encodeURIComponent(category)}/acknowledgement`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acknowledged }),
-    })
-    if (!response.ok) {
-      throw new Error('errors.failedToAcknowledgeUnsupportedSurfaceCategory')
-    }
-    await fetchStatus()
-  }, [fetchStatus])
+  const acknowledgeUnsupportedSurfaceCategory = useCallback(
+    async (category: string, acknowledged: boolean) => {
+      const response = await adminFetch(
+        `/admin/lifecycle/unsupported-deployment-surface-categories/${encodeURIComponent(category)}/acknowledgement`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acknowledged }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error('errors.failedToAcknowledgeUnsupportedSurfaceCategory');
+      }
+      await fetchStatus();
+    },
+    [fetchStatus]
+  );
 
-  const updateRetentionPolicy = useCallback(async (
-    key: string,
-    policy: Pick<RetentionPolicy, 'enabled' | 'retention_window_days' | 'scheduled_enforcement_enabled'>,
-  ) => {
-    const response = await adminFetch(`/admin/lifecycle/retention-policies/${key}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(policy),
-    })
-    if (!response.ok) {
-      throw new Error('errors.failedToUpdateRetentionPolicy')
-    }
-    await fetchStatus()
-  }, [fetchStatus])
+  const updateRetentionPolicy = useCallback(
+    async (
+      key: string,
+      policy: Pick<
+        RetentionPolicy,
+        'enabled' | 'retention_window_days' | 'scheduled_enforcement_enabled'
+      >
+    ) => {
+      const response = await adminFetch(
+        `/admin/lifecycle/retention-policies/${key}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(policy),
+        }
+      );
+      if (!response.ok) {
+        throw new Error('errors.failedToUpdateRetentionPolicy');
+      }
+      await fetchStatus();
+    },
+    [fetchStatus]
+  );
 
-  const updateArtifactEncryptionPosture = useCallback(async (posture: ArtifactEncryptionPosture) => {
-    const response = await adminFetch('/admin/lifecycle/artifact-encryption-posture', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ posture }),
-    })
-    if (!response.ok) {
-      throw new Error('errors.failedToUpdateArtifactEncryptionPosture')
-    }
-    await fetchStatus()
-  }, [fetchStatus])
+  const updateArtifactEncryptionPosture = useCallback(
+    async (posture: ArtifactEncryptionPosture) => {
+      const response = await adminFetch(
+        '/admin/lifecycle/artifact-encryption-posture',
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ posture }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error('errors.failedToUpdateArtifactEncryptionPosture');
+      }
+      await fetchStatus();
+    },
+    [fetchStatus]
+  );
 
   const previewRetention = useCallback(async () => {
-    const policyByClass = (status?.data_classes ?? []).reduce<Record<string, RetentionPolicy>>((policies, dataClass) => {
+    const policyByClass = (status?.data_classes ?? []).reduce<
+      Record<string, RetentionPolicy>
+    >((policies, dataClass) => {
       if (dataClass.retention_policy) {
-        policies[dataClass.key] = dataClass.retention_policy
+        policies[dataClass.key] = dataClass.retention_policy;
       }
-      return policies
-    }, {})
+      return policies;
+    }, {});
     const response = await adminFetch('/admin/lifecycle/retention/preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        stale_conversation_days: policyByClass.sage_session_memory?.retention_window_days ?? 30,
-        document_artifact_days: policyByClass.uploaded_document_artifacts?.retention_window_days ?? 0,
+        stale_conversation_days:
+          policyByClass.sage_session_memory?.retention_window_days ?? 30,
+        document_artifact_days:
+          policyByClass.uploaded_document_artifacts?.retention_window_days ?? 0,
       }),
-    })
+    });
     if (!response.ok) {
-      throw new Error('errors.failedToPreviewRetention')
+      throw new Error('errors.failedToPreviewRetention');
     }
-    return response.json()
-  }, [status])
+    return response.json();
+  }, [status]);
 
   const runScheduledRetention = useCallback(async () => {
-    const response = await adminFetch('/admin/lifecycle/retention/scheduled/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ retry_limit: 3 }),
-    })
+    const response = await adminFetch(
+      '/admin/lifecycle/retention/scheduled/run',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ retry_limit: 3 }),
+      }
+    );
     if (!response.ok) {
-      throw new Error('errors.failedToRunScheduledRetention')
+      throw new Error('errors.failedToRunScheduledRetention');
     }
-    const body = await response.json()
-    await fetchStatus()
-    return body
-  }, [fetchStatus])
+    const body = await response.json();
+    await fetchStatus();
+    return body;
+  }, [fetchStatus]);
 
   return {
     status,
@@ -590,51 +750,64 @@ export function useLifecycleStatus() {
     updateArtifactEncryptionPosture,
     previewRetention,
     runScheduledRetention,
-  }
+  };
 }
 
-export function useDeletionTombstones(status: DeletionTombstoneStatusFilter = 'all') {
-  const [tombstones, setTombstones] = useState<DeletionTombstone[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function useDeletionTombstones(
+  status: DeletionTombstoneStatusFilter = 'all'
+) {
+  const [tombstones, setTombstones] = useState<DeletionTombstone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTombstones = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const path = status === 'all'
-        ? '/admin/lifecycle/deletion-tombstones'
-        : `/admin/lifecycle/deletion-tombstones?status=${status}`
-      const response = await adminFetch(path)
+      setLoading(true);
+      setError(null);
+      const path =
+        status === 'all'
+          ? '/admin/lifecycle/deletion-tombstones'
+          : `/admin/lifecycle/deletion-tombstones?status=${status}`;
+      const response = await adminFetch(path);
       if (!response.ok) {
-        throw new Error('errors.failedToFetchDeletionTombstones')
+        throw new Error('errors.failedToFetchDeletionTombstones');
       }
-      const data: DeletionTombstonesResponse = await response.json()
-      setTombstones(Array.isArray(data.tombstones) ? data.tombstones : [])
+      const data: DeletionTombstonesResponse = await response.json();
+      setTombstones(Array.isArray(data.tombstones) ? data.tombstones : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchDeletionTombstones')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'errors.failedToFetchDeletionTombstones'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [status])
+  }, [status]);
 
-  const retryTombstone = useCallback(async (id: number) => {
-    const response = await adminFetch(`/admin/lifecycle/deletion-tombstones/${id}/retry`, {
-      method: 'POST',
-    })
-    try {
-      if (!response.ok) {
-        throw new Error('errors.failedToRetryDeletionTombstone')
+  const retryTombstone = useCallback(
+    async (id: number) => {
+      const response = await adminFetch(
+        `/admin/lifecycle/deletion-tombstones/${id}/retry`,
+        {
+          method: 'POST',
+        }
+      );
+      try {
+        if (!response.ok) {
+          throw new Error('errors.failedToRetryDeletionTombstone');
+        }
+        return await response.json();
+      } finally {
+        await fetchTombstones();
       }
-      return await response.json()
-    } finally {
-      await fetchTombstones()
-    }
-  }, [fetchTombstones])
+    },
+    [fetchTombstones]
+  );
 
   useEffect(() => {
-    fetchTombstones()
-  }, [fetchTombstones])
+    fetchTombstones();
+  }, [fetchTombstones]);
 
   return {
     tombstones,
@@ -642,193 +815,211 @@ export function useDeletionTombstones(status: DeletionTombstoneStatusFilter = 'a
     error,
     refresh: fetchTombstones,
     retryTombstone,
-  }
+  };
 }
 
 // --- Service Health Hook ---
 
 export function useServiceHealth() {
-  const [health, setHealth] = useState<ServiceHealthResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [health, setHealth] = useState<ServiceHealthResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await adminFetch('/admin/deployment/health')
+      setLoading(true);
+      setError(null);
+      const response = await adminFetch('/admin/deployment/health');
       if (!response.ok) {
-        throw new Error(`errors.failedToFetchServiceHealth`)
+        throw new Error(`errors.failedToFetchServiceHealth`);
       }
-      const data = await response.json()
-      setHealth(data)
+      const data = await response.json();
+      setHealth(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchServiceHealth')
+      setError(
+        err instanceof Error ? err.message : 'errors.failedToFetchServiceHealth'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchHealth()
-  }, [fetchHealth])
+    fetchHealth();
+  }, [fetchHealth]);
 
   return {
     health,
     loading,
     error,
     refresh: fetchHealth,
-  }
+  };
 }
 
 export function useDeploymentReadiness() {
-  const [readiness, setReadiness] = useState<DeploymentReadinessResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [readiness, setReadiness] =
+    useState<DeploymentReadinessResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchReadiness = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await adminFetch('/admin/deployment/readiness')
+      setLoading(true);
+      setError(null);
+      const response = await adminFetch('/admin/deployment/readiness');
       if (!response.ok) {
-        throw new Error('errors.failedToFetchDeploymentReadiness')
+        throw new Error('errors.failedToFetchDeploymentReadiness');
       }
-      const data: DeploymentReadinessResponse = await response.json()
-      setReadiness(data)
+      const data: DeploymentReadinessResponse = await response.json();
+      setReadiness(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchDeploymentReadiness')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'errors.failedToFetchDeploymentReadiness'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchReadiness()
-  }, [fetchReadiness])
+    fetchReadiness();
+  }, [fetchReadiness]);
 
   return {
     readiness,
     loading,
     error,
     refresh: fetchReadiness,
-  }
+  };
 }
 
 // --- Audit Log Hook ---
 
 export function useConfigAuditLog(tableName?: string, limit: number = 50) {
-  const [log, setLog] = useState<ConfigAuditLogResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [log, setLog] = useState<ConfigAuditLogResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchLog = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const params = new URLSearchParams()
-      params.set('limit', String(limit))
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
       if (tableName) {
-        params.set('table_name', tableName)
+        params.set('table_name', tableName);
       }
-      const response = await adminFetch(`/admin/deployment/audit-log?${params}`)
+      const response = await adminFetch(
+        `/admin/deployment/audit-log?${params}`
+      );
       if (!response.ok) {
-        throw new Error(`errors.failedToFetchAuditLog`)
+        throw new Error(`errors.failedToFetchAuditLog`);
       }
-      const data = await response.json()
-      setLog(data)
+      const data = await response.json();
+      setLog(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'errors.failedToFetchAuditLog')
+      setError(
+        err instanceof Error ? err.message : 'errors.failedToFetchAuditLog'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [tableName, limit])
+  }, [tableName, limit]);
 
   useEffect(() => {
-    fetchLog()
-  }, [fetchLog])
+    fetchLog();
+  }, [fetchLog]);
 
   return {
     log,
     loading,
     error,
     refresh: fetchLog,
-  }
+  };
 }
 
 // --- Key Migration Hook ---
 
 export function useKeyMigration() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const prepare = useCallback(async (): Promise<MigrationPrepareResponse> => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      const response = await adminFetch('/admin/key-migration/prepare')
+      const response = await adminFetch('/admin/key-migration/prepare');
       if (!response.ok) {
-        let detail = `Failed to prepare migration: ${response.status}`
+        let detail = `Failed to prepare migration: ${response.status}`;
         try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
+          const err = await response.json();
+          if (err.detail) detail = err.detail;
         } catch {
           // Non-JSON response
         }
-        throw new Error(detail)
+        throw new Error(detail);
       }
-      return await response.json()
+      return await response.json();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'errors.failedToPrepareMigration'
-      setError(message)
-      throw err
+      const message =
+        err instanceof Error ? err.message : 'errors.failedToPrepareMigration';
+      setError(message);
+      throw err;
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
-  const execute = useCallback(async (
-    newAdminPubkey: string,
-    users: DecryptedUserData[],
-    fieldValues: DecryptedFieldValue[],
-    signatureEvent: NostrEvent
-  ): Promise<MigrationExecuteResponse> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await adminFetch('/admin/key-migration/execute', {
-        method: 'POST',
-        body: JSON.stringify({
-          new_admin_pubkey: newAdminPubkey,
-          users,
-          field_values: fieldValues,
-          signature_event: signatureEvent,
-        }),
-      })
-      if (!response.ok) {
-        let detail = `Failed to execute migration: ${response.status}`
-        try {
-          const err = await response.json()
-          if (err.detail) detail = err.detail
-        } catch {
-          // Non-JSON response
+  const execute = useCallback(
+    async (
+      newAdminPubkey: string,
+      users: DecryptedUserData[],
+      fieldValues: DecryptedFieldValue[],
+      signatureEvent: NostrEvent
+    ): Promise<MigrationExecuteResponse> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await adminFetch('/admin/key-migration/execute', {
+          method: 'POST',
+          body: JSON.stringify({
+            new_admin_pubkey: newAdminPubkey,
+            users,
+            field_values: fieldValues,
+            signature_event: signatureEvent,
+          }),
+        });
+        if (!response.ok) {
+          let detail = `Failed to execute migration: ${response.status}`;
+          try {
+            const err = await response.json();
+            if (err.detail) detail = err.detail;
+          } catch {
+            // Non-JSON response
+          }
+          throw new Error(detail);
         }
-        throw new Error(detail)
+        return await response.json();
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'errors.failedToExecuteMigration';
+        setError(message);
+        throw err;
+      } finally {
+        setLoading(false);
       }
-      return await response.json()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'errors.failedToExecuteMigration'
-      setError(message)
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    },
+    []
+  );
 
   return {
     loading,
     error,
     prepare,
     execute,
-  }
+  };
 }

@@ -237,8 +237,8 @@ export function AdminResourcesDirectory({
     void fetchData();
   }, [fetchData]);
 
-  // Refresh the table when the assistant applies a resource change set while
-  // this page is open, so chat-driven edits show up without a manual reload.
+  // Refresh the table after a resource-directory mutation while this page is
+  // open, so another admin surface can keep the view current.
   useEffect(() => {
     const handleResourcesChanged = () => {
       void fetchData();

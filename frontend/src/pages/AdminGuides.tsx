@@ -89,7 +89,7 @@ const safetyBasics = [
   'Admins sign in with NIP-07. Users sign in with email magic links.',
   'User fields are encrypted by default. Only plaintext fields can be shared with chat.',
   'Secrets stay masked unless you share them for the current admin session.',
-  'Assistant changes are proposals. You still review and click Apply.',
+  'Sage confirms configuration changes with you in chat, then applies supported changes directly.',
   'Deployment Settings store desired runtime values. Operators still export env and restart services when needed.',
 ];
 
@@ -313,12 +313,12 @@ export function AdminGuides() {
           'Config reads inspect real instance state instead of guessing.'
         ),
         t(
-          'adminGuides.workflows.assistant.detail2',
-          'Proposed changes are staged for review.'
+          'adminGuides.workflows.assistant.directWriteDetail2',
+          'Sage asks for conversational confirmation before a supported write.'
         ),
         t(
-          'adminGuides.workflows.assistant.detail3',
-          'Apply runs the approved admin endpoints without another model turn.'
+          'adminGuides.workflows.assistant.directWriteDetail3',
+          'After you confirm, Sage calls its direct configuration Tools and reports the real result.'
         ),
       ],
       linkLabel: t(
@@ -487,8 +487,8 @@ export function AdminGuides() {
       'Review the current user types, onboarding questions, docs, and resources.'
     ),
     t(
-      'adminGuides.ask.prompt3',
-      'Prepare changes for review: set the assistant tone and default language.'
+      'adminGuides.ask.directWritePrompt3',
+      'Set the assistant tone and default language, and confirm the intended change with me first.'
     ),
   ];
 
@@ -673,7 +673,7 @@ export function AdminGuides() {
                   aria-hidden="true"
                 />
                 <span className="text-pretty">
-                  {t(`adminGuides.safety.items.${index}`, item)}
+                  {t(`adminGuides.safety.directItems.${index}`, item)}
                 </span>
               </li>
             ))}
@@ -689,8 +689,8 @@ export function AdminGuides() {
           'Good things to ask the Admin Assistant'
         )}
         description={t(
-          'adminGuides.ask.body',
-          'Ask for a review before asking for changes. It can inspect setup and prepare a change set.'
+          'adminGuides.ask.directWriteBody',
+          'Ask Sage to inspect or change supported configuration. It will confirm the intended change with you before writing.'
         )}
       >
         <div className="grid gap-4 md:grid-cols-3">

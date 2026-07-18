@@ -16,6 +16,7 @@ interface ToolSelectorProps {
   selectedTools: string[];
   onToggle: (toolId: string) => void;
   compact?: boolean;
+  disabledToolIds?: readonly string[];
 }
 
 export function ToolSelector({
@@ -23,6 +24,7 @@ export function ToolSelector({
   selectedTools,
   onToggle,
   compact = false,
+  disabledToolIds = [],
 }: ToolSelectorProps) {
   const { t } = useTranslation();
 
@@ -56,18 +58,17 @@ export function ToolSelector({
       {!compact && <span className="label mr-1">{t('chat.tools.label')}</span>}
       {activeTools.map((tool) => {
         const isSelected = selectedTools.includes(tool.id);
+        const isDisabled = disabledToolIds.includes(tool.id);
         return (
           <Button
             key={tool.id}
             onClick={() => onToggle(tool.id)}
+            disabled={isDisabled}
             aria-pressed={isSelected}
             variant={isSelected ? 'primary' : 'ghost'}
             size="sm"
             leadingIcon={tool.icon}
-            className={cx(
-              'text-xs',
-              compact && 'min-w-0 shrink-0 px-2.5'
-            )}
+            className={cx('text-xs', compact && 'min-w-0 shrink-0 px-2.5')}
             title={tool.description}
           >
             {tool.name}

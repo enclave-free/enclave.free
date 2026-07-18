@@ -445,6 +445,7 @@ describe('ChatMessage', () => {
               id: 'message-1',
               role: 'assistant',
               content: '',
+              traceStatus: 'Writing answer...',
               traceDeltas: [
                 {
                   id: 'trace-admin-config-call',
@@ -478,5 +479,76 @@ describe('ChatMessage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('[redacted]')).toBeInTheDocument();
     expect(screen.getByText('guarded')).toBeInTheDocument();
+  });
+
+  it('groups streamed provider reasoning into one expandable transcript', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-1',
+              role: 'assistant',
+              content: '',
+              traceStatus: 'Writing answer...',
+              traceDeltas: [
+                {
+                  id: 'reasoning-1',
+                  kind: 'reasoning',
+                  title: 'Provider reasoning',
+                  content: 'I need to be careful not to fabric',
+                  status: 'succeeded',
+                  metadata: { step: 2, source: 'provider' },
+                },
+                {
+                  id: 'reasoning-2',
+                  kind: 'reasoning',
+                  title: 'Provider reasoning',
+                  content: 'ate contact information. ',
+                  status: 'succeeded',
+                  metadata: { step: 2, source: 'provider' },
+                },
+                {
+                  id: 'reasoning-3',
+                  kind: 'reasoning',
+                  title: 'Provider reasoning',
+                  content:
+                    'I will reference the organizations in the documents.',
+                  status: 'succeeded',
+                  metadata: { step: 2, source: 'provider' },
+                },
+                {
+                  id: 'trace-tool-call',
+                  kind: 'tool_call',
+                  title: 'Knowledge Search',
+                  content: 'Calling knowledge_search.',
+                  status: 'running',
+                },
+              ],
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    );
+
+    const disclosure = screen.getByRole('button', { name: /Thinking/ });
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryAllByText('Provider reasoning')).toHaveLength(0);
+    expect(
+      screen.queryByRole('region', { name: 'Reasoning transcript' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Calling knowledge_search.')).toBeInTheDocument();
+
+    await user.click(disclosure);
+
+    const transcript = screen.getByRole('region', {
+      name: 'Reasoning transcript',
+    });
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    expect(transcript).toHaveTextContent(
+      'I need to be careful not to fabricate contact information. I will reference the organizations in the documents.'
+    );
   });
 });

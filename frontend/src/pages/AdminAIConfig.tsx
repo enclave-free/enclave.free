@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,6 +24,7 @@ import {
 import { OnboardingCard } from '../components/onboarding/OnboardingCard';
 import { Callout, CodeBlockSurface } from '../components/ui';
 import { isAdminAuthenticated, adminFetch } from '../utils/adminApi';
+import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import { useAIConfig, useDocumentDefaults } from '../hooks/useAdminConfig';
 import type {
   AIConfigItem,
@@ -85,25 +86,40 @@ export function AdminAIConfig() {
     null
   );
   const [userTypesLoading, setUserTypesLoading] = useState(true);
+  const userTypesFetchRunIdRef = useRef(0);
 
-  // Fetch user types on mount
-  useEffect(() => {
-    const fetchUserTypes = async () => {
-      try {
-        setUserTypesLoading(true);
-        const response = await adminFetch('/admin/user-types');
-        if (response.ok) {
-          const data = await response.json();
-          setUserTypes(data.types || []);
-        }
-      } catch {
-        // Silently fail - user types are optional
-      } finally {
+  const fetchUserTypes = useCallback(async () => {
+    const runId = ++userTypesFetchRunIdRef.current;
+    try {
+      setUserTypesLoading(true);
+      const response = await adminFetch('/admin/user-types');
+      if (response.ok) {
+        const data = await response.json();
+        const nextUserTypes = (data.types || []) as UserType[];
+        if (runId !== userTypesFetchRunIdRef.current) return;
+        setUserTypes(nextUserTypes);
+        setSelectedUserTypeId((selected) =>
+          selected != null &&
+          !nextUserTypes.some((userType) => userType.id === selected)
+            ? null
+            : selected
+        );
+      }
+    } catch {
+      // Silently fail - user types are optional
+    } finally {
+      if (runId === userTypesFetchRunIdRef.current) {
         setUserTypesLoading(false);
       }
-    };
-    fetchUserTypes();
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchUserTypes();
+    return subscribeAdminConfigChanges(['user_types'], () => {
+      void fetchUserTypes();
+    });
+  }, [fetchUserTypes]);
 
   // Hooks for config data - pass selectedUserTypeId
   const {
@@ -132,6 +148,8 @@ export function AdminAIConfig() {
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [externalEditConflict, setExternalEditConflict] = useState(false);
+  const editBaseValueRef = useRef<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState('');
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -198,8 +216,28 @@ export function AdminAIConfig() {
     setEditingKey(null);
     setEditValue('');
     setSaveError(null);
+    setExternalEditConflict(false);
+    editBaseValueRef.current = null;
     setToggleError(null);
   }, [selectedUserTypeId]);
+
+  useEffect(() => {
+    if (!editingKey || editBaseValueRef.current === null || !aiConfig) return;
+    const current = [
+      ...aiConfig.prompt_sections,
+      ...aiConfig.parameters,
+      ...aiConfig.defaults,
+    ].find((item) => item.key === editingKey);
+    if (current && current.value !== editBaseValueRef.current) {
+      setExternalEditConflict(true);
+      setSaveError(
+        t(
+          'adminAI.externalChangeConflict',
+          'Sage or another admin changed this setting while you were editing. Cancel and reopen the editor before saving.'
+        )
+      );
+    }
+  }, [aiConfig, editingKey, t]);
 
   // Focus trap for modal
   useEffect(() => {
@@ -233,11 +271,14 @@ export function AdminAIConfig() {
     setEditingKey(item.key);
     setEditValue(item.value);
     setSaveError(null);
+    setExternalEditConflict(false);
+    editBaseValueRef.current = item.value;
   };
 
   // Handle saving a config value (global or override based on selectedUserTypeId)
   const handleSave = async () => {
     if (!editingKey) return;
+    if (externalEditConflict) return;
 
     // Find the config item to check its value_type
     const item =
@@ -268,6 +309,7 @@ export function AdminAIConfig() {
       }
       setEditingKey(null);
       setEditValue('');
+      editBaseValueRef.current = null;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -293,6 +335,8 @@ export function AdminAIConfig() {
     setEditingKey(null);
     setEditValue('');
     setSaveError(null);
+    setExternalEditConflict(false);
+    editBaseValueRef.current = null;
   };
 
   // Handle preview prompt
@@ -603,7 +647,7 @@ export function AdminAIConfig() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || externalEditConflict}
                 className="flex-1 bg-accent text-accent-text rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent-hover transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving ? (

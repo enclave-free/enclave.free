@@ -77,6 +77,21 @@ describe('sendLlmChatWithUnifiedTools', () => {
     });
   });
 
+  it('sends the guided onboarding surface without altering the user message', async () => {
+    await sendLlmChatWithUnifiedTools({
+      content: '1. FreeThem, 4. blue',
+      tools: ['admin-config'],
+      conversationSurface: 'admin-onboarding',
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(options?.body))).toEqual({
+      message: '1. FreeThem, 4. blue',
+      tools: ['admin-config'],
+      conversation_surface: 'admin-onboarding',
+    });
+  });
+
   it('sends Knowledge Search document constraints through unified chat', async () => {
     await sendLlmChatWithUnifiedTools({
       content: 'Use the uploaded handbook',
@@ -509,7 +524,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
     });
   });
 
-  it('bridges admin-config apply summaries once Sage owns the session', async () => {
+  it('omits duplicated client history once Sage owns the admin-config session', async () => {
     const encoder = new TextEncoder();
     vi.stubGlobal(
       'fetch',
@@ -553,13 +568,6 @@ describe('sendLlmChatWithUnifiedTools', () => {
       message: 'continue',
       tools: ['admin-config'],
       session_id: 'session-123',
-      conversation_history: [
-        {
-          role: 'assistant',
-          content:
-            'Applied 1/1 change(s). Config validation: valid. Restart required: no.',
-        },
-      ],
     });
   });
 

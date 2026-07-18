@@ -4,9 +4,9 @@ This document describes the accepted Tool behavior for the Sage hard-cut prototy
 
 ## Core Rule
 
-Sage owns one model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete Tool contracts, gives the contracts to the model, executes authorized model-chosen Tool calls, injects Tool results, emits Activity and Conversation Trace metadata, and continues until the model can answer or produce an Executable Change Set.
+Sage owns one model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete Tool contracts, gives the contracts to the model, executes authorized model-chosen Tool calls, injects Tool results, emits Activity and Conversation Trace metadata, and continues until the model can answer or complete the authorized work.
 
-Python no longer owns or exposes public Agent Runtime routes. Direct Python calls are unsupported because public Agent Runtime routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches requests to Sage. Python remains the Enclave Control Plane behind private/internal contracts for authorized facts and actions such as safe database reads, document search, user profile context, lifecycle operations, and admin configuration reads.
+Python no longer owns or exposes public Agent Runtime routes. Direct Python calls are unsupported because public Agent Runtime routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches requests to Sage. Python remains the Enclave Control Plane behind private/internal contracts for authorized facts and actions such as safe database reads, document search, user profile context, lifecycle operations, and product-level admin configuration reads and writes.
 
 ## Public Route Shape
 
@@ -31,6 +31,7 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 {
   "message": "What does the handbook say?",
   "session_id": "optional-session-id",
+  "conversation_surface": "admin-onboarding",
   "tools": ["knowledge-search", "curated-resources", "web-search"],
   "job_ids": ["doc-handbook", "doc-faq"],
   "conversation_history": [
@@ -41,6 +42,7 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 ```
 
 - `tools` is a list of Tool Set IDs selected by an Admin or resolved by Sage from User Conversation defaults.
+- `conversation_surface` is optional. The browser sends `admin-onboarding` only for the guided Admin setup assistant. Sage uses it only for an authenticated Admin with the `admin-config` Tool Set enabled, adding the lightweight numbered-answer mapping, conversational confirmation, and atomic `configure_instance` guidance. Ordinary Admin and User Conversations omit it.
 - Sage drops or rejects Tool Sets the actor is not authorized to use. For non-admin users, Sage ignores the client-submitted `tools` list for effective resolution and computes the Tool Set list from server-side `/session-defaults`, including the empty or omitted case where configured defaults still apply.
 - `job_ids` is an optional Knowledge Search constraint: it is a list of selected Document Library `job_id` values, not an arbitrary prompt blob.
 - Additional Knowledge filters must be added as explicit request fields before the browser can send them.
@@ -51,13 +53,13 @@ For `/llm/chat` and `/llm/chat/stream`, the request shape is:
 
 Tool Sets are conversation controls and permission bundles. They are visible controls for Admin Conversations only, and normal Admin Conversations do not enable any Tool Set by default. User Conversations always consume the server-resolved defaults without showing Tool controls by default.
 
-| Tool Set ID         | Access                                        | Exposes                                                                                                 |
-| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                                                            |
-| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory                                              |
-| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service                                                     |
-| `admin-config`      | admins only                                   | admin configuration read Tools, typed bootstrap proposal Tool, and lower-level change-set proposal Tool |
-| `db-query`          | admins only                                   | read-only database inspection Tools                                                                     |
+| Tool Set ID         | Access                                        | Exposes                                                       |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| `knowledge-search`  | users and admins, filtered by Document Access | `knowledge_search` over the Document Library                  |
+| `curated-resources` | users and admins                              | `find_resources` over the admin-curated Resource Directory    |
+| `web-search`        | users and admins when enabled                 | `web_search` through the configured SearXNG service           |
+| `admin-config`      | admins only                                   | product-level admin configuration read and direct-write Tools |
+| `db-query`          | admins only                                   | read-only database inspection Tools                           |
 
 Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
 
@@ -77,7 +79,7 @@ Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private 
 
 ## Admin Config
 
-`admin-config` is an admin-only Tool Set. It should expose concrete model-callable Tools rather than a prompt-ready scoped prompt blob. Initial Tools should include:
+`admin-config` is an admin-only Tool Set. It exposes concrete product-level Tools rather than a prompt-ready scoped blob or a generic request dispatcher. Read Tools include:
 
 - `read_instance_settings`
 - `read_admin_setup_summary`
@@ -87,35 +89,32 @@ Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private 
 - `read_user_types`
 - `read_document_access`
 - `read_onboarding_status`
-- `propose_admin_config_bootstrap`
-- `propose_config_change_set`
 
-Reads may happen directly within Admin Conversation authority. Broad setup, status, and readiness questions should use `read_admin_setup_summary` first because it compacts readiness, missing setup, and next actions. Guided setup/bootstrap write intent should use `propose_admin_config_bootstrap`, whose typed arguments describe instance identity, assistant identity, public copy, visual defaults, language, access policy, user types, onboarding questions, and behavior rules. Other supported Admin Config writes may use `propose_config_change_set` as the lower-level escape hatch. Applying either proposal still requires Change Confirmation in the Conversation UI Surface.
+Direct-write Tools are:
 
-Each proposal Tool is a model-callable, non-mutating Tool. They validate and stage a change set for review, but they never call admin mutation endpoints. Confirmed **Apply** remains a UI/admin action, not a model-authorized Tool call.
+- `configure_instance`
+- `update_instance_settings`
+- `update_deployment_settings`
+- `update_agent_settings`
+- `manage_user_types`
+- `manage_onboarding_questions`
+- `update_document_access`
 
-Admin Config proposals must stage canonical write shapes. Typed bootstrap builds these shapes deterministically; the generic escape hatch must provide them directly. Instance settings use
-`PUT /admin/settings` with stored setting keys such as `header_tagline`,
-`default_language`, `default_theme`, and `auto_approve_users`. Agent Settings use
-`PUT /admin/ai-config/{key}` with `{ "value": "..." }`; behavior rules and
-forbidden topics use `PUT /admin/ai-config/prompt_rules` and
-`PUT /admin/ai-config/prompt_forbidden` with `value` set to a JSON string array,
-such as `{ "value": "[\"Ask users where they are from before giving location-specific guidance.\"]" }`.
-User types use `POST /admin/user-types` with `{ "name", "description"?, "icon"?,
-"display_order"? }`. User fields/onboarding questions use `POST /admin/user-fields`
-with `{ "field_name", "field_type", "required"?, "display_order"?, "user_type_id"?,
-"placeholder"?, "options"?, "encryption_enabled"?, "include_in_chat"? }`.
-Deployment config uses `PUT /admin/deployment/config/{key}`. Document-default
-assignments use the `PUT/DELETE /ingest/admin/documents/...` defaults paths.
-The proposal boundary may normalize only known small drift
-(`/admin/user_types`, legacy `tagline` into canonical `header_tagline`, and supported language labels such as
-`English`); staged `admin_change_set` payloads must contain canonical paths and
-keys after that. Unknown keys and unsupported values reject the proposal before
-review.
+The privileged read Tool is:
 
-Admin Config Tools may return non-secret configuration and secret status metadata by default. Raw Deployment Setting secret values require explicit Admin sharing and remain inside the trace blocklist unless they are intentionally shared by the Admin for the current turn; secret previews must stay masked in Change Confirmation.
+- `read_deployment_secret` for an explicit Admin secret-read request
 
-Theme requests in Admin Conversations mean Instance visual identity settings, such as default theme and `primary_color`. They should become Instance Settings change-set proposals, not frontend CSS or source-code theme edits.
+Reads happen within Admin Conversation authority. Broad setup, status, and readiness questions should use `read_admin_setup_summary` first because it compacts readiness, missing setup, and next actions. Before a write, Sage should briefly summarize one coherent intended change and ask once for natural Conversational Confirmation. After confirmation, Sage chooses and calls the needed direct Tools. This is prompt-guided model behavior, not a confirmation token, proposal contract, Apply card, or runtime intent classifier.
+
+Every direct Tool maps to a fixed private Enclave Control Plane endpoint with purpose-built arguments. The model cannot choose an endpoint path or submit raw request JSON. Each Tool call validates and commits atomically; separate Tool calls are not one transaction. Tool results return authoritative normalized state, changed names, validation status, affected areas, and restart requirements where relevant so Sage can report the real outcome naturally.
+
+Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can correct a Tool call instead of receiving a generic failure.
+
+`configure_instance` is the high-level atomic Tool for guided first-time setup. The smaller area Tools handle later edits to Instance Settings, Deployment Settings, Agent Settings, User Types, Onboarding Questions, and Document Access defaults. Destructive User or Document operations, service restarts, and Curated Resource management are outside this authority.
+
+Admin Config reads return non-secret values and secret status metadata by default. Sage may write a secret explicitly supplied by the Admin. `read_deployment_secret` may retrieve a stored secret only for an explicit Admin request. Activity, Conversation Trace, and Audit Log metadata omit secret values even when the natural encrypted Conversation answer intentionally contains one.
+
+Theme requests in Admin Conversations mean Instance visual identity settings, such as default theme and `primary_color`. They should use the Instance Settings Tool, not frontend CSS or source-code edits.
 
 ## Database
 
@@ -141,7 +140,9 @@ Sage decides Tool planning through model instructions and Tool descriptions, not
 - max Tool-loop steps, timeouts, and output budgets
 - Tool result injection
 - Activity, Trace Delta, and Conversation Trace assembly
-- Change Confirmation handoff for Executable Change Sets
+- authorization, argument validation, Tool-loop bounds, and secret-safe trace assembly
+
+For Admin Config, Sage also carries the real Conversation identifier to the Enclave Control Plane and returns affected-area refresh hints. The browser refetches those areas after success; it never repeats the write.
 
 ## Python Duties
 

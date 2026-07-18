@@ -38,6 +38,27 @@ class _JsonResponse:
         return self._body
 
 
+class _SseResponse:
+    def __init__(self, body: str) -> None:
+        self._body = body.encode("utf-8")
+        self._offset = 0
+
+    def __enter__(self) -> "_SseResponse":
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+    def read(self, size: int = -1) -> bytes:
+        if self._offset >= len(self._body):
+            return b""
+        if size < 0:
+            size = len(self._body) - self._offset
+        chunk = self._body[self._offset : self._offset + size]
+        self._offset += len(chunk)
+        return chunk
+
+
 class ConversationHarnessCleanupTest(unittest.TestCase):
     def test_retrieval_policy_cleanup_restores_original_sage_timestamp(self) -> None:
         previous = {
@@ -110,6 +131,39 @@ class ConversationHarnessCleanupTest(unittest.TestCase):
         scenario = timing.Scenario("connection_loss", "hello", [])
         with patch.object(timing.urllib.request, "urlopen", side_effect=urlopen):
             with self.assertRaisesRegex(ConnectionResetError, "connection lost"):
+                timing.measure_stream("http://gateway.test", "admin-token", scenario)
+
+    def test_timing_summary_rejects_write_reported_only_in_done_tools(self) -> None:
+        def urlopen(request: object, timeout: float) -> object:
+            if request.get_method() == "DELETE":
+                return _JsonResponse(
+                    {"status": "deleted", "deletion": {"status": "succeeded"}}
+                )
+            session_id = json.loads(request.data)["session_id"]
+            body = (
+                "event: answer_delta\n"
+                'data: {"delta":"Summary."}\n\n'
+                "event: done\n"
+                + "data: "
+                + json.dumps(
+                    {
+                        "session_id": session_id,
+                        "tools_used": [
+                            {"tool_id": "admin-config:update_instance_settings"}
+                        ],
+                    }
+                )
+                + "\n\n"
+            )
+            return _SseResponse(body)
+
+        scenario = timing.Scenario(
+            "config_setup_summary",
+            "Summarize only.",
+            ["admin-config"],
+        )
+        with patch.object(timing.urllib.request, "urlopen", side_effect=urlopen):
+            with self.assertRaisesRegex(RuntimeError, "invoked write Tools"):
                 timing.measure_stream("http://gateway.test", "admin-token", scenario)
 
     def test_retrieval_smoke_deletes_requested_session_after_connection_loss(self) -> None:
