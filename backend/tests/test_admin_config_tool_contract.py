@@ -911,6 +911,47 @@ class AdminConfigToolContractTest(unittest.TestCase):
             for entry in self.database.get_config_audit_log(limit=None)
         ))
 
+    def test_manage_user_types_preserves_question_answers_on_delete(self) -> None:
+        user_type_id = self.database.create_user_type("Families")
+        question_id = self.database.create_field_definition(
+            "case_note",
+            "text",
+            user_type_id=user_type_id,
+            encryption_enabled=False,
+        )
+        with self.database.get_write_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (pubkey, approved, user_type_id) VALUES (?, ?, ?)",
+                ("user-type-saved-answer", 1, user_type_id),
+            )
+            user_id = int(cursor.lastrowid)
+            cursor.execute(
+                "INSERT INTO user_field_values (user_id, field_id, value) VALUES (?, ?, ?)",
+                (user_id, question_id, "Keep this answer"),
+            )
+
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-delete-with-answer",
+                "operation": "delete",
+                "user_type_id": user_type_id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertIn("saved user answers", response.json()["detail"])
+        self.assertIsNotNone(self.database.get_user_type(user_type_id))
+        self.assertIsNotNone(self.database.get_field_definition_by_id(question_id))
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT value FROM user_field_values WHERE user_id = ? AND field_id = ?",
+                (user_id, question_id),
+            )
+            self.assertEqual(cursor.fetchone()["value"], "Keep this answer")
+
     def test_manage_onboarding_questions_supports_full_lifecycle(self) -> None:
         user_type_id = self.database.create_user_type("Families")
         create = self.client.post(

@@ -2371,6 +2371,22 @@ def manage_user_type_with_audit(
                         params,
                     )
             elif operation == "delete":
+                cursor.execute(
+                    """
+                    SELECT 1
+                    FROM user_field_values AS answers
+                    JOIN user_field_definitions AS questions
+                      ON questions.id = answers.field_id
+                    WHERE questions.user_type_id = ?
+                    LIMIT 1
+                    """,
+                    (resolved_id,),
+                )
+                if cursor.fetchone():
+                    raise ValueError(
+                        "User Type has Onboarding Questions with saved user answers "
+                        "and cannot be deleted"
+                    )
                 cursor.execute("DELETE FROM user_types WHERE id = ?", (resolved_id,))
                 changed_names = ["deleted"]
             else:
