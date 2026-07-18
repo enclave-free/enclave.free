@@ -25,6 +25,11 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.benches.conversation_model_bench import ADMIN_CONFIG_DIRECT_WRITE_TOOLS
+
 COMPOSE_ARGS = [
     "docker",
     "compose",
@@ -265,21 +270,21 @@ def measure_stream(api_base: str, token: str, scenario: Scenario) -> dict[str, A
             raise RuntimeError(
                 f"{scenario.name}: stream did not preserve requested session_id"
             )
+        observed_tools = list(tool_statuses)
+        done_tools = done_payload.get("tools_used")
+        if isinstance(done_tools, list):
+            observed_tools.extend(item for item in done_tools if isinstance(item, dict))
         if scenario.name == "config_setup_summary":
             direct_write_ids = {
-                "admin-config:configure_instance",
-                "admin-config:update_instance_settings",
-                "admin-config:update_deployment_settings",
-                "admin-config:update_agent_settings",
-                "admin-config:manage_user_types",
-                "admin-config:manage_onboarding_questions",
-                "admin-config:update_document_access",
+                f"admin-config:{tool_name}"
+                for tool_name in ADMIN_CONFIG_DIRECT_WRITE_TOOLS
             }
             invoked_write_ids = sorted(
                 {
-                    str(item.get("id") or "")
-                    for item in tool_statuses
-                    if str(item.get("id") or "") in direct_write_ids
+                    str(item.get("id") or item.get("tool_id") or "")
+                    for item in observed_tools
+                    if str(item.get("id") or item.get("tool_id") or "")
+                    in direct_write_ids
                 }
             )
             if invoked_write_ids:

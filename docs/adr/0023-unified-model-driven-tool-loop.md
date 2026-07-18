@@ -2,9 +2,9 @@
 
 Status: Still authoritative for the shared model-driven Tool loop. Its Admin Config proposal and Change Confirmation details are superseded by [ADR-0028](0028-sage-owns-direct-admin-config-writes.md). Treat those historical proposal sections below as decision context, not implementation guidance.
 
-The Enclave Free Prototype will hard-cut Conversation tool use to one Sage-owned, model-driven tool loop. Visible composer controls enable Tool Sets; each enabled Tool Set exposes concrete agent-callable Tools with explicit contracts. Sage gives those Tool contracts to the model, the model chooses which Tools to call, Sage executes authorized calls, injects Tool results, emits Activity and Conversation Trace metadata, and continues until the model can answer or produce an Executable Change Set.
+The Enclave Free Prototype will hard-cut Conversation tool use to one Sage-owned, model-driven tool loop. Visible composer controls enable Tool Sets; each enabled Tool Set exposes concrete agent-callable Tools with explicit contracts. Sage gives those Tool contracts to the model, the model chooses which Tools to call, Sage executes authorized calls, injects Tool results, emits Activity and Conversation Trace metadata, and continues until the model can answer.
 
-This replaces preselected context pipelines such as Scoped Config Context, route-specific retrieval magic, and deterministic intent classifiers that decide what configuration or knowledge the model is allowed to inspect before the model sees the available Tools. The model should be encouraged to call enabled Tools proactively when they can answer a factual, configuration, data, availability, or freshness question better than guessing. Deterministic code remains responsible for Tool availability, authorization, redaction, output budgets, read-only validation, loop limits, trace sanitization, and Change Confirmation gates.
+This replaces preselected context pipelines such as Scoped Config Context, route-specific retrieval magic, and deterministic intent classifiers that decide what configuration or knowledge the model is allowed to inspect before the model sees the available Tools. The model should be encouraged to call enabled Tools proactively when they can answer a factual, configuration, data, availability, or freshness question better than guessing. Deterministic code remains responsible for Tool availability, authorization, validation, persistence, output budgets, loop limits, and trace sanitization.
 
 ## Tool Sets And Tools
 
@@ -13,14 +13,12 @@ Visible Tool Sets are permission and product controls, not hidden routing modes:
 - `knowledge-search` enables Document Library Retrieval Tools. Selected Documents are Tool constraints for `knowledge_search`, not silently injected Required Context for ordinary chat.
 - `curated-resources` enables the admin-curated Resource Directory Tool, exposed as `find_resources`. It is separate from Knowledge Search because it searches structured SQLite resource records, not uploaded document embeddings.
 - `web-search` enables current/external web search.
-- `admin-config` enables raw admin configuration read Tools plus non-mutating proposal Tools. Confirmed apply is not model-authorized and still requires Change Confirmation.
+- `admin-config` enables admin configuration read Tools and direct write Tools. Sage asks for conversational confirmation before calling a write Tool, as defined by ADR-0028.
 - `db-query` enables admin-only read-only database inspection Tools.
 
-The first Admin Config Tool Set should expose concrete read Tools such as `read_instance_settings`, `read_deployment_settings`, `read_deployment_readiness`, `read_agent_settings`, `read_user_types`, `read_document_access`, and `read_onboarding_status`, plus proposal Tools for write intent. Reads may happen directly within Admin Conversation authority. Writes must be expressed as an Executable Change Set through a proposal Tool and applied only after Change Confirmation.
+The Admin Config Tool Set exposes concrete read Tools such as `read_instance_settings`, `read_deployment_settings`, `read_deployment_readiness`, `read_agent_settings`, `read_user_types`, `read_document_access`, and `read_onboarding_status`, plus the direct write Tools defined by ADR-0028.
 
-`propose_config_change_set` owns the canonical proposal boundary. It accepts the exact admin write shapes the UI can later apply, normalizes only narrow observed drift such as `/admin/user_types`, `tagline`, and supported language labels, and rejects anything else before staging. The model can correct and retry through the same Tool loop; the browser should stage structured `admin_change_set` payloads rather than scrape assistant prose as the primary path.
-
-ADR-0025 narrows this for primary Admin Config write flows: models should prefer Typed Proposal Tools whose deterministic implementations build canonical change-set requests, while `propose_config_change_set` remains a lower-level escape hatch.
+Historical note: before ADR-0028, this ADR required proposal Tools, Executable Change Sets, a browser-staged `admin_change_set`, and a separate Change Confirmation gate. ADR-0025 later preferred Typed Proposal Tools over `propose_config_change_set`. Those requirements are retained only as decision history and are not current implementation guidance.
 
 ## Route Direction
 

@@ -12,4 +12,4 @@ Sage will keep provider-portable typed responses for deciding and executing enab
 
 ## Consequences
 
-The model should select every immediately useful enabled Tool in the bounded planning response. Sage may still finish deterministic proposal Tools without another inference call. Tool execution, authorization, redaction, trace events, and Change Confirmation remain unchanged; only terminal answer generation leaves the typed response contract.
+In each bounded planning response, the model should select every immediately useful enabled Tool; Sage executes that round and continues planning until the model can answer or a deterministic terminal Tool result completes the turn. Tool execution, authorization, validation, persistence, and trace events remain unchanged; only terminal answer generation leaves the typed response contract. Historical proposal-Tool and Change Confirmation behavior from this ADR was superseded by ADR-0028's conversationally confirmed direct writes.

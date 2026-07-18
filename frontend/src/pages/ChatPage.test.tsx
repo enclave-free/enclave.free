@@ -1895,48 +1895,51 @@ describe('ChatPage', () => {
     const recordRefresh = (event: Event) =>
       refreshEvents.push(event as CustomEvent);
     window.addEventListener(ADMIN_CONFIG_CHANGED_EVENT, recordRefresh);
-    mockIsAdminAuthenticated.mockReturnValue(true);
-    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
-      async ({ onEvent }) => {
-        onEvent('assistant_message_started', {
-          message_id: 'admin-msg',
-          session_id: 'session-1',
-        });
-        onEvent('answer_delta', {
-          message_id: 'admin-msg',
-          delta: 'Done.',
-        });
-        onEvent('done', {
-          message_id: 'admin-msg',
-          session_id: 'session-1',
-          admin_config_affected_areas: ['instance_settings'],
-        });
-      }
-    );
+    try {
+      mockIsAdminAuthenticated.mockReturnValue(true);
+      vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(
+        async ({ onEvent }) => {
+          onEvent('assistant_message_started', {
+            message_id: 'admin-msg',
+            session_id: 'session-1',
+          });
+          onEvent('answer_delta', {
+            message_id: 'admin-msg',
+            delta: 'Done.',
+          });
+          onEvent('done', {
+            message_id: 'admin-msg',
+            session_id: 'session-1',
+            admin_config_affected_areas: ['instance_settings'],
+          });
+        }
+      );
 
-    render(<ChatPage />, { wrapper: ChatPageTestWrapper });
-    await waitForValidatedAdminConfig();
-    await user.type(getComposerTextbox(), 'apply it');
-    await user.click(screen.getByRole('button', { name: 'Send message' }));
+      render(<ChatPage />, { wrapper: ChatPageTestWrapper });
+      await waitForValidatedAdminConfig();
+      await user.type(getComposerTextbox(), 'apply it');
+      await user.click(screen.getByRole('button', { name: 'Send message' }));
 
-    await waitFor(() =>
-      expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce()
-    );
-    expect(
-      vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
-    ).toEqual(
-      expect.objectContaining({
-        content: 'apply it',
-        tools: expect.arrayContaining(['admin-config']),
-      })
-    );
-    expect(refreshEvents[refreshEvents.length - 1]?.detail).toEqual({
-      areas: ['instance_settings'],
-    });
-    expect(
-      screen.queryByRole('button', { name: 'Approve changes' })
-    ).not.toBeInTheDocument();
-    window.removeEventListener(ADMIN_CONFIG_CHANGED_EVENT, recordRefresh);
+      await waitFor(() =>
+        expect(sendLlmChatStreamWithUnifiedTools).toHaveBeenCalledOnce()
+      );
+      expect(
+        vi.mocked(sendLlmChatStreamWithUnifiedTools).mock.calls[0][0]
+      ).toEqual(
+        expect.objectContaining({
+          content: 'apply it',
+          tools: expect.arrayContaining(['admin-config']),
+        })
+      );
+      expect(refreshEvents[refreshEvents.length - 1]?.detail).toEqual({
+        areas: ['instance_settings'],
+      });
+      expect(
+        screen.queryByRole('button', { name: 'Approve changes' })
+      ).not.toBeInTheDocument();
+    } finally {
+      window.removeEventListener(ADMIN_CONFIG_CHANGED_EVENT, recordRefresh);
+    }
   });
 
   it('does not expose admin-only tools when a stale admin marker fails server validation', async () => {
@@ -2269,7 +2272,7 @@ describe('ChatPage', () => {
     });
   });
 
-  it('surfaces safe non-streaming provider failures for admin chat', async () => {
+  it('does not replay an admin Config turn after an ambiguous stream failure', async () => {
     const user = userEvent.setup();
     mockIsAdminAuthenticated.mockReturnValue(true);
     mockAdminFetch.mockImplementation((endpoint: string) => {
@@ -2293,16 +2296,6 @@ describe('ChatPage', () => {
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockRejectedValueOnce(
       new Error('Stream transport failed')
     );
-    vi.mocked(sendLlmChatWithUnifiedTools).mockResolvedValueOnce(
-      Response.json(
-        {
-          detail:
-            'Configured Tinfoil model is unavailable. Check TINFOIL_MODEL and restart Sage.',
-        },
-        { status: 503 }
-      )
-    );
-
     render(<ChatPage />, { wrapper: ChatPageTestWrapper });
 
     await waitForValidatedAdminConfig();
@@ -2313,9 +2306,8 @@ describe('ChatPage', () => {
     const errorNote = await screen.findByRole('note', {
       name: 'Chat request error',
     });
-    expect(errorNote).toHaveTextContent(
-      'The configured Model Provider model is unavailable. Check Deployment Settings and restart affected services.'
-    );
+    expect(errorNote).toHaveTextContent('Stream transport failed');
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 
   it('compacts Session Memory for long authenticated admin chat turns', async () => {

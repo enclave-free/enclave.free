@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import re
 import contextvars
-from typing import Iterator
+from typing import Iterable, Iterator
 from contextlib import contextmanager
 from base64 import b64encode, b64decode
 from datetime import datetime, timedelta, timezone
@@ -51,6 +51,9 @@ _dedicated_connection: contextvars.ContextVar[sqlite3.Connection | None] = conte
 )
 _deployment_secret_key = None
 _audit_hmac_key = None
+
+AUDIT_HASH_FORMAT_PIPE_V1 = "pipe_v1"
+AUDIT_HASH_FORMAT_JSON_V2 = "json_v2"
 
 # Deployment secret encryption format:
 # enc::v1::<base64_nonce>:<base64_tag>:<base64_ciphertext>
@@ -420,6 +423,7 @@ def init_schema():
             action_source TEXT NOT NULL DEFAULT 'unknown',
             conversation_id TEXT,
             changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            hash_format TEXT NOT NULL DEFAULT 'json_v2',
             prev_hash TEXT,
             entry_hash TEXT
         )
@@ -708,6 +712,7 @@ def init_schema():
     _migrate_add_user_type_icon_column()  # Add icon column to user_types table
     _migrate_encrypt_deployment_config_secrets()  # Encrypt plaintext deployment secrets at rest
     _migrate_add_config_audit_provenance_columns()  # Attribute UI, Sage, and legacy audit events
+    _migrate_add_config_audit_hash_format_column()  # Preserve legacy hashes while using canonical payloads for new events
     _migrate_add_config_audit_hash_columns()  # Add tamper-evident hash chain to config audit log
     _migrate_add_admin_session_nonce_column()  # Add admin session nonce for server-side session revocation
     _migrate_enforce_single_admin()  # Enforce the single-admin product invariant at the DB layer
@@ -1308,6 +1313,7 @@ def _audit_hash_payload(
     changed_at: str,
     action_source: str = "ordinary_product_flow",
     conversation_id: str | None = None,
+    hash_format: str = AUDIT_HASH_FORMAT_JSON_V2,
 ) -> str:
     """Build deterministic payload for audit hash chain."""
     parts = [
@@ -1321,7 +1327,15 @@ def _audit_hash_payload(
         conversation_id or "",
         changed_at,
     ]
-    return "|".join(parts)
+    if hash_format == AUDIT_HASH_FORMAT_PIPE_V1:
+        return "|".join(parts)
+    if hash_format == AUDIT_HASH_FORMAT_JSON_V2:
+        return json.dumps(
+            [hash_format, *parts],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+    raise ValueError(f"Unsupported audit hash format: {hash_format}")
 
 
 def _insert_config_audit_log(
@@ -1359,6 +1373,7 @@ def _insert_config_audit_log(
         changed_at,
         action_source,
         conversation_id,
+        AUDIT_HASH_FORMAT_JSON_V2,
     )
     entry_hash = _compute_audit_entry_hash(payload)
 
@@ -1366,9 +1381,9 @@ def _insert_config_audit_log(
         """
         INSERT INTO config_audit_log (
             table_name, config_key, old_value, new_value, changed_by,
-            action_source, conversation_id, changed_at, prev_hash, entry_hash
+            action_source, conversation_id, changed_at, hash_format, prev_hash, entry_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             table_name,
@@ -1379,6 +1394,7 @@ def _insert_config_audit_log(
             action_source,
             conversation_id,
             changed_at,
+            AUDIT_HASH_FORMAT_JSON_V2,
             prev_hash,
             entry_hash,
         ),
@@ -1745,6 +1761,22 @@ def _migrate_add_config_audit_provenance_columns() -> None:
     cursor.close()
 
 
+def _migrate_add_config_audit_hash_format_column() -> None:
+    """Label existing pipe-delimited hashes while new rows use canonical JSON."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(config_audit_log)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "hash_format" not in columns:
+        cursor.execute(
+            "ALTER TABLE config_audit_log "
+            "ADD COLUMN hash_format TEXT NOT NULL DEFAULT 'pipe_v1'"
+        )
+        logger.info("Migration: Added legacy hash format to config_audit_log")
+    conn.commit()
+    cursor.close()
+
+
 def _migrate_add_config_audit_hash_columns() -> None:
     """Add hash-chain columns to config_audit_log and backfill existing rows."""
     conn = get_connection()
@@ -1764,7 +1796,7 @@ def _migrate_add_config_audit_hash_columns() -> None:
     # Backfill/repair hash chain deterministically across full history.
     cursor.execute("""
         SELECT id, table_name, config_key, old_value, new_value, changed_by,
-               action_source, conversation_id, changed_at
+               action_source, conversation_id, changed_at, hash_format
         FROM config_audit_log
         ORDER BY id
     """)
@@ -1783,6 +1815,7 @@ def _migrate_add_config_audit_hash_columns() -> None:
             changed_at=changed_at,
             action_source=row["action_source"] or "unknown",
             conversation_id=row["conversation_id"],
+            hash_format=row["hash_format"] or AUDIT_HASH_FORMAT_PIPE_V1,
         )
         entry_hash = _compute_audit_entry_hash(payload)
         cursor.execute(
@@ -1873,7 +1906,10 @@ def get_onboarding_configured_keys() -> set[str]:
         return set()
 
 
-def _mark_onboarding_configured_keys_tx(cursor: sqlite3.Cursor, keys) -> None:
+def _mark_onboarding_configured_keys_tx(
+    cursor: sqlite3.Cursor,
+    keys: Iterable[object],
+) -> None:
     """Record explicitly configured keys using the caller's transaction."""
     incoming = {str(k) for k in keys if k and str(k) != ONBOARDING_CONFIGURED_KEYS_SETTING}
     if not incoming:
@@ -1900,7 +1936,7 @@ def _mark_onboarding_configured_keys_tx(cursor: sqlite3.Cursor, keys) -> None:
     )
 
 
-def mark_onboarding_configured_keys(keys) -> None:
+def mark_onboarding_configured_keys(keys: Iterable[object]) -> None:
     """Record that the operator explicitly set these instance-settings keys."""
     with get_cursor() as cursor:
         _mark_onboarding_configured_keys_tx(cursor, keys)
@@ -2290,6 +2326,7 @@ def manage_user_type_with_audit(
 ) -> dict:
     """Atomically create, update, or delete one User Type with provenance."""
     with get_write_cursor() as cursor:
+        changed_names: list[str]
         if operation == "create":
             cursor.execute(
                 """
@@ -2305,6 +2342,7 @@ def manage_user_type_with_audit(
             )
             resolved_id = int(cursor.lastrowid)
             old_record = None
+            changed_names = sorted(values)
         else:
             if user_type_id is None:
                 raise ValueError("user_type_id is required")
@@ -2318,19 +2356,23 @@ def manage_user_type_with_audit(
             if operation == "update":
                 assignments = []
                 params: list[object] = []
+                changed_names = []
                 for key in ("name", "description", "icon", "display_order"):
-                    if key in values:
+                    if key in values and old_record.get(key) != values[key]:
                         assignments.append(f"{key} = ?")
                         params.append(values[key])
-                if not assignments:
+                        changed_names.append(key)
+                if not values:
                     raise ValueError("At least one User Type field is required")
-                params.append(resolved_id)
-                cursor.execute(
-                    f"UPDATE user_types SET {', '.join(assignments)} WHERE id = ?",
-                    params,
-                )
+                if assignments:
+                    params.append(resolved_id)
+                    cursor.execute(
+                        f"UPDATE user_types SET {', '.join(assignments)} WHERE id = ?",
+                        params,
+                    )
             elif operation == "delete":
                 cursor.execute("DELETE FROM user_types WHERE id = ?", (resolved_id,))
+                changed_names = ["deleted"]
             else:
                 raise ValueError("Unsupported User Type operation")
 
@@ -2339,6 +2381,14 @@ def manage_user_type_with_audit(
         else:
             cursor.execute("SELECT * FROM user_types WHERE id = ?", (resolved_id,))
             new_record = dict(cursor.fetchone())
+
+        if operation == "update" and not changed_names:
+            return {
+                "user_type": new_record,
+                "deleted_user_type_id": None,
+                "changed_names": [],
+                "affected_areas": [],
+            }
 
         _insert_config_audit_log(
             cursor,
@@ -2350,7 +2400,6 @@ def manage_user_type_with_audit(
             action_source=action_source,
             conversation_id=conversation_id,
         )
-        changed_names = ["deleted"] if operation == "delete" else sorted(values)
         affected_areas = (
             [
                 "user_types",
@@ -2374,6 +2423,7 @@ def manage_user_type_with_audit(
         return {
             "user_type": new_record,
             "deleted_user_type_id": resolved_id if operation == "delete" else None,
+            "changed_names": changed_names,
             "affected_areas": affected_areas,
         }
 
@@ -2586,6 +2636,7 @@ def manage_onboarding_question_with_audit(
 ) -> dict:
     """Atomically create, update, or delete an Onboarding Question definition."""
     with get_write_cursor() as cursor:
+        changed_names: list[str]
         if operation == "create":
             cursor.execute(
                 """
@@ -2608,6 +2659,7 @@ def manage_onboarding_question_with_audit(
             )
             resolved_id = int(cursor.lastrowid)
             old_record = None
+            changed_names = sorted(values)
         else:
             if question_id is None:
                 raise ValueError("question_id is required")
@@ -2621,6 +2673,7 @@ def manage_onboarding_question_with_audit(
             if operation == "update":
                 assignments = []
                 params: list[object] = []
+                changed_names = []
                 for key in (
                     "field_name",
                     "field_type",
@@ -2634,22 +2687,37 @@ def manage_onboarding_question_with_audit(
                 ):
                     if key not in values:
                         continue
-                    assignments.append(f"{key} = ?")
                     value = values[key]
                     if key in {"required", "encryption_enabled", "include_in_chat"}:
                         value = int(bool(value))
                     elif key == "options":
+                        if old_record.get(key) == value:
+                            continue
                         value = json.dumps(value) if value is not None else None
+                    if key != "options" and old_record.get(key) == value:
+                        continue
+                    assignments.append(f"{key} = ?")
                     params.append(value)
-                if not assignments:
+                    changed_names.append(key)
+                if not values:
                     raise ValueError("At least one Onboarding Question field is required")
-                params.append(resolved_id)
-                cursor.execute(
-                    f"UPDATE user_field_definitions SET {', '.join(assignments)} WHERE id = ?",
-                    params,
-                )
+                if assignments:
+                    params.append(resolved_id)
+                    cursor.execute(
+                        f"UPDATE user_field_definitions SET {', '.join(assignments)} WHERE id = ?",
+                        params,
+                    )
             elif operation == "delete":
+                cursor.execute(
+                    "SELECT 1 FROM user_field_values WHERE field_id = ? LIMIT 1",
+                    (resolved_id,),
+                )
+                if cursor.fetchone():
+                    raise ValueError(
+                        "Onboarding Question has saved user answers and cannot be deleted"
+                    )
                 cursor.execute("DELETE FROM user_field_definitions WHERE id = ?", (resolved_id,))
+                changed_names = ["deleted"]
             else:
                 raise ValueError("Unsupported Onboarding Question operation")
 
@@ -2658,6 +2726,14 @@ def manage_onboarding_question_with_audit(
         else:
             cursor.execute("SELECT * FROM user_field_definitions WHERE id = ?", (resolved_id,))
             new_record = _parse_field_definition_row(cursor.fetchone())
+
+        if operation == "update" and not changed_names:
+            return {
+                "onboarding_question": new_record,
+                "deleted_question_id": None,
+                "changed_names": [],
+                "affected_areas": [],
+            }
 
         _insert_config_audit_log(
             cursor,
@@ -2669,12 +2745,12 @@ def manage_onboarding_question_with_audit(
             action_source=action_source,
             conversation_id=conversation_id,
         )
-        changed_names = ["deleted"] if operation == "delete" else sorted(values)
+        affected_areas = ["onboarding_questions"]
         _insert_admin_config_tool_audit(
             cursor,
             tool_name="manage_onboarding_questions",
             changed_names=changed_names,
-            affected_areas=["onboarding_questions"],
+            affected_areas=affected_areas,
             changed_by=changed_by,
             action_source=action_source,
             conversation_id=conversation_id,
@@ -2683,6 +2759,8 @@ def manage_onboarding_question_with_audit(
         return {
             "onboarding_question": new_record,
             "deleted_question_id": resolved_id if operation == "delete" else None,
+            "changed_names": changed_names,
+            "affected_areas": affected_areas,
         }
 
 
@@ -3800,12 +3878,12 @@ def update_agent_settings_with_audit(
     with get_write_cursor() as cursor:
         for key in sorted(updates):
             value = updates[key]
+            cursor.execute("SELECT value FROM ai_config WHERE key = ?", (key,))
+            global_row = cursor.fetchone()
+            if not global_row:
+                raise LookupError(f"Unknown Agent Setting: {key}")
             if user_type_id is None:
-                cursor.execute("SELECT value FROM ai_config WHERE key = ?", (key,))
-                row = cursor.fetchone()
-                if not row:
-                    raise LookupError(f"Unknown Agent Setting: {key}")
-                old_value = row["value"]
+                old_value = global_row["value"]
                 cursor.execute(
                     "UPDATE ai_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
                     (value, key),
@@ -5064,7 +5142,7 @@ def compact_config_audit_log_before(cutoff_iso: str, *, changed_by: str) -> dict
         cursor.execute(
             """
             SELECT id, table_name, config_key, old_value, new_value, changed_by,
-                   action_source, conversation_id, changed_at
+                   action_source, conversation_id, changed_at, hash_format
             FROM config_audit_log
             ORDER BY id
             """
@@ -5082,6 +5160,7 @@ def compact_config_audit_log_before(cutoff_iso: str, *, changed_by: str) -> dict
                 changed_at=row["changed_at"] or "",
                 action_source=row["action_source"] or "unknown",
                 conversation_id=row["conversation_id"],
+                hash_format=row["hash_format"] or AUDIT_HASH_FORMAT_PIPE_V1,
             )
             entry_hash = _compute_audit_entry_hash(payload)
             cursor.execute(
@@ -5123,7 +5202,8 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
     with get_cursor() as cursor:
         cursor.execute("""
             SELECT id, table_name, config_key, old_value, new_value, changed_by,
-                   action_source, conversation_id, changed_at, prev_hash, entry_hash
+                   action_source, conversation_id, changed_at, hash_format,
+                   prev_hash, entry_hash
             FROM config_audit_log
             ORDER BY id
         """)
@@ -5147,6 +5227,7 @@ def verify_config_audit_log_chain(table_name: str | None = None) -> dict:
             changed_at=changed_at,
             action_source=row["action_source"] or "unknown",
             conversation_id=row["conversation_id"],
+            hash_format=row["hash_format"] or AUDIT_HASH_FORMAT_PIPE_V1,
         )
         expected_entry_hash = _compute_audit_entry_hash(payload)
 

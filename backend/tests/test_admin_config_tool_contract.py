@@ -687,8 +687,27 @@ class AdminConfigToolContractTest(unittest.TestCase):
                 action_source="sage_conversation",
                 conversation_id="conversation-unknown-agent-setting",
             )
+        user_type_id = self.database.create_user_type("Unknown Setting Scope")
+        with self.assertRaisesRegex(LookupError, "Unknown Agent Setting"):
+            self.database.update_agent_settings_with_audit(
+                {"not_a_real_setting": "value"},
+                revert_keys=[],
+                user_type_id=user_type_id,
+                changed_by="abc123",
+                action_source="sage_conversation",
+                conversation_id="conversation-unknown-agent-setting",
+            )
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM ai_config_user_type_overrides WHERE ai_config_key = ?",
+                ("not_a_real_setting",),
+            )
+            self.assertIsNone(cursor.fetchone())
         self.assertFalse(any(
-            entry.get("conversation_id") == "conversation-invalid-agent-write"
+            entry.get("conversation_id") in {
+                "conversation-invalid-agent-write",
+                "conversation-unknown-agent-setting",
+            }
             for entry in self.database.get_config_audit_log(limit=None)
         ))
 
@@ -862,6 +881,36 @@ class AdminConfigToolContractTest(unittest.TestCase):
         )
         self.assertEqual(null_name.status_code, 422)
 
+    def test_manage_user_types_skips_no_op_update_audit_and_refresh(self) -> None:
+        user_type_id = self.database.create_user_type(
+            "Families",
+            "Family support",
+            icon="Heart",
+            display_order=2,
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-user-types",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-user-type-no-op",
+                "operation": "update",
+                "user_type_id": user_type_id,
+                "name": "Families",
+                "description": "Family support",
+                "icon": "Heart",
+                "display_order": 2,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["data"]["changed_names"], [])
+        self.assertEqual(response.json()["data"]["affected_areas"], [])
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-user-type-no-op"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
     def test_manage_onboarding_questions_supports_full_lifecycle(self) -> None:
         user_type_id = self.database.create_user_type("Families")
         create = self.client.post(
@@ -931,6 +980,78 @@ class AdminConfigToolContractTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 422)
         self.assertIsNone(self.database.get_field_definition_by_name("private_case_note"))
+
+    def test_manage_onboarding_questions_skips_no_op_update(self) -> None:
+        question_id = self.database.create_field_definition(
+            "preferred_language",
+            "select",
+            required=True,
+            display_order=3,
+            options=["English", "Spanish"],
+            encryption_enabled=False,
+            include_in_chat=True,
+        )
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-no-op",
+                "operation": "update",
+                "question_id": question_id,
+                "required": True,
+                "display_order": 3,
+                "options": ["English", "Spanish"],
+                "encryption_enabled": False,
+                "include_in_chat": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["data"]["changed_names"], [])
+        self.assertEqual(response.json()["data"]["affected_areas"], [])
+        self.assertFalse(any(
+            entry.get("conversation_id") == "conversation-question-no-op"
+            for entry in self.database.get_config_audit_log(limit=None)
+        ))
+
+    def test_manage_onboarding_questions_preserves_saved_answers_on_delete(self) -> None:
+        question_id = self.database.create_field_definition(
+            "case_note",
+            "text",
+            encryption_enabled=False,
+        )
+        with self.database.get_write_cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (pubkey, approved) VALUES (?, ?)",
+                ("saved-answer-user", 1),
+            )
+            user_id = int(cursor.lastrowid)
+            cursor.execute(
+                "INSERT INTO user_field_values (user_id, field_id, value) VALUES (?, ?, ?)",
+                (user_id, question_id, "Keep this answer"),
+            )
+
+        response = self.client.post(
+            "/internal/agent/admin-config/manage-onboarding-questions",
+            headers=self.headers,
+            json={
+                "actor": self.admin_actor,
+                "conversation_id": "conversation-question-delete-with-answer",
+                "operation": "delete",
+                "question_id": question_id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertIn("saved user answers", response.json()["detail"])
+        self.assertIsNotNone(self.database.get_field_definition_by_id(question_id))
+        with self.database.get_cursor() as cursor:
+            cursor.execute(
+                "SELECT value FROM user_field_values WHERE user_id = ? AND field_id = ?",
+                (user_id, question_id),
+            )
+            self.assertEqual(cursor.fetchone()["value"], "Keep this answer")
 
     def test_read_document_access_returns_global_and_user_type_effective_state(self) -> None:
         user_type_id = self.database.create_user_type(

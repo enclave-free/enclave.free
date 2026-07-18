@@ -1164,16 +1164,23 @@ export function ChatPage() {
               } else if (event === 'answer_delta' && streamMessageId) {
                 const delta = typeof data.delta === 'string' ? data.delta : '';
                 streamContent += delta;
-                dispatchConversation({
-                  type: 'assistantContentReplaced',
-                  assistantTurnId: streamMessageId,
-                  content: shareSecrets
-                    ? redactSecrets(streamContent, secretsForThisRequest)
-                    : streamContent,
-                });
+                if (!shareSecrets) {
+                  dispatchConversation({
+                    type: 'assistantContentReplaced',
+                    assistantTurnId: streamMessageId,
+                    content: streamContent,
+                  });
+                }
               } else if (event === 'done') {
                 if (typeof data.session_id === 'string')
                   streamSessionId = data.session_id;
+                if (streamMessageId && shareSecrets) {
+                  dispatchConversation({
+                    type: 'assistantContentReplaced',
+                    assistantTurnId: streamMessageId,
+                    content: redactSecrets(streamContent, secretsForThisRequest),
+                  });
+                }
                 dispatchStreamEvent(event, data, streamMessageId);
               } else if (event === 'error') {
                 streamReportedError = true;
@@ -1238,6 +1245,9 @@ export function ChatPage() {
               message: errorMessage,
             });
             dispatchConversation({ type: 'requestErrorDismissed' });
+          }
+          if (hasConfigTool) {
+            throw streamError;
           }
           console.warn(
             'Streaming chat failed; falling back to non-streaming chat:',

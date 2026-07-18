@@ -1529,7 +1529,6 @@ async def admin_config_manage_user_types(
         detail = "User Type name already exists" if "UNIQUE constraint" in str(exc) else str(exc)
         raise HTTPException(status_code=422, detail=detail) from exc
 
-    changed_names = sorted(values) if payload.operation != "delete" else ["deleted"]
     return InternalAdminConfigToolResponse(
         tool="manage_user_types",
         data={
@@ -1538,7 +1537,7 @@ async def admin_config_manage_user_types(
             "operation": payload.operation,
             "user_type": result["user_type"],
             "deleted_user_type_id": result["deleted_user_type_id"],
-            "changed_names": changed_names,
+            "changed_names": result["changed_names"],
             "affected_areas": result["affected_areas"],
         },
         generated_at=datetime.now(timezone.utc).isoformat(),
@@ -1619,7 +1618,6 @@ async def admin_config_manage_onboarding_questions(
         detail = "Question name already exists for this User Type" if "UNIQUE constraint" in str(exc) else str(exc)
         raise HTTPException(status_code=422, detail=detail) from exc
 
-    changed_names = sorted(values) if payload.operation != "delete" else ["deleted"]
     return InternalAdminConfigToolResponse(
         tool="manage_onboarding_questions",
         data={
@@ -1628,8 +1626,8 @@ async def admin_config_manage_onboarding_questions(
             "operation": payload.operation,
             "onboarding_question": result["onboarding_question"],
             "deleted_question_id": result["deleted_question_id"],
-            "changed_names": changed_names,
-            "affected_areas": ["onboarding_questions"],
+            "changed_names": result["changed_names"],
+            "affected_areas": result["affected_areas"],
         },
         generated_at=datetime.now(timezone.utc).isoformat(),
     )

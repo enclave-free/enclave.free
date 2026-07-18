@@ -388,6 +388,12 @@ function ReasoningDisclosure({
   const label = isLive
     ? t('chat.trace.thinking', 'Thinking')
     : t('chat.trace.reasoning', 'Reasoning');
+  const toggleAction = isOpen
+    ? t('chat.trace.collapse', 'Collapse')
+    : t('chat.trace.expand', 'Expand');
+  const transcriptLabel = t('chat.trace.transcript', '{{label}} transcript', {
+    label,
+  });
 
   useEffect(() => {
     if (!isOpen || !transcriptRef.current) return;
@@ -413,7 +419,7 @@ function ReasoningDisclosure({
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
         aria-controls={transcriptId}
-        aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${label} transcript`}
+        aria-label={`${toggleAction} ${transcriptLabel}`}
         className="group flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left outline-none transition-[background-color,box-shadow,scale] duration-150 ease-out hover:bg-surface-overlay/60 focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-[0.96]"
       >
         <Sparkles

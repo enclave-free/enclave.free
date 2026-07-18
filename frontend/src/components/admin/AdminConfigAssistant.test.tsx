@@ -938,6 +938,29 @@ describe('AdminConfigAssistant', () => {
     expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
   });
 
+  it('does not replay a Config write turn after an ambiguous stream failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(sendLlmChatStreamWithUnifiedTools).mockRejectedValueOnce(
+      new Error('Stream transport failed')
+    );
+
+    render(
+      <ThemeProvider>
+        <AdminConfigAssistant />
+      </ThemeProvider>
+    );
+    await enableConfigTool(user);
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Ask about admin configuration...' }),
+      'Apply the confirmed description change.'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Stream transport failed')).toBeInTheDocument();
+    expect(sendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
+  });
+
   it('surfaces classified raw provider errors without falling back to non-streaming chat', async () => {
     const user = userEvent.setup();
     vi.mocked(sendLlmChatStreamWithUnifiedTools).mockImplementationOnce(

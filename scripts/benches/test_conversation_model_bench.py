@@ -11,7 +11,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import ModuleType
+from unittest.mock import Mock, patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -830,7 +831,10 @@ class ConnectionLostStreamResponse(IncompleteStreamResponse):
 class ConversationModelBenchTest(unittest.TestCase):
     def test_confirmation_recognition_rejects_unrelated_questions(self) -> None:
         self.assertFalse(asks_for_confirmation("Which setting did you mean?"))
+        self.assertFalse(asks_for_confirmation("I cannot confirm that."))
+        self.assertFalse(asks_for_confirmation("The change is confirmed."))
         self.assertTrue(asks_for_confirmation("Shall I apply that change now?"))
+        self.assertTrue(asks_for_confirmation("Please confirm the change."))
 
     def test_bench_docs_match_direct_write_runner_contract(self) -> None:
         docs = (REPO_ROOT / "docs" / "conversation-model-bench.md").read_text(
@@ -1014,9 +1018,34 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertIn('changed_by=""', seed_source)
         self.assertNotIn('changed_by="conversation-model-bench"', seed_source)
 
-        cleanup_source = inspect.getsource(LocalComposeEnvironment.cleanup_scenario)
-        self.assertIn("current == target", cleanup_source)
-        self.assertIn("refusing to overwrite", cleanup_source)
+    def test_cleanup_refuses_to_overwrite_a_concurrent_admin_change(self) -> None:
+        environment = LocalComposeEnvironment()
+        environment._scenario_admin_config_fixture = {
+            "original": "Original description",
+            "target": "Benchmark description",
+            "admin_changed_by": "bench-admin-pubkey",
+        }
+        updates: list[dict[str, str]] = []
+        fake_database = ModuleType("database")
+        fake_database.init_schema = Mock()
+        fake_database.get_setting = Mock(return_value="Concurrent admin description")
+        fake_database.update_settings_with_audit = Mock(
+            side_effect=lambda values, **_kwargs: updates.append(values)
+        )
+
+        def execute_backend_script(script: str, *, timeout: float) -> str:
+            self.assertEqual(timeout, 30)
+            with patch.dict(sys.modules, {"database": fake_database}):
+                exec(script, {})
+            return ""
+
+        environment.run_backend_python = Mock(side_effect=execute_backend_script)
+
+        with self.assertRaisesRegex(RuntimeError, "refusing to overwrite"):
+            environment.cleanup_scenario()
+
+        self.assertEqual(updates, [])
+        fake_database.update_settings_with_audit.assert_not_called()
 
     def test_sage_cleanup_removes_temporary_identity_conversation_and_agent_state(self) -> None:
         with patch(

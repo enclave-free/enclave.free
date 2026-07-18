@@ -534,6 +534,9 @@ export function AdminConfigAssistant({
             }
             return;
           }
+          if (selectedTools.includes(CONFIG_TOOL_ID)) {
+            throw streamError;
+          }
           console.warn(
             'Streaming admin assistant failed; falling back to non-streaming chat:',
             streamError

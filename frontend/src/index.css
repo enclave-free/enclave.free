@@ -539,10 +539,10 @@ input:focus-visible {
   background-clip: text;
   -webkit-background-clip: text;
   text-shadow: 0 0 16px color-mix(in srgb, var(--color-accent) 24%, transparent);
-  animation: reasoningTextGlow 2.8s ease-in-out infinite;
+  animation: reasoning-text-glow 2.8s ease-in-out infinite;
 }
 
-@keyframes reasoningTextGlow {
+@keyframes reasoning-text-glow {
   0%, 100% {
     background-position: 100% 50%;
     opacity: 0.68;

@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import ModuleType
 
 
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
@@ -31,7 +32,7 @@ class ConfigAuditProvenanceTest(unittest.TestCase):
             os.environ["SQLITE_PATH"] = self.original_sqlite_path
         self.tmp.cleanup()
 
-    def _reload_database(self):
+    def _reload_database(self) -> ModuleType:
         import database
 
         if database._connection is not None:
@@ -103,7 +104,54 @@ class ConfigAuditProvenanceTest(unittest.TestCase):
         entry = database.get_config_audit_log(limit=1)[0]
         self.assertEqual(entry["action_source"], "unknown")
         self.assertIsNone(entry["conversation_id"])
+        self.assertEqual(entry["hash_format"], database.AUDIT_HASH_FORMAT_PIPE_V1)
+
+        database.log_config_audit_event(
+            table_name="instance_settings",
+            config_key="assistant_name",
+            old_value="Old",
+            new_value="New",
+            changed_by="admin-pubkey",
+        )
+        newest = database.get_config_audit_log(limit=1)[0]
+        self.assertEqual(newest["hash_format"], database.AUDIT_HASH_FORMAT_JSON_V2)
         self.assertTrue(database.verify_config_audit_log_chain()["valid"])
+
+    def test_canonical_hash_payload_preserves_field_boundaries(self) -> None:
+        database = self._reload_database()
+        common = {
+            "prev_hash": "previous",
+            "table_name": "instance_settings",
+            "config_key": "description",
+            "changed_by": "admin-pubkey",
+            "changed_at": "2026-07-18T00:00:00",
+        }
+
+        legacy_left = database._audit_hash_payload(
+            **common,
+            old_value="left|middle",
+            new_value="right",
+            hash_format=database.AUDIT_HASH_FORMAT_PIPE_V1,
+        )
+        legacy_right = database._audit_hash_payload(
+            **common,
+            old_value="left",
+            new_value="middle|right",
+            hash_format=database.AUDIT_HASH_FORMAT_PIPE_V1,
+        )
+        canonical_left = database._audit_hash_payload(
+            **common,
+            old_value="left|middle",
+            new_value="right",
+        )
+        canonical_right = database._audit_hash_payload(
+            **common,
+            old_value="left",
+            new_value="middle|right",
+        )
+
+        self.assertEqual(legacy_left, legacy_right)
+        self.assertNotEqual(canonical_left, canonical_right)
 
     def test_tool_outcome_preserves_absent_conversation_as_null(self) -> None:
         database = self._reload_database()
