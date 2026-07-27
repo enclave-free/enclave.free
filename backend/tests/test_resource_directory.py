@@ -337,13 +337,53 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertIsNone(body["next_offset"])
         self.assertEqual([r["resource_id"] for r in body["resources"]], ["page-two"])
 
+    def test_internal_resource_search_matches_normalized_ids_contacts_and_partial_text(self) -> None:
+        self.database.create_resource(
+            resource_id="precise-resource",
+            name="Precise Resource",
+            resource_type="ngo",
+            description="Specialized legal intake desk.",
+            contact={
+                "email": "Help@Precise.example",
+                "phone": "+1 (555) 010-2000",
+                "url": "https://precise.example/contact",
+                "secure_channel": "Signal: precise-help",
+                "address": "200 Main Street",
+            },
+            scope_level="global",
+            help_types=["legal"],
+            verified_at="2026-01-01T00:00:00Z",
+        )
+        for query in (
+            "PRECISE-RESOURCE",
+            "precise resource",
+            "+1 555 010 2000",
+            "HTTPS://PRECISE.EXAMPLE/CONTACT",
+            "signal: precise-help",
+            "200 main street",
+            "specialized legal",
+        ):
+            response = self.client.post(
+                "/internal/agent/resources/search",
+                headers=self.headers,
+                json={"query": query, "help_type": "legal", "limit": 5},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual([r["resource_id"] for r in response.json()["resources"]], ["precise-resource"])
+
     def test_internal_resource_search_trims_help_type_and_bounds_limit(self) -> None:
         original = self.database.search_resources
         captured: dict[str, object] = {}
 
         def fake_search_resources(**kwargs):
             captured.update(kwargs)
-            return []
+            return {
+                "resources": [],
+                "total_count": 0,
+                "returned_count": 0,
+                "has_more": False,
+                "next_offset": None,
+            }
 
         self.database.search_resources = fake_search_resources
         try:

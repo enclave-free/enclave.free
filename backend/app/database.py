@@ -5707,21 +5707,24 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
     query_text = text(query)
     query_compact = compact(query)
     query_digits = "".join(ch for ch in str(query or "") if ch.isdigit())
-    exact_values = [resource.get("resource_id"), resource.get("name")]
     contact = resource.get("contact") or {}
-    exact_values.extend(contact.get(key) for key in ("email", "phone", "url", "secure_channel", "address"))
-    for value in exact_values:
-        if text(value) == query_text or (query_digits and "".join(ch for ch in str(value or "") if ch.isdigit()) == query_digits):
+    exact_fields = [("resource_id", resource.get("resource_id")), ("name", resource.get("name"))]
+    exact_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
+    for field, value in exact_fields:
+        if text(value) == query_text:
             return 0
-        if query_compact and compact(value) == query_compact:
+        if field == "name" and query_compact and compact(value) == query_compact:
+            return 0
+        if field == "phone" and query_digits and "".join(ch for ch in str(value or "") if ch.isdigit()) == query_digits:
             return 0
 
-    partial_values = [resource.get("resource_id"), resource.get("name")]
-    partial_values.extend(contact.get(key) for key in ("email", "phone", "url", "secure_channel", "address"))
-    for value in partial_values:
+    partial_fields = [("name", resource.get("name"))]
+    partial_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
+    for field, value in partial_fields:
         value_text = text(value)
-        value_compact = compact(value)
-        if query_text in value_text or (query_compact and query_compact in value_compact):
+        if query_text in value_text:
+            return 1
+        if field == "name" and query_compact and query_compact in compact(value):
             return 1
 
     if query_text in text(resource.get("description")):

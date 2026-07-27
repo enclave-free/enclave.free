@@ -956,16 +956,7 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
         query=payload.query,
         return_metadata=True,
     )
-    if isinstance(resources, list):
-        page = {
-            "resources": resources,
-            "total_count": len(resources),
-            "returned_count": len(resources),
-            "has_more": False,
-            "next_offset": None,
-        }
-    else:
-        page = resources
+    page = resources
     return InternalResourceSearchResponse(
         resources=page["resources"],
         query=normalized_query,
