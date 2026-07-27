@@ -3,8 +3,8 @@
 - Issue: #534 — Find precise Curated Resources with honest bounded results
 - Fixed point before session: `133ca477e17d19ce8637a043fdec147f1a200a7e`
 - Worker session: `/root/ticket_534`
-- Commit: parent `5bcb1b94209470ddf0d6a33b21f5833889b0f169`; review fixes pending commit
-- Status: implementation complete; review fixes applied
+- Commit: parent `698a021192acdf9f1aa4855292034989e2e6b55e`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa`; ledger closeout `d37097f00db833ff15a00bd27f8ff1ca2e544c45`
+- Status: complete; review findings fixed and verification green
 
 ## Inputs
 
@@ -24,7 +24,9 @@
   - `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib web_runtime::tests`
   - `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo check -p sage-core --bin enclave_web`
   - `cargo fmt --all -- --check`
-- Full suite command: `/Users/plebdev/Desktop/Projects/enclave-free/enclave.free/.venv/bin/python -m unittest discover -s backend/tests -p 'test_*.py'` (423 tests, OK)
+- Full suite commands:
+  - `/Users/plebdev/Desktop/Projects/enclave-free/enclave.free/.venv/bin/python -m unittest discover -s backend/tests -p 'test_*.py'` (423 tests, OK)
+  - `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib` (118 tests, OK)
 
 ## Review
 
@@ -36,5 +38,4 @@
 
 ## Risks
 
-- Search ranking is implemented over existing structured SQLite rows and contact JSON; no semantic/vector index was introduced.
-- Full parent backend suite remains to be attempted after review.
+- No ticket-blocking risk remains. A typed page-metadata value object and query-candidate extraction remain optional structural cleanup outside #534; current behavior is covered through the accepted private contract seams.
