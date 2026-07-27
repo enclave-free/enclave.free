@@ -9,7 +9,7 @@
 - Feature branch: `feature/resource-contact-latency`
 - Human owner: plebdev
 - Started: 2026-07-27
-- Current status: Awaiting approval of tracer-bullet ticket granularity and blocking edges
+- Current status: Blocked at the mandatory human approval gate for tracer-bullet ticket granularity and blocking edges
 - Skill setup status: Complete; GitHub issue tracking, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -116,4 +116,9 @@ scope.
 
 ## Escalations
 
-- None.
+- The `plebdev-feature-dev` loop requires explicit human approval of ticket
+  granularity and blocking edges before publication. The proposed graph was
+  presented twice and remained unanswered across three consecutive goal turns.
+  Resume by replying **approve as written**, **use fewer tickets**, or **use more
+  tickets**. No implementation issue has been published and no feature code has
+  been changed while this gate is unresolved.
