@@ -270,6 +270,73 @@ class ResourceDirectoryTest(unittest.TestCase):
             ["ready-inventory"],
         )
 
+    def test_internal_resource_search_supports_precise_query_and_bounded_metadata(self) -> None:
+        self.database.create_resource(
+            resource_id="alpha-legal",
+            name="Alpha Legal Network",
+            resource_type="ngo",
+            description="Immigration and asylum support.",
+            contact={"email": "help@alpha.example", "phone": "+1 (555) 0100"},
+            scope_level="global",
+            help_types=["legal"],
+            verified_at="2026-01-01T00:00:00Z",
+        )
+        self.database.create_resource(
+            resource_id="beta-legal",
+            name="Beta Legal Network",
+            resource_type="ngo",
+            description="General legal support.",
+            contact={"email": "contact@beta.example"},
+            scope_level="global",
+            help_types=["legal"],
+            verified_at="2026-01-01T00:00:00Z",
+        )
+
+        response = self.client.post(
+            "/internal/agent/resources/search",
+            headers=self.headers,
+            json={"query": "HELP@ALPHA.EXAMPLE", "help_type": "legal", "limit": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["query"], "help@alpha.example")
+        self.assertEqual(body["total_count"], 1)
+        self.assertEqual(body["returned_count"], 1)
+        self.assertEqual(body["limit"], 1)
+        self.assertEqual(body["offset"], 0)
+        self.assertFalse(body["has_more"])
+        self.assertIsNone(body["next_offset"])
+        self.assertEqual([r["resource_id"] for r in body["resources"]], ["alpha-legal"])
+
+    def test_internal_resource_search_reports_partial_page_and_excludes_archived_from_total(self) -> None:
+        for resource_id, archived in (("page-one", False), ("page-two", False), ("page-archived", True)):
+            self.database.create_resource(
+                resource_id=resource_id,
+                name=resource_id.replace("-", " ").title(),
+                resource_type="ngo",
+                contact={"url": f"https://{resource_id}.example"},
+                scope_level="global",
+                help_types=["legal"],
+                verified_at="2026-01-01T00:00:00Z",
+                archived=archived,
+            )
+
+        response = self.client.post(
+            "/internal/agent/resources/search",
+            headers=self.headers,
+            json={"help_type": "legal", "limit": 1, "offset": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["total_count"], 2)
+        self.assertEqual(body["returned_count"], 1)
+        self.assertEqual(body["offset"], 1)
+        self.assertTrue(body["has_more"] is False)
+        self.assertIsNone(body["next_offset"])
+        self.assertEqual([r["resource_id"] for r in body["resources"]], ["page-two"])
+
     def test_internal_resource_search_trims_help_type_and_bounds_limit(self) -> None:
         original = self.database.search_resources
         captured: dict[str, object] = {}
