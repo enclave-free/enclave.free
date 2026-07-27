@@ -37,7 +37,7 @@ timeouts and retries for read-only Curated Resources and Knowledge Search calls.
 
 - Install: `python3 -m pip install -r backend/requirements.txt`; `cd runtime/sage && cargo fetch`; `cd frontend && npm ci`
 - Typecheck: `cd runtime/sage && cargo check -p sage-core --bin enclave_web`; `cd frontend && npm run build`
-- Test: `python3 -m unittest discover -s backend/tests -p 'test_*.py'`; `cd runtime/sage && LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib`; `cd frontend && npm test`
+- Test: `/Users/plebdev/Desktop/Projects/enclave-free/enclave.free/.venv/bin/python -m unittest discover -s backend/tests -p 'test_*.py'`; `cd runtime/sage && LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib`; `cd frontend && npm test`
 - Build: `cd frontend && npm run build`; Compose build/smoke only when integration verification requires it
 - Visual verification: focused Conversation Activity component tests followed by local browser inspection of Activity rows when the stack is available
 
@@ -73,6 +73,19 @@ existing local test seams and already-authorized development tooling. Production
 deployment, live customer data, WLC-specific ranking, missing Bitcoin content,
 provider failover, and controlled degraded-cluster experiments remain out of
 scope.
+
+## Pre-Change Baseline
+
+- Parent fixed point after PRD and run-ledger commits: `97e5b16`.
+- Sage fixed point and feature-branch base: `a33e590` on
+  `feature/resource-contact-latency`.
+- Backend Resource Directory: 17 tests passed with the repository's existing
+  Python 3.12 virtual environment. The macOS `/usr/bin/python3` is Python 3.9 and
+  cannot evaluate the application's modern type annotations, so it is not a
+  valid test interpreter for this run.
+- Sage Agent Runtime: 79 `web_runtime::tests` passed.
+- Conversation UI Surface: 71 focused ChatMessage, stream-adapter, ChatPage, and
+  LLM transport tests passed.
 
 ## Ticket Ledger
 
