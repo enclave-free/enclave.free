@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.4 - 2026-07-28
+
+- Re-ran Curated Resources for contact follow-ups and added exact or hybrid matching for organization names, emails, phone numbers, websites, addresses, and secure channels.
+- Added bounded result counts, continuation metadata, truncation warnings, and scoped completeness wording so partial Resource Directory pages are not presented as exhaustive.
+- Added content-free Tool-selection and omission observations, attributable Conversation timing, and bounded timeout/retry behavior for read-only Resource and Knowledge lookups.
+- Hardened final-answer Tool-transcript quarantine and added customer-prompt replay coverage across the four demo personas, including Spanish contact follow-up and inventory continuation.
+- Patched available frontend dependency advisories and kept the remaining React Router RSC-only advisory as one exact, tracked, fail-closed security exception.
+
 ## 0.4.3 - 2026-07-18
 
 - Prevented runaway search/process narration and provider-token-limit truncation from being accepted or persisted as successful final answers.
