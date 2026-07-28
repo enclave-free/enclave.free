@@ -110,7 +110,7 @@ scope.
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #534 | `133ca477e17d19ce8637a043fdec147f1a200a7e` / `a33e5903f775e5da627eac4269371622a2f1bf99` | `/root/ticket_534` | parent `698a021192acdf9f1aa4855292034989e2e6b55e`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa` (prior Sage slice `9964e31498300752289fec6b3ea0c9f37cdcceca`) | Standards/spec hard findings fixed; baseline smells retained as out-of-scope cleanup | backend 20 targeted / 423 full; Sage 118 full; Sage check; fmt check |
-| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535` | parent pointer/records pending; Sage `829c8df311dc6bc5da34250959b33e6d3d885ab3` | Standards/spec findings fixed at shared Conversation seam; duplicate policy wording retained as judgment call | Sage 122 full; Sage check; fmt check |
+| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535` | parent `6fa1da3bfe224f34869b68916a1a5e94e2ba0fed`; Sage `829c8df311dc6bc5da34250959b33e6d3d885ab3` | Standards/spec findings fixed at shared Conversation seam; duplicate policy wording retained as judgment call | Sage 122 full; Sage check; fmt check |
 
 ## Open Questions
 
