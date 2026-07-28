@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.8 - 2026-07-28
+
+- Quarantined capitalized `Tool:` and `Tool decision:` labels joined directly to a preceding sentence period, including same-line contact lookup arguments, before any answer text is exposed.
+- Preserved lowercase embedded identifiers such as `namespace.tool:build` and `devtool:build`, with exhaustive streamed split coverage for the customer-observed output shape.
+
 ## 0.4.7 - 2026-07-28
 
 - Prevented period-joined `Tool:` envelopes and lookup-only process narration from being released as final answers when the Tool phase had already completed.
