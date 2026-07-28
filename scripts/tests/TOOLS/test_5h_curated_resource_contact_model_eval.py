@@ -348,6 +348,7 @@ def score_inventory_turn(
 
     no_more_claim = has(
         r"\bno\s+(?:more|additional)\s+(?:matching\s+)?(?:results?|resources?)\b",
+        r"\bno\s+additional\s+pages?\b",
         r"\bno\s+remaining\s+(?:matching\s+)?(?:results?|resources?)\b",
         r"\bno\s+quedan\b",
         r"\bno\s+hay\s+m[aá]s\s+(?:resultados?|recursos?)\b",
@@ -376,7 +377,7 @@ def score_inventory_turn(
         r"\bnot\s+all\b",
         r"\bnot\s+(?:a\s+)?complete\b",
         r"\bmay\s+not\s+be\s+(?:all|complete)\b",
-        r"\b(?:cannot|can\s+not|can['’]t|unable\s+to)\s+(?:confirm|verify)[^.]{0,80}\b(?:no\s+more|all|complete)\b",
+        r"\b(?:cannot|can\s+not|can['’]t|unable\s+to)\s+(?:confirm|verify)[^.]{0,80}\b(?:no\s+more|no\s+additional\s+pages?|all|complete)\b",
         r"\bno\s+puedo\s+(?:confirmar|verificar)[^.]{0,80}\b(?:no\s+hay\s+m[aá]s|tod[oa]s|complet[oa])\b",
         r"\bno\s+son\s+tod[oa]s\b",
     )
