@@ -2,9 +2,9 @@
 
 - Issue: #535 — Ground contact follow-ups in a fresh Curated Resources call
 - Fixed point before session: parent `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa`
-- Worker session: `/root/ticket_535`
-- Commit: Sage `829c8df311dc6bc5da34250959b33e6d3d885ab3`; parent `6fa1da3bfe224f34869b68916a1a5e94e2ba0fed` (pointer/records)
-- Status: complete; review findings resolved at the accepted shared orchestration seam
+- Worker session: `/root/ticket_535_model_eval`
+- Commit: Sage `6a7cde839e55d283fa02a033e90fe8f708f34d7b`; parent eval `2e3db4ac53aae31f36350b72957c80a5ee46c7b4`; parent pointer/records are the closeout commit for this ticket
+- Status: complete; fresh standards/spec review findings resolved
 
 ## Inputs
 
@@ -16,7 +16,7 @@
 
 ## Implementation
 
-- Public interface used: Sage's shared `run_turn_with_adapters` Conversation orchestration seam directly beneath `/llm/chat` and `/llm/chat/stream`; `find_resources` Tool contract
+- Public interface used: Sage's real `SageAgent`/`run_agent_turn` Conversation seam with the real `FindResourcesTool`, local OpenAI-compatible provider boundary, and local Resource Directory stub; the durable Compose eval exercises `/llm/chat` and `/llm/chat/stream`
 - Behaviors covered: typed fresh contact lookup decision with organization/jurisdiction/language/help-type context; fresh-result-only final contact grounding against deliberately stale prose; honest no-match wording; disabled Curated Resources authorization boundary; batch/stream answer parity; English and Spanish contact cues
 - `tdd` used: yes — a red runtime-profile contract test was added before the policy implementation, then greened in one vertical slice
 - Commands run during implementation:
@@ -24,16 +24,16 @@
   - `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib`
   - `cargo check -p sage-core --bin enclave_web`
   - `cargo fmt --all -- --check`
-- Full suite command: Sage full library suite above (122 tests, passing). Parent Python/frontend suites were not rerun because this slice changes only Sage prompt/Tool contract text and its Sage tests.
+- Full suite command: `cargo test -p sage-core --lib` (121 tests, passing); `cargo check -p sage-core --bin enclave_web`; `cargo fmt --all -- --check`; `git -C runtime/sage diff --check`. Eval asset checks: `python3 -m unittest scripts/tests/test_curated_resource_contact_model_eval.py` (5/5), `python3 -m py_compile scripts/tests/TOOLS/test_5h_curated_resource_contact_model_eval.py`, and `--help`. The model-backed Compose run is implemented and scheduled for #539 on the completed local stack.
 
 ## Review
 
-- Review fixed point: Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa`; parent `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0`
-- Standards findings: behavioral eval concern resolved with four shared-seam tests; the fresh policy is repeated in the Tool description and runtime instruction as deliberate model-visible contract reinforcement (judgment-call duplication retained)
-- Spec findings: route-level test request superseded by the agreed seam: `run_turn_with_adapters` is the shared orchestration directly beneath `/llm/chat` and `/llm/chat/stream`; tests now validate follow-up input/context, typed selection, fresh grounding, empty results, disabled authorization, and stream/batch parity
-- Worthy fixes applied: added behavior tests through the shared Conversation orchestration seam and made the planner fake validate the actual follow-up/context input before selecting `find_resources`
-- Findings ignored with reasons: direct HTTP handler instantiation would require unavailable Postgres/provider state and would duplicate the accepted shared seam; no production or external state was authorized
+- Review fixed point: Sage `6a7cde839e55d283fa02a033e90fe8f708f34d7b`; parent eval `2e3db4ac53aae31f36350b72957c80a5ee46c7b4`
+- Standards status: pass after fresh review; shared Tool-description/runtime wording is deliberate model-visible contract reinforcement.
+- Spec status: pass after fresh review; the real replay covers independent English/Spanish contexts, five modalities, stale→fresh grounding, empty/disabled boundaries, sender modes, and stream/batch deltas. The Compose asset covers the public routes and ephemeral fixture cleanup.
+- Worthy fixes applied: replaced the initial boundary-only evidence with a real Sage planner/parser/tool/final-answer replay; added a durable model-backed Compose eval with per-case stale resets, context-free followups, pre-registered session IDs, and verified cleanup.
+- Accepted boundary: the local replay provider is a deterministic boundary mock permitted by the issue; live provider quality and full-stack execution are tracked for #539 rather than claimed as run here.
 
 ## Risks
 
-- The policy guides model Tool planning; it does not add a deterministic classifier or force Tool execution. Tests use deterministic boundary fakes at the shared orchestration seam, so real-provider quality remains an operational concern rather than an untested product path.
+- The policy guides model Tool planning; it does not add a deterministic classifier or force Tool execution. The model-backed Compose eval is executable but requires the configured provider and completed local stack; it is scheduled for #539.

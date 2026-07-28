@@ -47,11 +47,11 @@ timeouts and retries for read-only Curated Resources and Knowledge Search calls.
    Deliver exact and hybrid organization/contact matching, offset continuation,
    total/page metadata, Resource Tool warnings, and completeness-safe final-answer
    instructions through the Resource Directory and Sage Tool contract.
-2. **Ground contact follow-ups in a fresh Curated Resources call** — blocked by 1.
+2. **Ground contact follow-ups in a fresh Curated Resources call** — complete; model-backed Compose execution is scheduled for #539.
    Deliver the model-planning and final-answer policy for email, phone, website,
    address, secure channel, and equivalent English/Spanish follow-ups while
    preserving the enabled Tool Set boundary.
-3. **Show why Curated Resources was selected or missed** — blocked by 2.
+3. **Show why Curated Resources was selected or missed** — ready/frontier after #535.
    Deliver content-free Tool Selection Observations from planning through Trace,
    Activity, and structured logs, including selected, attempted, terminal, and
    expected-but-missed states without exposing prompts or contact values.
@@ -93,8 +93,8 @@ scope.
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
 | #534 | AFK | Complete | Fixed in review | Yes | backend 20 tests; Sage 118 tests; Sage check; fmt check; parent backend 423 tests |
-| #535 | AFK | Complete | Fixed in review at shared Conversation seam | Yes | Sage 122 tests; check; fmt |
-| #536 | AFK | Blocked by #535 | Pending | Pending | No |
+| #535 | AFK | Complete | Fresh Sage replay + durable model-backed eval; fresh spec/standards pass | Yes | Sage 121 tests; check; fmt; eval 5/5 |
+| #536 | AFK | Ready/frontier | Ready after #535 closeout | Pending | No |
 | #537 | AFK | Blocked by #536 | Pending | Pending | No |
 | #538 | AFK | Blocked by #536 and #537 | Pending | Pending | No |
 | #539 | AFK | Blocked by #534–#538 | Pending | Pending | No |
@@ -110,7 +110,7 @@ scope.
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #534 | `133ca477e17d19ce8637a043fdec147f1a200a7e` / `a33e5903f775e5da627eac4269371622a2f1bf99` | `/root/ticket_534` | parent `698a021192acdf9f1aa4855292034989e2e6b55e`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa` (prior Sage slice `9964e31498300752289fec6b3ea0c9f37cdcceca`) | Standards/spec hard findings fixed; baseline smells retained as out-of-scope cleanup | backend 20 targeted / 423 full; Sage 118 full; Sage check; fmt check |
-| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535` | parent `6fa1da3bfe224f34869b68916a1a5e94e2ba0fed`; Sage `829c8df311dc6bc5da34250959b33e6d3d885ab3` | Standards/spec findings fixed at shared Conversation seam; duplicate policy wording retained as judgment call | Sage 122 full; Sage check; fmt check |
+| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535_model_eval` | Sage `6a7cde839e55d283fa02a033e90fe8f708f34d7b`; eval `2e3db4ac53aae31f36350b72957c80a5ee46c7b4`; parent pointer/records in this closeout | Fresh standards/spec pass; real two-turn Sage replay; model-backed Compose eval scheduled for #539 | Sage 121 full; Sage check; fmt; eval 5/5 + py_compile/help |
 
 ## Open Questions
 
