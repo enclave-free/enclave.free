@@ -9,7 +9,7 @@
 - Feature branch: `feature/resource-contact-latency`
 - Human owner: plebdev
 - Started: 2026-07-27
-- Current status: Tickets #534–#539 implementation, verification, and independent review complete; local CodeRabbit findings fixed, Sage refresh rate-limited; staging publication and PR review remain
+- Current status: Tickets #534–#539 complete; staging PRs open; full CodeRabbit PR reviews and required checks pending
 - Skill setup status: Complete; GitHub issue tracking, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -123,3 +123,9 @@ scope.
 ## Escalations
 
 - None.
+
+## Staging Pull Requests
+
+- Parent: [enclave-free/enclave.free#540](https://github.com/enclave-free/enclave.free/pull/540), `feature/resource-contact-latency` → `staging`.
+- Sage: [enclave-free/sage#29](https://github.com/enclave-free/sage/pull/29), `feature/resource-contact-latency` → `staging`.
+- Both are ready for review and have an explicit `@coderabbit full review` request.
