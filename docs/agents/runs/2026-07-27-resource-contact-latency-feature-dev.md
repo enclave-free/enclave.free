@@ -9,7 +9,7 @@
 - Feature branch: `feature/resource-contact-latency`
 - Human owner: plebdev
 - Started: 2026-07-27
-- Current status: Tickets #534–#536 complete; #537 is the next frontier
+- Current status: Tickets #534–#537 complete; #538 is the ready frontier; #539 is blocked by #538
 - Skill setup status: Complete; GitHub issue tracking, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -55,15 +55,15 @@ timeouts and retries for read-only Curated Resources and Knowledge Search calls.
    Deliver content-free Tool Selection Observations from planning through Trace,
    Activity, and structured logs, including selected, attempted, terminal, and
    expected-but-missed states without exposing prompts or contact values.
-4. **Bound and retry read-only lookup failures** — blocked by 3.
+4. **Bound and retry read-only lookup failures** — complete; #538 is the ready frontier.
    Deliver conservative timeout/retry policies for Curated Resources and
    Knowledge Search with visible retry, timeout, and terminal evidence; writes
    remain unretried.
-5. **Attribute Conversation latency to its real phases** — blocked by 3 and 4.
+5. **Attribute Conversation latency to its real phases** — ready frontier (#538).
    Deliver separate planning, final inference, provider header/first-event proxy,
    Resource Directory, Retrieval, Tool, retry-delay, and total-turn timing in
    Trace, Activity, and privacy-safe structured logs.
-6. **Prove the reported customer journeys across User Types** — blocked by 1–5.
+6. **Prove the reported customer journeys across User Types** — blocked by #538.
    Deliver public Conversation/Resource contract regression coverage and replay
    the affected contact and bounded-inventory prompts across the relevant User
    Types, followed by the full backend, Sage, and frontend verification gates.
@@ -95,9 +95,9 @@ scope.
 | #534 | AFK | Complete | Fixed in review | Yes | backend 20 tests; Sage 118 tests; Sage check; fmt check; parent backend 423 tests |
 | #535 | AFK | Complete | Fresh Sage replay + durable model-backed eval; fresh spec/standards pass | Yes | Sage 121 tests; check; fmt; eval 5/5 |
 | #536 | AFK | Complete | Fresh exact-SHA standards/spec pass | Yes | Sage 124 tests; check; fmt; diff; frontend 375 tests/build |
-| #537 | AFK | Blocked by #536 | Pending | Pending | No |
-| #538 | AFK | Blocked by #536 and #537 | Pending | Pending | No |
-| #539 | AFK | Blocked by #534–#538 | Pending | Pending | No |
+| #537 | AFK | Complete | Fixed in review | No | parent `8d167d1677346f4a20ac372990c6c03bbf334a8a`; Sage `7bfcfc2911f4987235813e032ce95b4aea78d33e`; independent spec/standards PASS; Sage 136 + frontend 378 |
+| #538 | AFK | Ready frontier | Pending | Pending | No |
+| #539 | AFK | Blocked by #538 | Pending | Pending | No |
 
 ## Parked HITL Slices
 
@@ -112,6 +112,7 @@ scope.
 | #534 | `133ca477e17d19ce8637a043fdec147f1a200a7e` / `a33e5903f775e5da627eac4269371622a2f1bf99` | `/root/ticket_534` | parent `698a021192acdf9f1aa4855292034989e2e6b55e`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa` (prior Sage slice `9964e31498300752289fec6b3ea0c9f37cdcceca`) | Standards/spec hard findings fixed; baseline smells retained as out-of-scope cleanup | backend 20 targeted / 423 full; Sage 118 full; Sage check; fmt check |
 | #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535_model_eval` | Sage `6a7cde839e55d283fa02a033e90fe8f708f34d7b`; eval `2e3db4ac53aae31f36350b72957c80a5ee46c7b4`; parent pointer/records in this closeout | Fresh standards/spec pass; real two-turn Sage replay; model-backed Compose eval scheduled for #539 | Sage 121 full; Sage check; fmt; eval 5/5 + py_compile/help |
 | #536 | `e164e695a818566289e829760a2b4d89882b1446` / `6a7cde839e55d283fa02a033e90fe8f708f34d7b` | `/root/ticket_536` | parent `1f21c775f657628052c124e1542356caeb5b788c`; Sage `3733df23fd5cbae33cbc81c9e8f7ae5fe0151dea` | Fresh exact-SHA standards/spec pass; native structured-log capture; live stream and batch failure seams | Sage 124 full; check; fmt; diff; frontend 375 full + build |
+| #537 | `5f3a0c64dc2d6e937d880ff16948c99e0ce2adbb` / `7bfcfc2911f4987235813e032ce95b4aea78d33e` | `/root/ticket_537` | parent `8d167d1677346f4a20ac372990c6c03bbf334a8a`; Sage `7bfcfc2911f4987235813e032ce95b4aea78d33e` | Independent exact-SHA spec/standards PASS; no findings | Sage 136 full; check; fmt; frontend 378 full + build/Prettier |
 
 ## Open Questions
 
