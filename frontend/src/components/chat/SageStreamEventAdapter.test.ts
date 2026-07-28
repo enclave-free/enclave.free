@@ -2,6 +2,144 @@ import { describe, expect, it } from 'vitest';
 import { adaptSageStreamEvent } from './SageStreamEventAdapter';
 
 describe('Sage Stream Event Adapter', () => {
+  it('accepts content-free Tool Selection Observations', () => {
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'tool-selection-1',
+            kind: 'tool_selection_observation',
+            title: 'Tool Selection',
+            content: 'Curated Resources was expected but not selected.',
+            status: 'failed',
+            metadata: {
+              round: 1,
+              enabled_tools: ['find_resources'],
+              selected_tools: [],
+              selection_count: 0,
+              expected_curated_resources: true,
+              missed_expected_curated_resources: true,
+            },
+          },
+        },
+        'assistant-1'
+      )
+    ).toMatchObject({
+      type: 'assistantTraceDeltaReceived',
+      traceDelta: {
+        kind: 'tool_selection_observation',
+        status: 'failed',
+        metadata: {
+          selection_count: 0,
+          missed_expected_curated_resources: true,
+        },
+      },
+    });
+  });
+
+  it('preserves Tool retry and timeout trace deltas for streaming consumers', () => {
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'tool-retry-1',
+            kind: 'tool_retry',
+            title: 'Curated Resources',
+            content: 'Retrying Curated Resources after attempt 1.',
+            tool_name: 'find_resources',
+            status: 'running',
+            metadata: { phase: 'retry', call_id: 'call-1', attempt: 1 },
+          },
+        },
+        'assistant-1'
+      )
+    ).toMatchObject({
+      type: 'assistantTraceDeltaReceived',
+      traceDelta: {
+        id: 'tool-retry-1',
+        kind: 'tool_retry',
+        tool_name: 'find_resources',
+      },
+    });
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'tool-timeout-1',
+            kind: 'timeout',
+            title: 'Knowledge Search',
+            content: 'Knowledge Search timed out.',
+            tool_name: 'knowledge_search',
+            status: 'timed_out',
+            metadata: { phase: 'timeout', call_id: 'call-2', attempt: 2 },
+          },
+        },
+        'assistant-1'
+      )
+    ).toMatchObject({
+      type: 'assistantTraceDeltaReceived',
+      traceDelta: {
+        id: 'tool-timeout-1',
+        kind: 'timeout',
+        status: 'timed_out',
+      },
+    });
+  });
+
+  it('adapts the backend timing payload without changing its phase or outcome', () => {
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          message_id: 'msg-timing-1',
+          trace_delta: {
+            id: 'timing-final-provider-1',
+            kind: 'timing',
+            title: 'Final-answer provider first-event wait',
+            content:
+              'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+            status: 'succeeded',
+            metadata: {
+              phase: 'final_answer_first_provider_event_wait',
+              round: 2,
+              attempt: 1,
+              outcome: 'succeeded',
+              duration_ms: 184,
+              provider_wait_proxy: true,
+              wait_origin: 'request_start',
+            },
+            created_at: '2026-07-28T12:00:00Z',
+          },
+        },
+        'assistant-1'
+      )
+    ).toEqual({
+      type: 'assistantTraceDeltaReceived',
+      assistantTurnId: 'assistant-1',
+      traceDelta: {
+        id: 'timing-final-provider-1',
+        kind: 'timing',
+        title: 'Final-answer provider first-event wait',
+        content:
+          'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+        status: 'succeeded',
+        metadata: {
+          phase: 'final_answer_first_provider_event_wait',
+          round: 2,
+          attempt: 1,
+          outcome: 'succeeded',
+          duration_ms: 184,
+          provider_wait_proxy: true,
+          wait_origin: 'request_start',
+        },
+        created_at: '2026-07-28T12:00:00Z',
+      },
+    });
+  });
+
   it('maps transport events into Conversation UI State actions', () => {
     expect(
       adaptSageStreamEvent('assistant_message_started', {

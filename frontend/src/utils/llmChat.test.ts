@@ -342,6 +342,57 @@ describe('sendLlmChatWithUnifiedTools', () => {
     ]);
   });
 
+  it('delivers timing deltas through the stream without opening an Audit Log write path', async () => {
+    const encoder = new TextEncoder();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                encoder.encode(
+                  [
+                    'event: trace_delta',
+                    'data: {"message_id":"msg_timing","trace_delta":{"id":"timing-1","kind":"timing","title":"Final-answer model duration","content":"Final-answer model duration: 842 ms.","status":"succeeded","metadata":{"phase":"final_answer_model_duration","attempt":2,"outcome":"succeeded","duration_ms":842,"provider_wait_proxy":false}}}',
+                    '',
+                    '',
+                  ].join('\n')
+                )
+              );
+              controller.close();
+            },
+          }),
+          { headers: { 'Content-Type': 'text/event-stream' } }
+        )
+      )
+    );
+    const events: Array<{ event: string; data: unknown }> = [];
+
+    await sendLlmChatStreamWithUnifiedTools({
+      content: 'Show timing',
+      tools: [],
+      onEvent: (event, data) => events.push({ event, data }),
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      event: 'trace_delta',
+      data: {
+        trace_delta: {
+          kind: 'timing',
+          metadata: {
+            phase: 'final_answer_model_duration',
+            attempt: 2,
+          },
+        },
+      },
+    });
+    const urls = vi.mocked(fetch).mock.calls.map(([input]) => String(input));
+    expect(urls).toEqual(['/api/llm/chat/stream']);
+    expect(urls.some((url) => url.includes('audit'))).toBe(false);
+  });
+
   it('streams admin-config as an explicit backend tool without requiring client context', async () => {
     const encoder = new TextEncoder();
     vi.stubGlobal(

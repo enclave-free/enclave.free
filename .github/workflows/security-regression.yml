@@ -155,7 +155,17 @@ jobs:
           pip-audit --path "$audit_site_packages" "${ignore_vulns[@]}"
       - name: Frontend dependency scan
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: |
+          audit_report="$RUNNER_TEMP/frontend-npm-audit.json"
+          set +e
+          npm audit --json > "$audit_report"
+          audit_status=$?
+          set -e
+          if [ "$audit_status" -gt 1 ]; then
+            echo "npm audit failed before producing a usable vulnerability report."
+            exit "$audit_status"
+          fi
+          python ../scripts/check_frontend_audit.py "$audit_report" --threshold high
       - name: Semgrep SAST scan
         run: semgrep scan --config p/owasp-top-ten --config p/python --config p/typescript --sarif --output semgrep.sarif
       - name: Check Semgrep SARIF output
