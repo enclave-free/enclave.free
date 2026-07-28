@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.5 - 2026-07-28
+
+- Prevented provider-generated lookup narration and Tool-decision syntax from reaching visible final answers, including English and Spanish output with Markdown prefixes or spaced arguments.
+- Added one bounded clean-answer retry with fail-closed handling for repeated unsafe output while preserving Resource Directory results and attempt-specific timing.
+
 ## 0.4.4 - 2026-07-28
 
 - Re-ran Curated Resources for contact follow-ups and added exact or hybrid matching for organization names, emails, phone numbers, websites, addresses, and secure channels.
