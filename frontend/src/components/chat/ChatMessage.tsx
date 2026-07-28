@@ -69,6 +69,8 @@ export interface ConversationTraceDelta {
     | 'tool_result'
     | 'tool_selection_observation'
     | 'retry'
+    | 'tool_retry'
+    | 'timeout'
     | 'correction'
     | 'retrieval'
     | 'timing';

@@ -7,6 +7,8 @@ export const CONVERSATION_TRACE_DELTA_KINDS = [
   'tool_result',
   'tool_selection_observation',
   'retry',
+  'tool_retry',
+  'timeout',
   'correction',
   'retrieval',
   'timing',

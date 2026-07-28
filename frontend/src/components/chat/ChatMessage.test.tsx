@@ -346,7 +346,7 @@ describe('ChatMessage', () => {
       suppressed: false,
     });
 
-    expect(screen.getByLabelText('Activity timeline')).toBeInTheDocument();
+    expect(screen.getByLabelText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Tool Selection')).toBeInTheDocument();
     expect(
       screen.getByText('Curated Resources was expected but not selected.')
@@ -503,6 +503,49 @@ describe('ChatMessage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('[redacted]')).toBeInTheDocument();
     expect(screen.getByText('guarded')).toBeInTheDocument();
+  });
+
+  it('renders read-only Tool retry and timeout evidence as accessible Activity rows', () => {
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-1',
+              role: 'assistant',
+              content: '',
+              traceDeltas: [
+                {
+                  id: 'trace-tool-retry',
+                  kind: 'tool_retry',
+                  title: 'Curated Resources',
+                  content: 'Retrying Curated Resources after attempt 1.',
+                  tool_name: 'find_resources',
+                  status: 'running',
+                  metadata: { phase: 'retry', call_id: 'call-1', attempt: 1 },
+                },
+                {
+                  id: 'trace-tool-timeout',
+                  kind: 'timeout',
+                  title: 'Knowledge Search',
+                  content: 'Knowledge Search timed out.',
+                  tool_name: 'knowledge_search',
+                  status: 'timed_out',
+                  metadata: { phase: 'timeout', call_id: 'call-2', attempt: 2 },
+                },
+              ],
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    );
+
+    expect(screen.getByLabelText('Activity')).toBeInTheDocument();
+    expect(
+      screen.getByText('Retrying Curated Resources after attempt 1.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Knowledge Search timed out.')).toBeInTheDocument();
+    expect(screen.getByText('timed_out')).toBeInTheDocument();
   });
 
   it('groups streamed provider reasoning into one expandable transcript', async () => {

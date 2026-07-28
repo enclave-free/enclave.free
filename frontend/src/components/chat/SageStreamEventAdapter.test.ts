@@ -38,6 +38,57 @@ describe('Sage Stream Event Adapter', () => {
     });
   });
 
+  it('preserves Tool retry and timeout trace deltas for streaming consumers', () => {
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'tool-retry-1',
+            kind: 'tool_retry',
+            title: 'Curated Resources',
+            content: 'Retrying Curated Resources after attempt 1.',
+            tool_name: 'find_resources',
+            status: 'running',
+            metadata: { phase: 'retry', call_id: 'call-1', attempt: 1 },
+          },
+        },
+        'assistant-1'
+      )
+    ).toMatchObject({
+      type: 'assistantTraceDeltaReceived',
+      traceDelta: {
+        id: 'tool-retry-1',
+        kind: 'tool_retry',
+        tool_name: 'find_resources',
+      },
+    });
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'tool-timeout-1',
+            kind: 'timeout',
+            title: 'Knowledge Search',
+            content: 'Knowledge Search timed out.',
+            tool_name: 'knowledge_search',
+            status: 'timed_out',
+            metadata: { phase: 'timeout', call_id: 'call-2', attempt: 2 },
+          },
+        },
+        'assistant-1'
+      )
+    ).toMatchObject({
+      type: 'assistantTraceDeltaReceived',
+      traceDelta: {
+        id: 'tool-timeout-1',
+        kind: 'timeout',
+        status: 'timed_out',
+      },
+    });
+  });
+
   it('maps transport events into Conversation UI State actions', () => {
     expect(
       adaptSageStreamEvent('assistant_message_started', {
