@@ -548,6 +548,76 @@ describe('ChatMessage', () => {
     expect(screen.getByText('timed_out')).toBeInTheDocument();
   });
 
+  it('renders backend timing deltas with phase, duration, and guarded outcome', () => {
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <ChatMessage
+            message={{
+              id: 'message-timing-1',
+              role: 'assistant',
+              content: 'The answer is ready.',
+              traceDeltas: [
+                {
+                  id: 'timing-tool-guarded-1',
+                  kind: 'timing',
+                  title: 'Tool execution',
+                  content: 'Tool execution: 9 ms.',
+                  status: 'guarded',
+                  metadata: {
+                    phase: 'tool_execution',
+                    round: 1,
+                    attempt: 1,
+                    call_id: 'call-guarded',
+                    tool_name: 'db_query',
+                    outcome: 'guarded',
+                    duration_ms: 9,
+                    provider_wait_proxy: false,
+                    args: 'SELECT email FROM contacts WHERE email = contact@example.test',
+                    output: 'contact@example.test',
+                  },
+                  created_at: '2026-07-28T12:00:00Z',
+                },
+                {
+                  id: 'timing-provider-first-1',
+                  kind: 'timing',
+                  title: 'Final-answer provider first-event wait',
+                  content:
+                    'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+                  status: 'succeeded',
+                  metadata: {
+                    phase: 'final_answer_first_provider_event_wait',
+                    round: 2,
+                    attempt: 1,
+                    outcome: 'succeeded',
+                    duration_ms: 184,
+                    provider_wait_proxy: true,
+                  },
+                  created_at: '2026-07-28T12:00:00Z',
+                },
+              ],
+            }}
+          />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    );
+
+    expect(screen.getByLabelText('Activity')).toBeInTheDocument();
+    expect(screen.getByText('Tool execution')).toBeInTheDocument();
+    expect(
+      screen.getByText('Final-answer provider first-event wait')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Tool execution: 9 ms.')).toBeInTheDocument();
+    expect(
+      screen.getByText(/provider first-event wait: 184 ms/)
+    ).toBeInTheDocument();
+    expect(screen.getByText('guarded')).toBeInTheDocument();
+    expect(screen.queryByText(/contact@example\.test/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/SELECT email FROM contacts/)
+    ).not.toBeInTheDocument();
+  });
+
   it('groups streamed provider reasoning into one expandable transcript', async () => {
     const user = userEvent.setup();
 

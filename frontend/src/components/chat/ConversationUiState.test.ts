@@ -144,6 +144,77 @@ describe('Conversation UI State', () => {
     ]);
   });
 
+  it('keeps real timing deltas in Conversation Activity state and out of Audit data', () => {
+    const timingDelta = {
+      id: 'timing-total-turn-1',
+      kind: 'timing' as const,
+      title: 'Total turn',
+      content: 'Total turn: 842 ms.',
+      status: 'succeeded',
+      metadata: {
+        phase: 'total_turn',
+        round: null,
+        attempt: 1,
+        outcome: 'succeeded',
+        duration_ms: 842,
+        provider_wait_proxy: false,
+      },
+      created_at: '2026-07-28T12:00:00Z',
+    };
+    const providerTimingDelta = {
+      id: 'timing-provider-first-event-attempt-2',
+      kind: 'timing' as const,
+      title: 'Final-answer provider first-event wait',
+      content: 'Final-answer provider first-event wait: 184 ms.',
+      status: 'failed',
+      metadata: {
+        phase: 'final_answer_first_provider_event_wait',
+        round: 2,
+        attempt: 2,
+        outcome: 'failed',
+        duration_ms: 184,
+        provider_wait_proxy: true,
+      },
+      created_at: '2026-07-28T12:00:01Z',
+    };
+
+    const state = [
+      { type: 'assistantTurnStarted' as const, id: 'assistant-timing-1' },
+      {
+        type: 'assistantTraceDeltaReceived' as const,
+        assistantTurnId: 'assistant-timing-1',
+        traceDelta: timingDelta,
+      },
+      {
+        type: 'assistantTraceDeltaReceived' as const,
+        assistantTurnId: 'assistant-timing-1',
+        traceDelta: providerTimingDelta,
+      },
+      { type: 'assistantTurnFinished' as const },
+    ].reduce(reduceConversationUiState, createConversationUiState());
+
+    expect(state.turns[0].traceDeltas).toEqual([
+      timingDelta,
+      providerTimingDelta,
+    ]);
+    expect(
+      state.turns[0].traceDeltas.map((delta) => [
+        delta.id,
+        delta.metadata?.phase,
+        delta.metadata?.attempt,
+      ])
+    ).toEqual([
+      ['timing-total-turn-1', 'total_turn', 1],
+      [
+        'timing-provider-first-event-attempt-2',
+        'final_answer_first_provider_event_wait',
+        2,
+      ],
+    ]);
+    expect(state.turns[0]).not.toHaveProperty('audit');
+    expect(JSON.stringify(state)).not.toContain('Audit');
+  });
+
   it('replaces streamed assistant content when display text is sanitized', () => {
     const state = [
       { type: 'assistantTurnStarted' as const, id: 'assistant-1' },

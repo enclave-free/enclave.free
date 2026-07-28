@@ -89,6 +89,57 @@ describe('Sage Stream Event Adapter', () => {
     });
   });
 
+  it('adapts the backend timing payload without changing its phase or outcome', () => {
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          message_id: 'msg-timing-1',
+          trace_delta: {
+            id: 'timing-final-provider-1',
+            kind: 'timing',
+            title: 'Final-answer provider first-event wait',
+            content:
+              'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+            status: 'succeeded',
+            metadata: {
+              phase: 'final_answer_first_provider_event_wait',
+              round: 2,
+              attempt: 1,
+              outcome: 'succeeded',
+              duration_ms: 184,
+              provider_wait_proxy: true,
+              wait_origin: 'request_start',
+            },
+            created_at: '2026-07-28T12:00:00Z',
+          },
+        },
+        'assistant-1'
+      )
+    ).toEqual({
+      type: 'assistantTraceDeltaReceived',
+      assistantTurnId: 'assistant-1',
+      traceDelta: {
+        id: 'timing-final-provider-1',
+        kind: 'timing',
+        title: 'Final-answer provider first-event wait',
+        content:
+          'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+        status: 'succeeded',
+        metadata: {
+          phase: 'final_answer_first_provider_event_wait',
+          round: 2,
+          attempt: 1,
+          outcome: 'succeeded',
+          duration_ms: 184,
+          provider_wait_proxy: true,
+          wait_origin: 'request_start',
+        },
+        created_at: '2026-07-28T12:00:00Z',
+      },
+    });
+  });
+
   it('maps transport events into Conversation UI State actions', () => {
     expect(
       adaptSageStreamEvent('assistant_message_started', {
