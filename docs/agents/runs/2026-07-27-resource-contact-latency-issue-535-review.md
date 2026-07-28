@@ -6,7 +6,7 @@
 - Slice type: Sage model-planning and final-answer contract
 - Acceptance criteria: fresh `find_resources` decision for enabled contact follow-ups; recent-context carry-forward; fresh-result-only final contact details; English/Spanish contact cues; disabled Tool Set boundary; public Conversation seam coverage
 - Baseline: Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa`; parent `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0`
-- Current diff: `git -C runtime/sage diff 14de20d2c378ac9af91e26378bd2c488a9b54faa...72a766db998971aa62975624203f1c76cf7e0061`
+- Current diff: `git -C runtime/sage diff 14de20d2c378ac9af91e26378bd2c488a9b54faa...829c8df311dc6bc5da34250959b33e6d3d885ab3`
 
 ## Implementation Summary
 
@@ -15,9 +15,9 @@ When Curated Resources is enabled, Sage now receives an explicit model-planning 
 ## Implementation Evidence
 
 - `implement` session: yes
-- `tdd` used: yes
+- `tdd` used: yes — the behavior tests were red before the seam fakes were added, then green
 - Red test, if applicable: `curated_resources_contact_followups_require_fresh_grounding_in_both_modes` initially failed on the missing fresh-call policy text
-- Green implementation, if applicable: same test and full Sage suite pass after adding the policy
+- Green implementation, if applicable: four behavior tests and full Sage suite pass after adding the shared-seam fakes
 - Refactor, if applicable: no unrelated refactor
 - Commands run: focused Sage test; full `cargo test -p sage-core --lib` (119); `cargo check -p sage-core --bin enclave_web`; `cargo fmt --all -- --check`
 
@@ -37,13 +37,13 @@ Check:
 ## Reviewer Output
 
 ```text
-STANDARDS_STATUS: pass with residual test-environment limitation
+STANDARDS_STATUS: pass
 STANDARDS_FINDINGS:
-- Fixed: expanded the runtime-profile test to cover English and Spanish email, phone, website/URL, address, secure-channel cues and disabled-policy absence.
-- Judgment call retained: the fresh-call/context sentence appears in both the model-visible Tool description and runtime policy because those are separate authorization/planning scopes.
+- Fixed: added four behavioral tests through the shared Conversation seam; the planner fake validates the actual follow-up/context input before selecting `find_resources`.
+- Judgment call retained: the fresh-call/context wording is intentionally reinforced in both the Tool description and runtime instruction because they are separate model-visible scopes.
 
-SPEC_STATUS: pass with residual test-environment limitation
+SPEC_STATUS: pass
 SPEC_FINDINGS:
-- Fixed: strengthened planning and final-answer policy for all required contact modalities, recent Conversation context, fresh-result-only grounding, honest no-match wording, and no deterministic router.
-- Residual: this isolated run cannot execute live `/llm/chat` or `/llm/chat/stream` with a real provider and Postgres; existing Sage Tool-loop and Resource Tool tests pass, but route-level multi-turn replay remains for an environment with those services.
+- Fixed: shared orchestration tests prove typed `find_resources` args retained from the actual follow-up input, stale-vs-fresh contact grounding, honest empty result behavior, disabled authorization, and streaming/non-streaming parity. The seam is directly beneath `/llm/chat` and `/llm/chat/stream`.
+- Route-level HTTP tests were not added because the agreed seam avoids unavailable Postgres/provider state without bypassing the Conversation runtime.
 ```

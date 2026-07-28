@@ -93,7 +93,7 @@ scope.
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
 | #534 | AFK | Complete | Fixed in review | Yes | backend 20 tests; Sage 118 tests; Sage check; fmt check; parent backend 423 tests |
-| #535 | AFK | Complete | Fixed in review; route replay residual | No | Sage 119 tests; check; fmt |
+| #535 | AFK | Complete | Fixed in review at shared Conversation seam | Yes | Sage 122 tests; check; fmt |
 | #536 | AFK | Blocked by #535 | Pending | Pending | No |
 | #537 | AFK | Blocked by #536 | Pending | Pending | No |
 | #538 | AFK | Blocked by #536 and #537 | Pending | Pending | No |
@@ -110,7 +110,7 @@ scope.
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #534 | `133ca477e17d19ce8637a043fdec147f1a200a7e` / `a33e5903f775e5da627eac4269371622a2f1bf99` | `/root/ticket_534` | parent `698a021192acdf9f1aa4855292034989e2e6b55e`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa` (prior Sage slice `9964e31498300752289fec6b3ea0c9f37cdcceca`) | Standards/spec hard findings fixed; baseline smells retained as out-of-scope cleanup | backend 20 targeted / 423 full; Sage 118 full; Sage check; fmt check |
-| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535` | parent `a70e4a4a7a2a757ff8b104a8abe37cfb17529eb1`; Sage `72a766db998971aa62975624203f1c76cf7e0061` | Prompt policy strengthened; modality/boundary assertions added; route replay unavailable in isolated environment | Sage 119 full; Sage check; fmt check |
+| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535` | parent pointer/records pending; Sage `829c8df311dc6bc5da34250959b33e6d3d885ab3` | Standards/spec findings fixed at shared Conversation seam; duplicate policy wording retained as judgment call | Sage 122 full; Sage check; fmt check |
 
 ## Open Questions
 
