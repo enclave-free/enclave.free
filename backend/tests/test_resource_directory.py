@@ -358,6 +358,7 @@ class ResourceDirectoryTest(unittest.TestCase):
             "PRECISE-RESOURCE",
             "precise resource",
             "+1 555 010 2000",
+            "555-010-2",
             "HTTPS://PRECISE.EXAMPLE/CONTACT",
             "signal: precise-help",
             "200 main street",

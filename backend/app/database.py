@@ -5724,6 +5724,10 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
         value_text = text(value)
         if query_text in value_text:
             return 1
+        if field == "phone" and len(query_digits) >= 7:
+            value_digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+            if query_digits in value_digits:
+                return 1
         if field == "name" and query_compact and query_compact in compact(value):
             return 1
 
