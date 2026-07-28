@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.6 - 2026-07-28
+
+- Closed the remaining streamed Tool-decision leak across arbitrary provider chunk boundaries, including JSON, Markdown, bullet-form, and inline argument variants, while preserving ordinary explanatory Tool prose.
+- Tightened the four-persona customer replay verifier so terminal Resource pages are accepted only when the answer clearly states that no additional pages remain.
+
 ## 0.4.5 - 2026-07-28
 
 - Prevented provider-generated lookup narration and Tool-decision syntax from reaching visible final answers, including English and Spanish output with Markdown prefixes or spaced arguments.
