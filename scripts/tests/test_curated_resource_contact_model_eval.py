@@ -701,8 +701,17 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
             previous_answer=f"All 11 matching resources: {all_names}",
             previous_trace=complete_trace,
         )
+        qualified_additional_pages, _ = MODULE.score_inventory_turn(
+            "I cannot confirm there are no additional pages.",
+            self.resource_trace(0, False, None),
+            final_name=MODULE.INVENTORY_NAMES[-1],
+            continuation=True,
+            previous_answer=f"All 11 matching resources: {all_names}",
+            previous_trace=complete_trace,
+        )
         self.assertFalse(negated)
         self.assertFalse(qualified)
+        self.assertFalse(qualified_additional_pages)
 
     def test_inventory_scoring_rejects_wrong_numeric_and_spanish_negated_claims(self):
         complete_trace = self.complete_resource_trace()
