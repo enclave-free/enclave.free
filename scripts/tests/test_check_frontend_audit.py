@@ -120,6 +120,32 @@ class FrontendAuditTests(unittest.TestCase):
 
         self.assertEqual(evaluate_audit(report), ([], []))
 
+    def test_rejects_an_unrecognized_severity(self) -> None:
+        report = report_with(
+            (
+                "dependency",
+                {
+                    "severity": "future-severity",
+                    "via": [
+                        {
+                            "source": 44,
+                            "dependency": "dependency",
+                            "severity": "future-severity",
+                            "url": "https://github.com/advisories/GHSA-unknown-severity",
+                        }
+                    ],
+                },
+            )
+        )
+
+        unexpected, accepted = evaluate_audit(report)
+
+        self.assertEqual(accepted, [])
+        self.assertEqual(
+            unexpected,
+            ["dependency GHSA-unknown-severity (future-severity)"],
+        )
+
     def test_rejects_audit_errors_and_malformed_reports(self) -> None:
         self.assertTrue(evaluate_audit({"error": {"code": "EAI_AGAIN"}})[0])
         self.assertTrue(evaluate_audit({})[0])

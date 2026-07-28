@@ -27,7 +27,10 @@ ALLOWED_ADVISORIES = {
 
 
 def _at_or_above_threshold(severity: object, threshold: str) -> bool:
-    return SEVERITY_RANK.get(str(severity).casefold(), -1) >= SEVERITY_RANK[threshold]
+    rank = SEVERITY_RANK.get(str(severity).casefold())
+    if rank is None:
+        return True
+    return rank >= SEVERITY_RANK[threshold]
 
 
 def _advisory_id(url: object) -> str:
