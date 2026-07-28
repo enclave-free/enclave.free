@@ -123,6 +123,12 @@ class FrontendAuditTests(unittest.TestCase):
     def test_rejects_audit_errors_and_malformed_reports(self) -> None:
         self.assertTrue(evaluate_audit({"error": {"code": "EAI_AGAIN"}})[0])
         self.assertTrue(evaluate_audit({})[0])
+        for report in (None, [], "not-an-object", 1):
+            with self.subTest(report=report):
+                self.assertEqual(
+                    evaluate_audit(report),
+                    (["npm audit report is not a JSON object"], []),
+                )
 
 
 if __name__ == "__main__":

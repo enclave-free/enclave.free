@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
 
 
 SEVERITY_RANK = {
@@ -37,9 +36,11 @@ def _advisory_id(url: object) -> str:
 
 
 def evaluate_audit(
-    report: dict[str, Any], threshold: str = "high"
+    report: object, threshold: str = "high"
 ) -> tuple[list[str], list[str]]:
     """Return (unexpected findings, accepted exceptions) for an npm v2 report."""
+    if not isinstance(report, dict):
+        return ["npm audit report is not a JSON object"], []
     if report.get("error"):
         return [f"npm audit error: {report['error']}"], []
 
