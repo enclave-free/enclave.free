@@ -5,6 +5,7 @@ export const CONVERSATION_TRACE_DELTA_KINDS = [
   'model_step',
   'tool_call',
   'tool_result',
+  'tool_selection_observation',
   'retry',
   'correction',
   'retrieval',

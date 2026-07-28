@@ -67,6 +67,7 @@ export interface ConversationTraceDelta {
     | 'model_step'
     | 'tool_call'
     | 'tool_result'
+    | 'tool_selection_observation'
     | 'retry'
     | 'correction'
     | 'retrieval'

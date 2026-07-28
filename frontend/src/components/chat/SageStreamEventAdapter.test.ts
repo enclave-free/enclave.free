@@ -2,6 +2,42 @@ import { describe, expect, it } from 'vitest';
 import { adaptSageStreamEvent } from './SageStreamEventAdapter';
 
 describe('Sage Stream Event Adapter', () => {
+  it('accepts content-free Tool Selection Observations', () => {
+    expect(
+      adaptSageStreamEvent(
+        'trace_delta',
+        {
+          trace_delta: {
+            id: 'tool-selection-1',
+            kind: 'tool_selection_observation',
+            title: 'Tool Selection',
+            content: 'Curated Resources was expected but not selected.',
+            status: 'failed',
+            metadata: {
+              round: 1,
+              enabled_tools: ['find_resources'],
+              selected_tools: [],
+              selection_count: 0,
+              expected_curated_resources: true,
+              missed_expected_curated_resources: true,
+            },
+          },
+        },
+        'assistant-1'
+      )
+    ).toMatchObject({
+      type: 'assistantTraceDeltaReceived',
+      traceDelta: {
+        kind: 'tool_selection_observation',
+        status: 'failed',
+        metadata: {
+          selection_count: 0,
+          missed_expected_curated_resources: true,
+        },
+      },
+    });
+  });
+
   it('maps transport events into Conversation UI State actions', () => {
     expect(
       adaptSageStreamEvent('assistant_message_started', {

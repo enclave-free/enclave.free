@@ -329,6 +329,30 @@ describe('ChatMessage', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders a missed Curated Resources selection as an accessible Activity row', () => {
+    renderMessage('I could not find a current contact.', 'assistant', {
+      visibility: 'detailed',
+      tools: [],
+      retrieval: [],
+      activity_steps: [
+        {
+          id: 'activity-tool-selection-1',
+          kind: 'tool_selection_observation',
+          title: 'Tool Selection',
+          status: 'failed',
+          summary: 'Curated Resources was expected but not selected.',
+        },
+      ],
+      suppressed: false,
+    });
+
+    expect(screen.getByLabelText('Activity timeline')).toBeInTheDocument();
+    expect(screen.getByText('Tool Selection')).toBeInTheDocument();
+    expect(
+      screen.getByText('Curated Resources was expected but not selected.')
+    ).toBeInTheDocument();
+  });
+
   it('renders minimal assistant trace as compact usage badges', () => {
     renderMessage('Here is the answer.', 'assistant', {
       visibility: 'minimal',
