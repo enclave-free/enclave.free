@@ -37,4 +37,11 @@ SPEC_FINDINGS:
 
 - Parent issue commit: supplied in the final handoff message.
 - Sage pointer: `7bfcfc2911f4987235813e032ce95b4aea78d33e`.
-- Verification: Sage 136/136 tests; frontend 75 files / 378 tests; Sage check/fmt and frontend build/Prettier pass.
+- Verification commands:
+  - Sage focused retry policy: `LIBRARY_PATH="$(brew --prefix libpq)/lib:${LIBRARY_PATH:-}" cargo test -p sage-core --lib retry_ --no-default-features` (5 passed).
+  - Sage endpoint contract: `LIBRARY_PATH="$(brew --prefix libpq)/lib:${LIBRARY_PATH:-}" cargo test -p sage-core --lib endpoint_retry_contract --no-default-features` (1 passed across transient, exhausted, timeout, 4xx, malformed, empty, and success cases).
+  - Sage production adapters and timeout seams: the corresponding exact-name `cargo test -p sage-core --lib ... --no-default-features` invocations recorded in the issue record passed.
+  - Sage full/checks: `LIBRARY_PATH="$(brew --prefix libpq)/lib:${LIBRARY_PATH:-}" cargo test -p sage-core --lib --no-default-features` (136 passed), `cargo check -p sage-core --bin enclave_web`, `cargo fmt --all -- --check`, and `git diff --check`.
+  - Frontend focused: `npm test -- --run src/components/chat/SageStreamEventAdapter.test.ts --reporter=dot` (3 passed) and `npm test -- --run src/components/chat/ChatMessage.test.tsx --reporter=dot` (17 passed).
+  - Frontend full/build: `CI=1 npm test -- --run --reporter=dot` (75 files / 378 tests) and `npm run build` passed; touched-file Prettier checks passed.
+- The deterministic controlled-local-HTTP endpoint matrix above exercised the smoke seams for this runtime-only slice. No manual browser Test Dashboard steps were run or claimed; frontend transport and Activity behavior were verified through the focused and full automated suites.

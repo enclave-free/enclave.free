@@ -40,5 +40,5 @@ SPEC_FINDINGS:
 - Fixed: scoped phone-digit exact matching to phone fields, organization punctuation normalization to names, and removed partial resource-ID matching.
 - Fixed: stated fresh contact lookup requirement directly in the `find_resources` Tool contract.
 - Fixed: required metadata fields so completeness cannot silently default to complete.
-- Added public-contract coverage for exact ID/name/phone/URL/secure-channel/address, description fallback, pagination, and empty/final pages.
+- Added public-contract coverage for exact ID/name/phone/URL/secure-channel/address, description fallback, pagination, and final pages.
 ```

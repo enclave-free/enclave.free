@@ -42,7 +42,7 @@
 
 ## Model evidence — intentionally not all green
 
-- Full authoritative run `/tmp/issue539-authoritative-four-v2-exact-final-valid-admin.json`: 22/33 completed before a safe provider fatal. Contacts were 18/18 before the fatal; global bounded inventory and both Family inventory cases passed. A global continuation scorer-only false negative was corrected afterward.
+- Historical full authoritative run `/tmp/issue539-authoritative-four-v2-exact-final-valid-admin.json`: 22/33 completed before a safe provider fatal. This artifact predates the explicit Spanish replay dimension that raised the current unfiltered matrix to 41 cases. Contacts were 18/18 before the fatal; global bounded inventory and both Family inventory cases passed. A global continuation scorer-only false negative was corrected afterward.
 - Targeted Former inventory `/tmp/issue539-former-inventory-targeted-final.json`: reproduced the repetitive-process-narration HTTP 500, 0/2 completed, cleanup clean.
 - Targeted Solidarity all-cases `/tmp/issue539-solidarity-all-targeted-final.json`: 8/8 passed, cleanup clean.
 - Current global Spanish `/tmp/issue539-global-spanish-contact-metadata-final.json`: 3/3 passed, including exact Spanish email and disabled-global control.

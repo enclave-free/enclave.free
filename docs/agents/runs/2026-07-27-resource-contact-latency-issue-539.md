@@ -56,7 +56,7 @@
 ## Verification
 
 - Eval harness: `python3 -m unittest scripts.tests.test_curated_resource_contact_model_eval` — 35 passed.
-- Backend: `/Users/plebdev/Desktop/Projects/enclave-free/enclave.free/.venv/bin/python -m unittest discover -s backend/tests` — 424 passed in 20.417s.
+- Backend: `.venv/bin/python -m unittest discover -s backend/tests` — 424 passed in 20.417s using the repository virtual environment.
 - Sage: `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib --no-default-features` — 163 passed in 4.49s.
 - Sage focused checks: curly-apostrophe same/split 2/2, Resource Tool metadata 2/2, trace propagation 1/1, pagination deduplication 1/1, and terminal-page Tool-result plus Trace wording 1/1 passed.
 - Sage checks: `cargo fmt --all -- --check`, `cargo check -p sage-core --bin enclave_web --no-default-features`, and `git diff --check` passed.
@@ -67,4 +67,4 @@
 - Every final or fatal evaluator artifact reports `cleanup_failure_count=0`. The final pre-down audit showed zero issue resources, temporary User Types, users, session logs, overrides, ephemeral Admins, Sage sessions/messages/overrides/external identities, and the global Tool default restored to its exact original `[]` value.
 - The isolated #539 Compose project has no remaining containers, network, or volumes. Pre-existing stopped `enclave-*` containers and the ten pre-existing `enclavefree_*` / `enclavefree-agent-latency_*` volumes were left intact.
 - Residual risk is provider nondeterminism and latency. The observed failure is safe but user-visible: after the existing retry, Sage returns HTTP 500 rather than leaking repetitive process or Tool syntax. Provider/cluster failover and controlled degraded-cluster experiments remain out of scope.
-- Fresh independent review is still required at the corrected fixed point. This implementation record does not self-approve the review gate.
+- Final independent specification and standards reviews passed at Sage `a82ac43761475a57a45ac18f8bcb9acedaf9e7bc` and the parent-held #539 fixed point.

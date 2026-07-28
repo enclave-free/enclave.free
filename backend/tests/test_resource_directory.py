@@ -375,7 +375,7 @@ class ResourceDirectoryTest(unittest.TestCase):
         original = self.database.search_resources
         captured: dict[str, object] = {}
 
-        def fake_search_resources(**kwargs):
+        def fake_search_resources(**kwargs: object) -> dict[str, object]:
             captured.update(kwargs)
             return {
                 "resources": [],

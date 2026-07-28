@@ -3,7 +3,7 @@
 - Issue: #536 — Show why Curated Resources was selected or missed
 - Fixed point before session: parent `e164e695a818566289e829760a2b4d89882b1446`; Sage `6a7cde839e55d283fa02a033e90fe8f708f34d7b`
 - Worker session: `/root/ticket_536`
-- Status: implementation complete; final exact-SHA review rerun pending
+- Status: implementation complete; final exact-SHA specification and standards reviews passed at Sage `3733df23fd5cbae33cbc81c9e8f7ae5fe0151dea`
 
 ## Inputs
 
