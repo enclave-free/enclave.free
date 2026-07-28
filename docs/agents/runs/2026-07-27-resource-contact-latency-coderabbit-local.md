@@ -3,6 +3,8 @@
 ## Round 1
 
 - Scope: full committed parent diff against `origin/staging` at `0abc518f4b1b146e8550d3ea8499df6f3d49b01e`
+- Reviewed parent commit: `de65829`
+- Reviewed Sage pointer: `a82ac43761475a57a45ac18f8bcb9acedaf9e7bc`
 - Command: `coderabbit review --agent --type all --base-commit 0abc518f4b1b146e8550d3ea8499df6f3d49b01e -c AGENTS.md`
 - Availability: completed
 - Issues: 8 (1 critical, 7 minor)
@@ -25,4 +27,28 @@
 
 - Continue: yes
 - Escalate: no
-- Next: run targeted checks, commit the verified corrections, and rerun CodeRabbit against the corrected fixed point.
+- Completed validation before Round 1:
+  - `.venv/bin/python -m unittest discover -s backend/tests` — 424 passed with the repository Python 3.12.13 environment.
+  - `python3 -m unittest scripts.tests.test_curated_resource_contact_model_eval` — 35 passed; Python compile check passed.
+  - In `runtime/sage`, `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib --no-default-features` — 163 passed; `cargo fmt --all -- --check`, `cargo check -p sage-core --bin enclave_web --no-default-features`, and diff checks passed.
+  - In `frontend`, `npx vitest run --maxWorkers=2` — 75 files / 382 tests passed; `npm run build` passed.
+- Completed validation after Round 1 corrections at parent `1d6f9ca`:
+  - `/Users/plebdev/Desktop/Projects/enclave-free/enclave.free/.venv/bin/python -m unittest backend.tests.test_resource_directory` — 20 passed.
+  - In `frontend`, `npx vitest run src/utils/llmChat.test.ts --maxWorkers=2` — 20 passed, confirming the reported duplicate declaration was not present within one lexical scope.
+- Next: run Round 2 against parent `1d6f9ca`, then review the nested Sage diff directly.
+
+## Round 2
+
+- Scope: corrected full parent diff against `origin/staging` at `0abc518f4b1b146e8550d3ea8499df6f3d49b01e`
+- Reviewed parent commit: `1d6f9ca`
+- Reviewed Sage pointer: `a82ac43761475a57a45ac18f8bcb9acedaf9e7bc`
+- Command: `coderabbit review --agent --type all --base-commit 0abc518f4b1b146e8550d3ea8499df6f3d49b01e -c AGENTS.md`
+- Availability: completed
+- Issues: 1 minor, limited to this review record's reproducibility detail
+- Product-code status: no parent product-code issues reported
+
+### Planned after Round 2
+
+- Correct and commit this review record.
+- Run CodeRabbit directly in `runtime/sage` against Sage staging commit `a33e5903f775e5da627eac4269371622a2f1bf99`.
+- Run one final parent CodeRabbit refresh after all local review-record and Sage-review corrections are committed.
