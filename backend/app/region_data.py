@@ -16,6 +16,7 @@ M49 region codes (continental):
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Iterator, Optional, TypedDict
 
 
@@ -339,15 +340,31 @@ ALIASES: dict[str, str] = {
     "macedonia": "MK",
 }
 
-# Lazily-built lowercased canonical-name -> code index.
+# Lazily-built normalized canonical-name/alias -> code index.
 _NAME_INDEX: Optional[dict[str, str]] = None
+
+
+def _country_lookup_key(value: str) -> str:
+    """Normalize country names for case- and accent-insensitive lookup."""
+    decomposed = unicodedata.normalize("NFKD", value.casefold())
+    without_accents = "".join(
+        character
+        for character in decomposed
+        if not unicodedata.combining(character)
+    )
+    return " ".join(without_accents.split())
 
 
 def _name_index() -> dict[str, str]:
     global _NAME_INDEX
     if _NAME_INDEX is None:
-        index = {entry["name"].lower(): code for code, entry in COUNTRIES.items()}
-        index.update(ALIASES)
+        index = {
+            _country_lookup_key(entry["name"]): code
+            for code, entry in COUNTRIES.items()
+        }
+        index.update(
+            {_country_lookup_key(alias): code for alias, code in ALIASES.items()}
+        )
         _NAME_INDEX = index
     return _NAME_INDEX
 
@@ -364,14 +381,14 @@ def resolve_country_code(value: Optional[str]) -> Optional[str]:
     upper = raw.upper()
     if upper in COUNTRIES:
         return upper
-    # Name or alias (case-insensitive), tolerate a leading "jurisdiction:" label
-    lowered = raw.lower()
-    if lowered.startswith("jurisdiction:"):
-        lowered = lowered.split(":", 1)[1].strip()
-        iso = lowered.upper()
+    # Name or alias (case- and accent-insensitive), tolerate a leading
+    # "jurisdiction:" label.
+    if raw.casefold().startswith("jurisdiction:"):
+        raw = raw.split(":", 1)[1].strip()
+        iso = raw.upper()
         if iso in COUNTRIES:
             return iso
-    return _name_index().get(lowered)
+    return _name_index().get(_country_lookup_key(raw))
 
 
 class RegionAncestors(TypedDict):
