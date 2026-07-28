@@ -3,7 +3,7 @@
 - Issue: #535 — Ground contact follow-ups in a fresh Curated Resources call
 - Fixed point before session: parent `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa`
 - Worker session: `/root/ticket_535`
-- Commit: Sage `72a766db998971aa62975624203f1c76cf7e0061`; parent pointer/records pending
+- Commit: Sage `72a766db998971aa62975624203f1c76cf7e0061`; parent `a70e4a4a7a2a757ff8b104a8abe37cfb17529eb1`
 - Status: complete; review findings recorded, with route-level replay residual risk
 
 ## Inputs
