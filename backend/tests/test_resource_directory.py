@@ -590,6 +590,34 @@ class ResourceDirectoryTest(unittest.TestCase):
             "NI",
         )
 
+    def test_resource_search_resolves_accented_country_name(self) -> None:
+        self._create_ready_resource(
+            "mexico-legal",
+            scope_level="country",
+            scope_code="MX",
+            languages=["es"],
+            verified=True,
+        )
+
+        response = self.client.post(
+            "/internal/agent/resources/search",
+            headers=self.headers,
+            json={
+                "query": "Mexico Legal",
+                "help_type": "legal",
+                "jurisdiction": "México",
+                "language": "es",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["resolved_country_code"], "MX")
+        self.assertEqual(
+            [resource["resource_id"] for resource in body["resources"]],
+            ["mexico-legal"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
