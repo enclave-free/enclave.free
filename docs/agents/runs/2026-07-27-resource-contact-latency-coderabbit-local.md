@@ -52,3 +52,26 @@
 - Correct and commit this review record.
 - Run CodeRabbit directly in `runtime/sage` against Sage staging commit `a33e5903f775e5da627eac4269371622a2f1bf99`.
 - Run one final parent CodeRabbit refresh after all local review-record and Sage-review corrections are committed.
+
+## Sage Round 1
+
+- Scope: direct nested Sage diff against staging commit `a33e5903f775e5da627eac4269371622a2f1bf99`
+- Reviewed Sage commit: `a82ac43761475a57a45ac18f8bcb9acedaf9e7bc`
+- Command: `coderabbit review --agent --type all --base-commit a33e5903f775e5da627eac4269371622a2f1bf99 -c AGENTS.md`
+- Availability: completed
+- Issues: 1 minor
+- Addressed: Tool-selection Trace IDs now include both planning round and attempt, preventing retry attempts in one round from collapsing in the public Trace/Activity merge path.
+- Verification:
+  - `LIBRARY_PATH=/opt/homebrew/opt/libpq/lib DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libpq/lib cargo test -p sage-core --lib agent_trace_events_map_to_model_retry_correction_and_timing_deltas --no-default-features` — 1 passed.
+  - The same environment with `cargo test -p sage-core --lib --no-default-features` — 163 passed.
+  - `cargo fmt --all -- --check`, `cargo check -p sage-core --bin enclave_web --no-default-features`, and `git diff --check` passed.
+- Corrected Sage commit: `3bad5dbf28d1c27098f9759bd7297fecd2d8b639`.
+
+## Sage Round 2
+
+- Scope: corrected direct nested Sage diff against staging commit `a33e5903f775e5da627eac4269371622a2f1bf99`
+- Reviewed Sage commit: `3bad5dbf28d1c27098f9759bd7297fecd2d8b639`
+- Command: `coderabbit review --agent --type all --base-commit a33e5903f775e5da627eac4269371622a2f1bf99 -c AGENTS.md`
+- Availability: failed before analysis with CodeRabbit `rate_limit`
+- Reported wait: 43 minutes; CodeRabbit suggested waiting for the next included review or enabling usage-based reviews in organization billing.
+- Result: no second-round CodeRabbit claim is made. The single Sage Round 1 issue is fixed and deterministically verified; the staging PR will request `@coderabbit full review`.

@@ -31,6 +31,7 @@
 - Review fixed points: parent `e164e695a818566289e829760a2b4d89882b1446`; Sage final `3733df23fd5cbae33cbc81c9e8f7ae5fe0151dea`
 - Standards review: pass at Sage `3733df23fd5cbae33cbc81c9e8f7ae5fe0151dea`, zero findings.
 - Spec review: pass at Sage `3733df23fd5cbae33cbc81c9e8f7ae5fe0151dea`, zero findings.
+- Post-feature local CodeRabbit found that retry attempts in one planning round shared the same public Tool-selection Trace ID. Sage `3bad5dbf28d1c27098f9759bd7297fecd2d8b639` adds the attempt to that ID; its focused regression and the full 163-test Sage suite pass.
 
 ## Risks
 
