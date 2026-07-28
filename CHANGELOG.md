@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.7 - 2026-07-28
+
+- Prevented period-joined `Tool:` envelopes and lookup-only process narration from being released as final answers when the Tool phase had already completed.
+- Added one bounded clean-answer retry for those responses while preserving explanatory Tool prose, search-related explanations, and embedded identifiers across arbitrary provider chunk boundaries.
+
 ## 0.4.6 - 2026-07-28
 
 - Closed the remaining streamed Tool-decision leak across arbitrary provider chunk boundaries, including JSON, Markdown, bullet-form, and inline argument variants, while preserving ordinary explanatory Tool prose.
