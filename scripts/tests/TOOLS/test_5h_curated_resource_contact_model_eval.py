@@ -348,6 +348,7 @@ def score_inventory_turn(
 
     no_more_claim = has(
         r"\bno\s+(?:more|additional)\s+(?:matching\s+)?(?:results?|resources?)\b",
+        r"\bno\s+additional\s+pages?\b",
         r"\bno\s+remaining\s+(?:matching\s+)?(?:results?|resources?)\b",
         r"\bno\s+quedan\b",
         r"\bno\s+hay\s+m[aá]s\s+(?:resultados?|recursos?)\b",

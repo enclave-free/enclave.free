@@ -186,6 +186,21 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         self.assertTrue(first_ok)
         self.assertTrue(continuation_ok)
 
+    def test_inventory_scoring_accepts_no_additional_pages_after_complete_coverage(self):
+        complete_answer = (
+            f"Here are all {len(MODULE.INVENTORY_NAMES)} matching ready resources for the supplied filters: "
+            + ", ".join(MODULE.INVENTORY_NAMES)
+        )
+        continuation_ok, _ = MODULE.score_inventory_turn(
+            "There are no additional pages to show. The list is complete.",
+            self.resource_trace(0, False, None),
+            final_name=MODULE.INVENTORY_NAMES[-1],
+            continuation=True,
+            previous_answer=complete_answer,
+            previous_trace=self.complete_resource_trace(),
+        )
+        self.assertTrue(continuation_ok)
+
     def test_inventory_complete_continuation_accepts_authoritative_count_without_fixed_wording(self):
         completed = self.resource_trace(0, False, None)
         complete_trace = self.complete_resource_trace()
