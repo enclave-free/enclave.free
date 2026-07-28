@@ -294,10 +294,12 @@ Request:
 
 ```json
 {
+  "query": "Alpha Legal Network",
   "help_type": "legal",
   "jurisdiction": "Nicaragua",
   "language": "es",
-  "limit": 5
+  "limit": 5,
+  "offset": 0
 }
 ```
 
@@ -325,17 +327,29 @@ Response:
       "verified_at": "2026-06-01T00:00:00Z"
     }
   ],
+  "query": "alpha legal network",
   "resolved_country_code": "NI",
-  "help_type": "legal"
+  "help_type": "legal",
+  "total_count": 12,
+  "returned_count": 5,
+  "limit": 5,
+  "offset": 0,
+  "has_more": true,
+  "next_offset": 5
 }
 ```
 
 Only `ready` resources are returned. Referral lookups preserve the existing
-coverage behavior: matching resources must cover the resolved country, then are
-ranked by most-local coverage, verified resources, optional language match, and
-display order. Inventory lookups are capped, exclude pending/archived resources,
-and apply the same coverage filter when `jurisdiction` is supplied. Invalid
-payload shapes return `422`.
+coverage behavior: matching resources must cover the resolved country. Query
+matching checks normalized resource ID, organization name, email, phone, URL,
+secure-channel, and address values exactly before organization/contact substrings
+and description fallback; phone equality compares digits and organization names
+tolerate punctuation/spacing differences. Query relevance is ranked before
+most-local coverage, verified status, optional language match, display order, and
+name. `total_count` describes the complete filtered ready set before pagination;
+`has_more` and `next_offset` describe continuation. Inventory lookups are capped,
+exclude pending/archived resources, and apply the same coverage and pagination
+filters. Invalid payload shapes return `422`.
 
 ### `POST /internal/agent/admin-db-query`
 

@@ -5590,7 +5590,11 @@ def search_resources(
     help_type: str | None = None,
     language: str | None = None,
     limit: int = 5,
-) -> list[dict]:
+    *,
+    query: str | None = None,
+    offset: int = 0,
+    return_metadata: bool = False,
+) -> list[dict] | dict:
     """Faceted lookup of ready resources.
 
     When help_type is provided, return resources that match that type and whose
@@ -5601,8 +5605,10 @@ def search_resources(
     import region_data
 
     normalized_help_type = (help_type or "").strip()
+    normalized_query = " ".join(str(query or "").casefold().split()) or None
     sql_limit = max(0, int(limit))
-    fetch_limit = min(max(sql_limit * 4, sql_limit), 100) if language and sql_limit else sql_limit
+    sql_offset = max(0, int(offset))
+    legacy_fetch_limit = min(max(sql_limit * 4, sql_limit), 100) if language and sql_limit else sql_limit
     country_code = region_data.resolve_country_code(jurisdiction)
     ancestors = region_data.region_ancestors(country_code)
 
@@ -5632,7 +5638,10 @@ def search_resources(
                     ancestors["region_code"],
                 ]
             )
-        params.append(fetch_limit)
+        limit_clause = ""
+        if not return_metadata and not normalized_query and sql_offset == 0:
+            limit_clause = " LIMIT ?"
+            params.append(legacy_fetch_limit)
         cursor.execute(
             f"""
             SELECT DISTINCT r.* FROM resources r
@@ -5644,7 +5653,7 @@ def search_resources(
               CASE WHEN r.verified_at IS NOT NULL THEN 0 ELSE 1 END,
               r.display_order,
               r.name
-            LIMIT ?
+            {limit_clause}
             """,
             params,
         )
@@ -5652,21 +5661,79 @@ def search_resources(
         results = []
         for row in rows:
             help_types = _get_resource_help_types(cursor, row["resource_id"])
-            results.append(_resource_row_to_dict(row, help_types))
+            resource = _resource_row_to_dict(row, help_types)
+            if normalized_query:
+                resource["_query_relevance"] = _resource_query_relevance(resource, normalized_query)
+                if resource["_query_relevance"] is None:
+                    continue
+            else:
+                resource["_query_relevance"] = 0
+            results.append(resource)
 
     # Optional language preference should not outrank local coverage or verified status.
-    if language:
-        scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
-        results.sort(
-            key=lambda r: (
-                scope_rank.get(r.get("scope_level"), 3),
-                0 if r.get("verified_at") else 1,
-                0 if language in (r.get("languages") or []) else 1,
-                r.get("display_order") or 0,
-            )
+    scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
+    results.sort(
+        key=lambda r: (
+            r.get("_query_relevance", 0),
+            scope_rank.get(r.get("scope_level"), 3),
+            0 if r.get("verified_at") else 1,
+            0 if language and language in (r.get("languages") or []) else 1,
+            r.get("display_order") or 0,
+            (r.get("name") or "").casefold(),
         )
+    )
+    total_count = len(results)
+    page = results[sql_offset : sql_offset + sql_limit]
+    for resource in results:
+        resource.pop("_query_relevance", None)
+    metadata = {
+        "resources": page,
+        "total_count": total_count,
+        "returned_count": len(page),
+        "has_more": sql_offset + len(page) < total_count,
+        "next_offset": sql_offset + len(page) if sql_offset + len(page) < total_count else None,
+    }
+    return metadata if return_metadata else page
 
-    return results[:sql_limit]
+
+def _resource_query_relevance(resource: dict, query: str) -> int | None:
+    """Return a lower-is-better relevance rank for a normalized directory query."""
+    def compact(value: object) -> str:
+        return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+    def text(value: object) -> str:
+        return " ".join(str(value or "").casefold().split())
+
+    query_text = text(query)
+    query_compact = compact(query)
+    query_digits = "".join(ch for ch in str(query or "") if ch.isdigit())
+    contact = resource.get("contact") or {}
+    exact_fields = [("resource_id", resource.get("resource_id")), ("name", resource.get("name"))]
+    exact_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
+    for field, value in exact_fields:
+        if text(value) == query_text:
+            return 0
+        if field == "name" and query_compact and compact(value) == query_compact:
+            return 0
+        if field == "phone" and query_digits and "".join(ch for ch in str(value or "") if ch.isdigit()) == query_digits:
+            return 0
+
+    partial_fields = [("name", resource.get("name"))]
+    partial_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
+    for field, value in partial_fields:
+        value_text = text(value)
+        if query_text in value_text:
+            return 1
+        if field == "phone" and len(query_digits) >= 7:
+            value_digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+            if query_digits in value_digits:
+                return 1
+        if field == "name" and query_compact and query_compact in compact(value):
+            return 1
+
+    if query_text in text(resource.get("description")):
+        return 2
+    return None
 
 
 # --- Help-type vocabulary (operator-extensible) ---

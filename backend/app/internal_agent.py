@@ -146,16 +146,25 @@ class InternalDocumentSearchResponse(BaseModel):
 
 
 class InternalResourceSearchRequest(BaseModel):
+    query: Optional[str] = None
     help_type: Optional[str] = None
     jurisdiction: Optional[str] = None
     language: Optional[str] = None
     limit: int = 5
+    offset: int = 0
 
 
 class InternalResourceSearchResponse(BaseModel):
     resources: list[dict]
+    query: Optional[str] = None
     resolved_country_code: Optional[str] = None
     help_type: Optional[str] = None
+    total_count: int = 0
+    returned_count: int = 0
+    limit: int = 0
+    offset: int = 0
+    has_more: bool = False
+    next_offset: Optional[int] = None
 
 
 class InternalSessionLogTurn(BaseModel):
@@ -935,17 +944,30 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
             MAX_RESOURCE_SEARCH_LIMIT,
         ),
     )
+    effective_offset = max(0, int(payload.offset or 0))
+    normalized_query = " ".join((payload.query or "").casefold().split()) or None
     resolved = database.normalize_jurisdiction(payload.jurisdiction)
     resources = database.search_resources(
         jurisdiction=payload.jurisdiction,
         help_type=help_type,
         language=payload.language,
         limit=effective_limit,
+        offset=effective_offset,
+        query=payload.query,
+        return_metadata=True,
     )
+    page = resources
     return InternalResourceSearchResponse(
-        resources=resources,
+        resources=page["resources"],
+        query=normalized_query,
         resolved_country_code=resolved,
         help_type=help_type,
+        total_count=page["total_count"],
+        returned_count=page["returned_count"],
+        limit=effective_limit,
+        offset=effective_offset,
+        has_more=page["has_more"],
+        next_offset=page["next_offset"],
     )
 
 

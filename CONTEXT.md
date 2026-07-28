@@ -392,6 +392,14 @@ _Avoid_: debug mode, logging level, actor-specific trace policy
 A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
 _Avoid_: endpoint, fuzzy context category, hidden prompt blob
 
+**Curated Resource**:
+An Admin-vetted real-world referral or contact record that **Sage** may retrieve through the Curated Resources **Tool Set**. It is structured managed content, not a **Document** or a guarantee that the resource is suitable for every person.
+_Avoid_: document, web result, guaranteed referral
+
+**Resource Directory**:
+The Admin-managed collection of **Curated Resources** used for structured referral and contact lookup.
+_Avoid_: document library, search index, CRM
+
 **Admin Config Write Tool**:
 A model-callable **Admin Config Tool Set** contract that lets **Sage** directly apply a supported configuration change using product-level arguments. It is agent-owned write authority, not a proposal or pending UI artifact.
 _Avoid_: proposal tool, raw change-set JSON tool, Apply-card action
@@ -403,6 +411,10 @@ _Avoid_: route mode, hidden classifier, prompt context toggle
 **Model-Driven Tool Loop**:
 The Sage-owned loop where the model sees enabled **Tool** contracts, chooses calls, receives **Tool** results, and continues until it can answer or complete the authorized work.
 _Avoid_: preselected context pipeline, provider-native function-calling dependency
+
+**Tool Selection Observation**:
+A content-free record of which enabled **Tools** the model selected or omitted during a **Model-Driven Tool Loop** planning step. It supports Tool-use and latency diagnosis without authorizing or forcing a **Tool** call.
+_Avoid_: intent classifier, forced tool call, reasoning trace
 
 **Ordinary Product Flow**:
 A non-agent UI or API path where a **User** or **Admin** performs an action directly through the product.
