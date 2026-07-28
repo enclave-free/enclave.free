@@ -9,7 +9,7 @@
 - Feature branch: `feature/resource-contact-latency`
 - Human owner: plebdev
 - Started: 2026-07-27
-- Current status: Starting ticket #535
+- Current status: Ticket #535 complete; #536 remains next frontier
 - Skill setup status: Complete; GitHub issue tracking, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -27,9 +27,9 @@ timeouts and retries for read-only Curated Resources and Knowledge Search calls.
 - Prototype source branch, if any: None; existing public seams and contracts were sufficient
 - Spec issue: https://github.com/enclave-free/enclave.free/issues/533
 - Tickets: #534, #535, #536, #537, #538, and #539
-- Ticket sessions: #534 `docs/agents/runs/2026-07-27-resource-contact-latency-issue-534.md`
+- Ticket sessions: #534 `docs/agents/runs/2026-07-27-resource-contact-latency-issue-534.md`; #535 `docs/agents/runs/2026-07-27-resource-contact-latency-issue-535.md`
 - Agent briefs: Pending ticket publication
-- Review packets: #534 `docs/agents/runs/2026-07-27-resource-contact-latency-issue-534-review.md`
+- Review packets: #534 `docs/agents/runs/2026-07-27-resource-contact-latency-issue-534-review.md`; #535 `docs/agents/runs/2026-07-27-resource-contact-latency-issue-535-review.md`
 - Local CodeRabbit report: Pending implementation
 - PR URL: Pending
 
@@ -93,7 +93,7 @@ scope.
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
 | #534 | AFK | Complete | Fixed in review | Yes | backend 20 tests; Sage 118 tests; Sage check; fmt check; parent backend 423 tests |
-| #535 | AFK | Ready; frontier | Pending | Pending | No |
+| #535 | AFK | Complete | Fixed in review; route replay residual | No | Sage 119 tests; check; fmt |
 | #536 | AFK | Blocked by #535 | Pending | Pending | No |
 | #537 | AFK | Blocked by #536 | Pending | Pending | No |
 | #538 | AFK | Blocked by #536 and #537 | Pending | Pending | No |
@@ -110,6 +110,7 @@ scope.
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #534 | `133ca477e17d19ce8637a043fdec147f1a200a7e` / `a33e5903f775e5da627eac4269371622a2f1bf99` | `/root/ticket_534` | parent `698a021192acdf9f1aa4855292034989e2e6b55e`; Sage `14de20d2c378ac9af91e26378bd2c488a9b54faa` (prior Sage slice `9964e31498300752289fec6b3ea0c9f37cdcceca`) | Standards/spec hard findings fixed; baseline smells retained as out-of-scope cleanup | backend 20 targeted / 423 full; Sage 118 full; Sage check; fmt check |
+| #535 | `fca7379c4ada1dff5f5b2a0c57b024c9a95d2ff0` / `14de20d2c378ac9af91e26378bd2c488a9b54faa` | `/root/ticket_535` | parent pointer/records pending; Sage `72a766db998971aa62975624203f1c76cf7e0061` | Prompt policy strengthened; modality/boundary assertions added; route replay unavailable in isolated environment | Sage 119 full; Sage check; fmt check |
 
 ## Open Questions
 
