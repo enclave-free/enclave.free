@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.13 - 2026-07-29
+
+- Quarantined multiline `Tool calls` / `Function call` / `Arguments` transcripts across streaming boundaries while preserving benign explanatory prose.
+
 ## 0.4.12 - 2026-07-29
 
 - Quarantined final answers that begin with a serialized plural `Tool calls:` invocation so internal Tool syntax is never exposed and the existing safe inventory fallback can run.
