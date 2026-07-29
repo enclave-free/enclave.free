@@ -590,6 +590,47 @@ class ResourceDirectoryTest(unittest.TestCase):
             "NI",
         )
 
+    def test_resource_search_normalizes_country_names_aliases_and_whitespace(self) -> None:
+        cases = (
+            ("mexico-legal", "MX", "México", "es"),
+            (
+                "united-arab-emirates-legal",
+                "AE",
+                "  United   Arab   Emirates  ",
+                "en",
+            ),
+            ("turkey-legal", "TR", "TÜRKİYE", "tr"),
+        )
+        for resource_id, country_code, jurisdiction, language in cases:
+            self._create_ready_resource(
+                resource_id,
+                scope_level="country",
+                scope_code=country_code,
+                languages=[language],
+                verified=True,
+            )
+
+        for resource_id, country_code, jurisdiction, language in cases:
+            with self.subTest(jurisdiction=jurisdiction):
+                response = self.client.post(
+                    "/internal/agent/resources/search",
+                    headers=self.headers,
+                    json={
+                        "query": resource_id.replace("-", " ").title(),
+                        "help_type": "legal",
+                        "jurisdiction": jurisdiction,
+                        "language": language,
+                    },
+                )
+
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertEqual(body["resolved_country_code"], country_code)
+                self.assertEqual(
+                    [resource["resource_id"] for resource in body["resources"]],
+                    [resource_id],
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
