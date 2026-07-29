@@ -590,33 +590,46 @@ class ResourceDirectoryTest(unittest.TestCase):
             "NI",
         )
 
-    def test_resource_search_resolves_accented_country_name(self) -> None:
-        self._create_ready_resource(
-            "mexico-legal",
-            scope_level="country",
-            scope_code="MX",
-            languages=["es"],
-            verified=True,
+    def test_resource_search_normalizes_country_names_aliases_and_whitespace(self) -> None:
+        cases = (
+            ("mexico-legal", "MX", "México", "es"),
+            (
+                "united-arab-emirates-legal",
+                "AE",
+                "  United   Arab   Emirates  ",
+                "en",
+            ),
+            ("turkey-legal", "TR", "TÜRKİYE", "tr"),
         )
+        for resource_id, country_code, jurisdiction, language in cases:
+            self._create_ready_resource(
+                resource_id,
+                scope_level="country",
+                scope_code=country_code,
+                languages=[language],
+                verified=True,
+            )
 
-        response = self.client.post(
-            "/internal/agent/resources/search",
-            headers=self.headers,
-            json={
-                "query": "Mexico Legal",
-                "help_type": "legal",
-                "jurisdiction": "México",
-                "language": "es",
-            },
-        )
+        for resource_id, country_code, jurisdiction, language in cases:
+            with self.subTest(jurisdiction=jurisdiction):
+                response = self.client.post(
+                    "/internal/agent/resources/search",
+                    headers=self.headers,
+                    json={
+                        "query": resource_id.replace("-", " ").title(),
+                        "help_type": "legal",
+                        "jurisdiction": jurisdiction,
+                        "language": language,
+                    },
+                )
 
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["resolved_country_code"], "MX")
-        self.assertEqual(
-            [resource["resource_id"] for resource in body["resources"]],
-            ["mexico-legal"],
-        )
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertEqual(body["resolved_country_code"], country_code)
+                self.assertEqual(
+                    [resource["resource_id"] for resource in body["resources"]],
+                    [resource_id],
+                )
 
 
 if __name__ == "__main__":
