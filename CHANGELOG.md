@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.10 - 2026-07-28
+
+- Required fresh, exact Curated Resources lookups for contact-detail follow-ups while preserving the user's jurisdiction even when the prior help category is unavailable.
+- Preserved contact and inventory scope across pages, rejected inconsistent counts and cursors, and prevented partial Resource Directory results from being described as exhaustive.
+- Expanded English and Spanish inventory-region matching and added bounded lookup retries plus attributable Tool-selection and latency diagnostics.
+
 ## 0.4.9 - 2026-07-28
 
 - Normalized case, accents, and whitespace in country names and aliases so variants such as `México` and `Türkiye` resolve to their ISO codes and no longer exclude otherwise-matching country-scoped Curated Resources from exact contact searches.
