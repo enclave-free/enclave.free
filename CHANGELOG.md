@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.12 - 2026-07-29
+
+- Quarantined final answers that begin with a serialized plural `Tool calls:` invocation so internal Tool syntax is never exposed and the existing safe inventory fallback can run.
+
 ## 0.4.11 - 2026-07-29
 
 - Preserved successful curated-resource inventory answers when both final-answer generation attempts are safely quarantined before any text is exposed.
