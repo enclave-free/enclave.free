@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.11 - 2026-07-29
+
+- Preserved successful curated-resource inventory answers when both final-answer generation attempts are safely quarantined before any text is exposed.
+- Restricted the deterministic fallback to an explicitly user-safe inventory rendering; contact lookups, multi-Tool turns, partial streams, and ordinary provider failures remain fail-closed.
+
 ## 0.4.10 - 2026-07-28
 
 - Required fresh, exact Curated Resources lookups for contact-detail follow-ups while preserving the user's jurisdiction even when the prior help category is unavailable.
