@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.9 - 2026-07-28
+
+- Normalized case, accents, and whitespace in country names and aliases so variants such as `México` and `Türkiye` resolve to their ISO codes and no longer exclude otherwise-matching country-scoped Curated Resources from exact contact searches.
+
 ## 0.4.8 - 2026-07-28
 
 - Quarantined capitalized `Tool:` and `Tool decision:` labels joined directly to a preceding sentence period, including same-line contact lookup arguments, before any answer text is exposed.
