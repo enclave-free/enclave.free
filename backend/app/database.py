@@ -585,6 +585,11 @@ def init_schema():
             verified_at TIMESTAMP,
             vetted_by TEXT,
             source_note TEXT,
+            kind TEXT,
+            tags TEXT,
+            pointers TEXT,
+            regions TEXT,
+            provenance TEXT,
             display_order INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -735,6 +740,111 @@ def init_schema():
     seed_country_regions()
     seed_help_types()
     _migrate_resource_help_types_help_type_fk()  # Enforce resource help-type vocabulary membership
+    _migrate_resources_to_generic_contract()
+
+
+RESOURCE_KINDS = {"person", "organization", "product", "service", "method", "reference", "other"}
+RESOURCE_POINTER_TYPES = {"email", "phone", "url", "address", "secure_channel", "identifier", "other"}
+
+
+def _legacy_resource_kind(resource_type: str | None) -> str:
+    normalized = str(resource_type or "").strip().casefold()
+    if normalized in RESOURCE_KINDS:
+        return normalized
+    if normalized in {"hotline", "clinic", "shelter", "program"}:
+        return "service"
+    if normalized in {"guide", "manual", "document", "website"}:
+        return "reference"
+    if normalized in {"ngo", "nonprofit", "government", "agency", "company", "organization"}:
+        return "organization"
+    return "other"
+
+
+def _legacy_resource_generic_fields(
+    *,
+    resource_type: str | None,
+    contact: dict | None,
+    scope_level: str | None,
+    scope_code: str | None,
+    help_types: list[str] | None,
+    verified_at: str | None,
+    vetted_by: str | None,
+    source_note: str | None,
+) -> dict:
+    normalized_type = str(resource_type or "").strip().casefold()
+    tags = sorted({str(tag).strip() for tag in (help_types or []) if str(tag).strip()})
+    if normalized_type and normalized_type not in RESOURCE_KINDS:
+        tags.append(f"legacy_type:{normalized_type}")
+        tags = sorted(set(tags))
+    pointers = []
+    for key, value in (contact or {}).items():
+        if not str(value).strip():
+            continue
+        pointer = {
+            "type": "other" if key == "notes" else key,
+            "value": str(value).strip(),
+        }
+        if key == "notes":
+            pointer["label"] = "notes"
+        pointers.append(pointer)
+    regions = (
+        [{"level": scope_level, "code": None if scope_level == "global" else scope_code}]
+        if scope_level
+        else []
+    )
+    return {
+        "kind": _legacy_resource_kind(resource_type),
+        "tags": tags,
+        "pointers": pointers,
+        "regions": regions,
+        "provenance": {
+            "verified_at": verified_at,
+            "vetted_by": vetted_by,
+            "source_note": source_note,
+        },
+    }
+
+
+def _migrate_resources_to_generic_contract() -> None:
+    """Expand legacy resource rows into the generic contract, idempotently."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(resources)")
+    columns = {row["name"] for row in cursor.fetchall()}
+    for name in ("kind", "tags", "pointers", "regions", "provenance"):
+        if name not in columns:
+            cursor.execute(f"ALTER TABLE resources ADD COLUMN {name} TEXT")
+
+    cursor.execute("SELECT * FROM resources")
+    for row in cursor.fetchall():
+        cursor.execute(
+            "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
+            (row["resource_id"],),
+        )
+        help_types = [item["help_type"] for item in cursor.fetchall()]
+        generic = _legacy_resource_generic_fields(
+            resource_type=row["resource_type"],
+            contact=_json_loads_or({}, row["contact"]),
+            scope_level=row["scope_level"],
+            scope_code=row["scope_code"],
+            help_types=help_types,
+            verified_at=row["verified_at"],
+            vetted_by=row["vetted_by"],
+            source_note=row["source_note"],
+        )
+        updates = {
+            key: value
+            for key, value in generic.items()
+            if row[key] is None
+        }
+        if updates:
+            assignments = ", ".join(f"{key} = ?" for key in updates)
+            cursor.execute(
+                f"UPDATE resources SET {assignments} WHERE resource_id = ?",
+                [json.dumps(value) if key != "kind" else value for key, value in updates.items()]
+                + [row["resource_id"]],
+            )
+    conn.commit()
 
 
 def _migrate_resource_help_types_help_type_fk() -> None:
@@ -5312,6 +5422,109 @@ def resource_missing_fields(merged: dict, help_types: list[str]) -> list[str]:
     return missing
 
 
+def generic_resource_missing_fields(resource: dict) -> list[str]:
+    """Fields required before a generic Curated Resource can be searched."""
+    missing: list[str] = []
+    if not str(resource.get("name") or "").strip():
+        missing.append("name")
+    if resource.get("kind") not in RESOURCE_KINDS:
+        missing.append("kind")
+    if not str(resource.get("description") or "").strip():
+        missing.append("description")
+    has_useful_pointer = any(
+        isinstance(pointer, dict)
+        and str(pointer.get("type") or "").strip().casefold() in RESOURCE_POINTER_TYPES
+        and bool(str(pointer.get("value") or "").strip())
+        for pointer in (resource.get("pointers") or [])
+    )
+    if not has_useful_pointer:
+        missing.append("pointers")
+    return missing
+
+
+def _normalize_generic_tags(tags: list[str] | None) -> list[str]:
+    return sorted(
+        {
+            str(tag).strip().casefold()
+            for tag in (tags or [])
+            if str(tag).strip() and len(str(tag).strip()) <= 120
+        }
+    )
+
+
+def _normalize_generic_pointers(pointers: list[dict] | None) -> list[dict]:
+    normalized: list[dict] = []
+    for pointer in pointers or []:
+        if not isinstance(pointer, dict):
+            continue
+        pointer_type = str(pointer.get("type") or "").strip().casefold()
+        value = str(pointer.get("value") or "").strip()
+        if pointer_type not in RESOURCE_POINTER_TYPES or not value:
+            continue
+        item = {"type": pointer_type, "value": value}
+        label = str(pointer.get("label") or "").strip()
+        if label:
+            item["label"] = label
+        normalized.append(item)
+    return normalized
+
+
+def _merge_legacy_tags(existing: dict, derived: dict, *, replace_help_types: bool, replace_type: bool) -> list[str]:
+    tags = set(_normalize_generic_tags(existing.get("tags")))
+    if replace_help_types:
+        tags.difference_update(str(tag).casefold() for tag in existing.get("help_types") or [])
+        tags.update(str(tag).casefold() for tag in derived.get("tags") or [] if not str(tag).startswith("legacy_type:"))
+    if replace_type:
+        tags = {tag for tag in tags if not tag.startswith("legacy_type:")}
+        tags.update(str(tag).casefold() for tag in derived.get("tags") or [] if str(tag).startswith("legacy_type:"))
+    return sorted(tags)
+
+
+def _merge_legacy_pointers(existing: dict, derived: dict) -> list[dict]:
+    prior_legacy = _normalize_generic_pointers(
+        _legacy_resource_generic_fields(
+            resource_type=existing.get("resource_type"),
+            contact=existing.get("contact"),
+            scope_level=None,
+            scope_code=None,
+            help_types=None,
+            verified_at=None,
+            vetted_by=None,
+            source_note=None,
+        )["pointers"]
+    )
+    prior_keys = {(item["type"], item["value"], item.get("label")) for item in prior_legacy}
+    preserved = [
+        item
+        for item in _normalize_generic_pointers(existing.get("pointers"))
+        if (item["type"], item["value"], item.get("label")) not in prior_keys
+    ]
+    return preserved + _normalize_generic_pointers(derived.get("pointers"))
+
+
+def _merge_legacy_regions(existing: dict, derived: dict) -> list[dict]:
+    old_region = (
+        {"level": existing.get("scope_level"), "code": existing.get("scope_code")}
+        if existing.get("scope_level")
+        else None
+    )
+    preserved = [
+        region
+        for region in (existing.get("regions") or [])
+        if isinstance(region, dict) and region != old_region
+    ]
+    for region in derived.get("regions") or []:
+        if region not in preserved:
+            preserved.append(region)
+    return preserved
+
+
+def compute_generic_resource_status(resource: dict, archived: bool) -> str:
+    if archived:
+        return "archived"
+    return "ready" if not generic_resource_missing_fields(resource) else "pending"
+
+
 def compute_resource_status(merged: dict, help_types: list[str], archived: bool) -> str:
     """Auto-compute lifecycle status. 'archived' is explicit and wins; otherwise a
     resource is 'ready' iff all required fields are present, else 'pending'."""
@@ -5325,17 +5538,14 @@ def _recompute_resource_status(cursor: sqlite3.Cursor, resource_id: str) -> None
     row = cursor.fetchone()
     if not row:
         return
-    contact = _json_loads_or({}, row["contact"])
-    help_types = _get_resource_help_types(cursor, resource_id)
-    status = compute_resource_status(
+    pointers = _json_loads_or([], row["pointers"])
+    status = compute_generic_resource_status(
         {
             "name": row["name"],
-            "resource_type": row["resource_type"],
-            "scope_level": row["scope_level"],
-            "scope_code": row["scope_code"],
-            "contact": contact if isinstance(contact, dict) else {},
+            "kind": row["kind"],
+            "description": row["description"],
+            "pointers": pointers if isinstance(pointers, list) else [],
         },
-        help_types,
         archived=row["status"] == "archived",
     )
     cursor.execute(
@@ -5348,6 +5558,10 @@ def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
     import region_data
     contact = _json_loads_or({}, row["contact"])
     languages = _json_loads_or([], row["languages"])
+    tags = _json_loads_or([], row["tags"])
+    pointers = _json_loads_or([], row["pointers"])
+    regions = _json_loads_or([], row["regions"])
+    provenance = _json_loads_or({}, row["provenance"])
     return {
         "resource_id": row["resource_id"],
         "name": row["name"],
@@ -5359,17 +5573,18 @@ def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
         "scope_code": row["scope_code"],
         "coverage": region_data.describe_scope(row["scope_level"], row["scope_code"]),
         "help_types": help_types,
+        "kind": row["kind"],
+        "tags": tags if isinstance(tags, list) else [],
+        "pointers": pointers if isinstance(pointers, list) else [],
+        "regions": regions if isinstance(regions, list) else [],
+        "provenance": provenance if isinstance(provenance, dict) else {},
         "status": row["status"],
-        "missing_fields": resource_missing_fields(
-            {
-                "name": row["name"],
-                "resource_type": row["resource_type"],
-                "scope_level": row["scope_level"],
-                "scope_code": row["scope_code"],
-                "contact": contact if isinstance(contact, dict) else {},
-            },
-            help_types,
-        ),
+        "missing_fields": generic_resource_missing_fields({
+            "name": row["name"],
+            "kind": row["kind"],
+            "description": row["description"],
+            "pointers": pointers if isinstance(pointers, list) else [],
+        }),
         "verified_at": row["verified_at"],
         "vetted_by": row["vetted_by"],
         "source_note": row["source_note"],
@@ -5418,6 +5633,11 @@ def create_resource(
     *,
     resource_id: str,
     name: str | None = None,
+    kind: str | None = None,
+    tags: list[str] | None = None,
+    pointers: list[dict] | None = None,
+    regions: list[dict] | None = None,
+    provenance: dict | None = None,
     resource_type: str | None = None,
     description: str | None = None,
     contact: dict | None = None,
@@ -5441,15 +5661,45 @@ def create_resource(
         "scope_code": scope_code,
         "contact": contact or {},
     }
-    status = compute_resource_status(merged, help_types, archived)
+    generic = _legacy_resource_generic_fields(
+        resource_type=resource_type,
+        contact=contact,
+        scope_level=scope_level,
+        scope_code=scope_code,
+        help_types=help_types,
+        verified_at=verified_at,
+        vetted_by=vetted_by,
+        source_note=source_note,
+    )
+    if not str(resource_type or "").strip():
+        generic["kind"] = None
+    if kind is not None:
+        generic["kind"] = kind
+    if tags is not None:
+        generic["tags"] = _normalize_generic_tags(tags)
+    if pointers is not None:
+        generic["pointers"] = _normalize_generic_pointers(pointers)
+    if regions is not None:
+        generic["regions"] = regions
+    if provenance is not None:
+        generic["provenance"] = provenance
+    status = compute_generic_resource_status(
+        {
+            "name": name,
+            "kind": generic["kind"],
+            "description": description,
+            "pointers": generic["pointers"],
+        },
+        archived,
+    )
     with get_cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO resources (
                 resource_id, name, resource_type, description, contact, languages,
                 scope_level, scope_code, status, verified_at, vetted_by, source_note,
-                display_order, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                kind, tags, pointers, regions, provenance, display_order, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (
                 resource_id,
@@ -5464,6 +5714,11 @@ def create_resource(
                 verified_at,
                 vetted_by,
                 source_note,
+                generic["kind"],
+                json.dumps(generic["tags"]),
+                json.dumps(generic["pointers"]),
+                json.dumps(generic["regions"]),
+                json.dumps(generic["provenance"]),
                 display_order,
             ),
         )
@@ -5487,6 +5742,11 @@ def update_resource(
     resource_id: str,
     *,
     name=_UNSET,
+    kind=_UNSET,
+    tags=_UNSET,
+    pointers=_UNSET,
+    regions=_UNSET,
+    provenance=_UNSET,
     resource_type=_UNSET,
     description=_UNSET,
     contact=_UNSET,
@@ -5529,14 +5789,60 @@ def update_resource(
     else:
         is_archived = bool(archived)
 
-    merged = {
-        "name": final_name,
-        "resource_type": final_type,
-        "scope_level": final_scope_level,
-        "scope_code": final_scope_code,
-        "contact": final_contact or {},
-    }
-    final_status = compute_resource_status(merged, final_help_types, is_archived)
+    derived_generic = _legacy_resource_generic_fields(
+        resource_type=final_type,
+        contact=final_contact,
+        scope_level=final_scope_level,
+        scope_code=final_scope_code,
+        help_types=final_help_types,
+        verified_at=final_verified_at,
+        vetted_by=final_vetted_by,
+        source_note=final_source_note,
+    )
+    legacy_kind_was_authoritative = existing.get("kind") == _legacy_resource_kind(
+        existing.get("resource_type")
+    )
+    derived_kind = existing["kind"]
+    if resource_type is not _UNSET and legacy_kind_was_authoritative and str(final_type or "").strip():
+        derived_kind = derived_generic["kind"]
+    final_kind = pick(kind, derived_kind)
+    if tags is _UNSET:
+        final_tags = _merge_legacy_tags(
+            existing,
+            derived_generic,
+            replace_help_types=help_types is not _UNSET,
+            replace_type=resource_type is not _UNSET,
+        )
+    else:
+        final_tags = _normalize_generic_tags(tags)
+    final_pointers = (
+        _merge_legacy_pointers(existing, derived_generic)
+        if pointers is _UNSET and contact is not _UNSET
+        else _normalize_generic_pointers(pick(pointers, existing["pointers"]))
+    )
+    final_regions = (
+        _merge_legacy_regions(existing, derived_generic)
+        if regions is _UNSET and (scope_level is not _UNSET or scope_code is not _UNSET)
+        else pick(regions, existing["regions"])
+    )
+    final_provenance = dict(existing.get("provenance") or {})
+    if provenance is not _UNSET:
+        final_provenance.update(provenance or {})
+    if verified_at is not _UNSET:
+        final_provenance["verified_at"] = final_verified_at
+    if vetted_by is not _UNSET:
+        final_provenance["vetted_by"] = final_vetted_by
+    if source_note is not _UNSET:
+        final_provenance["source_note"] = final_source_note
+    final_status = compute_generic_resource_status(
+        {
+            "name": final_name,
+            "kind": final_kind,
+            "description": final_desc,
+            "pointers": final_pointers,
+        },
+        is_archived,
+    )
 
     with get_cursor() as cursor:
         cursor.execute(
@@ -5544,7 +5850,8 @@ def update_resource(
             UPDATE resources SET
                 name = ?, resource_type = ?, description = ?, contact = ?, languages = ?,
                 scope_level = ?, scope_code = ?, status = ?, verified_at = ?, vetted_by = ?,
-                source_note = ?, display_order = ?, updated_at = CURRENT_TIMESTAMP
+                source_note = ?, kind = ?, tags = ?, pointers = ?, regions = ?, provenance = ?,
+                display_order = ?, updated_at = CURRENT_TIMESTAMP
             WHERE resource_id = ?
             """,
             (
@@ -5559,6 +5866,11 @@ def update_resource(
                 final_verified_at,
                 final_vetted_by,
                 final_source_note,
+                final_kind,
+                json.dumps(final_tags or []),
+                json.dumps(final_pointers or []),
+                json.dumps(final_regions or []),
+                json.dumps(final_provenance or {}),
                 final_display_order,
                 resource_id,
             ),
@@ -5592,6 +5904,9 @@ def search_resources(
     limit: int = 5,
     *,
     query: str | None = None,
+    kind: str | None = None,
+    tags: list[str] | None = None,
+    region: str | None = None,
     offset: int = 0,
     return_metadata: bool = False,
 ) -> list[dict] | dict:
@@ -5605,12 +5920,23 @@ def search_resources(
     import region_data
 
     normalized_help_type = (help_type or "").strip()
+    normalized_kind = (kind or "").strip().casefold() or None
+    normalized_tags = {str(tag).strip().casefold() for tag in (tags or []) if str(tag).strip()}
     normalized_query = " ".join(str(query or "").casefold().split()) or None
     sql_limit = max(0, int(limit))
     sql_offset = max(0, int(offset))
-    legacy_fetch_limit = min(max(sql_limit * 4, sql_limit), 100) if language and sql_limit else sql_limit
-    country_code = region_data.resolve_country_code(jurisdiction)
+    country_code = region_data.resolve_country_code(region or jurisdiction)
+    if str(region or "").strip() and not country_code:
+        empty = {
+            "resources": [],
+            "total_count": 0,
+            "returned_count": 0,
+            "has_more": False,
+            "next_offset": None,
+        }
+        return empty if return_metadata else []
     ancestors = region_data.region_ancestors(country_code)
+    requires_python_scan = bool(normalized_kind or normalized_tags or normalized_query or language)
 
     with get_cursor() as cursor:
         joins = []
@@ -5620,14 +5946,33 @@ def search_resources(
             joins.append("JOIN resource_help_types h ON h.resource_id = r.resource_id")
             where.append("h.help_type = ?")
             params.append(normalized_help_type)
-        if country_code or normalized_help_type:
+        if country_code:
             where.append(
                 """
                 (
-                     (r.scope_level = 'country'   AND r.scope_code = ?)
-                  OR (r.scope_level = 'subregion' AND r.scope_code = ?)
-                  OR (r.scope_level = 'region'    AND r.scope_code = ?)
-                  OR (r.scope_level = 'global')
+                    EXISTS (
+                        SELECT 1
+                        FROM json_each(CASE WHEN json_valid(r.regions) THEN r.regions ELSE '[]' END) AS gr
+                        WHERE (json_extract(gr.value, '$.level') = 'global')
+                           OR (json_extract(gr.value, '$.level') = 'country'
+                               AND json_extract(gr.value, '$.code') = ?)
+                           OR (json_extract(gr.value, '$.level') = 'subregion'
+                               AND json_extract(gr.value, '$.code') = ?)
+                           OR (json_extract(gr.value, '$.level') = 'region'
+                               AND json_extract(gr.value, '$.code') = ?)
+                    )
+                    OR (
+                        NOT EXISTS (
+                            SELECT 1
+                            FROM json_each(CASE WHEN json_valid(r.regions) THEN r.regions ELSE '[]' END)
+                        )
+                        AND (
+                               (r.scope_level = 'country' AND r.scope_code = ?)
+                            OR (r.scope_level = 'subregion' AND r.scope_code = ?)
+                            OR (r.scope_level = 'region' AND r.scope_code = ?)
+                            OR (r.scope_level = 'global')
+                        )
+                    )
                 )
                 """
             )
@@ -5636,21 +5981,35 @@ def search_resources(
                     ancestors["country_code"],
                     ancestors["subregion_code"],
                     ancestors["region_code"],
+                    ancestors["country_code"],
+                    ancestors["subregion_code"],
+                    ancestors["region_code"],
                 ]
             )
         limit_clause = ""
-        if not return_metadata and not normalized_query and sql_offset == 0:
+        if not return_metadata and not requires_python_scan and sql_offset == 0:
             limit_clause = " LIMIT ?"
-            params.append(legacy_fetch_limit)
+            params.append(sql_limit)
         cursor.execute(
             f"""
             SELECT DISTINCT r.* FROM resources r
             {' '.join(joins)}
             WHERE {' AND '.join(where)}
             ORDER BY
-              CASE r.scope_level
-                WHEN 'country' THEN 0 WHEN 'subregion' THEN 1 WHEN 'region' THEN 2 ELSE 3 END,
-              CASE WHEN r.verified_at IS NOT NULL THEN 0 ELSE 1 END,
+              COALESCE(
+                (
+                  SELECT MIN(
+                    CASE json_extract(gr.value, '$.level')
+                      WHEN 'country' THEN 0 WHEN 'subregion' THEN 1
+                      WHEN 'region' THEN 2 WHEN 'global' THEN 3 ELSE 3 END
+                  )
+                  FROM json_each(CASE WHEN json_valid(r.regions) THEN r.regions ELSE '[]' END) AS gr
+                ),
+                CASE r.scope_level
+                  WHEN 'country' THEN 0 WHEN 'subregion' THEN 1 WHEN 'region' THEN 2 ELSE 3 END
+              ),
+              CASE WHEN COALESCE(json_extract(r.provenance, '$.verified_at'), r.verified_at) IS NOT NULL
+                THEN 0 ELSE 1 END,
               r.display_order,
               r.name
             {limit_clause}
@@ -5662,6 +6021,13 @@ def search_resources(
         for row in rows:
             help_types = _get_resource_help_types(cursor, row["resource_id"])
             resource = _resource_row_to_dict(row, help_types)
+            if normalized_kind and resource.get("kind") != normalized_kind:
+                continue
+            resource_tags = {str(tag).casefold() for tag in resource.get("tags") or []}
+            if normalized_tags and not normalized_tags.issubset(resource_tags):
+                continue
+            if country_code and not _resource_matches_region(resource, ancestors):
+                continue
             if normalized_query:
                 resource["_query_relevance"] = _resource_query_relevance(resource, normalized_query)
                 if resource["_query_relevance"] is None:
@@ -5675,8 +6041,8 @@ def search_resources(
     results.sort(
         key=lambda r: (
             r.get("_query_relevance", 0),
-            scope_rank.get(r.get("scope_level"), 3),
-            0 if r.get("verified_at") else 1,
+            _resource_scope_rank(r),
+            0 if _resource_is_verified(r) else 1,
             0 if language and language in (r.get("languages") or []) else 1,
             r.get("display_order") or 0,
             (r.get("name") or "").casefold(),
@@ -5696,6 +6062,36 @@ def search_resources(
     return metadata if return_metadata else page
 
 
+def _resource_scope_rank(resource: dict) -> int:
+    """Rank the most specific generic region, falling back during expansion."""
+    scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
+    generic_ranks = [
+        scope_rank[region["level"]]
+        for region in (resource.get("regions") or [])
+        if isinstance(region, dict) and region.get("level") in scope_rank
+    ]
+    if generic_ranks:
+        return min(generic_ranks)
+    return scope_rank.get(resource.get("scope_level"), 3)
+
+
+def _resource_is_verified(resource: dict) -> bool:
+    provenance = resource.get("provenance") or {}
+    return bool(provenance.get("verified_at") or resource.get("verified_at"))
+
+
+def _resource_matches_region(resource: dict, ancestors: dict) -> bool:
+    regions = resource.get("regions") or []
+    if regions:
+        return _generic_resource_matches_region(regions, ancestors)
+    legacy_regions = (
+        [{"level": resource.get("scope_level"), "code": resource.get("scope_code")}]
+        if resource.get("scope_level")
+        else []
+    )
+    return _generic_resource_matches_region(legacy_regions, ancestors)
+
+
 def _resource_query_relevance(resource: dict, query: str) -> int | None:
     """Return a lower-is-better relevance rank for a normalized directory query."""
     def compact(value: object) -> str:
@@ -5708,8 +6104,14 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
     query_compact = compact(query)
     query_digits = "".join(ch for ch in str(query or "") if ch.isdigit())
     contact = resource.get("contact") or {}
+    pointers = resource.get("pointers") or []
     exact_fields = [("resource_id", resource.get("resource_id")), ("name", resource.get("name"))]
     exact_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
+    exact_fields.extend(
+        (pointer.get("type"), pointer.get("value"))
+        for pointer in pointers
+        if isinstance(pointer, dict)
+    )
     for field, value in exact_fields:
         if text(value) == query_text:
             return 0
@@ -5720,6 +6122,11 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
 
     partial_fields = [("name", resource.get("name"))]
     partial_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
+    partial_fields.extend(
+        (pointer.get("type"), pointer.get("value"))
+        for pointer in pointers
+        if isinstance(pointer, dict)
+    )
     for field, value in partial_fields:
         value_text = text(value)
         if query_text in value_text:
@@ -5734,6 +6141,23 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
     if query_text in text(resource.get("description")):
         return 2
     return None
+
+
+def _generic_resource_matches_region(regions: list[dict], ancestors: dict) -> bool:
+    for region in regions:
+        if not isinstance(region, dict):
+            continue
+        level = region.get("level")
+        code = region.get("code")
+        if level == "global":
+            return True
+        if level == "country" and code == ancestors.get("country_code"):
+            return True
+        if level == "subregion" and code == ancestors.get("subregion_code"):
+            return True
+        if level == "region" and code == ancestors.get("region_code"):
+            return True
+    return False
 
 
 # --- Help-type vocabulary (operator-extensible) ---

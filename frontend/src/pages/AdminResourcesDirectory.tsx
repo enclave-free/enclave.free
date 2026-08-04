@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,52 +30,57 @@ import {
   type RegionData,
 } from '../components/admin/CoveragePicker';
 
-const RESOURCE_TYPES = [
-  'lawyer',
-  'ngo',
-  'un_body',
-  'clinic',
-  'shelter',
-  'financial',
-  'hotline',
+const RESOURCE_KINDS = [
+  'person',
+  'organization',
+  'product',
+  'service',
+  'method',
+  'reference',
   'other',
 ] as const;
-const CONTACT_KEYS = [
-  'phone',
+const POINTER_TYPES = [
   'email',
+  'phone',
   'url',
-  'secure_channel',
   'address',
-  'notes',
+  'secure_channel',
+  'identifier',
+  'other',
 ] as const;
 
-type ContactKey = (typeof CONTACT_KEYS)[number];
+type ResourceKind = (typeof RESOURCE_KINDS)[number];
+type PointerType = (typeof POINTER_TYPES)[number];
 
-interface ResourceContact {
-  phone?: string;
-  email?: string;
-  url?: string;
-  secure_channel?: string;
-  address?: string;
-  notes?: string;
+interface ResourcePointer {
+  type: PointerType;
+  value: string;
+  label?: string | null;
+}
+
+interface ResourceRegion {
+  level: Exclude<CoverageLevel, ''>;
+  code: string | null;
+}
+
+interface ResourceProvenance {
+  verified_at?: string | null;
+  vetted_by?: string | null;
+  source_note?: string | null;
 }
 
 interface Resource {
   resource_id: string;
   name: string | null;
-  resource_type: string | null;
+  kind: ResourceKind | null;
+  tags: string[];
+  pointers: ResourcePointer[];
+  regions: ResourceRegion[];
+  provenance: ResourceProvenance;
   description: string | null;
-  contact: ResourceContact;
   languages: string[];
-  scope_level: CoverageLevel | null;
-  scope_code: string | null;
-  coverage: string | null;
-  help_types: string[];
   status: 'pending' | 'ready' | 'archived';
   missing_fields: string[];
-  verified_at: string | null;
-  vetted_by: string | null;
-  source_note: string | null;
   display_order: number;
 }
 
@@ -122,22 +127,16 @@ function parseRegionData(value: unknown): RegionData | null {
     : null;
 }
 
-interface HelpType {
-  key: string;
-  label: string;
-  description?: string | null;
-}
-
 interface FormState {
   resource_id: string;
   name: string;
-  resource_type: string;
+  kind: ResourceKind | '';
+  tags: string;
   description: string;
-  scope_level: CoverageLevel;
-  scope_code: string;
-  help_types: string[];
+  pointers: ResourcePointer[];
+  regions: { level: CoverageLevel; code: string }[];
   languages: string;
-  contact: ResourceContact;
+  display_order: string;
   verified: boolean;
   vetted_by: string;
   source_note: string;
@@ -147,13 +146,13 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   resource_id: '',
   name: '',
-  resource_type: '',
+  kind: '',
+  tags: '',
   description: '',
-  scope_level: '',
-  scope_code: '',
-  help_types: [],
+  pointers: [{ type: 'url', value: '', label: '' }],
+  regions: [{ level: '', code: '' }],
   languages: '',
-  contact: {},
+  display_order: '0',
   verified: false,
   vetted_by: '',
   source_note: '',
@@ -172,16 +171,28 @@ function resourceToForm(resource: Resource): FormState {
   return {
     resource_id: resource.resource_id,
     name: resource.name ?? '',
-    resource_type: resource.resource_type ?? '',
+    kind: resource.kind ?? '',
+    tags: (resource.tags ?? []).join(', '),
     description: resource.description ?? '',
-    scope_level: resource.scope_level ?? '',
-    scope_code: resource.scope_code ?? '',
-    help_types: resource.help_types ?? [],
+    pointers:
+      resource.pointers?.length > 0
+        ? resource.pointers.map((pointer) => ({
+            ...pointer,
+            label: pointer.label ?? '',
+          }))
+        : [{ type: 'url', value: '', label: '' }],
+    regions:
+      resource.regions?.length > 0
+        ? resource.regions.map((region) => ({
+            level: region.level,
+            code: region.code ?? '',
+          }))
+        : [{ level: '', code: '' }],
     languages: (resource.languages ?? []).join(', '),
-    contact: { ...resource.contact },
-    verified: Boolean(resource.verified_at),
-    vetted_by: resource.vetted_by ?? '',
-    source_note: resource.source_note ?? '',
+    display_order: String(resource.display_order ?? 0),
+    verified: Boolean(resource.provenance?.verified_at),
+    vetted_by: resource.provenance?.vetted_by ?? '',
+    source_note: resource.provenance?.source_note ?? '',
     archived: resource.status === 'archived',
   };
 }
@@ -193,7 +204,6 @@ export function AdminResourcesDirectory({
 } = {}) {
   const { t } = useTranslation();
   const [resources, setResources] = useState<Resource[]>([]);
-  const [helpTypes, setHelpTypes] = useState<HelpType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -213,17 +223,13 @@ export function AdminResourcesDirectory({
           response.ok ? parseRegionData(await response.json()) : null
         )
         .catch(() => null);
-      const [resResources, resHelpTypes, nextRegionData] = await Promise.all([
+      const [resResources, nextRegionData] = await Promise.all([
         adminFetch('/admin/resources'),
-        adminFetch('/admin/help-types'),
         regionDataPromise,
       ]);
       if (!resResources.ok) throw new Error('Failed to load resources');
-      if (!resHelpTypes.ok) throw new Error('Failed to load help types');
       const resourcesData = await resResources.json();
-      const helpTypesData = await resHelpTypes.json();
       setResources(resourcesData.resources ?? []);
-      setHelpTypes(helpTypesData.help_types ?? []);
       // Region taxonomy is best-effort; the coverage picker degrades gracefully.
       setRegionData(nextRegionData);
     } catch (e) {
@@ -254,12 +260,6 @@ export function AdminResourcesDirectory({
       );
   }, [fetchData]);
 
-  const helpTypeLabels = useMemo(() => {
-    const map = new Map<string, string>();
-    helpTypes.forEach((h) => map.set(h.key, h.label));
-    return map;
-  }, [helpTypes]);
-
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
@@ -280,45 +280,75 @@ export function AdminResourcesDirectory({
     setFormError(null);
   };
 
-  const toggleHelpType = (key: string) => {
+  const setPointer = (
+    index: number,
+    field: keyof ResourcePointer,
+    value: string
+  ) => {
     setForm((prev) => ({
       ...prev,
-      help_types: prev.help_types.includes(key)
-        ? prev.help_types.filter((k) => k !== key)
-        : [...prev.help_types, key],
+      pointers: prev.pointers.map((pointer, pointerIndex) =>
+        pointerIndex === index ? { ...pointer, [field]: value } : pointer
+      ),
     }));
   };
 
-  const setContactField = (key: ContactKey, value: string) => {
+  const removePointer = (index: number) => {
     setForm((prev) => ({
       ...prev,
-      contact: { ...prev.contact, [key]: value },
+      pointers: prev.pointers.filter(
+        (_, pointerIndex) => pointerIndex !== index
+      ),
+    }));
+  };
+
+  const setRegion = (
+    index: number,
+    value: { scope_level: CoverageLevel; scope_code: string }
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      regions: prev.regions.map((region, regionIndex) =>
+        regionIndex === index
+          ? { level: value.scope_level, code: value.scope_code }
+          : region
+      ),
     }));
   };
 
   const buildBody = () => {
-    const contact: ResourceContact = {};
-    CONTACT_KEYS.forEach((key) => {
-      const value = (form.contact[key] ?? '').trim();
-      if (value) contact[key] = value;
-    });
     const languages = form.languages
       .split(',')
       .map((l) => l.trim())
       .filter(Boolean);
     const body: Record<string, unknown> = {
       name: form.name.trim() || null,
-      resource_type: form.resource_type || null,
+      kind: form.kind || null,
+      tags: form.tags
+        .split(',')
+        .map((tag) => tag.trim().toLocaleLowerCase())
+        .filter(Boolean),
       description: form.description.trim() || null,
-      scope_level: form.scope_level || null,
-      scope_code:
-        form.scope_level === 'global' ? null : form.scope_code.trim() || null,
-      help_types: form.help_types,
+      pointers: form.pointers
+        .map((pointer) => ({
+          type: pointer.type,
+          value: pointer.value.trim(),
+          label: pointer.label?.trim() || null,
+        }))
+        .filter((pointer) => pointer.value),
+      regions: form.regions
+        .filter((region) => region.level)
+        .map((region) => ({
+          level: region.level,
+          code: region.level === 'global' ? null : region.code.trim() || null,
+        })),
       languages,
-      contact,
+      display_order: Number.parseInt(form.display_order, 10) || 0,
       verified: form.verified,
-      vetted_by: form.vetted_by.trim() || null,
-      source_note: form.source_note.trim() || null,
+      provenance: {
+        vetted_by: form.vetted_by.trim() || null,
+        source_note: form.source_note.trim() || null,
+      },
       archived: form.archived,
     };
     if (!editing && form.resource_id.trim()) {
@@ -413,7 +443,7 @@ export function AdminResourcesDirectory({
                     <Badge tone={statusTone(resource.status)}>
                       {resource.status}
                     </Badge>
-                    {resource.verified_at && (
+                    {resource.provenance?.verified_at && (
                       <Badge tone="info">
                         <ShieldCheck className="mr-1 inline h-3 w-3" />
                         {t('adminResources.verified', 'verified')}
@@ -421,19 +451,42 @@ export function AdminResourcesDirectory({
                     )}
                   </div>
                   <div className="mt-1 text-sm text-text-secondary">
-                    {[resource.resource_type, resource.coverage]
+                    {[
+                      resource.kind,
+                      (resource.regions ?? [])
+                        .map((region) =>
+                          region.level === 'global'
+                            ? 'Global'
+                            : `${region.level}: ${region.code}`
+                        )
+                        .join(', '),
+                    ]
                       .filter(Boolean)
                       .join(' · ')}
                   </div>
-                  {resource.help_types.length > 0 && (
+                  {resource.tags.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {resource.help_types.map((key) => (
-                        <Badge key={key} tone="neutral">
-                          {helpTypeLabels.get(key) ?? key}
+                      {resource.tags.map((tag) => (
+                        <Badge key={tag} tone="neutral">
+                          {tag}
                         </Badge>
                       ))}
                     </div>
                   )}
+                  {resource.pointers.length > 0 && (
+                    <div className="mt-1 text-xs text-text-secondary">
+                      {resource.pointers
+                        .map(
+                          (pointer) =>
+                            `${pointer.label || pointer.type}: ${pointer.value}`
+                        )
+                        .join(' · ')}
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs text-text-secondary">
+                    {t('adminResources.order', 'Order')}:{' '}
+                    {resource.display_order}
+                  </div>
                   {resource.status === 'pending' &&
                     resource.missing_fields.length > 0 && (
                       <div className="mt-1 text-xs text-warning">
@@ -498,16 +551,19 @@ export function AdminResourcesDirectory({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField
-                  label={t('adminResources.type', 'Resource type')}
-                  value={form.resource_type}
+                  label={t('adminResources.kind', 'Kind')}
+                  value={form.kind}
                   onChange={(e) =>
-                    setForm({ ...form, resource_type: e.target.value })
+                    setForm({
+                      ...form,
+                      kind: e.target.value as ResourceKind | '',
+                    })
                   }
                 >
                   <option value="">—</option>
-                  {RESOURCE_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  {RESOURCE_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {kind}
                     </option>
                   ))}
                 </SelectField>
@@ -524,6 +580,26 @@ export function AdminResourcesDirectory({
                 />
               </div>
 
+              <TextField
+                label={t('adminResources.tags', 'Tags (comma-separated)')}
+                value={form.tags}
+                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                placeholder="bitcoin, education, local"
+              />
+
+              <TextField
+                type="number"
+                label={t('adminResources.displayOrder', 'Display order')}
+                value={form.display_order}
+                onChange={(event) =>
+                  setForm({ ...form, display_order: event.target.value })
+                }
+                description={t(
+                  'adminResources.displayOrderHint',
+                  'Lower numbers appear first after relevance and verification.'
+                )}
+              />
+
               <Textarea
                 label={t('adminResources.description', 'Description')}
                 value={form.description}
@@ -537,64 +613,159 @@ export function AdminResourcesDirectory({
                 )}
               />
 
-              <CoveragePicker
-                data={regionData}
-                value={{
-                  scope_level: form.scope_level,
-                  scope_code: form.scope_code,
-                }}
-                onChange={(v) =>
-                  setForm({
-                    ...form,
-                    scope_level: v.scope_level,
-                    scope_code: v.scope_code,
-                  })
-                }
-                label={t('adminResources.coverage', 'Coverage')}
-                description={t(
-                  'adminResources.coverageHint',
-                  'Choose a coverage level, then search for its name or code.'
-                )}
-              />
-
               <div>
-                <div className="mb-1 text-sm font-medium text-text">
-                  {t('adminResources.helpTypes', 'Types of help')}
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-sm font-medium text-text">
+                    {t('adminResources.regions', 'Regions')}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        regions: [...form.regions, { level: '', code: '' }],
+                      })
+                    }
+                  >
+                    {t('adminResources.addRegion', 'Add region')}
+                  </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {helpTypes.map((helpType) => {
-                    const active = form.help_types.includes(helpType.key);
-                    return (
-                      <button
-                        key={helpType.key}
-                        type="button"
-                        onClick={() => toggleHelpType(helpType.key)}
-                        aria-pressed={active}
-                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                          active
-                            ? 'border-accent bg-accent/10 text-accent'
-                            : 'border-border text-text-secondary hover:border-accent/50'
-                        }`}
-                      >
-                        {helpType.label}
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-col gap-3">
+                  {form.regions.map((region, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-border p-3"
+                    >
+                      <CoveragePicker
+                        data={regionData}
+                        value={{
+                          scope_level: region.level,
+                          scope_code: region.code,
+                        }}
+                        onChange={(value) => setRegion(index, value)}
+                        label={t(
+                          'adminResources.regionNumber',
+                          'Region {{number}}',
+                          {
+                            number: index + 1,
+                          }
+                        )}
+                        description={t(
+                          'adminResources.coverageHint',
+                          'Choose a coverage level, then search for its name or code.'
+                        )}
+                      />
+                      {form.regions.length > 1 && (
+                        <div className="mt-2 flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setForm({
+                                ...form,
+                                regions: form.regions.filter(
+                                  (_, regionIndex) => regionIndex !== index
+                                ),
+                              })
+                            }
+                          >
+                            {t('adminResources.removeRegion', 'Remove region')}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <div>
-                <div className="mb-1 text-sm font-medium text-text">
-                  {t('adminResources.contact', 'Contact methods')}
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-sm font-medium text-text">
+                    {t('adminResources.pointers', 'Pointers')}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        pointers: [
+                          ...form.pointers,
+                          { type: 'url', value: '', label: '' },
+                        ],
+                      })
+                    }
+                  >
+                    {t('adminResources.addPointer', 'Add pointer')}
+                  </Button>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {CONTACT_KEYS.map((key) => (
-                    <TextField
-                      key={key}
-                      label={key}
-                      value={form.contact[key] ?? ''}
-                      onChange={(e) => setContactField(key, e.target.value)}
-                    />
+                <div className="flex flex-col gap-3">
+                  {form.pointers.map((pointer, index) => (
+                    <div
+                      key={index}
+                      className="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-3"
+                    >
+                      <SelectField
+                        label={t(
+                          'adminResources.pointerType',
+                          'Pointer {{number}} type',
+                          {
+                            number: index + 1,
+                          }
+                        )}
+                        value={pointer.type}
+                        onChange={(event) =>
+                          setPointer(index, 'type', event.target.value)
+                        }
+                      >
+                        {POINTER_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </SelectField>
+                      <TextField
+                        label={t(
+                          'adminResources.pointerValue',
+                          'Pointer {{number}} value',
+                          {
+                            number: index + 1,
+                          }
+                        )}
+                        value={pointer.value}
+                        onChange={(event) =>
+                          setPointer(index, 'value', event.target.value)
+                        }
+                      />
+                      <TextField
+                        label={t(
+                          'adminResources.pointerLabel',
+                          'Pointer {{number}} label',
+                          {
+                            number: index + 1,
+                          }
+                        )}
+                        value={pointer.label ?? ''}
+                        onChange={(event) =>
+                          setPointer(index, 'label', event.target.value)
+                        }
+                      />
+                      {form.pointers.length > 1 && (
+                        <div className="sm:col-span-3 flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePointer(index)}
+                          >
+                            {t(
+                              'adminResources.removePointer',
+                              'Remove pointer'
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -625,10 +796,7 @@ export function AdminResourcesDirectory({
                       setForm({ ...form, verified: e.target.checked })
                     }
                   />
-                  {t(
-                    'adminResources.markVerified',
-                    'Mark as verified (ranks first)'
-                  )}
+                  {t('adminResources.markVerified', 'Mark as verified')}
                 </label>
                 <label className="flex items-center gap-2 text-sm text-text">
                   <input

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdminResourcesDirectory } from './AdminResourcesDirectory';
@@ -18,6 +24,23 @@ function jsonResponse(body: unknown) {
   } as Response;
 }
 
+function genericResource(kind: 'person' | 'product' | 'method' | 'reference') {
+  return {
+    resource_id: `admin-${kind}`,
+    name: `Admin ${kind}`,
+    kind,
+    tags: ['generic', kind],
+    pointers: [{ type: 'url', value: `https://${kind}.example.test` }],
+    regions: [{ level: 'global', code: null }],
+    provenance: {},
+    description: `A curated ${kind}.`,
+    languages: ['en'],
+    status: 'ready',
+    missing_fields: [],
+    display_order: 0,
+  };
+}
+
 async function openAddResourceForm() {
   const addButtons = await screen.findAllByRole('button', {
     name: 'Add resource',
@@ -27,6 +50,7 @@ async function openAddResourceForm() {
 
 describe('AdminResourcesDirectory', () => {
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
 
@@ -38,19 +62,19 @@ describe('AdminResourcesDirectory', () => {
             {
               resource_id: 'legal-aid',
               name: 'Legal Aid',
-              resource_type: 'ngo',
+              kind: 'organization',
+              tags: ['legal'],
+              pointers: [{ type: 'url', value: 'https://example.test' }],
+              regions: [{ level: 'global', code: null }],
+              provenance: {
+                verified_at: '2026-06-09T00:00:00Z',
+                vetted_by: 'test',
+                source_note: 'test',
+              },
               description: 'Legal support.',
-              contact: { url: 'https://example.test' },
               languages: ['en'],
-              scope_level: 'global',
-              scope_code: null,
-              coverage: 'Global',
-              help_types: ['legal'],
               status: 'ready',
               missing_fields: [],
-              verified_at: '2026-06-09T00:00:00Z',
-              vetted_by: 'test',
-              source_note: 'test',
               display_order: 0,
             },
           ],
@@ -162,4 +186,105 @@ describe('AdminResourcesDirectory', () => {
       screen.getByText('Region directory unavailable. Enter a code manually.')
     ).toBeInTheDocument();
   });
+
+  it('creates resources with the generic contract', async () => {
+    mockAdminFetch.mockImplementation(async (endpoint) => {
+      if (endpoint === '/admin/resources') {
+        return jsonResponse({ resources: [] });
+      }
+      if (endpoint === '/admin/regions') {
+        return jsonResponse({ countries: [], subregions: [], regions: [] });
+      }
+      throw new Error(`Unexpected endpoint: ${endpoint}`);
+    });
+
+    render(
+      <MemoryRouter>
+        <AdminResourcesDirectory />
+      </MemoryRouter>
+    );
+
+    await openAddResourceForm();
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Bitcoin Handbook' },
+    });
+    fireEvent.change(screen.getByLabelText('Kind'), {
+      target: { value: 'reference' },
+    });
+    fireEvent.change(screen.getByLabelText('Tags (comma-separated)'), {
+      target: { value: ' Bitcoin, Education ' },
+    });
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'A curated Bitcoin reference.' },
+    });
+    fireEvent.change(screen.getByLabelText('Display order'), {
+      target: { value: '7' },
+    });
+    fireEvent.change(screen.getByLabelText('Pointer 1 type'), {
+      target: { value: 'url' },
+    });
+    fireEvent.change(screen.getByLabelText('Pointer 1 value'), {
+      target: { value: ' https://bitcoin.example.test ' },
+    });
+    fireEvent.change(screen.getByLabelText('Coverage level'), {
+      target: { value: 'global' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Add resource' })).toBeNull();
+    });
+    const createCall = mockAdminFetch.mock.calls.find(
+      ([endpoint, options]) =>
+        endpoint === '/admin/resources' && options?.method === 'POST'
+    );
+    expect(createCall).toBeDefined();
+    expect(JSON.parse(String(createCall?.[1]?.body))).toMatchObject({
+      name: 'Bitcoin Handbook',
+      kind: 'reference',
+      tags: ['bitcoin', 'education'],
+      description: 'A curated Bitcoin reference.',
+      display_order: 7,
+      pointers: [
+        {
+          type: 'url',
+          value: 'https://bitcoin.example.test',
+          label: null,
+        },
+      ],
+      regions: [{ level: 'global', code: null }],
+    });
+    expect(mockAdminFetch).not.toHaveBeenCalledWith('/admin/help-types');
+  });
+
+  it.each(['person', 'product', 'method', 'reference'] as const)(
+    'renders and opens the generic %s contract for editing',
+    async (kind) => {
+      mockAdminFetch.mockImplementation(async (endpoint) => {
+        if (endpoint === '/admin/resources') {
+          return jsonResponse({ resources: [genericResource(kind)] });
+        }
+        if (endpoint === '/admin/regions') {
+          return jsonResponse({ countries: [], subregions: [], regions: [] });
+        }
+        throw new Error(`Unexpected endpoint: ${endpoint}`);
+      });
+
+      render(
+        <MemoryRouter>
+          <AdminResourcesDirectory />
+        </MemoryRouter>
+      );
+
+      expect(await screen.findByText(`Admin ${kind}`)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+      expect(
+        screen.getByRole('dialog', { name: 'Edit resource' })
+      ).toBeVisible();
+      expect(screen.getByLabelText('Kind')).toHaveValue(kind);
+      expect(screen.getByLabelText('Pointer 1 value')).toHaveValue(
+        `https://${kind}.example.test`
+      );
+    }
+  );
 });

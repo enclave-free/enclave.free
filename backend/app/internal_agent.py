@@ -147,6 +147,9 @@ class InternalDocumentSearchResponse(BaseModel):
 
 class InternalResourceSearchRequest(BaseModel):
     query: Optional[str] = None
+    kind: Optional[str] = None
+    tags: Optional[list[str]] = None
+    region: Optional[str] = None
     help_type: Optional[str] = None
     jurisdiction: Optional[str] = None
     language: Optional[str] = None
@@ -946,7 +949,9 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
     )
     effective_offset = max(0, int(payload.offset or 0))
     normalized_query = " ".join((payload.query or "").casefold().split()) or None
-    resolved = database.normalize_jurisdiction(payload.jurisdiction)
+    resolved = database.normalize_jurisdiction(payload.region or payload.jurisdiction)
+    if str(payload.region or "").strip() and not resolved:
+        raise HTTPException(status_code=422, detail="Unknown resource region")
     resources = database.search_resources(
         jurisdiction=payload.jurisdiction,
         help_type=help_type,
@@ -954,6 +959,9 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
         limit=effective_limit,
         offset=effective_offset,
         query=payload.query,
+        kind=payload.kind,
+        tags=payload.tags,
+        region=payload.region,
         return_metadata=True,
     )
     page = resources

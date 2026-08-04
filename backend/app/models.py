@@ -851,6 +851,49 @@ class PublicConfigResponse(BaseModel):
 
 RESOURCE_SCOPE_LEVELS = {"country", "subregion", "region", "global"}
 RESOURCE_CONTACT_KEYS = {"phone", "email", "url", "secure_channel", "address", "notes"}
+RESOURCE_KINDS = {"person", "organization", "product", "service", "method", "reference", "other"}
+RESOURCE_POINTER_TYPES = {"email", "phone", "url", "address", "secure_channel", "identifier", "other"}
+
+
+class ResourcePointer(BaseModel):
+    type: str
+    value: str = Field(..., min_length=1, max_length=2000)
+    label: Optional[str] = Field(default=None, max_length=240)
+
+    @field_validator("type")
+    @classmethod
+    def _validate_type(cls, value: str) -> str:
+        normalized = value.strip().casefold()
+        if normalized not in RESOURCE_POINTER_TYPES:
+            raise ValueError(f"pointer type must be one of: {', '.join(sorted(RESOURCE_POINTER_TYPES))}")
+        return normalized
+
+    @field_validator("value")
+    @classmethod
+    def _validate_value(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("pointer value must not be blank")
+        return normalized
+
+
+class ResourceRegion(BaseModel):
+    level: str
+    code: Optional[str] = Field(default=None, max_length=12)
+
+    @field_validator("level")
+    @classmethod
+    def _validate_level(cls, value: str) -> str:
+        normalized = value.strip().casefold()
+        if normalized not in RESOURCE_SCOPE_LEVELS:
+            raise ValueError(f"region level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
+        return normalized
+
+
+class ResourceProvenance(BaseModel):
+    verified_at: Optional[str] = None
+    vetted_by: Optional[str] = Field(default=None, max_length=240)
+    source_note: Optional[str] = Field(default=None, max_length=1000)
 
 
 def normalize_resource_languages(value: Optional[list[str]]) -> Optional[list[str]]:
@@ -882,15 +925,35 @@ def normalize_resource_contact(value: Optional[dict]) -> Optional[dict]:
     return cleaned
 
 
+def normalize_resource_tags(value: Optional[list[str]]) -> Optional[list[str]]:
+    if value is None:
+        return None
+    normalized: list[str] = []
+    for tag in value:
+        clean = str(tag).strip().casefold()
+        if not clean:
+            continue
+        if len(clean) > 120:
+            raise ValueError("resource tags must be 120 characters or fewer")
+        if clean not in normalized:
+            normalized.append(clean)
+    return normalized
+
+
 class ResourceCreate(BaseModel):
     """Request model for creating a directory resource.
 
-    Only `name` is strictly required to create a draft; the entry stays in `pending`
-    status until all required-for-ready fields are present (name, resource_type,
-    scope_level [+scope_code unless global], >=1 help_type, >=1 contact method).
+    A draft may be incomplete. It becomes searchable only when it has a name,
+    explicit generic kind, useful description, and at least one nonblank pointer.
+    A legacy resource_type may temporarily supply the kind during migration.
     """
     resource_id: Optional[str] = Field(default=None, max_length=120)
     name: Optional[str] = Field(default=None, max_length=240)
+    kind: Optional[str] = None
+    tags: Optional[list[str]] = Field(default=None, max_length=80)
+    pointers: Optional[list[ResourcePointer]] = Field(default=None, max_length=80)
+    regions: Optional[list[ResourceRegion]] = Field(default=None, max_length=80)
+    provenance: Optional[ResourceProvenance] = None
     resource_type: Optional[str] = Field(default=None, max_length=60)
     description: Optional[str] = Field(default=None, max_length=4000)
     contact: Optional[dict] = None
@@ -903,6 +966,16 @@ class ResourceCreate(BaseModel):
     source_note: Optional[str] = Field(default=None, max_length=1000)
     display_order: int = 0
     archived: bool = False
+
+    @field_validator("kind")
+    @classmethod
+    def _validate_kind(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().casefold()
+        if normalized not in RESOURCE_KINDS:
+            raise ValueError(f"kind must be one of: {', '.join(sorted(RESOURCE_KINDS))}")
+        return normalized
 
     @model_validator(mode="after")
     def _require_resource_id_or_name(self):
@@ -924,6 +997,11 @@ class ResourceCreate(BaseModel):
     def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_languages(v)
 
+    @field_validator("tags")
+    @classmethod
+    def _validate_tags(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        return normalize_resource_tags(value)
+
     @field_validator("contact")
     @classmethod
     def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
@@ -933,6 +1011,11 @@ class ResourceCreate(BaseModel):
 class ResourceUpdate(BaseModel):
     """Request model for updating a directory resource (all fields optional)."""
     name: Optional[str] = Field(default=None, max_length=240)
+    kind: Optional[str] = None
+    tags: Optional[list[str]] = Field(default=None, max_length=80)
+    pointers: Optional[list[ResourcePointer]] = Field(default=None, max_length=80)
+    regions: Optional[list[ResourceRegion]] = Field(default=None, max_length=80)
+    provenance: Optional[ResourceProvenance] = None
     resource_type: Optional[str] = Field(default=None, max_length=60)
     description: Optional[str] = Field(default=None, max_length=4000)
     contact: Optional[dict] = None
@@ -946,6 +1029,16 @@ class ResourceUpdate(BaseModel):
     display_order: Optional[int] = None
     archived: Optional[bool] = None
 
+    @field_validator("kind")
+    @classmethod
+    def _validate_kind(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().casefold()
+        if normalized not in RESOURCE_KINDS:
+            raise ValueError(f"kind must be one of: {', '.join(sorted(RESOURCE_KINDS))}")
+        return normalized
+
     @field_validator("scope_level")
     @classmethod
     def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
@@ -958,6 +1051,11 @@ class ResourceUpdate(BaseModel):
     def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_languages(v)
 
+    @field_validator("tags")
+    @classmethod
+    def _validate_tags(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        return normalize_resource_tags(value)
+
     @field_validator("contact")
     @classmethod
     def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
@@ -968,6 +1066,11 @@ class ResourceResponse(BaseModel):
     """Response model for a directory resource, including computed lifecycle state."""
     resource_id: str
     name: Optional[str] = None
+    kind: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+    pointers: list[ResourcePointer] = Field(default_factory=list)
+    regions: list[ResourceRegion] = Field(default_factory=list)
+    provenance: ResourceProvenance = Field(default_factory=ResourceProvenance)
     resource_type: Optional[str] = None
     description: Optional[str] = None
     contact: dict = Field(default_factory=dict)

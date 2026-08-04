@@ -1677,10 +1677,26 @@ def _resource_slug(name: Optional[str]) -> str:
 def _resource_audit_value(resource: dict | None) -> Optional[str]:
     if resource is None:
         return None
+    pointers = resource.get("pointers") or []
+    safe_pointer_facts = [
+        {
+            "type": pointer.get("type"),
+            "label": pointer.get("label"),
+        }
+        for pointer in pointers
+        if isinstance(pointer, dict)
+    ]
     return json.dumps(
         {
             "resource_id": resource.get("resource_id"),
             "name": resource.get("name"),
+            "kind": resource.get("kind"),
+            "tags": resource.get("tags"),
+            "pointer_count": len(pointers),
+            "pointers": safe_pointer_facts,
+            "regions": resource.get("regions"),
+            "provenance": resource.get("provenance"),
+            "display_order": resource.get("display_order"),
             "resource_type": resource.get("resource_type"),
             "scope_level": resource.get("scope_level"),
             "scope_code": resource.get("scope_code"),
@@ -1700,6 +1716,13 @@ def _validate_resource_scope(scope_level: Optional[str], scope_code: Optional[st
             status_code=400,
             detail=f"Invalid coverage scope for level '{scope_level}': unknown or missing scope_code",
         )
+
+
+def _validate_resource_regions(regions: Optional[list]) -> None:
+    for region in regions or []:
+        level = region.level if hasattr(region, "level") else region.get("level")
+        code = region.code if hasattr(region, "code") else region.get("code")
+        _validate_resource_scope(level, code)
 
 
 def _validate_help_type_keys(help_types: Optional[list[str]]) -> None:
@@ -1779,17 +1802,33 @@ async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(
     """Create a directory resource (requires admin auth). Status is auto-computed:
     a resource stays `pending` until all required fields are present, then becomes `ready`."""
     _validate_resource_scope(resource.scope_level, resource.scope_code)
+    _validate_resource_regions(resource.regions)
     _validate_help_type_keys(resource.help_types)
 
     resource_id = resource.resource_id or _resource_slug(resource.name)
     if database.get_resource(resource_id) is not None:
         raise HTTPException(status_code=400, detail=f"Resource id already exists: {resource_id}")
 
-    verified_at = database.utc_timestamp_z() if resource.verified else None
+    provenance = {
+        "verified_at": database.utc_timestamp_z() if resource.verified else None,
+        "vetted_by": resource.vetted_by,
+        "source_note": resource.source_note,
+    }
+    if resource.provenance:
+        provenance.update(resource.provenance.model_dump(exclude_unset=True))
 
     created = database.create_resource(
         resource_id=resource_id,
         name=resource.name,
+        kind=resource.kind,
+        tags=resource.tags,
+        pointers=[pointer.model_dump() for pointer in resource.pointers]
+        if resource.pointers is not None
+        else None,
+        regions=[region.model_dump() for region in resource.regions]
+        if resource.regions is not None
+        else None,
+        provenance=provenance,
         resource_type=resource.resource_type,
         description=resource.description,
         contact=resource.contact,
@@ -1797,9 +1836,9 @@ async def create_resource_admin(resource: ResourceCreate, admin: dict = Depends(
         scope_level=resource.scope_level,
         scope_code=resource.scope_code,
         help_types=resource.help_types,
-        verified_at=verified_at,
-        vetted_by=resource.vetted_by,
-        source_note=resource.source_note,
+        verified_at=provenance.get("verified_at"),
+        vetted_by=provenance.get("vetted_by"),
+        source_note=provenance.get("source_note"),
         display_order=resource.display_order,
         archived=resource.archived,
     )
@@ -1833,14 +1872,30 @@ async def update_resource_admin(
         )
     if "help_types" in provided:
         _validate_help_type_keys(provided.get("help_types"))
+    if "regions" in provided:
+        _validate_resource_regions(provided.get("regions"))
 
     # Map the `verified` boolean onto a verified_at timestamp.
-    kwargs = {k: v for k, v in provided.items() if k != "verified"}
+    kwargs = {k: v for k, v in provided.items() if k not in {"verified", "provenance"}}
+    provenance = dict(existing.get("provenance") or {})
     if "verified" in provided:
         if provided["verified"]:
             kwargs["verified_at"] = existing.get("verified_at") or database.utc_timestamp_z()
         else:
             kwargs["verified_at"] = None
+        provenance["verified_at"] = kwargs["verified_at"]
+    if "provenance" in provided and provided["provenance"] is not None:
+        provenance.update(provided["provenance"])
+        for field in ("verified_at", "vetted_by", "source_note"):
+            if field in provided["provenance"]:
+                kwargs[field] = provided["provenance"][field]
+    for field in ("verified_at", "vetted_by", "source_note"):
+        if field in kwargs:
+            provenance[field] = kwargs[field]
+    if "provenance" in provided or any(
+        field in kwargs for field in ("verified_at", "vetted_by", "source_note")
+    ):
+        kwargs["provenance"] = provenance
 
     updated = database.update_resource(resource_id, **kwargs)
     _best_effort_config_audit_event(
