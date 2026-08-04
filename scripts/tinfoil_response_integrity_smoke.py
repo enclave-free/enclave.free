@@ -109,7 +109,7 @@ def parse_args() -> argparse.Namespace:
         "--model",
         default=os.environ.get("LLM_MODEL")
         or os.environ.get("TINFOIL_MODEL")
-        or "gemma4-31b",
+        or "glm-5-2",
         help="Model used for the completion smoke",
     )
     parser.add_argument(

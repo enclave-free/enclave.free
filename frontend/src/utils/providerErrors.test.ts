@@ -66,7 +66,7 @@ describe('classifyProviderError', () => {
 
   it('classifies unavailable model errors', () => {
     const classified = classifyProviderError(
-      'Configured Tinfoil model is unavailable. Check TINFOIL_MODEL and restart Sage.'
+      'The configured Conversation model is temporarily unavailable. Please try again.'
     );
 
     expect(classified).toEqual({
