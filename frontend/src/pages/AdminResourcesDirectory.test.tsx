@@ -287,4 +287,33 @@ describe('AdminResourcesDirectory', () => {
       );
     }
   );
+
+  it('searches generic resource fields in the Admin product flow', async () => {
+    mockAdminFetch.mockImplementation(async (endpoint) => {
+      if (endpoint === '/admin/resources') {
+        return jsonResponse({
+          resources: [genericResource('person'), genericResource('product')],
+        });
+      }
+      if (endpoint === '/admin/regions') {
+        return jsonResponse({ countries: [], subregions: [], regions: [] });
+      }
+      throw new Error(`Unexpected endpoint: ${endpoint}`);
+    });
+
+    render(
+      <MemoryRouter>
+        <AdminResourcesDirectory />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Admin person')).toBeInTheDocument();
+    expect(screen.getByText('Admin product')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Search resources'), {
+      target: { value: 'product.example.test' },
+    });
+
+    expect(screen.queryByText('Admin person')).toBeNull();
+    expect(screen.getByText('Admin product')).toBeInTheDocument();
+  });
 });

@@ -5612,7 +5612,18 @@ def get_resource(resource_id: str) -> dict | None:
         return _resource_row_to_dict(row, help_types)
 
 
-def list_resources(status: str | None = None) -> list[dict]:
+def list_resources(
+    status: str | None = None,
+    *,
+    query: str | None = None,
+    kind: str | None = None,
+    tags: list[str] | None = None,
+) -> list[dict]:
+    normalized_query = " ".join(str(query or "").casefold().split()) or None
+    normalized_kind = str(kind or "").strip().casefold() or None
+    normalized_tags = {
+        str(tag).strip().casefold() for tag in (tags or []) if str(tag).strip()
+    }
     with get_cursor() as cursor:
         if status:
             cursor.execute(
@@ -5625,7 +5636,15 @@ def list_resources(status: str | None = None) -> list[dict]:
         result = []
         for row in rows:
             help_types = _get_resource_help_types(cursor, row["resource_id"])
-            result.append(_resource_row_to_dict(row, help_types))
+            resource = _resource_row_to_dict(row, help_types)
+            if normalized_kind and resource.get("kind") != normalized_kind:
+                continue
+            resource_tags = {str(tag).casefold() for tag in resource.get("tags") or []}
+            if normalized_tags and not normalized_tags.issubset(resource_tags):
+                continue
+            if normalized_query and _resource_query_relevance(resource, normalized_query) is None:
+                continue
+            result.append(resource)
         return result
 
 
@@ -5943,9 +5962,22 @@ def search_resources(
         where = ["r.status = 'ready'"]
         params: list[object] = []
         if normalized_help_type:
-            joins.append("JOIN resource_help_types h ON h.resource_id = r.resource_id")
-            where.append("h.help_type = ?")
-            params.append(normalized_help_type)
+            where.append(
+                """
+                (
+                    EXISTS (
+                        SELECT 1 FROM resource_help_types h
+                        WHERE h.resource_id = r.resource_id AND h.help_type = ?
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM json_each(CASE WHEN json_valid(r.tags) THEN r.tags ELSE '[]' END) AS tag
+                        WHERE lower(trim(CAST(tag.value AS TEXT))) = lower(?)
+                    )
+                )
+                """
+            )
+            params.extend([normalized_help_type, normalized_help_type])
         if country_code:
             where.append(
                 """

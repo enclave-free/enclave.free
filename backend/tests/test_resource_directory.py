@@ -497,6 +497,28 @@ class ResourceDirectoryTest(unittest.TestCase):
 
         self.assertEqual([item["resource_id"] for item in resources], ["legal-org"])
 
+    def test_legacy_help_type_filter_matches_generic_tag(self) -> None:
+        self.database.create_resource(
+            resource_id="generic-legal-reference",
+            name="Generic Legal Reference",
+            kind="reference",
+            tags=["legal"],
+            description="A generic resource with no legacy help-type row.",
+            pointers=[{"type": "url", "value": "https://legal.example.test"}],
+            regions=[{"level": "global", "code": None}],
+        )
+
+        resources = self.database.search_resources(
+            None,
+            help_type="legal",
+            limit=10,
+        )
+
+        self.assertEqual(
+            [item["resource_id"] for item in resources],
+            ["generic-legal-reference"],
+        )
+
     def test_jurisdiction_matches_and_ranks_generic_only_regions(self) -> None:
         for resource_id, regions, verified in (
             ("global-generic", [{"level": "global", "code": None}], True),
@@ -922,7 +944,7 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertTrue(
             any(
                 "FROM resources" in statement
-                and "JOIN resource_help_types" in statement
+                and "resource_help_types" in statement
                 and "LIMIT 2" in statement
                 for statement in statements
             )

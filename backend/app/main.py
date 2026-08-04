@@ -1790,10 +1790,13 @@ async def list_regions_admin(admin: dict = Depends(auth.require_admin)) -> dict:
 @app.get("/admin/resources", response_model=ResourceListResponse)
 async def list_resources_admin(
     status: Optional[str] = Query(None),
+    query: Optional[str] = Query(None, max_length=500),
+    kind: Optional[str] = Query(None),
+    tags: Optional[list[str]] = Query(None),
     admin: dict = Depends(auth.require_admin),
 ) -> ResourceListResponse:
     """List directory resources (requires admin auth)."""
-    resources = database.list_resources(status=status)
+    resources = database.list_resources(status=status, query=query, kind=kind, tags=tags)
     return ResourceListResponse(resources=[ResourceResponse(**r) for r in resources])
 
 

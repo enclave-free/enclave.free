@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -213,6 +213,7 @@ export function AdminResourcesDirectory({
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null);
   const [regionData, setRegionData] = useState<RegionData | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -242,6 +243,29 @@ export function AdminResourcesDirectory({
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const visibleResources = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    if (!query) return resources;
+    return resources.filter((resource) =>
+      [
+        resource.resource_id,
+        resource.name,
+        resource.kind,
+        resource.description,
+        ...(resource.tags ?? []),
+        ...(resource.pointers ?? []).flatMap((pointer) => [
+          pointer.type,
+          pointer.label,
+          pointer.value,
+        ]),
+      ].some((value) =>
+        String(value ?? '')
+          .toLocaleLowerCase()
+          .includes(query)
+      )
+    );
+  }, [resources, searchQuery]);
 
   // Refresh the table after a resource-directory mutation while this page is
   // open, so another admin surface can keep the view current.
@@ -416,6 +440,16 @@ export function AdminResourcesDirectory({
     <>
       {error && <Callout tone="error">{error}</Callout>}
 
+      <TextField
+        label={t('adminResources.search', 'Search resources')}
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        placeholder={t(
+          'adminResources.searchPlaceholder',
+          'Name, kind, tag, pointer, or description'
+        )}
+      />
+
       {loading ? (
         <div className="flex items-center justify-center py-16 text-text-secondary">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -427,9 +461,16 @@ export function AdminResourcesDirectory({
             'No resources yet. Add one manually when you have a vetted referral.'
           )}
         </Card>
+      ) : visibleResources.length === 0 ? (
+        <Card className="py-12 text-center text-text-secondary">
+          {t(
+            'adminResources.noSearchResults',
+            'No resources match this search.'
+          )}
+        </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {resources.map((resource) => (
+          {visibleResources.map((resource) => (
             <Card
               key={resource.resource_id}
               className="flex flex-col gap-2 p-4"

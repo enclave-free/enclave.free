@@ -140,6 +140,15 @@ class GenericResourceAdminTest(unittest.TestCase):
             {resource["kind"] for resource in listed.json()["resources"]},
             {"person", "product", "method", "reference"},
         )
+        searched = self.client.get(
+            "/admin/resources",
+            params={"query": "product.example.test", "kind": "product"},
+        )
+        self.assertEqual(searched.status_code, 200, searched.text)
+        self.assertEqual(
+            [resource["resource_id"] for resource in searched.json()["resources"]],
+            ["admin-product"],
+        )
 
     def test_partial_provenance_update_preserves_verification_and_vetter(self) -> None:
         create = self.client.post(
