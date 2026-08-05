@@ -18,6 +18,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [adr/0030-bounded-native-tool-loop.md](adr/0030-bounded-native-tool-loop.md): current anchor for the bounded six-batch native Tool loop and final-answer delivery.
 - [adr/0024-transparent-reasoning-and-tool-trace-posture.md](adr/0024-transparent-reasoning-and-tool-trace-posture.md): current anchor for live and persisted content-free model, Tool, Retrieval, retry, and timing traces.
 - [agents/runs/2026-08-05-provider-stall-continuity-latency-prd.md](agents/runs/2026-08-05-provider-stall-continuity-latency-prd.md): current implementation spec for silent provider-stall recovery, ephemeral Tool-loop continuity, and aggregate model usage observations.
+- [agents/runs/2026-08-05-provider-stall-continuity-latency-verification.md](agents/runs/2026-08-05-provider-stall-continuity-latency-verification.md): deterministic implementation evidence and the partial pre-change demo latency baseline for PRD #599.
 
 ## Core Product Docs
 

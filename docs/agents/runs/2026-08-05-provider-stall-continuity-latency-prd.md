@@ -1,8 +1,19 @@
 # PRD: Recover Silent Model Provider Stalls and Preserve Tool-Loop Continuity
 
-Status: Published as PRD issue [#599](https://github.com/enclave-free/enclave.free/issues/599) with the `ready-for-agent` label.
+Status: Implemented and deterministically verified on branch
+`feature/provider-continuity-stall-usage`. Live verification against a deployment
+containing the implementation remains a release step; production and demo
+deployment are outside this PRD.
 
 Decision anchors: [ADR-0024](https://github.com/enclave-free/enclave.free/blob/staging/docs/adr/0024-transparent-reasoning-and-tool-trace-posture.md) and [ADR-0030](https://github.com/enclave-free/enclave.free/blob/staging/docs/adr/0030-bounded-native-tool-loop.md)
+
+Delivery issues: [#600](https://github.com/enclave-free/enclave.free/issues/600),
+[#601](https://github.com/enclave-free/enclave.free/issues/601),
+[#602](https://github.com/enclave-free/enclave.free/issues/602), and
+[#603](https://github.com/enclave-free/enclave.free/issues/603).
+
+Verification record:
+[2026-08-05 provider-stall, continuity, and latency verification](2026-08-05-provider-stall-continuity-latency-verification.md).
 
 ## Problem Statement
 
@@ -129,9 +140,11 @@ evidence. Live provider behavior remains outside required CI.
 - Preserve Provider Continuity State only inside the in-memory request history for the current Bounded Native Tool Loop and only while continuing with the same configured model.
 - Destroy continuity state when the turn ends, fails, or changes model identity. Do not add it to Session Memory, Conversation Content, persisted messages, Conversation Trace, Activity, exports, Audit Log, or structured runtime logs.
 - Treat Provider Continuity State as opaque. Sage must not parse it for intent, summarize it, use it to authorize or route Tools, inspect it for answer policy, rewrite it, or truncate it independently.
+- Apply a fixed aggregate protocol-size ceiling to Provider Continuity State and reject an oversized value without inspecting, logging, or partially forwarding it.
 - Do not force thinking on or off, set a reasoning-effort parameter, add provider-specific reasoning prompts, or create placeholder continuity state when no state is returned.
 - Keep provider field mapping inside the provider adapter. The active OpenAI-compatible GLM transport may map `reasoning_content`; future adapters may map a signed, encrypted, or otherwise opaque equivalent without changing the Tool-loop domain contract.
 - Add optional streaming usage reporting to the existing model request when supported by the current OpenAI-compatible provider contract.
+- If a provider explicitly rejects the optional usage request extension before inference, repeat that request once without the extension and retain the negotiated capability for later requests; this adapter-level negotiation does not consume the model-recovery retry budget.
 - Parse a terminal usage-bearing stream chunk even when it contains no answer choice. It must not be mistaken for malformed completion data or a second answer.
 - Create one Model Usage Observation for each provider request attempt that returns usage. Associate it with the same model step and attempt as the existing timing observation.
 - Preserve provider-reported prompt, completion, total, cached, and reasoning counts when present. Do not derive missing subcounts or treat absence as zero.
@@ -160,6 +173,7 @@ evidence. Live provider behavior remains outside required CI.
 - Add streaming usage tests with a final usage-only chunk. Verify the response completes normally and one Model Usage Observation is correlated to the correct step and attempt.
 - Add partial-usage tests for providers that omit cached or reasoning counts. Verify absent fields remain absent and the turn does not fail.
 - Add unsupported-usage tests proving an otherwise valid provider stream without usage remains successful.
+- Add capability-negotiation coverage proving a provider that rejects the optional usage request extension is retried before inference without the extension and does not receive it on later requests.
 - Add trace and persistence tests proving usage contains numeric counts only, follows the assistant turn, survives ordinary refresh/export with the trace, and disappears through Conversation deletion.
 - Keep timing assertions external: verify event order, attempt counts, bounded completion, trace shape, and Tool execution count rather than private timer implementation.
 - Run the full Sage Rust tests and the existing Enclave contract, backend, frontend, and production-build checks after the targeted provider tests.

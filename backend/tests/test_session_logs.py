@@ -58,6 +58,34 @@ class SessionLogsTest(unittest.TestCase):
         with self.database.get_cursor() as cursor:
             cursor.execute("DELETE FROM admins")
 
+    @staticmethod
+    def model_usage_trace() -> dict:
+        return {
+            "visibility": "detailed",
+            "reasoning": {"summary": "Sage answered."},
+            "trace_deltas": [
+                {
+                    "id": "model-usage-2-1",
+                    "kind": "timing",
+                    "title": "Model usage",
+                    "content": "Provider-reported model usage observed.",
+                    "status": "succeeded",
+                    "metadata": {
+                        "phase": "model_request",
+                        "step": 2,
+                        "attempt": 1,
+                        "prompt_tokens": 101,
+                        "completion_tokens": 29,
+                        "total_tokens": 130,
+                    },
+                }
+            ],
+            "tools": [],
+            "retrieval": [],
+            "activity_steps": [],
+            "suppressed": False,
+        }
+
     def test_session_log_save_payload_preserves_trace_and_tool_metadata(self) -> None:
         from models import SessionLogSaveTranscript
 
@@ -87,6 +115,7 @@ class SessionLogsTest(unittest.TestCase):
                                 "output_summary": "Found 2 vetted resources.",
                             }
                         ],
+                        "trace_deltas": self.model_usage_trace()["trace_deltas"],
                     },
                 },
             ]
@@ -127,6 +156,10 @@ class SessionLogsTest(unittest.TestCase):
             persisted["turns"][1]["trace"]["reasoning"]["summary"],
             "Sage used enabled tools before answering.",
         )
+        usage = persisted["turns"][1]["trace"]["trace_deltas"][0]["metadata"]
+        self.assertEqual(usage["prompt_tokens"], 101)
+        self.assertEqual(usage["completion_tokens"], 29)
+        self.assertEqual(usage["total_tokens"], 130)
 
     def test_saving_missing_session_log_leaves_no_transcript_artifact(self) -> None:
         turns = [
@@ -285,7 +318,11 @@ class SessionLogsTest(unittest.TestCase):
             log["log_id"],
             [
                 {"role": "user", "content": "please help me test this instance"},
-                {"role": "assistant", "content": transcript_sentinel},
+                {
+                    "role": "assistant",
+                    "content": transcript_sentinel,
+                    "trace": self.model_usage_trace(),
+                },
             ],
             created_by="admin",
         )
@@ -344,7 +381,11 @@ class SessionLogsTest(unittest.TestCase):
             log["log_id"],
             [
                 {"role": "user", "content": "Please test export."},
-                {"role": "assistant", "content": transcript_sentinel},
+                {
+                    "role": "assistant",
+                    "content": transcript_sentinel,
+                    "trace": self.model_usage_trace(),
+                },
             ],
             created_by="admin-pubkey",
         )
@@ -381,6 +422,19 @@ class SessionLogsTest(unittest.TestCase):
         self.assertEqual(feedback[0]["rating"], "up")
         self.assertNotIn(comment_sentinel, json.dumps(feedback))
         self.assertNotIn(transcript_sentinel, ciphertext)
+        exported_transcript = json.loads(
+            self.encryption.nip04_decrypt(
+                ciphertext,
+                metadata["transcript_ephemeral_pubkey"],
+                self.admin_private_key,
+            )
+        )
+        exported_usage = exported_transcript["turns"][1]["trace"]["trace_deltas"][0][
+            "metadata"
+        ]
+        self.assertEqual(exported_usage["prompt_tokens"], 101)
+        self.assertEqual(exported_usage["completion_tokens"], 29)
+        self.assertEqual(exported_usage["total_tokens"], 130)
 
         entries = self.database.get_config_audit_log(limit=1, table_name="data_deletion")
         self.assertEqual(entries[0]["config_key"], "copied_export:test_feedback_session")
@@ -427,6 +481,28 @@ class SessionLogsTest(unittest.TestCase):
                 self.session_logs.delete_session_log(log["log_id"])
 
         self.assertIsNotNone(self.session_logs.get_session_log_metadata(log["log_id"]))
+
+    def test_delete_removes_transcript_containing_model_usage_observation(self) -> None:
+        log = self.session_logs.create_session_log(title="Model usage lifecycle")
+        self.session_logs.save_transcript(
+            log["log_id"],
+            [
+                {"role": "user", "content": "Please test lifecycle."},
+                {
+                    "role": "assistant",
+                    "content": "Lifecycle answer.",
+                    "trace": self.model_usage_trace(),
+                },
+            ],
+            created_by="admin",
+        )
+        files = self.transcript_files()
+        self.assertEqual(len(files), 1)
+
+        self.assertTrue(self.session_logs.delete_session_log(log["log_id"]))
+
+        self.assertIsNone(self.session_logs.get_session_log_metadata(log["log_id"]))
+        self.assertFalse(files[0].exists())
 
 
 if __name__ == "__main__":
