@@ -54,6 +54,8 @@ DEFAULT_SCENARIOS = (
     "user_knowledge_assistance",
     "user_curated_resource_referral",
     "user_knowledge_and_resource_assistance",
+    "user_consent_boundary",
+    "user_nicaragua_referral_relevance",
 )
 
 LOW_LEVEL_ADMIN_CONFIG_READ_TOOLS: set[str] = {

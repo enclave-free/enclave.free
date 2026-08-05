@@ -865,6 +865,8 @@ class ConversationModelBenchTest(unittest.TestCase):
                 "user_knowledge_assistance",
                 "user_curated_resource_referral",
                 "user_knowledge_and_resource_assistance",
+                "user_consent_boundary",
+                "user_nicaragua_referral_relevance",
             ),
         )
 
