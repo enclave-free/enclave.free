@@ -408,13 +408,25 @@ _Avoid_: proposal tool, raw change-set JSON tool, Apply-card action
 A visible **Conversation UI Surface** control that enables a related set of **Tools** for the submitted turn.
 _Avoid_: route mode, hidden classifier, prompt context toggle
 
-**Model-Driven Tool Loop**:
-The Sage-owned loop where the model receives enabled **Tool** contracts through native Tool calling, either answers directly or selects one Tool batch, receives the results, and then answers or reports the outcome.
-_Avoid_: preselected context pipeline, separate typed Tool planner, multi-round replanning
+**Bounded Native Tool Loop**:
+The Sage-owned bounded loop where the model receives enabled **Tool** contracts through native Tool calling, either answers directly or selects successive Tool batches, and receives each batch's results before continuing.
+_Avoid_: Model-Driven Tool Loop, one-batch Tool pipeline, preselected context pipeline, separate typed Tool planner, unbounded agent loop
 
 **Tool Selection Observation**:
 A content-free record of which enabled **Tools** the model selected or omitted in its native Tool-call response. It supports Tool-use and latency diagnosis without authorizing or forcing a **Tool** call.
 _Avoid_: intent classifier, forced tool call, reasoning trace
+
+**Model Usage Observation**:
+A content-free record of aggregate model input and output usage for one model request. It supports latency and context-size diagnosis without retaining **Conversation Content** or hidden provider reasoning.
+_Avoid_: prompt capture, answer capture, reasoning trace, billing subsystem, analytics product
+
+**Pre-Response Provider Stall**:
+A model request that remains completely silent beyond the product's bounded first-event wait. Because no answer, hidden reasoning event, or Tool call has arrived, Sage may abandon that attempt and repeat the same model request once without replaying a Tool.
+_Avoid_: slow answer, long reasoning, Tool timeout, provider failover
+
+**Provider Continuity State**:
+Opaque model-supplied state that must accompany a corresponding assistant Tool-call message so the same model can continue one in-progress turn after receiving Tool results. Sage preserves it only for that turn and never treats it as product-visible reasoning or authority.
+_Avoid_: Reasoning Trace, Conversation Content, Sage plan, persisted chain of thought
 
 **Ordinary Product Flow**:
 A non-agent UI or API path where a **User** or **Admin** performs an action directly through the product.
@@ -767,7 +779,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
 - The **Conversation UI Surface** should adapt to Sage-owned **Conversation Streaming Transport** rather than redefining **Agent Runtime** behavior
 - **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
-- **Sage** should emit live **Trace Deltas** from inside the **Model-Driven Tool Loop** so content-free model steps, Tool selection, Tool outcomes, retries, retrieval, and timing are visible as they happen
+- **Sage** should emit live **Trace Deltas** from inside the **Bounded Native Tool Loop** so content-free model steps, Tool selection, Tool outcomes, retries, retrieval, and timing are visible as they happen
 - Streaming **Conversation** transports should deliver **Trace Deltas** live, while non-streaming **Conversation** transports should return the accumulated **Conversation Trace** in the final response
 - The **Conversation UI Surface** should render **Trace Deltas** as assistant-ui-style Activity and Tool-call message parts, with **Conversation Activity Steps** remaining available as summary or compatibility metadata
 - During streaming turns, the **Conversation UI Surface** should render meaningful **Conversation Activity Steps** in order before the final assistant response is complete
@@ -779,9 +791,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - Streamed **Conversation Trace** events must follow the same redaction rules as persisted **Conversation Traces**
 - **Sage** should own **Conversation Trace** minimal blocklist protection before returning traces to clients
 - The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
-- **Conversation Streaming Transport** should support the same **Model-Driven Tool Loop** as non-streaming **Conversations** rather than preserving separate assistant-style and retrieval-first tool paths
+- **Conversation Streaming Transport** should support the same **Bounded Native Tool Loop** as non-streaming **Conversations** rather than preserving separate assistant-style and retrieval-first tool paths
 - **Conversation Streaming Transport** should remain tool-aware so configuration, database, web, and knowledge-assisted **Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
-- **Sage** should expose enabled **Tool** contracts through native Tool calling, execute at most one model-chosen Tool batch, inject the results, and then let the model answer or report the outcome
+- **Sage** should expose enabled **Tool** contracts through native Tool calling and allow the same model to continue through the **Bounded Native Tool Loop** before answering
 - **Sage** should not pre-classify a user turn into a scoped prompt context before the model sees available **Tools**
 - Every configured Conversation model must support the provider-native Tool-calling contract
 - Individual **Tools** and retrieval steps should emit trace material for their own work, and **Sage** should compose that material into the final **Conversation Trace** while protecting the minimal blocklist
@@ -794,6 +806,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only
 - The transparent prototype posture intentionally avoids separate trace defaults for **Admin Conversations**, **User Conversations**, or **User Types**
 - The default **Conversation** trace posture should expose content-free model and Tool evidence for troubleshooting without publishing hidden reasoning
+- **Model Usage Observations** should remain sanitized **Conversation Trace** metadata, follow the associated **Conversation** retention and deletion lifecycle, and stay out of normal answer content
+- A **Pre-Response Provider Stall** may retry the identical model request once, but any provider event ends that retry opportunity and an executed **Tool** must never be replayed by model-request recovery
+- **Provider Continuity State** should return unchanged only to the same model within the current **Bounded Native Tool Loop** and should never be interpreted, streamed, logged, persisted, exported, or carried into a later **Conversation** turn
 - The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
 - **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase
 - **Sage** may invoke **Tools** during a **Conversation**
@@ -810,7 +825,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Sage** should ask for **Conversational Confirmation** before calling an **Admin Config Write Tool**; this is an advisory model-behavior expectation, not a server-enforced authority precondition
 - For one coherent Admin Config task, **Sage** should briefly summarize the intended changes, ask once for **Conversational Confirmation**, then use all needed write **Tools** without reconfirming each call
 - If the intended Admin Config scope changes materially after confirmation, **Sage** should ask for fresh **Conversational Confirmation**; deciding whether a change is material remains trusted model judgment
-- A **Conversation** gives the model one Tool-selection opportunity before Tool execution; successful, failed, or guarded Tool results proceed to the answer instead of starting another Tool round
+- A **Conversation** may contain successive model-selected Tool batches within the **Bounded Native Tool Loop**; Tool outcomes return to the same model without starting a separate planning path
 - Native Tool calling is a hard-cut replacement for the separate typed planner; Sage should not retain a planner fallback flag or parallel legacy execution path
 - **Sage** should report rejected Tool arguments honestly; a later **Conversation** turn may retry the Tool without fresh **Conversational Confirmation** when the intended Admin Config change is unchanged
 - **Conversational Confirmation** for Admin Config is advisory, prompt-guided model behavior; the runtime should not require a proposal, Apply card, confirmation token, intent classifier, forced Tool call, or stored confirmation state
@@ -996,7 +1011,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 > **Domain expert:** "No. **User Type** is onboarding segmentation. **Document Access** is the rule set that may use User Type as an input."
 
 > **Dev:** "Can the product include document context even if Sage did not ask for it?"
-> **Domain expert:** "Only when product policy requires it. Ordinary selected Documents are Knowledge **Tool** constraints, so Sage should retrieve from them through the **Model-Driven Tool Loop** rather than receiving hidden document context."
+> **Domain expert:** "Only when product policy requires it. Ordinary selected Documents are Knowledge **Tool** constraints, so Sage should retrieve from them through the **Bounded Native Tool Loop** rather than receiving hidden document context."
 
 > **Dev:** "Are User Types permission roles?"
 > **Domain expert:** "No. A **User Type** is how the operator segments users so different **Onboarding Questions** can be asked."
