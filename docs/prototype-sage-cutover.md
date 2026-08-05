@@ -43,7 +43,7 @@ Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these
 
 Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /llm/chat/stream`, `POST /query`, `GET /query/sessions`, `GET /query/session/{session_id}`, `PATCH /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
 
-`POST /llm/chat/stream` is the streaming Conversation transport. ADR-0014 describes the earlier bounded two-phase streaming slice; [ADR-0023](adr/0023-unified-model-driven-tool-loop.md) owns Tool authority and Tool Set boundaries, while [ADR-0029](adr/0029-native-tool-calling-with-one-tool-round.md) defines the current native one-round behavior shared by streaming and non-streaming Conversations.
+`POST /llm/chat/stream` is the streaming Conversation transport. ADR-0014 describes the earlier bounded two-phase streaming slice; [ADR-0023](adr/0023-unified-model-driven-tool-loop.md) owns Tool authority and Tool Set boundaries, [ADR-0029](adr/0029-native-tool-calling-with-one-tool-round.md) owns the provider-native hard cut, and [ADR-0030](adr/0030-bounded-native-tool-loop.md) defines the current bounded two-batch behavior shared by streaming and non-streaming Conversations.
 
 ## Sage To Python Private Control-Plane Contract
 

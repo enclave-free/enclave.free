@@ -1,6 +1,6 @@
 # Native Tool Calling with One Tool Round
 
-Status: Accepted
+Status: Superseded in its one-batch constraint by [ADR-0030](0030-bounded-native-tool-loop.md). The remaining native-protocol, trust-boundary, and hard-cut decisions are still accepted.
 
 Sage will expose enabled **Tool** contracts through the configured **Model Provider**'s native Tool-calling protocol instead of using a separate DSRs typed planner. A **Conversation** allows one model-selected Tool batch: the model may answer directly, or Sage executes the selected Tools once and returns their successful, failed, or guarded results for the final answer. One generic retry may repair an unusable native Tool-call response, but deterministic intent rules must not force or reject an otherwise valid model-selected plan. Final model prose streams without content-specific quarantine, completeness policing, or answer rewriting; Sage deterministically enforces only protocol validity and existing credential and secret boundaries. This supersedes ADR-0023's rejection of provider-native Tool calling and ADR-0027's separate typed planning phase because the authoritative GLM 5.2 Conversation model was verified to support native Tool calls, and the native path removes the `replan_after_results` contract, the Tool-planning parser, content-specific plan correction, prose scanners, and the extra planning request on no-Tool turns.
 

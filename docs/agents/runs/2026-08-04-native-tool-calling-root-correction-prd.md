@@ -1,8 +1,8 @@
 # PRD: Native Tool Calling Root Correction
 
-Status: Ready for ticket breakdown. Deliberately not published to the issue tracker yet; ticket creation is the next requested step.
+Status: In implementation. Published as PRD issue #582 with implementation issues #574-#581 and #583-#589. The original one-batch constraint is superseded by the live-replay correction below.
 
-Decision anchor: [ADR-0029](../../adr/0029-native-tool-calling-with-one-tool-round.md)
+Decision anchors: [ADR-0029](../../adr/0029-native-tool-calling-with-one-tool-round.md) and [ADR-0030](../../adr/0030-bounded-native-tool-loop.md)
 
 ## Problem Statement
 
@@ -14,7 +14,7 @@ The Resource Directory itself is not the root problem. It already supports exact
 
 ## Solution
 
-Give each configured Conversation model the enabled Tool contracts through its provider-native Tool-calling API. On each user turn, the model either answers directly or selects one batch of Tool calls. Sage validates and executes that authorized batch once, returns every successful, failed, or guarded result to the model, and requests the final answer without offering another Tool batch. Final prose streams directly after basic protocol validation.
+Give each configured Conversation model the enabled Tool contracts through its provider-native Tool-calling API. On each request, the model either answers directly or selects a Tool batch. Sage validates and executes no more than two authorized batches, returns every successful, failed, or guarded result to the same model with the same enabled Tool contracts, and rejects a third selected batch before execution. Final prose streams directly after basic protocol validation.
 
 Tool descriptions remain short capability contracts. Knowledge Search explains that uploaded Documents can have different languages or titles and that multiple queries may be selected in the same Tool batch. Curated Resources explains that it searches curated services and contact information and returns relevance-ranked results with availability metadata. Sage does not encode WLC terms, contact-intent keywords, forced Tool calls, query rewriting, answer wording rules, or post-Tool replanning.
 
@@ -52,7 +52,7 @@ Keep generic resilience and observability at their natural boundaries. One unusa
 28. As a maintainer, I want one native Tool execution path, so that I do not have to reason about both a custom typed planner and a provider-native path.
 29. As a maintainer, I want the old planner, `replan_after_results`, contact-intent rules, plan validators, sanitizers, and final-answer quarantine deleted, so that obsolete behavior cannot reappear behind a flag.
 30. As a maintainer, I want one generic protocol retry rather than content-specific correction prompts, so that recovery behavior is small and provider-neutral.
-31. As a maintainer, I want the one-batch limit enforced by the provider request shape, so that the final-answer request cannot start another Tool round.
+31. As a maintainer, I want no more than two Tool batches executed per turn, so that GLM can refine one lookup without creating an unbounded agent loop.
 32. As a maintainer, I want direct-answer and Tool-assisted turns tested through the public Conversation transport, so that tests assert product behavior rather than private helper structure.
 33. As a maintainer, I want native Tool selection and same-model retry tested with GLM 5.2, so that the authoritative provider contract is explicit.
 34. As a maintainer, I want the customer's prompt suite replayed across all four personas, so that the original retrieval and contact failures are checked after the root correction.
@@ -64,12 +64,12 @@ Keep generic resilience and observability at their natural boundaries. One unusa
 ## Implementation Decisions
 
 - Use the authoritative model's OpenAI-compatible native Tool-call request and response contract. GLM 5.2 must support that contract; incompatible configuration is rejected rather than routed through the legacy planner.
-- A user turn has one model Tool-selection opportunity. The first request includes the enabled, authorized Tool contracts. The model may return usable answer content or one batch of native Tool calls.
+- Each model request includes the enabled, authorized Tool contracts. The model may return usable answer content or one batch of native Tool calls.
 - A direct answer completes from the first model request. Sage does not make a planning request followed by a separate answer request when no Tool was selected.
 - When the model selects Tools, Sage validates names, arguments, actor authority, Tool Set membership, batch bounds, and output budgets before execution. Provider selection never authorizes a Tool the actor could not use.
 - Sage executes the validated calls as one batch. Multiple calls to the same read Tool are permitted in the batch, including alternate Knowledge Search queries. Existing concurrency and resource limits continue to bound execution.
-- Successful, failed, rejected, and guarded Tool outcomes are returned as native Tool-result messages. The final model request does not include Tool definitions, which enforces the one-batch boundary without an intent classifier or second-round planner.
-- The final response requires usable answer content and a supported completion reason. A response that cannot satisfy the provider protocol fails through the ordinary Conversation error path; Sage never executes a second Tool batch.
+- Successful, failed, rejected, and guarded Tool outcomes are returned as native Tool-result messages together with the same enabled Tool contracts. The model may select one follow-up batch using the provider-native protocol.
+- Sage executes at most two Tool batches per turn. After two batches, it requests an answer from the accumulated results; if the model selects another batch, Sage rejects it before execution through the ordinary Conversation error path.
 - Permit one generic retry for an unusable native model response before answer text is exposed. The retry may restate the protocol requirement but must not contain contact-, WLC-, language-, organization-, resource-, or intent-specific correction instructions.
 - Remove the separate typed Tool-decision response, its parser dependency, `replan_after_results`, planner attempt loop, plan correction input, and every post-Tool replanning branch.
 - Remove deterministic contact and inventory expectation detection, lookup-mode forcing, expected/missed contact fields, model-plan validation, Tool-call sanitization based on inferred intent, and continuation enforcement in Sage.
@@ -95,9 +95,9 @@ Keep generic resilience and observability at their natural boundaries. One unusa
 - Use the public Conversation Streaming Transport as the primary deterministic acceptance seam. Script the provider at its native Tool-call boundary and stub only the existing private Enclave Control Plane contracts. Assert SSE answer, Activity, Trace, and terminal behavior rather than private helper calls.
 - Reuse the existing chat-streaming transport and Sage web-runtime test patterns. Extend the non-streaming Conversation route only for parity cases that are not already exercised through the shared runtime.
 - Verify a direct-answer turn exposes enabled Tools to the provider, returns usable content from one model request, executes no Tool, and emits a content-free selection observation.
-- Verify a Tool-assisted turn accepts native Tool calls, executes one authorized batch, returns native Tool-result messages, makes one final model request without Tools, and streams its answer.
+- Verify a Tool-assisted turn accepts native Tool calls, executes an authorized batch, returns correlated native Tool-result messages with the same Tool definitions, and streams the model's answer.
 - Verify multiple Knowledge Search calls can occur in the same batch and that successful, empty, failed, rejected, and guarded results all reach the final model request without triggering another Tool round.
-- Verify a final model response cannot cause a second Tool batch. The runtime must execute no additional call and must return the documented protocol outcome.
+- Verify the model may select one follow-up Tool batch and answer after its results. Verify a third selected batch is rejected before execution with the documented bounded-runtime outcome.
 - Verify one malformed or unusable native model response receives at most one content-neutral protocol retry. Assert no contact-, organization-, WLC-, language-, or query-specific correction is added.
 - Verify an eligible read-only Tool receives at most one retry for representative connection, timeout, and retryable server failures. Verify valid empty results, validation failures, weak results, and non-idempotent state-changing calls are not retried.
 - Verify native Tool contracts and same-model retry are shaped correctly for GLM 5.2. Keep deterministic adapter tests in CI and use a live provider probe as release evidence rather than a required networked test.
@@ -108,8 +108,8 @@ Keep generic resilience and observability at their natural boundaries. One unusa
 - Verify model request, Tool execution, Retrieval or Resource Directory lookup, first-event where available, and total-turn timings are present and non-negative. Verify unsupported cluster-scheduling and inference-only phases are absent rather than fabricated.
 - Verify the normal Conversation UI renders natural clarifying questions from answer Markdown and the Test Dashboard no longer depends on a separate clarifying-question field.
 - Run the full Rust, backend, frontend, contract, integration, and production-build suites after targeted tests. Documentation and ADR consistency checks must pass.
-- Run the live Conversation Model Bench against GLM 5.2 under normal conditions. Capture model identity, selected Tools, timings, answers, and sanitized trace evidence.
-- Replay the exact customer examples across all four personas, including contact follow-ups, incomplete Resource lists, ordinary no-Tool questions, and English questions about Documents with non-English titles. Compare outcomes to the original feedback without requiring exact answer wording.
+- After the bounded-loop deployment, run a focused live GLM 5.2 regression over the known empty-answer, textual Tool-markup, Tool-assisted, and ordinary no-Tool failure classes. Capture model identity, selected Tools, timings, answers, and sanitized trace evidence.
+- After the final integration gate in issue #580, run the single authoritative replay of the exact customer examples across all four personas, including contact follow-ups, incomplete Resource lists, ordinary no-Tool questions, and English questions about Documents with non-English titles. Compare outcomes to the original feedback without requiring exact answer wording.
 - Treat live prompt replay as evidence, not a deterministic CI gate. Evaluate whether Tool choice, grounding, truthful use of result metadata, latency, and overall answer usefulness improved.
 
 ## Out of Scope
@@ -120,7 +120,7 @@ Keep generic resilience and observability at their natural boundaries. One unusa
 - Automatically fetching a second Resource page, adding a pagination UI, or forcing Sage to mention that more results exist.
 - Deterministic contact, language, inventory, or organization intent classification.
 - Content-specific plan correction, answer rewriting, completeness policing, process-narration scanning, repetition quarantine, or deterministic final-answer fallback.
-- Multiple Tool rounds, post-result replanning, or Tool execution initiated from the final-answer request.
+- More than two Tool batches, a separate post-result planner, textual Tool-markup parsing, or an unbounded agent loop.
 - Model-provider or cluster failover, degraded-run detection, traffic shifting, or a controlled normal-versus-degraded cluster experiment.
 - Claiming direct measurement of internal provider queueing, cluster scheduling, or inference-only latency without provider-supplied signals.
 - Adding a model timeout before the simplified runtime is measured.
@@ -130,8 +130,12 @@ Keep generic resilience and observability at their natural boundaries. One unusa
 ## Further Notes
 
 - This spec supersedes the orchestration portions of GitHub issue #533 and the July 27 Curated Resource/contact/latency PRD. It intentionally retains the generic Resource Directory search, page metadata, measurable timing, and safe transient read-only retry work already delivered there.
-- ADR-0029 supersedes ADR-0023 only for the typed-planning and provider-native rejection decisions. ADR-0023 remains authoritative for Sage Tool ownership, Tool Set boundaries, actor authorization, and execution responsibility.
+- ADR-0029 supersedes ADR-0023 only for the typed-planning and provider-native rejection decisions. ADR-0030 supersedes ADR-0029 only for the one-batch constraint. ADR-0023 remains authoritative for Sage Tool ownership, Tool Set boundaries, actor authorization, and execution responsibility.
 - ADR-0027 remains historical context; its separate typed Tool-planning phase and final-answer quarantine are not implementation guidance after this correction.
 - Direct capability probes against GLM 5.2 returned valid OpenAI-style native Tool calls. The implementation tickets should still include deterministic adapter coverage and a repeatable live release probe.
 - The initial WLC correction is deliberately model-led: disclose multilingual/title variation in the Knowledge Search Tool description, allow multiple same-batch queries, and rerun the evidence suite before adding retrieval infrastructure.
-- This document is local by explicit request. No GitHub issue or `ready-for-agent` label has been created yet; ticket decomposition and publication follow after review of this spec report.
+- The PRD and implementation slices are published in GitHub. Completion requires reviewed, merged code, exact-revision deployment, and the live customer replay evidence described above.
+
+## Live-Replay Correction
+
+The first deployed hard cut proved that GLM 5.2 sometimes needs a native follow-up Tool call after seeing initial Tool results. Omitting Tool definitions produced a provider `stop` with no answer content. Retaining definitions while disabling Tool selection completed transport but caused literal `<tool_call>` markup in 29 of 40 customer replay turns. ADR-0030 therefore replaces the one-batch request shape with a provider-native loop capped at two executed Tool batches. This correction is generic and does not restore the removed planner, customer-specific routing, semantic answer filtering, or answer rewriting.

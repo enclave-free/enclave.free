@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns native Tool-call orchestration, and ADR-0028 owns direct Admin Config write behavior.
+This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns the native Tool-call hard cut, ADR-0030 owns the bounded native Tool loop, and ADR-0028 owns direct Admin Config write behavior.
 
 ## Review Ledger
 
@@ -34,4 +34,5 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0024 Transparent Reasoning and Tool Trace Posture                       | Still owns live/persisted trace visibility; ADR-0029 supersedes raw reasoning with content-free lifecycle evidence. |
 | 0027 Separate Tool decisions from final answer delivery                 | Superseded by ADR-0029; retained as final-answer safety history.                                                    |
 | 0028 Sage owns direct Admin Config writes                               | Anchor decision for conversationally confirmed direct Admin Config writes.                                         |
-| 0029 Native Tool calling with one Tool round                            | Anchor decision for native Tool selection, one Tool batch, and direct no-Tool answers.                             |
+| 0029 Native Tool calling with one Tool round                            | Native protocol and hard-cut decisions remain valid; its one-batch constraint is superseded by ADR-0030.           |
+| 0030 Bounded native Tool loop                                           | Anchor decision for model-driven native Tool continuation with at most two executed Tool batches.                  |

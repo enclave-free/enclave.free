@@ -5,8 +5,8 @@ This document describes the active architecture on `staging`.
 The hard cut to Sage is still in place, but the important refinement on this branch is that the gateway is no longer part of the application logic. nginx is now just the stable public entrypoint and path router.
 
 Status note: the sections below that describe native Tool calling and the
-`admin-config` endpoint family follow ADR-0029 and ADR-0028, with ADR-0023 still
-owning Tool authority and Tool Set boundaries.
+`admin-config` endpoint family follow ADR-0029, ADR-0030, and ADR-0028, with
+ADR-0023 still owning Tool authority and Tool Set boundaries.
 Scoped Config Context and prepared-tool context code are not supported fallback
 paths in this architecture.
 
@@ -40,7 +40,7 @@ Document Library Retrieval is a Sage Tool capability over Enclave-owned Document
 
 The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration. New Document writes chunk and embedding records into the Retrieval Index with minimized Qdrant payloads, while chunk text is hydrated from product-owned storage after access filtering.
 
-Sage owns Conversation behavior and one native model-driven Tool round. The first model request receives every enabled, authorized Tool contract and either answers directly or selects one bounded Tool batch. Sage executes that batch once, returns correlated Tool results, and makes a final model request without Tool definitions. When `knowledge-search` is enabled, each `knowledge_search` call retains the actor's selected Document constraints; retrieved chunks return as Tool results with Activity/Trace metadata.
+Sage owns Conversation behavior and a bounded native model-driven Tool loop. Each model request receives every enabled, authorized Tool contract. The model may answer directly or select a bounded Tool batch; after correlated results return, it may select one follow-up batch before it must answer. Sage never executes a third batch. When `knowledge-search` is enabled, each `knowledge_search` call retains the actor's selected Document constraints; retrieved chunks return as Tool results with Activity/Trace metadata.
 
 Graph-first RAG remains deferred. Neo4j, Graphiti, ontology extraction, entity normalization, and graph export are future architecture options, not the current completeness bar for this prototype.
 
@@ -63,7 +63,7 @@ Python does not expose public handlers for `/llm/chat`, `/query`, `/session-defa
 
 ## Model-Driven Tool Loop Ownership
 
-The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into provider-native Tool contracts, gives the model one Tool-selection opportunity, executes at most one authorized batch, injects every correlated outcome, and makes a final answer request without Tools. Direct no-Tool answers complete from the first model request. Sage applies Tool output budgets and emits transparent Activity and Conversation Trace metadata with minimal blocklist protection throughout.
+The Model-Driven Tool Loop is Sage-owned. Sage expands enabled Tool Sets into provider-native Tool contracts, lets the configured model answer or select a Tool batch, injects every correlated outcome, and gives the same model one bounded follow-up Tool opportunity. Direct no-Tool answers complete from the first model request, and no third Tool batch can execute. Sage applies Tool output budgets and emits transparent Activity and Conversation Trace metadata with minimal blocklist protection throughout.
 
 Python remains the Enclave Control Plane. It exposes private facts/actions through `/internal/agent/*` contracts, enforces authorization and redaction for the data it owns, and does not own public Agent Runtime Tool orchestration or pre-classify turns into prompt-ready context blobs.
 
@@ -124,7 +124,7 @@ Scoped admin context is not a supported integration path.
    - `web-search` into Web Search Tools
    - `admin-config` into product-level configuration read and direct-write Tools, admin only
    - `db-query` into read-only database inspection Tools, admin only
-7. Sage makes one native Tool-selection request; it either streams a direct answer or executes one authorized Tool batch and makes a Tool-free final-answer request
+7. Sage runs the bounded native Tool loop; it either streams a direct answer or executes at most two model-selected authorized Tool batches before the answer
 8. Sage returns the natural answer, Activity, trace metadata, sources, and affected-area refresh hints
 
 The streaming transport uses the same native round and emits content-free Tool-selection facts, Tool attempts and terminal outcomes, measurable timing, and answer deltas as they occur.
