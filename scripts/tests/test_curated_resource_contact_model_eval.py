@@ -330,6 +330,9 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
                 "persona": "generic_user",
                 "case": "fresh_email",
                 "answer": "Use fresh-539@example.test.",
+                "elapsed_ms": None,
+                "answer_chars": 27,
+                "answer_words": 2,
                 "executed_tools": ["curated-resources"],
                 "tool_lifecycle": [
                     {

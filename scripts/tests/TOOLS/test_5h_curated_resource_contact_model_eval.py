@@ -307,6 +307,9 @@ def evidence_entry(
         "persona": persona,
         "case": case,
         "answer": answer,
+        "elapsed_ms": trace.get("_evaluation_elapsed_ms") if isinstance(trace, dict) else None,
+        "answer_chars": len(answer),
+        "answer_words": len(answer.split()),
         "executed_tools": executed_tool_ids(trace),
         "tool_lifecycle": tool_lifecycle_events(trace),
         "resource_tool_metadata": resource_tool_metadata(trace),
@@ -666,14 +669,16 @@ def audit_contains_fine_timing(value: Any) -> bool:
     )
 
 def run_turn(base: str, token: str, payload: dict[str, Any], stream: bool, timeout: float) -> tuple[str, Any, str | None]:
+    started = time.perf_counter()
     response = req(base, token, "POST", "/llm/chat/stream" if stream else "/llm/chat", payload, timeout)
     if response.status_code != 200: raise RuntimeError(f"chat returned {response.status_code}: {response.text[:400]}")
     if not stream:
-        body = response.json(); return answer_json(body), (body.get("trace") or body), body.get("session_id")
+        body = response.json(); trace = dict(body.get("trace") or body); trace["_evaluation_elapsed_ms"] = round((time.perf_counter() - started) * 1000, 1); return answer_json(body), trace, body.get("session_id")
     response.encoding = "utf-8"
     events = parse_sse(response.text)
     answer = "".join(str(e["data"].get("delta") or "") for e in events if e["event"] == "answer_delta").strip()
     trace = next((e["data"].get("trace", {}) for e in events if e["event"] == "trace_final"), {})
+    trace = dict(trace); trace["_evaluation_elapsed_ms"] = round((time.perf_counter() - started) * 1000, 1)
     sid = next((e["data"].get("session_id") for e in events if e["data"].get("session_id")), None)
     return answer, trace, sid
 
