@@ -15,7 +15,7 @@ Start with the current-state docs below. They are the files that describe the ac
 - [adr/README.md](adr/README.md): ADR review ledger and current decision index.
 - [adr/0023-unified-model-driven-tool-loop.md](adr/0023-unified-model-driven-tool-loop.md): current anchor for Tool ownership and Tool Set boundaries.
 - [adr/0029-native-tool-calling-with-one-tool-round.md](adr/0029-native-tool-calling-with-one-tool-round.md): current anchor for the provider-native Tool hard cut and model trust boundary.
-- [adr/0030-bounded-native-tool-loop.md](adr/0030-bounded-native-tool-loop.md): current anchor for the bounded two-batch native Tool loop and final-answer delivery.
+- [adr/0030-bounded-native-tool-loop.md](adr/0030-bounded-native-tool-loop.md): current anchor for the bounded four-batch native Tool loop and final-answer delivery.
 - [adr/0024-transparent-reasoning-and-tool-trace-posture.md](adr/0024-transparent-reasoning-and-tool-trace-posture.md): current anchor for live and persisted content-free model, Tool, Retrieval, retry, and timing traces.
 
 ## Core Product Docs

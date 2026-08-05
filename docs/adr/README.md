@@ -35,4 +35,4 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0027 Separate Tool decisions from final answer delivery                 | Superseded by ADR-0029; retained as final-answer safety history.                                                    |
 | 0028 Sage owns direct Admin Config writes                               | Anchor decision for conversationally confirmed direct Admin Config writes.                                         |
 | 0029 Native Tool calling with one Tool round                            | Native protocol and hard-cut decisions remain valid; its one-batch constraint is superseded by ADR-0030.           |
-| 0030 Bounded native Tool loop                                           | Anchor decision for model-driven native Tool continuation with at most two executed Tool batches.                  |
+| 0030 Bounded native Tool loop                                           | Anchor decision for model-driven native Tool continuation with at most four executed Tool batches.                 |
