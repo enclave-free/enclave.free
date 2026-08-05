@@ -333,7 +333,7 @@ Plaintext that an **Admin** browser signer decrypts from admin-authorized encryp
 _Avoid_: backend decrypt, private-key handoff, trace evidence
 
 **Conversation Trace**:
-Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as tool calls, retrieval steps, and reasoning traces when available.
+Operator-configured metadata attached to a **Conversation** response that explains how **Sage** produced the response, such as Tool selection, Tool outcomes, retrieval steps, and measurable timing.
 _Avoid_: audit log, server log
 
 **Conversation Activity Step**:
@@ -341,7 +341,7 @@ A sanitized user-visible step in a **Conversation** that shows meaningful **Sage
 _Avoid_: trace blob, debug event, raw tool call
 
 **Trace Delta**:
-An append-only live **Conversation Streaming Transport** event that carries raw or near-raw trace detail for the current assistant turn, such as reasoning content, model step boundaries, tool calls, tool results, retries, and timing.
+An append-only live **Conversation Streaming Transport** event that carries guarded operational detail for the current assistant turn, such as model step boundaries, Tool selection, Tool outcomes, retries, and timing. It does not carry hidden provider reasoning.
 _Avoid_: hidden debug event, separate log stream
 
 **Activity**:
@@ -349,7 +349,7 @@ The user-facing presentation of live **Conversation Activity Steps** and final *
 _Avoid_: hidden tool-call UI
 
 **Reasoning Trace**:
-Visible model reasoning captured during a **Conversation** turn, including raw provider reasoning content when available. A **Reasoning Trace** is not a post-hoc narration invented by **Sage** when the **Model Provider** does not expose reasoning content. A **Reasoning Trace** is conversation transparency metadata, not **Audit Log** evidence or a source of product authority.
+Historical term for visible model reasoning captured during a **Conversation** turn. The current native Tool round does not publish hidden provider reasoning and does not ask the model to invent a post-hoc narration. Use content-free model, Tool, retrieval, retry, and timing evidence instead.
 _Avoid_: reasoning summary, server log, audit log
 
 **Conversation Turn Timing**:
@@ -397,7 +397,7 @@ An Admin-vetted real-world referral or contact record that **Sage** may retrieve
 _Avoid_: document, web result, guaranteed referral
 
 **Resource Directory**:
-The Admin-managed collection of **Curated Resources** used for structured referral and contact lookup.
+The Admin-managed collection of **Curated Resources** used for structured referral and contact lookup. Its search owns generic relevance behavior such as prioritizing exact organization and contact-detail matches; Sage does not use contact-specific intent rules to force that search.
 _Avoid_: document library, search index, CRM
 
 **Admin Config Write Tool**:
@@ -409,11 +409,11 @@ A visible **Conversation UI Surface** control that enables a related set of **To
 _Avoid_: route mode, hidden classifier, prompt context toggle
 
 **Model-Driven Tool Loop**:
-The Sage-owned loop where the model sees enabled **Tool** contracts, chooses calls, receives **Tool** results, and continues until it can answer or complete the authorized work.
-_Avoid_: preselected context pipeline, provider-native function-calling dependency
+The Sage-owned loop where the model receives enabled **Tool** contracts through native Tool calling, either answers directly or selects one Tool batch, receives the results, and then answers or reports the outcome.
+_Avoid_: preselected context pipeline, separate typed Tool planner, multi-round replanning
 
 **Tool Selection Observation**:
-A content-free record of which enabled **Tools** the model selected or omitted during a **Model-Driven Tool Loop** planning step. It supports Tool-use and latency diagnosis without authorizing or forcing a **Tool** call.
+A content-free record of which enabled **Tools** the model selected or omitted in its native Tool-call response. It supports Tool-use and latency diagnosis without authorizing or forcing a **Tool** call.
 _Avoid_: intent classifier, forced tool call, reasoning trace
 
 **Ordinary Product Flow**:
@@ -745,18 +745,18 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Conversation Content** is the inference payload protected by **Encrypted Inference**
 - A **Conversation Model Bench** exercises real **User Conversations** or **Admin Conversations** rather than raw **Model Provider** prompts
 - **Conversation Model Bench** evidence is internal comparison material, not product **Conversation Trace** or **Audit Log** evidence
-- A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, **Reasoning Trace**, and **Reasoning Summary** details
+- A **Conversation Trace** may include **Tool Trace**, **Retrieval Trace**, and **Reasoning Summary** details; the current native Tool round does not produce a **Reasoning Trace**
 - A **Conversation Activity Step** is a user-visible rendering unit derived from **Conversation Trace** metadata
-- A **Conversation Trace** may expose raw model reasoning in both **Admin Conversations** and **User Conversations**, but it must still protect credentials, hidden system/developer instructions, internal auth headers, raw secret reveal results, infrastructure/runtime environment dumps, and other authority-bearing internals
+- A **Conversation Trace** should not expose hidden provider reasoning in either **Admin Conversations** or **User Conversations**
 - When the minimal blocklist catches protected content inside a **Trace Delta**, **Sage** should keep the event, replace protected content with `[redacted]`, and mark it guarded; hidden authority-bearing instructions should be redacted as a whole field
 - Raw decrypted database rows should appear in **Conversation Trace** only when the row content was already intentionally returned through an authorized product view or authorized **Tool** result
-- A **Reasoning Summary** is a concise explanation of how **Sage** approached a response, while a **Reasoning Trace** may include raw provider reasoning content when the **Model Provider** exposes it
-- **Sage** should not fabricate a **Reasoning Trace** by asking the model to narrate hidden thoughts after the fact; when raw reasoning is unavailable, **Conversation Trace** should rely on model step, **Tool**, retry, correction, retrieval, timing, and optional **Reasoning Summary** details
+- A **Reasoning Summary** is a concise explanation of how **Sage** approached a response; it is not hidden provider reasoning
+- **Sage** should not fabricate a **Reasoning Trace** by asking the model to narrate hidden thoughts after the fact; **Conversation Trace** should rely on content-free model, **Tool**, retry, retrieval, and timing details
 - **Conversation Traces** should be persisted with the assistant turns they describe so refreshed conversations, exports, and admin troubleshooting remain coherent
 - Persisted **Conversation Traces** are assistant-turn metadata, preferably stored with the assistant message record and otherwise in a sidecar record keyed to that assistant turn
 - Assistant turns should have backend-generated stable message identifiers so streamed answer deltas, final responses, persisted **Conversation Traces**, exports, and deletion workflows can refer to the same turn
 - **Conversation Traces** should be on by default in the transparent prototype phase
-- Raw reasoning traces should persist as **Conversation Traces** with the assistant turn they describe and should be included in conversation exports by default
+- Hidden provider reasoning should not persist with assistant turns or appear in conversation exports
 - **Session Memory Deletion** should delete persisted **Conversation Traces** for the associated **Conversation**
 - Conversation exports should include the full persisted **Conversation Trace** by default
 - **Conversation Trace** should be exposed through a structured `trace` response object on Conversation transports
@@ -767,9 +767,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
 - The **Conversation UI Surface** should adapt to Sage-owned **Conversation Streaming Transport** rather than redefining **Agent Runtime** behavior
 - **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
-- **Sage** should emit live **Trace Deltas** from inside the **Model-Driven Tool Loop** so model steps, tool calls, tool results, retries, reasoning traces, and timing are visible as they happen
+- **Sage** should emit live **Trace Deltas** from inside the **Model-Driven Tool Loop** so content-free model steps, Tool selection, Tool outcomes, retries, retrieval, and timing are visible as they happen
 - Streaming **Conversation** transports should deliver **Trace Deltas** live, while non-streaming **Conversation** transports should return the accumulated **Conversation Trace** in the final response
-- The **Conversation UI Surface** should render **Trace Deltas** as assistant-ui-style reasoning and tool-call message parts, with **Conversation Activity Steps** remaining available as summary or compatibility metadata
+- The **Conversation UI Surface** should render **Trace Deltas** as assistant-ui-style Activity and Tool-call message parts, with **Conversation Activity Steps** remaining available as summary or compatibility metadata
 - During streaming turns, the **Conversation UI Surface** should render meaningful **Conversation Activity Steps** in order before the final assistant response is complete
 - **Conversation Activity Steps** should remain scannable after completion rather than being packed only into a dense trace blob
 - During streaming turns, **Conversation Activity Steps** must be emitted by **Sage**, and the prototype should bias toward showing enough activity to make the agent loop inspectable
@@ -781,9 +781,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The **Agent Runtime** should own **Conversation Streaming Transport** for public AI routes, while the **Enclave Control Plane** remains available through internal control-plane contracts
 - **Conversation Streaming Transport** should support the same **Model-Driven Tool Loop** as non-streaming **Conversations** rather than preserving separate assistant-style and retrieval-first tool paths
 - **Conversation Streaming Transport** should remain tool-aware so configuration, database, web, and knowledge-assisted **Conversations** benefit from streaming rather than falling back to delayed non-streaming turns
-- **Sage** should expose enabled **Tool** contracts to the model, execute model-chosen calls, inject **Tool** results, and continue until the model can answer or complete the authorized work
+- **Sage** should expose enabled **Tool** contracts through native Tool calling, execute at most one model-chosen Tool batch, inject the results, and then let the model answer or report the outcome
 - **Sage** should not pre-classify a user turn into a scoped prompt context before the model sees available **Tools**
-- The **Model-Driven Tool Loop** should stay provider-portable and should not depend on provider-native function-calling support
+- Every configured Conversation model must support the provider-native Tool-calling contract
 - Individual **Tools** and retrieval steps should emit trace material for their own work, and **Sage** should compose that material into the final **Conversation Trace** while protecting the minimal blocklist
 - Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
 - The transparent prototype **Trace Visibility Posture** should not require actor-specific **Audit Log** events because it is not currently a configurable policy surface
@@ -793,10 +793,16 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Admin Conversation** detailed traces may include validated read-only SQL only after sensitive literals are redacted
 - `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only
 - The transparent prototype posture intentionally avoids separate trace defaults for **Admin Conversations**, **User Conversations**, or **User Types**
-- The default **Conversation** trace posture should expose raw reasoning and detailed tool traces for troubleshooting and auditability
+- The default **Conversation** trace posture should expose content-free model and Tool evidence for troubleshooting without publishing hidden reasoning
 - The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
 - **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase
 - **Sage** may invoke **Tools** during a **Conversation**
+- **Tool** contracts and Agent Settings may guide model selection, but **Sage** should not use a hidden intent classifier to force or reject an otherwise valid model-selected Tool plan
+- **Conversation Streaming Transport** should deliver model answer text without content-specific quarantine or rewriting; protocol validity and existing credential and secret boundaries remain deterministic responsibilities
+- List-style **Tools** should return their best-ranked first page with structured counts and availability metadata so the model knows when additional results exist; **Sage** should not automatically fetch another page or expose pagination mechanics to the user
+- Exact and partial organization or contact matching belongs to the **Resource Directory** search; contact-intent detection and forced Curated Resources calls do not belong in **Sage** orchestration
+- **Tool** descriptions should be concise capability contracts that disclose important search and result-shape facts without prescribing conclusions, customer-specific vocabulary, or scripted workflows
+- A safe-to-retry **Tool** call may retry once for a clearly transient transport failure; state-changing calls without idempotency, empty or weak results, invalid arguments, and semantic disappointment are not retry signals
 - **User Conversations** and **Admin Conversations** are both **Conversations**
 - **User Conversations** and **Admin Conversations** share **Session Memory Deletion** mechanics while retaining role-specific authority and visibility
 - An **Admin Conversation** may have a **Subject User**
@@ -804,7 +810,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Sage** should ask for **Conversational Confirmation** before calling an **Admin Config Write Tool**; this is an advisory model-behavior expectation, not a server-enforced authority precondition
 - For one coherent Admin Config task, **Sage** should briefly summarize the intended changes, ask once for **Conversational Confirmation**, then use all needed write **Tools** without reconfirming each call
 - If the intended Admin Config scope changes materially after confirmation, **Sage** should ask for fresh **Conversational Confirmation**; deciding whether a change is material remains trusted model judgment
-- **Sage** may correct and retry rejected Tool arguments without reconfirming when the intended Admin Config change is unchanged
+- A **Conversation** gives the model one Tool-selection opportunity before Tool execution; successful, failed, or guarded Tool results proceed to the answer instead of starting another Tool round
+- Native Tool calling is a hard-cut replacement for the separate typed planner; Sage should not retain a planner fallback flag or parallel legacy execution path
+- **Sage** should report rejected Tool arguments honestly; a later **Conversation** turn may retry the Tool without fresh **Conversational Confirmation** when the intended Admin Config change is unchanged
 - **Conversational Confirmation** for Admin Config is advisory, prompt-guided model behavior; the runtime should not require a proposal, Apply card, confirmation token, intent classifier, forced Tool call, or stored confirmation state
 - The Admin Config direct-write transition is a hard cut: proposal Tools, executable change-set payloads, Apply cards, pending or superseded proposal state, proposal prose parsing, and client-side apply-language interception should be removed without compatibility fallback
 - The **Admin** and **Sage** are trusted to conduct Admin Config confirmation naturally inside the **Conversation**

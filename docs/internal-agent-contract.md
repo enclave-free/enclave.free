@@ -294,20 +294,19 @@ Request:
 
 ```json
 {
-  "query": "Alpha Legal Network",
-  "help_type": "legal",
-  "jurisdiction": "Nicaragua",
+  "query": "alpha@example.org",
+  "kind": "organization",
+  "tags": ["legal", "humanitarian"],
+  "region": "Nicaragua",
   "language": "es",
-  "limit": 5,
+  "limit": 10,
   "offset": 0
 }
 ```
 
-`help_type` is optional. When present, the endpoint performs a referral lookup
-for that type. When omitted or blank, the endpoint returns a bounded inventory
-of ready curated resources so Sage can answer questions such as "what resources
-do you have?" from the live Resource Directory instead of describing the tool
-catalog.
+All filters are optional. `tags` uses AND semantics: every requested normalized
+tag must be present. `kind` accepts the generic Resource kinds `person`,
+`organization`, `product`, `service`, `method`, `reference`, or `other`.
 
 Response:
 
@@ -317,39 +316,41 @@ Response:
     {
       "resource_id": "example-ni-detention-lawyer",
       "name": "Example Nicaragua Detention Counsel",
-      "resource_type": "lawyer",
+      "kind": "organization",
       "description": "Legal support for detention cases.",
-      "contact": { "email": "help@example.org" },
+      "tags": ["legal", "humanitarian"],
+      "pointers": [
+        {"type": "email", "label": "Intake", "value": "help@example.org"},
+        {"type": "url", "value": "https://example.org"}
+      ],
+      "regions": [{"level": "country", "code": "NI"}],
       "languages": ["es"],
-      "scope_level": "country",
-      "scope_code": "NI",
-      "help_types": ["legal"],
-      "verified_at": "2026-06-01T00:00:00Z"
+      "provenance": {
+        "verified_at": "2026-06-01T00:00:00Z",
+        "vetted_by": "Admin",
+        "source_note": "Customer manual"
+      }
     }
   ],
-  "query": "alpha legal network",
+  "query": "alpha@example.org",
   "resolved_country_code": "NI",
-  "help_type": "legal",
   "total_count": 12,
-  "returned_count": 5,
-  "limit": 5,
+  "returned_count": 10,
+  "limit": 10,
   "offset": 0,
   "has_more": true,
-  "next_offset": 5
+  "next_offset": 10
 }
 ```
 
-Only `ready` resources are returned. Referral lookups preserve the existing
-coverage behavior: matching resources must cover the resolved country. Query
-matching checks normalized resource ID, organization name, email, phone, URL,
-secure-channel, and address values exactly before organization/contact substrings
-and description fallback; phone equality compares digits and organization names
-tolerate punctuation/spacing differences. Query relevance is ranked before
-most-local coverage, verified status, optional language match, display order, and
-name. `total_count` describes the complete filtered ready set before pagination;
-`has_more` and `next_offset` describe continuation. Inventory lookups are capped,
-exclude pending/archived resources, and apply the same coverage and pagination
-filters. Invalid payload shapes return `422`.
+Only `ready` resources are returned. Query matching checks normalized Resource
+ID, name, and pointer values exactly before partial name/pointer matches and
+description fallback; phone pointer equality compares digits and names tolerate
+punctuation and spacing differences. Query relevance is ranked before regional
+specificity, provenance verification, optional language match, display order,
+and name. `total_count` describes the complete filtered ready set before
+pagination; `has_more` and `next_offset` describe continuation. Invalid payload
+shapes and obsolete aid-specific fields return `422`.
 
 ### `POST /internal/agent/admin-db-query`
 

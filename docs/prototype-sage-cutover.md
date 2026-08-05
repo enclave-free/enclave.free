@@ -43,7 +43,7 @@ Sage owns the public route, auth, CORS/CSRF, and Conversation boundary for these
 
 Route ownership now matches the public Agent Runtime boundary. `POST /llm/chat`, `POST /llm/chat/stream`, `POST /query`, `GET /query/sessions`, `GET /query/session/{session_id}`, `PATCH /query/session/{session_id}`, `DELETE /query/session/{session_id}`, and `GET /session-defaults` are implemented in Sage. `POST /admin/tools/execute` is routed and authorized by Sage, while Python remains the internal executor for safe read-only Enclave Control Plane DB access.
 
-`POST /llm/chat/stream` is the streaming Conversation transport. ADR-0014 describes the earlier bounded two-phase streaming slice; [ADR-0023](adr/0023-unified-model-driven-tool-loop.md) is the current direction for unified model-driven Tool loop work across streaming and non-streaming Conversation transports.
+`POST /llm/chat/stream` is the streaming Conversation transport. ADR-0014 describes the earlier bounded two-phase streaming slice; [ADR-0023](adr/0023-unified-model-driven-tool-loop.md) owns Tool authority and Tool Set boundaries, while [ADR-0029](adr/0029-native-tool-calling-with-one-tool-round.md) defines the current native one-round behavior shared by streaming and non-streaming Conversations.
 
 ## Sage To Python Private Control-Plane Contract
 
@@ -58,7 +58,7 @@ Active private control-plane endpoints used by Sage today:
 - `POST /internal/agent/resources/search`
 - `POST /internal/agent/admin-db-query`
 
-ADR-0023 adds this target endpoint family for the model-driven Tool loop hard cut:
+ADR-0023 and ADR-0028 add this endpoint family for Sage-owned Admin Config Tools:
 
 - `POST /internal/agent/admin-config/*`
 
@@ -99,13 +99,13 @@ The pinned Sage runtime lives in `runtime/sage`.
 
 ### Runtime/Sage Audit
 
-- Submodule provenance: `runtime/sage` is pinned to commit `ddd9140ecddf7415cb3ce99a6cdb33e4fae53c38` from `https://github.com/enclave-free/sage.git`.
+- Submodule provenance: `runtime/sage` is pinned to commit `6110ab4381eaa3690afe231dc2d41af7d8cd1f38` from `https://github.com/enclave-free/sage.git`.
 - Upstream stability: Sage is an internal Enclave runtime, so reviewer validation should use repository activity rather than package releases: inspect recent commits, open issues/PRs, and maintainer activity before advancing the submodule pointer.
 - Integration evidence: this prototype exercises the submodule through the Docker Compose `sage` service and the documented Sage contract checks, including `cargo check -p sage-core` from `runtime/sage` and the `backend/tests/test_5b_sage_route_smoke.py` smoke coverage listed in `docs/integration-tests.md`.
 - Security/stability checks: verify the Sage license and dependency tree at the pinned commit, review toolchain requirements from the submodule manifests, run dependency audit tooling appropriate for the Rust workspace, and regenerate an SBOM/checksum before merging a pointer update.
 - Reproducible verification:
   1. `git submodule update --init runtime/sage`
-  2. `cd runtime/sage && git rev-parse HEAD` should print `ddd9140ecddf7415cb3ce99a6cdb33e4fae53c38`.
+  2. `cd runtime/sage && git rev-parse HEAD` should print `6110ab4381eaa3690afe231dc2d41af7d8cd1f38`.
   3. `cargo check -p sage-core`
   4. From the prototype root, run the Sage route smoke tests documented in `docs/integration-tests.md`.
   5. Regenerate the SBOM or checksum artifact used by the release process and attach it with the CI job names/artifacts that exercised `runtime/sage`.
