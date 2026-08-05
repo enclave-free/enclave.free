@@ -18,8 +18,6 @@ from contextlib import contextmanager
 from base64 import b64encode, b64decode
 from datetime import datetime, timedelta, timezone
 from Crypto.Cipher import AES
-from models import RESOURCE_CONTACT_KEYS
-from region_data import is_valid_scope
 
 # Configure logging
 logger = logging.getLogger("enclave.database")
@@ -564,27 +562,18 @@ def init_schema():
         ON user_memories(subject_user_id, status, importance DESC, updated_at DESC, id DESC)
     """)
 
-    # --- Resource Referral Directory ---
-    # Admin-curated directory of trusted real-world resources (lawyers, NGOs, UN bodies,
-    # clinics, shelters, financial aid) that the agent can surface when a conversation
-    # escalates from information to action. Retrieval is faceted on region + help-type,
-    # not semantic similarity. See region_data.py for the ISO 3166 / UN M49 taxonomy.
+    # --- Curated Resources ---
+    # Admin-curated generic people, organizations, products, services, methods,
+    # references, and other resources with structured pointers and regions.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS resources (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             resource_id TEXT UNIQUE NOT NULL,
             name TEXT,
-            resource_type TEXT,
             description TEXT,
-            contact TEXT,
             languages TEXT,
-            scope_level TEXT CHECK(scope_level IN ('country', 'subregion', 'region', 'global')),
-            scope_code TEXT,
             status TEXT NOT NULL DEFAULT 'pending'
                 CHECK(status IN ('pending', 'ready', 'archived')),
-            verified_at TIMESTAMP,
-            vetted_by TEXT,
-            source_note TEXT,
             kind TEXT,
             tags TEXT,
             pointers TEXT,
@@ -595,33 +584,7 @@ def init_schema():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resources_scope ON resources(scope_level, scope_code)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_resources_status ON resources(status)")
-
-    # Operator-extensible vocabulary of help types (seeded with a core set).
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS help_types (
-            key TEXT PRIMARY KEY,
-            label TEXT NOT NULL,
-            description TEXT,
-            display_order INTEGER NOT NULL DEFAULT 0,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # Many-to-many: which help types a resource provides (the facet we filter on).
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS resource_help_types (
-            resource_id TEXT NOT NULL,
-            help_type TEXT NOT NULL,
-            PRIMARY KEY (resource_id, help_type),
-            FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
-            FOREIGN KEY (help_type) REFERENCES help_types(key) ON DELETE CASCADE
-        )
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resource_help_types_type ON resource_help_types(help_type)")
 
     # Static ISO 3166 + UN M49 region map, seeded from region_data.py for SQL joins.
     cursor.execute("""
@@ -735,11 +698,9 @@ def init_schema():
     _seed_default_ai_config()
     seed_default_settings()
 
-    # Seed resource-directory infrastructure (region map + core help-type vocabulary).
+    # Seed Curated Resource region infrastructure and contract legacy data once.
     # Example resources are seeded separately (demo data) in seed.py.
     seed_country_regions()
-    seed_help_types()
-    _migrate_resource_help_types_help_type_fk()  # Enforce resource help-type vocabulary membership
     _migrate_resources_to_generic_contract()
 
 
@@ -806,81 +767,108 @@ def _legacy_resource_generic_fields(
 
 
 def _migrate_resources_to_generic_contract() -> None:
-    """Expand legacy resource rows into the generic contract, idempotently."""
+    """Atomically map legacy resources and contract storage to the generic schema."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(resources)")
     columns = {row["name"] for row in cursor.fetchall()}
-    for name in ("kind", "tags", "pointers", "regions", "provenance"):
-        if name not in columns:
-            cursor.execute(f"ALTER TABLE resources ADD COLUMN {name} TEXT")
-
-    cursor.execute("SELECT * FROM resources")
-    for row in cursor.fetchall():
-        cursor.execute(
-            "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
-            (row["resource_id"],),
-        )
-        help_types = [item["help_type"] for item in cursor.fetchall()]
-        generic = _legacy_resource_generic_fields(
-            resource_type=row["resource_type"],
-            contact=_json_loads_or({}, row["contact"]),
-            scope_level=row["scope_level"],
-            scope_code=row["scope_code"],
-            help_types=help_types,
-            verified_at=row["verified_at"],
-            vetted_by=row["vetted_by"],
-            source_note=row["source_note"],
-        )
-        updates = {
-            key: value
-            for key, value in generic.items()
-            if row[key] is None
-        }
-        if updates:
-            assignments = ", ".join(f"{key} = ?" for key in updates)
-            cursor.execute(
-                f"UPDATE resources SET {assignments} WHERE resource_id = ?",
-                [json.dumps(value) if key != "kind" else value for key, value in updates.items()]
-                + [row["resource_id"]],
-            )
-    conn.commit()
-
-
-def _migrate_resource_help_types_help_type_fk() -> None:
-    """Rebuild resource_help_types with a help_types foreign key when needed."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("PRAGMA foreign_key_list(resource_help_types)")
-    foreign_keys = cursor.fetchall()
-    if any(row["table"] == "help_types" for row in foreign_keys):
+    legacy_columns = {
+        "resource_type",
+        "contact",
+        "scope_level",
+        "scope_code",
+        "verified_at",
+        "vetted_by",
+        "source_note",
+    }
+    if not columns.intersection(legacy_columns):
         cursor.close()
         return
 
-    cursor.execute("DROP TABLE IF EXISTS resource_help_types_new")
-    cursor.execute("""
-        CREATE TABLE resource_help_types_new (
-            resource_id TEXT NOT NULL,
-            help_type TEXT NOT NULL,
-            PRIMARY KEY (resource_id, help_type),
-            FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE,
-            FOREIGN KEY (help_type) REFERENCES help_types(key) ON DELETE CASCADE
+    cursor.execute("SAVEPOINT migrate_resources_generic_contract")
+    try:
+        for name in ("kind", "tags", "pointers", "regions", "provenance"):
+            if name not in columns:
+                cursor.execute(f"ALTER TABLE resources ADD COLUMN {name} TEXT")
+
+        cursor.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'resource_help_types'"
         )
-    """)
-    cursor.execute("""
-        INSERT OR IGNORE INTO resource_help_types_new (resource_id, help_type)
-        SELECT rht.resource_id, rht.help_type
-        FROM resource_help_types rht
-        JOIN resources r ON r.resource_id = rht.resource_id
-        JOIN help_types ht ON ht.key = rht.help_type
-    """)
-    cursor.execute("DROP TABLE resource_help_types")
-    cursor.execute("ALTER TABLE resource_help_types_new RENAME TO resource_help_types")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_resource_help_types_type ON resource_help_types(help_type)")
-    conn.commit()
-    logger.info("Migration: Rebuilt resource_help_types with help_types foreign key")
-    cursor.close()
+        has_legacy_help_types = cursor.fetchone() is not None
+        cursor.execute("SELECT * FROM resources")
+        for row in cursor.fetchall():
+            help_types: list[str] = []
+            if has_legacy_help_types:
+                cursor.execute(
+                    "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
+                    (row["resource_id"],),
+                )
+                help_types = [item["help_type"] for item in cursor.fetchall()]
+            generic = _legacy_resource_generic_fields(
+                resource_type=row["resource_type"],
+                contact=_json_loads_or({}, row["contact"]),
+                scope_level=row["scope_level"],
+                scope_code=row["scope_code"],
+                help_types=help_types,
+                verified_at=row["verified_at"],
+                vetted_by=row["vetted_by"],
+                source_note=row["source_note"],
+            )
+            updates = {key: value for key, value in generic.items() if row[key] is None}
+            if updates:
+                assignments = ", ".join(f"{key} = ?" for key in updates)
+                cursor.execute(
+                    f"UPDATE resources SET {assignments} WHERE resource_id = ?",
+                    [json.dumps(value) if key != "kind" else value for key, value in updates.items()]
+                    + [row["resource_id"]],
+                )
+
+        cursor.execute("DROP TABLE IF EXISTS resources_generic_contract")
+        cursor.execute("""
+        CREATE TABLE resources_generic_contract (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resource_id TEXT UNIQUE NOT NULL,
+            name TEXT,
+            description TEXT,
+            languages TEXT,
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK(status IN ('pending', 'ready', 'archived')),
+            kind TEXT,
+            tags TEXT,
+            pointers TEXT,
+            regions TEXT,
+            provenance TEXT,
+            display_order INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        cursor.execute("""
+        INSERT INTO resources_generic_contract (
+            id, resource_id, name, description, languages, status, kind, tags,
+            pointers, regions, provenance, display_order, created_at, updated_at
+        )
+        SELECT
+            id, resource_id, name, description, languages, status, kind,
+            COALESCE(tags, '[]'), COALESCE(pointers, '[]'), COALESCE(regions, '[]'),
+            COALESCE(provenance, '{}'), display_order, created_at, updated_at
+        FROM resources
+        """)
+        cursor.execute("DROP TABLE IF EXISTS resource_help_types")
+        cursor.execute("DROP TABLE IF EXISTS help_types")
+        cursor.execute("DROP TABLE resources")
+        cursor.execute("ALTER TABLE resources_generic_contract RENAME TO resources")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_resources_status ON resources(status)")
+        cursor.execute("RELEASE SAVEPOINT migrate_resources_generic_contract")
+        conn.commit()
+    except Exception:
+        cursor.execute("ROLLBACK TO SAVEPOINT migrate_resources_generic_contract")
+        cursor.execute("RELEASE SAVEPOINT migrate_resources_generic_contract")
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+    logger.info("Migration: Contracted Curated Resources to the generic schema")
 
 
 def _migrate_add_approved_column() -> None:
@@ -5397,31 +5385,6 @@ def _json_loads_or(default, raw):
         return default
 
 
-def _has_contact_method(contact: dict | None) -> bool:
-    if not isinstance(contact, dict):
-        return False
-    return any(str(contact.get(k, "")).strip() for k in RESOURCE_CONTACT_KEYS)
-
-
-def resource_missing_fields(merged: dict, help_types: list[str]) -> list[str]:
-    """Return the list of REQUIRED fields still missing for a resource to be 'ready'."""
-    missing: list[str] = []
-    if not str(merged.get("name") or "").strip():
-        missing.append("name")
-    if not str(merged.get("resource_type") or "").strip():
-        missing.append("resource_type")
-    scope_level = merged.get("scope_level")
-    if not scope_level:
-        missing.append("scope_level")
-    elif scope_level != "global" and not str(merged.get("scope_code") or "").strip():
-        missing.append("scope_code")
-    if not help_types:
-        missing.append("help_types")
-    if not _has_contact_method(merged.get("contact")):
-        missing.append("contact")
-    return missing
-
-
 def generic_resource_missing_fields(resource: dict) -> list[str]:
     """Fields required before a generic Curated Resource can be searched."""
     missing: list[str] = []
@@ -5469,94 +5432,13 @@ def _normalize_generic_pointers(pointers: list[dict] | None) -> list[dict]:
     return normalized
 
 
-def _merge_legacy_tags(existing: dict, derived: dict, *, replace_help_types: bool, replace_type: bool) -> list[str]:
-    tags = set(_normalize_generic_tags(existing.get("tags")))
-    if replace_help_types:
-        tags.difference_update(str(tag).casefold() for tag in existing.get("help_types") or [])
-        tags.update(str(tag).casefold() for tag in derived.get("tags") or [] if not str(tag).startswith("legacy_type:"))
-    if replace_type:
-        tags = {tag for tag in tags if not tag.startswith("legacy_type:")}
-        tags.update(str(tag).casefold() for tag in derived.get("tags") or [] if str(tag).startswith("legacy_type:"))
-    return sorted(tags)
-
-
-def _merge_legacy_pointers(existing: dict, derived: dict) -> list[dict]:
-    prior_legacy = _normalize_generic_pointers(
-        _legacy_resource_generic_fields(
-            resource_type=existing.get("resource_type"),
-            contact=existing.get("contact"),
-            scope_level=None,
-            scope_code=None,
-            help_types=None,
-            verified_at=None,
-            vetted_by=None,
-            source_note=None,
-        )["pointers"]
-    )
-    prior_keys = {(item["type"], item["value"], item.get("label")) for item in prior_legacy}
-    preserved = [
-        item
-        for item in _normalize_generic_pointers(existing.get("pointers"))
-        if (item["type"], item["value"], item.get("label")) not in prior_keys
-    ]
-    return preserved + _normalize_generic_pointers(derived.get("pointers"))
-
-
-def _merge_legacy_regions(existing: dict, derived: dict) -> list[dict]:
-    old_region = (
-        {"level": existing.get("scope_level"), "code": existing.get("scope_code")}
-        if existing.get("scope_level")
-        else None
-    )
-    preserved = [
-        region
-        for region in (existing.get("regions") or [])
-        if isinstance(region, dict) and region != old_region
-    ]
-    for region in derived.get("regions") or []:
-        if region not in preserved:
-            preserved.append(region)
-    return preserved
-
-
 def compute_generic_resource_status(resource: dict, archived: bool) -> str:
     if archived:
         return "archived"
     return "ready" if not generic_resource_missing_fields(resource) else "pending"
 
 
-def compute_resource_status(merged: dict, help_types: list[str], archived: bool) -> str:
-    """Auto-compute lifecycle status. 'archived' is explicit and wins; otherwise a
-    resource is 'ready' iff all required fields are present, else 'pending'."""
-    if archived:
-        return "archived"
-    return "ready" if not resource_missing_fields(merged, help_types) else "pending"
-
-
-def _recompute_resource_status(cursor: sqlite3.Cursor, resource_id: str) -> None:
-    cursor.execute("SELECT * FROM resources WHERE resource_id = ?", (resource_id,))
-    row = cursor.fetchone()
-    if not row:
-        return
-    pointers = _json_loads_or([], row["pointers"])
-    status = compute_generic_resource_status(
-        {
-            "name": row["name"],
-            "kind": row["kind"],
-            "description": row["description"],
-            "pointers": pointers if isinstance(pointers, list) else [],
-        },
-        archived=row["status"] == "archived",
-    )
-    cursor.execute(
-        "UPDATE resources SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE resource_id = ?",
-        (status, resource_id),
-    )
-
-
-def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
-    import region_data
-    contact = _json_loads_or({}, row["contact"])
+def _resource_row_to_dict(row: sqlite3.Row) -> dict:
     languages = _json_loads_or([], row["languages"])
     tags = _json_loads_or([], row["tags"])
     pointers = _json_loads_or([], row["pointers"])
@@ -5565,14 +5447,8 @@ def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
     return {
         "resource_id": row["resource_id"],
         "name": row["name"],
-        "resource_type": row["resource_type"],
         "description": row["description"],
-        "contact": contact if isinstance(contact, dict) else {},
         "languages": languages if isinstance(languages, list) else [],
-        "scope_level": row["scope_level"],
-        "scope_code": row["scope_code"],
-        "coverage": region_data.describe_scope(row["scope_level"], row["scope_code"]),
-        "help_types": help_types,
         "kind": row["kind"],
         "tags": tags if isinstance(tags, list) else [],
         "pointers": pointers if isinstance(pointers, list) else [],
@@ -5585,21 +5461,10 @@ def _resource_row_to_dict(row: sqlite3.Row, help_types: list[str]) -> dict:
             "description": row["description"],
             "pointers": pointers if isinstance(pointers, list) else [],
         }),
-        "verified_at": row["verified_at"],
-        "vetted_by": row["vetted_by"],
-        "source_note": row["source_note"],
         "display_order": row["display_order"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
-
-
-def _get_resource_help_types(cursor: sqlite3.Cursor, resource_id: str) -> list[str]:
-    cursor.execute(
-        "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
-        (resource_id,),
-    )
-    return [r["help_type"] for r in cursor.fetchall()]
 
 
 def get_resource(resource_id: str) -> dict | None:
@@ -5608,8 +5473,7 @@ def get_resource(resource_id: str) -> dict | None:
         row = cursor.fetchone()
         if not row:
             return None
-        help_types = _get_resource_help_types(cursor, resource_id)
-        return _resource_row_to_dict(row, help_types)
+        return _resource_row_to_dict(row)
 
 
 def list_resources(
@@ -5635,8 +5499,7 @@ def list_resources(
         rows = cursor.fetchall()
         result = []
         for row in rows:
-            help_types = _get_resource_help_types(cursor, row["resource_id"])
-            resource = _resource_row_to_dict(row, help_types)
+            resource = _resource_row_to_dict(row)
             if normalized_kind and resource.get("kind") != normalized_kind:
                 continue
             resource_tags = {str(tag).casefold() for tag in resource.get("tags") or []}
@@ -5657,57 +5520,22 @@ def create_resource(
     pointers: list[dict] | None = None,
     regions: list[dict] | None = None,
     provenance: dict | None = None,
-    resource_type: str | None = None,
     description: str | None = None,
-    contact: dict | None = None,
     languages: list[str] | None = None,
-    scope_level: str | None = None,
-    scope_code: str | None = None,
-    help_types: list[str] | None = None,
-    verified_at: str | None = None,
-    vetted_by: str | None = None,
-    source_note: str | None = None,
     display_order: int = 0,
     archived: bool = False,
 ) -> dict:
     """Create a resource. Status is auto-computed from required-field completeness."""
-    help_types = sorted(set(help_types or []))
-    _validate_resource_scope(scope_level, scope_code)
-    merged = {
-        "name": name,
-        "resource_type": resource_type,
-        "scope_level": scope_level,
-        "scope_code": scope_code,
-        "contact": contact or {},
-    }
-    generic = _legacy_resource_generic_fields(
-        resource_type=resource_type,
-        contact=contact,
-        scope_level=scope_level,
-        scope_code=scope_code,
-        help_types=help_types,
-        verified_at=verified_at,
-        vetted_by=vetted_by,
-        source_note=source_note,
-    )
-    if not str(resource_type or "").strip():
-        generic["kind"] = None
-    if kind is not None:
-        generic["kind"] = kind
-    if tags is not None:
-        generic["tags"] = _normalize_generic_tags(tags)
-    if pointers is not None:
-        generic["pointers"] = _normalize_generic_pointers(pointers)
-    if regions is not None:
-        generic["regions"] = regions
-    if provenance is not None:
-        generic["provenance"] = provenance
+    normalized_tags = _normalize_generic_tags(tags)
+    normalized_pointers = _normalize_generic_pointers(pointers)
+    normalized_regions = regions or []
+    normalized_provenance = provenance or {}
     status = compute_generic_resource_status(
         {
             "name": name,
-            "kind": generic["kind"],
+            "kind": kind,
             "description": description,
-            "pointers": generic["pointers"],
+            "pointers": normalized_pointers,
         },
         archived,
     )
@@ -5715,46 +5543,28 @@ def create_resource(
         cursor.execute(
             """
             INSERT INTO resources (
-                resource_id, name, resource_type, description, contact, languages,
-                scope_level, scope_code, status, verified_at, vetted_by, source_note,
-                kind, tags, pointers, regions, provenance, display_order, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                resource_id, name, description, languages, status, kind, tags,
+                pointers, regions, provenance, display_order, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (
                 resource_id,
                 name,
-                resource_type,
                 description,
-                json.dumps(contact or {}),
                 json.dumps(languages or []),
-                scope_level,
-                scope_code,
                 status,
-                verified_at,
-                vetted_by,
-                source_note,
-                generic["kind"],
-                json.dumps(generic["tags"]),
-                json.dumps(generic["pointers"]),
-                json.dumps(generic["regions"]),
-                json.dumps(generic["provenance"]),
+                kind,
+                json.dumps(normalized_tags),
+                json.dumps(normalized_pointers),
+                json.dumps(normalized_regions),
+                json.dumps(normalized_provenance),
                 display_order,
             ),
         )
-        for ht in help_types:
-            cursor.execute(
-                "INSERT OR IGNORE INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
-                (resource_id, ht),
-            )
     return get_resource(resource_id)
 
 
 _UNSET = object()
-
-
-def _validate_resource_scope(scope_level: str | None, scope_code: str | None) -> None:
-    if scope_code and not is_valid_scope(scope_level, scope_code):
-        raise ValueError(f"invalid resource scope: {scope_level}/{scope_code}")
 
 
 def update_resource(
@@ -5766,16 +5576,8 @@ def update_resource(
     pointers=_UNSET,
     regions=_UNSET,
     provenance=_UNSET,
-    resource_type=_UNSET,
     description=_UNSET,
-    contact=_UNSET,
     languages=_UNSET,
-    scope_level=_UNSET,
-    scope_code=_UNSET,
-    help_types=_UNSET,
-    verified_at=_UNSET,
-    vetted_by=_UNSET,
-    source_note=_UNSET,
     display_order=_UNSET,
     archived=_UNSET,
 ) -> dict | None:
@@ -5789,18 +5591,9 @@ def update_resource(
         return current if value is _UNSET else value
 
     final_name = pick(name, existing["name"])
-    final_type = pick(resource_type, existing["resource_type"])
     final_desc = pick(description, existing["description"])
-    final_contact = pick(contact, existing["contact"])
     final_languages = pick(languages, existing["languages"])
-    final_scope_level = pick(scope_level, existing["scope_level"])
-    final_scope_code = pick(scope_code, existing["scope_code"])
-    final_help_types = sorted(set(pick(help_types, existing["help_types"]) or []))
-    final_verified_at = pick(verified_at, existing["verified_at"])
-    final_vetted_by = pick(vetted_by, existing["vetted_by"])
-    final_source_note = pick(source_note, existing["source_note"])
     final_display_order = pick(display_order, existing["display_order"])
-    _validate_resource_scope(final_scope_level, final_scope_code)
 
     # Determine archive intent: explicit archived flag, or already-archived and not cleared.
     if archived is _UNSET:
@@ -5808,51 +5601,13 @@ def update_resource(
     else:
         is_archived = bool(archived)
 
-    derived_generic = _legacy_resource_generic_fields(
-        resource_type=final_type,
-        contact=final_contact,
-        scope_level=final_scope_level,
-        scope_code=final_scope_code,
-        help_types=final_help_types,
-        verified_at=final_verified_at,
-        vetted_by=final_vetted_by,
-        source_note=final_source_note,
-    )
-    legacy_kind_was_authoritative = existing.get("kind") == _legacy_resource_kind(
-        existing.get("resource_type")
-    )
-    derived_kind = existing["kind"]
-    if resource_type is not _UNSET and legacy_kind_was_authoritative and str(final_type or "").strip():
-        derived_kind = derived_generic["kind"]
-    final_kind = pick(kind, derived_kind)
-    if tags is _UNSET:
-        final_tags = _merge_legacy_tags(
-            existing,
-            derived_generic,
-            replace_help_types=help_types is not _UNSET,
-            replace_type=resource_type is not _UNSET,
-        )
-    else:
-        final_tags = _normalize_generic_tags(tags)
-    final_pointers = (
-        _merge_legacy_pointers(existing, derived_generic)
-        if pointers is _UNSET and contact is not _UNSET
-        else _normalize_generic_pointers(pick(pointers, existing["pointers"]))
-    )
-    final_regions = (
-        _merge_legacy_regions(existing, derived_generic)
-        if regions is _UNSET and (scope_level is not _UNSET or scope_code is not _UNSET)
-        else pick(regions, existing["regions"])
-    )
+    final_kind = pick(kind, existing["kind"])
+    final_tags = _normalize_generic_tags(pick(tags, existing["tags"]))
+    final_pointers = _normalize_generic_pointers(pick(pointers, existing["pointers"]))
+    final_regions = pick(regions, existing["regions"])
     final_provenance = dict(existing.get("provenance") or {})
     if provenance is not _UNSET:
         final_provenance.update(provenance or {})
-    if verified_at is not _UNSET:
-        final_provenance["verified_at"] = final_verified_at
-    if vetted_by is not _UNSET:
-        final_provenance["vetted_by"] = final_vetted_by
-    if source_note is not _UNSET:
-        final_provenance["source_note"] = final_source_note
     final_status = compute_generic_resource_status(
         {
             "name": final_name,
@@ -5867,24 +5622,16 @@ def update_resource(
         cursor.execute(
             """
             UPDATE resources SET
-                name = ?, resource_type = ?, description = ?, contact = ?, languages = ?,
-                scope_level = ?, scope_code = ?, status = ?, verified_at = ?, vetted_by = ?,
-                source_note = ?, kind = ?, tags = ?, pointers = ?, regions = ?, provenance = ?,
+                name = ?, description = ?, languages = ?, status = ?, kind = ?,
+                tags = ?, pointers = ?, regions = ?, provenance = ?,
                 display_order = ?, updated_at = CURRENT_TIMESTAMP
             WHERE resource_id = ?
             """,
             (
                 final_name,
-                final_type,
                 final_desc,
-                json.dumps(final_contact or {}),
                 json.dumps(final_languages or []),
-                final_scope_level,
-                final_scope_code,
                 final_status,
-                final_verified_at,
-                final_vetted_by,
-                final_source_note,
                 final_kind,
                 json.dumps(final_tags or []),
                 json.dumps(final_pointers or []),
@@ -5894,13 +5641,6 @@ def update_resource(
                 resource_id,
             ),
         )
-        if help_types is not _UNSET:
-            cursor.execute("DELETE FROM resource_help_types WHERE resource_id = ?", (resource_id,))
-            for ht in final_help_types:
-                cursor.execute(
-                    "INSERT OR IGNORE INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
-                    (resource_id, ht),
-                )
     return get_resource(resource_id)
 
 
@@ -5917,34 +5657,25 @@ def normalize_jurisdiction(value: str | None) -> str | None:
 
 
 def search_resources(
-    jurisdiction: str | None,
-    help_type: str | None = None,
+    region: str | None = None,
     language: str | None = None,
     limit: int = 5,
     *,
     query: str | None = None,
     kind: str | None = None,
     tags: list[str] | None = None,
-    region: str | None = None,
     offset: int = 0,
     return_metadata: bool = False,
 ) -> list[dict] | dict:
-    """Faceted lookup of ready resources.
-
-    When help_type is provided, return resources that match that type and whose
-    coverage contains the user's country, preserving the existing referral lookup
-    semantics. When help_type is omitted, return a bounded inventory of ready
-    resources; if a jurisdiction is available, keep the same coverage filter.
-    """
+    """Generic faceted lookup of ready Curated Resources."""
     import region_data
 
-    normalized_help_type = (help_type or "").strip()
     normalized_kind = (kind or "").strip().casefold() or None
     normalized_tags = {str(tag).strip().casefold() for tag in (tags or []) if str(tag).strip()}
     normalized_query = " ".join(str(query or "").casefold().split()) or None
     sql_limit = max(0, int(limit))
     sql_offset = max(0, int(offset))
-    country_code = region_data.resolve_country_code(region or jurisdiction)
+    country_code = region_data.resolve_country_code(region)
     if str(region or "").strip() and not country_code:
         empty = {
             "resources": [],
@@ -5958,26 +5689,8 @@ def search_resources(
     requires_python_scan = bool(normalized_kind or normalized_tags or normalized_query or language)
 
     with get_cursor() as cursor:
-        joins = []
         where = ["r.status = 'ready'"]
         params: list[object] = []
-        if normalized_help_type:
-            where.append(
-                """
-                (
-                    EXISTS (
-                        SELECT 1 FROM resource_help_types h
-                        WHERE h.resource_id = r.resource_id AND h.help_type = ?
-                    )
-                    OR EXISTS (
-                        SELECT 1
-                        FROM json_each(CASE WHEN json_valid(r.tags) THEN r.tags ELSE '[]' END) AS tag
-                        WHERE lower(trim(CAST(tag.value AS TEXT))) = lower(?)
-                    )
-                )
-                """
-            )
-            params.extend([normalized_help_type, normalized_help_type])
         if country_code:
             where.append(
                 """
@@ -5993,26 +5706,11 @@ def search_resources(
                            OR (json_extract(gr.value, '$.level') = 'region'
                                AND json_extract(gr.value, '$.code') = ?)
                     )
-                    OR (
-                        NOT EXISTS (
-                            SELECT 1
-                            FROM json_each(CASE WHEN json_valid(r.regions) THEN r.regions ELSE '[]' END)
-                        )
-                        AND (
-                               (r.scope_level = 'country' AND r.scope_code = ?)
-                            OR (r.scope_level = 'subregion' AND r.scope_code = ?)
-                            OR (r.scope_level = 'region' AND r.scope_code = ?)
-                            OR (r.scope_level = 'global')
-                        )
-                    )
                 )
                 """
             )
             params.extend(
                 [
-                    ancestors["country_code"],
-                    ancestors["subregion_code"],
-                    ancestors["region_code"],
                     ancestors["country_code"],
                     ancestors["subregion_code"],
                     ancestors["region_code"],
@@ -6025,7 +5723,6 @@ def search_resources(
         cursor.execute(
             f"""
             SELECT DISTINCT r.* FROM resources r
-            {' '.join(joins)}
             WHERE {' AND '.join(where)}
             ORDER BY
               COALESCE(
@@ -6037,10 +5734,9 @@ def search_resources(
                   )
                   FROM json_each(CASE WHEN json_valid(r.regions) THEN r.regions ELSE '[]' END) AS gr
                 ),
-                CASE r.scope_level
-                  WHEN 'country' THEN 0 WHEN 'subregion' THEN 1 WHEN 'region' THEN 2 ELSE 3 END
+                3
               ),
-              CASE WHEN COALESCE(json_extract(r.provenance, '$.verified_at'), r.verified_at) IS NOT NULL
+              CASE WHEN json_extract(r.provenance, '$.verified_at') IS NOT NULL
                 THEN 0 ELSE 1 END,
               r.display_order,
               r.name
@@ -6051,8 +5747,7 @@ def search_resources(
         rows = cursor.fetchall()
         results = []
         for row in rows:
-            help_types = _get_resource_help_types(cursor, row["resource_id"])
-            resource = _resource_row_to_dict(row, help_types)
+            resource = _resource_row_to_dict(row)
             if normalized_kind and resource.get("kind") != normalized_kind:
                 continue
             resource_tags = {str(tag).casefold() for tag in resource.get("tags") or []}
@@ -6069,7 +5764,6 @@ def search_resources(
             results.append(resource)
 
     # Optional language preference should not outrank local coverage or verified status.
-    scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
     results.sort(
         key=lambda r: (
             r.get("_query_relevance", 0),
@@ -6095,7 +5789,7 @@ def search_resources(
 
 
 def _resource_scope_rank(resource: dict) -> int:
-    """Rank the most specific generic region, falling back during expansion."""
+    """Rank the most specific generic region."""
     scope_rank = {"country": 0, "subregion": 1, "region": 2, "global": 3}
     generic_ranks = [
         scope_rank[region["level"]]
@@ -6104,24 +5798,16 @@ def _resource_scope_rank(resource: dict) -> int:
     ]
     if generic_ranks:
         return min(generic_ranks)
-    return scope_rank.get(resource.get("scope_level"), 3)
+    return 3
 
 
 def _resource_is_verified(resource: dict) -> bool:
     provenance = resource.get("provenance") or {}
-    return bool(provenance.get("verified_at") or resource.get("verified_at"))
+    return bool(provenance.get("verified_at"))
 
 
 def _resource_matches_region(resource: dict, ancestors: dict) -> bool:
-    regions = resource.get("regions") or []
-    if regions:
-        return _generic_resource_matches_region(regions, ancestors)
-    legacy_regions = (
-        [{"level": resource.get("scope_level"), "code": resource.get("scope_code")}]
-        if resource.get("scope_level")
-        else []
-    )
-    return _generic_resource_matches_region(legacy_regions, ancestors)
+    return _generic_resource_matches_region(resource.get("regions") or [], ancestors)
 
 
 def _resource_query_relevance(resource: dict, query: str) -> int | None:
@@ -6135,10 +5821,8 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
     query_text = text(query)
     query_compact = compact(query)
     query_digits = "".join(ch for ch in str(query or "") if ch.isdigit())
-    contact = resource.get("contact") or {}
     pointers = resource.get("pointers") or []
     exact_fields = [("resource_id", resource.get("resource_id")), ("name", resource.get("name"))]
-    exact_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
     exact_fields.extend(
         (pointer.get("type"), pointer.get("value"))
         for pointer in pointers
@@ -6153,7 +5837,6 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
             return 0
 
     partial_fields = [("name", resource.get("name"))]
-    partial_fields.extend((key, contact.get(key)) for key in ("email", "phone", "url", "secure_channel", "address"))
     partial_fields.extend(
         (pointer.get("type"), pointer.get("value"))
         for pointer in pointers
@@ -6190,107 +5873,6 @@ def _generic_resource_matches_region(regions: list[dict], ancestors: dict) -> bo
         if level == "region" and code == ancestors.get("region_code"):
             return True
     return False
-
-
-# --- Help-type vocabulary (operator-extensible) ---
-
-def list_help_types(include_inactive: bool = True) -> list[dict]:
-    with get_cursor() as cursor:
-        if include_inactive:
-            cursor.execute("SELECT * FROM help_types ORDER BY display_order, key")
-        else:
-            cursor.execute("SELECT * FROM help_types WHERE is_active = 1 ORDER BY display_order, key")
-        return [
-            {
-                "key": r["key"],
-                "label": r["label"],
-                "description": r["description"],
-                "display_order": r["display_order"],
-                "is_active": bool(r["is_active"]),
-            }
-            for r in cursor.fetchall()
-        ]
-
-
-def get_help_type(key: str) -> dict | None:
-    with get_cursor() as cursor:
-        cursor.execute("SELECT * FROM help_types WHERE key = ?", (key,))
-        r = cursor.fetchone()
-        if not r:
-            return None
-        return {
-            "key": r["key"],
-            "label": r["label"],
-            "description": r["description"],
-            "display_order": r["display_order"],
-            "is_active": bool(r["is_active"]),
-        }
-
-
-def upsert_help_type(
-    key: str,
-    label: str,
-    description: str | None = None,
-    display_order: int = 0,
-    is_active: bool = True,
-) -> dict:
-    with get_cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO help_types (key, label, description, display_order, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT(key) DO UPDATE SET
-                label = excluded.label,
-                description = excluded.description,
-                display_order = excluded.display_order,
-                is_active = excluded.is_active,
-                updated_at = CURRENT_TIMESTAMP
-            """,
-            (key, label, description, display_order, 1 if is_active else 0),
-        )
-    return get_help_type(key)
-
-
-def delete_help_type(key: str) -> bool:
-    with get_cursor() as cursor:
-        cursor.execute(
-            "SELECT resource_id FROM resource_help_types WHERE help_type = ?",
-            (key,),
-        )
-        affected_resource_ids = [row["resource_id"] for row in cursor.fetchall()]
-        cursor.execute("DELETE FROM help_types WHERE key = ?", (key,))
-        deleted = cursor.rowcount > 0
-        if deleted:
-            for resource_id in affected_resource_ids:
-                _recompute_resource_status(cursor, resource_id)
-        return deleted
-
-
-CORE_HELP_TYPES = [
-    {"key": "legal", "label": "Legal", "description": "Lawyers, legal aid, representation, habeas filings."},
-    {"key": "humanitarian", "label": "Humanitarian", "description": "Human-rights orgs, UN bodies, advocacy and protection."},
-    {"key": "medical", "label": "Medical", "description": "Clinics, doctors, trauma and emergency care."},
-    {"key": "food", "label": "Food", "description": "Food assistance and nutrition support."},
-    {"key": "shelter", "label": "Shelter", "description": "Safe housing, refuge, relocation support."},
-    {"key": "financial", "label": "Financial", "description": "Financial aid, support for the debanked, emergency funds."},
-    {"key": "psychosocial", "label": "Psychosocial", "description": "Mental health, counseling, trauma support."},
-    {"key": "other", "label": "Other", "description": "Resources that do not fit the categories above."},
-]
-
-
-def seed_help_types(defaults: list[dict] | None = None) -> None:
-    """Idempotently seed the core help-type vocabulary (operators can extend/edit later)."""
-    defaults = defaults if defaults is not None else CORE_HELP_TYPES
-    with get_cursor() as cursor:
-        for i, ht in enumerate(defaults):
-            cursor.execute(
-                """
-                INSERT OR IGNORE INTO help_types (key, label, description, display_order, is_active)
-                VALUES (?, ?, ?, ?, 1)
-                """,
-                (ht["key"], ht["label"], ht.get("description"), ht.get("display_order", i)),
-            )
-    logger.info("Default help types seeded")
 
 
 def seed_country_regions() -> None:

@@ -80,11 +80,6 @@ describe('AdminResourcesDirectory', () => {
           ],
         });
       }
-      if (endpoint === '/admin/help-types') {
-        return jsonResponse({
-          help_types: [{ key: 'legal', label: 'Legal', description: null }],
-        });
-      }
       return jsonResponse({});
     });
 
@@ -121,9 +116,6 @@ describe('AdminResourcesDirectory', () => {
       if (endpoint === '/admin/resources') {
         return jsonResponse({ resources: [] });
       }
-      if (endpoint === '/admin/help-types') {
-        return jsonResponse({ help_types: [] });
-      }
       if (endpoint === '/admin/regions') {
         throw new Error('Region service unavailable');
       }
@@ -157,9 +149,6 @@ describe('AdminResourcesDirectory', () => {
     mockAdminFetch.mockImplementation(async (endpoint) => {
       if (endpoint === '/admin/resources') {
         return jsonResponse({ resources: [] });
-      }
-      if (endpoint === '/admin/help-types') {
-        return jsonResponse({ help_types: [] });
       }
       if (endpoint === '/admin/regions') {
         return jsonResponse({ countries: [{}], subregions: [], regions: [] });

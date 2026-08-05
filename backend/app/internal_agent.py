@@ -17,7 +17,7 @@ from typing import Any, Optional, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 import database
 import ingest_db
@@ -146,12 +146,12 @@ class InternalDocumentSearchResponse(BaseModel):
 
 
 class InternalResourceSearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     query: Optional[str] = None
     kind: Optional[str] = None
     tags: Optional[list[str]] = None
     region: Optional[str] = None
-    help_type: Optional[str] = None
-    jurisdiction: Optional[str] = None
     language: Optional[str] = None
     limit: int = 5
     offset: int = 0
@@ -161,7 +161,6 @@ class InternalResourceSearchResponse(BaseModel):
     resources: list[dict]
     query: Optional[str] = None
     resolved_country_code: Optional[str] = None
-    help_type: Optional[str] = None
     total_count: int = 0
     returned_count: int = 0
     limit: int = 0
@@ -933,13 +932,7 @@ async def document_search(payload: InternalDocumentSearchRequest) -> InternalDoc
     dependencies=[Depends(_require_internal_token)],
 )
 async def resources_search(payload: InternalResourceSearchRequest) -> InternalResourceSearchResponse:
-    """Faceted lookup of trusted real-world resources by region + help type.
-
-    Returns only `ready` resources whose coverage scope contains the user's country,
-    ranked by scope specificity (in-country first), then verified, then language match.
-    If `help_type` is omitted, returns a bounded inventory of ready curated resources.
-    """
-    help_type = (payload.help_type or "").strip() or None
+    """Generic faceted lookup of ready Admin-curated resources."""
     effective_limit = max(
         0,
         min(
@@ -949,19 +942,17 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
     )
     effective_offset = max(0, int(payload.offset or 0))
     normalized_query = " ".join((payload.query or "").casefold().split()) or None
-    resolved = database.normalize_jurisdiction(payload.region or payload.jurisdiction)
+    resolved = database.normalize_jurisdiction(payload.region)
     if str(payload.region or "").strip() and not resolved:
         raise HTTPException(status_code=422, detail="Unknown resource region")
     resources = database.search_resources(
-        jurisdiction=payload.jurisdiction,
-        help_type=help_type,
+        region=payload.region,
         language=payload.language,
         limit=effective_limit,
         offset=effective_offset,
         query=payload.query,
         kind=payload.kind,
         tags=payload.tags,
-        region=payload.region,
         return_metadata=True,
     )
     page = resources
@@ -969,7 +960,6 @@ async def resources_search(payload: InternalResourceSearchRequest) -> InternalRe
         resources=page["resources"],
         query=normalized_query,
         resolved_country_code=resolved,
-        help_type=help_type,
         total_count=page["total_count"],
         returned_count=page["returned_count"],
         limit=effective_limit,

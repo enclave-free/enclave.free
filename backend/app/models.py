@@ -850,7 +850,6 @@ class PublicConfigResponse(BaseModel):
 # --- Resource Referral Directory Models ---
 
 RESOURCE_SCOPE_LEVELS = {"country", "subregion", "region", "global"}
-RESOURCE_CONTACT_KEYS = {"phone", "email", "url", "secure_channel", "address", "notes"}
 RESOURCE_KINDS = {"person", "organization", "product", "service", "method", "reference", "other"}
 RESOURCE_POINTER_TYPES = {"email", "phone", "url", "address", "secure_channel", "identifier", "other"}
 
@@ -910,21 +909,6 @@ def normalize_resource_languages(value: Optional[list[str]]) -> Optional[list[st
     return normalized
 
 
-def normalize_resource_contact(value: Optional[dict]) -> Optional[dict]:
-    if value is None:
-        return value
-    if not isinstance(value, dict):
-        raise ValueError("contact must be an object of contact methods")
-    cleaned: dict[str, str] = {}
-    for key, raw in value.items():
-        if key not in RESOURCE_CONTACT_KEYS:
-            raise ValueError(f"unknown contact key '{key}'; allowed: {', '.join(sorted(RESOURCE_CONTACT_KEYS))}")
-        text = str(raw).strip()
-        if text:
-            cleaned[key] = text
-    return cleaned
-
-
 def normalize_resource_tags(value: Optional[list[str]]) -> Optional[list[str]]:
     if value is None:
         return None
@@ -943,27 +927,21 @@ def normalize_resource_tags(value: Optional[list[str]]) -> Optional[list[str]]:
 class ResourceCreate(BaseModel):
     """Request model for creating a directory resource.
 
-    A draft may be incomplete. It becomes searchable only when it has a name,
-    explicit generic kind, useful description, and at least one nonblank pointer.
-    A legacy resource_type may temporarily supply the kind during migration.
+    A draft becomes searchable only when it has a generic kind, useful
+    description, and at least one nonblank pointer.
     """
+    model_config = ConfigDict(extra="forbid")
+
     resource_id: Optional[str] = Field(default=None, max_length=120)
-    name: Optional[str] = Field(default=None, max_length=240)
+    name: str = Field(..., min_length=1, max_length=240)
     kind: Optional[str] = None
     tags: Optional[list[str]] = Field(default=None, max_length=80)
     pointers: Optional[list[ResourcePointer]] = Field(default=None, max_length=80)
     regions: Optional[list[ResourceRegion]] = Field(default=None, max_length=80)
     provenance: Optional[ResourceProvenance] = None
-    resource_type: Optional[str] = Field(default=None, max_length=60)
     description: Optional[str] = Field(default=None, max_length=4000)
-    contact: Optional[dict] = None
     languages: Optional[list[str]] = Field(default=None, max_length=40)
-    scope_level: Optional[str] = None
-    scope_code: Optional[str] = Field(default=None, max_length=12)
-    help_types: Optional[list[str]] = Field(default=None, max_length=40)
     verified: Optional[bool] = None
-    vetted_by: Optional[str] = Field(default=None, max_length=240)
-    source_note: Optional[str] = Field(default=None, max_length=1000)
     display_order: int = 0
     archived: bool = False
 
@@ -981,16 +959,10 @@ class ResourceCreate(BaseModel):
     def _require_resource_id_or_name(self):
         resource_id = str(self.resource_id or "").strip()
         self.resource_id = resource_id or None
-        if not self.resource_id and not str(self.name or "").strip():
-            raise ValueError("resource_id or name is required")
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValueError("name must not be blank")
         return self
-
-    @field_validator("scope_level")
-    @classmethod
-    def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v not in RESOURCE_SCOPE_LEVELS:
-            raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
-        return v
 
     @field_validator("languages")
     @classmethod
@@ -1002,30 +974,19 @@ class ResourceCreate(BaseModel):
     def _validate_tags(cls, value: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_tags(value)
 
-    @field_validator("contact")
-    @classmethod
-    def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
-        return normalize_resource_contact(v)
-
-
 class ResourceUpdate(BaseModel):
     """Request model for updating a directory resource (all fields optional)."""
+    model_config = ConfigDict(extra="forbid")
+
     name: Optional[str] = Field(default=None, max_length=240)
     kind: Optional[str] = None
     tags: Optional[list[str]] = Field(default=None, max_length=80)
     pointers: Optional[list[ResourcePointer]] = Field(default=None, max_length=80)
     regions: Optional[list[ResourceRegion]] = Field(default=None, max_length=80)
     provenance: Optional[ResourceProvenance] = None
-    resource_type: Optional[str] = Field(default=None, max_length=60)
     description: Optional[str] = Field(default=None, max_length=4000)
-    contact: Optional[dict] = None
     languages: Optional[list[str]] = Field(default=None, max_length=40)
-    scope_level: Optional[str] = None
-    scope_code: Optional[str] = Field(default=None, max_length=12)
-    help_types: Optional[list[str]] = Field(default=None, max_length=40)
     verified: Optional[bool] = None
-    vetted_by: Optional[str] = Field(default=None, max_length=240)
-    source_note: Optional[str] = Field(default=None, max_length=1000)
     display_order: Optional[int] = None
     archived: Optional[bool] = None
 
@@ -1039,13 +1000,6 @@ class ResourceUpdate(BaseModel):
             raise ValueError(f"kind must be one of: {', '.join(sorted(RESOURCE_KINDS))}")
         return normalized
 
-    @field_validator("scope_level")
-    @classmethod
-    def _validate_scope_level(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v not in RESOURCE_SCOPE_LEVELS:
-            raise ValueError(f"scope_level must be one of: {', '.join(sorted(RESOURCE_SCOPE_LEVELS))}")
-        return v
-
     @field_validator("languages")
     @classmethod
     def _validate_languages(cls, v: Optional[list[str]]) -> Optional[list[str]]:
@@ -1056,12 +1010,6 @@ class ResourceUpdate(BaseModel):
     def _validate_tags(cls, value: Optional[list[str]]) -> Optional[list[str]]:
         return normalize_resource_tags(value)
 
-    @field_validator("contact")
-    @classmethod
-    def _validate_contact(cls, v: Optional[dict]) -> Optional[dict]:
-        return normalize_resource_contact(v)
-
-
 class ResourceResponse(BaseModel):
     """Response model for a directory resource, including computed lifecycle state."""
     resource_id: str
@@ -1071,19 +1019,10 @@ class ResourceResponse(BaseModel):
     pointers: list[ResourcePointer] = Field(default_factory=list)
     regions: list[ResourceRegion] = Field(default_factory=list)
     provenance: ResourceProvenance = Field(default_factory=ResourceProvenance)
-    resource_type: Optional[str] = None
     description: Optional[str] = None
-    contact: dict = Field(default_factory=dict)
     languages: list[str] = Field(default_factory=list)
-    scope_level: Optional[str] = None
-    scope_code: Optional[str] = None
-    coverage: Optional[str] = None
-    help_types: list[str] = Field(default_factory=list)
     status: str
     missing_fields: list[str] = Field(default_factory=list)
-    verified_at: Optional[str] = None
-    vetted_by: Optional[str] = None
-    source_note: Optional[str] = None
     display_order: int = 0
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -1092,28 +1031,6 @@ class ResourceResponse(BaseModel):
 class ResourceListResponse(BaseModel):
     """Response model for a list of directory resources."""
     resources: list[ResourceResponse]
-
-
-class HelpTypeModel(BaseModel):
-    """A help-type vocabulary entry."""
-    key: str = Field(..., min_length=1, max_length=60)
-    label: str = Field(..., min_length=1, max_length=120)
-    description: Optional[str] = Field(default=None, max_length=1000)
-    display_order: int = 0
-    is_active: bool = True
-
-
-class HelpTypeUpsert(BaseModel):
-    """Request model for creating or updating a help-type vocabulary entry."""
-    label: str = Field(..., min_length=1, max_length=120)
-    description: Optional[str] = Field(default=None, max_length=1000)
-    display_order: int = 0
-    is_active: bool = True
-
-
-class HelpTypeListResponse(BaseModel):
-    """Response model for the help-type vocabulary."""
-    help_types: list[HelpTypeModel]
 
 
 # --- Session Logs (Test & Feedback) ---

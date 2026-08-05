@@ -190,6 +190,33 @@ class GenericResourceAdminTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 422)
 
+    def test_admin_rejects_removed_legacy_resource_fields(self) -> None:
+        for legacy_field, value in (
+            ("resource_type", "ngo"),
+            ("contact", {"email": "legacy@example.test"}),
+            ("scope_level", "global"),
+            ("scope_code", "US"),
+            ("help_types", ["legal"]),
+            ("verified_at", "2026-01-01T00:00:00Z"),
+            ("vetted_by", "Legacy Admin"),
+            ("source_note", "Legacy source"),
+        ):
+            response = self.client.post(
+                "/admin/resources",
+                json={
+                    "name": "Legacy Payload",
+                    "kind": "reference",
+                    "description": "Must fail rather than silently ignore old inputs.",
+                    "pointers": [{"type": "url", "value": "https://example.test"}],
+                    legacy_field: value,
+                },
+            )
+            self.assertEqual(response.status_code, 422, (legacy_field, response.text))
+
+        self.assertFalse(
+            any(route.path == "/admin/help-types" for route in self.main.app.routes)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
