@@ -1,9 +1,10 @@
 # PRD: Recover Silent Model Provider Stalls and Preserve Tool-Loop Continuity
 
-Status: Implemented and deterministically verified on branch
-`feature/provider-continuity-stall-usage`. Live verification against a deployment
-containing the implementation remains a release step; production and demo
-deployment are outside this PRD.
+Status: Implemented, merged, deployed to `demo.enclave.free`, and release
+verified. The complete four-persona replay recovered one real silent provider
+stall. It also recorded two separate 180-second failures after provider progress
+and two answer-quality concerns; see the verification record for the exact
+release evidence and residuals.
 
 Decision anchors: [ADR-0024](https://github.com/enclave-free/enclave.free/blob/staging/docs/adr/0024-transparent-reasoning-and-tool-trace-posture.md) and [ADR-0030](https://github.com/enclave-free/enclave.free/blob/staging/docs/adr/0030-bounded-native-tool-loop.md)
 
@@ -204,3 +205,9 @@ evidence. Live provider behavior remains outside required CI.
 - The Model Provider does not expose internal queue or scheduler timing. Pre-response silence remains an operational symptom and recovery boundary, not proof of a particular upstream cluster cause.
 - Current [GLM](https://docs.z.ai/guides/capabilities/thinking-mode), [DeepSeek](https://api-docs.deepseek.com/guides/thinking_mode), [Claude](https://platform.claude.com/docs/en/about-claude/models/extended-thinking-models), and [OpenAI](https://platform.openai.com/docs/api-reference/responses-streaming/response/refusal/delta) reasoning/Tool protocols use provider-supplied reasoning or opaque signed state to preserve continuation across Tool results. The Enclave domain term Provider Continuity State keeps that behavior provider-neutral while preserving the strict non-disclosure boundary.
 - [Tinfoil usage reporting](https://docs.tinfoil.sh/guides/web-search) is part of the existing provider request and does not create a second inference request. A cancelled silent attempt may nevertheless have consumed upstream work before cancellation; that rare duplicate-attempt trade-off is accepted for bounded user latency and should be visible through returned usage when available.
+- Release evidence was captured on Enclave revision `898e0f1`, Sage revision
+  `a7d0972`, and effective model `glm-5-2`. The live suite completed all 20 turns,
+  recovered one exact 20-second silent stall, and cleaned up all four synthetic
+  Conversations. Two active generations later reached the existing 180-second
+  limit and failed safely without retry. Those active-generation failures remain
+  outside this PRD's narrow silent-stall boundary.
