@@ -43,7 +43,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         )
         self.assertNotIn("must be removed by the unified Tool loop hard cut", internal_contract)
         self.assertIn(
-            "four-batch loop bound, with at most eight calls in each batch",
+            "six-batch loop bound, with at most eight calls in each batch",
             tools,
         )
         self.assertIn("`kind`, `tags`, exact `pointers`, `regions`", tools)
@@ -108,7 +108,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
             "Sage owns Conversation behavior and a bounded native model-driven Tool loop",
             architecture,
         )
-        self.assertIn("Sage never executes a fifth batch", architecture)
+        self.assertIn("Sage never executes a seventh batch", architecture)
         self.assertIn("Graph-first RAG remains deferred", architecture)
         self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
         self.assertIn("2B", integration_tests)

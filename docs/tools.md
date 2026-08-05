@@ -4,7 +4,7 @@ This document describes the accepted Tool behavior for the Sage hard-cut prototy
 
 ## Core Rule
 
-Sage owns a bounded native model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts. The model may answer directly or select a Tool batch. Sage executes an authorized batch, injects its successful, failed, or guarded results, and returns the same enabled Tool contracts to the same model. The model may continue within a four-batch safety ceiling; Sage never executes a fifth batch. Sage emits Activity and Conversation Trace metadata throughout the loop.
+Sage owns a bounded native model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts. The model may answer directly or select a Tool batch. Sage executes an authorized batch, injects its successful, failed, or guarded results, and returns the same enabled Tool contracts to the same model. The model may continue within a six-batch safety ceiling. After a sixth batch, Sage always makes a final model request from the accumulated results and rejects any seventh selected batch before execution. Sage emits Activity and Conversation Trace metadata throughout the loop.
 
 Python no longer owns or exposes public Agent Runtime routes. Direct Python calls are unsupported because public Agent Runtime routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches requests to Sage. Python remains the Enclave Control Plane behind private/internal contracts for authorized facts and actions such as safe database reads, document search, user profile context, lifecycle operations, and product-level admin configuration reads and writes.
 
@@ -141,7 +141,7 @@ Normal Admin Conversation composers should make Knowledge, Resources, Web, Confi
 The model selects native Tool calls from concise Tool descriptions, not through a separate typed planner or deterministic intent classifier. Deterministic Sage code still decides:
 
 - which Tool Sets and Tools are available for the actor
-- the four-batch loop bound, with at most eight calls in each batch and no fifth batch execution
+- the six-batch loop bound, with at most eight calls in each batch; after six batches Sage makes a final model request and rejects any seventh selected batch before execution
 - a finite timeout for every Tool attempt, with retries enabled only for eligible read-only calls
 - Tool-result context budgets of 4,000 characters per result and 12,000 characters across the batch
 - Tool result injection
