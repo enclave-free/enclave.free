@@ -99,13 +99,13 @@ The pinned Sage runtime lives in `runtime/sage`.
 
 ### Runtime/Sage Audit
 
-- Submodule provenance: `runtime/sage` is pinned to commit `6110ab4381eaa3690afe231dc2d41af7d8cd1f38` from `https://github.com/enclave-free/sage.git`.
+- Submodule provenance: `runtime/sage` is pinned to commit `3b92bed95e9676c3005b5fe458915ec846894a8f` from `https://github.com/enclave-free/sage.git`.
 - Upstream stability: Sage is an internal Enclave runtime, so reviewer validation should use repository activity rather than package releases: inspect recent commits, open issues/PRs, and maintainer activity before advancing the submodule pointer.
 - Integration evidence: this prototype exercises the submodule through the Docker Compose `sage` service and the documented Sage contract checks, including `cargo check -p sage-core` from `runtime/sage` and the `backend/tests/test_5b_sage_route_smoke.py` smoke coverage listed in `docs/integration-tests.md`.
 - Security/stability checks: verify the Sage license and dependency tree at the pinned commit, review toolchain requirements from the submodule manifests, run dependency audit tooling appropriate for the Rust workspace, and regenerate an SBOM/checksum before merging a pointer update.
 - Reproducible verification:
   1. `git submodule update --init runtime/sage`
-  2. `cd runtime/sage && git rev-parse HEAD` should print `6110ab4381eaa3690afe231dc2d41af7d8cd1f38`.
+  2. `cd runtime/sage && git rev-parse HEAD` should print `3b92bed95e9676c3005b5fe458915ec846894a8f`.
   3. `cargo check -p sage-core`
   4. From the prototype root, run the Sage route smoke tests documented in `docs/integration-tests.md`.
   5. Regenerate the SBOM or checksum artifact used by the release process and attach it with the CI job names/artifacts that exercised `runtime/sage`.
