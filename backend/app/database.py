@@ -5812,12 +5812,30 @@ def _resource_matches_region(resource: dict, ancestors: dict) -> bool:
 
 def _resource_query_relevance(resource: dict, query: str) -> int | None:
     """Return a lower-is-better relevance rank for a normalized directory query."""
+    stop_words = {"a", "an", "and", "for", "in", "of", "or", "the", "to", "with"}
+
     def compact(value: object) -> str:
         return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
 
     def text(value: object) -> str:
         return " ".join(str(value or "").casefold().split())
 
+    def lexemes(value: object) -> list[str]:
+        words = re.findall(r"[^\W_]+", text(value), flags=re.UNICODE)
+        normalized = []
+        for word in words:
+            if word in stop_words:
+                continue
+            if len(word) > 4 and word.endswith("ies"):
+                word = f"{word[:-3]}y"
+            elif len(word) > 4 and word.endswith(("sses", "ches", "shes", "xes", "zes")):
+                word = word[:-2]
+            elif len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
+                word = word[:-1]
+            normalized.append(word)
+        return normalized
+
+    query_raw = str(query or "").strip()
     query_text = text(query)
     query_compact = compact(query)
     query_digits = "".join(ch for ch in str(query or "") if ch.isdigit())
@@ -5836,13 +5854,14 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
         if field == "phone" and query_digits and "".join(ch for ch in str(value or "") if ch.isdigit()) == query_digits:
             return 0
 
-    partial_fields = [("name", resource.get("name"))]
-    partial_fields.extend(
+    query_lexemes = list(dict.fromkeys(lexemes(query)))
+
+    partial_pointers = [
         (pointer.get("type"), pointer.get("value"))
         for pointer in pointers
         if isinstance(pointer, dict)
-    )
-    for field, value in partial_fields:
+    ]
+    for field, value in partial_pointers:
         value_text = text(value)
         if query_text in value_text:
             return 1
@@ -5850,11 +5869,69 @@ def _resource_query_relevance(resource: dict, query: str) -> int | None:
             value_digits = "".join(ch for ch in str(value or "") if ch.isdigit())
             if query_digits in value_digits:
                 return 1
-        if field == "name" and query_compact and query_compact in compact(value):
-            return 1
+
+    name_lexemes = lexemes(resource.get("name"))
+    name_initials = "".join(word[0] for word in name_lexemes if word)
+    dotted_acronym = bool(
+        re.fullmatch(r"(?:[^\W\d_]\.)+[^\W\d_]?", query_raw, flags=re.UNICODE)
+    )
+    plain_acronym = query_compact.isalpha() and query_raw.isalpha()
+    if (
+        query_compact
+        and len(query_compact) >= 2
+        and (plain_acronym or dotted_acronym)
+        and name_initials.startswith(query_compact)
+    ):
+        return 1
+
+    if not query_lexemes:
+        return None
+
+    looks_like_precise_pointer = (
+        "@" in query_text
+        or len(query_digits) >= 7
+        or bool(re.fullmatch(r"(?:https?://|www\.)?\S+\.\S+", query_text))
+    )
+    if looks_like_precise_pointer:
+        return None
+
+    name_text = text(resource.get("name"))
+    if query_text in name_text or (query_compact and query_compact in compact(resource.get("name"))):
+        return 1
 
     if query_text in text(resource.get("description")):
         return 2
+
+    primary_values = [resource.get("resource_id"), resource.get("name")]
+    primary_values.extend(
+        pointer.get("value")
+        for pointer in pointers
+        if isinstance(pointer, dict)
+    )
+    primary_lexemes = {
+        word for value in primary_values for word in lexemes(value)
+    }
+    searchable_values = [
+        *primary_values,
+        resource.get("description"),
+        resource.get("kind"),
+        *(resource.get("tags") or []),
+    ]
+    searchable_lexemes = {
+        word for value in searchable_values for word in lexemes(value)
+    }
+    if query_lexemes and all(word in primary_lexemes for word in query_lexemes):
+        return 2
+
+    matched_lexemes = sum(word in searchable_lexemes for word in query_lexemes)
+    if query_lexemes and matched_lexemes == len(query_lexemes):
+        return 3
+    if (
+        len(query_lexemes) >= 3
+        and matched_lexemes >= 2
+        and matched_lexemes * 2 >= len(query_lexemes)
+    ):
+        return 4 + len(query_lexemes) - matched_lexemes
     return None
 
 
