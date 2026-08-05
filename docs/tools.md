@@ -4,7 +4,7 @@ This document describes the accepted Tool behavior for the Sage hard-cut prototy
 
 ## Core Rule
 
-Sage owns a bounded native model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts. The model may answer directly or select a Tool batch. Sage executes an authorized batch, injects its successful, failed, or guarded results, and returns the same enabled Tool contracts to the same model. The model may select one follow-up batch before it must answer; Sage never executes a third batch. Sage emits Activity and Conversation Trace metadata throughout the loop.
+Sage owns a bounded native model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts. The model may answer directly or select a Tool batch. Sage executes an authorized batch, injects its successful, failed, or guarded results, and returns the same enabled Tool contracts to the same model. The model may continue within a four-batch safety ceiling; Sage never executes a fifth batch. Sage emits Activity and Conversation Trace metadata throughout the loop.
 
 Python no longer owns or exposes public Agent Runtime routes. Direct Python calls are unsupported because public Agent Runtime routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches requests to Sage. Python remains the Enclave Control Plane behind private/internal contracts for authorized facts and actions such as safe database reads, document search, user profile context, lifecycle operations, and product-level admin configuration reads and writes.
 
@@ -112,7 +112,7 @@ Reads happen within Admin Conversation authority. Broad setup, status, and readi
 
 Every direct Tool maps to a fixed private Enclave Control Plane endpoint with purpose-built arguments. The model cannot choose an endpoint path or submit raw request JSON. Each Tool call validates and commits atomically; separate Tool calls are not one transaction. Tool results return authoritative normalized state, changed names, validation status, affected areas, and restart requirements where relevant so Sage can report the real outcome naturally.
 
-Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can report the rejected call accurately. The model may use the bounded follow-up batch to correct a call from authoritative validation feedback; Sage does not rewrite the arguments itself.
+Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can report the rejected call accurately. The model may use the bounded loop to correct a call from authoritative validation feedback; Sage does not rewrite the arguments itself.
 
 `configure_instance` is the high-level atomic Tool for guided first-time setup. The smaller area Tools handle later edits to Instance Settings, Deployment Settings, Agent Settings, User Types, Onboarding Questions, and Document Access defaults. Destructive User or Document operations, service restarts, and Curated Resource management are outside this authority.
 
@@ -141,7 +141,7 @@ Normal Admin Conversation composers should make Knowledge, Resources, Web, Confi
 The model selects native Tool calls from concise Tool descriptions, not through a separate typed planner or deterministic intent classifier. Deterministic Sage code still decides:
 
 - which Tool Sets and Tools are available for the actor
-- the two-batch loop bound, with at most eight calls in each batch and no third batch execution
+- the four-batch loop bound, with at most eight calls in each batch and no fifth batch execution
 - a finite timeout for every Tool attempt, with retries enabled only for eligible read-only calls
 - Tool-result context budgets of 4,000 characters per result and 12,000 characters across the batch
 - Tool result injection

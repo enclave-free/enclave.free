@@ -19,7 +19,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("use `/llm/chat` for assistant-style turns", tools)
         self.assertNotIn("Current `/query` responses include", tools)
 
-    def test_tool_docs_name_native_tool_round_and_context_budgeting(self) -> None:
+    def test_tool_docs_name_bounded_native_tool_loop_and_context_budgeting(self) -> None:
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(
             encoding="utf-8"
@@ -32,7 +32,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         )
         normalized_internal_contract = " ".join(internal_contract.split())
 
-        self.assertIn("native model-driven Tool round", tools)
+        self.assertIn("bounded native model-driven Tool loop", tools)
         self.assertIn("selected Tool Sets", tools)
         self.assertIn("product-level admin configuration read and direct-write Tools", tools)
         self.assertIn("`update_instance_settings`", adr)
@@ -43,7 +43,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         )
         self.assertNotIn("must be removed by the unified Tool loop hard cut", internal_contract)
         self.assertIn(
-            "one-batch Tool-round bound of at most eight calls",
+            "four-batch loop bound, with at most eight calls in each batch",
             tools,
         )
         self.assertIn("`kind`, `tags`, exact `pointers`, `regions`", tools)
@@ -104,7 +104,11 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("Document Library Retrieval is a Sage Tool capability", architecture)
         self.assertIn("Document Library Retrieval is a Sage Tool capability over Enclave-owned Documents", architecture)
         self.assertIn("The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration", architecture)
-        self.assertIn("Sage owns Conversation behavior and one native model-driven Tool round", architecture)
+        self.assertIn(
+            "Sage owns Conversation behavior and a bounded native model-driven Tool loop",
+            architecture,
+        )
+        self.assertIn("Sage never executes a fifth batch", architecture)
         self.assertIn("Graph-first RAG remains deferred", architecture)
         self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
         self.assertIn("2B", integration_tests)
