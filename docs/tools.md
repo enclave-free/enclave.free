@@ -1,10 +1,10 @@
 # Agent Runtime Tool Semantics
 
-This document describes the accepted Tool behavior for the Sage hard-cut prototype after [ADR-0023](adr/0023-unified-model-driven-tool-loop.md) and [ADR-0029](adr/0029-native-tool-calling-with-one-tool-round.md).
+This document describes the accepted Tool behavior for the Sage hard-cut prototype after [ADR-0023](adr/0023-unified-model-driven-tool-loop.md), [ADR-0029](adr/0029-native-tool-calling-with-one-tool-round.md), and [ADR-0030](adr/0030-bounded-native-tool-loop.md).
 
 ## Core Rule
 
-Sage owns one native model-driven Tool round for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts and gives the model one Tool-selection opportunity. The model either answers directly or selects one Tool batch. Sage executes the authorized batch once, injects its successful, failed, or guarded results, and asks the model for the final answer without exposing Tools again. Sage emits Activity and Conversation Trace metadata throughout the round.
+Sage owns a bounded native model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts. The model may answer directly or select a Tool batch. Sage executes an authorized batch, injects its successful, failed, or guarded results, and returns the same enabled Tool contracts to the same model. The model may select one follow-up batch before it must answer; Sage never executes a third batch. Sage emits Activity and Conversation Trace metadata throughout the loop.
 
 Python no longer owns or exposes public Agent Runtime routes. Direct Python calls are unsupported because public Agent Runtime routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches requests to Sage. Python remains the Enclave Control Plane behind private/internal contracts for authorized facts and actions such as safe database reads, document search, user profile context, lifecycle operations, and product-level admin configuration reads and writes.
 
@@ -67,7 +67,7 @@ Enabled does not mean forced. Enabled means the model may call the Tool when it 
 
 `knowledge-search` is a first-class visible Tool Set, not a hidden retrieval mode. Selected Documents are constraints on `knowledge_search`, not silent Required Context for ordinary chat.
 
-Its Tool description is a concise capability contract: it searches uploaded Documents, Documents may have different languages or titles than the user's question, and the model may select multiple Knowledge Search calls in its one Tool batch when alternate queries would help. The contract does not contain WLC-specific vocabulary or deterministic query rewriting.
+Its Tool description is a concise capability contract: it searches uploaded Documents, Documents may have different languages or titles than the user's question, and the model may select multiple Knowledge Search calls in a Tool batch when alternate queries would help. The contract does not contain WLC-specific vocabulary or deterministic query rewriting.
 
 Sage passes allowed document constraints to the Knowledge Tool. Python enforces Document Access and hydrates retrieved chunks from product-owned storage after vector search. Retrieved chunks enter the Conversation as Tool results and Activity/Trace metadata under the transparent trace posture in ADR-0024.
 
@@ -112,7 +112,7 @@ Reads happen within Admin Conversation authority. Broad setup, status, and readi
 
 Every direct Tool maps to a fixed private Enclave Control Plane endpoint with purpose-built arguments. The model cannot choose an endpoint path or submit raw request JSON. Each Tool call validates and commits atomically; separate Tool calls are not one transaction. Tool results return authoritative normalized state, changed names, validation status, affected areas, and restart requirements where relevant so Sage can report the real outcome naturally.
 
-Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can report the rejected call accurately. A later Conversation turn may retry; the completed turn does not start a second Tool batch.
+Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can report the rejected call accurately. The model may use the bounded follow-up batch to correct a call from authoritative validation feedback; Sage does not rewrite the arguments itself.
 
 `configure_instance` is the high-level atomic Tool for guided first-time setup. The smaller area Tools handle later edits to Instance Settings, Deployment Settings, Agent Settings, User Types, Onboarding Questions, and Document Access defaults. Destructive User or Document operations, service restarts, and Curated Resource management are outside this authority.
 
@@ -141,14 +141,14 @@ Normal Admin Conversation composers should make Knowledge, Resources, Web, Confi
 The model selects native Tool calls from concise Tool descriptions, not through a separate typed planner or deterministic intent classifier. Deterministic Sage code still decides:
 
 - which Tool Sets and Tools are available for the actor
-- the one-batch Tool-round bound of at most eight calls
+- the two-batch loop bound, with at most eight calls in each batch and no third batch execution
 - a finite timeout for every Tool attempt, with retries enabled only for eligible read-only calls
 - Tool-result context budgets of 4,000 characters per result and 12,000 characters across the batch
 - Tool result injection
 - Activity, Trace Delta, and Conversation Trace assembly
 - authorization, argument validation, protocol validity, and secret-safe trace assembly
 
-Sage may retry one unusable native model response through a generic protocol retry that does not contain contact-, language-, organization-, or intent-specific correction text. A safe-to-retry Tool execution may retry once for a transient transport failure. Empty or weak results, invalid arguments, and state-changing calls without idempotency are not retry signals.
+Sage may retry one unusable native model response through a generic protocol retry that does not contain contact-, language-, organization-, or intent-specific correction text. The retry repeats the same request and cannot replay an executed Tool batch. A safe-to-retry Tool execution may retry once for a transient transport failure. Empty or weak results, invalid arguments, and state-changing calls without idempotency are not automatic retry signals, though the model may choose a different authorized call within the bounded native loop.
 
 Final model prose streams directly after protocol validation. Sage does not scan, quarantine, rewrite, or replace prose based on process narration, Tool-name syntax, repetition, or completeness claims. Real credential and secret protections remain enforced at their authority and trace boundaries.
 
