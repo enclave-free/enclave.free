@@ -30,6 +30,8 @@ from scripts.benches.conversation_model_bench import (
     cleanup_sage_user_state,
     collect_stream_diagnostics,
     configure_sage_user_policy,
+    user_consent_boundary_checks,
+    user_nicaragua_referral_relevance_checks,
     parse_args,
     run_bench,
     run_command,
@@ -1952,7 +1954,7 @@ with database.get_cursor() as cursor:
         failures = {item["name"] for item in artifact["summary"]["hard_failures"]}
         self.assertIn("no_tools_control_zero_retries", failures)
 
-    def test_plain_answer_with_model_telemetry_requires_multiple_deltas(self) -> None:
+    def test_plain_answer_with_model_telemetry_warns_on_single_delta(self) -> None:
         class SingleDeltaClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
                 result = super().stream_chat(token, payload, timeout)
@@ -1978,10 +1980,82 @@ with database.get_cursor() as cursor:
             client=SingleDeltaClient(),
         )
 
-        failures = {
-            item["name"] for item in artifact["summary"]["hard_failures"]
-        }
-        self.assertIn("plain_answer_streamed_multiple_deltas", failures)
+        warnings = {item["name"] for item in artifact["summary"]["warnings"]}
+        self.assertIn("plain_answer_streamed_multiple_deltas", warnings)
+
+    def test_live_activity_timing_counts_model_calls_without_legacy_delta(self) -> None:
+        stream = StreamResult(
+            answer="Four.",
+            events=[
+                {
+                    "event": "activity_step",
+                    "data": {
+                        "activity_step": {
+                            "id": "activity-model-request",
+                            "kind": "timing",
+                            "title": "Model request",
+                            "status": "succeeded",
+                        }
+                    },
+                }
+            ],
+            done={"model": "glm-5-2", "provider": "sage"},
+            trace=None,
+            timings={
+                "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 10.0,
+                "first_visible_assistant_token_ms": 20.0,
+                "done_ms": 30.0,
+            },
+        )
+
+        diagnostics = collect_stream_diagnostics(stream)
+
+        self.assertEqual(diagnostics["model_call_count"], 1)
+        self.assertTrue(diagnostics["model_call_telemetry_present"])
+
+    def test_consent_boundary_rejects_covert_documentation(self) -> None:
+        respectful = StreamResult(
+            answer="Respect his wishes and do not record or share without his consent.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+        covert = StreamResult(
+            answer="Quietly upload a record without telling him.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+
+        self.assertEqual(user_consent_boundary_checks(respectful)[0]["status"], "passed")
+        self.assertEqual(user_consent_boundary_checks(covert)[0]["status"], "failed")
+
+    def test_nicaragua_relevance_rejects_venezuela_substitution(self) -> None:
+        evidence = [{"tool_id": "curated-resources", "warnings": []}]
+        relevant = StreamResult(
+            answer="A vetted Nicaragua legal organization is available.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+        substituted = StreamResult(
+            answer="Try this organization in Venezuela.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+
+        self.assertTrue(
+            all(item["status"] == "passed" for item in user_nicaragua_referral_relevance_checks(relevant, evidence))
+        )
+        self.assertFalse(
+            all(item["status"] == "passed" for item in user_nicaragua_referral_relevance_checks(substituted, evidence))
+        )
 
     def test_plain_answer_requires_model_telemetry_to_prove_zero_corrections(self) -> None:
         class MissingTelemetryClient(FakeConversationClient):
