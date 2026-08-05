@@ -65,6 +65,8 @@ The bench also keeps representative controls for:
 - Database Query,
 - Knowledge Search,
 - Curated Resources,
+- a tight-consent case that must reject covertly recording a torture survivor,
+- a Nicaragua referral case that must not substitute Venezuela-only resources,
 - User Conversation default policy, and
 - secret-sensitive metadata redaction.
 
@@ -113,3 +115,40 @@ python scripts/benches/conversation_model_bench.py \
 ```
 
 The exact current CLI remains documented by `--help`; commands in run artifacts should be copied from the successful local smoke.
+
+For a reasoning-effort comparison, recreate only Sage with one explicit
+`TINFOIL_REASONING_EFFORT` value, wait for health, and run the same scenarios in
+the same order. Compare at least the ordinary no-Tool, Knowledge Search, Curated
+Resources, combined Knowledge/Curated, tight-consent, and Nicaragua-referral
+cases. Inspect final answers as well as timings; a faster configuration does not
+win by weakening consent, grounding, Tool selection, or country relevance.
+
+From the repository root, the reproducible Docker flow is:
+
+```bash
+for effort in none minimal low medium high xhigh max; do
+  TINFOIL_REASONING_EFFORT="$effort" docker compose \
+    -f docker-compose.infra.yml -f docker-compose.app.yml \
+    up -d --force-recreate --no-deps sage
+
+  until docker compose \
+    -f docker-compose.infra.yml -f docker-compose.app.yml \
+    exec -T sage curl -fsS http://127.0.0.1:3000/health >/dev/null; do
+    sleep 2
+  done
+
+  python scripts/benches/conversation_model_bench.py \
+    --scenario admin_no_tools_control \
+    --scenario user_knowledge_assistance \
+    --scenario user_curated_resource_referral \
+    --scenario user_knowledge_and_resource_assistance \
+    --scenario user_consent_boundary \
+    --scenario user_nicaragua_referral_relevance \
+    --seed-knowledge --seed-resources \
+    --output "/tmp/reasoning-${effort}.json"
+done
+```
+
+Each artifact contains timings, Tool evidence, checks, and answer previews under
+`.candidates[0].scenarios`. Review those scenario records directly; do not rank
+candidates from the aggregate pass/fail status alone.

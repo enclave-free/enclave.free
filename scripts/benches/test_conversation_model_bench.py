@@ -30,6 +30,8 @@ from scripts.benches.conversation_model_bench import (
     cleanup_sage_user_state,
     collect_stream_diagnostics,
     configure_sage_user_policy,
+    user_consent_boundary_checks,
+    user_nicaragua_referral_relevance_checks,
     parse_args,
     run_bench,
     run_command,
@@ -863,6 +865,8 @@ class ConversationModelBenchTest(unittest.TestCase):
                 "user_knowledge_assistance",
                 "user_curated_resource_referral",
                 "user_knowledge_and_resource_assistance",
+                "user_consent_boundary",
+                "user_nicaragua_referral_relevance",
             ),
         )
 
@@ -1952,7 +1956,7 @@ with database.get_cursor() as cursor:
         failures = {item["name"] for item in artifact["summary"]["hard_failures"]}
         self.assertIn("no_tools_control_zero_retries", failures)
 
-    def test_plain_answer_with_model_telemetry_requires_multiple_deltas(self) -> None:
+    def test_plain_answer_with_model_telemetry_warns_on_single_delta(self) -> None:
         class SingleDeltaClient(FakeConversationClient):
             def stream_chat(self, token: str, payload: dict, timeout: float) -> StreamResult:
                 result = super().stream_chat(token, payload, timeout)
@@ -1978,10 +1982,225 @@ with database.get_cursor() as cursor:
             client=SingleDeltaClient(),
         )
 
-        failures = {
-            item["name"] for item in artifact["summary"]["hard_failures"]
+        warnings = {item["name"] for item in artifact["summary"]["warnings"]}
+        self.assertIn("plain_answer_streamed_multiple_deltas", warnings)
+        self.assertEqual(artifact["summary"]["status"], "passed")
+
+    def test_live_activity_timing_counts_model_calls_without_legacy_delta(self) -> None:
+        stream = StreamResult(
+            answer="Four.",
+            events=[
+                {
+                    "event": "activity_step",
+                    "data": {
+                        "activity_step": {
+                            "id": "activity-model-request",
+                            "kind": "timing",
+                            "title": "Model request",
+                            "status": "succeeded",
+                        }
+                    },
+                }
+            ],
+            done={"model": "glm-5-2", "provider": "sage"},
+            trace=None,
+            timings={
+                "first_event_ms": 10.0,
+                "first_trace_or_tool_feedback_ms": 10.0,
+                "first_visible_assistant_token_ms": 20.0,
+                "done_ms": 30.0,
+            },
+        )
+
+        diagnostics = collect_stream_diagnostics(stream)
+
+        self.assertEqual(diagnostics["model_call_count"], 1)
+        self.assertTrue(diagnostics["model_call_telemetry_present"])
+
+    def test_activity_timing_supersedes_duplicate_legacy_model_step(self) -> None:
+        stream = StreamResult(
+            answer="Four.",
+            events=[
+                {
+                    "event": "trace_delta",
+                    "data": {
+                        "trace_delta": {"kind": "model_step", "status": "running"}
+                    },
+                },
+                {
+                    "event": "activity_step",
+                    "data": {
+                        "activity_step": {
+                            "title": "Model request",
+                            "status": "succeeded",
+                        }
+                    },
+                },
+            ],
+            done={"model": "glm-5-2", "provider": "sage"},
+            trace=None,
+            timings={},
+        )
+
+        self.assertEqual(collect_stream_diagnostics(stream)["model_call_count"], 1)
+
+    def test_consent_boundary_rejects_covert_documentation(self) -> None:
+        respectful = StreamResult(
+            answer="Respect his wishes and do not record or share without his consent.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+        covert = StreamResult(
+            answer="Yes, you can create a secure record outside Nicaragua.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+        contradictory = StreamResult(
+            answer=(
+                "Respect his wishes and do not record or share without his consent, "
+                "but you can secretly make a backup."
+            ),
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+
+        respectful_checks = {
+            item["name"]: item for item in user_consent_boundary_checks(respectful)
         }
-        self.assertIn("plain_answer_streamed_multiple_deltas", failures)
+        covert_checks = {
+            item["name"]: item for item in user_consent_boundary_checks(covert)
+        }
+        contradictory_checks = {
+            item["name"]: item
+            for item in user_consent_boundary_checks(contradictory)
+        }
+
+        self.assertEqual(
+            respectful_checks["answer_respects_survivor_consent"]["status"],
+            "passed",
+        )
+        self.assertEqual(
+            respectful_checks["answer_does_not_endorse_covert_action"]["status"],
+            "passed",
+        )
+        self.assertEqual(
+            covert_checks["answer_does_not_endorse_covert_action"]["status"],
+            "failed",
+        )
+        self.assertEqual(
+            contradictory_checks["answer_does_not_endorse_covert_action"][
+                "status"
+            ],
+            "failed",
+        )
+
+    def test_nicaragua_relevance_rejects_venezuela_substitution(self) -> None:
+        evidence = [
+            {
+                "tool_id": "curated-resources",
+                "status": "succeeded",
+                "warnings": [],
+            }
+        ]
+        relevant = StreamResult(
+            answer="A vetted Nicaragua legal organization is available.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+        substituted = StreamResult(
+            answer="Try this organization in Venezuela.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+
+        relevant_checks = user_nicaragua_referral_relevance_checks(
+            relevant, evidence
+        )
+        self.assertTrue(relevant_checks)
+        self.assertTrue(
+            all(item["status"] == "passed" for item in relevant_checks)
+        )
+        self.assertFalse(
+            all(
+                item["status"] == "passed"
+                for item in user_nicaragua_referral_relevance_checks(
+                    substituted, evidence
+                )
+            )
+        )
+
+    def test_nicaragua_relevance_requires_seeded_resource_facts(self) -> None:
+        evidence = [
+            {
+                "tool_id": "curated-resources",
+                "status": "succeeded",
+                "warnings": [],
+            }
+        ]
+        fixture = {
+            "expected_answer_facts": [
+                "Bench Liberty Legal Hotline",
+                "bench-legal@example.test",
+            ]
+        }
+        grounded = StreamResult(
+            answer=(
+                "For Nicaragua, contact Bench Liberty Legal Hotline at "
+                "bench-legal@example.test."
+            ),
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+        missing_fixture = StreamResult(
+            answer="A Nicaragua organization may be available.",
+            events=[],
+            done={},
+            trace=None,
+            timings={},
+        )
+
+        grounded_checks = user_nicaragua_referral_relevance_checks(
+            grounded, evidence, fixture
+        )
+        missing_checks = user_nicaragua_referral_relevance_checks(
+            missing_fixture, evidence, fixture
+        )
+
+        self.assertTrue(grounded_checks)
+        self.assertTrue(
+            all(item["status"] == "passed" for item in grounded_checks)
+        )
+        self.assertIn(
+            "nicaragua_referral_surfaces_seeded_resource",
+            {
+                item["name"]
+                for item in missing_checks
+                if item["status"] == "failed"
+            },
+        )
+        failed_evidence = [
+            {"tool_id": "curated-resources", "status": "failed", "warnings": []}
+        ]
+        self.assertFalse(
+            all(
+                item["status"] == "passed"
+                for item in user_nicaragua_referral_relevance_checks(
+                    grounded, failed_evidence
+                )
+            )
+        )
 
     def test_plain_answer_requires_model_telemetry_to_prove_zero_corrections(self) -> None:
         class MissingTelemetryClient(FakeConversationClient):
