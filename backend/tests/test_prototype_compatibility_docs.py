@@ -46,6 +46,8 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
             "six-batch loop bound, with at most eight calls in each batch",
             tools,
         )
+        self.assertIn("correlated bounded failures", tools)
+        self.assertIn("one final same-model request with Tools disabled", tools)
         self.assertIn("`kind`, `tags`, exact `pointers`, `regions`", tools)
         self.assertNotIn("`scope` is a generic model-selectable", tools)
         self.assertNotIn('"help_type"', internal_contract)
@@ -109,6 +111,8 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
             architecture,
         )
         self.assertIn("Sage never executes a seventh batch", architecture)
+        self.assertIn("correlated bounded failures", architecture)
+        self.assertIn("one final same-model request with Tools disabled", architecture)
         self.assertIn("Graph-first RAG remains deferred", architecture)
         self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
         self.assertIn("2B", integration_tests)
