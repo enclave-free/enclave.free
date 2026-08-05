@@ -1,6 +1,6 @@
 # PRD: Native Tool Calling Root Correction
 
-Status: In implementation. Published as PRD issue #582 with implementation issues #574-#581 and #583-#589. The original one-batch constraint is superseded by the live-replay correction below.
+Status: Implemented. Published as PRD issue #582 with implementation issues #574-#581 and #583-#589. The original one-batch constraint is superseded by the live-replay correction below. Its decisions to discard provider reasoning between Tool rounds and defer a model deadline are superseded by [Recover Silent Model Provider Stalls and Preserve Tool-Loop Continuity](2026-08-05-provider-stall-continuity-latency-prd.md), ADR-0024, and ADR-0030; the historical sections below remain useful context but are not current guidance for those two boundaries.
 
 Decision anchors: [ADR-0029](../../adr/0029-native-tool-calling-with-one-tool-round.md) and [ADR-0030](../../adr/0030-bounded-native-tool-loop.md)
 
