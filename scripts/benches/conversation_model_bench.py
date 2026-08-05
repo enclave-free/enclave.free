@@ -1757,20 +1757,21 @@ database.init_schema()
 database.create_resource(
     resource_id=resource_id,
     name=resource_name,
-    resource_type="ngo",
+    kind="organization",
     description="Synthetic benchmark fixture for vetted legal triage after detention release.",
-    contact={
-        "email": resource_email,
-        "secure_channel": "Signal: +1-000-000-0000",
-        "url": "https://example.test/bench-legal/" + suffix,
-    },
+    pointers=[
+        {"type": "email", "value": resource_email},
+        {"type": "secure_channel", "value": "Signal: +1-000-000-0000"},
+        {"type": "url", "value": "https://example.test/bench-legal/" + suffix},
+    ],
     languages=["en", "es"],
-    scope_level="global",
-    scope_code=None,
-    help_types=["legal", "humanitarian"],
-    verified_at=database.utc_timestamp_z(),
-    vetted_by="conversation-model-bench",
-    source_note="Synthetic benchmark fixture.",
+    regions=[{"level": "global", "code": None}],
+    tags=["legal", "humanitarian"],
+    provenance={
+        "verified_at": database.utc_timestamp_z(),
+        "vetted_by": "conversation-model-bench",
+        "source_note": "Synthetic benchmark fixture.",
+    },
     display_order=-100,
 )
 resource = database.get_resource(resource_id)
@@ -2368,6 +2369,7 @@ from qdrant_client.models import PointIdsList
 
 import database
 import ingest_db
+import session_logs
 import store
 
 payload = json.loads({json.dumps(serialized)})
@@ -2412,6 +2414,9 @@ for resource_id in resources.get("resource_ids") or []:
 user_id = payload.get("user_id")
 if user_id is not None:
     try:
+        for log in session_logs.list_session_logs(limit=500):
+            if log.get("subject_user_id") == int(user_id):
+                session_logs.delete_session_log(str(log["log_id"]))
         database.delete_user(int(user_id))
     except Exception as exc:
         errors.append("user SQLite: " + str(exc))
