@@ -341,6 +341,158 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.assertTrue(page["has_more"])
         self.assertEqual(page["next_offset"], 1)
 
+    def test_search_matches_name_acronyms_and_ranked_topic_terms(self) -> None:
+        self.database.create_resource(
+            resource_id="global-rights-alliance",
+            name="Global Rights Alliance",
+            kind="organization",
+            description=(
+                "Case visibility, support for families, and international campaigns. "
+                "A historical note mentions missing@globalrights.example."
+            ),
+            tags=["humanitarian"],
+            pointers=[
+                {"type": "email", "value": "info@globalrights.example"}
+            ],
+            regions=[{"level": "global", "code": None}],
+            languages=["en", "es"],
+        )
+        self.database.create_resource(
+            resource_id="global-rights-alliance-political-prisoners-support-team",
+            name="Global Rights Alliance - Political Prisoners Support Team",
+            kind="organization",
+            description=(
+                "Support for families of political prisoners, training, "
+                "resilience-building, and reintegration."
+            ),
+            tags=["humanitarian", "psychosocial"],
+            pointers=[
+                {"type": "email", "value": "support@globalrights.example"}
+            ],
+            regions=[{"level": "global", "code": None}],
+            languages=["en", "es"],
+        )
+        self.database.create_resource(
+            resource_id="aid-network",
+            name="Aid Network",
+            kind="organization",
+            description="A regional support network.",
+            tags=["humanitarian"],
+            pointers=[{"type": "url", "value": "https://aid-network.example.test"}],
+            regions=[{"level": "global", "code": None}],
+            languages=["en"],
+        )
+        self.database.create_resource(
+            resource_id="aid-community-organization",
+            name="Aid Community Organization",
+            kind="organization",
+            description="A community support organization.",
+            tags=["humanitarian"],
+            pointers=[{"type": "url", "value": "https://aid-community.example.test"}],
+            regions=[{"level": "global", "code": None}],
+            languages=["en"],
+        )
+
+        acronym = self.database.search_resources(
+            region="Bolivia",
+            query="GRA",
+            limit=10,
+            return_metadata=True,
+        )
+        dotted_acronym = self.database.search_resources(
+            region="Bolivia",
+            query="G.R.A.",
+            limit=10,
+            return_metadata=True,
+        )
+        topical = self.database.search_resources(
+            region="Bolivia",
+            query="family advocate political prisoner",
+            limit=10,
+            return_metadata=True,
+        )
+        repeated_term_miss = self.database.search_resources(
+            region="Bolivia",
+            query="support support astronomy",
+            limit=10,
+            return_metadata=True,
+        )
+        pointer_in_description_only = self.database.search_resources(
+            region="Bolivia",
+            query="missing@globalrights.example",
+            limit=10,
+            return_metadata=True,
+        )
+        stop_word_only = self.database.search_resources(
+            region="Bolivia",
+            query="for",
+            limit=10,
+            return_metadata=True,
+        )
+        stop_word_acronym = self.database.search_resources(
+            region="Bolivia",
+            query="AN",
+            limit=10,
+            return_metadata=True,
+        )
+        short_domain_collision = self.database.search_resources(
+            region="Bolivia",
+            query="a.co",
+            limit=10,
+            return_metadata=True,
+        )
+
+        self.assertEqual(
+            [resource["resource_id"] for resource in acronym["resources"]],
+            [
+                "global-rights-alliance",
+                "global-rights-alliance-political-prisoners-support-team",
+            ],
+        )
+        self.assertEqual(
+            [resource["resource_id"] for resource in dotted_acronym["resources"]],
+            [
+                "global-rights-alliance",
+                "global-rights-alliance-political-prisoners-support-team",
+            ],
+        )
+        self.assertEqual(
+            [resource["resource_id"] for resource in topical["resources"]],
+            ["global-rights-alliance-political-prisoners-support-team"],
+        )
+        self.assertEqual(repeated_term_miss["resources"], [])
+        self.assertEqual(pointer_in_description_only["resources"], [])
+        self.assertEqual(stop_word_only["resources"], [])
+        self.assertEqual(
+            [resource["resource_id"] for resource in stop_word_acronym["resources"]],
+            ["aid-network"],
+        )
+        self.assertEqual(short_domain_collision["resources"], [])
+
+    def test_search_normalizes_plural_terms_without_overstemming_ss_words(self) -> None:
+        self.database.create_resource(
+            resource_id="community-class",
+            name="Community Class",
+            kind="service",
+            description="A practical learning resource.",
+            tags=["address", "case"],
+            pointers=[{"type": "url", "value": "https://classes.example.test"}],
+            regions=[{"level": "global", "code": None}],
+            languages=["en"],
+        )
+
+        for query in ("community classes", "addresses", "cases", "services"):
+            with self.subTest(query=query):
+                page = self.database.search_resources(
+                    query=query,
+                    limit=10,
+                    return_metadata=True,
+                )
+                self.assertEqual(
+                    [resource["resource_id"] for resource in page["resources"]],
+                    ["community-class"],
+                )
+
     def test_internal_search_returns_generic_contract_and_continuation(self) -> None:
         self._create_ready(
             "bitcoin-reference",
