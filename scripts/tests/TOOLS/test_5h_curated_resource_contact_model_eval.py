@@ -692,7 +692,23 @@ def resource(
     name: str = ORG_NAME,
     display_order: int = 0,
 ) -> None:
-    body = {"resource_id": rid, "name": name, "resource_type": "legal", "description": "Synthetic issue #539 evaluation fixture; do not contact.", "contact": contact, "languages": ["en", "es"], "scope_level": "country", "scope_code": "MX", "help_types": ["legal"], "verified": True, "vetted_by": "issue-539-eval", "display_order": display_order}
+    body = {
+        "name": name,
+        "kind": "organization",
+        "description": "Synthetic issue #539 evaluation fixture; do not contact.",
+        "pointers": [
+            {"type": pointer_type, "value": value}
+            for pointer_type, value in contact.items()
+        ],
+        "languages": ["en", "es"],
+        "regions": [{"level": "country", "code": "MX"}],
+        "tags": ["legal"],
+        "provenance": {"vetted_by": "issue-539-eval"},
+        "verified": True,
+        "display_order": display_order,
+    }
+    if method == "POST":
+        body["resource_id"] = rid
     path = "/admin/resources" if method == "POST" else f"/admin/resources/{rid}"
     r = req(base, token, method, path, body)
     if r.status_code not in ({200, 201} if method == "POST" else {200}): raise RuntimeError(f"resource {method}: {r.status_code} {r.text[:400]}")
