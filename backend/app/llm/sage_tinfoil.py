@@ -35,7 +35,7 @@ class SageTinfoilProvider(LLMProvider):
             or "http://tinfoil-proxy:8089/v1"
         )
         self.api_key = get_config("LLM_API_KEY") or ""
-        self.default_model = get_config("LLM_MODEL") or "gemma4-31b"
+        self.default_model = get_config("LLM_MODEL") or "glm-5-2"
 
         self._init_client()
 

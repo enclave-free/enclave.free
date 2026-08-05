@@ -1,5 +1,9 @@
 # PRD: Reliable Curated Resource Contact Lookup and Attributable Conversation Latency
 
+Status: Partially superseded on 2026-08-04 by [Native Tool Calling Root Correction](2026-08-04-native-tool-calling-root-correction-prd.md) and [ADR-0029](../../adr/0029-native-tool-calling-with-one-tool-round.md).
+
+The Resource Directory query, exact/partial matching, ranking, pagination metadata, content-free timing, and safe transient read-only retry work remain valid. The contact-intent detector, required/forced Curated Resources lookup, expected-or-missed contact observations, typed Tool planner, plan correction and sanitization, post-Tool replanning, completeness prose guard, answer quarantine/retry, and deterministic Resource fallback are superseded and must not be used as current implementation guidance.
+
 ## Problem Statement
 
 Users can receive useful Curated Resource referrals in one turn and then lose
@@ -238,7 +242,7 @@ state-changing Tools.
 - A deterministic intent classifier that directly forces Tool execution or
   bypasses the Model-Driven Tool Loop.
 - Provider- or cluster-level failover, automatic degraded-run detection, routing
-  traffic to another Model Provider, or changing the configured model chain.
+  traffic to another Model Provider, or substituting another Conversation model.
 - A controlled normal-versus-degraded cluster experiment or statistically
   powered provider latency benchmark.
 - Claiming direct measurement of the Model Provider's internal queue or cluster

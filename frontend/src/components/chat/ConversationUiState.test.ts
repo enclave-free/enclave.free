@@ -153,7 +153,7 @@ describe('Conversation UI State', () => {
       status: 'succeeded',
       metadata: {
         phase: 'total_turn',
-        round: null,
+        step: null,
         attempt: 1,
         outcome: 'succeeded',
         duration_ms: 842,
@@ -164,12 +164,12 @@ describe('Conversation UI State', () => {
     const providerTimingDelta = {
       id: 'timing-provider-first-event-attempt-2',
       kind: 'timing' as const,
-      title: 'Final-answer provider first-event wait',
-      content: 'Final-answer provider first-event wait: 184 ms.',
+      title: 'Provider first-event wait',
+      content: 'Provider first-event wait: 184 ms (combined provider wait).',
       status: 'failed',
       metadata: {
-        phase: 'final_answer_first_provider_event_wait',
-        round: 2,
+        phase: 'provider_first_event_wait',
+        step: 1,
         attempt: 2,
         outcome: 'failed',
         duration_ms: 184,
@@ -207,7 +207,7 @@ describe('Conversation UI State', () => {
       ['timing-total-turn-1', 'total_turn', 1],
       [
         'timing-provider-first-event-attempt-2',
-        'final_answer_first_provider_event_wait',
+        'provider_first_event_wait',
         2,
       ],
     ]);

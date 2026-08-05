@@ -37,6 +37,7 @@ const TIMEOUT_PATTERNS = [/timed out/i, /timeout/i];
 
 const UNAVAILABLE_PATTERNS = [
   /model (?:does not exist|is unavailable)/i,
+  /model is temporarily unavailable/i,
   /provider (?:is )?unavailable/i,
   /service unavailable/i,
   /\b502\b/,

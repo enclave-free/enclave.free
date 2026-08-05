@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 is the current anchor for Conversation tool orchestration; ADR-0028 owns direct Admin Config write behavior.
+This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns native Tool-call orchestration, and ADR-0028 owns direct Admin Config write behavior.
 
 ## Review Ledger
 
@@ -10,7 +10,7 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | 0001 Sage owns Agent Runtime while Python retains Enclave Control Plane | Still valid; tool choice language is reinforced by ADR-0023.                                                      |
 | 0002 Privacy means operator control, not offline-only operation         | No change required.                                                                                               |
-| 0003 Model Providers must support encrypted verifiable inference        | No change required; ADR-0023 stays provider-portable and avoids provider-native tool coupling.                    |
+| 0003 Model Providers must support encrypted verifiable inference        | Still valid; ADR-0029 additionally requires the configured Conversation models to support native Tool calls.      |
 | 0004 Admin Conversations can apply confirmed control-plane changes      | Superseded for Admin Config writes by ADR-0028; it remains relevant to state-changing actions outside that boundary. |
 | 0005 User Reachout is outside Conversations                             | No change required.                                                                                               |
 | 0006 Retention and deletion are operator-controlled but incomplete      | No change required.                                                                                               |
@@ -30,5 +30,8 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0020 Use assistant-ui for the Conversation UI Surface                   | Updated so Knowledge is an explicit Tool control and Documents are Knowledge constraints.                         |
 | 0021 Signal is a Conversation Channel                                   | No change required.                                                                                               |
 | 0022 Bound Admin Database Streaming and Turn Timing                     | Superseded for future tool-loop work by ADR-0023.                                                                 |
-| 0023 Unified Model-Driven Tool Loop                                     | Anchor decision for Conversation tool orchestration; ADR-0028 supersedes its Admin Config proposal details.       |
-| 0024 Transparent Reasoning and Tool Trace Posture                       | New anchor decision for live and persisted reasoning/tool trace visibility.                                       |
+| 0023 Unified Model-Driven Tool Loop                                     | Still owns Tool boundaries; ADR-0029 supersedes typed planning and ADR-0028 supersedes Admin Config proposals.     |
+| 0024 Transparent Reasoning and Tool Trace Posture                       | Still owns live/persisted trace visibility; ADR-0029 supersedes raw reasoning with content-free lifecycle evidence. |
+| 0027 Separate Tool decisions from final answer delivery                 | Superseded by ADR-0029; retained as final-answer safety history.                                                    |
+| 0028 Sage owns direct Admin Config writes                               | Anchor decision for conversationally confirmed direct Admin Config writes.                                         |
+| 0029 Native Tool calling with one Tool round                            | Anchor decision for native Tool selection, one Tool batch, and direct no-Tool answers.                             |

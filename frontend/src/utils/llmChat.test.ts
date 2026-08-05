@@ -354,7 +354,7 @@ describe('sendLlmChatWithUnifiedTools', () => {
                 encoder.encode(
                   [
                     'event: trace_delta',
-                    'data: {"message_id":"msg_timing","trace_delta":{"id":"timing-1","kind":"timing","title":"Final-answer model duration","content":"Final-answer model duration: 842 ms.","status":"succeeded","metadata":{"phase":"final_answer_model_duration","attempt":2,"outcome":"succeeded","duration_ms":842,"provider_wait_proxy":false}}}',
+                    'data: {"message_id":"msg_timing","trace_delta":{"id":"timing-1","kind":"timing","title":"Model request","content":"Model request: 842 ms.","status":"succeeded","metadata":{"phase":"model_request","step":1,"attempt":2,"outcome":"succeeded","duration_ms":842,"provider_wait_proxy":false}}}',
                     '',
                     '',
                   ].join('\n')
@@ -382,7 +382,8 @@ describe('sendLlmChatWithUnifiedTools', () => {
         trace_delta: {
           kind: 'timing',
           metadata: {
-            phase: 'final_answer_model_duration',
+            phase: 'model_request',
+            step: 1,
             attempt: 2,
           },
         },
