@@ -50,3 +50,4 @@ Record PRs, revisions, deployed fingerprints, and live verification results here
 - Parent checks: 65 benchmark/harness tests and 3 production Compose-contract tests passed.
 - Local CodeRabbit: one minor suggestion rejected because suppressing `exhausted` after a scheduled retry would remove the terminal retry outcome required by the accepted trace contract.
 - PR CodeRabbit: one documentation clarification fixed in `0a06059`; incremental review requested.
+- Parent CI exposed newly published high-severity advisories on the unchanged staging lockfile. The lockfile was refreshed within existing compatible ranges to `nanoid` 3.3.18/5.1.16 and React Router 7.18.2; `npm audit`, all 389 frontend tests, and the production frontend build passed.
