@@ -6,6 +6,8 @@ stall. It also recorded two separate 180-second failures after provider progress
 and two answer-quality concerns; see the verification record for the exact
 release evidence and residuals.
 
+The provider-stall timing and model-attempt ceiling in this historical decision are superseded by [the August 8 provider first-event recovery decision](2026-08-08-provider-first-event-recovery-window-prd.md).
+
 Decision anchors: [ADR-0024](https://github.com/enclave-free/enclave.free/blob/staging/docs/adr/0024-transparent-reasoning-and-tool-trace-posture.md) and [ADR-0030](https://github.com/enclave-free/enclave.free/blob/staging/docs/adr/0030-bounded-native-tool-loop.md)
 
 Delivery issues: [#600](https://github.com/enclave-free/enclave.free/issues/600),

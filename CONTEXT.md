@@ -421,7 +421,7 @@ A content-free record of aggregate model input and output usage for one model re
 _Avoid_: prompt capture, answer capture, reasoning trace, billing subsystem, analytics product
 
 **Pre-Response Provider Stall**:
-A model request that remains completely silent beyond the product's bounded first-event wait. Because no answer, hidden reasoning event, or Tool call has arrived, Sage may abandon that attempt and repeat the same model request once without replaying a Tool.
+A model request that remains completely silent beyond the product's bounded first-event wait. Because no answer, hidden reasoning event, or Tool call has arrived, Sage may abandon that attempt and repeat the same model request within the bounded same-model recovery budget without replaying a Tool.
 _Avoid_: slow answer, long reasoning, Tool timeout, provider failover
 
 **Provider Continuity State**:
@@ -807,7 +807,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The transparent prototype posture intentionally avoids separate trace defaults for **Admin Conversations**, **User Conversations**, or **User Types**
 - The default **Conversation** trace posture should expose content-free model and Tool evidence for troubleshooting without publishing hidden reasoning
 - **Model Usage Observations** should remain sanitized **Conversation Trace** metadata, follow the associated **Conversation** retention and deletion lifecycle, and stay out of normal answer content
-- A **Pre-Response Provider Stall** may retry the identical model request once, but any provider event ends that retry opportunity and an executed **Tool** must never be replayed by model-request recovery
+- A **Pre-Response Provider Stall** may retry the identical model request within the shared three-attempt ceiling, but any provider event ends that attempt's retry opportunity and an executed **Tool** must never be replayed by model-request recovery
 - **Provider Continuity State** should return unchanged only to the same model within the current **Bounded Native Tool Loop** and should never be interpreted, streamed, logged, persisted, exported, or carried into a later **Conversation** turn
 - The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
 - **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase
