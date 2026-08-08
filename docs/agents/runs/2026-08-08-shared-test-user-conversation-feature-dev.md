@@ -23,9 +23,9 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 - Prototype source branch: None; source inspection and the existing shared modules resolve the seam without throwaway code.
 - Spec issue: #612 — https://github.com/enclave-free/enclave.free/issues/612
 - Tickets: #613 and #614, published in dependency order with `ready-for-agent`.
-- Ticket sessions: Pending.
+- Ticket sessions: Issue #613 session recorded in `2026-08-08-shared-test-user-conversation-issue-session-613.md`.
 - Agent briefs: Approved tickets are published directly as `ready-for-agent`.
-- Review packets: Pending.
+- Review packets: Issue #613 packet recorded in `2026-08-08-shared-test-user-conversation-review-613.md`.
 - Local CodeRabbit report: Pending.
 - PR URL: Pending.
 
@@ -63,7 +63,7 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #613 | `c00023241e8aaeeffe4677eca7db89e29b9c9f27` | Pending | Pending | Pending | Pending |
+| #613 | `722665ede5ce9ffef56b538e41425a3b0a10d1f2` | First full Codex worker session | Pending issue commit | Two unique P1 findings fixed; two-axis review passed | 60 targeted and 396 full-suite tests pass; production build passes; hook-only `GIT_INDEX_FILE` baseline defect recorded |
 
 ## Open questions
 
