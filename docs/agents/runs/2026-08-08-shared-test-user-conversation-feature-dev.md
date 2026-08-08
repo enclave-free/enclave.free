@@ -63,7 +63,7 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #613 | `722665ede5ce9ffef56b538e41425a3b0a10d1f2` | First full Codex worker session | Pending issue commit | Two unique P1 findings fixed; two-axis review passed | 60 targeted and 396 full-suite tests pass; production build passes; hook-only `GIT_INDEX_FILE` baseline defect recorded |
+| #613 | `722665ede5ce9ffef56b538e41425a3b0a10d1f2` | First full Codex worker session | `14e09e2346897fd6cb36dff5d8390f777cc6d156` | Two unique P1 findings fixed; two-axis review passed | 60 targeted and 396 full-suite tests pass; production build passes; hook-only `GIT_INDEX_FILE` baseline defect recorded |
 
 ## Open questions
 

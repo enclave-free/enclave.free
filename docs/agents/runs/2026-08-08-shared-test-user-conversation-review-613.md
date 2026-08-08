@@ -6,7 +6,7 @@
 - Slice type: AFK tracer bullet
 - Acceptance criteria: Extract one deep User Conversation execution/presentation module, migrate the ordinary logged-in User path, keep Admin Conversation behavior unchanged, and preserve current model/Tool/Retrieval/routing policy.
 - Baseline: `722665ede5ce9ffef56b538e41425a3b0a10d1f2`
-- Current diff: `git diff 722665e` (the ticket remains intentionally uncommitted until review passes)
+- Reviewed diff: working tree against `722665e`; accepted implementation commit `14e09e2346897fd6cb36dff5d8390f777cc6d156`
 
 ## Implementation Summary
 
