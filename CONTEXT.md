@@ -444,6 +444,10 @@ _Avoid_: Change Confirmation, Apply card, confirmation contract
 A **Conversation** between a **User** and **Sage** for assistance inside an **Instance**.
 _Avoid_: user query
 
+**Test User Session**:
+An Admin-initiated **User Conversation** performed as an approved synthetic **User** of a selected **User Type** so the **Admin** can exercise the real user-authorized **Conversation** path and save encrypted feedback evidence. It uses the same **Conversation UI State**, **Conversation Streaming Transport**, and **Conversation UI Surface** as an ordinary **User Conversation**; only identity setup and test-session capture belong to the surrounding Admin harness.
+_Avoid_: admin chat, preview chat, simplified test chat, separate test agent
+
 **Admin Conversation**:
 A **Conversation** between the **Admin** and **Sage** for configuring or operating an **Instance**.
 _Avoid_: admin query

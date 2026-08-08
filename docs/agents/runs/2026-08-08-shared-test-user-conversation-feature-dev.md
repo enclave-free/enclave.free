@@ -1,0 +1,74 @@
+# Shared Test User Conversation — feature ledger
+
+## Run
+
+- Run ID: 2026-08-08-shared-test-user-conversation
+- Loop: Feature Dev
+- Target repo: enclave-free/enclave.free
+- Base branch: `staging` at `c00023241e8aaeeffe4677eca7db89e29b9c9f27`
+- Feature branch: `feature/shared-test-user-conversation`
+- Human owner: Austin
+- Started: 2026-08-08
+- Current status: Ticket #613 implementation
+- Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files exist; GitHub, canonical triage labels, and multi-context domain guidance are configured.
+
+## Goal
+
+Make Admin Test User Sessions use the real User Conversation implementation inside a thin persona-and-feedback wrapper, delete the standalone chat client, and finish with a polished, reviewed, verified non-draft PR into `staging` that is ready for manual smoke testing.
+
+## Durable artifacts
+
+- CONTEXT updates: `Test User Session` added as a real synthetic-User Conversation, not a simplified test chat.
+- ADRs: ADR-0032, Test User Sessions Reuse the User Conversation Module.
+- Prototype source branch: None; source inspection and the existing shared modules resolve the seam without throwaway code.
+- Spec issue: #612 — https://github.com/enclave-free/enclave.free/issues/612
+- Tickets: #613 and #614, published in dependency order with `ready-for-agent`.
+- Ticket sessions: Pending.
+- Agent briefs: Approved tickets are published directly as `ready-for-agent`.
+- Review packets: Pending.
+- Local CodeRabbit report: Pending.
+- PR URL: Pending.
+
+## Commands
+
+- Install: `cd frontend && npm install`
+- Typecheck: `cd frontend && npm run build`
+- Test: `cd frontend && npm run test`
+- Build: `cd frontend && npm run build`
+- Visual verification: run the frontend against the local Compose stack; compare `/chat` as a logged-in User with `/admin/test-and-feedback` as the same User Type; verify live Activity, markdown, running state, reset, encrypted save, and Feedback review.
+
+## Alignment decisions
+
+- The backend actor, model, Tool defaults, Document Access, and Sage runtime path are already aligned; frontend ownership is the root correction.
+- One shared User Conversation module owns execution and presentation. Logged-in and synthetic-user contexts are two adapters at its seam.
+- The Admin harness owns persona selection and encrypted evidence capture, not a second message state machine.
+- Synthetic Users intentionally simulate a User Type with an otherwise blank User Profile.
+- Real User history and User Reachout side effects stay outside Test User Sessions.
+- The user confirmed the public testing seams and approved autonomous tracer-bullet granularity and blocking edges.
+
+## Ticket ledger
+
+| Issue | Type | Status | Review thread | Fixes needed | Verified |
+| --- | --- | --- | --- | --- | --- |
+| #613 Extract the shared User Conversation execution module | AFK | In progress | Architecture seam review required | Pending | No |
+| #614 Migrate Test User Sessions onto the shared module | AFK | Blocked by #613 | Standards/spec review required | Pending | No |
+
+## Parked HITL slices
+
+| Issue | Why parked | Blocks | Required human action | Final PR decision |
+| --- | --- | --- | --- | --- |
+| None | | | | |
+
+## Issue session ledger
+
+| Issue | Fixed point | Worker session | Commit | Review result | Checks |
+| --- | --- | --- | --- | --- | --- |
+| #613 | `c00023241e8aaeeffe4677eca7db89e29b9c9f27` | Pending | Pending | Pending | Pending |
+
+## Open questions
+
+- None.
+
+## Escalations
+
+- None.
