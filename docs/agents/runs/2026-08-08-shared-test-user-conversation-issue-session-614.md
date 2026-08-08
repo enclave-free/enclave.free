@@ -5,8 +5,8 @@
 - Issue: #614 — Migrate Test User Sessions onto the shared User Conversation module
 - Fixed point before session: `ad7afa874b7e6482294b3f580ea5bbc1363be87d`
 - Worker session: Second full Codex worker session in the validated Feature Dev pipeline
-- Commit: Pending issue commit
-- Status: Complete pending commit
+- Commit: `ba04e26950f041af5ddc5deb1df41b27b1e6319c`
+- Status: Complete
 
 ## Inputs
 
