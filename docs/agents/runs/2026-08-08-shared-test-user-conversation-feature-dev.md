@@ -9,7 +9,7 @@
 - Feature branch: `feature/shared-test-user-conversation`
 - Human owner: Austin
 - Started: 2026-08-08
-- Current status: Ticket #613 implementation
+- Current status: Ticket #614 complete pending issue commit
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files exist; GitHub, canonical triage labels, and multi-context domain guidance are configured.
 
 ## Goal
@@ -24,8 +24,10 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 - Spec issue: #612 — https://github.com/enclave-free/enclave.free/issues/612
 - Tickets: #613 and #614, published in dependency order with `ready-for-agent`.
 - Ticket sessions: Issue #613 session recorded in `2026-08-08-shared-test-user-conversation-issue-session-613.md`.
+- Ticket sessions: Issue #614 session recorded in `2026-08-08-shared-test-user-conversation-issue-session-614.md`.
 - Agent briefs: Approved tickets are published directly as `ready-for-agent`.
 - Review packets: Issue #613 packet recorded in `2026-08-08-shared-test-user-conversation-review-613.md`.
+- Review packets: Issue #614 packet recorded in `2026-08-08-shared-test-user-conversation-review-614.md`.
 - Local CodeRabbit report: Pending.
 - PR URL: Pending.
 
@@ -50,8 +52,8 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #613 Extract the shared User Conversation execution module | AFK | In progress | Architecture seam review required | Pending | No |
-| #614 Migrate Test User Sessions onto the shared module | AFK | Blocked by #613 | Standards/spec review required | Pending | No |
+| #613 Extract the shared User Conversation execution module | AFK | Complete | Architecture seam review completed | Two unique P1 findings fixed | Yes |
+| #614 Migrate Test User Sessions onto the shared module | AFK | Complete pending issue commit | Standards/spec review completed | Two spec coverage gaps fixed | Yes |
 
 ## Parked HITL slices
 
@@ -64,6 +66,7 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #613 | `722665ede5ce9ffef56b538e41425a3b0a10d1f2` | First full Codex worker session | `14e09e2346897fd6cb36dff5d8390f777cc6d156` | Two unique P1 findings fixed; two-axis review passed | 60 targeted and 396 full-suite tests pass; production build passes; hook-only `GIT_INDEX_FILE` baseline defect recorded |
+| #614 | `ad7afa874b7e6482294b3f580ea5bbc1363be87d` | Second full Codex worker session | Pending issue commit | Two spec coverage gaps fixed; final two-axis review passed | 30 final focused tests pass; 398-test full suite and production build pass; deterministic rendered-component verification passed; hook-only `GIT_INDEX_FILE` baseline defect recorded |
 
 ## Open questions
 
