@@ -8,13 +8,17 @@ Start with the current-state docs below. They are the files that describe the ac
 - [dumb-gateway-foundation.md](dumb-gateway-foundation.md): current branch goal, ownership split, and what "boring gateway" means in practice.
 - [prototype-sage-cutover.md](prototype-sage-cutover.md): shortest explanation of the Sage cutover, route ownership, and the Sage-to-Python contract.
 - [../ARCHITECTURE_CURRENT.md](../ARCHITECTURE_CURRENT.md): current service topology, request flow, and data ownership reference.
-- [tools.md](tools.md): unified model-driven Tool loop semantics.
+- [tools.md](tools.md): native model-driven Tool loop semantics.
 - [sessions.md](sessions.md): current auth, CSRF, Sage-backed public query-session records, and Session Memory behavior.
 - [admin-deployment-config.md](admin-deployment-config.md): current deployment config split across gateway, Python, Sage, and Tinfoil.
 - [internal-agent-contract.md](internal-agent-contract.md): private Sage-to-Python contract used by the prototype.
 - [adr/README.md](adr/README.md): ADR review ledger and current decision index.
-- [adr/0023-unified-model-driven-tool-loop.md](adr/0023-unified-model-driven-tool-loop.md): current anchor for Conversation Tool orchestration.
-- [adr/0024-transparent-reasoning-and-tool-trace-posture.md](adr/0024-transparent-reasoning-and-tool-trace-posture.md): current anchor for live and persisted reasoning/tool traces.
+- [adr/0023-unified-model-driven-tool-loop.md](adr/0023-unified-model-driven-tool-loop.md): current anchor for Tool ownership and Tool Set boundaries.
+- [adr/0029-native-tool-calling-with-one-tool-round.md](adr/0029-native-tool-calling-with-one-tool-round.md): current anchor for the provider-native Tool hard cut and model trust boundary.
+- [adr/0030-bounded-native-tool-loop.md](adr/0030-bounded-native-tool-loop.md): current anchor for the bounded six-batch native Tool loop and final-answer delivery.
+- [adr/0024-transparent-reasoning-and-tool-trace-posture.md](adr/0024-transparent-reasoning-and-tool-trace-posture.md): current anchor for live and persisted content-free model, Tool, Retrieval, retry, and timing traces.
+- [agents/runs/2026-08-05-provider-stall-continuity-latency-prd.md](agents/runs/2026-08-05-provider-stall-continuity-latency-prd.md): current implementation spec for silent provider-stall recovery, ephemeral Tool-loop continuity, and aggregate model usage observations.
+- [agents/runs/2026-08-05-provider-stall-continuity-latency-verification.md](agents/runs/2026-08-05-provider-stall-continuity-latency-verification.md): deterministic implementation evidence and the partial pre-change demo latency baseline for PRD #599.
 
 ## Core Product Docs
 

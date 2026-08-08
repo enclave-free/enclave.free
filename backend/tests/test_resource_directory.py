@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import importlib
 import os
+import sqlite3
 import sys
 import tempfile
 import types
 import unittest
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -26,15 +26,16 @@ class DummySentenceTransformer:
 class ResourceDirectoryTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self._orig_sqlite_path = os.environ.get("SQLITE_PATH")
-        self._orig_secret_key = os.environ.get("SECRET_KEY")
-        self._orig_uploads_dir = os.environ.get("UPLOADS_DIR")
-        self._orig_internal_token = os.environ.get("INTERNAL_AGENT_TOKEN")
-        self._orig_sentence_transformers = sys.modules.get("sentence_transformers")
+        self.db_path = Path(self.tmp.name) / "enclave.db"
+        self._original_env = {
+            name: os.environ.get(name)
+            for name in ("SQLITE_PATH", "SECRET_KEY", "UPLOADS_DIR", "INTERNAL_AGENT_TOKEN")
+        }
+        self._original_sentence_transformers = sys.modules.get("sentence_transformers")
         sys.modules["sentence_transformers"] = types.SimpleNamespace(
             SentenceTransformer=DummySentenceTransformer
         )
-        os.environ["SQLITE_PATH"] = str(Path(self.tmp.name) / "enclave.db")
+        os.environ["SQLITE_PATH"] = str(self.db_path)
         os.environ["SECRET_KEY"] = "test-secret"
         os.environ["UPLOADS_DIR"] = str(Path(self.tmp.name) / "uploads")
         os.environ["INTERNAL_AGENT_TOKEN"] = "test-internal-token"
@@ -45,7 +46,6 @@ class ResourceDirectoryTest(unittest.TestCase):
         self.database = importlib.reload(database)
         self.internal_agent = importlib.reload(internal_agent)
         self.database.init_schema()
-
         app = FastAPI()
         app.include_router(self.internal_agent.router)
         self.client = TestClient(app)
@@ -55,581 +55,505 @@ class ResourceDirectoryTest(unittest.TestCase):
         if self.database._connection is not None:
             self.database._connection.close()
             self.database._connection = None
-        self._restore_env("SQLITE_PATH", self._orig_sqlite_path)
-        self._restore_env("SECRET_KEY", self._orig_secret_key)
-        self._restore_env("UPLOADS_DIR", self._orig_uploads_dir)
-        self._restore_env("INTERNAL_AGENT_TOKEN", self._orig_internal_token)
-        self._restore_sentence_transformers()
-        self.tmp.cleanup()
-
-    @staticmethod
-    def _restore_env(name: str, value: str | None) -> None:
-        if value is None:
-            os.environ.pop(name, None)
-        else:
-            os.environ[name] = value
-
-    def _restore_sentence_transformers(self) -> None:
-        if self._orig_sentence_transformers is None:
+        for name, value in self._original_env.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        if self._original_sentence_transformers is None:
             sys.modules.pop("sentence_transformers", None)
         else:
-            sys.modules["sentence_transformers"] = self._orig_sentence_transformers
+            sys.modules["sentence_transformers"] = self._original_sentence_transformers
+        self.tmp.cleanup()
 
-    def _create_ready_resource(
+    def _create_ready(
         self,
         resource_id: str,
         *,
-        scope_level: str,
-        scope_code: str | None,
-        languages: list[str],
-        verified: bool,
+        kind: str = "organization",
+        tags: list[str] | None = None,
+        pointers: list[dict] | None = None,
+        regions: list[dict] | None = None,
+        languages: list[str] | None = None,
+        verified: bool = False,
         display_order: int = 0,
-    ) -> None:
-        self.database.create_resource(
+    ) -> dict:
+        return self.database.create_resource(
             resource_id=resource_id,
             name=resource_id.replace("-", " ").title(),
-            resource_type="ngo",
-            description="Referral resource for testing.",
-            contact={"url": f"https://{resource_id}.example"},
-            languages=languages,
-            scope_level=scope_level,
-            scope_code=scope_code,
-            help_types=["legal"],
-            verified_at="2026-01-01T00:00:00Z" if verified else None,
+            kind=kind,
+            description="A curated resource used for testing.",
+            tags=tags or ["legal"],
+            pointers=pointers
+            or [{"type": "url", "value": f"https://{resource_id}.example.test"}],
+            regions=regions or [{"level": "global", "code": None}],
+            languages=languages or ["en"],
+            provenance={
+                "verified_at": "2026-01-01T00:00:00Z" if verified else None,
+                "vetted_by": "Admin",
+            },
             display_order=display_order,
         )
 
-    def test_internal_resource_search_ranks_scope_before_verified_and_language(self) -> None:
-        self._create_ready_resource(
-            "global-spanish",
-            scope_level="global",
-            scope_code=None,
-            languages=["es"],
-            verified=True,
-        )
-        self._create_ready_resource(
-            "central-america-spanish",
-            scope_level="subregion",
-            scope_code="013",
-            languages=["es"],
-            verified=True,
-        )
-        self._create_ready_resource(
-            "nicaragua-spanish-unverified",
-            scope_level="country",
-            scope_code="NI",
-            languages=["es"],
-            verified=False,
-        )
-        self._create_ready_resource(
-            "nicaragua-english-verified",
-            scope_level="country",
-            scope_code="NI",
-            languages=["en"],
-            verified=True,
-        )
+    def _resource_schema(self) -> tuple[list[str], set[str]]:
+        with self.database.get_cursor() as cursor:
+            cursor.execute("PRAGMA table_info(resources)")
+            columns = [row["name"] for row in cursor.fetchall()]
+            cursor.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+            tables = {row["name"] for row in cursor.fetchall()}
+        return columns, tables
 
-        response = self.client.post(
-            "/internal/agent/resources/search",
-            headers=self.headers,
-            json={"help_type": "legal", "jurisdiction": "Nicaragua", "language": "es", "limit": 10},
-        )
+    def _replace_with_legacy_schema(self) -> None:
+        with self.database.get_cursor() as cursor:
+            cursor.execute("DROP TABLE resources")
+            cursor.execute(
+                """
+                CREATE TABLE resources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    resource_id TEXT UNIQUE NOT NULL,
+                    name TEXT,
+                    resource_type TEXT,
+                    description TEXT,
+                    contact TEXT,
+                    languages TEXT,
+                    scope_level TEXT,
+                    scope_code TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    verified_at TIMESTAMP,
+                    vetted_by TEXT,
+                    source_note TEXT,
+                    display_order INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE help_types (
+                    key TEXT PRIMARY KEY,
+                    label TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE resource_help_types (
+                    resource_id TEXT NOT NULL,
+                    help_type TEXT NOT NULL,
+                    PRIMARY KEY (resource_id, help_type)
+                )
+                """
+            )
+            cursor.execute("INSERT INTO help_types (key, label) VALUES ('legal', 'Legal')")
+            cursor.executemany(
+                """
+                INSERT INTO resources (
+                    resource_id, name, resource_type, description, contact, languages,
+                    scope_level, scope_code, status, verified_at, vetted_by, source_note,
+                    display_order
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        "legacy-ready",
+                        "Legacy Ready",
+                        "hotline",
+                        None,
+                        '{"phone":"+1 555 0100"}',
+                        '["en"]',
+                        "country",
+                        "US",
+                        "ready",
+                        "2026-01-01T00:00:00Z",
+                        "Admin",
+                        "Imported",
+                        3,
+                    ),
+                    (
+                        "legacy-pending",
+                        "Legacy Pending",
+                        "manual",
+                        "A complete but operator-held draft.",
+                        '{"url":"https://manual.example.test"}',
+                        '["es"]',
+                        "global",
+                        None,
+                        "pending",
+                        None,
+                        None,
+                        None,
+                        4,
+                    ),
+                ],
+            )
+            cursor.execute(
+                "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
+                ("legacy-ready", "legal"),
+            )
 
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["resolved_country_code"], "NI")
+    def test_fresh_database_uses_only_generic_resource_schema(self) -> None:
+        columns, tables = self._resource_schema()
+
         self.assertEqual(
-            [resource["resource_id"] for resource in body["resources"]],
+            columns,
             [
-                "nicaragua-english-verified",
-                "nicaragua-spanish-unverified",
-                "central-america-spanish",
-                "global-spanish",
+                "id",
+                "resource_id",
+                "name",
+                "description",
+                "languages",
+                "status",
+                "kind",
+                "tags",
+                "pointers",
+                "regions",
+                "provenance",
+                "display_order",
+                "created_at",
+                "updated_at",
             ],
         )
+        self.assertNotIn("help_types", tables)
+        self.assertNotIn("resource_help_types", tables)
 
-    def test_resource_search_language_sort_uses_bounded_candidate_window(self) -> None:
-        self._create_ready_resource(
-            "nicaragua-english-one",
-            scope_level="country",
-            scope_code="NI",
-            languages=["en"],
+    def test_legacy_migration_is_idempotent_preserves_data_and_contracts_schema(self) -> None:
+        self._replace_with_legacy_schema()
+
+        self.database._migrate_resources_to_generic_contract()
+        first = self.database.list_resources()
+        first_schema = self._resource_schema()
+        self.database._migrate_resources_to_generic_contract()
+        second = self.database.list_resources()
+        second_schema = self._resource_schema()
+
+        self.assertEqual(first, second)
+        self.assertEqual(first_schema, second_schema)
+        by_id = {resource["resource_id"]: resource for resource in first}
+        ready = by_id["legacy-ready"]
+        self.assertEqual(ready["kind"], "service")
+        self.assertEqual(ready["tags"], ["legacy_type:hotline", "legal"])
+        self.assertEqual(ready["pointers"], [{"type": "phone", "value": "+1 555 0100"}])
+        self.assertEqual(ready["regions"], [{"level": "country", "code": "US"}])
+        self.assertEqual(ready["provenance"]["vetted_by"], "Admin")
+        self.assertEqual(ready["status"], "ready")
+        self.assertEqual(ready["display_order"], 3)
+        self.assertEqual(by_id["legacy-pending"]["kind"], "reference")
+        self.assertEqual(by_id["legacy-pending"]["status"], "pending")
+        self.assertEqual(len(first), 2)
+        self.assertNotIn("resource_type", first_schema[0])
+        self.assertNotIn("help_types", first_schema[1])
+
+    def test_fresh_and_upgraded_databases_converge_on_active_schema(self) -> None:
+        fresh_schema = self._resource_schema()
+        self._replace_with_legacy_schema()
+
+        self.database._migrate_resources_to_generic_contract()
+
+        self.assertEqual(self._resource_schema(), fresh_schema)
+
+    def test_normal_sqlite_backup_preserves_pre_migration_state(self) -> None:
+        self._replace_with_legacy_schema()
+        backup_path = Path(self.tmp.name) / "pre-migration-backup.db"
+        source = self.database.get_connection()
+        backup = sqlite3.connect(backup_path)
+        source.backup(backup)
+        backup.close()
+
+        self.database._migrate_resources_to_generic_contract()
+
+        restored = sqlite3.connect(backup_path)
+        try:
+            columns = [row[1] for row in restored.execute("PRAGMA table_info(resources)")]
+            row = restored.execute(
+                "SELECT resource_type, contact, status FROM resources WHERE resource_id = ?",
+                ("legacy-ready",),
+            ).fetchone()
+        finally:
+            restored.close()
+        self.assertIn("resource_type", columns)
+        self.assertEqual(row, ("hotline", '{"phone":"+1 555 0100"}', "ready"))
+
+    def test_generic_readiness_and_archive_lifecycle(self) -> None:
+        pending = self.database.create_resource(
+            resource_id="pending",
+            name="Pending",
+            kind="reference",
+            description="Missing pointer.",
+            pointers=[{"type": "url", "value": "   "}],
+        )
+        ready = self._create_ready("ready")
+        archived = self.database.update_resource("ready", archived=True)
+
+        self.assertEqual(pending["status"], "pending")
+        self.assertEqual(pending["pointers"], [])
+        self.assertEqual(ready["status"], "ready")
+        self.assertEqual(archived["status"], "archived")
+        self.assertEqual(self.database.search_resources(limit=10), [])
+
+    def test_search_exact_pointer_filters_ranks_and_paginates(self) -> None:
+        self._create_ready(
+            "global-verified",
+            kind="reference",
+            tags=["bitcoin", "education"],
+            pointers=[{"type": "email", "value": "global@example.test"}],
             verified=True,
             display_order=0,
         )
-        self._create_ready_resource(
-            "nicaragua-english-two",
-            scope_level="country",
-            scope_code="NI",
-            languages=["en"],
-            verified=True,
-            display_order=1,
-        )
-        self._create_ready_resource(
-            "nicaragua-spanish-three",
-            scope_level="country",
-            scope_code="NI",
-            languages=["es"],
-            verified=True,
-            display_order=2,
-        )
-
-        resources = self.database.search_resources("NI", "legal", language="es", limit=2)
-
-        self.assertEqual(resources[0]["resource_id"], "nicaragua-spanish-three")
-        self.assertEqual(len(resources), 2)
-
-    def test_internal_resource_search_excludes_pending_resources(self) -> None:
-        self.database.create_resource(
-            resource_id="pending-legal",
-            name="Pending Legal",
-            resource_type="ngo",
-            scope_level="country",
-            scope_code="NI",
-            help_types=["legal"],
-        )
-        self._create_ready_resource(
-            "ready-legal",
-            scope_level="country",
-            scope_code="NI",
+        self._create_ready(
+            "us-unverified",
+            kind="reference",
+            tags=["bitcoin", "education"],
+            pointers=[{"type": "email", "value": "bitcoin@example.test"}],
+            regions=[{"level": "country", "code": "US"}],
             languages=["es"],
             verified=False,
+            display_order=1,
+        )
+        self._create_ready(
+            "ca-reference",
+            kind="reference",
+            tags=["bitcoin"],
+            regions=[{"level": "country", "code": "CA"}],
+        )
+
+        exact = self.database.search_resources(
+            region="US",
+            query="BITCOIN@EXAMPLE.TEST",
+            kind="reference",
+            tags=["bitcoin", "education"],
+            language="es",
+            limit=1,
+            return_metadata=True,
+        )
+        page = self.database.search_resources(
+            region="US",
+            kind="reference",
+            tags=["bitcoin"],
+            limit=1,
+            return_metadata=True,
+        )
+
+        self.assertEqual([item["resource_id"] for item in exact["resources"]], ["us-unverified"])
+        self.assertEqual(exact["total_count"], 1)
+        self.assertEqual([item["resource_id"] for item in page["resources"]], ["us-unverified"])
+        self.assertEqual(page["total_count"], 2)
+        self.assertTrue(page["has_more"])
+        self.assertEqual(page["next_offset"], 1)
+
+    def test_search_matches_name_acronyms_and_ranked_topic_terms(self) -> None:
+        self.database.create_resource(
+            resource_id="global-rights-alliance",
+            name="Global Rights Alliance",
+            kind="organization",
+            description=(
+                "Case visibility, support for families, and international campaigns. "
+                "A historical note mentions missing@globalrights.example."
+            ),
+            tags=["humanitarian"],
+            pointers=[
+                {"type": "email", "value": "info@globalrights.example"}
+            ],
+            regions=[{"level": "global", "code": None}],
+            languages=["en", "es"],
+        )
+        self.database.create_resource(
+            resource_id="global-rights-alliance-political-prisoners-support-team",
+            name="Global Rights Alliance - Political Prisoners Support Team",
+            kind="organization",
+            description=(
+                "Support for families of political prisoners, training, "
+                "resilience-building, and reintegration."
+            ),
+            tags=["humanitarian", "psychosocial"],
+            pointers=[
+                {"type": "email", "value": "support@globalrights.example"}
+            ],
+            regions=[{"level": "global", "code": None}],
+            languages=["en", "es"],
+        )
+        self.database.create_resource(
+            resource_id="aid-network",
+            name="Aid Network",
+            kind="organization",
+            description="A regional support network.",
+            tags=["humanitarian"],
+            pointers=[{"type": "url", "value": "https://aid-network.example.test"}],
+            regions=[{"level": "global", "code": None}],
+            languages=["en"],
+        )
+        self.database.create_resource(
+            resource_id="aid-community-organization",
+            name="Aid Community Organization",
+            kind="organization",
+            description="A community support organization.",
+            tags=["humanitarian"],
+            pointers=[{"type": "url", "value": "https://aid-community.example.test"}],
+            regions=[{"level": "global", "code": None}],
+            languages=["en"],
+        )
+
+        acronym = self.database.search_resources(
+            region="Bolivia",
+            query="GRA",
+            limit=10,
+            return_metadata=True,
+        )
+        dotted_acronym = self.database.search_resources(
+            region="Bolivia",
+            query="G.R.A.",
+            limit=10,
+            return_metadata=True,
+        )
+        topical = self.database.search_resources(
+            region="Bolivia",
+            query="family advocate political prisoner",
+            limit=10,
+            return_metadata=True,
+        )
+        repeated_term_miss = self.database.search_resources(
+            region="Bolivia",
+            query="support support astronomy",
+            limit=10,
+            return_metadata=True,
+        )
+        pointer_in_description_only = self.database.search_resources(
+            region="Bolivia",
+            query="missing@globalrights.example",
+            limit=10,
+            return_metadata=True,
+        )
+        stop_word_only = self.database.search_resources(
+            region="Bolivia",
+            query="for",
+            limit=10,
+            return_metadata=True,
+        )
+        stop_word_acronym = self.database.search_resources(
+            region="Bolivia",
+            query="AN",
+            limit=10,
+            return_metadata=True,
+        )
+        short_domain_collision = self.database.search_resources(
+            region="Bolivia",
+            query="a.co",
+            limit=10,
+            return_metadata=True,
+        )
+
+        self.assertEqual(
+            [resource["resource_id"] for resource in acronym["resources"]],
+            [
+                "global-rights-alliance",
+                "global-rights-alliance-political-prisoners-support-team",
+            ],
+        )
+        self.assertEqual(
+            [resource["resource_id"] for resource in dotted_acronym["resources"]],
+            [
+                "global-rights-alliance",
+                "global-rights-alliance-political-prisoners-support-team",
+            ],
+        )
+        self.assertEqual(
+            [resource["resource_id"] for resource in topical["resources"]],
+            ["global-rights-alliance-political-prisoners-support-team"],
+        )
+        self.assertEqual(repeated_term_miss["resources"], [])
+        self.assertEqual(pointer_in_description_only["resources"], [])
+        self.assertEqual(stop_word_only["resources"], [])
+        self.assertEqual(
+            [resource["resource_id"] for resource in stop_word_acronym["resources"]],
+            ["aid-network"],
+        )
+        self.assertEqual(short_domain_collision["resources"], [])
+
+    def test_search_normalizes_plural_terms_without_overstemming_ss_words(self) -> None:
+        self.database.create_resource(
+            resource_id="community-class",
+            name="Community Class",
+            kind="service",
+            description="A practical learning resource.",
+            tags=["address", "case"],
+            pointers=[{"type": "url", "value": "https://classes.example.test"}],
+            regions=[{"level": "global", "code": None}],
+            languages=["en"],
+        )
+
+        for query in ("community classes", "addresses", "cases", "services"):
+            with self.subTest(query=query):
+                page = self.database.search_resources(
+                    query=query,
+                    limit=10,
+                    return_metadata=True,
+                )
+                self.assertEqual(
+                    [resource["resource_id"] for resource in page["resources"]],
+                    ["community-class"],
+                )
+
+    def test_internal_search_returns_generic_contract_and_continuation(self) -> None:
+        self._create_ready(
+            "bitcoin-reference",
+            kind="reference",
+            tags=["bitcoin"],
+            pointers=[{"type": "email", "label": "Questions", "value": "bitcoin@example.test"}],
+            regions=[{"level": "country", "code": "US"}],
         )
 
         response = self.client.post(
             "/internal/agent/resources/search",
             headers=self.headers,
-            json={"help_type": "legal", "jurisdiction": "NI", "limit": 10},
+            json={
+                "query": "bitcoin@example.test",
+                "kind": "reference",
+                "tags": ["bitcoin"],
+                "region": "United States",
+                "limit": 10,
+            },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertEqual(body["resolved_country_code"], "US")
+        self.assertEqual(body["returned_count"], 1)
+        self.assertEqual(body["resources"][0]["kind"], "reference")
         self.assertEqual(
-            [resource["resource_id"] for resource in response.json()["resources"]],
-            ["ready-legal"],
+            body["resources"][0]["pointers"],
+            [{"type": "email", "label": "Questions", "value": "bitcoin@example.test"}],
         )
+        self.assertNotIn("help_type", body)
+        self.assertNotIn("contact", body["resources"][0])
 
-    def test_notes_contact_counts_as_ready_contact_method(self) -> None:
-        created = self.database.create_resource(
-            resource_id="notes-only-contact",
-            name="Notes Only Contact",
-            resource_type="ngo",
-            scope_level="global",
-            contact={"notes": "Contact through the encrypted intake desk."},
-            help_types=["legal"],
-            verified_at="2026-01-01T00:00:00Z",
-        )
+    def test_invalid_explicit_region_fails_closed(self) -> None:
+        self._create_ready("global")
 
-        self.assertEqual(created["status"], "ready")
-        self.assertEqual(created["missing_fields"], [])
-
-    def test_utc_timestamp_helper_returns_true_utc_z_timestamp(self) -> None:
-        timestamp = self.database.utc_timestamp_z()
-
-        self.assertTrue(timestamp.endswith("Z"))
-        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-        self.assertEqual(parsed.tzinfo, timezone.utc)
-
-    def test_internal_resource_search_requires_internal_token(self) -> None:
         response = self.client.post(
             "/internal/agent/resources/search",
-            json={"help_type": "legal", "jurisdiction": "NI"},
+            headers=self.headers,
+            json={"region": "not-a-real-region", "limit": 10},
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["detail"], "Unknown resource region")
+
+    def test_internal_search_requires_internal_token(self) -> None:
+        response = self.client.post(
+            "/internal/agent/resources/search",
+            json={"kind": "reference"},
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()["detail"], "Invalid internal agent token")
 
-    def test_internal_resource_search_blank_help_type_lists_ready_inventory(self) -> None:
-        self.database.create_resource(
-            resource_id="pending-inventory",
-            name="Pending Inventory",
-            resource_type="ngo",
-            scope_level="country",
-            scope_code="NI",
-            help_types=["legal"],
-        )
-        self._create_ready_resource(
-            "ready-inventory",
-            scope_level="country",
-            scope_code="NI",
-            languages=["es"],
-            verified=True,
-        )
-
-        response = self.client.post(
-            "/internal/agent/resources/search",
-            headers=self.headers,
-            json={"help_type": "   ", "limit": 10},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertIsNone(body["help_type"])
-        self.assertIsNone(body["resolved_country_code"])
-        self.assertEqual(
-            [resource["resource_id"] for resource in body["resources"]],
-            ["ready-inventory"],
-        )
-
-    def test_internal_resource_search_supports_precise_query_and_bounded_metadata(self) -> None:
-        self.database.create_resource(
-            resource_id="alpha-legal",
-            name="Alpha Legal Network",
-            resource_type="ngo",
-            description="Immigration and asylum support.",
-            contact={"email": "help@alpha.example", "phone": "+1 (555) 0100"},
-            scope_level="global",
-            help_types=["legal"],
-            verified_at="2026-01-01T00:00:00Z",
-        )
-        self.database.create_resource(
-            resource_id="beta-legal",
-            name="Beta Legal Network",
-            resource_type="ngo",
-            description="General legal support.",
-            contact={"email": "contact@beta.example"},
-            scope_level="global",
-            help_types=["legal"],
-            verified_at="2026-01-01T00:00:00Z",
-        )
-
-        response = self.client.post(
-            "/internal/agent/resources/search",
-            headers=self.headers,
-            json={"query": "HELP@ALPHA.EXAMPLE", "help_type": "legal", "limit": 1},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["query"], "help@alpha.example")
-        self.assertEqual(body["total_count"], 1)
-        self.assertEqual(body["returned_count"], 1)
-        self.assertEqual(body["limit"], 1)
-        self.assertEqual(body["offset"], 0)
-        self.assertFalse(body["has_more"])
-        self.assertIsNone(body["next_offset"])
-        self.assertEqual([r["resource_id"] for r in body["resources"]], ["alpha-legal"])
-
-    def test_internal_resource_search_reports_partial_page_and_excludes_archived_from_total(self) -> None:
-        for resource_id, archived in (("page-one", False), ("page-two", False), ("page-archived", True)):
-            self.database.create_resource(
-                resource_id=resource_id,
-                name=resource_id.replace("-", " ").title(),
-                resource_type="ngo",
-                contact={"url": f"https://{resource_id}.example"},
-                scope_level="global",
-                help_types=["legal"],
-                verified_at="2026-01-01T00:00:00Z",
-                archived=archived,
-            )
-
-        response = self.client.post(
-            "/internal/agent/resources/search",
-            headers=self.headers,
-            json={"help_type": "legal", "limit": 1, "offset": 1},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["total_count"], 2)
-        self.assertEqual(body["returned_count"], 1)
-        self.assertEqual(body["offset"], 1)
-        self.assertTrue(body["has_more"] is False)
-        self.assertIsNone(body["next_offset"])
-        self.assertEqual([r["resource_id"] for r in body["resources"]], ["page-two"])
-
-    def test_internal_resource_search_matches_normalized_ids_contacts_and_partial_text(self) -> None:
-        self.database.create_resource(
-            resource_id="precise-resource",
-            name="Precise Resource",
-            resource_type="ngo",
-            description="Specialized legal intake desk.",
-            contact={
-                "email": "Help@Precise.example",
-                "phone": "+1 (555) 010-2000",
-                "url": "https://precise.example/contact",
-                "secure_channel": "Signal: precise-help",
-                "address": "200 Main Street",
-            },
-            scope_level="global",
-            help_types=["legal"],
-            verified_at="2026-01-01T00:00:00Z",
-        )
-        for query in (
-            "PRECISE-RESOURCE",
-            "precise resource",
-            "+1 555 010 2000",
-            "555-010-2",
-            "HTTPS://PRECISE.EXAMPLE/CONTACT",
-            "signal: precise-help",
-            "200 main street",
-            "specialized legal",
-        ):
+    def test_internal_search_rejects_removed_legacy_filters(self) -> None:
+        for field, value in (("help_type", "legal"), ("jurisdiction", "US")):
             response = self.client.post(
                 "/internal/agent/resources/search",
                 headers=self.headers,
-                json={"query": query, "help_type": "legal", "limit": 5},
+                json={field: value},
             )
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual([r["resource_id"] for r in response.json()["resources"]], ["precise-resource"])
-
-    def test_internal_resource_search_trims_help_type_and_bounds_limit(self) -> None:
-        original = self.database.search_resources
-        captured: dict[str, object] = {}
-
-        def fake_search_resources(**kwargs: object) -> dict[str, object]:
-            captured.update(kwargs)
-            return {
-                "resources": [],
-                "total_count": 0,
-                "returned_count": 0,
-                "has_more": False,
-                "next_offset": None,
-            }
-
-        self.database.search_resources = fake_search_resources
-        try:
-            response = self.client.post(
-                "/internal/agent/resources/search",
-                headers=self.headers,
-                json={"help_type": " legal ", "jurisdiction": "NI", "limit": 999},
-            )
-        finally:
-            self.database.search_resources = original
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(captured["help_type"], "legal")
-        self.assertEqual(captured["limit"], self.internal_agent.MAX_RESOURCE_SEARCH_LIMIT)
-
-        self.database.search_resources = fake_search_resources
-        try:
-            response = self.client.post(
-                "/internal/agent/resources/search",
-                headers=self.headers,
-                json={"help_type": "legal", "jurisdiction": "NI", "limit": 0},
-            )
-        finally:
-            self.database.search_resources = original
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(captured["limit"], 0)
-
-    def test_resource_scope_validation_rejects_unknown_country_on_create_and_update(self) -> None:
-        with self.assertRaises(ValueError):
-            self.database.create_resource(
-                resource_id="bad-country-create",
-                name="Bad Country Create",
-                resource_type="ngo",
-                scope_level="country",
-                scope_code="ZZ",
-                contact={"url": "https://bad-country-create.example"},
-                help_types=["legal"],
-            )
-
-        self._create_ready_resource(
-            "valid-country",
-            scope_level="global",
-            scope_code=None,
-            languages=["en"],
-            verified=True,
-        )
-
-        with self.assertRaises(ValueError):
-            self.database.update_resource(
-                "valid-country",
-                scope_level="country",
-                scope_code="ZZ",
-            )
-
-        self.assertEqual(
-            self.database.get_resource("valid-country")["scope_level"],
-            "global",
-        )
-
-    def test_resource_create_normalizes_blank_resource_id_to_name_only(self) -> None:
-        from models import ResourceCreate
-
-        resource = ResourceCreate(resource_id="   ", name="Named Resource")
-
-        self.assertIsNone(resource.resource_id)
-
-    def test_region_data_accepts_western_europe_microstates(self) -> None:
-        import region_data
-
-        self.assertTrue(region_data.is_valid_scope("country", "LI"))
-        self.assertTrue(region_data.is_valid_scope("country", "MC"))
-
-    def test_global_scope_rejects_scope_code(self) -> None:
-        import region_data
-
-        self.assertTrue(region_data.is_valid_scope("global", None))
-        self.assertTrue(region_data.is_valid_scope("global", ""))
-        self.assertFalse(region_data.is_valid_scope("global", "US"))
-
-    def test_resource_help_types_enforces_help_type_vocabulary_fk(self) -> None:
-        self._create_ready_resource(
-            "fk-resource",
-            scope_level="global",
-            scope_code=None,
-            languages=["en"],
-            verified=True,
-        )
-
-        with self.database.get_cursor() as cursor:
-            cursor.execute("PRAGMA foreign_key_list(resource_help_types)")
-            foreign_keys = cursor.fetchall()
-
-        self.assertTrue(
-            any(row["table"] == "help_types" and row["from"] == "help_type" for row in foreign_keys)
-        )
-        with self.assertRaises(self.database.sqlite3.IntegrityError):
-            with self.database.get_cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
-                    ("fk-resource", "not-in-vocabulary"),
-                )
-
-    def test_resource_help_types_migration_drops_unknown_help_types(self) -> None:
-        self._create_ready_resource(
-            "migration-resource",
-            scope_level="global",
-            scope_code=None,
-            languages=["en"],
-            verified=True,
-        )
-        conn = self.database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DROP TABLE resource_help_types")
-        cursor.execute("""
-            CREATE TABLE resource_help_types (
-                resource_id TEXT NOT NULL,
-                help_type TEXT NOT NULL,
-                PRIMARY KEY (resource_id, help_type),
-                FOREIGN KEY (resource_id) REFERENCES resources(resource_id) ON DELETE CASCADE
-            )
-        """)
-        cursor.execute(
-            "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
-            ("migration-resource", "legal"),
-        )
-        cursor.execute(
-            "INSERT INTO resource_help_types (resource_id, help_type) VALUES (?, ?)",
-            ("migration-resource", "ghost-help-type"),
-        )
-        conn.commit()
-        cursor.close()
-
-        self.database.init_schema()
-
-        with self.database.get_cursor() as cursor:
-            cursor.execute(
-                "SELECT help_type FROM resource_help_types WHERE resource_id = ? ORDER BY help_type",
-                ("migration-resource",),
-            )
-            help_types = [row["help_type"] for row in cursor.fetchall()]
-            cursor.execute("PRAGMA foreign_key_list(resource_help_types)")
-            foreign_keys = cursor.fetchall()
-
-        self.assertEqual(help_types, ["legal"])
-        self.assertTrue(any(row["table"] == "help_types" for row in foreign_keys))
-
-    def test_search_resources_applies_sql_level_limit(self) -> None:
-        for index in range(3):
-            self._create_ready_resource(
-                f"limited-resource-{index}",
-                scope_level="country",
-                scope_code="NI",
-                languages=["en"],
-                verified=True,
-                display_order=index,
-            )
-
-        statements: list[str] = []
-        conn = self.database.get_connection()
-        conn.set_trace_callback(statements.append)
-        try:
-            resources = self.database.search_resources("NI", "legal", limit=2)
-        finally:
-            conn.set_trace_callback(None)
-
-        self.assertEqual(len(resources), 2)
-        self.assertTrue(
-            any(
-                "FROM resources" in statement
-                and "JOIN resource_help_types" in statement
-                and "LIMIT 2" in statement
-                for statement in statements
-            )
-        )
-
-    def test_delete_help_type_recomputes_resource_status_after_cascade(self) -> None:
-        self.database.upsert_help_type(
-            key="transport",
-            label="Transport",
-            description="Travel support",
-        )
-        created = self.database.create_resource(
-            resource_id="transport-ready",
-            name="Transport Ready",
-            resource_type="ngo",
-            scope_level="global",
-            contact={"url": "https://transport.example"},
-            help_types=["transport"],
-            verified_at="2026-01-01T00:00:00Z",
-        )
-        self.assertEqual(created["status"], "ready")
-
-        self.assertTrue(self.database.delete_help_type("transport"))
-
-        updated = self.database.get_resource("transport-ready")
-        self.assertEqual(updated["help_types"], [])
-        self.assertEqual(updated["status"], "pending")
-
-    def test_jurisdiction_prefix_accepts_iso_code(self) -> None:
-        self.assertEqual(
-            self.database.normalize_jurisdiction("jurisdiction:NI"),
-            "NI",
-        )
-
-    def test_resource_search_normalizes_country_names_aliases_and_whitespace(self) -> None:
-        cases = (
-            ("mexico-legal", "MX", "México", "es"),
-            (
-                "united-arab-emirates-legal",
-                "AE",
-                "  United   Arab   Emirates  ",
-                "en",
-            ),
-            ("turkey-legal", "TR", "TÜRKİYE", "tr"),
-        )
-        for resource_id, country_code, jurisdiction, language in cases:
-            self._create_ready_resource(
-                resource_id,
-                scope_level="country",
-                scope_code=country_code,
-                languages=[language],
-                verified=True,
-            )
-
-        for resource_id, country_code, jurisdiction, language in cases:
-            with self.subTest(jurisdiction=jurisdiction):
-                response = self.client.post(
-                    "/internal/agent/resources/search",
-                    headers=self.headers,
-                    json={
-                        "query": resource_id.replace("-", " ").title(),
-                        "help_type": "legal",
-                        "jurisdiction": jurisdiction,
-                        "language": language,
-                    },
-                )
-
-                self.assertEqual(response.status_code, 200)
-                body = response.json()
-                self.assertEqual(body["resolved_country_code"], country_code)
-                self.assertEqual(
-                    [resource["resource_id"] for resource in body["resources"]],
-                    [resource_id],
-                )
+            self.assertEqual(response.status_code, 422, (field, response.text))
 
 
 if __name__ == "__main__":

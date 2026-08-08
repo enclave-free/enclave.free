@@ -11,15 +11,14 @@ describe('Sage Stream Event Adapter', () => {
             id: 'tool-selection-1',
             kind: 'tool_selection_observation',
             title: 'Tool Selection',
-            content: 'Curated Resources was expected but not selected.',
-            status: 'failed',
+            content: 'No Tools were selected.',
+            status: 'succeeded',
             metadata: {
-              round: 1,
+              step: 0,
               enabled_tools: ['find_resources'],
               selected_tools: [],
               selection_count: 0,
-              expected_curated_resources: true,
-              missed_expected_curated_resources: true,
+              outcome: 'none',
             },
           },
         },
@@ -29,10 +28,10 @@ describe('Sage Stream Event Adapter', () => {
       type: 'assistantTraceDeltaReceived',
       traceDelta: {
         kind: 'tool_selection_observation',
-        status: 'failed',
+        status: 'succeeded',
         metadata: {
           selection_count: 0,
-          missed_expected_curated_resources: true,
+          outcome: 'none',
         },
       },
     });
@@ -98,13 +97,13 @@ describe('Sage Stream Event Adapter', () => {
           trace_delta: {
             id: 'timing-final-provider-1',
             kind: 'timing',
-            title: 'Final-answer provider first-event wait',
+            title: 'Provider first-event wait',
             content:
-              'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+              'Provider first-event wait: 184 ms (combined provider wait).',
             status: 'succeeded',
             metadata: {
-              phase: 'final_answer_first_provider_event_wait',
-              round: 2,
+              phase: 'provider_first_event_wait',
+              step: 1,
               attempt: 1,
               outcome: 'succeeded',
               duration_ms: 184,
@@ -122,13 +121,13 @@ describe('Sage Stream Event Adapter', () => {
       traceDelta: {
         id: 'timing-final-provider-1',
         kind: 'timing',
-        title: 'Final-answer provider first-event wait',
+        title: 'Provider first-event wait',
         content:
-          'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+          'Provider first-event wait: 184 ms (combined provider wait).',
         status: 'succeeded',
         metadata: {
-          phase: 'final_answer_first_provider_event_wait',
-          round: 2,
+          phase: 'provider_first_event_wait',
+          step: 1,
           attempt: 1,
           outcome: 'succeeded',
           duration_ms: 184,

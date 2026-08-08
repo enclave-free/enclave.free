@@ -119,56 +119,70 @@ def seed_qdrant(client):
     print("Qdrant seeding complete!")
 
 
-# A few example resources so the path is demonstrable end-to-end. These intentionally span
-# the scope hierarchy (country -> subregion -> global) to show specificity ranking.
+# A few generic example resources so the path is demonstrable end-to-end. These
+# intentionally span the region hierarchy to show specificity ranking.
 EXAMPLE_RESOURCES = [
     {
         "resource_id": "example-ni-detention-lawyer",
         "name": "Nicaragua Detention Defense (example)",
-        "resource_type": "lawyer",
+        "kind": "person",
         "description": "In-country lawyer handling arbitrary-detention and habeas cases.",
-        "contact": {"email": "contact@example.org", "secure_channel": "Signal: +505-000-0000"},
+        "pointers": [
+            {"type": "email", "value": "contact@example.org"},
+            {"type": "secure_channel", "value": "Signal: +505-000-0000"},
+        ],
         "languages": ["es"],
-        "scope_level": "country",
-        "scope_code": "NI",
-        "help_types": ["legal"],
-        "vetted_by": "seed",
-        "source_note": "Example seed data — replace with vetted entries.",
+        "regions": [{"level": "country", "code": "NI"}],
+        "tags": ["legal"],
+        "provenance": {
+            "vetted_by": "seed",
+            "source_note": "Example seed data — replace with vetted entries.",
+        },
     },
     {
         "resource_id": "example-centralamerica-hr-lawyer",
         "name": "Central America Human Rights Counsel (example)",
-        "resource_type": "ngo",
+        "kind": "organization",
         "description": "Spanish-speaking human-rights legal network across Central America.",
-        "contact": {"url": "https://example.org", "email": "info@example.org"},
+        "pointers": [
+            {"type": "url", "value": "https://example.org"},
+            {"type": "email", "value": "info@example.org"},
+        ],
         "languages": ["es", "en"],
-        "scope_level": "subregion",
-        "scope_code": "013",
-        "help_types": ["legal", "humanitarian"],
-        "vetted_by": "seed",
-        "source_note": "Example seed data — replace with vetted entries.",
+        "regions": [{"level": "subregion", "code": "013"}],
+        "tags": ["legal", "humanitarian"],
+        "provenance": {
+            "vetted_by": "seed",
+            "source_note": "Example seed data — replace with vetted entries.",
+        },
     },
     {
         "resource_id": "example-un-enforced-disappearances",
         "name": "UN Committee on Enforced Disappearances (example)",
-        "resource_type": "un_body",
+        "kind": "organization",
         "description": "UN mechanism receiving urgent actions on disappeared and forcibly conscripted persons.",
-        "contact": {"url": "https://www.ohchr.org"},
+        "pointers": [{"type": "url", "value": "https://www.ohchr.org"}],
         "languages": ["en", "fr", "es", "ar"],
-        "scope_level": "global",
-        "scope_code": None,
-        "help_types": ["humanitarian"],
-        "vetted_by": "seed",
-        "source_note": "Example seed data — replace with vetted entries.",
+        "regions": [{"level": "global", "code": None}],
+        "tags": ["humanitarian", "un-body"],
+        "provenance": {
+            "vetted_by": "seed",
+            "source_note": "Example seed data — replace with vetted entries.",
+        },
     },
 ]
 
 
 def seed_resource_directory() -> None:
-    """Seed example resources (region map + core help types are seeded by init_schema)."""
+    """Seed example resources after the generic schema is initialized."""
     for resource in EXAMPLE_RESOURCES:
         if database.get_resource(resource["resource_id"]) is None:
-            database.create_resource(verified_at=database.utc_timestamp_z(), **resource)
+            payload = dict(resource)
+            payload["provenance"] = {
+                **payload.get("provenance", {}),
+                "verified_at": database.utc_timestamp_z(),
+            }
+            database.create_resource(**payload)
     print("  Example resources seeded")
 
 

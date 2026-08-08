@@ -51,7 +51,7 @@ Recommended current values in admin deployment config:
 
 - `LLM_PROVIDER=sage`
 - `LLM_API_URL=http://tinfoil-proxy:8089/v1`
-- `LLM_MODEL=gemma4-31b`
+- `LLM_MODEL=glm-5-2`
 - `LLM_API_KEY=<tinfoil key>`
 
 These deployment keys are the canonical operator-facing Model Provider configuration. What they affect today:

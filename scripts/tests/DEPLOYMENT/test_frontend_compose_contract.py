@@ -25,6 +25,8 @@ def render_compose(*files: str) -> dict[str, object]:
     command.extend(("config", "--format", "json"))
 
     environment = os.environ.copy()
+    environment.pop("TINFOIL_MODEL", None)
+    environment.pop("TINFOIL_MODEL_FALLBACKS", None)
     environment.setdefault("LLM_API_KEY", "compose-contract-test")
     environment.setdefault("INTERNAL_AGENT_TOKEN", "compose-contract-test")
     environment.setdefault(
@@ -50,6 +52,23 @@ def frontend_service(config: dict[str, object]) -> dict[str, object]:
 
 
 class FrontendComposeContractTests(unittest.TestCase):
+    def test_conversations_use_one_glm_model_without_fallback_configuration(self) -> None:
+        config = render_compose(*BASE_COMPOSE_FILES)
+        services = config["services"]
+        assert isinstance(services, dict)
+        sage = services["sage"]
+        backend = services["core-backend"]
+        assert isinstance(sage, dict)
+        assert isinstance(backend, dict)
+
+        sage_environment = sage["environment"]
+        backend_environment = backend["environment"]
+        assert isinstance(sage_environment, dict)
+        assert isinstance(backend_environment, dict)
+        self.assertEqual(sage_environment["TINFOIL_MODEL"], "glm-5-2")
+        self.assertNotIn("TINFOIL_MODEL_FALLBACKS", sage_environment)
+        self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-2")
+
     def test_default_topology_is_the_production_frontend(self) -> None:
         frontend = frontend_service(render_compose(*BASE_COMPOSE_FILES))
 

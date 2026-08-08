@@ -4,7 +4,7 @@
 
 import type { TFunction } from 'i18next';
 
-export const DEFAULT_TINFOIL_MODEL = 'gemma4-31b';
+export const DEFAULT_TINFOIL_MODEL = 'glm-5-2';
 export const TINFOIL_SIGNUP_URL = 'https://tinfoil.sh';
 
 // --- Agent Settings Types ---

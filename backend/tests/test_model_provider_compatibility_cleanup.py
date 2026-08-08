@@ -23,6 +23,7 @@ class ModelProviderCompatibilityCleanupTest(unittest.TestCase):
                 "LLM_API_URL",
                 "LLM_MODEL",
                 "LLM_API_KEY",
+                "TINFOIL_MODEL_FALLBACKS",
                 "MAPLE_BASE_URL",
                 "MAPLE_MODEL",
                 "MAPLE_API_KEY",
@@ -79,6 +80,16 @@ class ModelProviderCompatibilityCleanupTest(unittest.TestCase):
         provider = SageTinfoilProvider()
 
         self.assertEqual(provider.api_key, "env-only-key")
+
+    def test_provider_defaults_to_glm_without_a_fallback_model_contract(self) -> None:
+        os.environ["TINFOIL_MODEL_FALLBACKS"] = "gpt-oss-120b"
+
+        from llm.sage_tinfoil import SageTinfoilProvider
+
+        provider = SageTinfoilProvider()
+
+        self.assertEqual(provider.default_model, "glm-5-2")
+        self.assertFalse(hasattr(provider, "fallback_models"))
 
     def test_maple_provider_label_is_not_coerced_to_sage(self) -> None:
         os.environ["LLM_PROVIDER"] = "maple"

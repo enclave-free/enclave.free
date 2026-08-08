@@ -44,7 +44,6 @@ interface RAGResponse {
   session_id: string
   sources: RAGSource[]
   graph_context: Record<string, string[]>
-  clarifying_questions: string[]
   search_term: string | null
   context_used: string
   temperature: number
@@ -1463,18 +1462,6 @@ export function TestDashboard() {
                   Session: {ragResult.session_id?.slice(0, 8)}{t('testDashboard.extracted.temp_b27bd5', '... | Temp:')} {ragResult.temperature}
                 </p>
               </div>
-
-              {/* Clarifying Questions */}
-              {ragResult.clarifying_questions?.length > 0 && (
-                <div className="bg-warning-subtle border border-warning/20 rounded-lg p-4">
-                  <p className="font-medium text-warning mb-2">{t('testDashboard.extracted.clarifying_questions_8a371e', 'Clarifying Questions:')}</p>
-                  <ul className="list-disc list-inside text-text-secondary">
-                    {ragResult.clarifying_questions.map((q, i) => (
-                      <li key={i}>{q}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
               {/* Sources */}
               {ragResult.sources?.length > 0 && (

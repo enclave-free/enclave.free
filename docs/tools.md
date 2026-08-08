@@ -1,10 +1,10 @@
 # Agent Runtime Tool Semantics
 
-This document describes the accepted Tool behavior for the Sage hard-cut prototype after [ADR-0023](adr/0023-unified-model-driven-tool-loop.md).
+This document describes the accepted Tool behavior for the Sage hard-cut prototype after [ADR-0023](adr/0023-unified-model-driven-tool-loop.md), [ADR-0029](adr/0029-native-tool-calling-with-one-tool-round.md), and [ADR-0030](adr/0030-bounded-native-tool-loop.md).
 
 ## Core Rule
 
-Sage owns one model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete Tool contracts, gives the contracts to the model, executes authorized model-chosen Tool calls, injects Tool results, emits Activity and Conversation Trace metadata, and continues until the model can answer or complete the authorized work.
+Sage owns a bounded native model-driven Tool loop for Conversations. The browser sends the user message, selected Tool Sets, and optional Tool constraints. Sage expands those selected Tool Sets into concrete native Tool contracts. The model may answer directly or select a Tool batch. Sage executes an authorized batch, injects all successful, failed, rejected, guarded, or timed-out Tool results, and returns the same enabled Tool contracts to the same model. The model may continue within a six-batch safety ceiling. If the model selects a seventh batch, Sage rejects it before execution, returns a correlated `tool_budget_exhausted` result for every unexecuted call, and makes one final request to the same model with Tools disabled. Sage emits Activity and Conversation Trace metadata throughout the loop.
 
 Python no longer owns or exposes public Agent Runtime routes. Direct Python calls are unsupported because public Agent Runtime routes are absent from the Enclave Control Plane; public callers use the Gateway path so nginx dispatches requests to Sage. Python remains the Enclave Control Plane behind private/internal contracts for authorized facts and actions such as safe database reads, document search, user profile context, lifecycle operations, and product-level admin configuration reads and writes.
 
@@ -61,11 +61,13 @@ Tool Sets are conversation controls and permission bundles. They are visible con
 | `admin-config`      | admins only                                   | product-level admin configuration read and direct-write Tools |
 | `db-query`          | admins only                                   | read-only database inspection Tools                           |
 
-Enabled does not mean forced. Enabled means the model is allowed and encouraged to call the Tool when it improves the answer. If an enabled Tool can answer a factual, configuration, data, availability, setup, or freshness question better than guessing, Sage should call it instead of asking the user to check manually.
+Enabled does not mean forced. Enabled means the model may call the Tool when it improves the answer. Tool descriptions and Agent Settings guide that choice; Sage does not use a hidden intent classifier to force or reject an otherwise valid model-selected Tool batch.
 
 ## Knowledge Search
 
 `knowledge-search` is a first-class visible Tool Set, not a hidden retrieval mode. Selected Documents are constraints on `knowledge_search`, not silent Required Context for ordinary chat.
+
+Its Tool description is a concise capability contract: it searches uploaded Documents, Documents may have different languages or titles than the user's question, and the model may select multiple Knowledge Search calls in a Tool batch when alternate queries would help. The contract does not contain WLC-specific vocabulary or deterministic query rewriting.
 
 Sage passes allowed document constraints to the Knowledge Tool. Python enforces Document Access and hydrates retrieved chunks from product-owned storage after vector search. Retrieved chunks enter the Conversation as Tool results and Activity/Trace metadata under the transparent trace posture in ADR-0024.
 
@@ -75,7 +77,9 @@ Required Context remains a separate product-policy term for future mandatory con
 
 `curated-resources` is a first-class visible Tool Set for the admin-curated Resource Directory. It is separate from `knowledge-search`: Resources are structured, priority referrals stored in SQLite by admins; Knowledge is uploaded document retrieval through embeddings and document access policy.
 
-Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns vetted organizations, contacts, coverage, help types, and languages. The Tool accepts an optional organization/contact `query` and continuation `offset`; output includes the filtered total, returned page count, and `has_more`/`next_offset` metadata. Operators may enable it as a User Conversation default when they want Sage to recommend known priority resources before guessing, searching the web, or asking the user to check manually. When this Tool Set is enabled and a user asks what resources are available or asks to list resources, Sage should call `find_resources` without a `help_type` so it lists ready curated resources from the live Resource Directory instead of describing the tool catalog. For a current contact request or follow-up (email, phone, website/URL, address, secure channel, or equivalent), Sage must make a fresh call when enabled and use only the returned contact data. A bounded page must not be described as all/every/complete when `has_more` is true or completeness is unknown; completeness claims stay scoped to matching ready resources and supplied filters when `has_more` is false.
+Sage exposes this Tool Set as `find_resources`. The Tool calls Python's private `/internal/agent/resources/search` contract and returns generic Admin-curated people, organizations, products, services, methods, references, and other Resources. Each result may include `kind`, `tags`, exact `pointers`, `regions`, `languages`, and `provenance`. The Tool accepts optional `query`, `kind`, `tags`, `region`, `language`, and continuation `offset` arguments and receives the best-ranked page of ten results plus `total_count`, `returned_count`, `has_more`, and `next_offset` metadata.
+
+The Resource Directory—not Sage orchestration—owns generic search quality. Exact normalized Resource IDs, names, and pointer values rank first. Name acronyms and partial name or pointer values rank next, followed by generic token overlap across identity, kind, tags, and description. Email-, phone-, and URL-shaped queries do not use the broader token fallback. Existing status, regional, language, verification, display-order, and name rules remain in force. Sage gives the model that first page plus structured counts so the model knows when additional matches exist. Sage does not detect contact intent, force a lookup, automatically fetch another page, police completeness wording, or expose Tool and pagination mechanics to the user.
 
 ## Admin Config
 
@@ -108,7 +112,7 @@ Reads happen within Admin Conversation authority. Broad setup, status, and readi
 
 Every direct Tool maps to a fixed private Enclave Control Plane endpoint with purpose-built arguments. The model cannot choose an endpoint path or submit raw request JSON. Each Tool call validates and commits atomically; separate Tool calls are not one transaction. Tool results return authoritative normalized state, changed names, validation status, affected areas, and restart requirements where relevant so Sage can report the real outcome naturally.
 
-Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can correct a Tool call instead of receiving a generic failure.
+Tool arguments use native JSON values throughout the Sage runtime. Structured settings are objects, collections are arrays, and scalar fields are strings, numbers, or booleans; callers do not JSON-encode objects or arrays into strings. Backend validation details, including structured HTTP 422 field locations and messages, are returned to Sage so it can report the rejected call accurately. The model may use the bounded loop to correct a call from authoritative validation feedback; Sage does not rewrite the arguments itself.
 
 `configure_instance` is the high-level atomic Tool for guided first-time setup. The smaller area Tools handle later edits to Instance Settings, Deployment Settings, Agent Settings, User Types, Onboarding Questions, and Document Access defaults. Destructive User or Document operations, service restarts, and Curated Resource management are outside this authority.
 
@@ -134,13 +138,31 @@ Normal Admin Conversation composers should make Knowledge, Resources, Web, Confi
 
 ## Sage Duties
 
-Sage decides Tool planning through model instructions and Tool descriptions, not deterministic intent classifiers. Deterministic Sage code still decides:
+The model selects native Tool calls from concise Tool descriptions, not through a separate typed planner or deterministic intent classifier. Deterministic Sage code still decides:
 
 - which Tool Sets and Tools are available for the actor
-- max Tool-loop steps, timeouts, and output budgets
+- the six-batch loop bound, with at most eight calls in each batch; a seventh selected batch is rejected before execution, receives correlated bounded failures, and is followed by one final same-model request with Tools disabled
+- a finite timeout for every Tool attempt, with retries enabled only for eligible read-only calls
+- Tool-result context budgets of 4,000 characters per result and 12,000 characters across the batch
 - Tool result injection
 - Activity, Trace Delta, and Conversation Trace assembly
-- authorization, argument validation, Tool-loop bounds, and secret-safe trace assembly
+- authorization, argument validation, protocol validity, and secret-safe trace assembly
+
+Each logical model request has one generic same-model recovery budget of three identical attempts. Alongside eligible transport, upstream, and protocol failures, complete provider silence for 30 seconds is a Pre-Response Provider Stall: Sage abandons that attempt and may retry the identical request within the shared ceiling. Any answer, reasoning, Tool-call, or other provider stream event makes that attempt ineligible for another model-request retry. Recovery cannot replay an executed Tool batch, and the existing 180-second attempt timeout remains for requests that have begun responding. The 30-second threshold and three-attempt ceiling are internal runtime policy rather than a new configuration surface.
+
+When the provider attaches opaque Provider Continuity State to an assistant Tool-call message, Sage returns it unchanged to the same model with the correlated Tool results during the current bounded native loop. Sage does not interpret, stream, log, persist, export, or carry that state into another Conversation turn. It does not alter thinking mode, tune reasoning effort, add model-specific reasoning prompts, or synthesize state the provider did not supply. A fixed aggregate protocol-size bound rejects oversized continuity state without inspecting, logging, or independently truncating it.
+
+A safe-to-retry Tool execution may retry once for a transient transport failure. Empty or weak results, invalid arguments, and state-changing calls without idempotency are not automatic retry signals, though the model may choose a different authorized call within the bounded native loop.
+
+Final model prose streams directly after protocol validation. Sage does not scan, quarantine, rewrite, or replace prose based on process narration, Tool-name syntax, repetition, or completeness claims. Real credential and secret protections remain enforced at their authority and trace boundaries.
+
+## Native Round Observability
+
+Tool Selection Observations contain only enabled Tool names, selected Tool names, selection count, step, attempt, and outcome. Every selected call emits attempted evidence and one terminal `succeeded`, `failed`, `rejected`, `guarded`, or `timed_out` outcome. These observations do not copy prompts, Tool arguments or results, contact values, credentials, secrets, or reasoning into operational logs. Hidden provider reasoning may establish the content-free first-event boundary and may be preserved as ephemeral Provider Continuity State, but it is not published through Activity, Conversation Trace, persistence, exports, or logs.
+
+Timing records only stages Sage can measure: each model request, combined provider first-event wait, each Tool execution, Resource Directory or Retrieval work, retry delay when one occurs, and total turn duration. Provider first-event wait begins at request start and can include transport and provider processing; it is not labeled as cluster scheduling, queue time, or inference-only latency. A Pre-Response Provider Stall records its threshold, abandoned attempt, retry, and outcome without Conversation Content.
+
+Where supported, each streaming model request asks the provider for aggregate usage. A provider that explicitly rejects the optional usage request extension before inference is retried once without that extension, and the adapter remembers not to request it again. Prompt, completion, total, cached, and reasoning counts are recorded only when the provider returns valid numeric values; malformed or absent fields remain absent and never fail the answer. These Model Usage Observations attach to the existing per-request timing trace, follow the Conversation Trace retention and deletion lifecycle, remain outside normal answer content, and do not create a separate billing or analytics subsystem. This operational Conversation metadata is available to Activity and Conversation Trace and is not Audit Log evidence.
 
 For Admin Config, Sage also carries the real Conversation identifier to the Enclave Control Plane and returns affected-area refresh hints. The browser refetches those areas after success; it never repeats the write.
 

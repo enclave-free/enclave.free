@@ -19,7 +19,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertNotIn("use `/llm/chat` for assistant-style turns", tools)
         self.assertNotIn("Current `/query` responses include", tools)
 
-    def test_tool_docs_name_model_driven_tool_loop_and_context_budgeting(self) -> None:
+    def test_tool_docs_name_bounded_native_tool_loop_and_context_budgeting(self) -> None:
         tools = (REPO_ROOT / "docs/tools.md").read_text(encoding="utf-8")
         architecture = (REPO_ROOT / "ARCHITECTURE_CURRENT.md").read_text(
             encoding="utf-8"
@@ -32,7 +32,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         )
         normalized_internal_contract = " ".join(internal_contract.split())
 
-        self.assertIn("model-driven Tool loop", tools)
+        self.assertIn("bounded native model-driven Tool loop", tools)
         self.assertIn("selected Tool Sets", tools)
         self.assertIn("product-level admin configuration read and direct-write Tools", tools)
         self.assertIn("`update_instance_settings`", adr)
@@ -43,9 +43,15 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         )
         self.assertNotIn("must be removed by the unified Tool loop hard cut", internal_contract)
         self.assertIn(
-            "max Tool-loop steps, timeouts, and output budgets",
+            "six-batch loop bound, with at most eight calls in each batch",
             tools,
         )
+        self.assertIn("correlated bounded failures", tools)
+        self.assertIn("one final same-model request with Tools disabled", tools)
+        self.assertIn("`kind`, `tags`, exact `pointers`, `regions`", tools)
+        self.assertNotIn("`scope` is a generic model-selectable", tools)
+        self.assertNotIn('"help_type"', internal_contract)
+        self.assertNotIn('"scope_level"', internal_contract)
         self.assertIn(
             "Python serves authorized Enclave Control Plane facts/actions through private `/internal/agent/*` contracts",
             tools,
@@ -100,7 +106,13 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertIn("Document Library Retrieval is a Sage Tool capability", architecture)
         self.assertIn("Document Library Retrieval is a Sage Tool capability over Enclave-owned Documents", architecture)
         self.assertIn("The Enclave Control Plane owns Document Ingestion, Document Access, chunk embeddings, and Retrieval hydration", architecture)
-        self.assertIn("Sage owns Conversation behavior and the model-driven Tool loop", architecture)
+        self.assertIn(
+            "Sage owns Conversation behavior and a bounded native model-driven Tool loop",
+            architecture,
+        )
+        self.assertIn("Sage never executes a seventh batch", architecture)
+        self.assertIn("correlated bounded failures", architecture)
+        self.assertIn("one final same-model request with Tools disabled", architecture)
         self.assertIn("Graph-first RAG remains deferred", architecture)
         self.assertIn("deferred architecture, not the current prototype completeness bar", planned)
         self.assertIn("2B", integration_tests)
@@ -111,7 +123,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         cutover = (REPO_ROOT / "docs/prototype-sage-cutover.md").read_text(encoding="utf-8")
 
         self.assertIn("non-streaming companion path", root_readme)
-        self.assertIn("streaming and non-streaming Conversation transports", cutover)
+        self.assertIn("streaming and non-streaming Conversations", cutover)
         self.assertNotIn("non-streaming compatibility path", root_readme)
         self.assertNotIn("non-streaming compatibility path", cutover)
 

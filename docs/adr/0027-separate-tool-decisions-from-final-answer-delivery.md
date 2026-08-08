@@ -1,6 +1,6 @@
 # Separate Tool decisions from final answer delivery
 
-Status: Still authoritative for Tool planning and natural final-answer delivery. Its Admin Config proposal and confirmation references are superseded by [ADR-0028](0028-sage-owns-direct-admin-config-writes.md). Treat those historical references below as decision context, not implementation guidance.
+Status: Superseded by [ADR-0029](0029-native-tool-calling-with-one-tool-round.md). This ADR remains historical context for why user-visible answers must not expose structured Tool syntax.
 
 Sage will keep provider-portable typed responses for deciding and executing enabled **Tools**, but it will not require final user-visible prose to round-trip through the typed `AgentResponse` schema or a repair-model call. After the model-selected Tool round completes, **Conversation Streaming Transport** should generate the final answer through a plain completion path and forward real provider chunks as answer deltas; deterministic terminal Tool results may finish without another model call. This accepts a bounded Tool-planning phase in exchange for removing correction calls and fake streaming from the answer critical path while preserving Sage ownership, Tool authorization, trace visibility, and provider portability.
 

@@ -73,6 +73,40 @@ describe('TestDashboard', () => {
     expect(screen.getByText(/"qdrant": "ok"/)).toBeInTheDocument()
   })
 
+  it('renders follow-up questions as ordinary answer text without a side panel', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/settings/public')) {
+        return Promise.resolve(Response.json({ settings: {} }))
+      }
+      if (url.includes('/query')) {
+        return Promise.resolve(Response.json({
+          answer: 'Which location should I search near?',
+          session_id: 'session-1234',
+          sources: [],
+          graph_context: {},
+          clarifying_questions: ['Which location should I search near?'],
+          search_term: null,
+          context_used: '',
+          temperature: 0.2,
+        }))
+      }
+      return Promise.resolve(Response.json({}))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderDashboard()
+
+    await user.type(
+      screen.getByPlaceholderText('Ask a question... (try: When was the UDHR adopted?)'),
+      'Find nearby support',
+    )
+    await user.click(screen.getByRole('button', { name: 'Query' }))
+
+    expect(await screen.findByText('Which location should I search near?')).toBeInTheDocument()
+    expect(screen.queryByText('Clarifying Questions:')).not.toBeInTheDocument()
+  })
+
   it('toggles migrated admin dashboard sections through their accessible header', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', vi.fn())

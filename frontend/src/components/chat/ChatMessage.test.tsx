@@ -329,7 +329,7 @@ describe('ChatMessage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders a missed Curated Resources selection as an accessible Activity row', () => {
+  it('renders a content-free Tool selection observation as an accessible Activity row', () => {
     renderMessage('I could not find a current contact.', 'assistant', {
       visibility: 'detailed',
       tools: [],
@@ -339,8 +339,8 @@ describe('ChatMessage', () => {
           id: 'activity-tool-selection-1',
           kind: 'tool_selection_observation',
           title: 'Tool Selection',
-          status: 'failed',
-          summary: 'Curated Resources was expected but not selected.',
+          status: 'succeeded',
+          summary: 'No Tools were selected.',
         },
       ],
       suppressed: false,
@@ -349,7 +349,7 @@ describe('ChatMessage', () => {
     expect(screen.getByLabelText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Tool Selection')).toBeInTheDocument();
     expect(
-      screen.getByText('Curated Resources was expected but not selected.')
+      screen.getByText('No Tools were selected.')
     ).toBeInTheDocument();
   });
 
@@ -566,7 +566,7 @@ describe('ChatMessage', () => {
                   status: 'guarded',
                   metadata: {
                     phase: 'tool_execution',
-                    round: 1,
+                    step: null,
                     attempt: 1,
                     call_id: 'call-guarded',
                     tool_name: 'db_query',
@@ -581,13 +581,13 @@ describe('ChatMessage', () => {
                 {
                   id: 'timing-provider-first-1',
                   kind: 'timing',
-                  title: 'Final-answer provider first-event wait',
+                  title: 'Provider first-event wait',
                   content:
-                    'Final-answer provider first-event wait: 184 ms (provider-wait proxy: network, queue, or startup).',
+                    'Provider first-event wait: 184 ms (combined provider wait).',
                   status: 'succeeded',
                   metadata: {
-                    phase: 'final_answer_first_provider_event_wait',
-                    round: 2,
+                    phase: 'provider_first_event_wait',
+                    step: 1,
                     attempt: 1,
                     outcome: 'succeeded',
                     duration_ms: 184,
@@ -605,11 +605,11 @@ describe('ChatMessage', () => {
     expect(screen.getByLabelText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Tool execution')).toBeInTheDocument();
     expect(
-      screen.getByText('Final-answer provider first-event wait')
+      screen.getByText('Provider first-event wait')
     ).toBeInTheDocument();
     expect(screen.getByText('Tool execution: 9 ms.')).toBeInTheDocument();
     expect(
-      screen.getByText(/provider first-event wait: 184 ms/)
+      screen.getByText(/Provider first-event wait: 184 ms/)
     ).toBeInTheDocument();
     expect(screen.getByText('guarded')).toBeInTheDocument();
     expect(screen.queryByText(/contact@example\.test/)).not.toBeInTheDocument();
