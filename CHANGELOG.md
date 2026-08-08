@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.14 - 2026-08-08
+
+- Replaced heavy-handed Tool routing and answer correction with a bounded, model-driven native Tool loop that preserves same-model continuity and generic Resource Directory lookups.
+- Added privacy-safe model, Tool, Retrieval, first-event, usage, and total-turn observations plus repeatable conversation benchmarks.
+- Measured GLM 5.2 reasoning levels and selected `none` as the demo default for lower latency without prompt-specific routing.
+- Increased the pre-first-event provider window to 30 seconds and allowed two identical same-model retries without replaying executed Tools.
+- Refreshed compatible frontend dependency resolutions to patched Nano ID and React Router releases.
+
 ## 0.4.13 - 2026-07-29
 
 - Quarantined multiline `Tool calls` / `Function call` / `Arguments` transcripts across streaming boundaries while preserving benign explanatory prose.

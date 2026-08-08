@@ -33,8 +33,8 @@ Reduce first-turn failures caused by a completely silent model-provider attempt 
 - [x] Sage formatting, lint, tests, and build checks pass.
 - [x] Parent checks pass with the updated Sage revision.
 - [x] Standards and specification review complete.
-- [ ] Staging PRs merge with green required checks.
-- [ ] Complete staging state is promoted to main.
+- [x] Staging PRs merge with green required checks.
+- [x] Complete staging state is promoted to main.
 - [ ] Demo runs the exact main parent revision and Sage pin.
 - [ ] Jim's first-turn Test-as-User prompt succeeds in repeated fresh sessions.
 
@@ -51,3 +51,4 @@ Record PRs, revisions, deployed fingerprints, and live verification results here
 - Local CodeRabbit: one minor suggestion rejected because suppressing `exhausted` after a scheduled retry would remove the terminal retry outcome required by the accepted trace contract.
 - PR CodeRabbit: one documentation clarification fixed in `0a06059`; incremental review requested.
 - Parent CI exposed newly published high-severity advisories on the unchanged staging lockfile. The lockfile was refreshed within existing compatible ranges to `nanoid` 3.3.18/5.1.16 and React Router 7.18.2; `npm audit`, all 389 frontend tests, and the production frontend build passed.
+- Parent staging PR `#609` merged as `7b29172` after all required checks passed. Complete staging promotion PR `#610` merged to main as `c29ab83` after both staging-push and promotion CI suites passed.
