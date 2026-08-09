@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.17 - 2026-08-09
+
+- Kept Admin Test User conversations within a responsive, viewport-bounded workspace so long answers and expanded Activity scroll inside the shared message thread.
+- Kept the composer, persona controls, Reset, Exit, and encrypted trial saving visible outside the conversation scroll without changing canonical User Conversation behavior.
+- Added focused regressions for the Admin adapter height boundary, shared thread scroll ownership, and control placement.
+
 ## 0.4.16 - 2026-08-09
 
 - Kept prose emitted before a later native Tool call private while preserving it in model continuity, so users receive only the grounded post-Tool answer.
