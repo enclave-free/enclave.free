@@ -9,7 +9,7 @@
 - Feature branch: `feature/shared-test-user-conversation`
 - Human owner: Austin
 - Started: 2026-08-08
-- Current status: Local review complete; staging PR pending
+- Current status: Staging PR #615 open; CI and hosted review pending
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files exist; GitHub, canonical triage labels, and multi-context domain guidance are configured.
 
 ## Goal
@@ -29,7 +29,7 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 - Review packets: Issue #613 packet recorded in `2026-08-08-shared-test-user-conversation-review-613.md`.
 - Review packets: Issue #614 packet recorded in `2026-08-08-shared-test-user-conversation-review-614.md`.
 - Local CodeRabbit report: `2026-08-08-shared-test-user-conversation-coderabbit-local.md`.
-- PR URL: Pending.
+- PR URL: https://github.com/enclave-free/enclave.free/pull/615
 
 ## Commands
 
