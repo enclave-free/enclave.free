@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.15 - 2026-08-09
+
+- Made Admin Test-as-User sessions use the same canonical Conversation component and behavior as logged-in User chat while preserving persona selection, feedback, reset, exit, and trial saving.
+- Reduced the model-facing Curated Resources contract to precise resource, region, language, and pagination hints so GLM can discover valid Admin-curated referrals without guessing restrictive search facets.
+- Gave generic consent, concise-answer, Tool-stopping, and silent Tool-selection requirements precedence over Agent Settings without adding intent classifiers, forced Tool calls, fallback retrieval, answer rewriting, or reasoning escalation.
+- Strengthened customer-conversation benchmarks for consent, safe database execution evidence, model-request boundaries, and the exact customer replay suite.
+
 ## 0.4.14 - 2026-08-08
 
 - Replaced heavy-handed Tool routing and answer correction with a bounded, model-driven native Tool loop that preserves same-model continuity and generic Resource Directory lookups.

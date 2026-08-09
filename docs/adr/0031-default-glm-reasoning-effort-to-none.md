@@ -53,6 +53,11 @@ and no measured safety, grounding, Tool-selection, or country-relevance benefit
 justified the higher latency. The focused consent benchmark is now multi-turn so
 future runs do not rely only on an explicit one-shot refusal.
 
+[ADR-0033](0033-model-led-autonomy-and-concise-user-responses.md) subsequently
+corrects that separate issue through the shared, provider-neutral autonomy and
+explicit-consent instruction. It does not change this ADR's reasoning-effort
+decision or introduce reasoning escalation.
+
 These samples are bounded release evidence rather than a universal model claim.
 They establish the best current platform default and leave future changes to the
 same explicit, scenario-based evaluation process.
