@@ -561,6 +561,102 @@ describe('TestAsUserView', () => {
     ]);
   });
 
+  it('saves a later completed exchange after an earlier request fails before output', async () => {
+    mockSendLlmChatStreamWithUnifiedTools
+      .mockRejectedValueOnce(new Error('Stream unavailable'))
+      .mockImplementationOnce(async (options) => {
+        emitStreamAnswer(options, {
+          message: 'Later completed answer',
+          sessionId: 'sage-later',
+        });
+      });
+    mockSendLlmChatWithUnifiedTools.mockResolvedValueOnce(
+      Response.json({ detail: 'Fallback unavailable' }, { status: 503 })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Failed question'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Fallback unavailable')).toBeInTheDocument();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Successful question'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Later completed answer')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalled());
+    expect(mockSaveTranscript.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: 'Successful question',
+      }),
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Later completed answer',
+      }),
+    ]);
+  });
+
+  it('pairs a fallback answer with its question after activity-only stream output', async () => {
+    mockSendLlmChatStreamWithUnifiedTools.mockImplementationOnce(
+      async (options) => {
+        options.onEvent('assistant_message_started', {
+          message_id: 'stream-assistant',
+          session_id: 'sage-fallback',
+        });
+        options.onEvent('activity_step', {
+          activity_step: {
+            id: 'searching',
+            kind: 'tool',
+            title: 'Searching resources',
+            status: 'running',
+          },
+        });
+        throw new Error('Stream unavailable');
+      }
+    );
+    mockSendLlmChatWithUnifiedTools.mockResolvedValueOnce(
+      Response.json({
+        message_id: 'fallback-assistant',
+        message: 'Fallback completed answer',
+        session_id: 'sage-fallback',
+        tools_used: [],
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Question needing fallback'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Fallback completed answer')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalled());
+    expect(mockSaveTranscript.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: 'Question needing fallback',
+      }),
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Fallback completed answer',
+        ts: 'fallback-assistant',
+      }),
+    ]);
+  });
+
   it('does not start a test chat when synthetic User auth is unavailable', async () => {
     const user = userEvent.setup();
     mockGetImpersonationStatus.mockResolvedValue(false);
@@ -638,6 +734,29 @@ describe('TestAsUserView', () => {
     expect(
       screen.queryByText('Send a message as this user to begin the trial.')
     ).not.toBeInTheDocument();
+  });
+
+  it('confirms before discarding completed unsaved turns', async () => {
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Keep this completed turn'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Hello from Sage')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Exit' }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Testing as Student')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Exit' }));
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Pick a persona to test')).toBeInTheDocument();
   });
 
   it('does not save a transcript while a chat response is still pending', async () => {

@@ -91,7 +91,14 @@ describe('UserConversation', () => {
       onEvent('trace_final', { trace });
       onEvent('done', {
         session_id: 'session-1',
-        tools_used: [{ name: 'find_resources', status: 'succeeded' }],
+        tools_used: [
+          {
+            tool_id: 'curated-resources',
+            tool_name: 'Curated Resources',
+            query: 'legal help',
+          },
+          { name: 'malformed-tool-record' },
+        ],
       });
     });
     const user = userEvent.setup();
@@ -116,9 +123,18 @@ describe('UserConversation', () => {
     ).toBeTruthy();
     await waitFor(() => {
       expect(onTerminalTurn).toHaveBeenCalledWith({
+        userTurnId: expect.stringMatching(/^user-/),
         assistantTurnId: 'assistant-1',
         sessionId: 'session-1',
-        toolsUsed: [{ name: 'find_resources', status: 'succeeded' }],
+        toolsUsed: [
+          {
+            tool_id: 'curated-resources',
+            tool_name: 'Curated Resources',
+            query: 'legal help',
+            warnings: [],
+            guarded: false,
+          },
+        ],
       });
     });
     expect(mockStream).toHaveBeenCalledWith(
@@ -161,6 +177,7 @@ describe('UserConversation', () => {
       })
     );
     expect(onTerminalTurn).toHaveBeenCalledWith({
+      userTurnId: expect.stringMatching(/^user-/),
       assistantTurnId: 'assistant-fallback',
       sessionId: 'session-fallback',
       toolsUsed: [],

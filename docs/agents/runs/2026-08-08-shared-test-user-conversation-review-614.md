@@ -25,7 +25,7 @@ The source file fell from 623 to 392 lines. Its diff removes 432 lines and adds 
   - Focused adapter: 15 passed.
   - Shared conversation + Admin adapter + Feedback: 30 passed after review.
   - TypeScript: `npx tsc --noEmit` passed.
-  - Full frontend suite: 398 passed before the review-only navigation test was added.
+  - Full frontend suite: 402 passed after standards/spec, local CodeRabbit, and final independent-review corrections.
   - Production build: passed; review changed tests only.
   - Commit hook: `lint-staged` passed, then the recursively invoked suite passed 398 of 399; only the known inherited-`GIT_INDEX_FILE` temporary-repository harness test failed exactly as previously documented. The narrow `--no-verify` bypass was used after removing the stray `sample.ts` index entry.
   - `git diff --check ad7afa874b7e6482294b3f580ea5bbc1363be87d`: passed.
@@ -54,4 +54,13 @@ SPEC_STATUS: pass
 SPEC_FINDINGS:
 - Initial completed-only serialization coverage gap fixed with an exact mixed completed-plus-partial-failed transcript assertion.
 - Initial navigation coverage gap fixed by observing the parent page switch to the Feedback tab and render FeedbackView.
+
+LOCAL_CODERABBIT_STATUS: pass-after-fixes
+LOCAL_CODERABBIT_FINDINGS:
+- Transcript serialization now fails closed around explicitly associated completed User/Assistant pairs and checked Tool metadata.
+- Exit now confirms before discarding completed unsaved turns while preserving immediate exit for empty/incomplete sessions.
+
+FINAL_INDEPENDENT_REVIEW_STATUS: pass-after-fix
+FINAL_INDEPENDENT_REVIEW_FINDINGS:
+- Replaced global even/odd transcript assumptions with explicit terminal-Assistant-to-submitted-User identity pairing, preserving successful exchanges after earlier failures and activity-only fallback transitions.
 ```

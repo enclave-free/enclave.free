@@ -80,35 +80,35 @@ function completedTranscript(
 
   const turns: TranscriptTurn[] = [];
   let sageSessionId: string | null = null;
+  const capturedUserTurnIds = new Set<string>();
 
-  snapshot.turns.forEach((turn, index) => {
-    if (turn.role === 'user') {
-      const assistantTurn = snapshot.turns[index + 1];
-      if (
-        assistantTurn?.role === 'assistant' &&
-        terminalTurns[assistantTurn.id]
-      ) {
-        turns.push({
-          role: 'user',
-          content: turn.content,
-          ts: turn.id,
-          tools_used: [],
-        });
-      }
-      return;
-    }
+  for (const assistantTurn of snapshot.turns) {
+    if (assistantTurn.role !== 'assistant') continue;
+    const terminal = terminalTurns[assistantTurn.id];
+    if (!terminal) continue;
+    const userTurn = snapshot.turns.find(
+      (turn) => turn.id === terminal.userTurnId && turn.role === 'user'
+    );
+    if (!userTurn || capturedUserTurnIds.has(userTurn.id)) continue;
 
-    const terminal = terminalTurns[turn.id];
-    if (!terminal) return;
+    capturedUserTurnIds.add(userTurn.id);
     sageSessionId = terminal.sessionId ?? sageSessionId;
-    turns.push({
-      role: 'assistant',
-      content: turn.content,
-      ts: turn.id,
-      trace: turn.trace,
-      tools_used: terminal.toolsUsed as TranscriptTurn['tools_used'],
-    });
-  });
+    turns.push(
+      {
+        role: 'user',
+        content: userTurn.content,
+        ts: userTurn.id,
+        tools_used: [],
+      },
+      {
+        role: 'assistant',
+        content: assistantTurn.content,
+        ts: assistantTurn.id,
+        trace: assistantTurn.trace,
+        tools_used: terminal.toolsUsed,
+      }
+    );
+  }
 
   return { turns, sageSessionId };
 }
@@ -199,10 +199,24 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   }, [clearConversationCapture]);
 
   const exitSession = useCallback(() => {
+    const hasUnsavedTurns =
+      completedTranscript(snapshot, terminalTurns).turns.length > 0;
+    if (
+      hasUnsavedTurns &&
+      !window.confirm(
+        t(
+          'adminTestFeedback.test.exitUnsavedConfirm',
+          'Exit this test session? Completed turns have not been saved and will be discarded.'
+        )
+      )
+    ) {
+      return;
+    }
+
     setSession(null);
     setSavedNotice(null);
     clearConversationCapture();
-  }, [clearConversationCapture]);
+  }, [clearConversationCapture, snapshot, t, terminalTurns]);
 
   const capturedTranscript = completedTranscript(snapshot, terminalTurns);
 

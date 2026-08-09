@@ -29,9 +29,19 @@ import {
 import { adaptSageStreamEvent } from './SageStreamEventAdapter';
 
 export interface UserConversationTerminalTurn {
+  userTurnId: string;
   assistantTurnId: string;
   sessionId: string | null;
-  toolsUsed: unknown[];
+  toolsUsed: UserConversationToolUse[];
+}
+
+export interface UserConversationToolUse {
+  tool_id: string;
+  tool_name: string;
+  query?: string | null;
+  output_summary?: string | null;
+  warnings: string[];
+  guarded: boolean;
 }
 
 export interface UserConversationHandle {
@@ -68,6 +78,44 @@ function payloadRecord(payload: unknown): Record<string, unknown> {
   return payload && typeof payload === 'object'
     ? (payload as Record<string, unknown>)
     : {};
+}
+
+function readToolUses(value: unknown): UserConversationToolUse[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((candidate) => {
+    const tool = payloadRecord(candidate);
+    if (
+      typeof tool.tool_id !== 'string' ||
+      !tool.tool_id ||
+      typeof tool.tool_name !== 'string' ||
+      !tool.tool_name
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        tool_id: tool.tool_id,
+        tool_name: tool.tool_name,
+        query:
+          typeof tool.query === 'string' || tool.query === null
+            ? tool.query
+            : undefined,
+        output_summary:
+          typeof tool.output_summary === 'string' ||
+          tool.output_summary === null
+            ? tool.output_summary
+            : undefined,
+        warnings: Array.isArray(tool.warnings)
+          ? tool.warnings.filter(
+              (warning): warning is string => typeof warning === 'string'
+            )
+          : [],
+        guarded: typeof tool.guarded === 'boolean' ? tool.guarded : false,
+      },
+    ];
+  });
 }
 
 function providerStreamErrorMessage(
@@ -149,15 +197,16 @@ export const UserConversation = forwardRef<
 
   const send = useCallback(
     async (content: string) => {
+      const userTurnId = generateTurnId('user');
       dispatch({
         type: 'userTurnSubmitted',
-        id: generateTurnId('user'),
+        id: userTurnId,
         content,
       });
 
       let assistantTurnId: string | null = null;
       let sessionId = state.conversationSessionId;
-      let toolsUsed: unknown[] = [];
+      let toolsUsed: UserConversationToolUse[] = [];
       let answerContent = '';
       let streamReportedError = false;
       let streamCompleted = false;
@@ -190,7 +239,7 @@ export const UserConversation = forwardRef<
             }
             if (event === 'done') {
               streamCompleted = true;
-              toolsUsed = Array.isArray(data.tools_used) ? data.tools_used : [];
+              toolsUsed = readToolUses(data.tools_used);
             }
             if (event === 'answer_delta' && typeof data.delta === 'string') {
               answerContent += data.delta;
@@ -215,7 +264,12 @@ export const UserConversation = forwardRef<
 
         dispatch({ type: 'assistantTurnFinished', sessionId });
         if (assistantTurnId) {
-          onTerminalTurn?.({ assistantTurnId, sessionId, toolsUsed });
+          onTerminalTurn?.({
+            userTurnId,
+            assistantTurnId,
+            sessionId,
+            toolsUsed,
+          });
         }
       } catch (error) {
         const message =
@@ -273,7 +327,7 @@ export const UserConversation = forwardRef<
             typeof data.session_id === 'string' && data.session_id
               ? data.session_id
               : sessionId;
-          toolsUsed = Array.isArray(data.tools_used) ? data.tools_used : [];
+          toolsUsed = readToolUses(data.tools_used);
           dispatch({
             type: 'assistantTurnCompleted',
             id: fallbackAssistantTurnId,
@@ -282,6 +336,7 @@ export const UserConversation = forwardRef<
             sessionId,
           });
           onTerminalTurn?.({
+            userTurnId,
             assistantTurnId: fallbackAssistantTurnId,
             sessionId,
             toolsUsed,
