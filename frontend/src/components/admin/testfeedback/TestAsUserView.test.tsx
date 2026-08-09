@@ -215,6 +215,39 @@ describe('TestAsUserView', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps the active test chat in a viewport-bounded scrolling workspace', async () => {
+    await startStudentSession();
+
+    const workspace = await screen.findByRole('region', {
+      name: 'Test User conversation workspace',
+    });
+    const scrollViewport = screen.getByRole('group', {
+      name: 'Conversation messages',
+    });
+    const composer = screen.getByRole('textbox', {
+      name: 'Message the assistant as this user…',
+    });
+    const reset = screen.getByRole('button', { name: 'Reset' });
+    const exit = screen.getByRole('button', { name: 'Exit' });
+    const save = screen.getByRole('button', { name: 'End & save trial' });
+    const workspaceHeightClass = Array.from(workspace.classList).find(
+      (className) => className.startsWith('h-[clamp(')
+    );
+
+    expect(workspaceHeightClass).toMatch(/32rem.*100dvh.*56rem/);
+    expect(workspace).toHaveClass('overflow-hidden');
+    expect(scrollViewport).toHaveClass('overflow-y-auto');
+    expect(workspace).toContainElement(scrollViewport);
+    expect(workspace).toContainElement(composer);
+    expect(workspace).toContainElement(reset);
+    expect(workspace).toContainElement(exit);
+    expect(workspace).toContainElement(save);
+    expect(scrollViewport).not.toContainElement(composer);
+    expect(scrollViewport).not.toContainElement(reset);
+    expect(scrollViewport).not.toContainElement(exit);
+    expect(scrollViewport).not.toContainElement(save);
+  });
+
   it('renders markdown plus live Activity and Trace after early text while the shared surface remains running', async () => {
     let finishStream!: () => void;
     const streamGate = new Promise<void>((resolve) => {
