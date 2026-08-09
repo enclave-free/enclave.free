@@ -9,7 +9,7 @@
 - Feature branch: `feature/admin-test-chat-scroll`
 - Human owner: Austin
 - Started: 2026-08-09
-- Current status: Complete locally; final Standards and Spec reviews pass, local CodeRabbit is clean, and staging PR publication is pending.
+- Current status: Staging PR #622 is open and clean; all hosted CI checks pass, hosted Round 1 feedback is fixed, and the rate-limited Round 2 fallback reviews pass.
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files configure GitHub, triage labels, and multi-context domain guidance.
 
 ## Goal
@@ -28,7 +28,8 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 - Review packets: Initial two-axis review findings were corrected. Final Standards and Spec re-reviews both pass with no actionable findings.
 - Local CodeRabbit report: Three initial findings processed; two clean post-correction rounds reported zero findings.
 - Hosted CodeRabbit Round 1: One test-strengthening comment accepted; Reset, Exit, and End & Save are now asserted inside the bounded workspace as well as outside the messages viewport.
-- PR URL: Pending.
+- Hosted CodeRabbit Round 2: Rate-limited after the correction. Required fallback final Standards and Spec reviews both pass with no actionable findings.
+- PR URL: https://github.com/enclave-free/enclave.free/pull/622
 
 ## Commands
 
@@ -59,9 +60,9 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 
 ## Issue Session Ledger
 
-| Issue | Fixed point                                | Worker session                             | Commit                          | Review result                                     | Checks                                                                                                                        |
-| ----- | ------------------------------------------ | ------------------------------------------ | ------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| #621  | `4a4037d33cde091b443b5a7ad6723a4d4246b1c4` | Orchestrator, tiny isolated low-risk write | `b8f5690`, `65fd065`, `0ab4360` | Final Standards/Spec pass; local CodeRabbit clean | 21/21 focused tests, 76 files/404 full tests, production build, Prettier, generated CSS inspection, and live Zen preview pass |
+| Issue | Fixed point                                | Worker session                             | Commit                                                | Review result                                                           | Checks                                                                                                                        |
+| ----- | ------------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| #621  | `4a4037d33cde091b443b5a7ad6723a4d4246b1c4` | Orchestrator, tiny isolated low-risk write | `b8f5690`, `65fd065`, `0ab4360`, `0dfc787`, `74ee360` | Final Standards/Spec pass; local CodeRabbit clean; hosted fallback pass | 21/21 focused tests, 76 files/404 full tests, production build, Prettier, generated CSS inspection, and live Zen preview pass |
 
 ## Open Questions
 
