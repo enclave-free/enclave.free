@@ -58,3 +58,10 @@
 - Full frontend suite: 76 files / 403 tests passed.
 - TypeScript and production build passed.
 - All GitHub security, production-runtime, PDF-drift, dependency/SAST, and Semgrep gates passed before the correction push; they will rerun on the corrected commit.
+
+## Hosted PR Refresh
+
+- Scope: corrected PR #615 at `85fdee2`
+- Command: `@coderabbit full review`
+- Availability: rate-limited before a new analysis; the CodeRabbit status context completed as passing with `Review rate limited`.
+- Result: no second hosted-review claim is made. All hosted Round 1 findings are fixed, the inline finding received a commit-specific reply, an independent correction re-review passed, and the corrected commit passed every GitHub security/runtime/SAST gate.

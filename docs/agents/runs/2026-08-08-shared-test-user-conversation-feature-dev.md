@@ -9,7 +9,7 @@
 - Feature branch: `feature/shared-test-user-conversation`
 - Human owner: Austin
 - Started: 2026-08-08
-- Current status: Staging PR #615 open; hosted Round 1 fixes verified, final hosted refresh pending
+- Current status: Staging PR #615 ready to merge; all hosted CI gates pass and hosted Round 1 fixes are independently re-reviewed
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files exist; GitHub, canonical triage labels, and multi-context domain guidance are configured.
 
 ## Goal
