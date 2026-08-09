@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.16 - 2026-08-09
+
+- Kept prose emitted before a later native Tool call private while preserving it in model continuity, so users receive only the grounded post-Tool answer.
+- Buffered Tool-capable direct answers until model-led Tool selection completes, without adding classifiers, forced Tools, rewrites, fallback answers, or post-event retries.
+- Added provider-level regressions for split content/Tool-call streams and synchronized the no-leak assertion with actual provider progress.
+
 ## 0.4.15 - 2026-08-09
 
 - Made Admin Test-as-User sessions use the same canonical Conversation component and behavior as logged-in User chat while preserving persona selection, feedback, reset, exit, and trial saving.
