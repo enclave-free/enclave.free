@@ -22,6 +22,8 @@ export function AssistantConversationThread({
   notices,
   onMessageAction,
 }: AssistantConversationThreadProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       role="region"
@@ -31,6 +33,11 @@ export function AssistantConversationThread({
       <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col">
         <ThreadPrimitive.Viewport
           autoScroll
+          role="group"
+          aria-label={t(
+            'chat.conversationMessagesAria',
+            'Conversation messages'
+          )}
           className="flex-1 overflow-y-auto px-2 py-5 sm:px-4 sm:py-6"
         >
           <div className="mx-auto w-full max-w-3xl">
