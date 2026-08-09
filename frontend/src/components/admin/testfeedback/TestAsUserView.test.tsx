@@ -1,39 +1,65 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { InstanceConfigProvider } from '../../../context/InstanceConfigContext';
+import { AdminTestAndFeedback } from '../../../pages/AdminTestAndFeedback';
+import { ThemeProvider } from '../../../theme';
 import { TestAsUserView } from './TestAsUserView';
-import { sendLlmChatStreamWithUnifiedTools } from '../../../utils/llmChat';
+import {
+  sendLlmChatStreamWithUnifiedTools,
+  sendLlmChatWithUnifiedTools,
+} from '../../../utils/llmChat';
 import {
   createSessionLog,
+  deleteSessionLog,
   getImpersonationStatus,
+  getSessionLog,
+  listSessionLogs,
   listUserTypes,
   provisionTestUser,
+  recordSessionLogPlaintextExport,
   requestImpersonationToken,
   saveTranscript,
+  setTurnFeedback,
 } from '../../../utils/sessionLogsApi';
 
 vi.mock('../../../utils/llmChat', () => ({
   sendLlmChatStreamWithUnifiedTools: vi.fn(),
+  sendLlmChatWithUnifiedTools: vi.fn(),
 }));
 
 vi.mock('../../../utils/sessionLogsApi', () => ({
   createSessionLog: vi.fn(),
+  deleteSessionLog: vi.fn(),
   getImpersonationStatus: vi.fn(),
+  getSessionLog: vi.fn(),
+  listSessionLogs: vi.fn(),
   listUserTypes: vi.fn(),
   provisionTestUser: vi.fn(),
+  recordSessionLogPlaintextExport: vi.fn(),
   requestImpersonationToken: vi.fn(),
   saveTranscript: vi.fn(),
+  setTurnFeedback: vi.fn(),
 }));
 
 const mockSendLlmChatStreamWithUnifiedTools = vi.mocked(
   sendLlmChatStreamWithUnifiedTools
 );
+const mockSendLlmChatWithUnifiedTools = vi.mocked(sendLlmChatWithUnifiedTools);
 const mockCreateSessionLog = vi.mocked(createSessionLog);
+const mockDeleteSessionLog = vi.mocked(deleteSessionLog);
 const mockGetImpersonationStatus = vi.mocked(getImpersonationStatus);
+const mockGetSessionLog = vi.mocked(getSessionLog);
+const mockListSessionLogs = vi.mocked(listSessionLogs);
 const mockListUserTypes = vi.mocked(listUserTypes);
 const mockProvisionTestUser = vi.mocked(provisionTestUser);
+const mockRecordSessionLogPlaintextExport = vi.mocked(
+  recordSessionLogPlaintextExport
+);
 const mockRequestImpersonationToken = vi.mocked(requestImpersonationToken);
 const mockSaveTranscript = vi.mocked(saveTranscript);
+const mockSetTurnFeedback = vi.mocked(setTurnFeedback);
 
 type StreamChatOptions = Parameters<
   typeof sendLlmChatStreamWithUnifiedTools
@@ -72,13 +98,20 @@ function emitStreamAnswer(
 describe('TestAsUserView', () => {
   beforeEach(() => {
     mockSendLlmChatStreamWithUnifiedTools.mockReset();
+    mockSendLlmChatWithUnifiedTools.mockReset();
     mockCreateSessionLog.mockReset();
+    mockDeleteSessionLog.mockReset();
     mockGetImpersonationStatus.mockReset();
+    mockGetSessionLog.mockReset();
+    mockListSessionLogs.mockReset();
     mockListUserTypes.mockReset();
     mockProvisionTestUser.mockReset();
+    mockRecordSessionLogPlaintextExport.mockReset();
     mockRequestImpersonationToken.mockReset();
     mockSaveTranscript.mockReset();
+    mockSetTurnFeedback.mockReset();
 
+    mockListSessionLogs.mockResolvedValue([]);
     mockListUserTypes.mockResolvedValue([
       { id: 1, name: 'Student', description: null },
     ]);
@@ -128,25 +161,43 @@ describe('TestAsUserView', () => {
     );
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        Response.json({
-          web_search_enabled: true,
-          default_document_ids: ['doc-1', 'doc-2'],
-          default_tool_ids: ['curated-resources', 'web-search'],
-          knowledge_source_scope: 'selected',
-        })
-      )
+      vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        if (String(input).includes('/session-defaults')) {
+          return Response.json({
+            web_search_enabled: true,
+            default_document_ids: ['doc-1', 'doc-2'],
+            default_tool_ids: ['curated-resources', 'web-search'],
+            knowledge_source_scope: 'selected',
+          });
+        }
+        return new Response(null, { status: 404 });
+      })
+    );
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })
     );
   });
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
-  async function startStudentSession() {
+  async function startStudentSession(onSaved?: () => void) {
     const user = userEvent.setup();
-    render(<TestAsUserView />);
+    render(
+      <ThemeProvider>
+        <InstanceConfigProvider>
+          <TestAsUserView onSaved={onSaved} />
+        </InstanceConfigProvider>
+      </ThemeProvider>
+    );
 
     await screen.findByRole('option', { name: 'Student' });
     await user.selectOptions(screen.getByLabelText('User type'), '1');
@@ -164,6 +215,75 @@ describe('TestAsUserView', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('renders markdown plus live Activity and Trace after early text while the shared surface remains running', async () => {
+    let finishStream!: () => void;
+    const streamGate = new Promise<void>((resolve) => {
+      finishStream = resolve;
+    });
+    mockSendLlmChatStreamWithUnifiedTools.mockImplementationOnce(
+      async (options) => {
+        options.onEvent('assistant_message_started', {
+          message_id: 'msg-1',
+          session_id: 'sage-1',
+        });
+        options.onEvent('answer_delta', {
+          delta: 'Early **answer**',
+          session_id: 'sage-1',
+        });
+        options.onEvent('activity_step', {
+          activity_step: {
+            id: 'resource-search',
+            kind: 'tool',
+            title: 'Searching resources',
+            status: 'running',
+          },
+        });
+        options.onEvent('trace_delta', {
+          trace_delta: {
+            id: 'resource-result',
+            kind: 'tool_result',
+            title: 'Resources ready',
+            status: 'succeeded',
+          },
+        });
+        await streamGate;
+        options.onEvent('done', { session_id: 'sage-1', tools_used: [] });
+      }
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByRole('textbox', {
+        name: 'Message the assistant as this user…',
+      }),
+      'Find resources'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    const answer = await screen.findByText('answer');
+    expect(answer.tagName).toBe('STRONG');
+    expect(await screen.findByText('Searching resources')).toBeInTheDocument();
+    expect(await screen.findByText('Resources ready')).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', {
+        name: 'Message the assistant as this user…',
+      })
+    ).toBeDisabled();
+
+    await act(async () => {
+      finishStream();
+      await streamGate;
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', {
+          name: 'Message the assistant as this user…',
+        })
+      ).toBeEnabled()
+    );
+  });
+
   it('sends chat turns with the synthetic User bearer token', async () => {
     const user = await startStudentSession();
 
@@ -171,7 +291,7 @@ describe('TestAsUserView', () => {
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Can you help me?'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
@@ -181,6 +301,37 @@ describe('TestAsUserView', () => {
         })
       );
     });
+  });
+
+  it('uses the shared pre-output fallback with the synthetic User bearer', async () => {
+    mockSendLlmChatStreamWithUnifiedTools.mockRejectedValueOnce(
+      new Error('Stream unavailable')
+    );
+    mockSendLlmChatWithUnifiedTools.mockResolvedValueOnce(
+      Response.json({
+        message_id: 'msg-fallback',
+        message: 'Fallback answer',
+        session_id: 'sage-fallback',
+        trace: null,
+        tools_used: [],
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Use fallback'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Fallback answer')).toBeInTheDocument();
+    expect(mockSendLlmChatWithUnifiedTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'Use fallback',
+        authToken: 'synthetic-user-token',
+      })
+    );
+    expect(screen.queryByText('Stream unavailable')).not.toBeInTheDocument();
   });
 
   it('shows live stream status before the streamed answer finishes', async () => {
@@ -212,7 +363,7 @@ describe('TestAsUserView', () => {
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Find resources'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(
       await screen.findByText('Running enabled tools...')
@@ -236,7 +387,7 @@ describe('TestAsUserView', () => {
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Do you have any resources you can read through?'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
@@ -268,13 +419,15 @@ describe('TestAsUserView', () => {
   });
 
   it('sends all-knowledge defaults without selected document constraints while impersonating the synthetic User', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      Response.json({
-        web_search_enabled: false,
-        default_document_ids: [],
-        default_tool_ids: ['curated-resources', 'knowledge-search'],
-        knowledge_source_scope: 'all',
-      })
+    vi.mocked(fetch).mockImplementation(async (input) =>
+      String(input).includes('/session-defaults')
+        ? Response.json({
+            web_search_enabled: false,
+            default_document_ids: [],
+            default_tool_ids: ['curated-resources', 'knowledge-search'],
+            knowledge_source_scope: 'all',
+          })
+        : new Response(null, { status: 404 })
     );
     const user = await startStudentSession();
 
@@ -282,7 +435,7 @@ describe('TestAsUserView', () => {
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Can you search all available knowledge?'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
@@ -308,14 +461,18 @@ describe('TestAsUserView', () => {
   });
 
   it('uses a conservative Tool Set fallback when user defaults cannot be loaded', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500 }));
+    vi.mocked(fetch).mockImplementation(async (input) =>
+      String(input).includes('/session-defaults')
+        ? new Response(null, { status: 500 })
+        : new Response(null, { status: 404 })
+    );
     const user = await startStudentSession();
 
     await user.type(
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Can you look up resources?'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledWith(
@@ -329,11 +486,37 @@ describe('TestAsUserView', () => {
     });
   });
 
-  it('removes an unfinished assistant placeholder when streaming fails before done', async () => {
-    mockSendLlmChatStreamWithUnifiedTools.mockImplementationOnce(
-      async (options) => {
+  it('preserves useful partial output but keeps the unfinished turn out of the transcript', async () => {
+    const completedTrace = {
+      visibility: 'detailed' as const,
+      tools: [
+        {
+          id: 'curated-resources',
+          name: 'Curated Resources',
+          status: 'succeeded',
+        },
+      ],
+      retrieval: [],
+    };
+    const completedTools = [
+      {
+        tool_id: 'curated-resources',
+        tool_name: 'Curated Resources',
+        warnings: [],
+        guarded: false,
+      },
+    ];
+    mockSendLlmChatStreamWithUnifiedTools
+      .mockImplementationOnce(async (options) => {
+        emitStreamAnswer(options, {
+          message: 'Completed answer',
+          trace: completedTrace,
+          toolsUsed: completedTools,
+        });
+      })
+      .mockImplementationOnce(async (options) => {
         options.onEvent('assistant_message_started', {
-          message_id: 'msg-1',
+          message_id: 'msg-2',
           session_id: 'sage-1',
         });
         options.onEvent('answer_delta', {
@@ -341,36 +524,140 @@ describe('TestAsUserView', () => {
           session_id: 'sage-1',
         });
         throw new Error('Sage stream failed');
-      }
-    );
+      });
     const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'This turn will complete'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Completed answer')).toBeInTheDocument();
 
     await user.type(
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'This stream will fail'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
+    expect(await screen.findByText('Partial answer')).toBeInTheDocument();
     expect(await screen.findByText('Sage stream failed')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    expect(
+      screen.getByPlaceholderText('Message the assistant as this user…')
+    ).toBeEnabled();
+    expect(mockSendLlmChatWithUnifiedTools).not.toHaveBeenCalled();
 
-    await waitFor(() => {
-      expect(mockSaveTranscript).toHaveBeenCalled();
-    });
-    const savedTurns = mockSaveTranscript.mock.calls[0]?.[1] ?? [];
-    expect(savedTurns).toEqual([
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalled());
+    expect(mockSaveTranscript.mock.calls[0]?.[1]).toEqual([
       expect.objectContaining({
         role: 'user',
-        content: 'This stream will fail',
+        content: 'This turn will complete',
+      }),
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Completed answer',
+        ts: 'msg-1',
+        trace: completedTrace,
+        tools_used: completedTools,
       }),
     ]);
-    expect(savedTurns).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'assistant',
-        }),
-      ])
+  });
+
+  it('saves a later completed exchange after an earlier request fails before output', async () => {
+    mockSendLlmChatStreamWithUnifiedTools
+      .mockRejectedValueOnce(new Error('Stream unavailable'))
+      .mockImplementationOnce(async (options) => {
+        emitStreamAnswer(options, {
+          message: 'Later completed answer',
+          sessionId: 'sage-later',
+        });
+      });
+    mockSendLlmChatWithUnifiedTools.mockResolvedValueOnce(
+      Response.json({ detail: 'Fallback unavailable' }, { status: 503 })
     );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Failed question'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Fallback unavailable')).toBeInTheDocument();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Successful question'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Later completed answer')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalled());
+    expect(mockSaveTranscript.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: 'Successful question',
+      }),
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Later completed answer',
+      }),
+    ]);
+  });
+
+  it('pairs a fallback answer with its question after activity-only stream output', async () => {
+    mockSendLlmChatStreamWithUnifiedTools.mockImplementationOnce(
+      async (options) => {
+        options.onEvent('assistant_message_started', {
+          message_id: 'stream-assistant',
+          session_id: 'sage-fallback',
+        });
+        options.onEvent('activity_step', {
+          activity_step: {
+            id: 'searching',
+            kind: 'tool',
+            title: 'Searching resources',
+            status: 'running',
+          },
+        });
+        throw new Error('Stream unavailable');
+      }
+    );
+    mockSendLlmChatWithUnifiedTools.mockResolvedValueOnce(
+      Response.json({
+        message_id: 'fallback-assistant',
+        message: 'Fallback completed answer',
+        session_id: 'sage-fallback',
+        tools_used: [],
+      })
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Question needing fallback'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('Fallback completed answer')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalled());
+    expect(mockSaveTranscript.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: 'Question needing fallback',
+      }),
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Fallback completed answer',
+        ts: 'fallback-assistant',
+      }),
+    ]);
   });
 
   it('does not start a test chat when synthetic User auth is unavailable', async () => {
@@ -391,6 +678,10 @@ describe('TestAsUserView', () => {
   });
 
   it('resets the active test conversation without changing the synthetic User identity', async () => {
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
     mockSendLlmChatStreamWithUnifiedTools
       .mockImplementationOnce(async (options) => {
         emitStreamAnswer(options, {
@@ -410,21 +701,26 @@ describe('TestAsUserView', () => {
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'First message'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(await screen.findByText('First answer')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('First answer')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(confirm).toHaveBeenCalledTimes(2);
 
     expect(screen.queryByText('First answer')).not.toBeInTheDocument();
     expect(
-      screen.getByText('Send a message as this user to begin the trial.')
+      screen.getByRole('heading', { name: 'What would you like to know?' })
     ).toBeInTheDocument();
 
     await user.type(
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Second message'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
       expect(mockSendLlmChatStreamWithUnifiedTools).toHaveBeenCalledTimes(2);
@@ -452,6 +748,29 @@ describe('TestAsUserView', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('confirms before discarding completed unsaved turns', async () => {
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Keep this completed turn'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Hello from Sage')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Exit' }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Testing as Student')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Exit' }));
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Pick a persona to test')).toBeInTheDocument();
+  });
+
   it('does not save a transcript while a chat response is still pending', async () => {
     let resolveChat!: () => void;
     mockSendLlmChatStreamWithUnifiedTools.mockImplementationOnce(
@@ -469,7 +788,7 @@ describe('TestAsUserView', () => {
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Hold this save until Sage replies'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     const saveButton = screen.getByRole('button', { name: 'End & save trial' });
     await waitFor(() => {
@@ -486,7 +805,34 @@ describe('TestAsUserView', () => {
     expect(saveButton).not.toBeDisabled();
   });
 
+  it('reuses the pending encrypted log when transcript saving is retried', async () => {
+    mockSaveTranscript.mockRejectedValueOnce(
+      new Error('Encrypted transcript save failed')
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Save this exchange once'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Hello from Sage')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    expect(
+      await screen.findByText('Encrypted transcript save failed')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalledTimes(2));
+
+    expect(mockCreateSessionLog).toHaveBeenCalledTimes(1);
+    expect(mockSaveTranscript.mock.calls[0]?.[0]).toBe('log-1');
+    expect(mockSaveTranscript.mock.calls[1]?.[0]).toBe('log-1');
+  });
+
   it('preserves Sage trace and tool metadata when saving the test transcript', async () => {
+    const onSaved = vi.fn();
     const toolsUsed = [
       {
         tool_id: 'curated-resources',
@@ -520,13 +866,13 @@ describe('TestAsUserView', () => {
         });
       }
     );
-    const user = await startStudentSession();
+    const user = await startStudentSession(onSaved);
 
     await user.type(
       screen.getByPlaceholderText('Message the assistant as this user…'),
       'Find resources for me'
     );
-    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
     expect(
       await screen.findByText('I found vetted resources.')
     ).toBeInTheDocument();
@@ -560,5 +906,39 @@ describe('TestAsUserView', () => {
         expect.any(String)
       );
     });
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates the parent Test & Feedback page to Feedback after saving', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <InstanceConfigProvider>
+            <AdminTestAndFeedback />
+          </InstanceConfigProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('option', { name: 'Student' });
+    await user.selectOptions(screen.getByLabelText('User type'), '1');
+    await user.click(screen.getByRole('button', { name: 'Start session' }));
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Save this trial'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Hello from Sage')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+
+    expect(
+      await screen.findByRole('tab', { name: 'Feedback', selected: true })
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'No saved beta logs yet. Run a Test User Session or wait for user conversations.'
+      )
+    ).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns the native Tool-call hard cut, ADR-0030 owns the bounded native Tool loop, ADR-0031 owns the explicit GLM reasoning-effort default, and ADR-0028 owns direct Admin Config write behavior.
+This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns the native Tool-call hard cut, ADR-0030 owns the bounded native Tool loop, ADR-0031 owns the explicit GLM reasoning-effort default, ADR-0032 owns shared User Conversation behavior for Test User Sessions, and ADR-0028 owns direct Admin Config write behavior.
 
 ## Review Ledger
 
@@ -37,3 +37,4 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0029 Native Tool calling with one Tool round                            | Native protocol and hard-cut decisions remain valid; its one-batch constraint is superseded by ADR-0030.           |
 | 0030 Bounded native Tool loop                                           | Anchor decision for model-driven native Tool continuation, provider continuity, silent-stall recovery, and at most six executed Tool batches. |
 | 0031 Default GLM reasoning effort to none                               | Anchor decision for the explicit deployment-level reasoning setting and its measured `none` default.                         |
+| 0032 Test User Sessions reuse the User Conversation module              | Anchor decision for one shared User Conversation execution and UI module with thin logged-in and Admin test harness adapters. |

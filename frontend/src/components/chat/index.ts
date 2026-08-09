@@ -18,6 +18,13 @@ export {
 } from './ConversationMessageActions';
 export { ConversationSurface } from './ConversationSurface';
 export {
+  UserConversation,
+  type UserConversationHandle,
+  type UserConversationProps,
+  type UserConversationTerminalTurn,
+  type UserConversationToolUse,
+} from './UserConversation';
+export {
   buildConversationSurfaceTurns,
   type ConversationActivityStep,
   type ConversationSurfaceTurn,

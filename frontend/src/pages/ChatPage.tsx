@@ -33,6 +33,9 @@ import {
   readTraceDelta,
   createConversationUiState,
   reduceConversationUiState,
+  UserConversation,
+  type UserConversationHandle,
+  type ConversationUiState,
   type ConversationUiTurn,
 } from '../components/chat';
 import { ToolSelector, Tool } from '../components/chat/ToolSelector';
@@ -370,28 +373,46 @@ export function ChatPage() {
         selectedTools: [],
       })
   );
+  const userConversationRef = useRef<UserConversationHandle>(null);
+  const [userConversationState, setUserConversationState] =
+    useState<ConversationUiState>(() => createConversationUiState());
+  const [userSelectedTools, setUserSelectedTools] = useState<string[]>([]);
+  const [userSelectedDocuments, setUserSelectedDocuments] = useState<string[]>(
+    []
+  );
   const [documents, setDocuments] = useState<DocumentSource[]>([]);
   const [sessionDefaultsLoaded, setSessionDefaultsLoaded] = useState(false);
   const [pendingDefaultDocs, setPendingDefaultDocs] = useState<string[]>([]);
   const [shareSecrets, setShareSecrets] = useState(false);
   const [secretsForRedaction, setSecretsForRedaction] = useState<string[]>([]);
   const messages = useMemo(
-    () => conversationState.turns.map(conversationTurnToMessage),
-    [conversationState.turns]
+    () =>
+      (isAdmin ? conversationState.turns : userConversationState.turns).map(
+        conversationTurnToMessage
+      ),
+    [conversationState.turns, isAdmin, userConversationState.turns]
   );
-  const selectedTools = conversationState.selectedTools;
+  const selectedTools = isAdmin
+    ? conversationState.selectedTools
+    : userSelectedTools;
   const actorScopedSelectedTools = useMemo(
     () => filterToolsForActor(selectedTools, isAdmin),
     [isAdmin, selectedTools]
   );
-  const selectedDocuments = conversationState.selectedDocuments;
-  const conversationSessionId = conversationState.conversationSessionId;
+  const selectedDocuments = isAdmin
+    ? conversationState.selectedDocuments
+    : userSelectedDocuments;
+  const conversationSessionId = isAdmin
+    ? conversationState.conversationSessionId
+    : userConversationState.conversationSessionId;
   const configToolEnabled = isAdmin && selectedTools.includes(CONFIG_TOOL_ID);
   const prevConversationSessionIdRef = useRef<string | null>(
     conversationSessionId
   );
-  const isLoading = conversationState.isRunning;
-  const error = conversationState.error;
+  const isLoading = isAdmin
+    ? conversationState.isRunning
+    : userConversationState.isRunning;
+  const error = isAdmin ? conversationState.error : userConversationState.error;
   useEffect(() => {
     let cancelled = false;
 
@@ -421,10 +442,7 @@ export function ChatPage() {
     if (adminSessionChecking || isAdmin) return;
     const filteredTools = filterToolsForActor(selectedTools, false);
     if (filteredTools.length !== selectedTools.length) {
-      dispatchConversation({
-        type: 'selectedToolsChanged',
-        selectedTools: filteredTools,
-      });
+      setUserSelectedTools(filteredTools);
     }
     setShareSecrets(false);
     setSecretsForRedaction([]);
@@ -644,6 +662,22 @@ export function ChatPage() {
     }
   }, []);
 
+  const handleUserTurnCompleted = useCallback(() => {
+    void loadConversationHistory();
+  }, [loadConversationHistory]);
+
+  const handleUserAuthFailure = useCallback(
+    (status: 401 | 403) => {
+      if (status === 403) {
+        localStorage.setItem(STORAGE_KEYS.USER_APPROVED, 'false');
+        navigate('/pending');
+        return;
+      }
+      navigate('/login');
+    },
+    [navigate]
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -761,10 +795,7 @@ export function ChatPage() {
             });
           } else {
             const defaults = resolveUserConversationSessionDefaults(data);
-            dispatchConversation({
-              type: 'selectedToolsChanged',
-              selectedTools: defaults.tools,
-            });
+            setUserSelectedTools(defaults.tools);
             if (defaults.documentIds.length > 0) {
               setPendingDefaultDocs(defaults.documentIds);
             }
@@ -772,18 +803,26 @@ export function ChatPage() {
         } else {
           // Non-2xx response - fail closed for non-admin user Tool Sets.
           console.warn('Failed to fetch session defaults:', res.status);
-          dispatchConversation({
-            type: 'selectedToolsChanged',
-            selectedTools: [],
-          });
+          if (isAdmin) {
+            dispatchConversation({
+              type: 'selectedToolsChanged',
+              selectedTools: [],
+            });
+          } else {
+            setUserSelectedTools([]);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch session defaults:', err);
         // Fail closed for non-admin user Tool Sets on defaults load errors.
-        dispatchConversation({
-          type: 'selectedToolsChanged',
-          selectedTools: [],
-        });
+        if (isAdmin) {
+          dispatchConversation({
+            type: 'selectedToolsChanged',
+            selectedTools: [],
+          });
+        } else {
+          setUserSelectedTools([]);
+        }
       } finally {
         setSessionDefaultsLoaded(true);
       }
@@ -836,14 +875,18 @@ export function ChatPage() {
         documents.some((d) => d.id === id)
       );
       if (validIds.length > 0) {
-        dispatchConversation({
-          type: 'selectedDocumentsChanged',
-          selectedDocuments: validIds,
-        });
+        if (isAdmin) {
+          dispatchConversation({
+            type: 'selectedDocumentsChanged',
+            selectedDocuments: validIds,
+          });
+        } else {
+          setUserSelectedDocuments(validIds);
+        }
       }
       setPendingDefaultDocs([]);
     }
-  }, [pendingDefaultDocs, documents]);
+  }, [documents, isAdmin, pendingDefaultDocs]);
 
   const handleToolToggle = useCallback(
     (toolId: string) => {
@@ -853,7 +896,15 @@ export function ChatPage() {
         setShareSecrets(false);
         setSecretsForRedaction([]);
       }
-      dispatchConversation({ type: 'toolToggled', toolId });
+      if (isAdmin) {
+        dispatchConversation({ type: 'toolToggled', toolId });
+      } else {
+        setUserSelectedTools((tools) =>
+          tools.includes(toolId)
+            ? tools.filter((tool) => tool !== toolId)
+            : [...tools, toolId]
+        );
+      }
     },
     [isAdmin, selectedTools]
   );
@@ -861,7 +912,15 @@ export function ChatPage() {
   const handleDocumentToggle = useCallback(
     (docId: string) => {
       const selectedAfterToggle = !selectedDocuments.includes(docId);
-      dispatchConversation({ type: 'documentToggled', documentId: docId });
+      if (isAdmin) {
+        dispatchConversation({ type: 'documentToggled', documentId: docId });
+      } else {
+        setUserSelectedDocuments((documentIds) =>
+          documentIds.includes(docId)
+            ? documentIds.filter((documentId) => documentId !== docId)
+            : [...documentIds, docId]
+        );
+      }
       if (
         isAdmin &&
         selectedAfterToggle &&
@@ -876,6 +935,17 @@ export function ChatPage() {
     [isAdmin, selectedDocuments, selectedTools]
   );
 
+  const reportConversationError = useCallback(
+    (message: string) => {
+      if (isAdmin) {
+        dispatchConversation({ type: 'requestFailed', message });
+      } else {
+        userConversationRef.current?.fail(message);
+      }
+    },
+    [isAdmin]
+  );
+
   const handleConversationSelect = useCallback(
     async (conversation: ConversationHistorySummary) => {
       try {
@@ -886,29 +956,29 @@ export function ChatPage() {
           }
         );
         if (!res.ok) {
-          dispatchConversation({
-            type: 'requestFailed',
-            message: await readErrorDetail(res),
-          });
+          reportConversationError(await readErrorDetail(res));
           return;
         }
         const payload = await res.json();
         const view = conversationSessionViewFromApi(payload);
         if (!view) {
-          dispatchConversation({
-            type: 'requestFailed',
-            message: t(
+          reportConversationError(
+            t(
               'chat.sessions.resumeInvalid',
               'Unable to load that Conversation.'
-            ),
-          });
+            )
+          );
           return;
         }
-        dispatchConversation({
-          type: 'conversationHydrated',
-          sessionId: view.id,
-          turns: view.turns,
-        });
+        if (isAdmin) {
+          dispatchConversation({
+            type: 'conversationHydrated',
+            sessionId: view.id,
+            turns: view.turns,
+          });
+        } else {
+          userConversationRef.current?.hydrate(view.id, view.turns);
+        }
         setActiveConversationTitle(view.title ?? conversation.title);
         setSessionMemoryNotice(null);
         setReducedContextNotice(null);
@@ -919,19 +989,17 @@ export function ChatPage() {
         setDeleteStatus('idle');
         setDeleteError(null);
       } catch (err) {
-        dispatchConversation({
-          type: 'requestFailed',
-          message:
-            err instanceof Error
-              ? err.message
-              : t(
-                  'chat.sessions.resumeInvalid',
-                  'Unable to load that Conversation.'
-                ),
-        });
+        reportConversationError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'chat.sessions.resumeInvalid',
+                'Unable to load that Conversation.'
+              )
+        );
       }
     },
-    [t]
+    [isAdmin, reportConversationError, t]
   );
 
   const handleRenameSubmit = useCallback(
@@ -1015,7 +1083,11 @@ export function ChatPage() {
         existing.filter((conversation) => conversation.id !== deleteDraft.id)
       );
       if (conversationSessionId === deleteDraft.id) {
-        dispatchConversation({ type: 'newConversationStarted' });
+        if (isAdmin) {
+          dispatchConversation({ type: 'newConversationStarted' });
+        } else {
+          userConversationRef.current?.reset();
+        }
         setSessionMemoryNotice(null);
         setReducedContextNotice(null);
         setActiveConversationTitle(null);
@@ -1031,7 +1103,7 @@ export function ChatPage() {
           : t('chat.sessions.deleteError', 'Unable to delete Conversation.')
       );
     }
-  }, [conversationSessionId, deleteDraft, t]);
+  }, [conversationSessionId, deleteDraft, isAdmin, t]);
 
   const generateMessageId = () =>
     `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1178,7 +1250,10 @@ export function ChatPage() {
                   dispatchConversation({
                     type: 'assistantContentReplaced',
                     assistantTurnId: streamMessageId,
-                    content: redactSecrets(streamContent, secretsForThisRequest),
+                    content: redactSecrets(
+                      streamContent,
+                      secretsForThisRequest
+                    ),
                   });
                 }
                 dispatchStreamEvent(event, data, streamMessageId);
@@ -1330,7 +1405,11 @@ export function ChatPage() {
   };
 
   const handleNewChat = () => {
-    dispatchConversation({ type: 'newConversationStarted' });
+    if (isAdmin) {
+      dispatchConversation({ type: 'newConversationStarted' });
+    } else {
+      userConversationRef.current?.reset();
+    }
     setSessionMemoryNotice(null);
     setReducedContextNotice(null);
     setShareSecrets(false);
@@ -1838,15 +1917,27 @@ export function ChatPage() {
         onClose={() => setReachoutOpen(false)}
       />
 
-      <ConversationSurface
-        turns={conversationTurns}
-        onSend={handleSend}
-        isRunning={isLoading}
-        placeholder={t('chat.input.placeholder')}
-        toolbar={inputToolbar}
-        notices={threadNotices}
-        hasPersistedSession={Boolean(conversationSessionId)}
-      />
+      {isAdmin ? (
+        <ConversationSurface
+          turns={conversationTurns}
+          onSend={handleSend}
+          isRunning={isLoading}
+          placeholder={t('chat.input.placeholder')}
+          toolbar={inputToolbar}
+          notices={threadNotices}
+          hasPersistedSession={Boolean(conversationSessionId)}
+        />
+      ) : (
+        <UserConversation
+          ref={userConversationRef}
+          selectedTools={userSelectedTools}
+          selectedDocuments={userSelectedDocuments}
+          placeholder={t('chat.input.placeholder')}
+          onSnapshot={setUserConversationState}
+          onTerminalTurn={handleUserTurnCompleted}
+          onAuthFailure={handleUserAuthFailure}
+        />
+      )}
     </ChatContainer>
   );
 }
