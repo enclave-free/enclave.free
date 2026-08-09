@@ -25,7 +25,7 @@ The source file fell from 623 to 392 lines. Its diff removes 432 lines and adds 
   - Focused adapter: 15 passed.
   - Shared conversation + Admin adapter + Feedback: 30 passed after review.
   - TypeScript: `npx tsc --noEmit` passed.
-  - Full frontend suite: 402 passed after standards/spec, local CodeRabbit, and final independent-review corrections.
+  - Full frontend suite: 403 passed after standards/spec, local/hosted CodeRabbit, and final independent-review corrections.
   - Production build: passed; review changed tests only.
   - Commit hook: `lint-staged` passed, then the recursively invoked suite passed 398 of 399; only the known inherited-`GIT_INDEX_FILE` temporary-repository harness test failed exactly as previously documented. The narrow `--no-verify` bypass was used after removing the stray `sample.ts` index entry.
   - `git diff --check ad7afa874b7e6482294b3f580ea5bbc1363be87d`: passed.
@@ -63,4 +63,10 @@ LOCAL_CODERABBIT_FINDINGS:
 FINAL_INDEPENDENT_REVIEW_STATUS: pass-after-fix
 FINAL_INDEPENDENT_REVIEW_FINDINGS:
 - Replaced global even/odd transcript assumptions with explicit terminal-Assistant-to-submitted-User identity pairing, preserving successful exchanges after earlier failures and activity-only fallback transitions.
+
+HOSTED_CODERABBIT_STATUS: pass-after-fixes
+HOSTED_CODERABBIT_FINDINGS:
+- Reset and Exit now share one unsaved-completed-turn confirmation guard.
+- Transcript-save retries reuse one pending encrypted session log and stable title.
+- The terminal-state test waits explicitly for the composer to re-enable.
 ```

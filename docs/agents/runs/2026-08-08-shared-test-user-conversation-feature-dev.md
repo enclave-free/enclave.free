@@ -9,7 +9,7 @@
 - Feature branch: `feature/shared-test-user-conversation`
 - Human owner: Austin
 - Started: 2026-08-08
-- Current status: Staging PR #615 open; CI and hosted review pending
+- Current status: Staging PR #615 open; hosted Round 1 fixes verified, final hosted refresh pending
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files exist; GitHub, canonical triage labels, and multi-context domain guidance are configured.
 
 ## Goal
@@ -53,7 +53,7 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
 | #613 Extract the shared User Conversation execution module | AFK | Complete | Architecture seam review completed | Two unique P1 findings fixed | Yes |
-| #614 Migrate Test User Sessions onto the shared module | AFK | Complete | Standards/spec, local CodeRabbit, and final independent review completed | Two spec gaps, two CodeRabbit findings, and one terminal-pairing edge case fixed | Yes |
+| #614 Migrate Test User Sessions onto the shared module | AFK | Complete | Standards/spec, local and hosted CodeRabbit, and final independent review completed | Two spec gaps, five CodeRabbit findings, and one terminal-pairing edge case fixed | Yes |
 
 ## Parked HITL slices
 
@@ -66,7 +66,7 @@ Make Admin Test User Sessions use the real User Conversation implementation insi
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #613 | `722665ede5ce9ffef56b538e41425a3b0a10d1f2` | First full Codex worker session | `14e09e2346897fd6cb36dff5d8390f777cc6d156` | Two unique P1 findings fixed; two-axis review passed | 60 targeted and 396 full-suite tests pass; production build passes; hook-only `GIT_INDEX_FILE` baseline defect recorded |
-| #614 | `ad7afa874b7e6482294b3f580ea5bbc1363be87d` | Second full Codex worker session | `ba04e26950f041af5ddc5deb1df41b27b1e6319c` plus local review corrections | Two spec gaps, two CodeRabbit findings, and one independent-review edge case fixed; final review passed | 25 final focused tests pass; 402-test full suite, TypeScript, and production build pass; deterministic rendered-component verification passed; hook-only `GIT_INDEX_FILE` baseline defect recorded |
+| #614 | `ad7afa874b7e6482294b3f580ea5bbc1363be87d` | Second full Codex worker session | `ba04e26950f041af5ddc5deb1df41b27b1e6319c` plus review corrections | Two spec gaps, five CodeRabbit findings, and one independent-review edge case fixed; final independent review passed | 26 final focused tests pass; 403-test full suite, TypeScript, and production build pass; deterministic rendered-component verification passed; hook-only `GIT_INDEX_FILE` baseline defect recorded |
 
 ## Open questions
 

@@ -121,6 +121,7 @@ function completedTranscript(
 export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const { t } = useTranslation();
   const conversationRef = useRef<UserConversationHandle>(null);
+  const pendingLogRef = useRef<{ id: string; title: string } | null>(null);
   const [userTypes, setUserTypes] = useState<AdminUserType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
@@ -143,6 +144,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     t('adminTestFeedback.test.genericUser', 'User');
 
   const clearConversationCapture = useCallback(() => {
+    pendingLogRef.current = null;
     setSnapshot(null);
     setTerminalTurns({});
     setSaveError(null);
@@ -193,30 +195,31 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     []
   );
 
+  const confirmDiscardCompletedTurns = useCallback(
+    () =>
+      completedTranscript(snapshot, terminalTurns).turns.length === 0 ||
+      window.confirm(
+        t(
+          'adminTestFeedback.test.discardUnsavedConfirm',
+          'Discard completed turns that have not been saved?'
+        )
+      ),
+    [snapshot, t, terminalTurns]
+  );
+
   const resetConversation = useCallback(() => {
+    if (!confirmDiscardCompletedTurns()) return;
     clearConversationCapture();
     conversationRef.current?.reset();
-  }, [clearConversationCapture]);
+  }, [clearConversationCapture, confirmDiscardCompletedTurns]);
 
   const exitSession = useCallback(() => {
-    const hasUnsavedTurns =
-      completedTranscript(snapshot, terminalTurns).turns.length > 0;
-    if (
-      hasUnsavedTurns &&
-      !window.confirm(
-        t(
-          'adminTestFeedback.test.exitUnsavedConfirm',
-          'Exit this test session? Completed turns have not been saved and will be discarded.'
-        )
-      )
-    ) {
-      return;
-    }
+    if (!confirmDiscardCompletedTurns()) return;
 
     setSession(null);
     setSavedNotice(null);
     clearConversationCapture();
-  }, [clearConversationCapture, snapshot, t, terminalTurns]);
+  }, [clearConversationCapture, confirmDiscardCompletedTurns]);
 
   const capturedTranscript = completedTranscript(snapshot, terminalTurns);
 
@@ -227,15 +230,19 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     setSaving(true);
     setSaveError(null);
     try {
-      const title = `${session.personaName} · ${new Date().toLocaleString()}`;
-      const log = await createSessionLog({
-        source: 'admin_test',
-        title,
-        subject_user_id: session.testUserId,
-        user_type_id: session.userTypeId,
-        sage_session_id: capture.sageSessionId,
-      });
-      await saveTranscript(log.log_id, capture.turns, title);
+      if (!pendingLogRef.current) {
+        const title = `${session.personaName} · ${new Date().toLocaleString()}`;
+        const log = await createSessionLog({
+          source: 'admin_test',
+          title,
+          subject_user_id: session.testUserId,
+          user_type_id: session.userTypeId,
+          sage_session_id: capture.sageSessionId,
+        });
+        pendingLogRef.current = { id: log.log_id, title };
+      }
+      const pendingLog = pendingLogRef.current;
+      await saveTranscript(pendingLog.id, capture.turns, pendingLog.title);
       setSavedNotice(
         t(
           'adminTestFeedback.test.saved',

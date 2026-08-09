@@ -33,3 +33,28 @@
 - Addressed: Terminal callbacks now carry the exact submitted User turn ID, so encrypted capture pairs each terminal Assistant answer with its actual question instead of assuming the entire UI history remains globally even/odd. This preserves later successes after an earlier transport failure and correctly captures non-streaming fallback answers after activity-only stream output.
 - Regressions added: failed pre-output stream plus failed fallback followed by a later success; activity-only stream failure followed by a successful fallback.
 - Result: pass after fix; focused 25-test suite, full 402-test suite, TypeScript, and production build all pass.
+
+## Hosted PR Round 1
+
+- Scope: PR #615 at `3c28dd2e305f5b834ce688c3c036b75ac3dc8d7b`
+- Command: `@coderabbit full review`
+- Availability: completed
+- Issues: 1 minor actionable comment and 2 nitpicks
+
+### Addressed
+
+- Reset now uses the same unsaved-completed-turn guard as Exit, so neither control silently discards captured trial evidence.
+- A transcript-save retry now reuses the pending encrypted session log and its title instead of creating duplicate empty logs.
+- The post-stream composer assertion now explicitly waits for React to apply the terminal state update.
+- Added regression coverage for rejecting/accepting Reset confirmation and retrying a failed transcript save against one log ID.
+
+### Not Changed
+
+- CodeRabbit's repository-wide docstring-coverage warning is an informational generated threshold, not a configured project gate or a finding about missing behavior. The new shared component and Admin adapter already document their ownership boundary; adding boilerplate comments to every small local callback would conflict with the repository's concise TypeScript style.
+
+### Verification
+
+- Focused shared-module and Admin-adapter suite: 26 passed.
+- Full frontend suite: 76 files / 403 tests passed.
+- TypeScript and production build passed.
+- All GitHub security, production-runtime, PDF-drift, dependency/SAST, and Semgrep gates passed before the correction push; they will rerun on the corrected commit.

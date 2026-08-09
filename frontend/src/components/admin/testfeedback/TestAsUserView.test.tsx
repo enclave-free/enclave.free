@@ -185,6 +185,7 @@ describe('TestAsUserView', () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -274,11 +275,13 @@ describe('TestAsUserView', () => {
       await streamGate;
     });
 
-    expect(
-      screen.getByRole('textbox', {
-        name: 'Message the assistant as this user…',
-      })
-    ).toBeEnabled();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', {
+          name: 'Message the assistant as this user…',
+        })
+      ).toBeEnabled()
+    );
   });
 
   it('sends chat turns with the synthetic User bearer token', async () => {
@@ -675,6 +678,10 @@ describe('TestAsUserView', () => {
   });
 
   it('resets the active test conversation without changing the synthetic User identity', async () => {
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
     mockSendLlmChatStreamWithUnifiedTools
       .mockImplementationOnce(async (options) => {
         emitStreamAnswer(options, {
@@ -698,6 +705,11 @@ describe('TestAsUserView', () => {
     expect(await screen.findByText('First answer')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('First answer')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(confirm).toHaveBeenCalledTimes(2);
 
     expect(screen.queryByText('First answer')).not.toBeInTheDocument();
     expect(
@@ -791,6 +803,32 @@ describe('TestAsUserView', () => {
     });
     expect(await screen.findByText('Done')).toBeInTheDocument();
     expect(saveButton).not.toBeDisabled();
+  });
+
+  it('reuses the pending encrypted log when transcript saving is retried', async () => {
+    mockSaveTranscript.mockRejectedValueOnce(
+      new Error('Encrypted transcript save failed')
+    );
+    const user = await startStudentSession();
+
+    await user.type(
+      screen.getByPlaceholderText('Message the assistant as this user…'),
+      'Save this exchange once'
+    );
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(await screen.findByText('Hello from Sage')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    expect(
+      await screen.findByText('Encrypted transcript save failed')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'End & save trial' }));
+    await waitFor(() => expect(mockSaveTranscript).toHaveBeenCalledTimes(2));
+
+    expect(mockCreateSessionLog).toHaveBeenCalledTimes(1);
+    expect(mockSaveTranscript.mock.calls[0]?.[0]).toBe('log-1');
+    expect(mockSaveTranscript.mock.calls[1]?.[0]).toBe('log-1');
   });
 
   it('preserves Sage trace and tool metadata when saving the test transcript', async () => {
