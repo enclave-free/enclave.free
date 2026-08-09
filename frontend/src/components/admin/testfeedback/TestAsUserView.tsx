@@ -335,7 +335,7 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
         'adminTestFeedback.test.workspaceAria',
         'Test User conversation workspace'
       )}
-      className="flex h-[clamp(32rem,calc(100dvh-13rem),56rem)] min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-raised shadow-sm"
+      className="flex h-[clamp(32rem,calc(100dvh_-_13rem),56rem)] min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-raised shadow-sm"
     >
       <UserConversation
         ref={conversationRef}

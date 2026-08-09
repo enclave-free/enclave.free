@@ -9,7 +9,7 @@
 - Feature branch: `feature/admin-test-chat-scroll`
 - Human owner: Austin
 - Started: 2026-08-09
-- Current status: Implementation and local verification complete; review pending.
+- Current status: Initial review findings corrected and reverified; final re-review pending.
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files configure GitHub, triage labels, and multi-context domain guidance.
 
 ## Goal
@@ -25,8 +25,8 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 - Tickets: #621 — Keep Admin Test User chat within a scrollable workspace.
 - Ticket sessions: This small, isolated, low-risk adapter layout correction is owned by the orchestrator under the loop's sub-agent implementation exception.
 - Agent briefs: #621 is published with `ready-for-agent`.
-- Review packets: Two-axis review pending from fixed point `4a4037d33cde091b443b5a7ad6723a4d4246b1c4`.
-- Local CodeRabbit report: Pending.
+- Review packets: Initial two-axis review found a brittle class assertion and incomplete scroll-ownership coverage; both are corrected. Final re-review pending.
+- Local CodeRabbit report: Three findings processed. The async lookup and unambiguous Tailwind calc token were adopted; the generated CSS had already been valid and real Zen resolved it successfully.
 - PR URL: Pending.
 
 ## Commands
@@ -46,9 +46,9 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 
 ## Ticket Ledger
 
-| Issue | Type | Status                      | Review thread           | Fixes needed | Verified |
-| ----- | ---- | --------------------------- | ----------------------- | ------------ | -------- |
-| #621  | AFK  | Implemented; review pending | Two-axis review pending | None yet     | Yes      |
+| Issue | Type | Status               | Review thread                    | Fixes needed                     | Verified |
+| ----- | ---- | -------------------- | -------------------------------- | -------------------------------- | -------- |
+| #621  | AFK  | Corrections verified | Final two-axis re-review pending | Initial test-seam findings fixed | Yes      |
 
 ## Parked HITL Slices
 
@@ -58,9 +58,9 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 
 ## Issue Session Ledger
 
-| Issue | Fixed point                                | Worker session                             | Commit  | Review result | Checks                                                                                                                        |
-| ----- | ------------------------------------------ | ------------------------------------------ | ------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| #621  | `4a4037d33cde091b443b5a7ad6723a4d4246b1c4` | Orchestrator, tiny isolated low-risk write | Pending | Pending       | 20/20 focused tests, 76 files/404 full tests, production build, Prettier, generated CSS inspection, and live Zen preview pass |
+| Issue | Fixed point                                | Worker session                             | Commit                                   | Review result                             | Checks                                                                                                                        |
+| ----- | ------------------------------------------ | ------------------------------------------ | ---------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| #621  | `4a4037d33cde091b443b5a7ad6723a4d4246b1c4` | Orchestrator, tiny isolated low-risk write | `b8f5690` plus review correction pending | Initial Standards/Spec findings corrected | 21/21 focused tests, 76 files/404 full tests, production build, Prettier, generated CSS inspection, and live Zen preview pass |
 
 ## Open Questions
 
@@ -74,5 +74,6 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 
 - The focused layout regression failed before implementation because no bounded workspace region existed, then passed after the adapter acquired its responsive height boundary.
 - The production build emits the expected responsive `height: clamp(...)` declaration.
+- Review correction exposes the shared message viewport as an accessible group, verifies that it owns `overflow-y-auto`, and proves that the composer plus Reset, Exit, and End & Save controls remain outside it.
 - A temporary local DOM preview in the user's open Zen browser applied the exact rule to the current long demo trace. The thread showed its internal scrollbar while the persona controls and composer remained visible. The page was refreshed immediately afterward to remove the temporary preview.
 - Full-suite stderr includes existing intentional test-path diagnostics and a missing local `LLM_API_KEY` Compose warning; Vitest still completed successfully with 404/404 tests passing.

@@ -218,23 +218,26 @@ describe('TestAsUserView', () => {
   it('keeps the active test chat in a viewport-bounded scrolling workspace', async () => {
     await startStudentSession();
 
-    const workspace = screen.getByRole('region', {
+    const workspace = await screen.findByRole('region', {
       name: 'Test User conversation workspace',
     });
+    const scrollViewport = screen.getByRole('group', {
+      name: 'Conversation messages',
+    });
+    const composer = screen.getByRole('textbox', {
+      name: 'Message the assistant as this user…',
+    });
+    const reset = screen.getByRole('button', { name: 'Reset' });
+    const exit = screen.getByRole('button', { name: 'Exit' });
+    const save = screen.getByRole('button', { name: 'End & save trial' });
 
-    expect(workspace).toHaveClass(
-      'h-[clamp(32rem,calc(100dvh-13rem),56rem)]',
-      'min-h-0',
-      'overflow-hidden'
-    );
-    expect(
-      screen.getByRole('region', { name: 'Conversation thread' })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('textbox', {
-        name: 'Message the assistant as this user…',
-      })
-    ).toBeVisible();
+    expect(scrollViewport).toHaveClass('overflow-y-auto');
+    expect(workspace).toContainElement(scrollViewport);
+    expect(workspace).toContainElement(composer);
+    expect(scrollViewport).not.toContainElement(composer);
+    expect(scrollViewport).not.toContainElement(reset);
+    expect(scrollViewport).not.toContainElement(exit);
+    expect(scrollViewport).not.toContainElement(save);
   });
 
   it('renders markdown plus live Activity and Trace after early text while the shared surface remains running', async () => {
