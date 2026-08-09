@@ -9,7 +9,7 @@
 - Feature branch: `feature/admin-test-chat-scroll`
 - Human owner: Austin
 - Started: 2026-08-09
-- Current status: Initial review findings corrected and reverified; final re-review pending.
+- Current status: Complete locally; final Standards and Spec reviews pass, local CodeRabbit is clean, and staging PR publication is pending.
 - Skill setup status: Present. `AGENTS.md` and all three `docs/agents` setup files configure GitHub, triage labels, and multi-context domain guidance.
 
 ## Goal
@@ -25,8 +25,8 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 - Tickets: #621 — Keep Admin Test User chat within a scrollable workspace.
 - Ticket sessions: This small, isolated, low-risk adapter layout correction is owned by the orchestrator under the loop's sub-agent implementation exception.
 - Agent briefs: #621 is published with `ready-for-agent`.
-- Review packets: Initial two-axis review found a brittle class assertion and incomplete scroll-ownership coverage; both are corrected. Final re-review pending.
-- Local CodeRabbit report: Three findings processed. The async lookup and unambiguous Tailwind calc token were adopted; the generated CSS had already been valid and real Zen resolved it successfully.
+- Review packets: Initial two-axis review findings were corrected. Final Standards and Spec re-reviews both pass with no actionable findings.
+- Local CodeRabbit report: Three initial findings processed; two clean post-correction rounds reported zero findings.
 - PR URL: Pending.
 
 ## Commands
@@ -46,9 +46,9 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 
 ## Ticket Ledger
 
-| Issue | Type | Status               | Review thread                    | Fixes needed                     | Verified |
-| ----- | ---- | -------------------- | -------------------------------- | -------------------------------- | -------- |
-| #621  | AFK  | Corrections verified | Final two-axis re-review pending | Initial test-seam findings fixed | Yes      |
+| Issue | Type | Status   | Review thread                 | Fixes needed                     | Verified |
+| ----- | ---- | -------- | ----------------------------- | -------------------------------- | -------- |
+| #621  | AFK  | Complete | Final Standards and Spec pass | Initial test-seam findings fixed | Yes      |
 
 ## Parked HITL Slices
 
@@ -58,9 +58,9 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 
 ## Issue Session Ledger
 
-| Issue | Fixed point                                | Worker session                             | Commit                                   | Review result                             | Checks                                                                                                                        |
-| ----- | ------------------------------------------ | ------------------------------------------ | ---------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| #621  | `4a4037d33cde091b443b5a7ad6723a4d4246b1c4` | Orchestrator, tiny isolated low-risk write | `b8f5690` plus review correction pending | Initial Standards/Spec findings corrected | 21/21 focused tests, 76 files/404 full tests, production build, Prettier, generated CSS inspection, and live Zen preview pass |
+| Issue | Fixed point                                | Worker session                             | Commit                          | Review result                                     | Checks                                                                                                                        |
+| ----- | ------------------------------------------ | ------------------------------------------ | ------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| #621  | `4a4037d33cde091b443b5a7ad6723a4d4246b1c4` | Orchestrator, tiny isolated low-risk write | `b8f5690`, `65fd065`, `0ab4360` | Final Standards/Spec pass; local CodeRabbit clean | 21/21 focused tests, 76 files/404 full tests, production build, Prettier, generated CSS inspection, and live Zen preview pass |
 
 ## Open Questions
 
