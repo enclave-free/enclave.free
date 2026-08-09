@@ -27,6 +27,7 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 - Agent briefs: #621 is published with `ready-for-agent`.
 - Review packets: Initial two-axis review findings were corrected. Final Standards and Spec re-reviews both pass with no actionable findings.
 - Local CodeRabbit report: Three initial findings processed; two clean post-correction rounds reported zero findings.
+- Hosted CodeRabbit Round 1: One test-strengthening comment accepted; Reset, Exit, and End & Save are now asserted inside the bounded workspace as well as outside the messages viewport.
 - PR URL: Pending.
 
 ## Commands

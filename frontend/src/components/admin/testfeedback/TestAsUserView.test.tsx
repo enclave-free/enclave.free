@@ -239,6 +239,9 @@ describe('TestAsUserView', () => {
     expect(scrollViewport).toHaveClass('overflow-y-auto');
     expect(workspace).toContainElement(scrollViewport);
     expect(workspace).toContainElement(composer);
+    expect(workspace).toContainElement(reset);
+    expect(workspace).toContainElement(exit);
+    expect(workspace).toContainElement(save);
     expect(scrollViewport).not.toContainElement(composer);
     expect(scrollViewport).not.toContainElement(reset);
     expect(scrollViewport).not.toContainElement(exit);
