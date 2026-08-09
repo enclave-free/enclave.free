@@ -75,5 +75,6 @@ Make the active Admin Test User chat a viewport-bounded workspace whose Conversa
 - The focused layout regression failed before implementation because no bounded workspace region existed, then passed after the adapter acquired its responsive height boundary.
 - The production build emits the expected responsive `height: clamp(...)` declaration.
 - Review correction exposes the shared message viewport as an accessible group, verifies that it owns `overflow-y-auto`, and proves that the composer plus Reset, Exit, and End & Save controls remain outside it.
+- The final regression also verifies the adapter retains a `dvh`-relative clamp with the agreed minimum and maximum bounds plus `overflow-hidden`, without asserting the full Tailwind token verbatim.
 - A temporary local DOM preview in the user's open Zen browser applied the exact rule to the current long demo trace. The thread showed its internal scrollbar while the persona controls and composer remained visible. The page was refreshed immediately afterward to remove the temporary preview.
 - Full-suite stderr includes existing intentional test-path diagnostics and a missing local `LLM_API_KEY` Compose warning; Vitest still completed successfully with 404/404 tests passing.

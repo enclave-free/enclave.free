@@ -230,7 +230,12 @@ describe('TestAsUserView', () => {
     const reset = screen.getByRole('button', { name: 'Reset' });
     const exit = screen.getByRole('button', { name: 'Exit' });
     const save = screen.getByRole('button', { name: 'End & save trial' });
+    const workspaceHeightClass = Array.from(workspace.classList).find(
+      (className) => className.startsWith('h-[clamp(')
+    );
 
+    expect(workspaceHeightClass).toMatch(/32rem.*100dvh.*56rem/);
+    expect(workspace).toHaveClass('overflow-hidden');
     expect(scrollViewport).toHaveClass('overflow-y-auto');
     expect(workspace).toContainElement(scrollViewport);
     expect(workspace).toContainElement(composer);
