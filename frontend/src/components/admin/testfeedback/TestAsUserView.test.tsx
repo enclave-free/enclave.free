@@ -215,6 +215,28 @@ describe('TestAsUserView', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps the active test chat in a viewport-bounded scrolling workspace', async () => {
+    await startStudentSession();
+
+    const workspace = screen.getByRole('region', {
+      name: 'Test User conversation workspace',
+    });
+
+    expect(workspace).toHaveClass(
+      'h-[clamp(32rem,calc(100dvh-13rem),56rem)]',
+      'min-h-0',
+      'overflow-hidden'
+    );
+    expect(
+      screen.getByRole('region', { name: 'Conversation thread' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', {
+        name: 'Message the assistant as this user…',
+      })
+    ).toBeVisible();
+  });
+
   it('renders markdown plus live Activity and Trace after early text while the shared surface remains running', async () => {
     let finishStream!: () => void;
     const streamGate = new Promise<void>((resolve) => {

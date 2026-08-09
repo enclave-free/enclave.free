@@ -329,7 +329,14 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
   const hasConversationTurns = Boolean(snapshot?.turns.length);
 
   return (
-    <div className="flex min-h-[36rem] flex-col overflow-hidden rounded-xl border border-border bg-surface-raised shadow-sm">
+    <div
+      role="region"
+      aria-label={t(
+        'adminTestFeedback.test.workspaceAria',
+        'Test User conversation workspace'
+      )}
+      className="flex h-[clamp(32rem,calc(100dvh-13rem),56rem)] min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-raised shadow-sm"
+    >
       <UserConversation
         ref={conversationRef}
         selectedTools={session.tools}
