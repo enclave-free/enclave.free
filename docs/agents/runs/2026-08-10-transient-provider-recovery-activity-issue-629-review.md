@@ -24,5 +24,5 @@ multi-turn cohort edge case; a generic per-turn hard completion check and a
 first-turn-failure/later-success regression corrected it, with 67/67 benchmark
 tests passing. Both correction re-reviews passed with zero remaining findings.
 The local CodeRabbit rerun reached the organization's included-review rate limit
-before analysis; the published staging PR receives the required full review
-command instead.
+before analysis; full hosted reviews were triggered on parent PR #630 and Sage
+PR #53 instead.

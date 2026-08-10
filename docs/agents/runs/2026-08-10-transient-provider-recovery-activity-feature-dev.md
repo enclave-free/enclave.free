@@ -9,7 +9,7 @@
 - Feature branch: `feature/transient-provider-recovery-activity`
 - Human owner: Austin Kelsay
 - Started: 2026-08-10
-- Current status: Integrated local candidate verified; final branch review and staging PR publication pending
+- Current status: Reviewed non-draft staging PRs published; CI and hosted CodeRabbit pending
 - Skill setup status: Complete; GitHub Issues, canonical triage labels, and multi-context domain docs are configured.
 
 ## Goal
@@ -26,8 +26,8 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 - Ticket sessions: #626 `df70528` plus `3d20898`; #627 `6d63f3d`; #628 `cdb199b`; #629 current integration session.
 - Agent briefs: The issue bodies and durable triage comments for #626–#629.
 - Review packets: Issue-specific session and review records for #626–#629.
-- Local CodeRabbit report: Sage raised one major HTTP-date compatibility issue, fixed in `3d20898`, then passed with zero issues. Parent raised ten minor coverage/evidence issues and those corrections pass. The final parent rerun reached the organization's included-review rate limit before analysis; the staging PR receives the required `@coderabbitai full review` instead.
-- PR URL: Pending.
+- Local CodeRabbit report: Sage raised one major HTTP-date compatibility issue, fixed in `3d20898`, then passed with zero issues. Parent raised ten minor coverage/evidence issues and those corrections pass. The final parent rerun reached the organization's included-review rate limit before analysis; full hosted reviews were triggered on both staging PRs instead.
+- PR URLs: parent [#630](https://github.com/enclave-free/enclave.free/pull/630); Sage [#53](https://github.com/enclave-free/sage/pull/53).
 
 ## Commands
 
@@ -46,7 +46,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 | #626 Provider 429 recovery | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | Corrected mixed-exhaustion coverage, typed snapshot policy, and Retry-After date parsing | 189 lib + 67 main Sage tests + fmt/clippy/check pass |
 | #627 Reliability cohorts | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | None | 66/66 bench tests pass |
 | #628 Whole-Activity collapse | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | Corrected naming and controlled-region findings | 405/405 frontend tests + build + visual checks pass |
-| #629 Integration verification | AFK | implementation and local verification complete | Combined review pending | Final branch review and PR publication | 16/16 fresh live Conversations, health, provider doubles, source gates, and prior dual-adapter visuals pass |
+| #629 Integration verification | AFK | reviewed; published in PR #630 | Standards PASS; Spec PASS after correction | Corrected multi-turn false-green cohort edge case | 67/67 bench tests, 16/16 fresh live Conversations, health, provider doubles, source gates, and prior dual-adapter visuals pass |
 
 ## Parked HITL Slices
 
@@ -61,7 +61,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 | #626 | `50f0157` / Sage `e072834` | Fresh worker + two-axis reviewers | Sage `df70528` plus `3d20898` | Standards PASS; Spec PASS after correction; CodeRabbit PASS | 189 lib + 67 main tests + fmt/clippy/check pass |
 | #627 | `cbdb746` | Current full Codex session | `6d63f3d` | Standards PASS; Spec PASS | 66/66 bench tests pass |
 | #628 | `cbdb746` | Fresh worker + two-axis reviewers | `cdb199b` | Standards PASS; Spec PASS after correction | 405/405 frontend tests + build + desktop/compact checks pass |
-| #629 | `50f0157` / Sage `e072834` | Current full Codex session | Parent pin pending final Sage `3d20898` | Sage CodeRabbit PASS; combined two-axis review pending | Parent, frontend, bench, Compose, Sage, Apple health, 16/16 live Conversations, and prior dual-adapter visual gates pass |
+| #629 | `50f0157` / Sage `e072834` | Current full Codex session | Parent `a41c56f`; Sage `3d20898` | Standards PASS; Spec PASS after correction; hosted review pending | Parent, frontend, bench, Compose, Sage, Apple health, 16/16 live Conversations, and prior dual-adapter visual gates pass |
 
 ## Open Questions
 
