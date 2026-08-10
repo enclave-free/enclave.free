@@ -559,6 +559,18 @@ def run_scenario(
             resource_fixture=resource_fixture,
             database_fixture=database_fixture,
         )
+    for index, dispatched in enumerate(dispatched_streams, start=1):
+        completed = stream_completed(dispatched)
+        checks.append(
+            check(
+                f"conversation_turn_{index}_completed",
+                completed,
+                "hard",
+                None
+                if completed
+                else f"Conversation turn {index} did not produce a completed answer",
+            )
+        )
     checks.extend(
         [
             check(

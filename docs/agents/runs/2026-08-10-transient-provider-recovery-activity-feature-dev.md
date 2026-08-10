@@ -26,12 +26,12 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 - Ticket sessions: #626 `df70528` plus `3d20898`; #627 `6d63f3d`; #628 `cdb199b`; #629 current integration session.
 - Agent briefs: The issue bodies and durable triage comments for #626–#629.
 - Review packets: Issue-specific session and review records for #626–#629.
-- Local CodeRabbit report: Sage raised one major HTTP-date compatibility issue, fixed in `3d20898`, then passed with zero issues. Parent raised ten minor coverage/evidence issues; code-level corrections pass focused checks and final review is pending.
+- Local CodeRabbit report: Sage raised one major HTTP-date compatibility issue, fixed in `3d20898`, then passed with zero issues. Parent raised ten minor coverage/evidence issues and those corrections pass. The final parent rerun reached the organization's included-review rate limit before analysis; the staging PR receives the required `@coderabbitai full review` instead.
 - PR URL: Pending.
 
 ## Commands
 
-- Parent tests: from the repository root, `python3 -m unittest scripts.benches.test_conversation_model_bench` passed 66/66 and the backend discovery suite passed 423/423 with test-only secret placeholders.
+- Parent tests: from the repository root, `python3 -m unittest scripts.benches.test_conversation_model_bench` passed 67/67 after the final multi-turn failure correction; the backend discovery suite passed 423/423 with test-only secret placeholders.
 - Frontend tests: from `frontend`, `npm test` passed 76 files and 405 tests; the focused shared/User/Admin command recorded in the #628 session passed 46/46.
 - Frontend build: from `frontend`, `npm run build` passed TypeScript and the Vite production build. The modified Activity files pass targeted Prettier; the repository-wide command reports pre-existing legacy/generated formatting debt outside this feature.
 - Sage checks: from `runtime/sage`, `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --all-features --quiet`, and `cargo check -p sage-core --bin enclave_web` pass with the Homebrew libpq path supplied on macOS; 189 library and 67 executable tests pass.

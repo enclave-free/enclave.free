@@ -999,6 +999,48 @@ class ConversationModelBenchTest(unittest.TestCase):
             },
         )
 
+    def test_reliability_cohort_fails_when_an_earlier_multi_turn_request_fails(
+        self,
+    ) -> None:
+        class FirstTurnFailingClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.call_count = 0
+
+            def stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                self.call_count += 1
+                if self.call_count == 1:
+                    raise RuntimeError("simulated first-turn provider failure")
+                return super().stream_chat(token, payload, timeout)
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("user_consent_boundary",)),
+            environment=FakeEnvironment(),
+            client=FirstTurnFailingClient(),
+        )
+
+        candidate = artifact["candidates"][0]
+        self.assertEqual(candidate["summary"]["status"], "failed")
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(
+            artifact["summary"]["reliability"],
+            {
+                "requested_repetitions": 1,
+                "scenario_run_count": 1,
+                "attempted_turn_count": 2,
+                "completed_turn_count": 1,
+                "failed_turn_count": 1,
+            },
+        )
+        self.assertIn(
+            "conversation_turn_1_completed",
+            {
+                failure["name"]
+                for failure in artifact["summary"]["hard_failures"]
+            },
+        )
+
     def test_stream_diagnostics_distinguish_observed_zero_cached_tokens_from_absence(
         self,
     ) -> None:

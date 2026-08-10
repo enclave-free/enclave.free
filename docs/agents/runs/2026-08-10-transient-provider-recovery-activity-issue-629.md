@@ -65,6 +65,13 @@ The Resource cohort retained five non-blocking model-quality warnings: four
 paragraph-count warnings and one 11.9-second first-Activity warning. It produced
 no Conversation, grounding, consent, Tool, or cleanup hard failure.
 
+Final branch review found that the initial cohort summary could count an earlier
+failed turn in a multi-turn scenario while allowing a later successful turn to
+leave the aggregate green. The generic scenario boundary now emits a hard
+completion check for every dispatched turn. A first-turn-failure/later-success
+regression proves both candidate and run fail, and the complete benchmark suite
+passes 67/67.
+
 ## Browser Evidence
 
 Issue #628 already verified the shared Activity renderer at 1440x900 and 390x844

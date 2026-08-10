@@ -19,6 +19,10 @@
 
 ## Review Status
 
-The final two-axis branch review and final local CodeRabbit pass are recorded in
-the feature ledger after all corrections. Any actionable finding must be resolved
-before this issue is accepted into the staging pull request.
+The final Standards review passed. The final Spec review found one false-green
+multi-turn cohort edge case; a generic per-turn hard completion check and a
+first-turn-failure/later-success regression corrected it, with 67/67 benchmark
+tests passing. Both correction re-reviews passed with zero remaining findings.
+The local CodeRabbit rerun reached the organization's included-review rate limit
+before analysis; the published staging PR receives the required full review
+command instead.
