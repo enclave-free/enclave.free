@@ -424,6 +424,10 @@ _Avoid_: prompt capture, answer capture, reasoning trace, billing subsystem, ana
 A model request that remains completely silent beyond the product's bounded first-event wait. Because no answer, hidden reasoning event, or Tool call has arrived, Sage may abandon that attempt and repeat the same model request within the bounded same-model recovery budget without replaying a Tool.
 _Avoid_: slow answer, long reasoning, Tool timeout, provider failover
 
+**Transient Provider Rejection**:
+A Model Provider HTTP rejection, such as temporary rate limiting or upstream unavailability, that arrives before any answer, hidden reasoning event, or Tool call and is eligible for the same bounded same-model recovery budget as a **Pre-Response Provider Stall**.
+_Avoid_: User rate limit, authentication failure, provider failover
+
 **Provider Continuity State**:
 Opaque model-supplied state that must accompany a corresponding assistant Tool-call message so the same model can continue one in-progress turn after receiving Tool results. Sage preserves it only for that turn and never treats it as product-visible reasoning or authority.
 _Avoid_: Reasoning Trace, Conversation Content, Sage plan, persisted chain of thought
@@ -780,6 +784,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Activity** should be the user-facing presentation for both live **Conversation Activity Steps** and final **Conversation Trace** metadata
 - **Activity** should be visible by default during the prototype phase, with a polished timeline that is verbose enough for debugging and auditability
 - **Activity** should use progressive disclosure: visible rows for meaningful work, expandable details for raw or near-raw trace material, and hard protection for secrets and hidden authority-bearing instructions
+- A viewer may collapse the complete per-turn **Activity** body without changing the persisted **Conversation Trace** or the transparent **Trace Visibility Posture**; optional summaries remain a separate progressive-disclosure layer
 - The chat UI should prefer **Conversation Streaming Transport** for **Conversation Trace** and answer updates, while preserving non-streaming fallback behavior for compatibility and resilience
 - The **Conversation UI Surface** should adapt to Sage-owned **Conversation Streaming Transport** rather than redefining **Agent Runtime** behavior
 - **Conversation Streaming Transport** should improve perceived latency by emitting early assistant-turn and answer-delta events even when total model generation time is unchanged
@@ -812,6 +817,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The default **Conversation** trace posture should expose content-free model and Tool evidence for troubleshooting without publishing hidden reasoning
 - **Model Usage Observations** should remain sanitized **Conversation Trace** metadata, follow the associated **Conversation** retention and deletion lifecycle, and stay out of normal answer content
 - A **Pre-Response Provider Stall** may retry the identical model request within the shared three-attempt ceiling, but any provider event ends that attempt's retry opportunity and an executed **Tool** must never be replayed by model-request recovery
+- A **Transient Provider Rejection** may use that same three-attempt ceiling only before model output, with a short bounded retry delay that respects provider guidance when practical; it does not receive a separate retry budget
 - **Provider Continuity State** should return unchanged only to the same model within the current **Bounded Native Tool Loop** and should never be interpreted, streamed, logged, persisted, exported, or carried into a later **Conversation** turn
 - The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
 - **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase
