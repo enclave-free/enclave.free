@@ -23,4 +23,26 @@ plus compact verification satisfy the external acceptance evidence.
 
 ## Disposition
 
-Accepted for integration into issue #629.
+Accepted for integration into issue #629. Independent validation used:
+
+```bash
+cd frontend
+npm test -- src/components/chat/ChatMessage.test.tsx \
+  src/components/chat/UserConversation.test.tsx \
+  src/components/admin/testfeedback/TestAsUserView.test.tsx
+# 46/46 passed
+npm test
+# 76 files, 405 tests passed
+npm run build
+# passed
+npx prettier --check src/components/chat/ChatMessage.tsx \
+  src/components/chat/ChatMessage.test.tsx
+# passed
+```
+
+The desktop 1440x900 and compact 390x844 Test Dashboard checks passed for both
+ordinary User and Admin Test User paths, including zero compact horizontal
+overflow. `npm run verify:pre-commit` exposed the documented nested lint-staged
+fixture artifact rather than a product failure; the equivalent gates above ran
+separately before the scoped commit. Compose smoke endpoints are intentionally
+recorded once in the #629 combined integration report.

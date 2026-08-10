@@ -42,4 +42,10 @@ Ran 66 tests — OK
 
 ## Disposition
 
-Accepted for integration into issue #629 without corrections.
+Accepted for integration into issue #629 without corrections. The public bench
+contract and deterministic client evidence are the leaf-ticket gate. Compose
+health, live fresh-Conversation cohorts, Test Dashboard checks, and their exact
+endpoints belong to #629's combined verification record. Network Link
+Conditioner remains an optional browser-to-Gateway manual check by design; it
+does not prove native Gateway-to-Provider recovery and is not a prerequisite for
+accepting this bench-harness slice.

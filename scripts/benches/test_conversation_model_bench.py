@@ -899,6 +899,9 @@ class ConversationModelBenchTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parse_args(["--repeat", "0"])
 
+        with self.assertRaises(SystemExit):
+            parse_args(["--repeat", "-1"])
+
     def test_reliability_cohort_uses_fresh_conversations_and_reports_turn_counts(
         self,
     ) -> None:
@@ -930,6 +933,7 @@ class ConversationModelBenchTest(unittest.TestCase):
 
         scenarios = artifact["candidates"][0]["scenarios"]
         self.assertEqual([scenario["repetition"] for scenario in scenarios], [1, 2, 3])
+        self.assertEqual([len(scenario["turns"]) for scenario in scenarios], [1, 1, 1])
         self.assertEqual(len(set(client.requested_session_ids)), 3)
         self.assertCountEqual(client.deleted_session_ids, client.requested_session_ids)
         self.assertEqual(
@@ -965,18 +969,21 @@ class ConversationModelBenchTest(unittest.TestCase):
             ) -> None:
                 self.deleted_session_ids.append(session_id)
 
+        client = IntermittentClient()
         artifact = run_bench(
             BenchOptions(
                 scenarios=("admin_no_tools_control",),
                 repetitions=3,
             ),
             environment=FakeEnvironment(),
-            client=IntermittentClient(),
+            client=client,
         )
 
         scenarios = artifact["candidates"][0]["scenarios"]
         self.assertEqual(artifact["summary"]["status"], "failed")
         self.assertEqual(len(scenarios), 3)
+        self.assertEqual(len(client.deleted_session_ids), 3)
+        self.assertEqual(len(set(client.deleted_session_ids)), 3)
         self.assertEqual(
             scenarios[1]["response"]["stream_error"],
             "conversation request failed: simulated transient provider failure",

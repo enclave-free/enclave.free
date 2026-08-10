@@ -9,7 +9,7 @@
 - Feature branch: `feature/transient-provider-recovery-activity`
 - Human owner: Austin Kelsay
 - Started: 2026-08-10
-- Current status: Implementing approved AFK tickets
+- Current status: Integrated local candidate verified; final branch review and staging PR publication pending
 - Skill setup status: Complete; GitHub Issues, canonical triage labels, and multi-context domain docs are configured.
 
 ## Goal
@@ -23,28 +23,30 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 - Prototype source branch, if any: None expected; the deployed failure and deterministic retry seam already provide runnable evidence.
 - Spec issue: [#625](https://github.com/enclave-free/enclave.free/issues/625); local PRD `docs/agents/runs/2026-08-10-transient-provider-recovery-activity-prd.md`.
 - Tickets: [#626](https://github.com/enclave-free/enclave.free/issues/626), [#627](https://github.com/enclave-free/enclave.free/issues/627), [#628](https://github.com/enclave-free/enclave.free/issues/628), [#629](https://github.com/enclave-free/enclave.free/issues/629).
-- Ticket sessions: Pending.
-- Agent briefs: Pending.
-- Review packets: Pending.
-- Local CodeRabbit report: Pending.
+- Ticket sessions: #626 `df70528` plus `3d20898`; #627 `6d63f3d`; #628 `cdb199b`; #629 current integration session.
+- Agent briefs: The issue bodies and durable triage comments for #626–#629.
+- Review packets: Issue-specific session and review records for #626–#629.
+- Local CodeRabbit report: Sage raised one major HTTP-date compatibility issue, fixed in `3d20898`, then passed with zero issues. Parent raised ten minor coverage/evidence issues; code-level corrections pass focused checks and final review is pending.
 - PR URL: Pending.
 
 ## Commands
 
-- Install: Existing repository dependencies; no new dependencies planned.
-- Typecheck: `cd frontend && npm run build`; `cargo check -p sage-core --bin enclave_web` in `runtime/sage`.
-- Test: Focused frontend Vitest; focused Sage retry tests; full frontend suite; full Sage workspace suite; parent benchmark-harness tests.
-- Build: Frontend production build and Sage `enclave_web` check.
-- Visual verification: Shared logged-in User Conversation and Admin Test-as-User Activity behavior at desktop and compact viewport sizes.
+- Parent tests: from the repository root, `python3 -m unittest scripts.benches.test_conversation_model_bench` passed 66/66 and the backend discovery suite passed 423/423 with test-only secret placeholders.
+- Frontend tests: from `frontend`, `npm test` passed 76 files and 405 tests; the focused shared/User/Admin command recorded in the #628 session passed 46/46.
+- Frontend build: from `frontend`, `npm run build` passed TypeScript and the Vite production build. The modified Activity files pass targeted Prettier; the repository-wide command reports pre-existing legacy/generated formatting debt outside this feature.
+- Sage checks: from `runtime/sage`, `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --all-features --quiet`, and `cargo check -p sage-core --bin enclave_web` pass with the Homebrew libpq path supplied on macOS; 189 library and 67 executable tests pass.
+- Compose contract: `LLM_API_KEY=test-placeholder SECRET_KEY=test-secret-placeholder docker compose -f docker-compose.infra.yml -f docker-compose.app.yml -f docker-compose.frontend-dev.yml config --quiet` passes.
+- Local candidate: exact Core, Sage, and frontend images passed Apple-container startup and endpoint health; a 12-turn Admin cohort completed 12/12 with zero warnings, and a four-turn seeded Resource cohort completed 4/4 with zero hard failures.
+- Visual verification: the shared logged-in User Conversation and Admin Test User Activity checks passed at 1440x900 and 390x844. The final fresh in-app browser reached the exact candidate's login/Admin setup surfaces but lacked authenticated User and NIP-07 Admin sessions; no auth state was injected.
 
 ## Ticket Ledger
 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
-| #626 Provider 429 recovery | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | Corrected mixed-exhaustion coverage and typed snapshot policy | 188 lib + 66 main Sage tests + fmt/clippy/check pass |
+| #626 Provider 429 recovery | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | Corrected mixed-exhaustion coverage, typed snapshot policy, and Retry-After date parsing | 189 lib + 67 main Sage tests + fmt/clippy/check pass |
 | #627 Reliability cohorts | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | None | 66/66 bench tests pass |
 | #628 Whole-Activity collapse | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | Corrected naming and controlled-region findings | 405/405 frontend tests + build + visual checks pass |
-| #629 Integration verification | AFK | blocked by #626–#628 | Pending | Pending | No |
+| #629 Integration verification | AFK | implementation and local verification complete | Combined review pending | Final branch review and PR publication | 16/16 fresh live Conversations, health, provider doubles, source gates, and prior dual-adapter visuals pass |
 
 ## Parked HITL Slices
 
@@ -56,10 +58,10 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #626 | `50f0157` / Sage `e072834` | Fresh worker + two-axis reviewers | Sage `df70528` | Standards PASS; Spec PASS after correction | 188 lib + 66 main tests + fmt/clippy/check pass |
+| #626 | `50f0157` / Sage `e072834` | Fresh worker + two-axis reviewers | Sage `df70528` plus `3d20898` | Standards PASS; Spec PASS after correction; CodeRabbit PASS | 189 lib + 67 main tests + fmt/clippy/check pass |
 | #627 | `cbdb746` | Current full Codex session | `6d63f3d` | Standards PASS; Spec PASS | 66/66 bench tests pass |
 | #628 | `cbdb746` | Fresh worker + two-axis reviewers | `cdb199b` | Standards PASS; Spec PASS after correction | 405/405 frontend tests + build + desktop/compact checks pass |
-| #629 | Pending after #626–#628 | Current full Codex session | Pending | Pending | Pending |
+| #629 | `50f0157` / Sage `e072834` | Current full Codex session | Parent pin pending final Sage `3d20898` | Sage CodeRabbit PASS; combined two-axis review pending | Parent, frontend, bench, Compose, Sage, Apple health, 16/16 live Conversations, and prior dual-adapter visual gates pass |
 
 ## Open Questions
 

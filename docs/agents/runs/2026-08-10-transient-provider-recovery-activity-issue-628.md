@@ -38,15 +38,36 @@ Both review axes then passed with zero findings.
 
 ## Verification
 
-```text
-Focused shared/User/Admin component tests: 46/46 passed
-Full frontend suite: 76 files, 405 tests passed
-TypeScript/production build: passed
-Prettier and git diff --check: passed
-Desktop visual check: 1440x900 passed
-Compact visual check: 390x844 passed; document width 390, no horizontal overflow
+```bash
+cd frontend
+npm test -- src/components/chat/ChatMessage.test.tsx \
+  src/components/chat/UserConversation.test.tsx \
+  src/components/admin/testfeedback/TestAsUserView.test.tsx
+# 46/46 passed
+
+npm test
+# 76 files, 405 tests passed
+
+npm run build
+# TypeScript and Vite production build passed
+
+npx prettier --check src/components/chat/ChatMessage.tsx \
+  src/components/chat/ChatMessage.test.tsx
+# passed
+
+git diff --check cbdb746...cdb199b
+# passed
 ```
 
-The commit used `HUSKY=0` only after the complete manual gate because the nested
-pre-commit invocation ran lint-staged inside lint-staged and staged a temporary
-`sample.ts`; that hook artifact was removed before the scoped commit.
+The shared Test Dashboard path was exercised as an ordinary User Conversation
+and an Admin Test User Session at 1440x900 and 390x844. Activity opened by
+default, the header hid and restored the whole body, the nested control affected
+only optional summaries, live status remained visible, and the 390-pixel page
+had no horizontal overflow. Compose health and Conversation endpoints are
+integration evidence owned by #629 rather than this shared-renderer leaf ticket.
+
+`npm run verify:pre-commit` was also attempted. Its nested test fixture invoked
+lint-staged from inside lint-staged and staged a temporary `sample.ts`, so it was
+not treated as an independent pass. The complete test, build, formatting, diff,
+and visual gates above were run separately, the artifact was removed, and only
+then was the exact two-file commit created with `HUSKY=0`.

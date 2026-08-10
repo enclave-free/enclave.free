@@ -98,12 +98,13 @@ Warnings cover model-quality variance such as extra read calls, latency, weak bu
 
 ## Reliability Cohorts
 
-Use `--repeat N` to run every selected scenario `N` times. Each repetition
-creates and deletes a fresh Conversation rather than reusing Conversation
-Memory. The artifact identifies each repetition independently and reports the
-requested repetition count, scenario runs, attempted turns, completed turns,
-and failed turns at both candidate and run scope. Any hard failure in any
-repetition keeps the candidate and run failed.
+Use `--repeat N` to run every selected scenario `N` times, where `N` is a
+positive integer and defaults to `1`. Each repetition creates and deletes a
+fresh Conversation rather than reusing Conversation Memory. The artifact
+identifies each repetition independently and reports the requested repetition
+count, scenario runs, attempted turns, completed turns, and failed turns at
+both candidate and run scope. Any hard failure in any repetition keeps the
+candidate and run failed.
 
 A cohort is release evidence, not a statistically powered availability claim.
 Runs are sequential and may still observe provider-side prompt caching or a

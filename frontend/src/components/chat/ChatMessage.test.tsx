@@ -344,12 +344,14 @@ describe('ChatMessage', () => {
             id: 'knowledge-search',
             name: 'Knowledge Search',
             status: 'succeeded',
+            output_summary: 'Found the relevant guide.',
           },
         ],
         retrieval: [
           {
             source_type: 'document',
             title: 'Rights Guide',
+            summary: 'Matched the current policy section.',
           },
         ],
         activity_steps: [
@@ -392,6 +394,20 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Tool calls')).toBeInTheDocument();
     expect(screen.getByText('Retrieval')).toBeInTheDocument();
 
+    const optionalDetails = screen.getByRole('button', {
+      name: 'Show optional details',
+    });
+    const optionalDetailIds = optionalDetails
+      .getAttribute('aria-controls')
+      ?.split(' ');
+    await user.click(optionalDetails);
+    expect(
+      screen.getByRole('button', { name: 'Hide optional details' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    optionalDetailIds?.forEach((id) => {
+      expect(document.getElementById(id)).not.toHaveAttribute('hidden');
+    });
+
     await user.click(collapse);
 
     expect(
@@ -416,6 +432,12 @@ describe('ChatMessage', () => {
     );
     expect(screen.getByText('Searching documents')).toBeInTheDocument();
     expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hide optional details' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    optionalDetailIds?.forEach((id) => {
+      expect(document.getElementById(id)).not.toHaveAttribute('hidden');
+    });
   });
 
   it('renders Activity from trace metadata when no separate activity prop is present', () => {
