@@ -220,7 +220,10 @@ function ConversationTracePanel({
   liveStatus?: string | null;
   isStreaming?: boolean;
 }) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(true);
+  const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
+  const activityBodyId = useId();
+  const optionalDetailsBaseId = useId();
   const visibility = trace?.visibility;
   const tools = trace?.tools ?? [];
   const retrieval = trace?.retrieval ?? [];
@@ -238,10 +241,23 @@ function ConversationTracePanel({
   const hasTraceChips = tools.length > 0 || retrieval.length > 0;
   const hasTraceDetail = Boolean(summary) || hasTraceChips;
   const isLive = Boolean(liveStatus);
-  const hasExpandableDetails =
-    Boolean(summary) ||
-    tools.some((tool) => Boolean(tool.input_summary || tool.output_summary)) ||
-    retrieval.some((item) => Boolean(item.summary));
+  const reasoningSummaryId = summary
+    ? `${optionalDetailsBaseId}-reasoning`
+    : undefined;
+  const toolOptionalDetailIds = tools.map((tool, index) =>
+    tool.input_summary || tool.output_summary
+      ? `${optionalDetailsBaseId}-tool-${index}`
+      : undefined
+  );
+  const retrievalOptionalDetailIds = retrieval.map((item, index) =>
+    item.summary ? `${optionalDetailsBaseId}-retrieval-${index}` : undefined
+  );
+  const optionalDetailIds = [
+    reasoningSummaryId,
+    ...toolOptionalDetailIds,
+    ...retrievalOptionalDetailIds,
+  ].filter((id): id is string => Boolean(id));
+  const hasExpandableDetails = optionalDetailIds.length > 0;
 
   if (visibility === 'off' && !isLive && !hasActivity && !hasTraceDeltas)
     return null;
@@ -288,7 +304,16 @@ function ConversationTracePanel({
       className="mt-3 overflow-hidden rounded-lg border border-border/80 bg-surface text-xs text-text-muted"
       aria-label="Activity"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-surface-raised px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setActivityOpen((open) => !open)}
+        aria-expanded={activityOpen}
+        aria-controls={activityBodyId}
+        aria-label={activityOpen ? 'Hide Activity' : 'Show Activity'}
+        className={`flex w-full items-center justify-between gap-3 bg-surface-raised px-3 py-2 text-left outline-none transition hover:bg-surface-overlay focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40 ${
+          activityOpen ? 'border-b border-border/70' : ''
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-2">
           {isLive ? (
             <Loader2
@@ -303,30 +328,54 @@ function ConversationTracePanel({
           )}
           <span className="font-medium text-text">Activity</span>
         </div>
-        {liveStatus && (
-          <span className="truncate text-right text-[11px] text-text-secondary">
-            {liveStatus}
-          </span>
-        )}
-      </div>
+        <div className="flex min-w-0 items-center gap-2">
+          {liveStatus && (
+            <span className="truncate text-right text-[11px] text-text-secondary">
+              {liveStatus}
+            </span>
+          )}
+          <ChevronDown
+            className={`h-3.5 w-3.5 shrink-0 text-text-muted transition-transform ${
+              activityOpen ? 'rotate-180' : ''
+            }`}
+            aria-hidden="true"
+          />
+        </div>
+      </button>
 
-      <div className="space-y-3 px-3 py-3">
+      <div
+        id={activityBodyId}
+        role="region"
+        aria-label="Activity details"
+        className="space-y-3 px-3 py-3"
+        hidden={!activityOpen}
+      >
         {hasExpandableDetails && (
           <button
             type="button"
-            onClick={() => setDetailsOpen((open) => !open)}
-            aria-expanded={detailsOpen}
+            onClick={() => setOptionalDetailsOpen((open) => !open)}
+            aria-expanded={optionalDetailsOpen}
+            aria-controls={optionalDetailIds.join(' ')}
             className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-text-secondary transition hover:bg-surface-overlay hover:text-text"
           >
             <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+              className={`h-3.5 w-3.5 transition-transform ${optionalDetailsOpen ? 'rotate-180' : ''}`}
               aria-hidden="true"
             />
-            {detailsOpen ? 'Hide activity details' : 'Show activity details'}
+            {optionalDetailsOpen
+              ? 'Hide optional details'
+              : 'Show optional details'}
           </button>
         )}
-        {detailsOpen && summary && (
-          <p className="leading-relaxed text-text-secondary">{summary}</p>
+        {summary && reasoningSummaryId && (
+          <div
+            id={reasoningSummaryId}
+            role="region"
+            aria-label="Reasoning summary"
+            hidden={!optionalDetailsOpen}
+          >
+            <p className="leading-relaxed text-text-secondary">{summary}</p>
+          </div>
         )}
         {hasActivity && (
           <div className="space-y-2" aria-label="Activity timeline">
@@ -354,7 +403,8 @@ function ConversationTracePanel({
               <ToolTraceRow
                 key={`${tool.id}-${tool.input_summary ?? ''}-${index}`}
                 tool={tool}
-                detailsOpen={detailsOpen}
+                optionalDetailsOpen={optionalDetailsOpen}
+                optionalDetailsId={toolOptionalDetailIds[index]}
               />
             ))}
           </TraceRows>
@@ -365,7 +415,8 @@ function ConversationTracePanel({
               <RetrievalTraceRow
                 key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`}
                 item={item}
-                detailsOpen={detailsOpen}
+                optionalDetailsOpen={optionalDetailsOpen}
+                optionalDetailsId={retrievalOptionalDetailIds[index]}
               />
             ))}
           </TraceRows>
@@ -589,10 +640,12 @@ type RetrievalTrace = NonNullable<ConversationTrace['retrieval']>[number];
 
 function ToolTraceRow({
   tool,
-  detailsOpen,
+  optionalDetailsOpen,
+  optionalDetailsId,
 }: {
   tool: ToolTrace;
-  detailsOpen: boolean;
+  optionalDetailsOpen: boolean;
+  optionalDetailsId?: string;
 }) {
   return (
     <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
@@ -608,17 +661,30 @@ function ToolTraceRow({
             )}
             {tool.status && <TraceStatus status={tool.status} />}
           </div>
-          {detailsOpen && tool.input_summary && (
-            <p className="mt-1 leading-relaxed">
-              <span className="font-medium text-text-secondary">Input:</span>{' '}
-              {tool.input_summary}
-            </p>
-          )}
-          {detailsOpen && tool.output_summary && (
-            <p className="mt-1 leading-relaxed">
-              <span className="font-medium text-text-secondary">Output:</span>{' '}
-              {tool.output_summary}
-            </p>
+          {optionalDetailsId && (
+            <div
+              id={optionalDetailsId}
+              role="region"
+              aria-label={`${tool.name} optional details`}
+              hidden={!optionalDetailsOpen}
+            >
+              {tool.input_summary && (
+                <p className="mt-1 leading-relaxed">
+                  <span className="font-medium text-text-secondary">
+                    Input:
+                  </span>{' '}
+                  {tool.input_summary}
+                </p>
+              )}
+              {tool.output_summary && (
+                <p className="mt-1 leading-relaxed">
+                  <span className="font-medium text-text-secondary">
+                    Output:
+                  </span>{' '}
+                  {tool.output_summary}
+                </p>
+              )}
+            </div>
           )}
           <TraceWarnings warnings={tool.warnings ?? []} />
         </div>
@@ -629,10 +695,12 @@ function ToolTraceRow({
 
 function RetrievalTraceRow({
   item,
-  detailsOpen,
+  optionalDetailsOpen,
+  optionalDetailsId,
 }: {
   item: RetrievalTrace;
-  detailsOpen: boolean;
+  optionalDetailsOpen: boolean;
+  optionalDetailsId?: string;
 }) {
   return (
     <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
@@ -652,10 +720,17 @@ function RetrievalTraceRow({
               </span>
             )}
           </div>
-          {detailsOpen && item.summary && (
-            <p className="mt-1 leading-relaxed text-text-secondary">
-              {item.summary}
-            </p>
+          {item.summary && optionalDetailsId && (
+            <div
+              id={optionalDetailsId}
+              role="region"
+              aria-label={`${item.title || item.source_type || 'Retrieved source'} optional details`}
+              hidden={!optionalDetailsOpen}
+            >
+              <p className="mt-1 leading-relaxed text-text-secondary">
+                {item.summary}
+              </p>
+            </div>
           )}
         </div>
       </div>

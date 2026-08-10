@@ -851,6 +851,10 @@ class ConversationModelBenchTest(unittest.TestCase):
         self.assertIn("same Conversation identifier", docs)
         self.assertIn("No direct Admin Config write Tool runs", docs)
         self.assertIn("Audit Log provenance", docs)
+        self.assertIn("--repeat", docs)
+        self.assertIn("Network Link Conditioner", docs)
+        self.assertIn("browser-to-Gateway", docs)
+        self.assertIn("does not simulate Model Provider", docs)
         self.assertNotIn("Open Decisions", docs)
 
     def test_cli_defaults_to_all_v0_scenarios(self) -> None:
@@ -874,12 +878,208 @@ class ConversationModelBenchTest(unittest.TestCase):
 
     def test_cli_parses_explicit_models_and_no_restore(self) -> None:
         options = parse_args(
-            ["--models", "gpt-oss-120b, gemma4-31b", "--seed-resources", "--no-restore-model"]
+            [
+                "--models",
+                "gpt-oss-120b, gemma4-31b",
+                "--seed-resources",
+                "--repeat",
+                "3",
+                "--no-restore-model",
+            ]
         )
 
         self.assertEqual(options.models, ("gpt-oss-120b", "gemma4-31b"))
         self.assertTrue(options.seed_resources)
+        self.assertEqual(options.repetitions, 3)
         self.assertFalse(options.restore_model)
+
+    def test_cli_defaults_to_one_repetition_and_rejects_non_positive_values(self) -> None:
+        self.assertEqual(parse_args([]).repetitions, 1)
+
+        with self.assertRaises(SystemExit):
+            parse_args(["--repeat", "0"])
+
+        with self.assertRaises(SystemExit):
+            parse_args(["--repeat", "-1"])
+
+    def test_reliability_cohort_uses_fresh_conversations_and_reports_turn_counts(
+        self,
+    ) -> None:
+        class RecordingClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.requested_session_ids: list[str] = []
+                self.deleted_session_ids: list[str] = []
+
+            def stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                self.requested_session_ids.append(payload["session_id"])
+                return super().stream_chat(token, payload, timeout)
+
+            def delete_session(
+                self, token: str, session_id: str, timeout: float
+            ) -> None:
+                self.deleted_session_ids.append(session_id)
+
+        client = RecordingClient()
+        artifact = run_bench(
+            BenchOptions(
+                scenarios=("admin_no_tools_control",),
+                repetitions=3,
+            ),
+            environment=FakeEnvironment(),
+            client=client,
+        )
+
+        scenarios = artifact["candidates"][0]["scenarios"]
+        self.assertEqual([scenario["repetition"] for scenario in scenarios], [1, 2, 3])
+        self.assertEqual([len(scenario["turns"]) for scenario in scenarios], [1, 1, 1])
+        self.assertEqual(len(set(client.requested_session_ids)), 3)
+        self.assertCountEqual(client.deleted_session_ids, client.requested_session_ids)
+        self.assertEqual(
+            artifact["summary"]["reliability"],
+            {
+                "requested_repetitions": 3,
+                "scenario_run_count": 3,
+                "attempted_turn_count": 3,
+                "completed_turn_count": 3,
+                "failed_turn_count": 0,
+            },
+        )
+        self.assertEqual(artifact["run"]["repetitions"], 3)
+
+    def test_reliability_cohort_preserves_each_failed_iteration_as_a_hard_failure(
+        self,
+    ) -> None:
+        class IntermittentClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.call_count = 0
+                self.deleted_session_ids: list[str] = []
+
+            def stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                self.call_count += 1
+                if self.call_count == 2:
+                    raise RuntimeError("simulated transient provider failure")
+                return super().stream_chat(token, payload, timeout)
+
+            def delete_session(
+                self, token: str, session_id: str, timeout: float
+            ) -> None:
+                self.deleted_session_ids.append(session_id)
+
+        client = IntermittentClient()
+        artifact = run_bench(
+            BenchOptions(
+                scenarios=("admin_no_tools_control",),
+                repetitions=3,
+            ),
+            environment=FakeEnvironment(),
+            client=client,
+        )
+
+        scenarios = artifact["candidates"][0]["scenarios"]
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(len(scenarios), 3)
+        self.assertEqual(len(client.deleted_session_ids), 3)
+        self.assertEqual(len(set(client.deleted_session_ids)), 3)
+        self.assertEqual(
+            scenarios[1]["response"]["stream_error"],
+            "conversation request failed: simulated transient provider failure",
+        )
+        self.assertEqual(
+            artifact["summary"]["reliability"],
+            {
+                "requested_repetitions": 3,
+                "scenario_run_count": 3,
+                "attempted_turn_count": 3,
+                "completed_turn_count": 2,
+                "failed_turn_count": 1,
+            },
+        )
+
+    def test_reliability_cohort_fails_when_an_earlier_multi_turn_request_fails(
+        self,
+    ) -> None:
+        class FirstTurnFailingClient(FakeConversationClient):
+            def __init__(self) -> None:
+                self.call_count = 0
+
+            def stream_chat(
+                self, token: str, payload: dict, timeout: float
+            ) -> StreamResult:
+                self.call_count += 1
+                if self.call_count == 1:
+                    raise RuntimeError("simulated first-turn provider failure")
+                return super().stream_chat(token, payload, timeout)
+
+        artifact = run_bench(
+            BenchOptions(scenarios=("user_consent_boundary",)),
+            environment=FakeEnvironment(),
+            client=FirstTurnFailingClient(),
+        )
+
+        candidate = artifact["candidates"][0]
+        self.assertEqual(candidate["summary"]["status"], "failed")
+        self.assertEqual(artifact["summary"]["status"], "failed")
+        self.assertEqual(
+            artifact["summary"]["reliability"],
+            {
+                "requested_repetitions": 1,
+                "scenario_run_count": 1,
+                "attempted_turn_count": 2,
+                "completed_turn_count": 1,
+                "failed_turn_count": 1,
+            },
+        )
+        self.assertIn(
+            "conversation_turn_1_completed",
+            {
+                failure["name"]
+                for failure in artifact["summary"]["hard_failures"]
+            },
+        )
+
+    def test_stream_diagnostics_distinguish_observed_zero_cached_tokens_from_absence(
+        self,
+    ) -> None:
+        observed = collect_stream_diagnostics(
+            StreamResult(
+                answer="Answer",
+                events=[
+                    {
+                        "event": "trace_delta",
+                        "data": {
+                            "trace_delta": {
+                                "kind": "timing",
+                                "title": "Model usage",
+                                "metadata": {"cached_tokens": 0},
+                            }
+                        },
+                    }
+                ],
+                done={"model": "glm-5-2"},
+                trace=None,
+                timings={},
+            )
+        )
+        absent = collect_stream_diagnostics(
+            StreamResult(
+                answer="Answer",
+                events=[],
+                done={"model": "glm-5-2"},
+                trace=None,
+                timings={},
+            )
+        )
+
+        self.assertEqual(observed["provider_usage_observation_count"], 1)
+        self.assertTrue(observed["cached_tokens_observed"])
+        self.assertEqual(observed["cached_tokens_total"], 0)
+        self.assertEqual(absent["provider_usage_observation_count"], 0)
+        self.assertFalse(absent["cached_tokens_observed"])
+        self.assertIsNone(absent["cached_tokens_total"])
 
     def test_no_tools_control_requires_one_model_call_and_streamed_answer(self) -> None:
         class NoToolsClient:

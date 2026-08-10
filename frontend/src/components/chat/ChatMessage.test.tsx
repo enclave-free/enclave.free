@@ -258,7 +258,7 @@ describe('ChatMessage', () => {
     );
   });
 
-  it('renders assistant Activity as visible timeline rows with expandable details', async () => {
+  it('keeps optional Activity summaries behind a distinct nested disclosure', async () => {
     const user = userEvent.setup();
     renderMessage('Here is the answer.', 'assistant', {
       visibility: 'summary',
@@ -277,7 +277,13 @@ describe('ChatMessage', () => {
           metadata: {},
         },
       ],
-      retrieval: [],
+      retrieval: [
+        {
+          source_type: 'document',
+          title: 'Policy guide',
+          summary: 'Matched the current policy section.',
+        },
+      ],
       suppressed: false,
     });
 
@@ -288,20 +294,150 @@ describe('ChatMessage', () => {
     expect(screen.queryByText('Tools')).not.toBeInTheDocument();
     expect(screen.getByText('Web search')).toBeInTheDocument();
     expect(
-      screen.queryByText('Sage used Web search before answering.')
-    ).not.toBeInTheDocument();
+      screen.getByText('Sage used Web search before answering.')
+    ).not.toBeVisible();
+    expect(screen.getByText('Found 3 relevant results.')).not.toBeVisible();
     expect(
-      screen.queryByText('Found 3 relevant results.')
-    ).not.toBeInTheDocument();
+      screen.getByText('Matched the current policy section.')
+    ).not.toBeVisible();
 
-    await user.click(
-      screen.getByRole('button', { name: 'Show activity details' })
-    );
+    const optionalDetails = screen.getByRole('button', {
+      name: 'Show optional details',
+    });
+    const controlledDetailIds = optionalDetails
+      .getAttribute('aria-controls')
+      ?.split(/\s+/);
 
+    expect(optionalDetails).toHaveAttribute('aria-expanded', 'false');
+    expect(controlledDetailIds).toHaveLength(3);
+    controlledDetailIds?.forEach((id) => {
+      expect(document.getElementById(id)).toHaveAttribute('hidden');
+    });
+
+    await user.click(optionalDetails);
+
+    expect(
+      screen.getByRole('button', { name: 'Hide optional details' })
+    ).toHaveAttribute('aria-expanded', 'true');
     expect(
       screen.getByText('Sage used Web search before answering.')
     ).toBeInTheDocument();
     expect(screen.getByText('Found 3 relevant results.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Matched the current policy section.')
+    ).toBeInTheDocument();
+    controlledDetailIds?.forEach((id) => {
+      expect(document.getElementById(id)).not.toHaveAttribute('hidden');
+    });
+  });
+
+  it('collapses and restores the complete Activity body from its accessible header control', async () => {
+    const user = userEvent.setup();
+
+    renderMessage(
+      'Here is the answer.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        tools: [
+          {
+            id: 'knowledge-search',
+            name: 'Knowledge Search',
+            status: 'succeeded',
+            output_summary: 'Found the relevant guide.',
+          },
+        ],
+        retrieval: [
+          {
+            source_type: 'document',
+            title: 'Rights Guide',
+            summary: 'Matched the current policy section.',
+          },
+        ],
+        activity_steps: [
+          {
+            id: 'activity-1',
+            kind: 'retrieval',
+            title: 'Searching documents',
+            status: 'succeeded',
+          },
+        ],
+      },
+      {
+        message: {
+          id: 'message-1',
+          role: 'assistant',
+          content: 'Here is the answer.',
+          traceStatus: 'Preparing response...',
+          traceDeltas: [
+            {
+              id: 'trace-1',
+              kind: 'timing',
+              title: 'Model request',
+              content: 'Model request: 820 ms.',
+              status: 'succeeded',
+            },
+          ],
+        },
+      }
+    );
+
+    const collapse = screen.getByRole('button', { name: 'Hide Activity' });
+    const activityBody = screen.getByRole('region', {
+      name: 'Activity details',
+    });
+
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    expect(collapse).toHaveAttribute('aria-controls', activityBody.id);
+    expect(screen.getByText('Searching documents')).toBeInTheDocument();
+    expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
+    expect(screen.getByText('Tool calls')).toBeInTheDocument();
+    expect(screen.getByText('Retrieval')).toBeInTheDocument();
+
+    const optionalDetails = screen.getByRole('button', {
+      name: 'Show optional details',
+    });
+    const optionalDetailIds = optionalDetails
+      .getAttribute('aria-controls')
+      ?.split(' ');
+    await user.click(optionalDetails);
+    expect(
+      screen.getByRole('button', { name: 'Hide optional details' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    optionalDetailIds?.forEach((id) => {
+      expect(document.getElementById(id)).not.toHaveAttribute('hidden');
+    });
+
+    await user.click(collapse);
+
+    expect(
+      screen.getByRole('button', { name: 'Show Activity' })
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('region', { name: 'Activity details' })
+    ).not.toBeInTheDocument();
+    expect(document.getElementById(activityBody.id)).toHaveAttribute('hidden');
+    expect(screen.getByText('Searching documents')).not.toBeVisible();
+    expect(screen.getByText('Model request: 820 ms.')).not.toBeVisible();
+    expect(screen.getByText('Activity')).toBeInTheDocument();
+    expect(screen.getByText('Preparing response...')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show Activity' }));
+
+    expect(
+      screen.getByRole('region', { name: 'Activity details' })
+    ).toBeInTheDocument();
+    expect(document.getElementById(activityBody.id)).not.toHaveAttribute(
+      'hidden'
+    );
+    expect(screen.getByText('Searching documents')).toBeInTheDocument();
+    expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hide optional details' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    optionalDetailIds?.forEach((id) => {
+      expect(document.getElementById(id)).not.toHaveAttribute('hidden');
+    });
   });
 
   it('renders Activity from trace metadata when no separate activity prop is present', () => {
@@ -348,9 +484,7 @@ describe('ChatMessage', () => {
 
     expect(screen.getByLabelText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Tool Selection')).toBeInTheDocument();
-    expect(
-      screen.getByText('No Tools were selected.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('No Tools were selected.')).toBeInTheDocument();
   });
 
   it('renders minimal assistant trace as compact usage badges', () => {
@@ -604,9 +738,7 @@ describe('ChatMessage', () => {
 
     expect(screen.getByLabelText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Tool execution')).toBeInTheDocument();
-    expect(
-      screen.getByText('Provider first-event wait')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Provider first-event wait')).toBeInTheDocument();
     expect(screen.getByText('Tool execution: 9 ms.')).toBeInTheDocument();
     expect(
       screen.getByText(/Provider first-event wait: 184 ms/)
