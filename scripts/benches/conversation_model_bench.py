@@ -99,6 +99,7 @@ class BenchOptions:
     verbose: bool = False
     runtime: str = "docker"
     apple_profile: str = DEFAULT_APPLE_PROFILE
+    repetitions: int = 1
 
 
 @dataclass(frozen=True)
@@ -327,6 +328,14 @@ def run_bench(
             environment.restore_model(original_model)
 
     run_summary = summarize_checks(all_checks)
+    run_summary["reliability"] = summarize_reliability(
+        [
+            scenario
+            for candidate in candidates
+            for scenario in candidate["scenarios"]
+        ],
+        requested_repetitions=options.repetitions,
+    )
     artifact = {
         "schema_version": 1,
         "run": {
@@ -336,6 +345,7 @@ def run_bench(
             "original_model": original_model,
             "requested_models": list(options.models),
             "restored_model": original_model if should_restore else None,
+            "repetitions": options.repetitions,
         },
         "candidates": candidates,
         "summary": run_summary,
@@ -354,30 +364,39 @@ def run_candidate(
     scenarios: list[dict[str, Any]] = []
     candidate_checks: list[dict[str, Any]] = []
 
-    for scenario_id in options.scenarios:
-        scenario = scenario_by_id(scenario_id)
-        scenario_result = run_scenario(
-            scenario,
-            environment=environment,
-            client=client,
-            timeout=options.timeout,
-            seed_knowledge=options.seed_knowledge,
-            seed_resources=options.seed_resources,
-        )
-        scenarios.append(scenario_result)
-        candidate_checks.extend(scenario_result["checks"])
+    for repetition in range(1, options.repetitions + 1):
+        for scenario_id in options.scenarios:
+            scenario = scenario_by_id(scenario_id)
+            scenario_result = run_scenario(
+                scenario,
+                repetition=repetition,
+                environment=environment,
+                client=client,
+                timeout=options.timeout,
+                seed_knowledge=options.seed_knowledge,
+                seed_resources=options.seed_resources,
+            )
+            scenarios.append(scenario_result)
+            candidate_checks.extend(scenario_result["checks"])
 
     return {
         "model": candidate_model,
         "runtime_config": sanitize_runtime_config(runtime_config),
         "scenarios": scenarios,
-        "summary": summarize_checks(candidate_checks),
+        "summary": {
+            **summarize_checks(candidate_checks),
+            "reliability": summarize_reliability(
+                scenarios,
+                requested_repetitions=options.repetitions,
+            ),
+        },
     }
 
 
 def run_scenario(
     scenario: Scenario,
     *,
+    repetition: int = 1,
     environment: BenchEnvironment,
     client: ConversationClient,
     timeout: float,
@@ -562,6 +581,8 @@ def run_scenario(
     ]
     return {
         "id": scenario.id,
+        "repetition": repetition,
+        "scenario_run_id": f"{scenario.id}#{repetition}",
         "actor": scenario.actor,
         "request": {
             "tools": list(scenario.tools),
@@ -608,7 +629,12 @@ def serialize_bench_turn(message: str, stream: StreamResult) -> dict[str, Any]:
         "timing": stream.timings,
         "diagnostics": collect_stream_diagnostics(stream),
         "tool_evidence": collect_tool_evidence(stream),
+        "completed": stream_completed(stream),
     }
+
+
+def stream_completed(stream: StreamResult) -> bool:
+    return stream.error is None and bool(stream.done) and bool(stream.answer.strip())
 
 
 def sanitize_admin_config_fixture(
@@ -927,6 +953,9 @@ def collect_stream_diagnostics(stream: StreamResult) -> dict[str, Any]:
     correction_call_count = 0
     retry_count = 0
     tool_execution_ms = 0.0
+    provider_usage_observation_count = 0
+    cached_tokens_observed = False
+    cached_tokens_total = 0
     timing_phases: list[dict[str, Any]] = []
 
     for event in stream.events:
@@ -954,6 +983,22 @@ def collect_stream_diagnostics(stream: StreamResult) -> dict[str, Any]:
                 continue
             kind = str(trace_delta.get("kind") or "")
             status = str(trace_delta.get("status") or "")
+            title = str(trace_delta.get("title") or "").casefold()
+            metadata = trace_delta.get("metadata")
+            if kind == "timing" and title == "model usage":
+                provider_usage_observation_count += 1
+                cached_tokens = (
+                    metadata.get("cached_tokens")
+                    if isinstance(metadata, dict)
+                    else None
+                )
+                if (
+                    isinstance(cached_tokens, (int, float))
+                    and not isinstance(cached_tokens, bool)
+                    and cached_tokens >= 0
+                ):
+                    cached_tokens_observed = True
+                    cached_tokens_total += int(cached_tokens)
             if kind == "model_step" and status == "running":
                 legacy_model_call_count += 1
             elif kind == "correction" and status == "running":
@@ -985,6 +1030,9 @@ def collect_stream_diagnostics(stream: StreamResult) -> dict[str, Any]:
         "correction_call_count": correction_call_count,
         "retry_count": retry_count,
         "tool_execution_ms": round(tool_execution_ms, 1),
+        "provider_usage_observation_count": provider_usage_observation_count,
+        "cached_tokens_observed": cached_tokens_observed,
+        "cached_tokens_total": cached_tokens_total if cached_tokens_observed else None,
         "timing_phases": timing_phases,
         "phase_durations": phase_durations,
         "background_timing": {
@@ -1767,6 +1815,22 @@ def summarize_checks(checks: list[dict[str, Any]]) -> dict[str, Any]:
         "hard_failures": hard_failures,
         "warnings": warnings,
         "check_count": len(checks),
+    }
+
+
+def summarize_reliability(
+    scenarios: list[dict[str, Any]],
+    *,
+    requested_repetitions: int,
+) -> dict[str, int]:
+    turns = [turn for scenario in scenarios for turn in scenario.get("turns", [])]
+    completed_turns = sum(bool(turn.get("completed")) for turn in turns)
+    return {
+        "requested_repetitions": requested_repetitions,
+        "scenario_run_count": len(scenarios),
+        "attempted_turn_count": len(turns),
+        "completed_turn_count": completed_turns,
+        "failed_turn_count": len(turns) - completed_turns,
     }
 
 
@@ -2793,6 +2857,13 @@ def write_artifact(artifact: dict[str, Any], output: str | None) -> Path:
     return path
 
 
+def positive_int(raw: str) -> int:
+    value = int(raw)
+    if value < 1:
+        raise argparse.ArgumentTypeError("value must be at least 1")
+    return value
+
+
 def parse_args(argv: list[str]) -> BenchOptions:
     parser = argparse.ArgumentParser(description="Run the Conversation Model Bench")
     parser.add_argument("--api-base")
@@ -2804,6 +2875,13 @@ def parse_args(argv: list[str]) -> BenchOptions:
     parser.add_argument("--scenario", action="append", dest="scenarios")
     parser.add_argument("--models")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--repeat",
+        type=positive_int,
+        default=1,
+        dest="repetitions",
+        help="repeat each selected scenario in a fresh Conversation",
+    )
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--seed-knowledge", action="store_true")
     parser.add_argument("--seed-resources", action="store_true")
@@ -2824,6 +2902,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
         verbose=args.verbose,
         runtime=args.runtime,
         apple_profile=args.apple_profile,
+        repetitions=args.repetitions,
     )
 
 

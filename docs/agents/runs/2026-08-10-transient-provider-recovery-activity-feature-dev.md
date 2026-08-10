@@ -42,7 +42,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 | Issue | Type | Status | Review thread | Fixes needed | Verified |
 | --- | --- | --- | --- | --- | --- |
 | #626 Provider 429 recovery | AFK | ready-for-agent | Pending | Pending | No |
-| #627 Reliability cohorts | AFK | ready-for-agent | Pending | Pending | No |
+| #627 Reliability cohorts | AFK | implemented; review pending | Pending | None known | Focused + full bench tests pass |
 | #628 Whole-Activity collapse | AFK | ready-for-agent | Pending | Pending | No |
 | #629 Integration verification | AFK | blocked by #626–#628 | Pending | Pending | No |
 
@@ -57,7 +57,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
 | #626 | `50f0157` / Sage `e072834` | Current full Codex session | Pending | Pending | Pending |
-| #627 | Pending after #626 | Current full Codex session | Pending | Pending | Pending |
+| #627 | `cbdb746` | Current full Codex session | Pending | Pending | 66/66 bench tests pass |
 | #628 | Pending after #627 | Current full Codex session | Pending | Pending | Pending |
 | #629 | Pending after #626–#628 | Current full Codex session | Pending | Pending | Pending |
 

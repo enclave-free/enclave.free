@@ -96,6 +96,55 @@ Hard checks cover objective contract failures: wrong actor, missing persistence,
 
 Warnings cover model-quality variance such as extra read calls, latency, weak but truthful phrasing, or User answers over 300 words or more than three paragraphs. The bench must not introduce a deterministic confirmation classifier, exact required answer, forced Tool call, or response rewrite. A conservative consent check hard-fails clear covert-documentation endorsement even when an answer also contains respectful language, but release evidence must inspect the complete natural conversation rather than treating lexical checks as semantic proof. Structural model-turn separation is verified at the native provider seam, where the real boundary is available without inferring it from answer words.
 
+## Reliability Cohorts
+
+Use `--repeat N` to run every selected scenario `N` times. Each repetition
+creates and deletes a fresh Conversation rather than reusing Conversation
+Memory. The artifact identifies each repetition independently and reports the
+requested repetition count, scenario runs, attempted turns, completed turns,
+and failed turns at both candidate and run scope. Any hard failure in any
+repetition keeps the candidate and run failed.
+
+A cohort is release evidence, not a statistically powered availability claim.
+Runs are sequential and may still observe provider-side prompt caching or a
+warm provider path. When the Model Provider reports cached-token usage, the
+artifact records whether that value was observed and its total; an absent value
+must not be interpreted as zero caching.
+
+For example, run twelve fresh Nicaragua-referral Conversations with the seeded
+Resource fixture:
+
+```bash
+python scripts/benches/conversation_model_bench.py \
+  --scenario user_nicaragua_referral_relevance \
+  --repeat 12 \
+  --seed-resources
+```
+
+## Adverse Network Verification
+
+Deterministic native-provider tests are authoritative for the
+Gateway-to-Model-Provider seam. They script provider silence, HTTP 429, mixed
+stall/rate-limit sequences, and retry exhaustion without depending on a live
+provider.
+
+Network Link Conditioner is an optional manual release check for the
+browser-to-Gateway Conversation Streaming Transport. It can exercise high
+latency, constrained bandwidth, packet loss, and a dropped browser stream, but
+it does not simulate Model Provider rate limiting, provider silence, or the
+Gateway-to-Model-Provider connection. Do not treat a conditioned browser run as
+evidence that provider retry classification works.
+
+For a remote demo check, exercise at least:
+
+- a disconnect before any answer content and the bounded fallback response;
+- a disconnect after useful partial output, preserving that output without
+  replaying the turn; and
+- delayed streaming followed by composer recovery.
+
+Keep Network Link Conditioner manual and outside CI. Record the selected
+profile and observed browser behavior with the release evidence.
+
 ## Commands
 
 Run deterministic bench tests:
