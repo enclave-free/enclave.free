@@ -43,7 +43,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 | --- | --- | --- | --- | --- | --- |
 | #626 Provider 429 recovery | AFK | ready-for-agent | Pending | Pending | No |
 | #627 Reliability cohorts | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | None | 66/66 bench tests pass |
-| #628 Whole-Activity collapse | AFK | ready-for-agent | Pending | Pending | No |
+| #628 Whole-Activity collapse | AFK | reviewed; ready for integration | Standards PASS; Spec PASS | Corrected naming and controlled-region findings | 405/405 frontend tests + build + visual checks pass |
 | #629 Integration verification | AFK | blocked by #626–#628 | Pending | Pending | No |
 
 ## Parked HITL Slices
@@ -58,7 +58,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 | --- | --- | --- | --- | --- | --- |
 | #626 | `50f0157` / Sage `e072834` | Current full Codex session | Pending | Pending | Pending |
 | #627 | `cbdb746` | Current full Codex session | `6d63f3d` | Standards PASS; Spec PASS | 66/66 bench tests pass |
-| #628 | Pending after #627 | Current full Codex session | Pending | Pending | Pending |
+| #628 | `cbdb746` | Fresh worker + two-axis reviewers | `cdb199b` | Standards PASS; Spec PASS after correction | 405/405 frontend tests + build + desktop/compact checks pass |
 | #629 | Pending after #626–#628 | Current full Codex session | Pending | Pending | Pending |
 
 ## Open Questions
