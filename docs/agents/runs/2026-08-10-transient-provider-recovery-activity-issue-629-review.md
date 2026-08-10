@@ -3,7 +3,7 @@
 ## Review Range
 
 - Parent: `50f0157d04d145e3d5419a87d3392e66e51c82a7...feature/transient-provider-recovery-activity`
-- Sage: `e072834d849a1f5363c7fb22027f56150ef0b9d7...3d20898`
+- Sage: `e072834d849a1f5363c7fb22027f56150ef0b9d7...e7d0581`
 - Specification: #625–#629, ADR-0024, ADR-0030, ADR-0032, and the feature PRD
 
 ## Verification Disposition

@@ -4,7 +4,7 @@
 
 - Parent fixed point: `50f0157d04d145e3d5419a87d3392e66e51c82a7`
 - Sage fixed point: `e072834d849a1f5363c7fb22027f56150ef0b9d7`
-- Integrated revisions: parent branch `feature/transient-provider-recovery-activity` and Sage `3d20898`
+- Integrated revisions: parent branch `feature/transient-provider-recovery-activity` and Sage `e7d0581`
 - Related issues: #625–#629
 
 ## Deterministic Provider Evidence
