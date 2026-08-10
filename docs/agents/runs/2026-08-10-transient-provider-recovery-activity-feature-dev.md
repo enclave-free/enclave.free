@@ -23,7 +23,7 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 - Prototype source branch, if any: None expected; the deployed failure and deterministic retry seam already provide runnable evidence.
 - Spec issue: [#625](https://github.com/enclave-free/enclave.free/issues/625); local PRD `docs/agents/runs/2026-08-10-transient-provider-recovery-activity-prd.md`.
 - Tickets: [#626](https://github.com/enclave-free/enclave.free/issues/626), [#627](https://github.com/enclave-free/enclave.free/issues/627), [#628](https://github.com/enclave-free/enclave.free/issues/628), [#629](https://github.com/enclave-free/enclave.free/issues/629).
-- Ticket sessions: #626 `df70528`, `3d20898`, and `e7d0581`; #627 `6d63f3d`; #628 `cdb199b`; #629 current integration session.
+- Ticket sessions: #626 `df70528`, `3d20898`, and `e7d0581`, merged to Sage staging as `f41321e`; #627 `6d63f3d`; #628 `cdb199b`; #629 current integration session.
 - Agent briefs: The issue bodies and durable triage comments for #626–#629.
 - Review packets: Issue-specific session and review records for #626–#629.
 - CodeRabbit report: the local Sage review's HTTP-date compatibility finding was fixed in `3d20898`; hosted review then found one clock-precision flake in that parser test, fixed in `e7d0581`. Parent's ten local coverage/evidence findings are corrected. The final local parent rerun reached the organization's included-review rate limit before analysis, so full hosted reviews were triggered on both staging PRs.
@@ -58,10 +58,10 @@ Correct the remaining model-provider reliability gap exposed by Jim's August 10 
 
 | Issue | Fixed point | Worker session | Commit | Review result | Checks |
 | --- | --- | --- | --- | --- | --- |
-| #626 | `50f0157` / Sage `e072834` | Fresh worker + two-axis reviewers | Sage `df70528`, `3d20898`, and `e7d0581` | Standards PASS; Spec PASS; hosted CodeRabbit correction pending re-review | 189 lib + 67 main tests + fmt/clippy/check pass |
+| #626 | `50f0157` / Sage `e072834` | Fresh worker + two-axis reviewers | Sage `df70528`, `3d20898`, and `e7d0581`; staging merge `f41321e` | Standards PASS; Spec PASS; CodeRabbit finding fixed and thread resolved | 189 lib + 67 main tests + fmt/clippy/check pass |
 | #627 | `cbdb746` | Current full Codex session | `6d63f3d` | Standards PASS; Spec PASS | 66/66 bench tests pass |
 | #628 | `cbdb746` | Fresh worker + two-axis reviewers | `cdb199b` | Standards PASS; Spec PASS after correction | 405/405 frontend tests + build + desktop/compact checks pass |
-| #629 | `50f0157` / Sage `e072834` | Current full Codex session | Parent integration branch; Sage `e7d0581` | Standards PASS; Spec PASS after correction; hosted review pending | Parent, frontend, bench, Compose, Sage, Apple health, 16/16 live Conversations, and prior dual-adapter visual gates pass |
+| #629 | `50f0157` / Sage `e072834` | Current full Codex session | Parent integration branch; Sage staging `f41321e` | Standards PASS; Spec PASS after correction; hosted parent checks pass | Parent, frontend, bench, Compose, Sage, Apple health, 17/17 live Conversations, and prior dual-adapter visual gates pass |
 
 ## Open Questions
 
