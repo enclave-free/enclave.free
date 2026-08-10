@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.18 - 2026-08-10
+
+- Recovered transient provider rate limits before visible output within the existing bounded same-model retry budget, honoring safe `Retry-After` guidance without replaying completed Tools.
+- Added fresh, repeatable Conversation reliability cohorts with per-turn hard completion gates and observable provider cache evidence.
+- Made the complete shared Conversation Activity section collapsible while retaining an independent disclosure for optional Tool, Retrieval, and reasoning details.
+
 ## 0.4.17 - 2026-08-09
 
 - Kept Admin Test User conversations within a responsive, viewport-bounded workspace so long answers and expanded Activity scroll inside the shared message thread.
