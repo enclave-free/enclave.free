@@ -818,6 +818,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - **Model Usage Observations** should remain sanitized **Conversation Trace** metadata, follow the associated **Conversation** retention and deletion lifecycle, and stay out of normal answer content
 - A **Pre-Response Provider Stall** may retry the identical model request within the shared three-attempt ceiling, but any provider event ends that attempt's retry opportunity and an executed **Tool** must never be replayed by model-request recovery
 - A **Transient Provider Rejection** may use that same three-attempt ceiling only before model output, with a short bounded retry delay that respects provider guidance when practical; it does not receive a separate retry budget
+- One logical model-retry **Activity** row should move from scheduled/running to recovered or failed; terminal retry evidence must not leave an earlier rendering of the same logical retry permanently running
 - **Provider Continuity State** should return unchanged only to the same model within the current **Bounded Native Tool Loop** and should never be interpreted, streamed, logged, persisted, exported, or carried into a later **Conversation** turn
 - The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
 - **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase

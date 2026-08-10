@@ -52,6 +52,7 @@ The shared Conversation UI Surface will keep Activity visible by default for Adm
 30. As an accessibility user, I want the whole-Activity and optional-detail disclosures to expose accurate expanded state and controlled regions, so that assistive technology can operate them reliably.
 31. As an Operator, I want Activity presentation changes not to alter trace streaming, persistence, export, retention, or deletion, so that UI polish does not change the data lifecycle.
 32. As a maintainer, I want these corrections at the existing provider, benchmark, and shared Conversation seams, so that the change adds no planner, classifier, response rewrite, provider failover, or duplicate chat path.
+33. As a User, I want a scheduled model-retry Activity row to reach a recovered or failed terminal state, so that a completed retry is not displayed as running indefinitely.
 
 ## Implementation Decisions
 
@@ -60,6 +61,7 @@ The shared Conversation UI Surface will keep Activity visible by default for Adm
 - Keep one three-attempt budget per logical model request. A stall followed by a 429 has only the attempts remaining in that same budget.
 - Preserve byte-for-byte request identity across attempts, including model, messages, Tools, parameters, and reasoning configuration.
 - Apply a small internal exponential delay with jitter before eligible retries. Prefer a valid short Retry-After delay, cap all delays at a small internal maximum, and expose only elapsed Retry Delay timing.
+- Give the logical model-retry lifecycle one stable Trace Delta identity so recovered or exhausted evidence replaces the scheduled/running row; later attempts may update that same logical row and must not leave an earlier retry visibly running.
 - Keep the 30-second first-event boundary and 180-second active request timeout unchanged in this slice.
 - Continue making any answer, hidden provider reasoning event, Tool call, or other provider stream event the hard cutoff for model-request recovery.
 - Do not replay a completed Tool batch. A post-Tool model retry receives the already-correlated Tool results in the identical logical request.
@@ -74,7 +76,7 @@ The shared Conversation UI Surface will keep Activity visible by default for Adm
 
 ## Testing Decisions
 
-- The native provider seam is authoritative for retry classification, request identity, Retry-After parsing/capping, bounded delay, provider-event cutoff, attempt exhaustion, and post-Tool result reuse. Scripted local HTTP responses will test behavior without a live provider.
+- The native provider seam is authoritative for retry classification, request identity, Retry-After parsing/capping, bounded delay, stable retry-Activity lifecycle, provider-event cutoff, attempt exhaustion, and post-Tool result reuse. Scripted local HTTP responses will test behavior without a live provider.
 - The Conversation Model Bench public interface is authoritative for reliability-cohort behavior. Unit tests will use the existing fake environment/client adapters and assert fresh scenario execution, independent results, cleanup, aggregate counts, and hard-failure propagation.
 - The shared Conversation Activity module is authoritative for UI behavior. Component tests will use accessible names and expanded/controlled relationships to prove that the complete timeline/Trace body collapses while the header remains, and that optional summaries remain independently controlled.
 - Ordinary logged-in and Admin Test User adapters need only focused parity assertions because ADR-0032 already makes the shared User Conversation module their common implementation.
