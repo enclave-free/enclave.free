@@ -8,6 +8,7 @@ import {
 import { HomeRedirect } from './pages/HomeRedirect';
 import { AdminRoute } from './components/shared/AdminRoute';
 import { InitiationGate } from './components/shared/InitiationGate';
+import { DecryptStatus } from './components/shared/DecryptStatus';
 
 const TestDashboard = lazy(() =>
   import('./pages/TestDashboard').then((module) => ({
@@ -165,6 +166,9 @@ function LazyPage({ children }: { children: ReactNode }) {
 function App() {
   return (
     <Router>
+      {/* Global pending-approval indicator; NIP-04 decrypts happen on several
+          admin screens and a dismissed popup otherwise looks like a hang. */}
+      <DecryptStatus />
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
         <Route

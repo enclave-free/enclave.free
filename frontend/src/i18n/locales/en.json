@@ -2694,5 +2694,9 @@
       "plain": "Plain",
       "chatContext": "Chat context"
     }
+  },
+  "decryptStatus": {
+    "progress": "Decrypting {{done}} of {{total}}",
+    "checkExtension": "check your Nostr extension"
   }
 }

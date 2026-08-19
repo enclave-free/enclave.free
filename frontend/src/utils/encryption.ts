@@ -51,8 +51,69 @@ export function hasNip04Support(): boolean {
  */
 let decryptQueue: Promise<unknown> = Promise.resolve()
 
+/**
+ * Observable queue state, so the UI can show that approvals are still pending.
+ *
+ * The extension popup does not always raise itself and can be dismissed by
+ * accident, which otherwise looks like a hang. `done`/`total` count the current
+ * run and reset once the queue drains. See #648.
+ */
+export interface DecryptQueueState {
+  done: number
+  total: number
+  /** True while any request is queued or in flight. */
+  active: boolean
+}
+
+let queueState: DecryptQueueState = { done: 0, total: 0, active: false }
+const queueListeners = new Set<(state: DecryptQueueState) => void>()
+
+function publishQueueState() {
+  for (const listener of queueListeners) listener(queueState)
+}
+
+/** Subscribe to decrypt-queue progress. Returns an unsubscribe function. */
+export function subscribeToDecryptQueue(
+  listener: (state: DecryptQueueState) => void
+): () => void {
+  queueListeners.add(listener)
+  listener(queueState)
+  return () => {
+    queueListeners.delete(listener)
+  }
+}
+
+export function getDecryptQueueState(): DecryptQueueState {
+  return queueState
+}
+
 function enqueueDecrypt<T>(task: () => Promise<T>): Promise<T> {
-  const run = decryptQueue.then(task, task)
+  // Starting from idle begins a fresh run, so the counter reads per-operation
+  // rather than accumulating across the whole session.
+  queueState = queueState.active
+    ? { ...queueState, total: queueState.total + 1 }
+    : { done: 0, total: 1, active: true }
+  publishQueueState()
+
+  const settle = () => {
+    const done = queueState.done + 1
+    const active = done < queueState.total
+    queueState = active
+      ? { ...queueState, done }
+      : { done: 0, total: 0, active: false }
+    publishQueueState()
+  }
+
+  const run = decryptQueue.then(task, task).then(
+    (value) => {
+      settle()
+      return value
+    },
+    (error) => {
+      settle()
+      throw error
+    }
+  )
   // Never let one rejection poison the chain for later callers.
   decryptQueue = run.then(
     () => undefined,

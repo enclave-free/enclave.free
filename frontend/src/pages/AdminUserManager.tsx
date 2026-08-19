@@ -48,6 +48,7 @@ import {
   type UserRosterExportUser,
   type UserRosterIdentity,
 } from '../utils/userRosterExport';
+import { DecryptProgressInline } from '../components/shared/DecryptStatus';
 
 const EXPORT_DECRYPT_BATCH_SIZE = 5;
 
@@ -1154,6 +1155,7 @@ export function AdminUserManager() {
                       {t('adminUserManager.unlockDetails', 'Unlock details')}
                     </Button>
                   )}
+                  <DecryptProgressInline />
                   <Button
                     variant="secondary"
                     onClick={loadDashboard}
@@ -1519,6 +1521,7 @@ export function AdminUserManager() {
                 {t('adminUserManager.unlockDetails', 'Unlock details')}
               </Button>
             )}
+            <DecryptProgressInline />
             <Button
               variant="secondary"
               onClick={loadDashboard}
