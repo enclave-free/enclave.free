@@ -110,6 +110,8 @@ export interface Message {
 interface ChatMessageProps {
   message: Message;
   onAction?: (actionId: ConversationMessageActionId, message: Message) => void;
+  /** Admin surfaces pass true to keep the Activity panel expanded (see #636). */
+  defaultActivityOpen?: boolean;
 }
 
 function UserIcon({ iconName }: { iconName: string }) {
@@ -213,18 +215,29 @@ function ConversationTracePanel({
   traceDeltas = [],
   liveStatus,
   isStreaming = false,
+  defaultActivityOpen = false,
 }: {
   trace?: ConversationTrace | null;
   activitySteps?: ConversationActivityStep[];
   traceDeltas?: ConversationTraceDelta[];
   liveStatus?: string | null;
   isStreaming?: boolean;
+  defaultActivityOpen?: boolean;
 }) {
-  const [activityOpen, setActivityOpen] = useState(true);
+  const visibility = trace?.visibility;
+  // Activity is collapsed by default: the panel exposes provider, retry and
+  // timing internals that are noise (and often alarming) to someone asking for
+  // help. See #636.
+  //
+  // This is deliberately NOT derived from `trace.visibility`. Sage hardcodes
+  // "detailed" for every Conversation and explicitly ignores the
+  // `user_trace_visibility` / `admin_trace_visibility` Agent Settings, treating
+  // them as legacy keys — so that field cannot distinguish a User from an
+  // Admin. Admin surfaces opt back in with `defaultActivityOpen`.
+  const [activityOpen, setActivityOpen] = useState(defaultActivityOpen);
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
   const activityBodyId = useId();
   const optionalDetailsBaseId = useId();
-  const visibility = trace?.visibility;
   const tools = trace?.tools ?? [];
   const retrieval = trace?.retrieval ?? [];
   const summary = trace?.reasoning?.summary;
@@ -828,7 +841,11 @@ function isSafeMarkdownHref(href?: string) {
   }
 }
 
-function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
+function ChatMessageComponent({
+  message,
+  onAction,
+  defaultActivityOpen = false,
+}: ChatMessageProps) {
   const { resolvedTheme } = useTheme();
   const { t } = useTranslation();
   const { config } = useInstanceConfig();
@@ -976,6 +993,7 @@ function ChatMessageComponent({ message, onAction }: ChatMessageProps) {
                     traceDeltas={resolvedTraceDeltas}
                     liveStatus={visibleTraceStatus}
                     isStreaming={Boolean(message.traceStatus)}
+                    defaultActivityOpen={defaultActivityOpen}
                   />
                   {message.content.trim() && (
                     <div
