@@ -1532,6 +1532,46 @@ export function AdminUserConfig() {
   ];
 
   // Helper to get user type name by id
+  // Which Onboarding Questions to show. The list is fetched unfiltered, so
+  // every field and its user_type_id is already in state -- this is purely a
+  // view concern and never refetches. 'all' | 'global' | <user type id>.
+  // See #645.
+  const [fieldScopeFilter, setFieldScopeFilter] = useState<
+    'all' | 'global' | number
+  >('all');
+
+  // Pair each visible field with its index in the unfiltered `fields` array:
+  // reordering and the type-migration flow operate on the full list, so a
+  // filtered index would move the wrong row.
+  //
+  // Selecting a User Type answers "what is this person actually asked?", so it
+  // includes global questions -- everyone gets those. This matches the server,
+  // which resolves a type as `user_type_id IS NULL OR user_type_id = ?`
+  // (database.py get_field_definitions). Globals sort first, as they do there.
+  // The per-row scope badge still distinguishes shared from type-specific.
+  const visibleFields = useMemo(() => {
+    const isGlobal = (field: CustomField) =>
+      field.user_type_id === null || field.user_type_id === undefined;
+
+    const matched = fields
+      .map((field, index) => ({ field, index }))
+      .filter(({ field }) => {
+        if (fieldScopeFilter === 'all') return true;
+        if (fieldScopeFilter === 'global') return isGlobal(field);
+        return isGlobal(field) || field.user_type_id === fieldScopeFilter;
+      });
+
+    if (fieldScopeFilter === 'all' || fieldScopeFilter === 'global') {
+      return matched;
+    }
+    return [
+      ...matched.filter(({ field }) => isGlobal(field)),
+      ...matched.filter(({ field }) => !isGlobal(field)),
+    ];
+  }, [fields, fieldScopeFilter]);
+
+  const isFieldScopeFiltered = fieldScopeFilter !== 'all';
+
   const getUserTypeName = (typeId: number | null | undefined): string => {
     if (typeId === null || typeId === undefined) return t('admin.global');
     const userType = userTypes.find((ut) => ut.id === typeId);
@@ -2488,10 +2528,68 @@ export function AdminUserConfig() {
               </div>
             )}
 
+            {/* Scope filter: answers "which questions does this User Type
+                actually get asked?", which the flat list could not. #645 */}
+            {fields.length > 0 && userTypes.length > 0 && (
+              <div
+                className="flex flex-wrap items-center gap-1.5 mb-4"
+                role="group"
+                aria-label={t(
+                  'admin.setup.fieldScopeFilterLabel',
+                  'Filter questions by user type'
+                )}
+              >
+                {(
+                  [
+                    { key: 'all' as const, label: t('common.all', 'All') },
+                    {
+                      key: 'global' as const,
+                      label: t('admin.global'),
+                    },
+                    ...userTypes.map((ut) => ({
+                      key: ut.id,
+                      label: ut.name,
+                    })),
+                  ] as Array<{ key: 'all' | 'global' | number; label: string }>
+                ).map(({ key, label }) => {
+                  const selected = fieldScopeFilter === key;
+                  return (
+                    <button
+                      key={String(key)}
+                      type="button"
+                      onClick={() => setFieldScopeFilter(key)}
+                      aria-pressed={selected}
+                      className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                        selected
+                          ? 'bg-accent/15 text-accent border-accent/30'
+                          : 'bg-surface text-text-muted border-border hover:text-text'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {isFieldScopeFiltered && (
+              <p className="text-xs text-text-muted mb-4 -mt-2">
+                {fieldScopeFilter === 'global'
+                  ? t(
+                      'admin.setup.fieldScopeGlobalHint',
+                      'Questions every user answers, whatever their type.'
+                    )
+                  : t(
+                      'admin.setup.fieldScopeTypeHint',
+                      'Everything this user type is asked: the global questions everyone answers, plus their own.'
+                    )}
+              </p>
+            )}
+
             {/* Fields List */}
             {fields.length > 0 ? (
+              visibleFields.length > 0 ? (
               <div className="space-y-2 mb-4">
-                {fields.map((field, index) => (
+                {visibleFields.map(({ field, index }) => (
                   <div
                     key={field.id}
                     className="bg-surface border border-border rounded-xl p-3.5 animate-fade-in hover:border-border-strong hover:shadow-sm transition-all"
@@ -2557,10 +2655,18 @@ export function AdminUserConfig() {
                           disabled={
                             isReordering ||
                             index === 0 ||
+                            isFieldScopeFiltered ||
                             userConfigExternalConflict
                           }
                           className="p-1 text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title={t('common.moveUp')}
+                          title={
+                            isFieldScopeFiltered
+                              ? t(
+                                  'admin.setup.reorderNeedsAllScope',
+                                  'Show all questions to reorder them'
+                                )
+                              : t('common.moveUp')
+                          }
                         >
                           <ChevronUp className="w-4 h-4" />
                         </button>
@@ -2570,10 +2676,18 @@ export function AdminUserConfig() {
                           disabled={
                             isReordering ||
                             index === fields.length - 1 ||
+                            isFieldScopeFiltered ||
                             userConfigExternalConflict
                           }
                           className="p-1 text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title={t('common.moveDown')}
+                          title={
+                            isFieldScopeFiltered
+                              ? t(
+                                  'admin.setup.reorderNeedsAllScope',
+                                  'Show all questions to reorder them'
+                                )
+                              : t('common.moveDown')
+                          }
                         >
                           <ChevronDown className="w-4 h-4" />
                         </button>
@@ -2599,6 +2713,19 @@ export function AdminUserConfig() {
                   </div>
                 ))}
               </div>
+              ) : (
+                // Filtered to a type with no specific questions. Saying so
+                // beats rendering blank, which reads as broken rather than
+                // "only the global questions apply here". #645
+                <div className="text-center py-6 bg-surface border border-border border-dashed rounded-lg mb-4">
+                  <p className="text-xs text-text-muted">
+                    {t(
+                      'admin.setup.noFieldsForScope',
+                      'No questions apply to this user type yet.'
+                    )}
+                  </p>
+                </div>
+              )
             ) : (
               <div className="text-center py-6 bg-surface border border-border border-dashed rounded-lg mb-4">
                 <FilePlus

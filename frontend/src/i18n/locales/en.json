@@ -42,7 +42,8 @@
     "export": "Export",
     "reset": "Reset",
     "exit": "Exit",
-    "none": "None"
+    "none": "None",
+    "all": "All"
   },
   "language": {
     "english": "English",
@@ -166,7 +167,12 @@
       "database": "Database",
       "databaseHint": "View and manage your instance data directly in the SQLite database.",
       "openDatabase": "Open Database Explorer",
-      "save": "Save Configuration"
+      "save": "Save Configuration",
+      "fieldScopeFilterLabel": "Filter questions by user type",
+      "noFieldsForScope": "No questions apply to this user type yet.",
+      "reorderNeedsAllScope": "Show all questions to reorder them",
+      "fieldScopeGlobalHint": "Questions every user answers, whatever their type.",
+      "fieldScopeTypeHint": "Everything this user type is asked: the global questions everyone answers, plus their own."
     },
     "instanceConfig": {
       "title": "Instance Configuration",
