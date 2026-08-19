@@ -9,8 +9,9 @@ import {
   RefreshCw,
   Download,
   Wrench,
+  Info,
 } from 'lucide-react';
-import { Button, Callout, Card } from '../../ui';
+import { Button, Callout, Card, IconButton } from '../../ui';
 import { decryptField, hasNip04Support } from '../../../utils/encryption';
 import {
   deleteSessionLog,
@@ -137,8 +138,58 @@ export function FeedbackView() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const openLogRequestIdRef = useRef(0);
+  // Decryption progress, so a pending extension approval is visible instead of
+  // looking like a hang. Null when no decrypt is in flight. See #648.
+  const [decryptProgress, setDecryptProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const nip04 = useMemo(() => hasNip04Support(), []);
+
+  // Export is gated on a completed client-side decrypt rather than refused
+  // after the click. The transcript and comments are NIP-04 ciphertext at rest;
+  // the readable copy only exists once every decryption request is approved.
+  // Exporting before that produced a file that looked successful but was empty
+  // or unreadable (see #493, #643).
+  //
+  // Server-side enforcement is out of scope by design: the plaintext is
+  // assembled in the browser and the backend never holds it.
+  const exportBlockedReason: 'no-extension' | 'decrypting' | 'not-decrypted' | 'partial' | null =
+    !nip04
+      ? 'no-extension'
+      : decryptProgress
+        ? 'decrypting'
+        : !turns
+          ? 'not-decrypted'
+          : undecryptedFeedbackTurns.length > 0
+            ? 'partial'
+            : null;
+
+  const exportBlockedMessage = !exportBlockedReason
+    ? null
+    : exportBlockedReason === 'no-extension'
+      ? t(
+          'adminTestFeedback.feedback.exportNeedsExtension',
+          'Export needs a Nostr extension. Transcripts are encrypted at rest and your extension is what decrypts them.'
+        )
+      : exportBlockedReason === 'decrypting'
+        ? t(
+            'adminTestFeedback.feedback.exportDecrypting',
+            'Still decrypting. Export becomes available once every request is approved.'
+          )
+        : exportBlockedReason === 'not-decrypted'
+          ? t(
+              'adminTestFeedback.feedback.exportNotDecrypted',
+              'Open and decrypt the transcript before exporting.'
+            )
+          : t(
+              'adminTestFeedback.feedback.exportFeedbackNotDecrypted',
+              'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
+            );
+
+  const exportDisabled = exporting || exportBlockedReason !== null;
+  const [showExportHelp, setShowExportHelp] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -172,10 +223,23 @@ export function FeedbackView() {
     setTurns(null);
     setDrafts({});
     setUndecryptedFeedbackTurns([]);
+    setDecryptProgress(null);
     try {
       const full = await getSessionLog(logId);
       if (!isCurrentRequest()) return;
       setDetail(full);
+
+      // Count everything that will need an extension approval up front, so the
+      // Admin sees real progress rather than an anonymous spinner. See #648.
+      const encryptedCommentCount = full.feedback.filter(
+        (fb) => fb.comment_ciphertext
+      ).length;
+      const transcriptCount =
+        full.transcript_ciphertext && full.transcript_ephemeral_pubkey ? 1 : 0;
+      const totalDecrypts = transcriptCount + encryptedCommentCount;
+      if (totalDecrypts > 0) {
+        setDecryptProgress({ done: 0, total: totalDecrypts });
+      }
 
       // Decrypt the transcript ciphertext via NIP-07.
       let parsedTurns: TranscriptTurn[] = [];
@@ -192,42 +256,53 @@ export function FeedbackView() {
         }
         const parsed = JSON.parse(plaintext) as { turns?: TranscriptTurn[] };
         parsedTurns = parsed.turns ?? [];
+        setDecryptProgress((prev) =>
+          prev ? { ...prev, done: prev.done + 1 } : prev
+        );
       }
       if (!isCurrentRequest()) return;
       setTurns(parsedTurns);
 
       // Hydrate per-turn drafts from existing (decrypted) feedback.
+      //
+      // Sequential on purpose. Decrypts are already serialized globally (see
+      // encryption.ts), but iterating in order keeps the progress count honest
+      // and makes the approval sequence predictable for the Admin. See #648.
       const nextDrafts: Record<number, TurnDraft> = {};
       const nextUndecryptedFeedbackTurns: number[] = [];
-      await Promise.all(
-        full.feedback.map(async (fb) => {
-          let comment = '';
-          if (fb.comment_ciphertext) {
-            if (!fb.comment_ephemeral_pubkey) {
-              nextUndecryptedFeedbackTurns.push(fb.turn_index);
-            } else {
-              try {
-                const decryptedComment = await decryptField({
-                  ciphertext: fb.comment_ciphertext,
-                  ephemeral_pubkey: fb.comment_ephemeral_pubkey,
-                });
-                if (decryptedComment == null) {
-                  nextUndecryptedFeedbackTurns.push(fb.turn_index);
-                } else {
-                  comment = decryptedComment;
-                }
-              } catch {
+      for (const fb of full.feedback) {
+        if (!isCurrentRequest()) return;
+        let comment = '';
+        if (fb.comment_ciphertext) {
+          if (!fb.comment_ephemeral_pubkey) {
+            nextUndecryptedFeedbackTurns.push(fb.turn_index);
+          } else {
+            try {
+              const decryptedComment = await decryptField({
+                ciphertext: fb.comment_ciphertext,
+                ephemeral_pubkey: fb.comment_ephemeral_pubkey,
+              });
+              if (decryptedComment == null) {
                 nextUndecryptedFeedbackTurns.push(fb.turn_index);
+              } else {
+                comment = decryptedComment;
               }
+            } catch {
+              nextUndecryptedFeedbackTurns.push(fb.turn_index);
             }
           }
-          nextDrafts[fb.turn_index] = {
-            rating: fb.rating,
-            comment,
-            saved: true,
-          };
-        })
-      );
+          if (isCurrentRequest()) {
+            setDecryptProgress((prev) =>
+              prev ? { ...prev, done: prev.done + 1 } : prev
+            );
+          }
+        }
+        nextDrafts[fb.turn_index] = {
+          rating: fb.rating,
+          comment,
+          saved: true,
+        };
+      }
       if (!isCurrentRequest()) return;
       setDrafts(nextDrafts);
       setUndecryptedFeedbackTurns(nextUndecryptedFeedbackTurns);
@@ -240,6 +315,7 @@ export function FeedbackView() {
     } finally {
       if (isCurrentRequest()) {
         setLoadingDetail(false);
+        setDecryptProgress(null);
       }
     }
   }, []);
@@ -484,8 +560,36 @@ export function FeedbackView() {
             )}
           </Card>
         ) : loadingDetail ? (
-          <div className="flex items-center justify-center py-16 text-text-muted">
+          <div className="flex flex-col items-center gap-4 py-16 text-text-muted">
             <Loader2 className="h-5 w-5 animate-spin" />
+            {decryptProgress && (
+              // A pending extension approval otherwise looks like a hang: the
+              // popup does not always raise itself. See #648.
+              <Callout tone="accent">
+                <div className="font-medium text-text">
+                  {t(
+                    'adminTestFeedback.feedback.decryptPendingTitle',
+                    'Check your Nostr extension'
+                  )}
+                </div>
+                <p className="mt-1">
+                  {t(
+                    'adminTestFeedback.feedback.decryptPendingBody',
+                    'It is asking permission to decrypt this transcript. It may not open on its own — click the extension icon if you do not see it. Choose the option to remember your choice so it only asks once.'
+                  )}
+                </p>
+                <p className="mt-2 text-xs">
+                  {t(
+                    'adminTestFeedback.feedback.decryptProgress',
+                    'Decrypted {{done}} of {{total}}.',
+                    {
+                      done: decryptProgress.done,
+                      total: decryptProgress.total,
+                    }
+                  )}
+                </p>
+              </Callout>
+            )}
           </div>
         ) : detailError ? (
           <Callout tone="error">{detailError}</Callout>
@@ -505,7 +609,7 @@ export function FeedbackView() {
                     variant="secondary"
                     size="sm"
                     onClick={() => void handleExport()}
-                    disabled={exporting}
+                    disabled={exportDisabled}
                     leadingIcon={
                       exporting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -516,6 +620,34 @@ export function FeedbackView() {
                   >
                     {t('common.export', 'Export')}
                   </Button>
+                  {exportBlockedMessage && (
+                    // A disabled button swallows mouse events, so a native
+                    // title would never fire and would be invisible to keyboard
+                    // users. Use an explicit toggle instead. See #643.
+                    <IconButton
+                      label={t(
+                        'adminTestFeedback.feedback.exportWhyDisabled',
+                        'Why is export disabled?'
+                      )}
+                      onClick={() => setShowExportHelp((open) => !open)}
+                      pressed={showExportHelp}
+                    >
+                      <Info className="h-4 w-4" aria-hidden="true" />
+                    </IconButton>
+                  )}
+                  {exportBlockedReason === 'partial' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void openLog(selectedId)}
+                      leadingIcon={<RefreshCw className="h-4 w-4" />}
+                    >
+                      {t(
+                        'adminTestFeedback.feedback.retryDecryption',
+                        'Retry decryption'
+                      )}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -528,6 +660,9 @@ export function FeedbackView() {
               )}
             </div>
 
+            {showExportHelp && exportBlockedMessage && (
+              <Callout tone="accent">{exportBlockedMessage}</Callout>
+            )}
             {feedbackError && <Callout tone="error">{feedbackError}</Callout>}
             {exportError && <Callout tone="error">{exportError}</Callout>}
             {deleteError && <Callout tone="error">{deleteError}</Callout>}

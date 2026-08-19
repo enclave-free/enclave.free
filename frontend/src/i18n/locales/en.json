@@ -1025,7 +1025,14 @@
       "thumbDown": "Needs work",
       "notePlaceholder": "Optional note (saved encrypted)…",
       "exportNotDecrypted": "Open and decrypt the transcript before exporting.",
-      "exportFeedbackNotDecrypted": "Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting."
+      "exportFeedbackNotDecrypted": "Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.",
+      "exportNeedsExtension": "Export needs a Nostr extension. Transcripts are encrypted at rest and your extension is what decrypts them.",
+      "exportDecrypting": "Still decrypting. Export becomes available once every request is approved.",
+      "exportWhyDisabled": "Why is export disabled?",
+      "retryDecryption": "Retry decryption",
+      "decryptPendingTitle": "Check your Nostr extension",
+      "decryptPendingBody": "It is asking permission to decrypt this transcript. It may not open on its own — click the extension icon if you do not see it. Choose the option to remember your choice so it only asks once.",
+      "decryptProgress": "Decrypted {{done}} of {{total}}."
     }
   },
   "adminGuides": {
