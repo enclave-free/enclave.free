@@ -279,6 +279,15 @@ describe('TestAsUserView', () => {
             status: 'succeeded',
           },
         });
+        options.onEvent('trace_delta', {
+          trace_delta: {
+            id: 'model-request',
+            kind: 'timing',
+            title: 'Model request',
+            content: 'Model request: 820 ms.',
+            status: 'succeeded',
+          },
+        });
         await streamGate;
         options.onEvent('done', { session_id: 'sage-1', tools_used: [] });
       }
@@ -297,6 +306,9 @@ describe('TestAsUserView', () => {
     expect(answer.tagName).toBe('STRONG');
     expect(await screen.findByText('Searching resources')).toBeInTheDocument();
     expect(await screen.findByText('Resources ready')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Model request: 820 ms.')
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('textbox', {
         name: 'Message the assistant as this user…',

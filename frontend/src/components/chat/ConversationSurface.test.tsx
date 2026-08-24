@@ -18,6 +18,7 @@ function renderSurface(
   options: {
     isRunning?: boolean;
     hasPersistedSession?: boolean;
+    activityAudience?: 'user' | 'admin';
     onMessageAction?: (
       actionId: ConversationMessageActionId,
       message: Message
@@ -29,6 +30,7 @@ function renderSurface(
     <ThemeProvider>
       <InstanceConfigProvider>
         <ConversationSurface
+          activityAudience={options.activityAudience ?? 'user'}
           turns={turns}
           onSend={onSend}
           isRunning={options.isRunning}
@@ -207,6 +209,33 @@ describe('ConversationSurface', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(onSend).toHaveBeenCalledWith('Next question');
+  });
+
+  it('passes the Admin audience through the shared surface', () => {
+    renderSurface(
+      [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'Settings are configured.',
+          activitySteps: [],
+          traceDeltas: [
+            {
+              id: 'model-request',
+              kind: 'timing',
+              title: 'Model request',
+              content: 'Model request: 820 ms.',
+            },
+          ],
+          trace: null,
+          traceStatus: null,
+        },
+      ],
+      vi.fn(),
+      { activityAudience: 'admin' }
+    );
+
+    expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
   });
 
   it('shows the empty Conversation state before any turns exist', () => {

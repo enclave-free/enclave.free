@@ -427,6 +427,16 @@ describe('AdminConfigAssistant', () => {
             content: 'Reading instance settings.',
           },
         });
+        onEvent('trace_delta', {
+          message_id: 'msg-1',
+          trace_delta: {
+            id: 'model-request',
+            kind: 'timing',
+            title: 'Model request',
+            content: 'Model request: 820 ms.',
+            status: 'succeeded',
+          },
+        });
         onEvent('answer_delta', {
           message_id: 'msg-1',
           delta: 'I checked the settings.',
@@ -451,6 +461,7 @@ describe('AdminConfigAssistant', () => {
     expect(await screen.findByText('Admin Config')).toBeInTheDocument();
     expect(screen.getByText('read_instance_settings')).toBeInTheDocument();
     expect(screen.getByText('Reading instance settings.')).toBeInTheDocument();
+    expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
     expect(screen.getByText('I checked the settings.')).toBeInTheDocument();
   });
 
