@@ -136,6 +136,176 @@ describe('AdminUserConfig', () => {
     vi.clearAllMocks();
   });
 
+  it('filters Onboarding Questions by User Type and explains an empty scope', async () => {
+    const user = userEvent.setup();
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+      {
+        id: 2,
+        name: 'Former Political Prisoner',
+        description: '',
+        display_order: 1,
+      },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Relationship to the detained person',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: 1,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Unfiltered: both questions are listed.
+    expect(await screen.findByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.getByText('Relationship to the detained person')
+    ).toBeInTheDocument();
+
+    // Scoping to a type answers "what is this person actually asked?", so it
+    // keeps the global questions -- everyone answers those. This mirrors the
+    // server's own `user_type_id IS NULL OR user_type_id = ?` resolution.
+    await user.click(screen.getByRole('button', { name: 'Family member' }));
+    expect(
+      screen.getByText('Relationship to the detained person')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+
+    // A type with no questions of its own still shows the global ones.
+    await user.click(
+      screen.getByRole('button', { name: 'Former Political Prisoner' })
+    );
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Relationship to the detained person')
+    ).not.toBeInTheDocument();
+
+    // Global scope shows only the unscoped question.
+    await user.click(screen.getByRole('button', { name: 'Global' }));
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Relationship to the detained person')
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows only global questions under the Global scope', async () => {
+    const user = userEvent.setup();
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Relationship to the detained person',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: 1,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Full Name');
+    await user.click(screen.getByRole('button', { name: 'Global' }));
+
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Relationship to the detained person')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Questions every user answers, whatever their type.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('disables reordering while a scope filter is active', async () => {
+    const user = userEvent.setup();
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Country of residence',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Full Name');
+    // display_order is global, so moving a row while rows are hidden would
+    // reorder against neighbours the Admin cannot see.
+    expect(
+      screen.getAllByRole('button', { name: 'Move down' })[0]
+    ).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Global' }));
+
+    expect(
+      screen.getAllByRole('button', {
+        name: 'Show all questions to reorder them',
+      })[0]
+    ).toBeDisabled();
+  });
+
   it('lets an admin configure whether new users require User Approval', async () => {
     const user = userEvent.setup();
 

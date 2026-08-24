@@ -32,6 +32,11 @@ interface ConversationSurfaceProps {
   transportCapabilities?: ConversationTransportCapabilities;
   hasPersistedSession?: boolean;
   hasPendingApproval?: boolean;
+  /**
+   * Admin surfaces pass true so Activity starts expanded. Users get the
+   * collapsed default; see #636.
+   */
+  defaultActivityOpen?: boolean;
   onMessageAction?: (
     actionId: ConversationMessageActionId,
     message: Message
@@ -50,6 +55,7 @@ export function ConversationSurface({
   transportCapabilities,
   hasPersistedSession = false,
   hasPendingApproval = false,
+  defaultActivityOpen = false,
   onMessageAction,
 }: ConversationSurfaceProps) {
   const { t } = useTranslation();
@@ -103,6 +109,7 @@ export function ConversationSurface({
           assistantState={assistantState}
           runningLabel={t('chat.typing')}
           notices={notices}
+          defaultActivityOpen={defaultActivityOpen}
           onMessageAction={onMessageAction}
         />
         <AssistantComposerInput

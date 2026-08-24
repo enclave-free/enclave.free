@@ -271,13 +271,23 @@ describe('FeedbackView', () => {
     );
     await user.click(trialButton as HTMLButtonElement);
     await screen.findByText('Yes, here is a plan.');
-    await user.click(screen.getByRole('button', { name: 'Export' }));
+    // Export is now prevented rather than refused after the click: the button
+    // is disabled and the reason sits behind the info control (#643).
+    const exportButton = screen.getByRole('button', { name: 'Export' });
+    expect(exportButton).toBeDisabled();
 
+    await user.click(
+      screen.getByRole('button', { name: 'Why is export disabled?' })
+    );
     expect(
       await screen.findByText(
         'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
       )
     ).toBeInTheDocument();
+
+    // Clicking the disabled control must still produce no file and no audit
+    // record — the failure mode behind #493.
+    await user.click(exportButton);
     expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
     expect(mockAnchorClick).not.toHaveBeenCalled();
   });
@@ -307,13 +317,23 @@ describe('FeedbackView', () => {
     );
     await user.click(trialButton as HTMLButtonElement);
     await screen.findByText('Yes, here is a plan.');
-    await user.click(screen.getByRole('button', { name: 'Export' }));
+    // Export is now prevented rather than refused after the click: the button
+    // is disabled and the reason sits behind the info control (#643).
+    const exportButton = screen.getByRole('button', { name: 'Export' });
+    expect(exportButton).toBeDisabled();
 
+    await user.click(
+      screen.getByRole('button', { name: 'Why is export disabled?' })
+    );
     expect(
       await screen.findByText(
         'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
       )
     ).toBeInTheDocument();
+
+    // Clicking the disabled control must still produce no file and no audit
+    // record — the failure mode behind #493.
+    await user.click(exportButton);
     expect(mockDecryptField).toHaveBeenCalledTimes(1);
     expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
     expect(mockAnchorClick).not.toHaveBeenCalled();

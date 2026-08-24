@@ -255,7 +255,8 @@
     "export": "Exportar",
     "reset": "Restablecer",
     "exit": "Salir",
-    "none": "Ninguno"
+    "none": "Ninguno",
+    "all": "Todos"
   },
   "settings": {
     "title": "Configuración",
@@ -353,7 +354,12 @@
       "optionsCount_many": "{{count}} opciones",
       "optionsCount_other": "{{count}} opciones",
       "userSectionDesc": "Configura los tipos de usuario y las preguntas que los usuarios responden durante la incorporación.",
-      "userSectionTitle": "Configuración de usuario"
+      "userSectionTitle": "Configuración de usuario",
+      "fieldScopeFilterLabel": "Filtrar preguntas por tipo de usuario",
+      "noFieldsForScope": "Todavía no hay preguntas para este tipo de usuario.",
+      "reorderNeedsAllScope": "Muestra todas las preguntas para reordenarlas",
+      "fieldScopeGlobalHint": "Preguntas que responden todos los usuarios, sea cual sea su tipo.",
+      "fieldScopeTypeHint": "Todo lo que se le pregunta a este tipo de usuario: las preguntas globales que responden todos, más las suyas."
     },
     "userMigration": {
       "title": "Migración de tipo de usuario",
@@ -2526,7 +2532,14 @@
       "thumbDown": "Necesita mejorar",
       "notePlaceholder": "Nota opcional (se guarda cifrada)…",
       "exportNotDecrypted": "Abre y descifra la transcripción antes de exportarla.",
-      "exportFeedbackNotDecrypted": "No se pudieron descifrar algunos comentarios. Vuelve a abrir la transcripción y aprueba cada solicitud de descifrado antes de exportar."
+      "exportFeedbackNotDecrypted": "No se pudieron descifrar algunos comentarios. Vuelve a abrir la transcripción y aprueba cada solicitud de descifrado antes de exportar.",
+      "exportNeedsExtension": "La exportación necesita una extensión de Nostr. Las transcripciones están cifradas y tu extensión es la que las descifra.",
+      "exportDecrypting": "Aún se está descifrando. La exportación estará disponible cuando se aprueben todas las solicitudes.",
+      "exportWhyDisabled": "¿Por qué está desactivada la exportación?",
+      "retryDecryption": "Reintentar descifrado",
+      "decryptPendingTitle": "Revisa tu extensión de Nostr",
+      "decryptPendingBody": "Está pidiendo permiso para descifrar esta transcripción. Puede que no se abra sola: haz clic en el icono de la extensión si no la ves. Elige la opción de recordar tu decisión para que solo lo pregunte una vez.",
+      "decryptProgress": "Descifrado {{done}} de {{total}}."
     }
   },
   "adminResources": {
@@ -2695,5 +2708,10 @@
       "plain": "Sin cifrar",
       "chatContext": "Contexto del chat"
     }
+  },
+  "decryptStatus": {
+    "progress": "Descifrando {{done}} de {{total}}",
+    "checkExtension": "revisa tu extensión de Nostr",
+    "persistentApproval": "Elige la opción de recordar o siempre para que solo lo pregunte una vez."
   }
 }

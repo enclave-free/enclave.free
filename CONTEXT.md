@@ -385,8 +385,10 @@ The selected visible conversation controls captured when a **User** or **Admin**
 _Avoid_: current controls, session settings, agent settings
 
 **Trace Visibility Posture**:
-The prototype product stance that **Conversation Trace** details are visible by default for both **Admin Conversations** and **User Conversations**. It is not a per-actor policy surface in the current transparent prototype phase.
-_Avoid_: debug mode, logging level, actor-specific trace policy
+The prototype product stance for how much of a **Conversation Trace** a viewer sees on open. **Sage** still emits the same sanitized trace for every **Conversation**, and the **Conversation UI Surface** decides the opening state: **User Conversations** and **Test User Sessions** start with **Conversation Activity** collapsed, while **Admin Conversations** may opt in to starting expanded. Any viewer can expand or collapse the panel from its header control.
+
+This is UI presentation posture, not a trace-content policy. The legacy `user_trace_visibility` and `admin_trace_visibility` **Agent Settings** are not authoritative on the Sage path — Sage records them as legacy keys and emits `detailed` regardless — so the opening state is decided by the surface rendering the **Conversation**, not by a per-actor setting.
+_Avoid_: debug mode, logging level, actor-specific trace policy, trace redaction
 
 **Tool**:
 A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
@@ -807,9 +809,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - Every configured Conversation model must support the provider-native Tool-calling contract
 - Individual **Tools** and retrieval steps should emit trace material for their own work, and **Sage** should compose that material into the final **Conversation Trace** while protecting the minimal blocklist
 - Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
-- The transparent prototype **Trace Visibility Posture** should not require actor-specific **Audit Log** events because it is not currently a configurable policy surface
+- The **Trace Visibility Posture** should not require actor-specific **Audit Log** events: it governs the opening state of a panel the viewer can toggle freely, not what the trace contains or who may read it
 - **Conversation Trace** blocklist handling should keep the trace event when possible, replace protected content with `[redacted]`, and mark the event guarded without failing the associated chat response
-- Viewers may expand or collapse shown per-message trace details, but the prototype should avoid actor-specific trace visibility plumbing unless a later decision reintroduces it
+- Viewers may expand or collapse shown per-message trace details; the surface rendering the **Conversation** decides the opening state (**User** collapsed, **Admin** may opt in to expanded) rather than a per-actor trace-visibility setting
 - **Tool Trace** for `db-query` should expose authorized SQL results only when those results were intentionally returned through the database **Tool** result, while still protecting credentials and hidden authority-bearing internals
 - **Admin Conversation** detailed traces may include validated read-only SQL only after sensitive literals are redacted
 - `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only

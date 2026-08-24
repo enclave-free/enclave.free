@@ -23,6 +23,10 @@ vi.mock('../utils/adminApi', () => ({
 vi.mock('../utils/encryption', () => ({
   decryptField: vi.fn(),
   hasNip04Support: vi.fn(),
+  // The inline decrypt-progress indicator subscribes to the queue; return a
+  // no-op unsubscribe so the component can mount under this mock. See #648.
+  subscribeToDecryptQueue: vi.fn(() => () => {}),
+  getDecryptQueueState: vi.fn(() => ({ done: 0, total: 0, active: false })),
 }));
 
 const mockAdminFetch = vi.mocked(adminFetch);

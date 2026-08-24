@@ -258,6 +258,106 @@ describe('ChatMessage', () => {
     );
   });
 
+  it('collapses Activity by default for Users and opens it on the arrow', async () => {
+    const user = userEvent.setup();
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'minimal',
+      reasoning: { summary: 'Sage used Web search before answering.' },
+      tools: [
+        {
+          id: 'web-search',
+          name: 'Web search',
+          status: 'success',
+          execution: 'server',
+          input_summary: 'current policy updates',
+          output_summary: 'Found 3 relevant results.',
+          warnings: [],
+          metadata: {},
+        },
+      ],
+      retrieval: [],
+      suppressed: false,
+      activity_steps: [
+        {
+          id: 'step-1',
+          kind: 'timing',
+          title: 'Provider first-event wait',
+          status: 'timed_out',
+          summary:
+            'Provider produced no event before the first-event deadline.',
+        },
+      ],
+    });
+
+    const toggle = screen.getByRole('button', { name: 'Show Activity' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      document.getElementById(toggle.getAttribute('aria-controls')!)
+    ).toHaveAttribute('hidden');
+
+    await user.click(toggle);
+
+    expect(
+      screen.getByRole('button', { name: 'Hide Activity' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Provider first-event wait')).toBeInTheDocument();
+  });
+
+  it('keeps Activity collapsed even when the trace says detailed', () => {
+    // Sage hardcodes visibility "detailed" for every Conversation, so the
+    // default must not be derived from it. See #636.
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'detailed',
+      reasoning: { summary: 'Sage answered.' },
+      tools: [],
+      retrieval: [],
+      suppressed: false,
+      activity_steps: [
+        {
+          id: 'step-1',
+          kind: 'timing',
+          title: 'Provider first-event wait',
+          status: 'timed_out',
+          summary:
+            'Provider produced no event before the first-event deadline.',
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Show Activity' })
+    ).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens Activity by default when the surface opts in', () => {
+    renderMessage(
+      'Here is the answer.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        reasoning: { summary: 'Sage answered.' },
+        tools: [],
+        retrieval: [],
+        suppressed: false,
+        activity_steps: [
+          {
+            id: 'step-1',
+            kind: 'timing',
+            title: 'Provider first-event wait',
+            status: 'timed_out',
+            summary:
+              'Provider produced no event before the first-event deadline.',
+          },
+        ],
+      },
+      { defaultActivityOpen: true }
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Hide Activity' })
+    ).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('keeps optional Activity summaries behind a distinct nested disclosure', async () => {
     const user = userEvent.setup();
     renderMessage('Here is the answer.', 'assistant', {
@@ -288,6 +388,9 @@ describe('ChatMessage', () => {
     });
 
     expect(screen.getByText('Activity')).toBeInTheDocument();
+    // Activity is collapsed by default (see #636); this test is about the
+    // nested optional-details disclosure, so open the outer panel first.
+    await user.click(screen.getByRole('button', { name: 'Show Activity' }));
     expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument();
     expect(screen.queryByText('summary')).not.toBeInTheDocument();
     expect(screen.getByText('Tool calls')).toBeInTheDocument();
@@ -379,6 +482,9 @@ describe('ChatMessage', () => {
             },
           ],
         },
+        // This test covers the collapse/restore round-trip, so start expanded.
+        // The default is collapsed (see #636).
+        defaultActivityOpen: true,
       }
     );
 
@@ -801,6 +907,8 @@ describe('ChatMessage', () => {
         </InstanceConfigProvider>
       </ThemeProvider>
     );
+
+    await user.click(screen.getByRole('button', { name: 'Show Activity' }));
 
     const disclosure = screen.getByRole('button', { name: /Thinking/ });
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');
