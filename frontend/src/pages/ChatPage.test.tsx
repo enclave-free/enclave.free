@@ -1753,6 +1753,7 @@ describe('ChatPage', () => {
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(screen.getByText('Tool completed.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show Activity' }));
     expect(
       screen.queryByText('Model request: 820 ms.')
     ).not.toBeInTheDocument();

@@ -47,6 +47,7 @@ const USER_HIDDEN_OPERATIONAL_TITLES = new Set([
   'provider first-event wait',
   'retry delay',
   'token usage',
+  'tool selection',
   'tool retry',
 ]);
 
@@ -104,6 +105,8 @@ function presentUserLiveStatus(status?: string | null): string | null {
     normalized.startsWith('retry delay') ||
     normalized.startsWith('retrying model request') ||
     normalized.startsWith('retrying provider request') ||
+    (normalized.startsWith('retrying ') &&
+      normalized.includes(' after attempt')) ||
     normalized.startsWith('correcting provider') ||
     normalized.startsWith('model usage') ||
     normalized.startsWith('token usage')

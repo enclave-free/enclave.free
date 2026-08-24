@@ -207,6 +207,9 @@ describe('presentConversationActivity', () => {
     expect(presentStatus('TIMED_OUT')).toBeNull();
     expect(presentStatus('Knowledge Search timed out.')).toBeNull();
     expect(presentStatus('Retrying model request after attempt 1.')).toBeNull();
+    expect(
+      presentStatus('Retrying Curated Resources after attempt 1.')
+    ).toBeNull();
   });
 
   it('recognizes diagnostic titles even when an older payload used a generic kind', () => {
@@ -218,6 +221,12 @@ describe('presentConversationActivity', () => {
           id: 'legacy-model-request',
           kind: 'status',
           title: 'Model request',
+          status: 'succeeded',
+        },
+        {
+          id: 'legacy-tool-selection',
+          kind: 'status',
+          title: 'Tool Selection',
           status: 'succeeded',
         },
         {
