@@ -55,6 +55,28 @@ function restoreProperty(
   }
 }
 
+async function openStudentTrial() {
+  const user = userEvent.setup();
+  const trialButton = (await screen.findByText('Student trial')).closest(
+    'button'
+  );
+  await user.click(trialButton as HTMLButtonElement);
+}
+
+async function expectTranscriptIntegrityFailure() {
+  await openStudentTrial();
+  expect(
+    await screen.findByText(
+      'The transcript is unavailable or incomplete and cannot be exported.'
+    )
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Export' })
+  ).not.toBeInTheDocument();
+  expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
+  expect(mockAnchorClick).not.toHaveBeenCalled();
+}
+
 describe('FeedbackView', () => {
   beforeEach(() => {
     originalCreateObjectURLDescriptor = Object.getOwnPropertyDescriptor(
@@ -233,6 +255,112 @@ describe('FeedbackView', () => {
     expect(
       await screen.findByText('Export could not be audited')
     ).toBeInTheDocument();
+    expect(mockAnchorClick).not.toHaveBeenCalled();
+  });
+
+  it('blocks plaintext export when the transcript is missing its decryption key', async () => {
+    const sessionLog = await mockGetSessionLog('log-1');
+    mockGetSessionLog.mockResolvedValue({
+      ...sessionLog,
+      transcript_ephemeral_pubkey: null,
+    });
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+    expect(mockDecryptField).not.toHaveBeenCalled();
+  });
+
+  it('blocks plaintext export when decrypted transcript data has no turns array', async () => {
+    mockDecryptField.mockResolvedValue(JSON.stringify({}));
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when the decrypted transcript is incomplete', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [{ role: 'user', content: 'Can you help me?' }],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when decrypted transcript turns are malformed', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Can you help me?' },
+          { role: 'assistant', content: 42, tools_used: 'not-an-array' },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when a decrypted tools-used record is malformed', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Can you help me?' },
+          {
+            role: 'assistant',
+            content: 'Yes, here is a plan.',
+            tools_used: [null],
+          },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when a decrypted trace tool record is malformed', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Can you help me?' },
+          {
+            role: 'assistant',
+            content: 'Yes, here is a plan.',
+            trace: { tools: [null] },
+          },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('keeps plaintext export disabled for a log with no saved transcript', async () => {
+    const user = userEvent.setup();
+    const sessionLog = await mockGetSessionLog('log-1');
+    mockGetSessionLog.mockResolvedValue({
+      ...sessionLog,
+      turn_count: 0,
+      has_transcript: false,
+      transcript_ciphertext: null,
+      transcript_ephemeral_pubkey: null,
+    });
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    await user.click(trialButton as HTMLButtonElement);
+
+    expect(
+      await screen.findByRole('button', { name: 'Export' })
+    ).toBeDisabled();
+    expect(mockDecryptField).not.toHaveBeenCalled();
+    expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
     expect(mockAnchorClick).not.toHaveBeenCalled();
   });
 
