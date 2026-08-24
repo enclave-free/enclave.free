@@ -49,6 +49,87 @@ interface TranscriptToolSummary {
   summary?: string | null;
 }
 
+const TRANSCRIPT_INTEGRITY_ERROR =
+  'The transcript is unavailable or incomplete and cannot be exported.';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value == null || typeof value === 'string';
+}
+
+function isOptionalStringArray(value: unknown): boolean {
+  return (
+    value == null ||
+    (Array.isArray(value) && value.every((entry) => typeof entry === 'string'))
+  );
+}
+
+function isTranscriptToolCall(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.tool_id === 'string' &&
+    typeof value.tool_name === 'string' &&
+    isOptionalString(value.query) &&
+    isOptionalString(value.output_summary) &&
+    isOptionalStringArray(value.warnings) &&
+    (value.guarded == null || typeof value.guarded === 'boolean')
+  );
+}
+
+function isTranscriptTraceTool(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    (typeof value.id === 'string' || typeof value.name === 'string') &&
+    isOptionalString(value.id) &&
+    isOptionalString(value.name) &&
+    isOptionalString(value.output_summary) &&
+    isOptionalStringArray(value.warnings)
+  );
+}
+
+function isTranscriptTurn(value: unknown): value is TranscriptTurn {
+  if (!isRecord(value)) return false;
+  const toolsUsed = value.tools_used;
+  const trace = value.trace;
+  return (
+    typeof value.role === 'string' &&
+    typeof value.content === 'string' &&
+    (toolsUsed == null ||
+      (Array.isArray(toolsUsed) && toolsUsed.every(isTranscriptToolCall))) &&
+    (trace == null ||
+      (isRecord(trace) &&
+        (trace.tools == null ||
+          (Array.isArray(trace.tools) &&
+            trace.tools.every(isTranscriptTraceTool)))))
+  );
+}
+
+function parseTranscriptTurns(
+  plaintext: string,
+  expectedTurnCount: number
+): TranscriptTurn[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(plaintext) as unknown;
+  } catch {
+    throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
+  }
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    !('turns' in parsed) ||
+    !Array.isArray(parsed.turns) ||
+    parsed.turns.length !== expectedTurnCount ||
+    !parsed.turns.every(isTranscriptTurn)
+  ) {
+    throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
+  }
+  return parsed.turns;
+}
+
 function transcriptToolSummaries(
   turn: TranscriptTurn
 ): TranscriptToolSummary[] {
@@ -229,6 +310,15 @@ export function FeedbackView() {
       if (!isCurrentRequest()) return;
       setDetail(full);
 
+      const hasTranscriptCiphertext = Boolean(full.transcript_ciphertext);
+      const hasTranscriptKey = Boolean(full.transcript_ephemeral_pubkey);
+      if (
+        hasTranscriptCiphertext !== hasTranscriptKey ||
+        (!hasTranscriptCiphertext && full.turn_count > 0)
+      ) {
+        throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
+      }
+
       // Count everything that will need an extension approval up front, so the
       // Admin sees real progress rather than an anonymous spinner. See #648.
       const encryptedCommentCount = full.feedback.filter(
@@ -242,7 +332,7 @@ export function FeedbackView() {
       }
 
       // Decrypt the transcript ciphertext via NIP-07.
-      let parsedTurns: TranscriptTurn[] = [];
+      let parsedTurns: TranscriptTurn[] | null = null;
       if (full.transcript_ciphertext && full.transcript_ephemeral_pubkey) {
         const plaintext = await decryptField({
           ciphertext: full.transcript_ciphertext,
@@ -254,8 +344,7 @@ export function FeedbackView() {
             'Could not decrypt the transcript. Approve the decryption request in your Nostr extension.'
           );
         }
-        const parsed = JSON.parse(plaintext) as { turns?: TranscriptTurn[] };
-        parsedTurns = parsed.turns ?? [];
+        parsedTurns = parseTranscriptTurns(plaintext, full.turn_count);
         setDecryptProgress((prev) =>
           prev ? { ...prev, done: prev.done + 1 } : prev
         );
