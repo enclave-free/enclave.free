@@ -61,6 +61,12 @@ describe('AdminUserConfig', () => {
         if (endpoint === '/admin/user-fields') {
           return Promise.resolve(Response.json({ fields: fieldsResponse }));
         }
+        if (
+          endpoint.startsWith('/admin/user-types/') &&
+          options?.method === 'DELETE'
+        ) {
+          return Promise.resolve(Response.json({ success: true }));
+        }
         if (endpoint === '/admin/users') {
           return Promise.resolve(Response.json({ users: usersResponse }));
         }
@@ -254,6 +260,61 @@ describe('AdminUserConfig', () => {
         'Questions every user answers, whatever their type.'
       )
     ).toBeInTheDocument();
+  });
+
+  it('resets the question scope when its selected User Type is deleted', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+      { id: 2, name: 'Advocate', description: '', display_order: 1 },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Relationship to the detained person',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: 1,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Full Name');
+    await user.click(screen.getByRole('button', { name: 'Family member' }));
+    expect(
+      screen.getByRole('button', { name: 'Family member' })
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getAllByTitle('Remove')[0]);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Family member' })
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
   });
 
   it('disables reordering while a scope filter is active', async () => {

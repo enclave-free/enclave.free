@@ -1534,6 +1534,15 @@ export function AdminUserConfig() {
     'all' | 'global' | number
   >('all');
 
+  useEffect(() => {
+    if (
+      typeof fieldScopeFilter === 'number' &&
+      !userTypes.some((userType) => userType.id === fieldScopeFilter)
+    ) {
+      setFieldScopeFilter('all');
+    }
+  }, [fieldScopeFilter, userTypes]);
+
   // Pair each visible field with its index in the unfiltered `fields` array:
   // reordering and the type-migration flow operate on the full list, so a
   // filtered index would move the wrong row.
