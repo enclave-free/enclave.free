@@ -14,6 +14,8 @@ interface AssistantConversationThreadProps {
     actionId: ConversationMessageActionId,
     message: Message
   ) => void;
+  /** Admin surfaces pass true to keep Activity expanded (see #636). */
+  defaultActivityOpen?: boolean;
 }
 
 export function AssistantConversationThread({
@@ -21,6 +23,7 @@ export function AssistantConversationThread({
   runningLabel,
   notices,
   onMessageAction,
+  defaultActivityOpen = false,
 }: AssistantConversationThreadProps) {
   const { t } = useTranslation();
 
@@ -61,6 +64,7 @@ export function AssistantConversationThread({
                           actions,
                         }}
                         onAction={onMessageAction}
+                        defaultActivityOpen={defaultActivityOpen}
                       />
                       {accessory}
                     </div>

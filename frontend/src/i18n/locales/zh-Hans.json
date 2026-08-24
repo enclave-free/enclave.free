@@ -42,7 +42,8 @@
     "export": "导出",
     "reset": "重置",
     "exit": "退出",
-    "none": "无"
+    "none": "无",
+    "all": "全部"
   },
   "settings": {
     "title": "设置",
@@ -124,7 +125,12 @@
       "instanceSectionTitle": "实例配置",
       "onboardingFieldsHint": "创建用户在入职期间回答的问题。",
       "userSectionDesc": "配置用户类型和用户在入职期间回答的问题。",
-      "userSectionTitle": "用户配置"
+      "userSectionTitle": "用户配置",
+      "fieldScopeFilterLabel": "按用户类型筛选问题",
+      "noFieldsForScope": "此用户类型暂时没有适用的问题。",
+      "reorderNeedsAllScope": "显示全部问题后才能重新排序",
+      "fieldScopeGlobalHint": "所有用户都要回答的问题，无论其类型。",
+      "fieldScopeTypeHint": "此用户类型会被问到的全部内容：所有人都要回答的通用问题，加上该类型专属的问题。"
     },
     "database": {
       "backToSetup": "返回管理设置",
@@ -2521,7 +2527,14 @@
       "thumbDown": "需要改进",
       "notePlaceholder": "可选备注（加密保存）…",
       "exportNotDecrypted": "请先打开并解密对话记录，然后再导出。",
-      "exportFeedbackNotDecrypted": "部分反馈评论无法解密。请重新打开对话记录并批准每个解密请求，然后再导出。"
+      "exportFeedbackNotDecrypted": "部分反馈评论无法解密。请重新打开对话记录并批准每个解密请求，然后再导出。",
+      "exportNeedsExtension": "导出需要 Nostr 扩展。对话记录以加密方式存储，需由你的扩展解密。",
+      "exportDecrypting": "仍在解密。全部请求获批后即可导出。",
+      "exportWhyDisabled": "为什么无法导出？",
+      "retryDecryption": "重新解密",
+      "decryptPendingTitle": "请查看你的 Nostr 扩展",
+      "decryptPendingBody": "它正在请求解密此对话记录的权限。它可能不会自动弹出——如果没看到，请点击扩展图标。请选择记住此选择的选项，这样它只会询问一次。",
+      "decryptProgress": "已解密 {{done}} / {{total}}。"
     }
   },
   "adminResources": {
@@ -2689,5 +2702,10 @@
       "plain": "明文",
       "chatContext": "聊天上下文"
     }
+  },
+  "decryptStatus": {
+    "progress": "正在解密 {{done}} / {{total}}",
+    "checkExtension": "请查看你的 Nostr 扩展",
+    "persistentApproval": "请选择记住或始终允许的选项，这样它只会询问一次。"
   }
 }

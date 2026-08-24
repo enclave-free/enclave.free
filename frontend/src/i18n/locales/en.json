@@ -2703,6 +2703,7 @@
   },
   "decryptStatus": {
     "progress": "Decrypting {{done}} of {{total}}",
-    "checkExtension": "check your Nostr extension"
+    "checkExtension": "check your Nostr extension",
+    "persistentApproval": "Choose the remember or always option so it only asks once."
   }
 }

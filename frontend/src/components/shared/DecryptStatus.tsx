@@ -32,7 +32,10 @@ export function DecryptStatus() {
       role="status"
       aria-live="polite"
     >
-      <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" aria-hidden="true" />
+      <Loader2
+        className="h-3.5 w-3.5 animate-spin text-accent"
+        aria-hidden="true"
+      />
       <span className="font-medium text-text">
         {t('decryptStatus.progress', 'Decrypting {{done}} of {{total}}', {
           done: state.done,
@@ -42,6 +45,12 @@ export function DecryptStatus() {
       <span className="inline-flex items-center gap-1 text-text-muted">
         <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
         {t('decryptStatus.checkExtension', 'check your Nostr extension')}
+      </span>
+      <span className="text-text-muted">
+        {t(
+          'decryptStatus.persistentApproval',
+          'Choose the remember or always option so it only asks once.'
+        )}
       </span>
     </div>
   );
@@ -82,6 +91,12 @@ export function DecryptProgressInline() {
       </span>
       <span className="text-text-muted">
         {t('decryptStatus.checkExtension', 'check your Nostr extension')}
+      </span>
+      <span className="text-text-muted">
+        {t(
+          'decryptStatus.persistentApproval',
+          'Choose the remember or always option so it only asks once.'
+        )}
       </span>
     </span>
   );

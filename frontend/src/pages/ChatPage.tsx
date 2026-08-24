@@ -1926,6 +1926,10 @@ export function ChatPage() {
           toolbar={inputToolbar}
           notices={threadNotices}
           hasPersistedSession={Boolean(conversationSessionId)}
+          // Authenticated Admins keep the expanded Activity posture on the
+          // primary shared surface; Users below get the collapsed default.
+          // See #636.
+          defaultActivityOpen
         />
       ) : (
         <UserConversation
