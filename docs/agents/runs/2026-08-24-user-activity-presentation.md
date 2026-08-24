@@ -5,7 +5,7 @@
 - Run ID: 2026-08-24-user-activity-presentation
 - Loop: plebdev-feature-dev
 - Target repo: enclave-free/enclave.free
-- Base branch: staging at merged PR #649 commit `f29b5e2810d7a5be7d1c9d09912b664ac423c294`
+- Base branch: staging at merged PR #653 commit `8423efcc56b0f3ce292aa5fe74d3ae0797eab482`
 - Feature branch: feature/user-activity-presentation
 - Human owner: Austin
 - Started: 2026-08-24
@@ -82,4 +82,4 @@ Keep User Activity focused on product-meaningful work while retaining full opera
 
 ## Escalations
 
-- None. PR #649 merged and this branch was rebased onto its `staging` merge commit.
+- None. PRs #649 and #653 merged, and this branch was rebased onto the current `staging` merge commit.
