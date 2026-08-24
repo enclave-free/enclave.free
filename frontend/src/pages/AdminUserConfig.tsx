@@ -42,10 +42,14 @@ import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import { decryptField, hasNip04Support } from '../utils/encryption';
 import {
-  buildUserRosterWorkbook,
   type EncryptedFieldValue,
   type UserRosterIdentity,
 } from '../utils/userRosterExport';
+import {
+  isPreparedUserRosterExportCurrent,
+  prepareUserRosterExport,
+  type PreparedUserRosterExport,
+} from '../utils/userRosterExportPreparation';
 
 const FIELD_TYPE_VALUES: FieldType[] = [
   'text',
@@ -58,20 +62,6 @@ const FIELD_TYPE_VALUES: FieldType[] = [
   'url',
 ];
 
-const EXPORT_DECRYPT_BATCH_SIZE = 5;
-
-async function mapInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  mapper: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  for (let index = 0; index < items.length; index += batchSize) {
-    const batch = items.slice(index, index + batchSize);
-    results.push(...(await Promise.all(batch.map(mapper))));
-  }
-  return results;
-}
 type SourceTypeFilter = 'all' | 'untyped' | number;
 
 const USER_AVATAR_COLORS = [
@@ -177,7 +167,10 @@ export function AdminUserConfig() {
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [userRosterPreparing, setUserRosterPreparing] = useState(false);
   const [userRosterExporting, setUserRosterExporting] = useState(false);
+  const [preparedUserRosterExport, setPreparedUserRosterExport] =
+    useState<PreparedUserRosterExport | null>(null);
   const [userRosterExportError, setUserRosterExportError] = useState<
     string | null
   >(null);
@@ -262,6 +255,7 @@ export function AdminUserConfig() {
   >({});
   const [identityDecryptNonce, setIdentityDecryptNonce] = useState(0);
   const userIdentityDecryptRunIdRef = useRef(0);
+  const userRosterPreparationRunIdRef = useRef(0);
 
   // Reachout settings (stored in instance_settings; only reachout_* public keys are exposed via /settings/public)
   const [reachoutLoaded, setReachoutLoaded] = useState(false);
@@ -1593,6 +1587,13 @@ export function AdminUserConfig() {
     [users]
   );
 
+  useEffect(() => {
+    userRosterPreparationRunIdRef.current += 1;
+    setUserRosterPreparing(false);
+    setPreparedUserRosterExport(null);
+    setUserRosterExportSuccess(null);
+  }, [fields, userTypes, users]);
+
   const hasEncryptedIdentity = (user: AdminUserSummary): boolean =>
     Boolean(
       user.email_encrypted?.ciphertext || user.name_encrypted?.ciphertext
@@ -1687,84 +1688,6 @@ export function AdminUserConfig() {
     setIdentityDecryptNonce((current) => current + 1);
   };
 
-  const decryptIdentityForExport = async (
-    user: AdminUserSummary
-  ): Promise<DecryptedUserIdentity | undefined> => {
-    const existing = decryptedUserIdentities[user.id];
-    if (existing?.status === 'ready') return existing;
-
-    if (!hasEncryptedIdentity(user)) {
-      return undefined;
-    }
-
-    if (!hasNip04Support()) {
-      return {
-        status: 'unavailable',
-        email: null,
-        name: null,
-      };
-    }
-
-    const [email, name] = await Promise.all([
-      decryptField(user.email_encrypted),
-      decryptField(user.name_encrypted),
-    ]);
-
-    return {
-      status: email || name ? 'ready' : 'failed',
-      email,
-      name,
-    };
-  };
-
-  const collectExportIdentities = async (): Promise<
-    Record<number, DecryptedUserIdentity | undefined>
-  > => {
-    const entries = await mapInBatches(
-      users,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async (user) => [user.id, await decryptIdentityForExport(user)] as const
-    );
-    return Object.fromEntries(entries);
-  };
-
-  const collectExportProfileValues = async (): Promise<
-    Record<number, Record<string, string | null>>
-  > => {
-    if (!hasNip04Support()) {
-      return {};
-    }
-
-    const profileValues = Object.fromEntries(
-      users.map((user) => [user.id, {}])
-    ) as Record<number, Record<string, string | null>>;
-    const encryptedFieldTasks = users.flatMap((user) =>
-      Object.entries(user.fields_encrypted ?? {}).map(
-        ([fieldName, encrypted]) => ({
-          userId: user.id,
-          fieldName,
-          encrypted,
-        })
-      )
-    );
-
-    const decryptedFieldValues = await mapInBatches(
-      encryptedFieldTasks,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async ({ userId, fieldName, encrypted }) => ({
-        userId,
-        fieldName,
-        value: await decryptField(encrypted),
-      })
-    );
-
-    for (const { userId, fieldName, value } of decryptedFieldValues) {
-      profileValues[userId][fieldName] = value;
-    }
-
-    return profileValues;
-  };
-
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -1778,10 +1701,13 @@ export function AdminUserConfig() {
     document.body.removeChild(anchor);
   };
 
-  const handleExportUserRoster = async () => {
+  const handlePrepareUserRoster = async () => {
+    const runId = userRosterPreparationRunIdRef.current + 1;
+    userRosterPreparationRunIdRef.current = runId;
     setUserRosterExportError(null);
     setUserRosterExportSuccess(null);
-    setUserRosterExporting(true);
+    setPreparedUserRosterExport(null);
+    setUserRosterPreparing(true);
 
     try {
       if (hasNip04Support()) {
@@ -1795,27 +1721,84 @@ export function AdminUserConfig() {
         }
       }
 
-      const exportedAt = new Date();
-      const [exportIdentities, exportProfileValues] = await Promise.all([
-        collectExportIdentities(),
-        collectExportProfileValues(),
-      ]);
-      const workbook = buildUserRosterWorkbook({
+      const result = await prepareUserRosterExport({
         users,
         userTypes,
         onboardingFields: fields,
-        identities: exportIdentities,
-        profileValues: exportProfileValues,
-        exportedAt,
+        exportedAt: new Date(),
         exportedBy: localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY),
+        decrypt: hasNip04Support() ? decryptField : undefined,
       });
+      if (userRosterPreparationRunIdRef.current !== runId) return;
+
+      if (!result.ok) {
+        setUserRosterExportError(
+          result.reason === 'decrypt-unavailable'
+            ? t(
+                'admin.userRosterExport.decryptUnavailable',
+                'A browser extension with NIP-04 decryption is required to prepare this roster.'
+              )
+            : t(
+                'admin.userRosterExport.decryptFailed',
+                'An encrypted roster value could not be decrypted. No spreadsheet was created.'
+              )
+        );
+        return;
+      }
+
+      setPreparedUserRosterExport(result.snapshot);
+      setUserRosterExportSuccess(
+        t(
+          'admin.userRosterExport.prepared',
+          'The complete roster is prepared. Download is now enabled.'
+        )
+      );
+    } catch (err) {
+      if (userRosterPreparationRunIdRef.current === runId) {
+        setUserRosterExportError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'admin.userRosterExport.failed',
+                'Failed to prepare user roster.'
+              )
+        );
+      }
+    } finally {
+      if (userRosterPreparationRunIdRef.current === runId) {
+        setUserRosterPreparing(false);
+      }
+    }
+  };
+
+  const handleDownloadUserRoster = async () => {
+    setUserRosterExportError(null);
+    setUserRosterExportSuccess(null);
+
+    const snapshot = preparedUserRosterExport;
+    if (!snapshot || !isPreparedUserRosterExportCurrent(snapshot, users)) {
+      setPreparedUserRosterExport(null);
+      setUserRosterExportError(
+        t(
+          'admin.userRosterExport.prepareRequired',
+          'Prepare the current roster before downloading it.'
+        )
+      );
+      return;
+    }
+
+    const preparationGeneration = userRosterPreparationRunIdRef.current;
+    setUserRosterExporting(true);
+
+    try {
+      const { workbook } = snapshot;
 
       const auditResponse = await adminFetch('/admin/users/roster-export', {
         method: 'POST',
         body: JSON.stringify({
           filename: workbook.filename,
-          user_count: users.length,
-          pending_count: pendingApprovalUsers.length,
+          user_count: snapshot.userCount,
+          pending_count: snapshot.pendingCount,
           includes_decrypted_browser_values: workbook.includesDecryptedValues,
         }),
       });
@@ -1833,6 +1816,17 @@ export function AdminUserConfig() {
         return;
       }
 
+      if (userRosterPreparationRunIdRef.current !== preparationGeneration) {
+        setPreparedUserRosterExport(null);
+        setUserRosterExportError(
+          t(
+            'admin.userRosterExport.prepareRequired',
+            'Prepare the current roster before downloading it.'
+          )
+        );
+        return;
+      }
+
       downloadBlob(workbook.blob, workbook.filename);
       setUserRosterExportSuccess(
         t(
@@ -1844,7 +1838,10 @@ export function AdminUserConfig() {
       setUserRosterExportError(
         err instanceof Error
           ? err.message
-          : t('admin.userRosterExport.failed', 'Failed to export user roster.')
+          : t(
+              'admin.userRosterExport.failed',
+              'Failed to download user roster.'
+            )
       );
     } finally {
       setUserRosterExporting(false);
@@ -3434,8 +3431,34 @@ export function AdminUserConfig() {
               )}
 
               <Button
-                onClick={() => void handleExportUserRoster()}
-                disabled={usersLoading || userRosterExporting}
+                onClick={() => void handlePrepareUserRoster()}
+                disabled={
+                  usersLoading || userRosterPreparing || userRosterExporting
+                }
+                variant="secondary"
+                size="sm"
+                leadingIcon={
+                  userRosterPreparing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Key className="w-4 h-4" />
+                  )
+                }
+              >
+                {t(
+                  'admin.userRosterExport.prepareButton',
+                  'Prepare user roster'
+                )}
+              </Button>
+
+              <Button
+                onClick={() => void handleDownloadUserRoster()}
+                disabled={
+                  usersLoading ||
+                  userRosterPreparing ||
+                  userRosterExporting ||
+                  !preparedUserRosterExport
+                }
                 variant="secondary"
                 size="sm"
                 leadingIcon={
@@ -3446,7 +3469,10 @@ export function AdminUserConfig() {
                   )
                 }
               >
-                {t('admin.userRosterExport.button', 'Export users')}
+                {t(
+                  'admin.userRosterExport.downloadButton',
+                  'Download prepared roster'
+                )}
               </Button>
 
               <Button
