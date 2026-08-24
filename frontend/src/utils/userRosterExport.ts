@@ -265,6 +265,13 @@ function getIdentityStatus(
   user: UserRosterExportUser,
   identity: UserRosterIdentity | undefined
 ): string {
+  if (
+    identity?.status === 'ready' &&
+    (user.name_encrypted?.ciphertext !== undefined ||
+      user.email_encrypted?.ciphertext !== undefined)
+  ) {
+    return 'Decrypted';
+  }
   if (identity?.name || identity?.email) return 'Decrypted';
   if (user.name || user.email) return 'Plaintext legacy';
   if (user.name_encrypted?.ciphertext || user.email_encrypted?.ciphertext) {
@@ -289,8 +296,12 @@ function userProfileValue(
   }
 
   const fieldName = field.name;
-  const decrypted = profileValues[fieldName];
-  if (hasText(decrypted)) return String(decrypted);
+  if (Object.prototype.hasOwnProperty.call(profileValues, fieldName)) {
+    const decrypted = profileValues[fieldName];
+    return decrypted === null || decrypted === undefined
+      ? MISSING_VALUE
+      : String(decrypted);
+  }
   const plaintext = user.fields?.[fieldName];
   if (hasText(plaintext)) return String(plaintext);
   if (user.fields_encrypted?.[fieldName]?.ciphertext) return LOCKED_VALUE;
@@ -352,14 +363,22 @@ function buildUsersRows(
         input.onboardingFields,
         profileValues
       );
-      const name =
-        identity?.name ||
-        user.name ||
-        (user.name_encrypted?.ciphertext ? LOCKED_VALUE : MISSING_VALUE);
-      const email =
-        identity?.email ||
-        user.email ||
-        (user.email_encrypted?.ciphertext ? LOCKED_VALUE : MISSING_VALUE);
+      const nameWasDecrypted =
+        identity?.status === 'ready' &&
+        user.name_encrypted?.ciphertext !== undefined;
+      const emailWasDecrypted =
+        identity?.status === 'ready' &&
+        user.email_encrypted?.ciphertext !== undefined;
+      const name = nameWasDecrypted
+        ? (identity.name ?? MISSING_VALUE)
+        : identity?.name ||
+          user.name ||
+          (user.name_encrypted?.ciphertext ? LOCKED_VALUE : MISSING_VALUE);
+      const email = emailWasDecrypted
+        ? (identity.email ?? MISSING_VALUE)
+        : identity?.email ||
+          user.email ||
+          (user.email_encrypted?.ciphertext ? LOCKED_VALUE : MISSING_VALUE);
       const userType =
         user.user_type?.name ??
         input.userTypes.find((type) => type.id === user.user_type_id)?.name ??
@@ -476,10 +495,14 @@ function buildExportNotesRows(
 function includesDecryptedValues(input: UserRosterWorkbookInput): boolean {
   return (
     Object.values(input.identities).some(
-      (identity) => Boolean(identity?.name) || Boolean(identity?.email)
+      (identity) =>
+        identity?.status === 'ready' ||
+        Boolean(identity?.name) ||
+        Boolean(identity?.email)
     ) ||
-    Object.values(input.profileValues).some((values) =>
-      Object.values(values).some(hasText)
+    Object.values(input.profileValues).some(
+      (values) =>
+        Object.keys(values).length > 0 || Object.values(values).some(hasText)
     )
   );
 }

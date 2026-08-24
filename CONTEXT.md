@@ -487,6 +487,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - A **Deployment Surface** may contain traces of **Instance** activity without being a supported **Lifecycle Data Class**
 - A **Copied Export** becomes a **Deployment Surface** after creation and is outside **Active Storage Lifecycle**
 - Export actions for sensitive **Instance** data should create **Audit Log** evidence even though the exported copy is not lifecycle-controlled by the product
+- A **User Roster Export** that includes encrypted identity or **User Profile** values should be prepared completely in the Admin browser before download is enabled; one rejected or failed decryption should prevent the entire **Copied Export** rather than produce a partial spreadsheet
 - Browser local storage, session storage, and cache are **Deployment Surfaces**, but the product should actively minimize deliberate browser-side storage of **Conversation Content** and other sensitive **Instance** data
 - **Data Retention** is part of **Operator-Controlled Privacy**
 - **Retention Execution** applies **Data Retention** rules

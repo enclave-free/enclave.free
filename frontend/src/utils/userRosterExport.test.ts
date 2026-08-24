@@ -143,4 +143,54 @@ describe('buildUserRosterWorkbook', () => {
     expect(text).toContain('Locked');
     expect(text).not.toContain('ciphertext-should-not-export');
   });
+
+  it('treats successfully decrypted empty values as missing rather than locked', async () => {
+    const workbook = buildUserRosterWorkbook({
+      exportedAt: new Date('2026-08-24T12:00:00Z'),
+      userTypes: [],
+      onboardingFields: [
+        {
+          id: '1',
+          name: 'Optional Notes',
+          type: 'text',
+          required: false,
+          user_type_id: null,
+        },
+      ],
+      identities: {
+        7: { status: 'ready', email: '', name: '' },
+      },
+      profileValues: {
+        7: { 'Optional Notes': '' },
+      },
+      users: [
+        {
+          id: 7,
+          user_type_id: null,
+          approved: true,
+          email_encrypted: {
+            ciphertext: 'email-ciphertext-should-not-export',
+            ephemeral_pubkey: 'ephemeral-email',
+          },
+          name_encrypted: {
+            ciphertext: 'name-ciphertext-should-not-export',
+            ephemeral_pubkey: 'ephemeral-name',
+          },
+          fields_encrypted: {
+            'Optional Notes': {
+              ciphertext: 'notes-ciphertext-should-not-export',
+              ephemeral_pubkey: 'ephemeral-notes',
+            },
+          },
+        },
+      ],
+    });
+
+    const text = await workbookText(workbook.blob);
+
+    expect(workbook.includesDecryptedValues).toBe(true);
+    expect(text).toContain('Decrypted');
+    expect(text).not.toContain('Locked');
+    expect(text).not.toContain('ciphertext-should-not-export');
+  });
 });
