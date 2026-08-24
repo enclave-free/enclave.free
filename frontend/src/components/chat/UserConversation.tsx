@@ -363,6 +363,7 @@ export const UserConversation = forwardRef<
 
   return (
     <ConversationSurface
+      activityAudience="user"
       turns={buildConversationSurfaceTurns(state.turns)}
       onSend={(content) => void send(content)}
       isRunning={state.isRunning}

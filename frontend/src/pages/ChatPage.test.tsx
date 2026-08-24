@@ -1723,6 +1723,16 @@ describe('ChatPage', () => {
             summary: 'Tool completed.',
           },
         });
+        onEvent('trace_delta', {
+          message_id: 'msg-stream',
+          trace_delta: {
+            id: 'model-request',
+            kind: 'timing',
+            title: 'Model request',
+            content: 'Model request: 820 ms.',
+            status: 'succeeded',
+          },
+        });
         onEvent('answer_delta', {
           message_id: 'msg-stream',
           delta: 'Streamed hello.',
@@ -1743,6 +1753,9 @@ describe('ChatPage', () => {
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(screen.getByText('Tool completed.')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Model request: 820 ms.')
+    ).not.toBeInTheDocument();
   });
 
   it('uses the shared surface for Admin Conversations while preserving admin-only tools', async () => {
@@ -1762,6 +1775,16 @@ describe('ChatPage', () => {
             title: 'Admin Config',
             status: 'succeeded',
             summary: 'Tool completed.',
+          },
+        });
+        onEvent('trace_delta', {
+          message_id: 'msg-stream',
+          trace_delta: {
+            id: 'model-request',
+            kind: 'timing',
+            title: 'Model request',
+            content: 'Model request: 820 ms.',
+            status: 'succeeded',
           },
         });
         onEvent('answer_delta', {
@@ -1787,6 +1810,10 @@ describe('ChatPage', () => {
 
     expect(await screen.findByText('Admin Config')).toBeInTheDocument();
     expect(await screen.findByText('Admin answer.')).toBeInTheDocument();
+    expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hide Activity' })
+    ).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('surfaces stream errors without retrying after answer text has started', async () => {

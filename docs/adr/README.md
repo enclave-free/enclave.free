@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns the native Tool-call hard cut, ADR-0030 owns the bounded native Tool loop, ADR-0031 owns the explicit GLM reasoning-effort default, ADR-0032 owns shared User Conversation behavior for Test User Sessions, ADR-0033 owns model-led autonomy and concise User responses, and ADR-0028 owns direct Admin Config write behavior.
+This directory records accepted product and architecture decisions for the Enclave Free Prototype. ADR-0023 defines Conversation Tool ownership and Tool Set boundaries, ADR-0029 owns the native Tool-call hard cut, ADR-0030 owns the bounded native Tool loop, ADR-0031 owns the explicit GLM reasoning-effort default, ADR-0032 owns shared User Conversation behavior for Test User Sessions, ADR-0033 owns model-led autonomy and concise User responses, ADR-0034 owns audience-aware Conversation Activity presentation, and ADR-0028 owns direct Admin Config write behavior.
 
 ## Review Ledger
 
@@ -31,7 +31,7 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0021 Signal is a Conversation Channel                                   | No change required.                                                                                               |
 | 0022 Bound Admin Database Streaming and Turn Timing                     | Superseded for future tool-loop work by ADR-0023.                                                                 |
 | 0023 Unified Model-Driven Tool Loop                                     | Still owns Tool boundaries; ADR-0029 supersedes typed planning and ADR-0028 supersedes Admin Config proposals.     |
-| 0024 Transparent Reasoning and Tool Trace Posture                       | Still owns live/persisted trace visibility, ephemeral Provider Continuity State privacy, and content-free Model Usage Observations. |
+| 0024 Transparent Reasoning and Tool Trace Posture                       | Still owns live/persisted trace data, ephemeral Provider Continuity State privacy, and content-free Model Usage Observations; ADR-0034 supersedes identical Admin/User presentation. |
 | 0027 Separate Tool decisions from final answer delivery                 | Superseded by ADR-0029; retained as final-answer safety history.                                                    |
 | 0028 Sage owns direct Admin Config writes                               | Anchor decision for conversationally confirmed direct Admin Config writes.                                         |
 | 0029 Native Tool calling with one Tool round                            | Native protocol and hard-cut decisions remain valid; its one-batch constraint is superseded by ADR-0030.           |
@@ -39,3 +39,4 @@ Reviewed on 2026-06-15 for the unified model-driven Tool loop hard cut:
 | 0031 Default GLM reasoning effort to none                               | Anchor decision for the explicit deployment-level reasoning setting and its measured `none` default.                         |
 | 0032 Test User Sessions reuse the User Conversation module              | Anchor decision for one shared User Conversation execution and UI module with thin logged-in and Admin test harness adapters. |
 | 0033 Model-led autonomy and concise User responses                      | Anchor decision for generic consent, personal-decision, brevity, Tool-stopping, and model-turn separator behavior without semantic answer rewriting. |
+| 0034 Present Conversation Activity for its audience                     | Anchor decision for one retained trace contract with product-facing User Activity and diagnostic Admin Activity. |

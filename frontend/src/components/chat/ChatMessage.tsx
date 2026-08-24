@@ -33,6 +33,10 @@ import type {
   ConversationMessageAction,
   ConversationMessageActionId,
 } from './ConversationMessageActions';
+import {
+  presentConversationActivity,
+  type ConversationActivityAudience,
+} from './conversationActivityPresentation';
 
 export interface ConversationTrace {
   visibility: 'off' | 'minimal' | 'summary' | 'detailed';
@@ -109,6 +113,7 @@ export interface Message {
 
 interface ChatMessageProps {
   message: Message;
+  activityAudience: ConversationActivityAudience;
   onAction?: (actionId: ConversationMessageActionId, message: Message) => void;
   /** Admin surfaces pass true to keep the Activity panel expanded (see #636). */
   defaultActivityOpen?: boolean;
@@ -225,15 +230,16 @@ function ConversationTracePanel({
   defaultActivityOpen?: boolean;
 }) {
   const visibility = trace?.visibility;
-  // Activity is collapsed by default: the panel exposes provider, retry and
-  // timing internals that are noise (and often alarming) to someone asking for
-  // help. See #636.
+  // User Activity is collapsed by default so product work stays available
+  // without competing with the answer. Admin surfaces opt in to the expanded
+  // diagnostic presentation. See #636 and #651.
   //
   // This is deliberately NOT derived from `trace.visibility`. Sage hardcodes
   // "detailed" for every Conversation and explicitly ignores the
   // `user_trace_visibility` / `admin_trace_visibility` Agent Settings, treating
   // them as legacy keys — so that field cannot distinguish a User from an
-  // Admin. Admin surfaces opt back in with `defaultActivityOpen`.
+  // Admin. Expansion remains a separate surface decision expressed through
+  // `defaultActivityOpen`.
   const [activityOpen, setActivityOpen] = useState(defaultActivityOpen);
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
   const activityBodyId = useId();
@@ -821,11 +827,9 @@ function TraceWarnings({ warnings }: { warnings: string[] }) {
   );
 }
 
-function isInternalWritingStatus(status: string) {
+function isHiddenLiveStatus(status: string) {
   const normalized = status.trim().toLowerCase().replace(/\.+$/, '');
-  return (
-    normalized === 'writing answer' || normalized === 'finalizing response'
-  );
+  return normalized === 'finalizing response';
 }
 
 function isSafeMarkdownHref(href?: string) {
@@ -843,6 +847,7 @@ function isSafeMarkdownHref(href?: string) {
 
 function ChatMessageComponent({
   message,
+  activityAudience,
   onAction,
   defaultActivityOpen = false,
 }: ChatMessageProps) {
@@ -852,24 +857,39 @@ function ChatMessageComponent({
   const [copiedMessage, setCopiedMessage] = useState(false);
   const isUser = message.role === 'user';
   const label = isUser ? config.userLabel : config.assistantName;
-  const visibleTraceStatus =
-    message.traceStatus && !isInternalWritingStatus(message.traceStatus)
+  const candidateTraceStatus =
+    message.traceStatus && !isHiddenLiveStatus(message.traceStatus)
       ? message.traceStatus
       : null;
-  const resolvedTraceDeltas =
+  const rawTraceDeltas =
     message.traceDeltas ?? message.trace?.trace_deltas ?? [];
+  const rawActivitySteps =
+    message.activitySteps && message.activitySteps.length > 0
+      ? message.activitySteps
+      : (message.trace?.activity_steps ?? []);
+  const presentedActivity = presentConversationActivity({
+    audience: activityAudience,
+    trace: message.trace,
+    activitySteps: rawActivitySteps,
+    traceDeltas: rawTraceDeltas,
+    liveStatus: candidateTraceStatus,
+  });
+  const visibleTraceStatus = presentedActivity.liveStatus;
+  const resolvedTraceDeltas = presentedActivity.traceDeltas;
+  const resolvedActivitySteps = presentedActivity.activitySteps;
+  const resolvedTrace = presentedActivity.trace;
 
   if (
     !isUser &&
     !message.content.trim() &&
     !visibleTraceStatus &&
     !isTraceRenderable(
-      message.trace,
+      resolvedTrace,
       visibleTraceStatus,
-      message.activitySteps,
+      resolvedActivitySteps,
       resolvedTraceDeltas
     ) &&
-    !(message.activitySteps && message.activitySteps.length > 0) &&
+    resolvedActivitySteps.length === 0 &&
     resolvedTraceDeltas.length === 0
   ) {
     return null;
@@ -988,8 +1008,8 @@ function ChatMessageComponent({
                 {copyAction}
                 <div className="text-text break-words [&_*]:text-inherit [&_a]:text-accent [&_code]:text-text">
                   <ConversationTracePanel
-                    trace={message.trace}
-                    activitySteps={message.activitySteps}
+                    trace={resolvedTrace}
+                    activitySteps={resolvedActivitySteps}
                     traceDeltas={resolvedTraceDeltas}
                     liveStatus={visibleTraceStatus}
                     isStreaming={Boolean(message.traceStatus)}
@@ -998,10 +1018,9 @@ function ChatMessageComponent({
                   {message.content.trim() && (
                     <div
                       className={
-                        message.trace ||
+                        resolvedTrace ||
                         visibleTraceStatus ||
-                        (message.activitySteps &&
-                          message.activitySteps.length > 0) ||
+                        resolvedActivitySteps.length > 0 ||
                         resolvedTraceDeltas.length > 0
                           ? 'mt-3'
                           : ''

@@ -1919,6 +1919,7 @@ export function ChatPage() {
 
       {isAdmin ? (
         <ConversationSurface
+          activityAudience="admin"
           turns={conversationTurns}
           onSend={handleSend}
           isRunning={isLoading}
