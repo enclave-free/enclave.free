@@ -33,6 +33,7 @@ function ThreadHarness({
       <AssistantConversationThread
         assistantState={state}
         runningLabel="Thinking..."
+        activityAudience="user"
         notices={notices}
       />
     </AssistantRuntimeProvider>

@@ -32,7 +32,101 @@ export function hasNip04Support(): boolean {
 }
 
 /**
+ * Serializes every NIP-04 decrypt through a single queue.
+ *
+ * Callers across the admin surfaces fan out decrypts in parallel — the User
+ * Manager alone issues two per User (email + name) via `Promise.all`, so a
+ * two-User roster fires four at once. NIP-07 extensions prompt per request and
+ * cannot apply a freshly granted permission to requests already in flight, so
+ * the Admin gets a stack of approval popups instead of one.
+ *
+ * Serializing means the first request prompts, the Admin approves it (choosing
+ * "remember" so the grant persists), and every queued request behind it passes
+ * without a prompt. NIP-07 has no batch-decrypt method, so one *prompt* is the
+ * best available approximation of one *request*.
+ *
+ * The cost is small: each decrypt is a local ECDH + AES operation (~1ms), so
+ * even a few hundred fields stay well under a second. The approval popup was
+ * always the bottleneck, never the cryptography.
+ */
+let decryptQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * Observable queue state, so the UI can show that approvals are still pending.
+ *
+ * The extension popup does not always raise itself and can be dismissed by
+ * accident, which otherwise looks like a hang. `done`/`total` count the current
+ * run and reset once the queue drains. See #648.
+ */
+export interface DecryptQueueState {
+  done: number
+  total: number
+  /** True while any request is queued or in flight. */
+  active: boolean
+}
+
+let queueState: DecryptQueueState = { done: 0, total: 0, active: false }
+const queueListeners = new Set<(state: DecryptQueueState) => void>()
+
+function publishQueueState() {
+  for (const listener of queueListeners) listener(queueState)
+}
+
+/** Subscribe to decrypt-queue progress. Returns an unsubscribe function. */
+export function subscribeToDecryptQueue(
+  listener: (state: DecryptQueueState) => void
+): () => void {
+  queueListeners.add(listener)
+  listener(queueState)
+  return () => {
+    queueListeners.delete(listener)
+  }
+}
+
+export function getDecryptQueueState(): DecryptQueueState {
+  return queueState
+}
+
+function enqueueDecrypt<T>(task: () => Promise<T>): Promise<T> {
+  // Starting from idle begins a fresh run, so the counter reads per-operation
+  // rather than accumulating across the whole session.
+  queueState = queueState.active
+    ? { ...queueState, total: queueState.total + 1 }
+    : { done: 0, total: 1, active: true }
+  publishQueueState()
+
+  const settle = () => {
+    const done = queueState.done + 1
+    const active = done < queueState.total
+    queueState = active
+      ? { ...queueState, done }
+      : { done: 0, total: 0, active: false }
+    publishQueueState()
+  }
+
+  const run = decryptQueue.then(task, task).then(
+    (value) => {
+      settle()
+      return value
+    },
+    (error) => {
+      settle()
+      throw error
+    }
+  )
+  // Never let one rejection poison the chain for later callers.
+  decryptQueue = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
+/**
  * Decrypt a NIP-04 encrypted field using the browser extension.
+ *
+ * Requests are queued (see `enqueueDecrypt`) so concurrent callers produce one
+ * approval prompt rather than one per field.
  *
  * @param encrypted - The encrypted field data from the API
  * @returns The decrypted plaintext, or null if decryption fails
@@ -49,18 +143,20 @@ export async function decryptField(
     return null
   }
 
-  try {
-    // The ephemeral_pubkey is the "sender" from the extension's perspective
-    // It will use our private key to compute shared secret with the ephemeral pubkey
-    const plaintext = await window.nostr!.nip04!.decrypt(
-      encrypted.ephemeral_pubkey,
-      encrypted.ciphertext
-    )
-    return plaintext
-  } catch (error) {
-    console.error('Failed to decrypt field:', error)
-    return null
-  }
+  return enqueueDecrypt(async () => {
+    try {
+      // The ephemeral_pubkey is the "sender" from the extension's perspective
+      // It will use our private key to compute shared secret with the ephemeral pubkey
+      const plaintext = await window.nostr!.nip04!.decrypt(
+        encrypted.ephemeral_pubkey,
+        encrypted.ciphertext
+      )
+      return plaintext
+    } catch (error) {
+      console.error('Failed to decrypt field:', error)
+      return null
+    }
+  })
 }
 
 /**

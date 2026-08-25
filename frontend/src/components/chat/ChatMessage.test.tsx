@@ -41,6 +41,7 @@ function renderMessage(
     <ThemeProvider>
       <InstanceConfigProvider>
         <ChatMessage
+          activityAudience="user"
           {...props}
           message={{
             id: 'message-1',
@@ -258,6 +259,218 @@ describe('ChatMessage', () => {
     );
   });
 
+  it('collapses Activity by default for Users and opens it on the arrow', async () => {
+    const user = userEvent.setup();
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'minimal',
+      reasoning: { summary: 'Sage used Web search before answering.' },
+      tools: [
+        {
+          id: 'web-search',
+          name: 'Web search',
+          status: 'success',
+          execution: 'server',
+          input_summary: 'current policy updates',
+          output_summary: 'Found 3 relevant results.',
+          warnings: [],
+          metadata: {},
+        },
+      ],
+      retrieval: [],
+      suppressed: false,
+      activity_steps: [
+        {
+          id: 'step-1',
+          kind: 'tool',
+          title: 'Web Search',
+          status: 'succeeded',
+          summary: 'Found three relevant results.',
+        },
+      ],
+    });
+
+    const toggle = screen.getByRole('button', { name: 'Show Activity' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      document.getElementById(toggle.getAttribute('aria-controls')!)
+    ).toHaveAttribute('hidden');
+
+    await user.click(toggle);
+
+    expect(
+      screen.getByRole('button', { name: 'Hide Activity' })
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByText('Web Search')).toHaveLength(1);
+  });
+
+  it('keeps Activity collapsed even when the trace says detailed', () => {
+    // Sage hardcodes visibility "detailed" for every Conversation, so the
+    // default must not be derived from it. See #636.
+    renderMessage('Here is the answer.', 'assistant', {
+      visibility: 'detailed',
+      reasoning: { summary: 'Sage answered.' },
+      tools: [],
+      retrieval: [],
+      suppressed: false,
+      activity_steps: [
+        {
+          id: 'step-1',
+          kind: 'timing',
+          title: 'Provider first-event wait',
+          status: 'timed_out',
+          summary:
+            'Provider produced no event before the first-event deadline.',
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Show Activity' })
+    ).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens Activity by default when the surface opts in', () => {
+    renderMessage(
+      'Here is the answer.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        reasoning: { summary: 'Sage answered.' },
+        tools: [],
+        retrieval: [],
+        suppressed: false,
+        activity_steps: [
+          {
+            id: 'step-1',
+            kind: 'timing',
+            title: 'Provider first-event wait',
+            status: 'timed_out',
+            summary:
+              'Provider produced no event before the first-event deadline.',
+          },
+        ],
+      },
+      { activityAudience: 'admin', defaultActivityOpen: true }
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Hide Activity' })
+    ).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('shows product work but omits operational rows from User Activity', () => {
+    renderMessage(
+      'Here is the answer.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        tools: [],
+        retrieval: [],
+        activity_steps: [
+          {
+            id: 'provider-wait',
+            kind: 'timing',
+            title: 'Provider first-event wait',
+            status: 'timed_out',
+            summary: 'Provider produced no event before the deadline.',
+          },
+          {
+            id: 'web-search',
+            kind: 'tool',
+            title: 'Web Search',
+            status: 'succeeded',
+            summary: 'Found three relevant results.',
+          },
+        ],
+        trace_deltas: [
+          {
+            id: 'model-request',
+            kind: 'timing',
+            title: 'Model request',
+            content: 'Model request: 820 ms.',
+          },
+          {
+            id: 'tool-result',
+            kind: 'tool_result',
+            title: 'Web Search',
+            content: 'Found three results with retry guidance.',
+          },
+        ],
+      },
+      { activityAudience: 'user', defaultActivityOpen: true }
+    );
+
+    expect(screen.getAllByText('Web Search')).toHaveLength(2);
+    expect(
+      screen.getByText('Found three relevant results.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Found three results with retry guidance.')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Provider first-event wait')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Model request: 820 ms.')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('timed_out')).not.toBeInTheDocument();
+  });
+
+  it('keeps raw operational rows visible in Admin Activity', () => {
+    renderMessage(
+      'Here is the answer.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        activity_steps: [
+          {
+            id: 'provider-wait',
+            kind: 'timing',
+            title: 'Provider first-event wait',
+            status: 'timed_out',
+          },
+        ],
+      },
+      { activityAudience: 'admin', defaultActivityOpen: true }
+    );
+
+    expect(screen.getByText('Provider first-event wait')).toBeInTheDocument();
+    expect(screen.getByText('timed_out')).toBeInTheDocument();
+  });
+
+  it('does not leave an empty User Activity panel for only operational rows', () => {
+    renderMessage(
+      'The answer is still available.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        activity_steps: [
+          {
+            id: 'provider-wait',
+            kind: 'timing',
+            title: 'Provider first-event wait',
+            status: 'timed_out',
+          },
+        ],
+      },
+      {
+        activityAudience: 'user',
+        message: {
+          id: 'message-1',
+          role: 'assistant',
+          content: 'The answer is still available.',
+          traceStatus: 'TIMED_OUT',
+        },
+      }
+    );
+
+    expect(
+      screen.getByText('The answer is still available.')
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('Activity')).not.toBeInTheDocument();
+    expect(screen.queryByText('TIMED_OUT')).not.toBeInTheDocument();
+  });
+
   it('keeps optional Activity summaries behind a distinct nested disclosure', async () => {
     const user = userEvent.setup();
     renderMessage('Here is the answer.', 'assistant', {
@@ -288,6 +501,9 @@ describe('ChatMessage', () => {
     });
 
     expect(screen.getByText('Activity')).toBeInTheDocument();
+    // Activity is collapsed by default (see #636); this test is about the
+    // nested optional-details disclosure, so open the outer panel first.
+    await user.click(screen.getByRole('button', { name: 'Show Activity' }));
     expect(screen.queryByText('Conversation Trace')).not.toBeInTheDocument();
     expect(screen.queryByText('summary')).not.toBeInTheDocument();
     expect(screen.getByText('Tool calls')).toBeInTheDocument();
@@ -379,6 +595,10 @@ describe('ChatMessage', () => {
             },
           ],
         },
+        // This test covers the collapse/restore round-trip, so start expanded.
+        // The default is collapsed (see #636).
+        activityAudience: 'admin',
+        defaultActivityOpen: true,
       }
     );
 
@@ -465,7 +685,7 @@ describe('ChatMessage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders a content-free Tool selection observation as an accessible Activity row', () => {
+  it('omits a content-free Tool selection observation from User Activity', () => {
     renderMessage('I could not find a current contact.', 'assistant', {
       visibility: 'detailed',
       tools: [],
@@ -482,9 +702,11 @@ describe('ChatMessage', () => {
       suppressed: false,
     });
 
-    expect(screen.getByLabelText('Activity')).toBeInTheDocument();
-    expect(screen.getByText('Tool Selection')).toBeInTheDocument();
-    expect(screen.getByText('No Tools were selected.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Activity')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tool Selection')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No Tools were selected.')
+    ).not.toBeInTheDocument();
   });
 
   it('renders minimal assistant trace as compact usage badges', () => {
@@ -559,6 +781,7 @@ describe('ChatMessage', () => {
       <ThemeProvider>
         <InstanceConfigProvider>
           <ChatMessage
+            activityAudience="admin"
             message={{
               id: 'message-1',
               role: 'assistant',
@@ -580,18 +803,19 @@ describe('ChatMessage', () => {
       <ThemeProvider>
         <InstanceConfigProvider>
           <ChatMessage
+            activityAudience="user"
             message={{
               id: 'message-1',
               role: 'assistant',
               content: 'Partial answer',
-              traceStatus: 'Searching documents...',
+              traceStatus: 'Writing answer...',
             }}
           />
         </InstanceConfigProvider>
       </ThemeProvider>
     );
 
-    expect(screen.getByText('Searching documents...')).toBeInTheDocument();
+    expect(screen.getByText('Writing answer...')).toBeInTheDocument();
   });
 
   it('renders live Trace Deltas as Activity rows before the final answer finishes', () => {
@@ -599,6 +823,7 @@ describe('ChatMessage', () => {
       <ThemeProvider>
         <InstanceConfigProvider>
           <ChatMessage
+            activityAudience="user"
             message={{
               id: 'message-1',
               role: 'assistant',
@@ -644,6 +869,7 @@ describe('ChatMessage', () => {
       <ThemeProvider>
         <InstanceConfigProvider>
           <ChatMessage
+            activityAudience="admin"
             message={{
               id: 'message-1',
               role: 'assistant',
@@ -687,6 +913,7 @@ describe('ChatMessage', () => {
       <ThemeProvider>
         <InstanceConfigProvider>
           <ChatMessage
+            activityAudience="admin"
             message={{
               id: 'message-timing-1',
               role: 'assistant',
@@ -757,6 +984,7 @@ describe('ChatMessage', () => {
       <ThemeProvider>
         <InstanceConfigProvider>
           <ChatMessage
+            activityAudience="user"
             message={{
               id: 'message-1',
               role: 'assistant',
@@ -801,6 +1029,8 @@ describe('ChatMessage', () => {
         </InstanceConfigProvider>
       </ThemeProvider>
     );
+
+    await user.click(screen.getByRole('button', { name: 'Show Activity' }));
 
     const disclosure = screen.getByRole('button', { name: /Thinking/ });
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');

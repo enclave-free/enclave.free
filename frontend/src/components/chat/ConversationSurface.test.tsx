@@ -18,28 +18,111 @@ function renderSurface(
   options: {
     isRunning?: boolean;
     hasPersistedSession?: boolean;
+    activityAudience?: 'user' | 'admin';
     onMessageAction?: (
       actionId: ConversationMessageActionId,
       message: Message
     ) => void;
+    defaultActivityOpen?: boolean;
   } = {}
 ) {
   render(
     <ThemeProvider>
       <InstanceConfigProvider>
         <ConversationSurface
+          activityAudience={options.activityAudience ?? 'user'}
           turns={turns}
           onSend={onSend}
           isRunning={options.isRunning}
           hasPersistedSession={options.hasPersistedSession}
           transportCapabilities={{ regenerate: true }}
           onMessageAction={options.onMessageAction}
+          defaultActivityOpen={options.defaultActivityOpen}
         />
       </InstanceConfigProvider>
     </ThemeProvider>
   );
   return { onSend };
 }
+
+describe('ConversationSurface Activity posture', () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => store.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        store.set(key, value);
+      }),
+      removeItem: vi.fn((key: string) => {
+        store.delete(key);
+      }),
+      clear: vi.fn(() => {
+        store.clear();
+      }),
+    });
+    localStorage.setItem('enclave-theme', 'light');
+    localStorage.setItem(
+      INSTANCE_CONFIG_KEY,
+      JSON.stringify(DEFAULT_INSTANCE_CONFIG)
+    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })
+    );
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const activityTurn: ConversationSurfaceTurn[] = [
+    {
+      id: 'turn-1',
+      role: 'assistant',
+      content: 'Here is the answer.',
+      activitySteps: [
+        {
+          id: 'step-1',
+          kind: 'timing',
+          title: 'Provider first-event wait',
+          status: 'timed_out',
+          summary: 'Provider produced no event before the deadline.',
+        },
+      ],
+      traceDeltas: [],
+      traceStatus: null,
+      trace: {
+        visibility: 'detailed',
+        reasoning: { summary: 'Sage answered.' },
+        tools: [],
+        retrieval: [],
+        suppressed: false,
+      },
+    },
+  ];
+
+  it('starts Activity collapsed for Users on the shared surface', () => {
+    renderSurface(activityTurn);
+
+    expect(
+      screen.getByRole('button', { name: 'Show Activity' })
+    ).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('starts Activity expanded when an authenticated Admin opts in', () => {
+    renderSurface(activityTurn, vi.fn(), { defaultActivityOpen: true });
+
+    expect(
+      screen.getByRole('button', { name: 'Hide Activity' })
+    ).toHaveAttribute('aria-expanded', 'true');
+  });
+});
 
 describe('ConversationSurface', () => {
   beforeEach(() => {
@@ -126,6 +209,33 @@ describe('ConversationSurface', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(onSend).toHaveBeenCalledWith('Next question');
+  });
+
+  it('passes the Admin audience through the shared surface', () => {
+    renderSurface(
+      [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'Settings are configured.',
+          activitySteps: [],
+          traceDeltas: [
+            {
+              id: 'model-request',
+              kind: 'timing',
+              title: 'Model request',
+              content: 'Model request: 820 ms.',
+            },
+          ],
+          trace: null,
+          traceStatus: null,
+        },
+      ],
+      vi.fn(),
+      { activityAudience: 'admin' }
+    );
+
+    expect(screen.getByText('Model request: 820 ms.')).toBeInTheDocument();
   });
 
   it('shows the empty Conversation state before any turns exist', () => {

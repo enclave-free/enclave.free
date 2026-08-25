@@ -42,7 +42,8 @@
     "export": "Export",
     "reset": "Reset",
     "exit": "Exit",
-    "none": "None"
+    "none": "None",
+    "all": "All"
   },
   "language": {
     "english": "English",
@@ -166,7 +167,12 @@
       "database": "Database",
       "databaseHint": "View and manage your instance data directly in the SQLite database.",
       "openDatabase": "Open Database Explorer",
-      "save": "Save Configuration"
+      "save": "Save Configuration",
+      "fieldScopeFilterLabel": "Filter questions by user type",
+      "noFieldsForScope": "No questions apply to this user type yet.",
+      "reorderNeedsAllScope": "Show all questions to reorder them",
+      "fieldScopeGlobalHint": "Questions every user answers, whatever their type.",
+      "fieldScopeTypeHint": "Everything this user type is asked: the global questions everyone answers, plus their own."
     },
     "instanceConfig": {
       "title": "Instance Configuration",
@@ -672,6 +678,12 @@
     },
     "userRosterExport": {
       "auditFailed": "User roster export could not be audited. The spreadsheet was not downloaded.",
+      "decryptUnavailable": "A browser extension with NIP-04 decryption is required to prepare this roster.",
+      "decryptFailed": "An encrypted roster value could not be decrypted. No spreadsheet was created.",
+      "prepared": "The complete roster is prepared. Download is now enabled.",
+      "prepareRequired": "Prepare the current roster before downloading it.",
+      "prepareButton": "Prepare user roster",
+      "downloadButton": "Download prepared roster",
       "success": "User roster spreadsheet downloaded.",
       "failed": "Failed to export user roster.",
       "button": "Export users",
@@ -1025,7 +1037,14 @@
       "thumbDown": "Needs work",
       "notePlaceholder": "Optional note (saved encrypted)…",
       "exportNotDecrypted": "Open and decrypt the transcript before exporting.",
-      "exportFeedbackNotDecrypted": "Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting."
+      "exportFeedbackNotDecrypted": "Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.",
+      "exportNeedsExtension": "Export needs a Nostr extension. Transcripts are encrypted at rest and your extension is what decrypts them.",
+      "exportDecrypting": "Still decrypting. Export becomes available once every request is approved.",
+      "exportWhyDisabled": "Why is export disabled?",
+      "retryDecryption": "Retry decryption",
+      "decryptPendingTitle": "Check your Nostr extension",
+      "decryptPendingBody": "It is asking permission to decrypt this transcript. It may not open on its own — click the extension icon if you do not see it. Choose the option to remember your choice so it only asks once.",
+      "decryptProgress": "Decrypted {{done}} of {{total}}."
     }
   },
   "adminGuides": {
@@ -2568,6 +2587,9 @@
     "unlockDetails": "Unlock details",
     "refreshRoster": "Refresh roster",
     "exportVisible": "Export visible roster",
+    "prepareVisible": "Prepare visible roster",
+    "downloadPrepared": "Download prepared roster",
+    "exportPrepared": "The complete visible roster is prepared. Download is now enabled.",
     "rosterTitle": "User roster",
     "rosterShown": "{{shown}} shown from {{total}} total.",
     "tableLabel": "User roster",
@@ -2648,6 +2670,9 @@
       "loadUserTypes": "Failed to load user types.",
       "loadQuestions": "Failed to load onboarding questions.",
       "approvalUpdate": "User approval could not be updated.",
+      "decryptUnavailable": "A browser extension with NIP-04 decryption is required to prepare this roster.",
+      "decryptRoster": "An encrypted roster value could not be decrypted. No spreadsheet was created.",
+      "prepareRequired": "Prepare the current visible roster before downloading it.",
       "exportAudit": "User roster export could not be audited.",
       "exportRoster": "Failed to export user roster."
     },
@@ -2687,5 +2712,10 @@
       "plain": "Plain",
       "chatContext": "Chat context"
     }
+  },
+  "decryptStatus": {
+    "progress": "Decrypting {{done}} of {{total}}",
+    "checkExtension": "check your Nostr extension",
+    "persistentApproval": "Choose the remember or always option so it only asks once."
   }
 }

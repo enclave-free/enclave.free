@@ -61,6 +61,12 @@ describe('AdminUserConfig', () => {
         if (endpoint === '/admin/user-fields') {
           return Promise.resolve(Response.json({ fields: fieldsResponse }));
         }
+        if (
+          endpoint.startsWith('/admin/user-types/') &&
+          options?.method === 'DELETE'
+        ) {
+          return Promise.resolve(Response.json({ success: true }));
+        }
         if (endpoint === '/admin/users') {
           return Promise.resolve(Response.json({ users: usersResponse }));
         }
@@ -134,6 +140,231 @@ describe('AdminUserConfig', () => {
     cleanup();
     anchorClickSpy?.mockRestore();
     vi.clearAllMocks();
+  });
+
+  it('filters Onboarding Questions by User Type and explains an empty scope', async () => {
+    const user = userEvent.setup();
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+      {
+        id: 2,
+        name: 'Former Political Prisoner',
+        description: '',
+        display_order: 1,
+      },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Relationship to the detained person',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: 1,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Unfiltered: both questions are listed.
+    expect(await screen.findByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.getByText('Relationship to the detained person')
+    ).toBeInTheDocument();
+
+    // Scoping to a type answers "what is this person actually asked?", so it
+    // keeps the global questions -- everyone answers those. This mirrors the
+    // server's own `user_type_id IS NULL OR user_type_id = ?` resolution.
+    await user.click(screen.getByRole('button', { name: 'Family member' }));
+    expect(
+      screen.getByText('Relationship to the detained person')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+
+    // A type with no questions of its own still shows the global ones.
+    await user.click(
+      screen.getByRole('button', { name: 'Former Political Prisoner' })
+    );
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Relationship to the detained person')
+    ).not.toBeInTheDocument();
+
+    // Global scope shows only the unscoped question.
+    await user.click(screen.getByRole('button', { name: 'Global' }));
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Relationship to the detained person')
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows only global questions under the Global scope', async () => {
+    const user = userEvent.setup();
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Relationship to the detained person',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: 1,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Full Name');
+    await user.click(screen.getByRole('button', { name: 'Global' }));
+
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Relationship to the detained person')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Questions every user answers, whatever their type.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('resets the question scope when its selected User Type is deleted', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+      { id: 2, name: 'Advocate', description: '', display_order: 1 },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Relationship to the detained person',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: 1,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Full Name');
+    await user.click(screen.getByRole('button', { name: 'Family member' }));
+    expect(
+      screen.getByRole('button', { name: 'Family member' })
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getAllByTitle('Remove')[0]);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Family member' })
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+  });
+
+  it('disables reordering while a scope filter is active', async () => {
+    const user = userEvent.setup();
+    userTypesResponse = [
+      { id: 1, name: 'Family member', description: '', display_order: 0 },
+    ];
+    fieldsResponse = [
+      {
+        id: 10,
+        field_name: 'Full Name',
+        field_type: 'text',
+        required: true,
+        display_order: 0,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+      {
+        id: 11,
+        field_name: 'Country of residence',
+        field_type: 'text',
+        required: false,
+        display_order: 1,
+        user_type_id: null,
+        encryption_enabled: true,
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Full Name');
+    // display_order is global, so moving a row while rows are hidden would
+    // reorder against neighbours the Admin cannot see.
+    expect(
+      screen.getAllByRole('button', { name: 'Move down' })[0]
+    ).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Global' }));
+
+    expect(
+      screen.getAllByRole('button', {
+        name: 'Show all questions to reorder them',
+      })[0]
+    ).toBeDisabled();
   });
 
   it('lets an admin configure whether new users require User Approval', async () => {
@@ -372,7 +603,49 @@ describe('AdminUserConfig', () => {
     );
 
     expect(await screen.findAllByText('Austin Kelsay')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Export users' }));
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
+    await user.click(
+      screen.getByRole('button', { name: 'Prepare user roster' })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    expect(
+      screen.getByRole('note', { name: 'User roster export ready' })
+    ).toHaveTextContent(
+      'The complete roster is prepared. Download is now enabled.'
+    );
+    const refreshButtons = screen.getAllByRole('button', { name: 'Refresh' });
+    await user.click(refreshButtons[refreshButtons.length - 1]);
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeDisabled();
+      expect(
+        screen.queryByRole('note', { name: 'User roster export ready' })
+      ).not.toBeInTheDocument();
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Prepare user roster' })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    expect(
+      mockAdminFetch.mock.calls.some(
+        ([endpoint]) => endpoint === '/admin/users/roster-export'
+      )
+    ).toBe(false);
+    await user.click(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    );
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(
@@ -467,7 +740,17 @@ describe('AdminUserConfig', () => {
     );
 
     expect(await screen.findAllByText('Austin Kelsay')).toHaveLength(2);
-    await user.click(screen.getByRole('button', { name: 'Export users' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Prepare user roster' })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    );
 
     await waitFor(() => {
       expect(mockAdminFetch).toHaveBeenCalledWith(
@@ -480,4 +763,167 @@ describe('AdminUserConfig', () => {
       await screen.findByRole('note', { name: 'User roster export failed' })
     ).toHaveTextContent('audit unavailable');
   });
+
+  it('requires fresh preparation when the roster changes during export auditing', async () => {
+    usersResponse = [
+      {
+        id: 7,
+        pubkey: null,
+        user_type_id: null,
+        approved: true,
+        created_at: '2026-08-24T12:00:00Z',
+        fields: {},
+      },
+    ];
+    let resolveAudit!: (response: Response) => void;
+    const auditPromise = new Promise<Response>((resolve) => {
+      resolveAudit = resolve;
+    });
+    const defaultAdminFetch = mockAdminFetch.getMockImplementation();
+    mockAdminFetch.mockImplementation(
+      (endpoint: string, options?: RequestInit) => {
+        if (
+          endpoint === '/admin/users/roster-export' &&
+          options?.method === 'POST'
+        ) {
+          return auditPromise;
+        }
+        return defaultAdminFetch!(endpoint, options);
+      }
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Prepare user roster' })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    );
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/users/roster-export',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    const refreshButtons = screen.getAllByRole('button', { name: 'Refresh' });
+    await user.click(refreshButtons[refreshButtons.length - 1]);
+    await waitFor(() => {
+      expect(
+        mockAdminFetch.mock.calls.filter(
+          ([endpoint]) => endpoint === '/admin/users'
+        )
+      ).toHaveLength(2);
+    });
+    resolveAudit(Response.json({ success: true, message: 'recorded' }));
+
+    expect(
+      await screen.findByRole('note', { name: 'User roster export failed' })
+    ).toHaveTextContent('Prepare the current roster before downloading it.');
+    expect(anchorClickSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
+  });
+
+  it('does not audit or download when one encrypted roster value cannot be prepared', async () => {
+    usersResponse = [
+      {
+        id: 7,
+        user_type_id: null,
+        approved: true,
+        email_encrypted: {
+          ciphertext: 'email-cipher',
+          ephemeral_pubkey: 'ephemeral-email',
+        },
+        fields_encrypted: {
+          Notes: {
+            ciphertext: 'rejected-profile-cipher',
+            ephemeral_pubkey: 'ephemeral-profile',
+          },
+        },
+      },
+    ];
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('button', { name: 'Prepare user roster' });
+    await user.click(
+      screen.getByRole('button', { name: 'Prepare user roster' })
+    );
+
+    expect(
+      await screen.findByRole('note', { name: 'User roster export failed' })
+    ).toHaveTextContent('An encrypted roster value could not be decrypted');
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
+    expect(
+      mockAdminFetch.mock.calls.some(
+        ([endpoint]) => endpoint === '/admin/users/roster-export'
+      )
+    ).toBe(false);
+    expect(anchorClickSpy).not.toHaveBeenCalled();
+  });
+
+  it('requires browser decryption support before preparing encrypted Users', async () => {
+    mockHasNip04Support.mockReturnValue(false);
+    usersResponse = [
+      {
+        id: 7,
+        user_type_id: null,
+        approved: true,
+        email_encrypted: {
+          ciphertext: 'email-cipher',
+          ephemeral_pubkey: 'ephemeral-email',
+        },
+      },
+    ];
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <Routes>
+          <Route path="/admin/users" element={<AdminUserConfig />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Prepare user roster' })
+    );
+
+    expect(
+      await screen.findByRole('note', { name: 'User roster export failed' })
+    ).toHaveTextContent('A browser extension with NIP-04 decryption is required');
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
+    expect(
+      mockAdminFetch.mock.calls.some(
+        ([endpoint]) => endpoint === '/admin/users/roster-export'
+      )
+    ).toBe(false);
+  });
+
 });

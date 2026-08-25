@@ -43,11 +43,16 @@ import { STORAGE_KEYS } from '../types/onboarding';
 import { adminFetch } from '../utils/adminApi';
 import { decryptField, hasNip04Support } from '../utils/encryption';
 import {
-  buildUserRosterWorkbook,
   type EncryptedFieldValue,
   type UserRosterExportUser,
   type UserRosterIdentity,
 } from '../utils/userRosterExport';
+import {
+  isPreparedUserRosterExportCurrent,
+  prepareUserRosterExport,
+  type PreparedUserRosterExport,
+} from '../utils/userRosterExportPreparation';
+import { DecryptProgressInline } from '../components/shared/DecryptStatus';
 
 const EXPORT_DECRYPT_BATCH_SIZE = 5;
 
@@ -517,7 +522,10 @@ export function AdminUserManager() {
   );
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [preparingExport, setPreparingExport] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [preparedExport, setPreparedExport] =
+    useState<PreparedUserRosterExport | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [profileValues, setProfileValues] = useState<
@@ -525,6 +533,7 @@ export function AdminUserManager() {
   >({});
   const decryptRunIdRef = useRef(0);
   const profileDecryptRunIdRef = useRef(0);
+  const exportPreparationRunIdRef = useRef(0);
 
   const detailRequested = userId !== undefined;
   const parsedUserId = userId ? Number(userId) : null;
@@ -739,6 +748,18 @@ export function AdminUserManager() {
     });
   }, [approvalFilter, identities, query, t, typeFilter, users]);
 
+  const requestedExportUserIds = filteredUsers
+    .map((user) => user.id)
+    .sort((left, right) => left - right)
+    .join(',');
+
+  useEffect(() => {
+    exportPreparationRunIdRef.current += 1;
+    setPreparingExport(false);
+    setPreparedExport(null);
+    setExportMessage(null);
+  }, [fields, requestedExportUserIds, userTypes, users]);
+
   const selectedUser = useMemo(
     () =>
       detailUserId === null
@@ -901,79 +922,13 @@ export function AdminUserManager() {
     }
   };
 
-  const collectExportProfileValues = async (
-    exportUsers: AdminUserSummary[]
-  ): Promise<Record<number, Record<string, string | null>>> => {
-    if (!hasNip04Support()) return {};
-
-    const values = Object.fromEntries(
-      exportUsers.map((user) => [user.id, {}])
-    ) as Record<number, Record<string, string | null>>;
-    const encryptedFields = exportUsers.flatMap((user) =>
-      Object.entries(user.fields_encrypted ?? {}).map(
-        ([fieldName, encrypted]) => ({
-          userId: user.id,
-          fieldName,
-          encrypted,
-        })
-      )
-    );
-
-    const decryptedFields = await mapInBatches(
-      encryptedFields,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async ({ userId, fieldName, encrypted }) => ({
-        userId,
-        fieldName,
-        value: await decryptField(encrypted),
-      })
-    );
-
-    for (const field of decryptedFields) {
-      values[field.userId][field.fieldName] = field.value;
-    }
-
-    return values;
-  };
-
-  const decryptIdentityForExport = async (
-    user: AdminUserSummary
-  ): Promise<IdentityState | undefined> => {
-    const existing = identities[user.id];
-    if (existing?.status === 'ready') return existing;
-    if (!hasEncryptedIdentity(user)) return existing;
-
-    if (!hasNip04Support()) {
-      return { status: 'unavailable', email: null, name: null };
-    }
-
-    const [email, name] = await Promise.all([
-      decryptField(user.email_encrypted),
-      decryptField(user.name_encrypted),
-    ]);
-
-    return {
-      status: email || name ? 'ready' : 'failed',
-      email,
-      name,
-    };
-  };
-
-  const collectExportIdentities = async (
-    exportUsers: AdminUserSummary[]
-  ): Promise<Record<number, IdentityState | undefined>> => {
-    const entries = await mapInBatches(
-      exportUsers,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async (user) => [user.id, await decryptIdentityForExport(user)] as const
-    );
-    return Object.fromEntries(entries);
-  };
-
-  const handleExportVisibleRoster = async () => {
+  const handlePrepareVisibleRoster = async () => {
+    const runId = exportPreparationRunIdRef.current + 1;
+    exportPreparationRunIdRef.current = runId;
     setExportMessage(null);
     setExportError(null);
-    setExporting(true);
+    setPreparedExport(null);
+    setPreparingExport(true);
 
     try {
       if (hasNip04Support()) {
@@ -987,27 +942,87 @@ export function AdminUserManager() {
         }
       }
 
-      const exportedAt = new Date();
-      const [exportIdentities, profileValues] = await Promise.all([
-        collectExportIdentities(filteredUsers),
-        collectExportProfileValues(filteredUsers),
-      ]);
-      const workbook = buildUserRosterWorkbook({
+      const result = await prepareUserRosterExport({
         users: filteredUsers,
         userTypes,
         onboardingFields: fields,
-        identities: exportIdentities,
-        profileValues,
-        exportedAt,
+        exportedAt: new Date(),
         exportedBy: localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY),
+        decrypt: hasNip04Support() ? decryptField : undefined,
       });
+      if (exportPreparationRunIdRef.current !== runId) return;
+
+      if (!result.ok) {
+        setExportError(
+          result.reason === 'decrypt-unavailable'
+            ? t(
+                'adminUserManager.errors.decryptUnavailable',
+                'A browser extension with NIP-04 decryption is required to prepare this roster.'
+              )
+            : t(
+                'adminUserManager.errors.decryptRoster',
+                'An encrypted roster value could not be decrypted. No spreadsheet was created.'
+              )
+        );
+        return;
+      }
+
+      setPreparedExport(result.snapshot);
+      setExportMessage(
+        t(
+          'adminUserManager.exportPrepared',
+          'The complete visible roster is prepared. Download is now enabled.'
+        )
+      );
+    } catch (error) {
+      if (exportPreparationRunIdRef.current === runId) {
+        setExportError(
+          error instanceof Error
+            ? error.message
+            : t(
+                'adminUserManager.errors.exportRoster',
+                'Failed to prepare user roster.'
+              )
+        );
+      }
+    } finally {
+      if (exportPreparationRunIdRef.current === runId) {
+        setPreparingExport(false);
+      }
+    }
+  };
+
+  const handleDownloadPreparedRoster = async () => {
+    setExportMessage(null);
+    setExportError(null);
+
+    const snapshot = preparedExport;
+    if (
+      !snapshot ||
+      !isPreparedUserRosterExportCurrent(snapshot, filteredUsers)
+    ) {
+      setPreparedExport(null);
+      setExportError(
+        t(
+          'adminUserManager.errors.prepareRequired',
+          'Prepare the current visible roster before downloading it.'
+        )
+      );
+      return;
+    }
+
+    const preparationGeneration = exportPreparationRunIdRef.current;
+    setExporting(true);
+
+    try {
+      const { workbook } = snapshot;
 
       const auditResponse = await adminFetch('/admin/users/roster-export', {
         method: 'POST',
         body: JSON.stringify({
           filename: workbook.filename,
-          user_count: filteredUsers.length,
-          pending_count: filteredUsers.filter((user) => !user.approved).length,
+          user_count: snapshot.userCount,
+          pending_count: snapshot.pendingCount,
           includes_decrypted_browser_values: workbook.includesDecryptedValues,
         }),
       });
@@ -1020,6 +1035,17 @@ export function AdminUserManager() {
               'adminUserManager.errors.exportAudit',
               'User roster export could not be audited.'
             )
+          )
+        );
+        return;
+      }
+
+      if (exportPreparationRunIdRef.current !== preparationGeneration) {
+        setPreparedExport(null);
+        setExportError(
+          t(
+            'adminUserManager.errors.prepareRequired',
+            'Prepare the current visible roster before downloading it.'
           )
         );
         return;
@@ -1038,7 +1064,7 @@ export function AdminUserManager() {
           ? error.message
           : t(
               'adminUserManager.errors.exportRoster',
-              'Failed to export user roster.'
+              'Failed to download user roster.'
             )
       );
     } finally {
@@ -1154,6 +1180,7 @@ export function AdminUserManager() {
                       {t('adminUserManager.unlockDetails', 'Unlock details')}
                     </Button>
                   )}
+                  <DecryptProgressInline />
                   <Button
                     variant="secondary"
                     onClick={loadDashboard}
@@ -1519,6 +1546,7 @@ export function AdminUserManager() {
                 {t('adminUserManager.unlockDetails', 'Unlock details')}
               </Button>
             )}
+            <DecryptProgressInline />
             <Button
               variant="secondary"
               onClick={loadDashboard}
@@ -1533,8 +1561,27 @@ export function AdminUserManager() {
               {t('adminUserManager.refreshRoster', 'Refresh roster')}
             </Button>
             <Button
-              onClick={handleExportVisibleRoster}
-              disabled={exporting || filteredUsers.length === 0}
+              variant="secondary"
+              onClick={handlePrepareVisibleRoster}
+              disabled={
+                preparingExport || exporting || filteredUsers.length === 0
+              }
+              leadingIcon={
+                preparingExport ? (
+                  <Loader2
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Key className="h-4 w-4" aria-hidden="true" />
+                )
+              }
+            >
+              {t('adminUserManager.prepareVisible', 'Prepare visible roster')}
+            </Button>
+            <Button
+              onClick={handleDownloadPreparedRoster}
+              disabled={preparingExport || exporting || !preparedExport}
               leadingIcon={
                 exporting ? (
                   <Loader2
@@ -1546,7 +1593,10 @@ export function AdminUserManager() {
                 )
               }
             >
-              {t('adminUserManager.exportVisible', 'Export visible roster')}
+              {t(
+                'adminUserManager.downloadPrepared',
+                'Download prepared roster'
+              )}
             </Button>
           </div>
         </section>

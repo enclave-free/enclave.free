@@ -55,6 +55,28 @@ function restoreProperty(
   }
 }
 
+async function openStudentTrial() {
+  const user = userEvent.setup();
+  const trialButton = (await screen.findByText('Student trial')).closest(
+    'button'
+  );
+  await user.click(trialButton as HTMLButtonElement);
+}
+
+async function expectTranscriptIntegrityFailure() {
+  await openStudentTrial();
+  expect(
+    await screen.findByText(
+      'The transcript is unavailable or incomplete and cannot be exported.'
+    )
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Export' })
+  ).not.toBeInTheDocument();
+  expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
+  expect(mockAnchorClick).not.toHaveBeenCalled();
+}
+
 describe('FeedbackView', () => {
   beforeEach(() => {
     originalCreateObjectURLDescriptor = Object.getOwnPropertyDescriptor(
@@ -213,6 +235,7 @@ describe('FeedbackView', () => {
     const text = await blob.text();
     expect(text).toContain('Yes, here is a plan.');
     expect(text).toContain('"log_id": "log-1"');
+    expect(text).toContain('"tools_used": []');
   });
 
   it('does not download a plaintext export when audit recording fails', async () => {
@@ -233,6 +256,113 @@ describe('FeedbackView', () => {
     expect(
       await screen.findByText('Export could not be audited')
     ).toBeInTheDocument();
+    expect(mockAnchorClick).not.toHaveBeenCalled();
+  });
+
+  it('blocks plaintext export when the transcript is missing its decryption key', async () => {
+    const sessionLog = await mockGetSessionLog('log-1');
+    mockGetSessionLog.mockResolvedValue({
+      ...sessionLog,
+      transcript_ephemeral_pubkey: null,
+    });
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+    expect(mockDecryptField).not.toHaveBeenCalled();
+  });
+
+  it('blocks plaintext export when decrypted transcript data has no turns array', async () => {
+    mockDecryptField.mockResolvedValue(JSON.stringify({}));
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when the decrypted transcript is incomplete', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [{ role: 'user', content: 'Can you help me?' }],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when decrypted transcript turns are malformed', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Can you help me?', tools_used: [] },
+          { role: 'assistant', content: 42, tools_used: [] },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when a decrypted tools-used record is malformed', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Can you help me?', tools_used: [] },
+          {
+            role: 'assistant',
+            content: 'Yes, here is a plan.',
+            tools_used: [null],
+          },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('blocks plaintext export when a decrypted trace tool record is malformed', async () => {
+    mockDecryptField.mockResolvedValue(
+      JSON.stringify({
+        turns: [
+          { role: 'user', content: 'Can you help me?', tools_used: [] },
+          {
+            role: 'assistant',
+            content: 'Yes, here is a plan.',
+            tools_used: [],
+            trace: { tools: [null] },
+          },
+        ],
+      })
+    );
+
+    render(<FeedbackView />);
+    await expectTranscriptIntegrityFailure();
+  });
+
+  it('keeps plaintext export disabled for a log with no saved transcript', async () => {
+    const user = userEvent.setup();
+    const sessionLog = await mockGetSessionLog('log-1');
+    mockGetSessionLog.mockResolvedValue({
+      ...sessionLog,
+      turn_count: 0,
+      has_transcript: false,
+      transcript_ciphertext: null,
+      transcript_ephemeral_pubkey: null,
+    });
+
+    render(<FeedbackView />);
+
+    const trialButton = (await screen.findByText('Student trial')).closest(
+      'button'
+    );
+    await user.click(trialButton as HTMLButtonElement);
+
+    expect(
+      await screen.findByRole('button', { name: 'Export' })
+    ).toBeDisabled();
+    expect(mockDecryptField).not.toHaveBeenCalled();
+    expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
     expect(mockAnchorClick).not.toHaveBeenCalled();
   });
 
@@ -257,8 +387,12 @@ describe('FeedbackView', () => {
       .mockResolvedValueOnce(
         JSON.stringify({
           turns: [
-            { role: 'user', content: 'Can you help me?' },
-            { role: 'assistant', content: 'Yes, here is a plan.' },
+            { role: 'user', content: 'Can you help me?', tools_used: [] },
+            {
+              role: 'assistant',
+              content: 'Yes, here is a plan.',
+              tools_used: [],
+            },
           ],
         })
       )
@@ -271,13 +405,23 @@ describe('FeedbackView', () => {
     );
     await user.click(trialButton as HTMLButtonElement);
     await screen.findByText('Yes, here is a plan.');
-    await user.click(screen.getByRole('button', { name: 'Export' }));
+    // Export is now prevented rather than refused after the click: the button
+    // is disabled and the reason sits behind the info control (#643).
+    const exportButton = screen.getByRole('button', { name: 'Export' });
+    expect(exportButton).toBeDisabled();
 
+    await user.click(
+      screen.getByRole('button', { name: 'Why is export disabled?' })
+    );
     expect(
       await screen.findByText(
         'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
       )
     ).toBeInTheDocument();
+
+    // Clicking the disabled control must still produce no file and no audit
+    // record — the failure mode behind #493.
+    await user.click(exportButton);
     expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
     expect(mockAnchorClick).not.toHaveBeenCalled();
   });
@@ -307,13 +451,23 @@ describe('FeedbackView', () => {
     );
     await user.click(trialButton as HTMLButtonElement);
     await screen.findByText('Yes, here is a plan.');
-    await user.click(screen.getByRole('button', { name: 'Export' }));
+    // Export is now prevented rather than refused after the click: the button
+    // is disabled and the reason sits behind the info control (#643).
+    const exportButton = screen.getByRole('button', { name: 'Export' });
+    expect(exportButton).toBeDisabled();
 
+    await user.click(
+      screen.getByRole('button', { name: 'Why is export disabled?' })
+    );
     expect(
       await screen.findByText(
         'Some feedback comments could not be decrypted. Reopen the transcript and approve every decryption request before exporting.'
       )
     ).toBeInTheDocument();
+
+    // Clicking the disabled control must still produce no file and no audit
+    // record — the failure mode behind #493.
+    await user.click(exportButton);
     expect(mockDecryptField).toHaveBeenCalledTimes(1);
     expect(mockRecordSessionLogPlaintextExport).not.toHaveBeenCalled();
     expect(mockAnchorClick).not.toHaveBeenCalled();
@@ -324,7 +478,7 @@ describe('FeedbackView', () => {
     mockDecryptField.mockResolvedValue(
       JSON.stringify({
         turns: [
-          { role: 'user', content: 'Find resources' },
+          { role: 'user', content: 'Find resources', tools_used: [] },
           {
             role: 'assistant',
             content: 'I found vetted resources.',

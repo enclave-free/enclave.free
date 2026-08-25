@@ -42,7 +42,8 @@
     "export": "导出",
     "reset": "重置",
     "exit": "退出",
-    "none": "无"
+    "none": "无",
+    "all": "全部"
   },
   "settings": {
     "title": "设置",
@@ -124,7 +125,12 @@
       "instanceSectionTitle": "实例配置",
       "onboardingFieldsHint": "创建用户在入职期间回答的问题。",
       "userSectionDesc": "配置用户类型和用户在入职期间回答的问题。",
-      "userSectionTitle": "用户配置"
+      "userSectionTitle": "用户配置",
+      "fieldScopeFilterLabel": "按用户类型筛选问题",
+      "noFieldsForScope": "此用户类型暂时没有适用的问题。",
+      "reorderNeedsAllScope": "显示全部问题后才能重新排序",
+      "fieldScopeGlobalHint": "所有用户都要回答的问题，无论其类型。",
+      "fieldScopeTypeHint": "此用户类型会被问到的全部内容：所有人都要回答的通用问题，加上该类型专属的问题。"
     },
     "database": {
       "backToSetup": "返回管理设置",
@@ -631,6 +637,12 @@
     },
     "userRosterExport": {
       "auditFailed": "用户名单导出无法通过审计。电子表格未下载。",
+      "decryptUnavailable": "需要支持 NIP-04 解密的浏览器扩展才能准备此名单。",
+      "decryptFailed": "无法解密用户名单中的加密值。未创建电子表格。",
+      "prepared": "完整的用户名单已准备好。现在可以下载。",
+      "prepareRequired": "请先准备当前用户名单，然后再下载。",
+      "prepareButton": "准备用户名单",
+      "downloadButton": "下载已准备的名单",
       "success": "用户名单电子表格已下载。",
       "failed": "导出用户名单失败。",
       "button": "导出用户",
@@ -2521,7 +2533,14 @@
       "thumbDown": "需要改进",
       "notePlaceholder": "可选备注（加密保存）…",
       "exportNotDecrypted": "请先打开并解密对话记录，然后再导出。",
-      "exportFeedbackNotDecrypted": "部分反馈评论无法解密。请重新打开对话记录并批准每个解密请求，然后再导出。"
+      "exportFeedbackNotDecrypted": "部分反馈评论无法解密。请重新打开对话记录并批准每个解密请求，然后再导出。",
+      "exportNeedsExtension": "导出需要 Nostr 扩展。对话记录以加密方式存储，需由你的扩展解密。",
+      "exportDecrypting": "仍在解密。全部请求获批后即可导出。",
+      "exportWhyDisabled": "为什么无法导出？",
+      "retryDecryption": "重新解密",
+      "decryptPendingTitle": "请查看你的 Nostr 扩展",
+      "decryptPendingBody": "它正在请求解密此对话记录的权限。它可能不会自动弹出——如果没看到，请点击扩展图标。请选择记住此选择的选项，这样它只会询问一次。",
+      "decryptProgress": "已解密 {{done}} / {{total}}。"
     }
   },
   "adminResources": {
@@ -2570,6 +2589,9 @@
     "unlockDetails": "解锁详情",
     "refreshRoster": "刷新用户名单",
     "exportVisible": "导出可见的用户名单",
+    "prepareVisible": "准备可见名单",
+    "downloadPrepared": "下载已准备的名单",
+    "exportPrepared": "完整的可见用户名单已准备好。现在可以下载。",
     "rosterTitle": "用户名单",
     "rosterShown": "共 {{total}} 个中显示 {{shown}} 个。",
     "tableLabel": "用户名单",
@@ -2650,6 +2672,9 @@
       "loadUserTypes": "加载用户类型失败。",
       "loadQuestions": "加载引导问题失败。",
       "approvalUpdate": "无法更新用户审批。",
+      "decryptUnavailable": "需要支持 NIP-04 解密的浏览器扩展才能准备此名单。",
+      "decryptRoster": "无法解密用户名单中的加密值。未创建电子表格。",
+      "prepareRequired": "请先准备当前可见的用户名单，然后再下载。",
       "exportAudit": "无法审计用户名单导出。",
       "exportRoster": "导出用户名单失败。"
     },
@@ -2689,5 +2714,10 @@
       "plain": "明文",
       "chatContext": "聊天上下文"
     }
+  },
+  "decryptStatus": {
+    "progress": "正在解密 {{done}} / {{total}}",
+    "checkExtension": "请查看你的 Nostr 扩展",
+    "persistentApproval": "请选择记住或始终允许的选项，这样它只会询问一次。"
   }
 }

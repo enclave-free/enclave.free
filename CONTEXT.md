@@ -337,7 +337,7 @@ Operator-configured metadata attached to a **Conversation** response that explai
 _Avoid_: audit log, server log
 
 **Conversation Activity Step**:
-A sanitized user-visible step in a **Conversation** that shows meaningful **Sage** activity during an assistant turn, such as using a tool, retrieving context, checking configuration, or preparing a response.
+A sanitized, audience-appropriate step in a **Conversation** that shows meaningful **Sage** activity during an assistant turn, such as using a tool, retrieving context, checking configuration, or preparing a response.
 _Avoid_: trace blob, debug event, raw tool call
 
 **Trace Delta**:
@@ -345,7 +345,7 @@ An append-only live **Conversation Streaming Transport** event that carries guar
 _Avoid_: hidden debug event, separate log stream
 
 **Activity**:
-The user-facing presentation of live **Conversation Activity Steps** and final **Conversation Trace** metadata for an assistant turn. It is one visible concept even when the **Conversation Streaming Transport** delivers live steps and final trace metadata separately, and it should remain transparent enough for prototype debugging and auditability.
+The audience-facing presentation of live **Conversation Activity Steps** and final **Conversation Trace** metadata for an assistant turn. **User Conversation** Activity explains product-meaningful work without provider diagnostics, while **Admin Conversation** Activity preserves operational detail.
 _Avoid_: hidden tool-call UI
 
 **Reasoning Trace**:
@@ -385,8 +385,8 @@ The selected visible conversation controls captured when a **User** or **Admin**
 _Avoid_: current controls, session settings, agent settings
 
 **Trace Visibility Posture**:
-The prototype product stance that **Conversation Trace** details are visible by default for both **Admin Conversations** and **User Conversations**. It is not a per-actor policy surface in the current transparent prototype phase.
-_Avoid_: debug mode, logging level, actor-specific trace policy
+The product stance that a guarded **Conversation Trace** remains attached to both **Admin Conversations** and **User Conversations**, while its **Activity** presentation is audience-aware: **User Conversations** and **Test User Sessions** start collapsed and show product-meaningful work; **Admin Conversations** may start expanded and show diagnostic detail. Viewers may toggle the panel, and legacy per-actor trace settings do not define this posture.
+_Avoid_: debug mode, logging level, actor-specific trace policy, trace redaction
 
 **Tool**:
 A concrete callable contract that **Sage** exposes to the model during a **Conversation** so the model can request an authorized action or information source.
@@ -485,6 +485,7 @@ _Avoid_: scoped config context, config dump, manual context switch
 - A **Deployment Surface** may contain traces of **Instance** activity without being a supported **Lifecycle Data Class**
 - A **Copied Export** becomes a **Deployment Surface** after creation and is outside **Active Storage Lifecycle**
 - Export actions for sensitive **Instance** data should create **Audit Log** evidence even though the exported copy is not lifecycle-controlled by the product
+- A **User Roster Export** that includes encrypted identity or **User Profile** values should be prepared completely in the Admin browser before download is enabled; one rejected or failed decryption should prevent the entire **Copied Export** rather than produce a partial spreadsheet
 - Browser local storage, session storage, and cache are **Deployment Surfaces**, but the product should actively minimize deliberate browser-side storage of **Conversation Content** and other sensitive **Instance** data
 - **Data Retention** is part of **Operator-Controlled Privacy**
 - **Retention Execution** applies **Data Retention** rules
@@ -807,9 +808,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - Every configured Conversation model must support the provider-native Tool-calling contract
 - Individual **Tools** and retrieval steps should emit trace material for their own work, and **Sage** should compose that material into the final **Conversation Trace** while protecting the minimal blocklist
 - Ordinary **Conversation Trace** generation is conversation metadata, not **Audit Log** evidence
-- The transparent prototype **Trace Visibility Posture** should not require actor-specific **Audit Log** events because it is not currently a configurable policy surface
+- The **Trace Visibility Posture** should not require actor-specific **Audit Log** events: it governs the opening state of a panel the viewer can toggle freely, not what the trace contains or who may read it
 - **Conversation Trace** blocklist handling should keep the trace event when possible, replace protected content with `[redacted]`, and mark the event guarded without failing the associated chat response
-- Viewers may expand or collapse shown per-message trace details, but the prototype should avoid actor-specific trace visibility plumbing unless a later decision reintroduces it
+- Viewers may expand or collapse shown per-message trace details; the surface rendering the **Conversation** decides the opening state (**User** collapsed, **Admin** may opt in to expanded) rather than a per-actor trace-visibility setting
 - **Tool Trace** for `db-query` should expose authorized SQL results only when those results were intentionally returned through the database **Tool** result, while still protecting credentials and hidden authority-bearing internals
 - **Admin Conversation** detailed traces may include validated read-only SQL only after sensitive literals are redacted
 - `db-query` traces should not be visible in **User Conversations** because `db-query` is admin-only
@@ -820,8 +821,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - A **Transient Provider Rejection** may use that same three-attempt ceiling only before model output, with a short bounded retry delay that respects provider guidance when practical; it does not receive a separate retry budget
 - One logical model-retry **Activity** row should move from scheduled/running to recovered or failed; terminal retry evidence must not leave an earlier rendering of the same logical retry permanently running
 - **Provider Continuity State** should return unchanged only to the same model within the current **Bounded Native Tool Loop** and should never be interpreted, streamed, logged, persisted, exported, or carried into a later **Conversation** turn
-- The default **User Conversation** trace posture should match the transparent prototype posture used for **Admin Conversations**
-- **Activity** should be similarly transparent in **Admin Conversations** and **User Conversations** during the prototype phase
+- **Admin Conversations** and **User Conversations** should retain the same guarded **Conversation Trace** data, while presenting different **Activity** detail to each audience
+- **User Conversation** Activity should show product-meaningful actions and outcomes without provider, model-request, retry, timing, or usage diagnostics
+- **Admin Conversation** Activity should preserve operational trace detail for diagnosis and inspection
 - **Sage** may invoke **Tools** during a **Conversation**
 - **Tool** contracts and Agent Settings may guide model selection, but **Sage** should not use a hidden intent classifier to force or reject an otherwise valid model-selected Tool plan
 - **Conversation Streaming Transport** should deliver model answer text without content-specific quarantine or rewriting; protocol validity and existing credential and secret boundaries remain deterministic responsibilities

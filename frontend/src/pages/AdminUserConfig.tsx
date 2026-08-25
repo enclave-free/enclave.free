@@ -42,10 +42,14 @@ import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import { decryptField, hasNip04Support } from '../utils/encryption';
 import {
-  buildUserRosterWorkbook,
   type EncryptedFieldValue,
   type UserRosterIdentity,
 } from '../utils/userRosterExport';
+import {
+  isPreparedUserRosterExportCurrent,
+  prepareUserRosterExport,
+  type PreparedUserRosterExport,
+} from '../utils/userRosterExportPreparation';
 
 const FIELD_TYPE_VALUES: FieldType[] = [
   'text',
@@ -58,20 +62,6 @@ const FIELD_TYPE_VALUES: FieldType[] = [
   'url',
 ];
 
-const EXPORT_DECRYPT_BATCH_SIZE = 5;
-
-async function mapInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  mapper: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  for (let index = 0; index < items.length; index += batchSize) {
-    const batch = items.slice(index, index + batchSize);
-    results.push(...(await Promise.all(batch.map(mapper))));
-  }
-  return results;
-}
 type SourceTypeFilter = 'all' | 'untyped' | number;
 
 const USER_AVATAR_COLORS = [
@@ -177,7 +167,10 @@ export function AdminUserConfig() {
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [userRosterPreparing, setUserRosterPreparing] = useState(false);
   const [userRosterExporting, setUserRosterExporting] = useState(false);
+  const [preparedUserRosterExport, setPreparedUserRosterExport] =
+    useState<PreparedUserRosterExport | null>(null);
   const [userRosterExportError, setUserRosterExportError] = useState<
     string | null
   >(null);
@@ -262,6 +255,7 @@ export function AdminUserConfig() {
   >({});
   const [identityDecryptNonce, setIdentityDecryptNonce] = useState(0);
   const userIdentityDecryptRunIdRef = useRef(0);
+  const userRosterPreparationRunIdRef = useRef(0);
 
   // Reachout settings (stored in instance_settings; only reachout_* public keys are exposed via /settings/public)
   const [reachoutLoaded, setReachoutLoaded] = useState(false);
@@ -1532,6 +1526,55 @@ export function AdminUserConfig() {
   ];
 
   // Helper to get user type name by id
+  // Which Onboarding Questions to show. The list is fetched unfiltered, so
+  // every field and its user_type_id is already in state -- this is purely a
+  // view concern and never refetches. 'all' | 'global' | <user type id>.
+  // See #645.
+  const [fieldScopeFilter, setFieldScopeFilter] = useState<
+    'all' | 'global' | number
+  >('all');
+
+  useEffect(() => {
+    if (
+      typeof fieldScopeFilter === 'number' &&
+      !userTypes.some((userType) => userType.id === fieldScopeFilter)
+    ) {
+      setFieldScopeFilter('all');
+    }
+  }, [fieldScopeFilter, userTypes]);
+
+  // Pair each visible field with its index in the unfiltered `fields` array:
+  // reordering and the type-migration flow operate on the full list, so a
+  // filtered index would move the wrong row.
+  //
+  // Selecting a User Type answers "what is this person actually asked?", so it
+  // includes global questions -- everyone gets those. This matches the server,
+  // which resolves a type as `user_type_id IS NULL OR user_type_id = ?`
+  // (database.py get_field_definitions). Globals sort first, as they do there.
+  // The per-row scope badge still distinguishes shared from type-specific.
+  const visibleFields = useMemo(() => {
+    const isGlobal = (field: CustomField) =>
+      field.user_type_id === null || field.user_type_id === undefined;
+
+    const matched = fields
+      .map((field, index) => ({ field, index }))
+      .filter(({ field }) => {
+        if (fieldScopeFilter === 'all') return true;
+        if (fieldScopeFilter === 'global') return isGlobal(field);
+        return isGlobal(field) || field.user_type_id === fieldScopeFilter;
+      });
+
+    if (fieldScopeFilter === 'all' || fieldScopeFilter === 'global') {
+      return matched;
+    }
+    return [
+      ...matched.filter(({ field }) => isGlobal(field)),
+      ...matched.filter(({ field }) => !isGlobal(field)),
+    ];
+  }, [fields, fieldScopeFilter]);
+
+  const isFieldScopeFiltered = fieldScopeFilter !== 'all';
+
   const getUserTypeName = (typeId: number | null | undefined): string => {
     if (typeId === null || typeId === undefined) return t('admin.global');
     const userType = userTypes.find((ut) => ut.id === typeId);
@@ -1552,6 +1595,13 @@ export function AdminUserConfig() {
     () => users.filter((user) => !user.approved),
     [users]
   );
+
+  useEffect(() => {
+    userRosterPreparationRunIdRef.current += 1;
+    setUserRosterPreparing(false);
+    setPreparedUserRosterExport(null);
+    setUserRosterExportSuccess(null);
+  }, [fields, userTypes, users]);
 
   const hasEncryptedIdentity = (user: AdminUserSummary): boolean =>
     Boolean(
@@ -1647,84 +1697,6 @@ export function AdminUserConfig() {
     setIdentityDecryptNonce((current) => current + 1);
   };
 
-  const decryptIdentityForExport = async (
-    user: AdminUserSummary
-  ): Promise<DecryptedUserIdentity | undefined> => {
-    const existing = decryptedUserIdentities[user.id];
-    if (existing?.status === 'ready') return existing;
-
-    if (!hasEncryptedIdentity(user)) {
-      return undefined;
-    }
-
-    if (!hasNip04Support()) {
-      return {
-        status: 'unavailable',
-        email: null,
-        name: null,
-      };
-    }
-
-    const [email, name] = await Promise.all([
-      decryptField(user.email_encrypted),
-      decryptField(user.name_encrypted),
-    ]);
-
-    return {
-      status: email || name ? 'ready' : 'failed',
-      email,
-      name,
-    };
-  };
-
-  const collectExportIdentities = async (): Promise<
-    Record<number, DecryptedUserIdentity | undefined>
-  > => {
-    const entries = await mapInBatches(
-      users,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async (user) => [user.id, await decryptIdentityForExport(user)] as const
-    );
-    return Object.fromEntries(entries);
-  };
-
-  const collectExportProfileValues = async (): Promise<
-    Record<number, Record<string, string | null>>
-  > => {
-    if (!hasNip04Support()) {
-      return {};
-    }
-
-    const profileValues = Object.fromEntries(
-      users.map((user) => [user.id, {}])
-    ) as Record<number, Record<string, string | null>>;
-    const encryptedFieldTasks = users.flatMap((user) =>
-      Object.entries(user.fields_encrypted ?? {}).map(
-        ([fieldName, encrypted]) => ({
-          userId: user.id,
-          fieldName,
-          encrypted,
-        })
-      )
-    );
-
-    const decryptedFieldValues = await mapInBatches(
-      encryptedFieldTasks,
-      EXPORT_DECRYPT_BATCH_SIZE,
-      async ({ userId, fieldName, encrypted }) => ({
-        userId,
-        fieldName,
-        value: await decryptField(encrypted),
-      })
-    );
-
-    for (const { userId, fieldName, value } of decryptedFieldValues) {
-      profileValues[userId][fieldName] = value;
-    }
-
-    return profileValues;
-  };
-
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -1738,10 +1710,13 @@ export function AdminUserConfig() {
     document.body.removeChild(anchor);
   };
 
-  const handleExportUserRoster = async () => {
+  const handlePrepareUserRoster = async () => {
+    const runId = userRosterPreparationRunIdRef.current + 1;
+    userRosterPreparationRunIdRef.current = runId;
     setUserRosterExportError(null);
     setUserRosterExportSuccess(null);
-    setUserRosterExporting(true);
+    setPreparedUserRosterExport(null);
+    setUserRosterPreparing(true);
 
     try {
       if (hasNip04Support()) {
@@ -1755,27 +1730,84 @@ export function AdminUserConfig() {
         }
       }
 
-      const exportedAt = new Date();
-      const [exportIdentities, exportProfileValues] = await Promise.all([
-        collectExportIdentities(),
-        collectExportProfileValues(),
-      ]);
-      const workbook = buildUserRosterWorkbook({
+      const result = await prepareUserRosterExport({
         users,
         userTypes,
         onboardingFields: fields,
-        identities: exportIdentities,
-        profileValues: exportProfileValues,
-        exportedAt,
+        exportedAt: new Date(),
         exportedBy: localStorage.getItem(STORAGE_KEYS.ADMIN_PUBKEY),
+        decrypt: hasNip04Support() ? decryptField : undefined,
       });
+      if (userRosterPreparationRunIdRef.current !== runId) return;
+
+      if (!result.ok) {
+        setUserRosterExportError(
+          result.reason === 'decrypt-unavailable'
+            ? t(
+                'admin.userRosterExport.decryptUnavailable',
+                'A browser extension with NIP-04 decryption is required to prepare this roster.'
+              )
+            : t(
+                'admin.userRosterExport.decryptFailed',
+                'An encrypted roster value could not be decrypted. No spreadsheet was created.'
+              )
+        );
+        return;
+      }
+
+      setPreparedUserRosterExport(result.snapshot);
+      setUserRosterExportSuccess(
+        t(
+          'admin.userRosterExport.prepared',
+          'The complete roster is prepared. Download is now enabled.'
+        )
+      );
+    } catch (err) {
+      if (userRosterPreparationRunIdRef.current === runId) {
+        setUserRosterExportError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'admin.userRosterExport.failed',
+                'Failed to prepare user roster.'
+              )
+        );
+      }
+    } finally {
+      if (userRosterPreparationRunIdRef.current === runId) {
+        setUserRosterPreparing(false);
+      }
+    }
+  };
+
+  const handleDownloadUserRoster = async () => {
+    setUserRosterExportError(null);
+    setUserRosterExportSuccess(null);
+
+    const snapshot = preparedUserRosterExport;
+    if (!snapshot || !isPreparedUserRosterExportCurrent(snapshot, users)) {
+      setPreparedUserRosterExport(null);
+      setUserRosterExportError(
+        t(
+          'admin.userRosterExport.prepareRequired',
+          'Prepare the current roster before downloading it.'
+        )
+      );
+      return;
+    }
+
+    const preparationGeneration = userRosterPreparationRunIdRef.current;
+    setUserRosterExporting(true);
+
+    try {
+      const { workbook } = snapshot;
 
       const auditResponse = await adminFetch('/admin/users/roster-export', {
         method: 'POST',
         body: JSON.stringify({
           filename: workbook.filename,
-          user_count: users.length,
-          pending_count: pendingApprovalUsers.length,
+          user_count: snapshot.userCount,
+          pending_count: snapshot.pendingCount,
           includes_decrypted_browser_values: workbook.includesDecryptedValues,
         }),
       });
@@ -1793,6 +1825,17 @@ export function AdminUserConfig() {
         return;
       }
 
+      if (userRosterPreparationRunIdRef.current !== preparationGeneration) {
+        setPreparedUserRosterExport(null);
+        setUserRosterExportError(
+          t(
+            'admin.userRosterExport.prepareRequired',
+            'Prepare the current roster before downloading it.'
+          )
+        );
+        return;
+      }
+
       downloadBlob(workbook.blob, workbook.filename);
       setUserRosterExportSuccess(
         t(
@@ -1804,7 +1847,10 @@ export function AdminUserConfig() {
       setUserRosterExportError(
         err instanceof Error
           ? err.message
-          : t('admin.userRosterExport.failed', 'Failed to export user roster.')
+          : t(
+              'admin.userRosterExport.failed',
+              'Failed to download user roster.'
+            )
       );
     } finally {
       setUserRosterExporting(false);
@@ -2488,10 +2534,68 @@ export function AdminUserConfig() {
               </div>
             )}
 
+            {/* Scope filter: answers "which questions does this User Type
+                actually get asked?", which the flat list could not. #645 */}
+            {fields.length > 0 && userTypes.length > 0 && (
+              <div
+                className="flex flex-wrap items-center gap-1.5 mb-4"
+                role="group"
+                aria-label={t(
+                  'admin.setup.fieldScopeFilterLabel',
+                  'Filter questions by user type'
+                )}
+              >
+                {(
+                  [
+                    { key: 'all' as const, label: t('common.all', 'All') },
+                    {
+                      key: 'global' as const,
+                      label: t('admin.global'),
+                    },
+                    ...userTypes.map((ut) => ({
+                      key: ut.id,
+                      label: ut.name,
+                    })),
+                  ] as Array<{ key: 'all' | 'global' | number; label: string }>
+                ).map(({ key, label }) => {
+                  const selected = fieldScopeFilter === key;
+                  return (
+                    <button
+                      key={String(key)}
+                      type="button"
+                      onClick={() => setFieldScopeFilter(key)}
+                      aria-pressed={selected}
+                      className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                        selected
+                          ? 'bg-accent/15 text-accent border-accent/30'
+                          : 'bg-surface text-text-muted border-border hover:text-text'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {isFieldScopeFiltered && (
+              <p className="text-xs text-text-muted mb-4 -mt-2">
+                {fieldScopeFilter === 'global'
+                  ? t(
+                      'admin.setup.fieldScopeGlobalHint',
+                      'Questions every user answers, whatever their type.'
+                    )
+                  : t(
+                      'admin.setup.fieldScopeTypeHint',
+                      'Everything this user type is asked: the global questions everyone answers, plus their own.'
+                    )}
+              </p>
+            )}
+
             {/* Fields List */}
             {fields.length > 0 ? (
+              visibleFields.length > 0 ? (
               <div className="space-y-2 mb-4">
-                {fields.map((field, index) => (
+                {visibleFields.map(({ field, index }) => (
                   <div
                     key={field.id}
                     className="bg-surface border border-border rounded-xl p-3.5 animate-fade-in hover:border-border-strong hover:shadow-sm transition-all"
@@ -2557,10 +2661,18 @@ export function AdminUserConfig() {
                           disabled={
                             isReordering ||
                             index === 0 ||
+                            isFieldScopeFiltered ||
                             userConfigExternalConflict
                           }
                           className="p-1 text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title={t('common.moveUp')}
+                          title={
+                            isFieldScopeFiltered
+                              ? t(
+                                  'admin.setup.reorderNeedsAllScope',
+                                  'Show all questions to reorder them'
+                                )
+                              : t('common.moveUp')
+                          }
                         >
                           <ChevronUp className="w-4 h-4" />
                         </button>
@@ -2570,10 +2682,18 @@ export function AdminUserConfig() {
                           disabled={
                             isReordering ||
                             index === fields.length - 1 ||
+                            isFieldScopeFiltered ||
                             userConfigExternalConflict
                           }
                           className="p-1 text-text-muted hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title={t('common.moveDown')}
+                          title={
+                            isFieldScopeFiltered
+                              ? t(
+                                  'admin.setup.reorderNeedsAllScope',
+                                  'Show all questions to reorder them'
+                                )
+                              : t('common.moveDown')
+                          }
                         >
                           <ChevronDown className="w-4 h-4" />
                         </button>
@@ -2599,6 +2719,19 @@ export function AdminUserConfig() {
                   </div>
                 ))}
               </div>
+              ) : (
+                // Filtered to a type with no specific questions. Saying so
+                // beats rendering blank, which reads as broken rather than
+                // "only the global questions apply here". #645
+                <div className="text-center py-6 bg-surface border border-border border-dashed rounded-lg mb-4">
+                  <p className="text-xs text-text-muted">
+                    {t(
+                      'admin.setup.noFieldsForScope',
+                      'No questions apply to this user type yet.'
+                    )}
+                  </p>
+                </div>
+              )
             ) : (
               <div className="text-center py-6 bg-surface border border-border border-dashed rounded-lg mb-4">
                 <FilePlus
@@ -3307,8 +3440,34 @@ export function AdminUserConfig() {
               )}
 
               <Button
-                onClick={() => void handleExportUserRoster()}
-                disabled={usersLoading || userRosterExporting}
+                onClick={() => void handlePrepareUserRoster()}
+                disabled={
+                  usersLoading || userRosterPreparing || userRosterExporting
+                }
+                variant="secondary"
+                size="sm"
+                leadingIcon={
+                  userRosterPreparing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Key className="w-4 h-4" />
+                  )
+                }
+              >
+                {t(
+                  'admin.userRosterExport.prepareButton',
+                  'Prepare user roster'
+                )}
+              </Button>
+
+              <Button
+                onClick={() => void handleDownloadUserRoster()}
+                disabled={
+                  usersLoading ||
+                  userRosterPreparing ||
+                  userRosterExporting ||
+                  !preparedUserRosterExport
+                }
                 variant="secondary"
                 size="sm"
                 leadingIcon={
@@ -3319,7 +3478,10 @@ export function AdminUserConfig() {
                   )
                 }
               >
-                {t('admin.userRosterExport.button', 'Export users')}
+                {t(
+                  'admin.userRosterExport.downloadButton',
+                  'Download prepared roster'
+                )}
               </Button>
 
               <Button

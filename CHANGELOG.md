@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.19 - 2026-08-24
+
+- Made Test & Feedback and User Roster copied exports fail closed until browser-held ciphertext is completely decrypted, with serialized NIP-04 approvals, persistent-approval guidance, snapshot invalidation, and audit-before-download.
+- Identified each Onboarding Question's User Type in Admin configuration.
+- Kept User and Test User Activity collapsed and product-focused while preserving expanded operational diagnostics for Admins and leaving the shared raw Conversation Trace unchanged.
+
 ## 0.4.18 - 2026-08-10
 
 - Recovered transient provider rate limits before visible output within the existing bounded same-model retry budget, honoring safe `Retry-After` guidance without replaying completed Tools.

@@ -23,6 +23,10 @@ vi.mock('../utils/adminApi', () => ({
 vi.mock('../utils/encryption', () => ({
   decryptField: vi.fn(),
   hasNip04Support: vi.fn(),
+  // The inline decrypt-progress indicator subscribes to the queue; return a
+  // no-op unsubscribe so the component can mount under this mock. See #648.
+  subscribeToDecryptQueue: vi.fn(() => () => {}),
+  getDecryptQueueState: vi.fn(() => ({ done: 0, total: 0, active: false })),
 }));
 
 const mockAdminFetch = vi.mocked(adminFetch);
@@ -544,8 +548,25 @@ describe('AdminUserManager', () => {
     });
 
     await user.selectOptions(screen.getByLabelText('User Type'), '2');
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
     await user.click(
-      screen.getByRole('button', { name: 'Export visible roster' })
+      screen.getByRole('button', { name: 'Prepare visible roster' })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    expect(
+      mockAdminFetch.mock.calls.some(
+        ([endpoint]) => endpoint === '/admin/users/roster-export'
+      )
+    ).toBe(false);
+    await user.click(
+      screen.getByRole('button', { name: 'Download prepared roster' })
     );
 
     await waitFor(() => {
@@ -597,7 +618,15 @@ describe('AdminUserManager', () => {
 
     await screen.findAllByText('Austin Kelsay');
     await user.click(
-      screen.getByRole('button', { name: 'Export visible roster' })
+      screen.getByRole('button', { name: 'Prepare visible roster' })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Download prepared roster' })
     );
 
     expect(
@@ -605,4 +634,156 @@ describe('AdminUserManager', () => {
     ).toHaveTextContent('Audit service unavailable');
     expect(anchorClickSpy).not.toHaveBeenCalled();
   });
+
+  it('requires fresh preparation when the visible roster changes during export auditing', async () => {
+    let resolveAudit!: (response: Response) => void;
+    const auditPromise = new Promise<Response>((resolve) => {
+      resolveAudit = resolve;
+    });
+    const defaultAdminFetch = mockAdminFetch.getMockImplementation();
+    mockAdminFetch.mockImplementation(
+      (endpoint: string, options?: RequestInit) => {
+        if (
+          endpoint === '/admin/users/roster-export' &&
+          options?.method === 'POST'
+        ) {
+          return auditPromise;
+        }
+        return defaultAdminFetch!(endpoint, options);
+      }
+    );
+    const user = userEvent.setup();
+    renderUserManager();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Prepare visible roster' })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    );
+    await waitFor(() => {
+      expect(mockAdminFetch).toHaveBeenCalledWith(
+        '/admin/users/roster-export',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Refresh roster' }));
+    await waitFor(() => {
+      expect(
+        mockAdminFetch.mock.calls.filter(
+          ([endpoint]) => endpoint === '/admin/users'
+        )
+      ).toHaveLength(2);
+    });
+    resolveAudit(Response.json({ success: true, message: 'recorded' }));
+
+    expect(
+      await screen.findByRole('note', { name: 'User roster export failed' })
+    ).toHaveTextContent(
+      'Prepare the current visible roster before downloading it.'
+    );
+    expect(anchorClickSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
+  });
+
+  it('keeps download disabled and skips audit when roster decryption is incomplete', async () => {
+    const user = userEvent.setup();
+    mockDecryptField.mockImplementation(async (encrypted) =>
+      encrypted?.ciphertext === 'jamie-name' ? null : 'decrypted'
+    );
+    renderUserManager();
+
+    await screen.findByRole('button', { name: 'Prepare visible roster' });
+    await user.click(
+      screen.getByRole('button', { name: 'Prepare visible roster' })
+    );
+
+    expect(
+      await screen.findByRole('note', { name: 'User roster export failed' })
+    ).toHaveTextContent('An encrypted roster value could not be decrypted');
+    expect(
+      screen.getByRole('button', { name: 'Download prepared roster' })
+    ).toBeDisabled();
+    expect(
+      mockAdminFetch.mock.calls.some(
+        ([endpoint]) => endpoint === '/admin/users/roster-export'
+      )
+    ).toBe(false);
+    expect(anchorClickSpy).not.toHaveBeenCalled();
+  });
+
+  it('invalidates a prepared snapshot when the visible User set changes', async () => {
+    const user = userEvent.setup();
+    renderUserManager();
+
+    await screen.findByRole('button', { name: 'Prepare visible roster' });
+    await user.selectOptions(screen.getByLabelText('User Type'), '2');
+    await user.click(
+      screen.getByRole('button', { name: 'Prepare visible roster' })
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    expect(
+      screen.getByRole('note', { name: 'User roster export ready' })
+    ).toHaveTextContent(
+      'The complete visible roster is prepared. Download is now enabled.'
+    );
+
+    await user.selectOptions(screen.getByLabelText('User Type'), 'all');
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeDisabled();
+      expect(
+        screen.queryByRole('note', { name: 'User roster export ready' })
+      ).not.toBeInTheDocument();
+    });
+    expect(anchorClickSpy).not.toHaveBeenCalled();
+  });
+
+  it('prepares optional missing values without requiring a browser extension', async () => {
+    const user = userEvent.setup();
+    mockHasNip04Support.mockReturnValue(false);
+    usersResponse = [
+      {
+        id: 7,
+        pubkey: null,
+        user_type_id: 1,
+        user_type: userTypesResponse[0],
+        approved: true,
+        created_at: '2026-08-24T12:00:00Z',
+        fields: {},
+      },
+    ];
+    renderUserManager();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Prepare visible roster' })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Download prepared roster' })
+      ).toBeEnabled();
+    });
+    expect(mockDecryptField).not.toHaveBeenCalled();
+    expect(
+      mockAdminFetch.mock.calls.some(
+        ([endpoint]) => endpoint === '/admin/users/roster-export'
+      )
+    ).toBe(false);
+  });
+
 });

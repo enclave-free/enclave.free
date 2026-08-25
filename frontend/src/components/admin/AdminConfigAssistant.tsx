@@ -800,7 +800,16 @@ export function AdminConfigAssistant({
               )}
             </div>
           ) : (
-            messages.map((m) => <ChatMessage key={m.id} message={m} />)
+            messages.map((m) => (
+              // Admin Conversations keep Activity expanded; it is collapsed by
+              // default for Users. See #636.
+              <ChatMessage
+                key={m.id}
+                message={m}
+                activityAudience="admin"
+                defaultActivityOpen
+              />
+            ))
           )}
 
           {isLoading && (

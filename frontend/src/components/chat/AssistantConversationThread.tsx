@@ -5,10 +5,14 @@ import { ThreadPrimitive } from '@assistant-ui/react';
 import { ChatMessage, type Message } from './ChatMessage';
 import type { AssistantConversationState } from './AssistantTurnAdapter';
 import type { ConversationMessageActionId } from './ConversationMessageActions';
+import type { ConversationActivityAudience } from './conversationActivityPresentation';
 
 interface AssistantConversationThreadProps {
   assistantState: AssistantConversationState;
   runningLabel: string;
+  activityAudience: ConversationActivityAudience;
+  /** Admin surfaces pass true to keep Activity expanded (see #636). */
+  defaultActivityOpen?: boolean;
   notices?: ReactNode;
   onMessageAction?: (
     actionId: ConversationMessageActionId,
@@ -19,6 +23,8 @@ interface AssistantConversationThreadProps {
 export function AssistantConversationThread({
   assistantState,
   runningLabel,
+  activityAudience,
+  defaultActivityOpen = false,
   notices,
   onMessageAction,
 }: AssistantConversationThreadProps) {
@@ -50,6 +56,8 @@ export function AssistantConversationThread({
                   ({ turn, accessory, actions }) => (
                     <div key={turn.id}>
                       <ChatMessage
+                        activityAudience={activityAudience}
+                        defaultActivityOpen={defaultActivityOpen}
                         message={{
                           id: turn.id,
                           role: turn.role,

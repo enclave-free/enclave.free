@@ -255,7 +255,8 @@
     "export": "Exporter",
     "reset": "Réinitialiser",
     "exit": "Quitter",
-    "none": "Aucun"
+    "none": "Aucun",
+    "all": "Tous"
   },
   "settings": {
     "title": "Paramètres",
@@ -352,7 +353,12 @@
       "instanceSectionTitle": "Configuration de l'instance",
       "onboardingFieldsHint": "Créez les questions auxquelles les utilisateurs répondent lors de l'intégration.",
       "userSectionDesc": "Configurez les types d'utilisateurs et les questions auxquelles les utilisateurs répondent lors de l'intégration.",
-      "userSectionTitle": "Configuration utilisateur"
+      "userSectionTitle": "Configuration utilisateur",
+      "fieldScopeFilterLabel": "Filtrer les questions par type d'utilisateur",
+      "noFieldsForScope": "Aucune question ne s'applique encore à ce type d'utilisateur.",
+      "reorderNeedsAllScope": "Afficher toutes les questions pour les réorganiser",
+      "fieldScopeGlobalHint": "Questions auxquelles répondent tous les utilisateurs, quel que soit leur type.",
+      "fieldScopeTypeHint": "Tout ce qui est demandé à ce type d'utilisateur : les questions globales posées à tous, plus les siennes."
     },
     "database": {
       "backToSetup": "Retour à la configuration admin",
@@ -846,6 +852,12 @@
     },
     "userRosterExport": {
       "auditFailed": "L'export de la liste des utilisateurs n'a pas pu être audité. Le tableur n'a pas été téléchargé.",
+      "decryptUnavailable": "Une extension de navigateur prenant en charge le déchiffrement NIP-04 est requise pour préparer cette liste.",
+      "decryptFailed": "Une valeur chiffrée de la liste n'a pas pu être déchiffrée. Aucun tableur n'a été créé.",
+      "prepared": "La liste complète est préparée. Le téléchargement est maintenant activé.",
+      "prepareRequired": "Préparez la liste actuelle avant de la télécharger.",
+      "prepareButton": "Préparer la liste des utilisateurs",
+      "downloadButton": "Télécharger la liste préparée",
       "success": "Tableur de la liste des utilisateurs téléchargé.",
       "failed": "Échec de l'export de la liste des utilisateurs.",
       "button": "Exporter les utilisateurs",
@@ -2524,7 +2536,14 @@
       "thumbDown": "À améliorer",
       "notePlaceholder": "Note facultative (enregistrée chiffrée)…",
       "exportNotDecrypted": "Ouvrez et déchiffrez la transcription avant de l’exporter.",
-      "exportFeedbackNotDecrypted": "Certains commentaires n’ont pas pu être déchiffrés. Rouvrez la transcription et approuvez chaque demande de déchiffrement avant l’exportation."
+      "exportFeedbackNotDecrypted": "Certains commentaires n’ont pas pu être déchiffrés. Rouvrez la transcription et approuvez chaque demande de déchiffrement avant l’exportation.",
+      "exportNeedsExtension": "L'export nécessite une extension Nostr. Les transcriptions sont chiffrées et votre extension est ce qui les déchiffre.",
+      "exportDecrypting": "Déchiffrement en cours. L'export sera disponible une fois toutes les demandes approuvées.",
+      "exportWhyDisabled": "Pourquoi l'export est-il désactivé ?",
+      "retryDecryption": "Réessayer le déchiffrement",
+      "decryptPendingTitle": "Vérifiez votre extension Nostr",
+      "decryptPendingBody": "Elle demande l'autorisation de déchiffrer cette transcription. Elle peut ne pas s'ouvrir d'elle-même : cliquez sur l'icône de l'extension si vous ne la voyez pas. Choisissez l'option qui mémorise votre choix pour qu'elle ne le demande qu'une fois.",
+      "decryptProgress": "{{done}} déchiffrés sur {{total}}."
     }
   },
   "adminResources": {
@@ -2573,6 +2592,9 @@
     "unlockDetails": "Déverrouiller les détails",
     "refreshRoster": "Actualiser la liste des utilisateurs",
     "exportVisible": "Exporter la liste des utilisateurs visible",
+    "prepareVisible": "Préparer la liste visible",
+    "downloadPrepared": "Télécharger la liste préparée",
+    "exportPrepared": "La liste visible complète est préparée. Le téléchargement est maintenant activé.",
     "rosterTitle": "Liste des utilisateurs",
     "rosterShown": "{{shown}} affichés sur {{total}} au total.",
     "tableLabel": "Liste des utilisateurs",
@@ -2653,6 +2675,9 @@
       "loadUserTypes": "Échec du chargement des types d'utilisateur.",
       "loadQuestions": "Échec du chargement des questions d'intégration.",
       "approvalUpdate": "L'approbation de l'utilisateur n'a pas pu être mise à jour.",
+      "decryptUnavailable": "Une extension de navigateur prenant en charge le déchiffrement NIP-04 est requise pour préparer cette liste.",
+      "decryptRoster": "Une valeur chiffrée de la liste n'a pas pu être déchiffrée. Aucun tableur n'a été créé.",
+      "prepareRequired": "Préparez la liste visible actuelle avant de la télécharger.",
       "exportAudit": "L'export de la liste des utilisateurs n'a pas pu être audité.",
       "exportRoster": "Échec de l'export de la liste des utilisateurs."
     },
@@ -2693,5 +2718,10 @@
       "plain": "En clair",
       "chatContext": "Contexte du chat"
     }
+  },
+  "decryptStatus": {
+    "progress": "Déchiffrement de {{done}} sur {{total}}",
+    "checkExtension": "vérifiez votre extension Nostr",
+    "persistentApproval": "Choisissez l'option mémoriser ou toujours pour qu'elle ne le demande qu'une fois."
   }
 }
