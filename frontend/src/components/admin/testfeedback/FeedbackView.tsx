@@ -22,6 +22,7 @@ import {
   type FeedbackRating,
   type SessionLogDetail,
   type SessionLogMetadata,
+  type TranscriptToolCall,
   type TranscriptTurn,
 } from '../../../utils/sessionLogsApi';
 
@@ -67,7 +68,21 @@ function isOptionalStringArray(value: unknown): boolean {
   );
 }
 
-function isTranscriptToolCall(value: unknown): boolean {
+interface ParsedTranscriptToolCall extends Omit<
+  TranscriptToolCall,
+  'warnings' | 'guarded'
+> {
+  warnings?: string[] | null;
+  guarded?: boolean | null;
+}
+
+interface ParsedTranscriptTurn extends Omit<TranscriptTurn, 'tools_used'> {
+  tools_used?: ParsedTranscriptToolCall[] | null;
+}
+
+function isTranscriptToolCall(
+  value: unknown
+): value is ParsedTranscriptToolCall {
   if (!isRecord(value)) return false;
   return (
     typeof value.tool_id === 'string' &&
@@ -90,7 +105,7 @@ function isTranscriptTraceTool(value: unknown): boolean {
   );
 }
 
-function isTranscriptTurn(value: unknown): value is TranscriptTurn {
+function isTranscriptTurn(value: unknown): value is ParsedTranscriptTurn {
   if (!isRecord(value)) return false;
   const toolsUsed = value.tools_used;
   const trace = value.trace;
@@ -127,7 +142,14 @@ function parseTranscriptTurns(
   ) {
     throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
   }
-  return parsed.turns;
+  return parsed.turns.map((turn) => ({
+    ...turn,
+    tools_used: (turn.tools_used ?? []).map((tool) => ({
+      ...tool,
+      warnings: tool.warnings ?? [],
+      guarded: tool.guarded ?? false,
+    })),
+  }));
 }
 
 function transcriptToolSummaries(
@@ -236,16 +258,20 @@ export function FeedbackView() {
   //
   // Server-side enforcement is out of scope by design: the plaintext is
   // assembled in the browser and the backend never holds it.
-  const exportBlockedReason: 'no-extension' | 'decrypting' | 'not-decrypted' | 'partial' | null =
-    !nip04
-      ? 'no-extension'
-      : decryptProgress
-        ? 'decrypting'
-        : !turns
-          ? 'not-decrypted'
-          : undecryptedFeedbackTurns.length > 0
-            ? 'partial'
-            : null;
+  const exportBlockedReason:
+    | 'no-extension'
+    | 'decrypting'
+    | 'not-decrypted'
+    | 'partial'
+    | null = !nip04
+    ? 'no-extension'
+    : decryptProgress
+      ? 'decrypting'
+      : !turns
+        ? 'not-decrypted'
+        : undecryptedFeedbackTurns.length > 0
+          ? 'partial'
+          : null;
 
   const exportBlockedMessage = !exportBlockedReason
     ? null

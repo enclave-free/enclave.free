@@ -45,6 +45,8 @@ const USER_HIDDEN_OPERATIONAL_TITLES = new Set([
   'model request',
   'model usage',
   'provider first-event wait',
+  'provider request',
+  'provider timing',
   'retry delay',
   'token usage',
   'tool selection',

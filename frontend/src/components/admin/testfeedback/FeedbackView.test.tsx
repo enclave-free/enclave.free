@@ -235,6 +235,7 @@ describe('FeedbackView', () => {
     const text = await blob.text();
     expect(text).toContain('Yes, here is a plan.');
     expect(text).toContain('"log_id": "log-1"');
+    expect(text).toContain('"tools_used": []');
   });
 
   it('does not download a plaintext export when audit recording fails', async () => {
@@ -292,8 +293,8 @@ describe('FeedbackView', () => {
     mockDecryptField.mockResolvedValue(
       JSON.stringify({
         turns: [
-          { role: 'user', content: 'Can you help me?' },
-          { role: 'assistant', content: 42, tools_used: 'not-an-array' },
+          { role: 'user', content: 'Can you help me?', tools_used: [] },
+          { role: 'assistant', content: 42, tools_used: [] },
         ],
       })
     );
@@ -306,7 +307,7 @@ describe('FeedbackView', () => {
     mockDecryptField.mockResolvedValue(
       JSON.stringify({
         turns: [
-          { role: 'user', content: 'Can you help me?' },
+          { role: 'user', content: 'Can you help me?', tools_used: [] },
           {
             role: 'assistant',
             content: 'Yes, here is a plan.',
@@ -324,10 +325,11 @@ describe('FeedbackView', () => {
     mockDecryptField.mockResolvedValue(
       JSON.stringify({
         turns: [
-          { role: 'user', content: 'Can you help me?' },
+          { role: 'user', content: 'Can you help me?', tools_used: [] },
           {
             role: 'assistant',
             content: 'Yes, here is a plan.',
+            tools_used: [],
             trace: { tools: [null] },
           },
         ],
@@ -385,8 +387,12 @@ describe('FeedbackView', () => {
       .mockResolvedValueOnce(
         JSON.stringify({
           turns: [
-            { role: 'user', content: 'Can you help me?' },
-            { role: 'assistant', content: 'Yes, here is a plan.' },
+            { role: 'user', content: 'Can you help me?', tools_used: [] },
+            {
+              role: 'assistant',
+              content: 'Yes, here is a plan.',
+              tools_used: [],
+            },
           ],
         })
       )
@@ -472,7 +478,7 @@ describe('FeedbackView', () => {
     mockDecryptField.mockResolvedValue(
       JSON.stringify({
         turns: [
-          { role: 'user', content: 'Find resources' },
+          { role: 'user', content: 'Find resources', tools_used: [] },
           {
             role: 'assistant',
             content: 'I found vetted resources.',

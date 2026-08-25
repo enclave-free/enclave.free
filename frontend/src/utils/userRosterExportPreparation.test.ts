@@ -92,6 +92,8 @@ describe('prepareUserRosterExport', () => {
     expect(result.snapshot.pendingCount).toBe(1);
     expect(result.snapshot.workbook.includesDecryptedValues).toBe(true);
     expect(Object.isFrozen(result.snapshot)).toBe(true);
+    expect(result.snapshot).not.toHaveProperty('rosterFingerprint');
+    expect(JSON.stringify(result.snapshot)).not.toContain('email-cipher');
   });
 
   it('fails when encrypted values require unavailable browser decryption', async () => {
@@ -159,12 +161,110 @@ describe('prepareUserRosterExport', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(
-      isPreparedUserRosterExportCurrent(result.snapshot, [encryptedUser])
+      isPreparedUserRosterExportCurrent(result.snapshot, [
+        {
+          ...encryptedUser,
+          email_encrypted: { ...encryptedUser.email_encrypted! },
+          name_encrypted: { ...encryptedUser.name_encrypted! },
+          fields_encrypted: {
+            'Case Notes': {
+              ...encryptedUser.fields_encrypted!['Case Notes']!,
+            },
+          },
+        },
+      ])
     ).toBe(true);
     expect(
       isPreparedUserRosterExportCurrent(result.snapshot, [
         encryptedUser,
         { id: 8, user_type_id: null, approved: true },
+      ])
+    ).toBe(false);
+  });
+
+  it('keeps a prepared snapshot current when nested record key order changes', async () => {
+    const user = {
+      ...encryptedUser,
+      fields: { Secondary: 'Second value', 'Case Notes': 'First value' },
+      fields_encrypted: {
+        Secondary: {
+          ciphertext: 'secondary-cipher',
+          ephemeral_pubkey: 'secondary-sender',
+        },
+        'Case Notes': encryptedUser.fields_encrypted!['Case Notes'],
+      },
+    };
+    const result = await prepareUserRosterExport(
+      buildPreparationInput([user], async () => 'decrypted')
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      isPreparedUserRosterExportCurrent(result.snapshot, [
+        {
+          ...user,
+          fields: { 'Case Notes': 'First value', Secondary: 'Second value' },
+          fields_encrypted: {
+            'Case Notes': encryptedUser.fields_encrypted!['Case Notes'],
+            Secondary: {
+              ciphertext: 'secondary-cipher',
+              ephemeral_pubkey: 'secondary-sender',
+            },
+          },
+        },
+      ])
+    ).toBe(true);
+  });
+
+  it('marks a prepared snapshot stale when approval changes without changing User IDs', async () => {
+    const result = await prepareUserRosterExport(
+      buildPreparationInput([encryptedUser], async () => 'decrypted')
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      isPreparedUserRosterExportCurrent(result.snapshot, [
+        { ...encryptedUser, approved: true },
+      ])
+    ).toBe(false);
+  });
+
+  it('marks a prepared snapshot stale when a profile value changes without changing User IDs', async () => {
+    const user = {
+      ...encryptedUser,
+      fields: { 'Case Notes': 'Initial note' },
+    };
+    const result = await prepareUserRosterExport(
+      buildPreparationInput([user], async () => 'decrypted')
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      isPreparedUserRosterExportCurrent(result.snapshot, [
+        { ...user, fields: { 'Case Notes': 'Updated note' } },
+      ])
+    ).toBe(false);
+  });
+
+  it('marks a prepared snapshot stale when encrypted identity data changes without changing User IDs', async () => {
+    const result = await prepareUserRosterExport(
+      buildPreparationInput([encryptedUser], async () => 'decrypted')
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      isPreparedUserRosterExportCurrent(result.snapshot, [
+        {
+          ...encryptedUser,
+          email_encrypted: {
+            ciphertext: 'updated-email-cipher',
+            ephemeral_pubkey: 'email-sender',
+          },
+        },
       ])
     ).toBe(false);
   });
