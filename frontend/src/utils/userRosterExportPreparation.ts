@@ -27,6 +27,8 @@ export interface PreparedUserRosterExport {
   readonly workbook: Readonly<UserRosterWorkbook>;
 }
 
+const preparedRosterContent = new WeakMap<PreparedUserRosterExport, string>();
+
 type FailedDecryptionTarget =
   | {
       kind: 'identity';
@@ -58,6 +60,38 @@ function hasCiphertext(
 function requestedUserIds(users: UserRosterExportUser[]): number[] {
   return [...new Set(users.map((user) => user.id))].sort(
     (left, right) => left - right
+  );
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (typeof value !== 'object' || value === null) return value;
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => [key, canonicalize(child)])
+  );
+}
+
+function canonicalRosterContent(users: UserRosterExportUser[]): string {
+  return JSON.stringify(
+    users.map((user) =>
+      canonicalize({
+        id: user.id,
+        pubkey: user.pubkey,
+        email: user.email,
+        name: user.name,
+        email_encrypted: user.email_encrypted,
+        name_encrypted: user.name_encrypted,
+        user_type_id: user.user_type_id,
+        user_type_name: user.user_type?.name,
+        approved: user.approved,
+        created_at: user.created_at,
+        fields: user.fields,
+        fields_encrypted: user.fields_encrypted,
+      })
+    )
   );
 }
 
@@ -103,7 +137,8 @@ export function isPreparedUserRosterExportCurrent(
     currentIds.length === snapshot.requestUserIds.length &&
     currentIds.every(
       (userId, index) => userId === snapshot.requestUserIds[index]
-    )
+    ) &&
+    canonicalRosterContent(users) === preparedRosterContent.get(snapshot)
   );
 }
 
@@ -175,6 +210,7 @@ export async function prepareUserRosterExport(
     pendingCount: input.users.filter((user) => !user.approved).length,
     workbook,
   });
+  preparedRosterContent.set(snapshot, canonicalRosterContent(input.users));
 
   return { ok: true, snapshot };
 }

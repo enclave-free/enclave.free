@@ -230,6 +230,18 @@ describe('presentConversationActivity', () => {
           status: 'succeeded',
         },
         {
+          id: 'legacy-provider-request',
+          kind: 'status',
+          title: 'Provider request',
+          status: 'succeeded',
+        },
+        {
+          id: 'legacy-provider-timing',
+          kind: 'status',
+          title: 'Provider timing',
+          status: 'succeeded',
+        },
+        {
           id: 'unknown-product-work',
           kind: 'status',
           title: 'Preparing referral options',
