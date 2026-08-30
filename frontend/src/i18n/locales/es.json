@@ -204,13 +204,19 @@
       "requestLabel": "Error en la solicitud del chat"
     },
     "trace": {
-      "finalizing": "Finalizando la respuesta..."
+      "finalizing": "Finalizando la respuesta...",
+      "collapse": "Contraer",
+      "expand": "Expandir",
+      "reasoning": "Razonamiento",
+      "thinking": "Pensando",
+      "transcript": "Transcripción de {{label}}"
     },
     "new": "Chat nuevo",
     "listTitle": "Chats",
     "composerContextAria": "Contexto del redactor",
     "contextTitle": "Contexto",
-    "messageActions": "Acciones del mensaje"
+    "messageActions": "Acciones del mensaje",
+    "conversationMessagesAria": "Mensajes de la conversación"
   },
   "common": {
     "adminQuestion": "¿Eres administrador?",
@@ -256,7 +262,8 @@
     "reset": "Restablecer",
     "exit": "Salir",
     "none": "Ninguno",
-    "all": "Todos"
+    "all": "Todos",
+    "warning": "Advertencia"
   },
   "settings": {
     "title": "Configuración",
@@ -316,7 +323,10 @@
       "removeFieldFailed": "Error al eliminar el campo",
       "reorderFailed": "Error al reordenar el campo",
       "updateTypeFailed": "Fallo al actualizar el tipo de usuario",
-      "loadSettingsFailed": "No se pudo cargar la configuración"
+      "loadSettingsFailed": "No se pudo cargar la configuración",
+      "externalConfigConflict": "Sage u otro administrador cambió estos ajustes mientras editabas. Recarga esta página antes de guardar para no sobrescribir los valores más recientes.",
+      "externalSettingsConflict": "Sage u otro administrador cambió estos ajustes mientras editabas. Recarga esta página antes de guardar.",
+      "externalUserConfigConflict": "Sage u otro administrador cambió los Tipos de usuario o las Preguntas de incorporación mientras editabas. Recarga esta página antes de guardar tu borrador."
     },
     "setup": {
       "backToChat": "Volver al chat",
@@ -638,7 +648,9 @@
       "shareSecretsHint": "Desactivado de forma predeterminada. Primero habilita la herramienta de configuración. Cuando está activado, los valores secretos de configuración del despliegue se revelan del lado del cliente y se envían a Sage para este flujo de prototipo.",
       "startNewConversation": "Iniciar una nueva conversación con el asistente",
       "onboardingTitle": "Chat de configuración guiada",
-      "onboardingContext": "Conversación de configuración enfocada"
+      "onboardingContext": "Conversación de configuración enfocada",
+      "directShareSecretsHint": "Opcional: incluye los valores de los secretos de despliegue almacenados en el contexto de esta Conversación. Las lecturas directas de secretos no lo requieren.",
+      "directWritePrompt": "Pregunta sobre la configuración de administración. Sage puede inspeccionar los ajustes y, tras confirmarlo contigo en la conversación, aplicar directamente los cambios admitidos."
     },
     "reachout": {
       "badgeDefault": "Predeterminado",
@@ -985,7 +997,9 @@
         "detail1": "Las lecturas de configuración inspeccionan el estado real de la instancia en lugar de adivinar.",
         "detail2": "Los cambios propuestos se preparan para su revisión.",
         "detail3": "Aplicar ejecuta los endpoints de administración aprobados sin otro turno del modelo.",
-        "link": "Abrir asistente de administración"
+        "link": "Abrir asistente de administración",
+        "directWriteDetail2": "Sage pide confirmación en la conversación antes de una escritura admitida.",
+        "directWriteDetail3": "Tras tu confirmación, Sage llama a sus Herramientas de configuración directa e informa del resultado real."
       },
       "guided": {
         "eyebrow": "Comenzar",
@@ -1051,7 +1065,9 @@
       "prompt2": "Revisa los tipos de usuario, las preguntas de incorporación, los documentos y los recursos actuales.",
       "prompt3": "Prepara los cambios para revisión: define el tono del asistente y el idioma predeterminado.",
       "title": "Buenas cosas que pedirle al Asistente de administración",
-      "body": "Pide una revisión antes de pedir cambios. Puede inspeccionar la configuración y preparar un conjunto de cambios."
+      "body": "Pide una revisión antes de pedir cambios. Puede inspeccionar la configuración y preparar un conjunto de cambios.",
+      "directWriteBody": "Pide a Sage que inspeccione o cambie la configuración admitida. Confirmará contigo el cambio previsto antes de escribir.",
+      "directWritePrompt3": "Define el tono del asistente y el idioma predeterminado, y confirma primero conmigo el cambio previsto."
     },
     "hero": {
       "eyebrow": "Mapa de control del administrador",
@@ -1075,6 +1091,13 @@
         "2": "Los secretos permanecen ocultos a menos que los compartas para la sesión de administrador actual.",
         "3": "Los cambios del asistente son propuestas. Tú los revisas y haces clic en Aplicar.",
         "4": "La configuración de despliegue guarda los valores de ejecución deseados. Los operadores aún exportan el entorno y reinician los servicios cuando es necesario."
+      },
+      "directItems": {
+        "0": "Los administradores inician sesión con NIP-07. Los usuarios lo hacen con enlaces mágicos por correo.",
+        "1": "Los campos de usuario están cifrados de forma predeterminada. Solo los campos en texto plano pueden compartirse con el chat.",
+        "2": "Los secretos permanecen ocultos salvo que los compartas para la sesión de administración actual.",
+        "3": "Sage confirma contigo los cambios de configuración en el chat y luego aplica directamente los cambios admitidos.",
+        "4": "La Configuración de Despliegue almacena los valores de ejecución deseados. Los operadores aún exportan el entorno y reinician los servicios cuando es necesario."
       }
     },
     "quickSteps": {
@@ -1274,7 +1297,8 @@
     "loadErrorLabel": "Error al cargar la Configuración del agente",
     "previewErrorLabel": "Error de previsualización de la Configuración del agente",
     "documentToggleErrorLabel": "Error al alternar documento en la Configuración del agente",
-    "documentDefaultsHintV2": "Los documentos marcados como \"Disponible\" pueden usarse en la Búsqueda de conocimiento. Los documentos marcados como \"Activo por defecto\" se incluyen cuando el origen de conocimiento está configurado en documentos predeterminados seleccionados."
+    "documentDefaultsHintV2": "Los documentos marcados como \"Disponible\" pueden usarse en la Búsqueda de conocimiento. Los documentos marcados como \"Activo por defecto\" se incluyen cuando el origen de conocimiento está configurado en documentos predeterminados seleccionados.",
+    "externalChangeConflict": "Sage u otro administrador cambió este ajuste mientras editabas. Cancela y vuelve a abrir el editor antes de guardar."
   },
   "adminDeployment": {
     "title": "Configuración de Despliegue",
@@ -2522,7 +2546,10 @@
       "chatEmpty": "Envía un mensaje como este usuario para comenzar la prueba.",
       "inputPlaceholder": "Escribe al asistente como este usuario…",
       "saved": "Prueba guardada (cifrada). Revísala en Comentarios.",
-      "testingAs": "Probando como {{persona}}"
+      "testingAs": "Probando como {{persona}}",
+      "authFailed": "La sesión del usuario sintético ya no está autorizada.",
+      "discardUnsavedConfirm": "¿Descartar los turnos completados que no se han guardado?",
+      "workspaceAria": "Espacio de trabajo de conversación del usuario de prueba"
     },
     "feedback": {
       "trials": "Registros beta",
@@ -2584,7 +2611,25 @@
       "subregion": "Subregión",
       "region": "Región",
       "global": "Global"
-    }
+    },
+    "addPointer": "Añadir puntero",
+    "addRegion": "Añadir región",
+    "displayOrder": "Orden de visualización",
+    "displayOrderHint": "Los números más bajos aparecen primero, después de la relevancia y la verificación.",
+    "kind": "Tipo",
+    "noSearchResults": "Ningún recurso coincide con esta búsqueda.",
+    "order": "Orden",
+    "pointerLabel": "Etiqueta del puntero {{number}}",
+    "pointerType": "Tipo del puntero {{number}}",
+    "pointerValue": "Valor del puntero {{number}}",
+    "pointers": "Punteros",
+    "regionNumber": "Región {{number}}",
+    "regions": "Regiones",
+    "removePointer": "Eliminar puntero",
+    "removeRegion": "Eliminar región",
+    "search": "Buscar recursos",
+    "searchPlaceholder": "Nombre, tipo, etiqueta, puntero o descripción",
+    "tags": "Etiquetas (separadas por comas)"
   },
   "adminUserManager": {
     "backToAdmin": "Volver al panel de administración",

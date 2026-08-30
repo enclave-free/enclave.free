@@ -209,8 +209,14 @@
       "requestLabel": "Erreur de requête de discussion"
     },
     "trace": {
-      "finalizing": "Finalisation de la réponse..."
-    }
+      "finalizing": "Finalisation de la réponse...",
+      "collapse": "Réduire",
+      "expand": "Développer",
+      "reasoning": "Raisonnement",
+      "thinking": "Réflexion",
+      "transcript": "Transcription de {{label}}"
+    },
+    "conversationMessagesAria": "Messages de la conversation"
   },
   "common": {
     "adminQuestion": "Êtes-vous un administrateur ?",
@@ -256,7 +262,8 @@
     "reset": "Réinitialiser",
     "exit": "Quitter",
     "none": "Aucun",
-    "all": "Tous"
+    "all": "Tous",
+    "warning": "Avertissement"
   },
   "settings": {
     "title": "Paramètres",
@@ -316,7 +323,10 @@
       "reorderFailed": "Échec de la réorganisation du champ",
       "loadUsersFailed": "Échec du chargement des utilisateurs",
       "updateTypeFailed": "Échec de la mise à jour du type d'utilisateur",
-      "loadSettingsFailed": "Échec du chargement des paramètres"
+      "loadSettingsFailed": "Échec du chargement des paramètres",
+      "externalConfigConflict": "Sage ou un autre administrateur a modifié ces paramètres pendant votre édition. Rechargez cette page avant d'enregistrer afin de ne pas écraser les valeurs plus récentes.",
+      "externalSettingsConflict": "Sage ou un autre administrateur a modifié ces paramètres pendant votre édition. Rechargez cette page avant d'enregistrer.",
+      "externalUserConfigConflict": "Sage ou un autre administrateur a modifié les Types d'utilisateur ou les Questions d'intégration pendant votre édition. Rechargez cette page avant d'enregistrer votre brouillon."
     },
     "setup": {
       "backToChat": "Retour au chat",
@@ -636,7 +646,9 @@
       "approve": "Approuver",
       "applyErrorLabel": "Erreur d'application de la configuration",
       "onboardingTitle": "Chat de configuration guidée",
-      "onboardingContext": "Conversation de configuration ciblée"
+      "onboardingContext": "Conversation de configuration ciblée",
+      "directShareSecretsHint": "Facultatif : inclure les valeurs des secrets de déploiement stockés dans le contexte de cette Conversation. Les lectures directes de secrets ne l'exigent pas.",
+      "directWritePrompt": "Posez des questions sur la configuration d'administration. Sage peut inspecter les paramètres et, après confirmation avec vous dans la conversation, appliquer directement les modifications prises en charge."
     },
     "reachout": {
       "badgeDefault": "Par défaut",
@@ -1102,7 +1114,9 @@
         "detail1": "Les lectures de config inspectent l'état réel de l'instance au lieu de deviner.",
         "detail2": "Les modifications proposées sont préparées pour révision.",
         "detail3": "Appliquer exécute les points d'accès admin approuvés sans nouveau tour du modèle.",
-        "link": "Ouvrir l'assistant admin"
+        "link": "Ouvrir l'assistant admin",
+        "directWriteDetail2": "Sage demande une confirmation dans la conversation avant toute écriture prise en charge.",
+        "directWriteDetail3": "Après votre confirmation, Sage appelle ses Outils de configuration directe et rapporte le résultat réel."
       },
       "guided": {
         "eyebrow": "Démarrer",
@@ -1168,7 +1182,9 @@
       "prompt2": "Passez en revue les types d'utilisateur, les questions d'intégration, les documents et les ressources actuels.",
       "prompt3": "Préparez des modifications pour révision : définissez le ton de l'assistant et la langue par défaut.",
       "title": "Bonnes choses à demander à l'assistant admin",
-      "body": "Demandez une révision avant de demander des modifications. Il peut inspecter la configuration et préparer un ensemble de modifications."
+      "body": "Demandez une révision avant de demander des modifications. Il peut inspecter la configuration et préparer un ensemble de modifications.",
+      "directWriteBody": "Demandez à Sage d'inspecter ou de modifier la configuration prise en charge. Il confirmera la modification prévue avec vous avant d'écrire.",
+      "directWritePrompt3": "Définissez le ton de l'assistant et la langue par défaut, et confirmez d'abord la modification prévue avec moi."
     },
     "hero": {
       "eyebrow": "Carte de contrôle admin",
@@ -1192,6 +1208,13 @@
         "2": "Les secrets restent masqués sauf si vous les partagez pour la session admin en cours.",
         "3": "Les modifications de l'assistant sont des propositions. Vous les révisez et cliquez sur Appliquer.",
         "4": "Les paramètres de déploiement enregistrent les valeurs d'exécution souhaitées. Les opérateurs exportent toujours l'environnement et redémarrent les services au besoin."
+      },
+      "directItems": {
+        "0": "Les administrateurs se connectent avec NIP-07. Les utilisateurs se connectent via des liens magiques par e-mail.",
+        "1": "Les champs utilisateur sont chiffrés par défaut. Seuls les champs en texte clair peuvent être partagés avec le chat.",
+        "2": "Les secrets restent masqués sauf si vous les partagez pour la session d'administration en cours.",
+        "3": "Sage confirme les modifications de configuration avec vous dans le chat, puis applique directement les changements pris en charge.",
+        "4": "Les Paramètres de déploiement stockent les valeurs d'exécution souhaitées. Les opérateurs exportent toujours l'environnement et redémarrent les services si nécessaire."
       }
     },
     "quickSteps": {
@@ -1391,7 +1414,8 @@
     "loadErrorLabel": "Erreur de chargement des paramètres de l'agent",
     "previewErrorLabel": "Erreur d'aperçu des paramètres de l'agent",
     "documentToggleErrorLabel": "Erreur de bascule de document des paramètres de l'agent",
-    "documentDefaultsHintV2": "Les documents marqués « Disponible » peuvent être utilisés par la recherche de connaissances. Les documents marqués « Actif par défaut » sont inclus lorsque les sources de connaissances sont définies sur les documents par défaut sélectionnés."
+    "documentDefaultsHintV2": "Les documents marqués « Disponible » peuvent être utilisés par la recherche de connaissances. Les documents marqués « Actif par défaut » sont inclus lorsque les sources de connaissances sont définies sur les documents par défaut sélectionnés.",
+    "externalChangeConflict": "Sage ou un autre administrateur a modifié ce paramètre pendant votre édition. Annulez et rouvrez l'éditeur avant d'enregistrer."
   },
   "adminDeployment": {
     "title": "Configuration du déploiement",
@@ -2520,7 +2544,10 @@
       "chatEmpty": "Envoyez un message en tant que cet utilisateur pour commencer l'essai.",
       "inputPlaceholder": "Écrivez à l'assistant en tant que cet utilisateur…",
       "saved": "Essai enregistré (chiffré). Examinez-le sous Retours.",
-      "testingAs": "Test en tant que {{persona}}"
+      "testingAs": "Test en tant que {{persona}}",
+      "authFailed": "La session de l'utilisateur synthétique n'est plus autorisée.",
+      "discardUnsavedConfirm": "Abandonner les tours terminés qui n’ont pas été enregistrés ?",
+      "workspaceAria": "Espace de travail de conversation de l'utilisateur de test"
     },
     "feedback": {
       "trials": "Journaux bêta",
@@ -2582,7 +2609,25 @@
       "subregion": "Sous-région",
       "region": "Région",
       "global": "Monde"
-    }
+    },
+    "addPointer": "Ajouter un pointeur",
+    "addRegion": "Ajouter une région",
+    "displayOrder": "Ordre d'affichage",
+    "displayOrderHint": "Les numéros les plus bas apparaissent en premier, après la pertinence et la vérification.",
+    "kind": "Type",
+    "noSearchResults": "Aucune ressource ne correspond à cette recherche.",
+    "order": "Ordre",
+    "pointerLabel": "Libellé du pointeur {{number}}",
+    "pointerType": "Type du pointeur {{number}}",
+    "pointerValue": "Valeur du pointeur {{number}}",
+    "pointers": "Pointeurs",
+    "regionNumber": "Région {{number}}",
+    "regions": "Régions",
+    "removePointer": "Supprimer le pointeur",
+    "removeRegion": "Supprimer la région",
+    "search": "Rechercher des ressources",
+    "searchPlaceholder": "Nom, type, étiquette, pointeur ou description",
+    "tags": "Étiquettes (séparées par des virgules)"
   },
   "adminUserManager": {
     "backToAdmin": "Retour au tableau de bord d'administration",
