@@ -1556,7 +1556,101 @@
       "reviewRestartRequired": "Review Restart Required",
       "reviewOperationalReadiness": "Review Operational Readiness",
       "reviewServiceHealth": "Review Service Health",
-      "reviewRuntimeEnv": "Review Runtime Env Export"
+      "reviewRuntimeEnv": "Review Runtime Env Export",
+      "deployment_settings_validation": {
+        "label": "Deployment Settings Validation",
+        "status": {
+          "invalid": {
+            "summary": "Deployment Settings validation has errors that must be repaired.",
+            "nextAction": "Review Deployment Settings validation errors."
+          },
+          "warnings": {
+            "summary": "Deployment Settings validation has advisory warnings.",
+            "nextAction": "Review Deployment Settings validation warnings."
+          },
+          "valid": {
+            "summary": "Deployment Settings validation has no errors or warnings.",
+            "nextAction": "No action required."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Verifiable Inference"
+      },
+      "lifecycle_readiness": {
+        "label": "Data Lifecycle Review"
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Deployment Surface Acknowledgements",
+        "status": {
+          "acknowledged": {
+            "summary": "Unsupported Deployment Surface categories have been acknowledged.",
+            "nextAction": "No action required."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Backup And Restore Drill"
+      },
+      "restart_required": {
+        "label": "Restart Required",
+        "status": {
+          "current": {
+            "summary": "No restart-required Deployment Settings have changed since service start.",
+            "nextAction": "No action required."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage Runtime Config",
+        "status": {
+          "not_generated": {
+            "summary": "Sage runtime env has not been generated from Deployment Settings yet.",
+            "nextAction": "Export the Sage runtime env before treating Deployment Settings as applied to Sage."
+          },
+          "matches_desired": {
+            "summary": "Running Sage runtime config matches desired Deployment Settings.",
+            "nextAction": "No action required."
+          },
+          "drifted": {
+            "summary": "Running Sage runtime config differs from desired Deployment Settings.",
+            "nextAction": "Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage."
+          },
+          "current": {
+            "summary": "Sage runtime env has been generated from current Deployment Settings.",
+            "nextAction": "No action required unless the generated artifact has not been applied to the Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings changed after the Sage runtime env was generated.",
+            "nextAction": "Export a fresh Sage runtime env and apply it through the Deployment restart path."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Core Backend Runtime Config",
+        "status": {
+          "not_generated": {
+            "summary": "Core-backend runtime env has not been generated from Deployment Settings yet.",
+            "nextAction": "Export the core-backend runtime env before treating Deployment Settings as applied to core-backend."
+          },
+          "matches_desired": {
+            "summary": "Running core-backend runtime config matches desired Deployment Settings.",
+            "nextAction": "No action required."
+          },
+          "drifted": {
+            "summary": "Running core-backend runtime config differs from desired Deployment Settings.",
+            "nextAction": "Investigate core-backend runtime config drift, apply the generated core-backend env, and restart core-backend."
+          },
+          "current": {
+            "summary": "Core-backend runtime env has been generated from current Deployment Settings.",
+            "nextAction": "No action required unless the generated artifact has not been applied to the Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings changed after the core-backend runtime env was generated.",
+            "nextAction": "Export a fresh core-backend runtime env and apply it through the Deployment restart path."
+          }
+        }
+      }
     },
     "wizard": {
       "title": "Deployment Wizard",

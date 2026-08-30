@@ -1552,7 +1552,101 @@
       "reviewRestartRequired": "Revisar reinicio requerido",
       "reviewOperationalReadiness": "Revisar preparación operativa",
       "reviewServiceHealth": "Revisar estado del servicio",
-      "reviewRuntimeEnv": "Revisar exportación del entorno de ejecución"
+      "reviewRuntimeEnv": "Revisar exportación del entorno de ejecución",
+      "deployment_settings_validation": {
+        "label": "Validación de la configuración de despliegue",
+        "status": {
+          "invalid": {
+            "summary": "La validación de la configuración de despliegue tiene errores que deben repararse.",
+            "nextAction": "Revisa los errores de validación de la configuración de despliegue."
+          },
+          "warnings": {
+            "summary": "La validación de la configuración de despliegue tiene advertencias informativas.",
+            "nextAction": "Revisa las advertencias de validación de la configuración de despliegue."
+          },
+          "valid": {
+            "summary": "La validación de la configuración de despliegue no tiene errores ni advertencias.",
+            "nextAction": "No se requiere ninguna acción."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Inferencia verificable"
+      },
+      "lifecycle_readiness": {
+        "label": "Revisión del ciclo de vida de los datos"
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Reconocimientos de superficies de despliegue",
+        "status": {
+          "acknowledged": {
+            "summary": "Se han reconocido las categorías de superficies de despliegue no admitidas.",
+            "nextAction": "No se requiere ninguna acción."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Simulacro de copia de seguridad y restauración"
+      },
+      "restart_required": {
+        "label": "Reinicio requerido",
+        "status": {
+          "current": {
+            "summary": "No han cambiado ajustes de despliegue que requieran reinicio desde la última exportación.",
+            "nextAction": "No se requiere ninguna acción."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Configuración de ejecución de Sage",
+        "status": {
+          "not_generated": {
+            "summary": "El entorno de ejecución de Sage no se ha generado a partir de la Configuración de Despliegue.",
+            "nextAction": "Exporta el entorno de ejecución de Sage antes de considerar aplicada la Configuración de Despliegue."
+          },
+          "matches_desired": {
+            "summary": "La configuración de ejecución de Sage coincide con la Configuración de Despliegue deseada.",
+            "nextAction": "No se requiere ninguna acción."
+          },
+          "drifted": {
+            "summary": "La configuración de ejecución de Sage difiere de la Configuración de Despliegue deseada.",
+            "nextAction": "Investiga la desviación de configuración de Sage, aplica el entorno generado y reinicia el servicio."
+          },
+          "current": {
+            "summary": "El entorno de ejecución de Sage se ha generado a partir de la Configuración de Despliegue actual.",
+            "nextAction": "No se requiere ninguna acción, salvo que el artefacto generado no se haya aplicado al Despliegue."
+          },
+          "stale": {
+            "summary": "La Configuración de Despliegue cambió después de generar el entorno de ejecución de Sage.",
+            "nextAction": "Exporta un entorno de ejecución de Sage actualizado y aplícalo mediante el reinicio del Despliegue."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Configuración de ejecución del backend principal",
+        "status": {
+          "not_generated": {
+            "summary": "El entorno de ejecución de el backend principal no se ha generado a partir de la Configuración de Despliegue.",
+            "nextAction": "Exporta el entorno de ejecución de el backend principal antes de considerar aplicada la Configuración de Despliegue."
+          },
+          "matches_desired": {
+            "summary": "La configuración de ejecución de el backend principal coincide con la Configuración de Despliegue deseada.",
+            "nextAction": "No se requiere ninguna acción."
+          },
+          "drifted": {
+            "summary": "La configuración de ejecución de el backend principal difiere de la Configuración de Despliegue deseada.",
+            "nextAction": "Investiga la desviación de configuración de el backend principal, aplica el entorno generado y reinicia el servicio."
+          },
+          "current": {
+            "summary": "El entorno de ejecución de el backend principal se ha generado a partir de la Configuración de Despliegue actual.",
+            "nextAction": "No se requiere ninguna acción, salvo que el artefacto generado no se haya aplicado al Despliegue."
+          },
+          "stale": {
+            "summary": "La Configuración de Despliegue cambió después de generar el entorno de ejecución de el backend principal.",
+            "nextAction": "Exporta un entorno de ejecución de el backend principal actualizado y aplícalo mediante el reinicio del Despliegue."
+          }
+        }
+      }
     },
     "wizard": {
       "title": "Asistente de despliegue",

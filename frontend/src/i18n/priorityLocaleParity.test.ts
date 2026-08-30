@@ -208,7 +208,25 @@ describe('dynamic translation key families resolve in English', () => {
   const QUICK_STEP_COUNT = 5; // AdminGuides.tsx quickSteps
   const SAFETY_ITEM_COUNT = 5; // AdminGuides.tsx safetyBasics
 
+  // Deployment readiness text is authored in the backend and translated on the
+  // stable item key. Labels are always present, so they are gateable; summaries
+  // and next actions vary by runtime status and fall back to the server string.
+  const READINESS_ITEMS = [
+    'deployment_settings_validation',
+    'verifiable_inference',
+    'lifecycle_readiness',
+    'deployment_surface_acknowledgements',
+    'backup_restore_drill',
+    'restart_required',
+    'sage_runtime_env',
+    'core_backend_runtime_env',
+  ];
+
   const families: Array<[string, string[]]> = [
+    [
+      'adminDeployment.readiness item labels',
+      READINESS_ITEMS.map((key) => `adminDeployment.readiness.${key}.label`),
+    ],
     [
       'admin.fieldTypes',
       FIELD_TYPES.flatMap((type) => [

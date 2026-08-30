@@ -585,6 +585,31 @@ export function AdminDeploymentConfig() {
     return 'border-border bg-surface-muted text-text-muted';
   };
 
+  /**
+   * Deployment readiness text is authored in the backend
+   * (`backend/app/deployment_config.py`) and arrives as plain English prose, so
+   * it never entered the i18n system and rendered English in every locale.
+   *
+   * Translate on the stable `key` (+ `status`, which selects the wording) and
+   * fall back to the server string. Some summaries are interpolated or read
+   * from stored config at request time; those cannot be re-interpolated here
+   * and intentionally keep the server text. See #647.
+   */
+  const readinessLabel = (item: DeploymentReadinessItem) =>
+    t(`adminDeployment.readiness.${item.key}.label`, item.label);
+
+  const readinessSummary = (item: DeploymentReadinessItem) =>
+    t(
+      `adminDeployment.readiness.${item.key}.status.${item.status}.summary`,
+      item.summary
+    );
+
+  const readinessNextAction = (item: DeploymentReadinessItem) =>
+    t(
+      `adminDeployment.readiness.${item.key}.status.${item.status}.nextAction`,
+      item.next_action
+    );
+
   const readinessReviewTarget = (item: DeploymentReadinessItem) => {
     if (item.source === 'inference_verification') {
       return {
@@ -2377,13 +2402,13 @@ export function AdminDeploymentConfig() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-text">
-                        {item.label}
+                        {readinessLabel(item)}
                       </p>
                       <p className="mt-1 text-xs text-text-secondary">
-                        {item.summary}
+                        {readinessSummary(item)}
                       </p>
                       <p className="mt-2 text-xs text-text-muted">
-                        {item.next_action}
+                        {readinessNextAction(item)}
                       </p>
                     </div>
                     <span
@@ -2450,13 +2475,13 @@ export function AdminDeploymentConfig() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-text">
-                    {wizardItem.label}
+                    {readinessLabel(wizardItem)}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">
-                    {wizardItem.summary}
+                    {readinessSummary(wizardItem)}
                   </p>
                   <p className="mt-2 text-xs text-text-muted">
-                    {wizardItem.next_action}
+                    {readinessNextAction(wizardItem)}
                   </p>
                 </div>
                 <span

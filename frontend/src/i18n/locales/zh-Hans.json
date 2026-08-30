@@ -1581,7 +1581,101 @@
       "reviewRestartRequired": "审查需要重启项",
       "reviewOperationalReadiness": "审查运维就绪情况",
       "reviewServiceHealth": "审查服务健康状况",
-      "reviewRuntimeEnv": "审查运行时环境导出"
+      "reviewRuntimeEnv": "审查运行时环境导出",
+      "deployment_settings_validation": {
+        "label": "部署设置校验",
+        "status": {
+          "invalid": {
+            "summary": "部署设置校验存在必须修复的错误。",
+            "nextAction": "查看部署设置校验错误。"
+          },
+          "warnings": {
+            "summary": "部署设置校验存在提示性警告。",
+            "nextAction": "查看部署设置校验警告。"
+          },
+          "valid": {
+            "summary": "部署设置校验没有错误或警告。",
+            "nextAction": "无需操作。"
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "可验证推理"
+      },
+      "lifecycle_readiness": {
+        "label": "数据生命周期审查"
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "部署面确认",
+        "status": {
+          "acknowledged": {
+            "summary": "不受支持的部署面类别已确认。",
+            "nextAction": "无需操作。"
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "备份与恢复演练"
+      },
+      "restart_required": {
+        "label": "需要重启",
+        "status": {
+          "current": {
+            "summary": "自上次导出以来，没有需要重启的部署设置发生更改。",
+            "nextAction": "无需操作。"
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage 运行时配置",
+        "status": {
+          "not_generated": {
+            "summary": "Sage 的运行时环境尚未根据部署设置生成。",
+            "nextAction": "在认定部署设置已应用之前，请先导出 Sage 的运行时环境。"
+          },
+          "matches_desired": {
+            "summary": "Sage 的运行时配置与期望的部署设置一致。",
+            "nextAction": "无需操作。"
+          },
+          "drifted": {
+            "summary": "Sage 的运行时配置与期望的部署设置不一致。",
+            "nextAction": "排查 Sage 的配置漂移，应用生成的环境并重启服务。"
+          },
+          "current": {
+            "summary": "Sage 的运行时环境已根据当前部署设置生成。",
+            "nextAction": "除非生成的产物尚未应用到部署，否则无需操作。"
+          },
+          "stale": {
+            "summary": "在生成 Sage 的运行时环境后，部署设置发生了更改。",
+            "nextAction": "导出最新的 Sage 运行时环境，并通过部署重启流程应用。"
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "核心后端运行时配置",
+        "status": {
+          "not_generated": {
+            "summary": "核心后端 的运行时环境尚未根据部署设置生成。",
+            "nextAction": "在认定部署设置已应用之前，请先导出 核心后端 的运行时环境。"
+          },
+          "matches_desired": {
+            "summary": "核心后端 的运行时配置与期望的部署设置一致。",
+            "nextAction": "无需操作。"
+          },
+          "drifted": {
+            "summary": "核心后端 的运行时配置与期望的部署设置不一致。",
+            "nextAction": "排查 核心后端 的配置漂移，应用生成的环境并重启服务。"
+          },
+          "current": {
+            "summary": "核心后端 的运行时环境已根据当前部署设置生成。",
+            "nextAction": "除非生成的产物尚未应用到部署，否则无需操作。"
+          },
+          "stale": {
+            "summary": "在生成 核心后端 的运行时环境后，部署设置发生了更改。",
+            "nextAction": "导出最新的 核心后端 运行时环境，并通过部署重启流程应用。"
+          }
+        }
+      }
     },
     "wizard": {
       "title": "部署向导",

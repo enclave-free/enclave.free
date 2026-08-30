@@ -1669,7 +1669,101 @@
       "reviewRestartRequired": "Examiner le redémarrage requis",
       "reviewOperationalReadiness": "Examiner la préparation opérationnelle",
       "reviewServiceHealth": "Examiner l'état de santé des services",
-      "reviewRuntimeEnv": "Examiner l'export de l'env d'exécution"
+      "reviewRuntimeEnv": "Examiner l'export de l'env d'exécution",
+      "deployment_settings_validation": {
+        "label": "Validation des paramètres de déploiement",
+        "status": {
+          "invalid": {
+            "summary": "La validation des paramètres de déploiement comporte des erreurs à corriger.",
+            "nextAction": "Examinez les erreurs de validation des paramètres de déploiement."
+          },
+          "warnings": {
+            "summary": "La validation des paramètres de déploiement comporte des avertissements consultatifs.",
+            "nextAction": "Examinez les avertissements de validation des paramètres de déploiement."
+          },
+          "valid": {
+            "summary": "La validation des paramètres de déploiement ne comporte ni erreur ni avertissement.",
+            "nextAction": "Aucune action requise."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Inférence vérifiable"
+      },
+      "lifecycle_readiness": {
+        "label": "Revue du cycle de vie des données"
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Accusés de réception des surfaces de déploiement",
+        "status": {
+          "acknowledged": {
+            "summary": "Les catégories de surfaces de déploiement non prises en charge ont été confirmées.",
+            "nextAction": "Aucune action requise."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Exercice de sauvegarde et de restauration"
+      },
+      "restart_required": {
+        "label": "Redémarrage requis",
+        "status": {
+          "current": {
+            "summary": "Aucun paramètre de déploiement nécessitant un redémarrage n'a changé depuis le dernier export.",
+            "nextAction": "Aucune action requise."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Configuration d'exécution de Sage",
+        "status": {
+          "not_generated": {
+            "summary": "L'environnement d'exécution de Sage n'a pas été généré à partir des Paramètres de déploiement.",
+            "nextAction": "Exportez l'environnement d'exécution de Sage avant de considérer les Paramètres de déploiement comme appliqués."
+          },
+          "matches_desired": {
+            "summary": "La configuration d'exécution de Sage correspond aux Paramètres de déploiement souhaités.",
+            "nextAction": "Aucune action requise."
+          },
+          "drifted": {
+            "summary": "La configuration d'exécution de Sage diffère des Paramètres de déploiement souhaités.",
+            "nextAction": "Analysez la dérive de configuration de Sage, appliquez l'environnement généré et redémarrez le service."
+          },
+          "current": {
+            "summary": "L'environnement d'exécution de Sage a été généré à partir des Paramètres de déploiement actuels.",
+            "nextAction": "Aucune action requise, sauf si l'artefact généré n'a pas été appliqué au Déploiement."
+          },
+          "stale": {
+            "summary": "Les Paramètres de déploiement ont changé après la génération de l'environnement d'exécution de Sage.",
+            "nextAction": "Exportez un environnement d'exécution Sage à jour et appliquez-le via le redémarrage du Déploiement."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Configuration d'exécution du backend principal",
+        "status": {
+          "not_generated": {
+            "summary": "L'environnement d'exécution de le backend principal n'a pas été généré à partir des Paramètres de déploiement.",
+            "nextAction": "Exportez l'environnement d'exécution de le backend principal avant de considérer les Paramètres de déploiement comme appliqués."
+          },
+          "matches_desired": {
+            "summary": "La configuration d'exécution de le backend principal correspond aux Paramètres de déploiement souhaités.",
+            "nextAction": "Aucune action requise."
+          },
+          "drifted": {
+            "summary": "La configuration d'exécution de le backend principal diffère des Paramètres de déploiement souhaités.",
+            "nextAction": "Analysez la dérive de configuration de le backend principal, appliquez l'environnement généré et redémarrez le service."
+          },
+          "current": {
+            "summary": "L'environnement d'exécution de le backend principal a été généré à partir des Paramètres de déploiement actuels.",
+            "nextAction": "Aucune action requise, sauf si l'artefact généré n'a pas été appliqué au Déploiement."
+          },
+          "stale": {
+            "summary": "Les Paramètres de déploiement ont changé après la génération de l'environnement d'exécution de le backend principal.",
+            "nextAction": "Exportez un environnement d'exécution le backend principal à jour et appliquez-le via le redémarrage du Déploiement."
+          }
+        }
+      }
     },
     "wizard": {
       "title": "Assistant de déploiement",
