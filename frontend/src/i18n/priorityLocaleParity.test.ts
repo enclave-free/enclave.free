@@ -1,5 +1,3 @@
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import ar from './locales/ar.json';
 import en from './locales/en.json';
@@ -115,20 +113,19 @@ describe('priority locale parity', () => {
  * untranslated in all 31 locales.
  */
 describe('translation keys used in code exist in English', () => {
-  // Vitest runs from the frontend package root.
-  const SRC = join(process.cwd(), 'src');
+  // Sources are pulled through Vite rather than node:fs on purpose. The
+  // production image runs `tsc && vite build` without @types/node, so a
+  // `node:fs` import here type-errors the release build even though it is
+  // test-only code.
+  const sources = import.meta.glob('../**/*.{ts,tsx}', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }) as Record<string, string>;
 
-  function sourceFiles(dir: string, out: string[] = []): string[] {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        sourceFiles(full, out);
-      } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\./.test(entry.name)) {
-        out.push(full);
-      }
-    }
-    return out;
-  }
+  const sourceEntries = Object.entries(sources).filter(
+    ([file]) => !/\.(test|spec)\./.test(file)
+  );
 
   function lookup(key: string): unknown {
     return key
@@ -159,11 +156,10 @@ describe('translation keys used in code exist in English', () => {
 
   it('has no translation key that is missing from en.json', () => {
     const orphans = new Set<string>();
-    for (const file of sourceFiles(SRC)) {
-      const source = readFileSync(file, 'utf8');
+    for (const [file, source] of sourceEntries) {
       for (const match of source.matchAll(CALL)) {
         if (!resolves(match[1])) {
-          orphans.add(`${match[1]} — ${file.slice(SRC.length + 1)}`);
+          orphans.add(`${match[1]} — ${file.replace('../', '')}`);
         }
       }
     }
