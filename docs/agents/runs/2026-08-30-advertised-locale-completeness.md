@@ -9,7 +9,7 @@
 - Feature branch: `feature/advertised-locale-completeness-final` (clean-history shipping branch)
 - Human owner: plebdev
 - Started: 2026-08-30
-- Current status: #660–#666 complete and verified; non-draft staging PR #667 open, PR review in progress
+- Current status: #660–#666 complete and verified; non-draft staging PR #667 open with all checks green; awaiting human merge permission
 - Skill setup status: complete; issue tracker, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -27,6 +27,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - Agent briefs: pending
 - Review packets: pending
 - Local CodeRabbit report: `docs/agents/runs/2026-08-31-advertised-locale-completeness-coderabbit-local.md` (service unavailable after three authenticated attempts; independent Standards + Spec fallback passed)
+- PR CodeRabbit report: `docs/agents/runs/2026-08-31-advertised-locale-completeness-coderabbit-pr.md` (review skipped at the service's 100-file limit; independent Standards + Spec fallback passed)
 - PR URL: https://github.com/enclave-free/enclave.free/pull/667; Sage dependency PR: https://github.com/enclave-free/sage/pull/54
 - Existing source work: PR #658, issues #495 and #647
 
@@ -81,6 +82,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - Focused readiness/localization verification passed 3 files / 50 tests; the complete frontend suite passed 83 files / 490 tests; TypeScript, production build, parser asset exclusion, the 5-test production container/runtime contract, and the 3-test Compose contract passed.
 - The complete Enclave Control Plane suite passed 432 tests, and the exact security-regression workflow selection passed 143 tests.
 - The pinned Sage commit passed formatting, workspace strict clippy, 195 library tests, 67 binary tests, doc tests, and the `enclave_web` executable check.
+- PR #667's GitHub matrix passed backend and frontend security regressions, the localization contract, the production runtime contract, PDF drift, dependency audit, and Semgrep. The localization job explicitly initializes the pinned Sage submodule required by its cross-repository structural-coverage test.
 - Browser evidence confirms the 31-locale picker plus Spanish, Arabic, Bengali, and Finnish authentication at 1280×900 and 390×844. The document `lang`/`dir` values were `es/ltr`, `ar/rtl`, `bn/ltr`, and `fi/ltr`; every compact capture had `scrollWidth === clientWidth`, and no Vite error overlay appeared. Screenshots: `docs/agents/runs/artifacts/advertised-locales/language-picker-31-locales.png`, `spanish-auth-desktop.png`, `spanish-auth-compact.png`, `arabic-auth-desktop.png`, `arabic-auth-compact.png`, `bengali-auth-desktop.png`, `bengali-auth-compact.png`, `finnish-auth-desktop.png`, and `finnish-auth-compact.png`.
 - The magic-link renderer supports all 31 advertised locale codes, uses exact placeholder validation, separates plain RFC subjects from escaped HTML, and isolates RTL URL/identity fragments. Frontend locale propagation remains intentionally sequenced after #661.
 - Sage PR #54 adds keyed Activity descriptors while preserving English compatibility fields and stable safe machine identifiers; provider-controlled unsafe display data and trace IDs are redacted before stream, snapshot, persistence, and export boundaries.
