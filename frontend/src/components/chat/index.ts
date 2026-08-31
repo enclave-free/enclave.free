@@ -12,6 +12,7 @@ export {
 export {
   getConversationMessageActions,
   type ConversationMessageAction,
+  type LocalizedConversationMessageAction,
   type ConversationMessageActionContext,
   type ConversationMessageActionId,
   type ConversationTransportCapabilities,
@@ -39,5 +40,9 @@ export {
 } from './ConversationUiState';
 export { DocumentScope, type DocumentSource } from './DocumentScope';
 export { ExportButton } from './ExportButton';
-export { adaptSageStreamEvent, readTraceDelta } from './SageStreamEventAdapter';
+export {
+  adaptSageStreamEvent,
+  readActivityStepValue,
+  readTraceDelta,
+} from './SageStreamEventAdapter';
 export { ToolSelector, type Tool } from './ToolSelector';

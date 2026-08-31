@@ -33,7 +33,7 @@ export function AssistantConversationThread({
   return (
     <div
       role="region"
-      aria-label="Conversation thread"
+      aria-label={t('chat.conversationThreadAria', 'Conversation thread')}
       className="flex min-h-0 flex-1 flex-col"
     >
       <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col">

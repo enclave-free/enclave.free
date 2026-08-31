@@ -5,79 +5,25 @@ export interface Language {
   flag: string;
 }
 
+import {
+  advertisedLocaleCodes,
+  advertisedLocales,
+  type AdvertisedLocaleCode,
+} from '../i18n/localeCatalog';
+
 // Order is intentional and drives the language-picker display order (the picker
 // renders this array as-is). It is a product/mission call, NOT alphabetical —
 // please do not "tidy" it. Languages most likely to be needed by at-risk users
 // lead; languages spoken predominantly in stable, low-risk regions are demoted
 // to the bottom. See issue #496.
-export const LANGUAGES: Language[] = [
-  // Priority set — highest likely need for at-risk users.
-  { code: 'es', nativeName: 'Español', englishName: 'Spanish', flag: '🇪🇸' },
-  { code: 'en', nativeName: 'English', englishName: 'English', flag: '🇺🇸' },
-  { code: 'fr', nativeName: 'Français', englishName: 'French', flag: '🇫🇷' },
-  { code: 'ru', nativeName: 'Русский', englishName: 'Russian', flag: '🇷🇺' },
-  { code: 'ar', nativeName: 'العربية', englishName: 'Arabic', flag: '🇸🇦' },
-  {
-    code: 'zh-Hans',
-    nativeName: '简体中文',
-    englishName: 'Chinese (Simplified)',
-    flag: '🇨🇳',
-  },
-
-  // High-need — large populations facing serious human-rights / authoritarian pressure.
-  { code: 'fa', nativeName: 'فارسی', englishName: 'Persian', flag: '🇮🇷' },
-  {
-    code: 'zh-Hant',
-    nativeName: '繁體中文',
-    englishName: 'Chinese (Traditional)',
-    flag: '🇹🇼',
-  },
-  {
-    code: 'uk',
-    nativeName: 'Українська',
-    englishName: 'Ukrainian',
-    flag: '🇺🇦',
-  },
-  { code: 'tr', nativeName: 'Türkçe', englishName: 'Turkish', flag: '🇹🇷' },
-  { code: 'hi', nativeName: 'हिन्दी', englishName: 'Hindi', flag: '🇮🇳' },
-  { code: 'bn', nativeName: 'বাংলা', englishName: 'Bengali', flag: '🇧🇩' },
-  {
-    code: 'id',
-    nativeName: 'Bahasa Indonesia',
-    englishName: 'Indonesian',
-    flag: '🇮🇩',
-  },
-  {
-    code: 'vi',
-    nativeName: 'Tiếng Việt',
-    englishName: 'Vietnamese',
-    flag: '🇻🇳',
-  },
-  { code: 'th', nativeName: 'ไทย', englishName: 'Thai', flag: '🇹🇭' },
-  { code: 'he', nativeName: 'עברית', englishName: 'Hebrew', flag: '🇮🇱' },
-  { code: 'ko', nativeName: '한국어', englishName: 'Korean', flag: '🇰🇷' },
-  {
-    code: 'pt',
-    nativeName: 'Português',
-    englishName: 'Portuguese',
-    flag: '🇧🇷',
-  },
-  { code: 'ja', nativeName: '日本語', englishName: 'Japanese', flag: '🇯🇵' },
-
-  // Lower-priority — spoken predominantly in stable, low-risk regions. Demoted.
-  { code: 'pl', nativeName: 'Polski', englishName: 'Polish', flag: '🇵🇱' },
-  { code: 'de', nativeName: 'Deutsch', englishName: 'German', flag: '🇩🇪' },
-  { code: 'it', nativeName: 'Italiano', englishName: 'Italian', flag: '🇮🇹' },
-  { code: 'nl', nativeName: 'Nederlands', englishName: 'Dutch', flag: '🇳🇱' },
-  { code: 'cs', nativeName: 'Čeština', englishName: 'Czech', flag: '🇨🇿' },
-  { code: 'ro', nativeName: 'Română', englishName: 'Romanian', flag: '🇷🇴' },
-  { code: 'hu', nativeName: 'Magyar', englishName: 'Hungarian', flag: '🇭🇺' },
-  { code: 'el', nativeName: 'Ελληνικά', englishName: 'Greek', flag: '🇬🇷' },
-  { code: 'sv', nativeName: 'Svenska', englishName: 'Swedish', flag: '🇸🇪' },
-  { code: 'no', nativeName: 'Norsk', englishName: 'Norwegian', flag: '🇳🇴' },
-  { code: 'da', nativeName: 'Dansk', englishName: 'Danish', flag: '🇩🇰' },
-  { code: 'fi', nativeName: 'Suomi', englishName: 'Finnish', flag: '🇫🇮' },
-];
+export const LANGUAGES: Language[] = advertisedLocales.map(
+  ({ code, nativeName, englishName, flag }) => ({
+    code,
+    nativeName,
+    englishName,
+    flag,
+  })
+);
 
 export const STORAGE_KEY_LANGUAGE = 'enclave_language';
 
@@ -97,25 +43,40 @@ export function saveExplicitLanguageChoice(code: string): void {
 
 export function hasChosenLanguage(): boolean {
   try {
-    if (localStorage.getItem(STORAGE_KEY_LANGUAGE_EXPLICIT) === '1') {
-      return true;
-    }
-
-    // Before the explicit marker existed, both onboarding and the language
-    // detector wrote to the same key. Preserve any valid legacy value as a
-    // user preference. The detector no longer auto-caches navigator language,
-    // so unmarked values only occur during this one-way migration.
-    const legacyLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE);
-    if (
-      legacyLanguage === null ||
-      !LANGUAGES.some(({ code }) => code === legacyLanguage)
-    ) {
-      return false;
-    }
-
-    saveExplicitLanguageChoice(legacyLanguage);
-    return true;
+    return localStorage.getItem(STORAGE_KEY_LANGUAGE_EXPLICIT) === '1';
   } catch {
     return false;
+  }
+}
+
+/**
+ * Return the explicitly selected advertised locale for request propagation.
+ *
+ * i18next may be using a browser-detected language when a User has not made an
+ * explicit choice. Requests must not turn that ambient browser state into a
+ * server-side locale preference, so an absent or invalid stored value is
+ * represented as undefined and left for the Enclave Control Plane's English
+ * fallback.
+ */
+export function getExplicitLanguageChoice(): AdvertisedLocaleCode | undefined {
+  try {
+    // Read the marker directly so request provenance stays tied to an actual
+    // explicit selection, independently of ambient language detection.
+    if (localStorage.getItem(STORAGE_KEY_LANGUAGE_EXPLICIT) !== '1') {
+      return undefined;
+    }
+
+    const storedLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE);
+    if (storedLanguage === null) {
+      return undefined;
+    }
+
+    return advertisedLocaleCodes.includes(
+      storedLanguage as AdvertisedLocaleCode
+    )
+      ? (storedLanguage as AdvertisedLocaleCode)
+      : undefined;
+  } catch {
+    return undefined;
   }
 }

@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../i18n';
 import {
   STORAGE_KEY_LANGUAGE,
   STORAGE_KEY_LANGUAGE_EXPLICIT,
@@ -21,13 +22,15 @@ describe('UserOnboarding', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
+    await i18n.changeLanguage('en');
     vi.unstubAllGlobals();
   });
 
-  it('sends returning users with a saved language preference to email auth', async () => {
+  it('sends returning users with a marked language preference to email auth', async () => {
     localStorage.setItem(STORAGE_KEY_LANGUAGE, 'en');
+    localStorage.setItem(STORAGE_KEY_LANGUAGE_EXPLICIT, '1');
 
     render(
       <MemoryRouter initialEntries={['/login']}>
@@ -42,6 +45,26 @@ describe('UserOnboarding', () => {
       expect(screen.getByText('Email auth ready')).toBeInTheDocument();
     });
     expect(localStorage.setItem).toHaveBeenCalledWith(
+      STORAGE_KEY_LANGUAGE_EXPLICIT,
+      '1'
+    );
+  });
+
+  it('keeps an unmarked cached language in the selection flow', () => {
+    localStorage.setItem(STORAGE_KEY_LANGUAGE, 'es');
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<UserOnboarding />} />
+          <Route path="/auth" element={<div>Email auth ready</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.queryByText('Email auth ready')).not.toBeInTheDocument();
+    expect(localStorage.setItem).not.toHaveBeenCalledWith(
       STORAGE_KEY_LANGUAGE_EXPLICIT,
       '1'
     );

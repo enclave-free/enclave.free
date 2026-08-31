@@ -25,11 +25,6 @@ import {
 import { PageShell } from '../components/ui';
 import { cx } from '../components/ui/utils';
 
-interface Step {
-  title: string;
-  body: string;
-}
-
 interface SummaryCard {
   title: string;
   body: string;
@@ -62,36 +57,8 @@ const summaryCardClassName = cx(
 const infoCardClassName =
   'rounded-2xl bg-surface-raised p-5 shadow-sm ring-1 ring-border/70';
 
-const quickSteps: Step[] = [
-  {
-    title: 'Sign in as admin',
-    body: 'Use the admin NIP-07 key. Keep it private.',
-  },
-  {
-    title: 'Set the basics',
-    body: 'Name the instance, choose the look, and set the assistant identity.',
-  },
-  {
-    title: 'Define your users',
-    body: 'Create user types, onboarding questions, and approval rules.',
-  },
-  {
-    title: 'Add trusted knowledge',
-    body: 'Upload documents and add vetted resources.',
-  },
-  {
-    title: 'Test before launch',
-    body: 'Chat as a user, review feedback, then invite real people.',
-  },
-];
-
-const safetyBasics = [
-  'Admins sign in with NIP-07. Users sign in with email magic links.',
-  'User fields are encrypted by default. Only plaintext fields can be shared with chat.',
-  'Secrets stay masked unless you share them for the current admin session.',
-  'Sage confirms configuration changes with you in chat, then applies supported changes directly.',
-  'Deployment Settings store desired runtime values. Operators still export env and restart services when needed.',
-];
+const quickSteps = [0, 1, 2, 3, 4] as const;
+const safetyBasics = [0, 1, 2, 3, 4] as const;
 
 export function AdminGuides() {
   const { t } = useTranslation();
@@ -558,21 +525,21 @@ export function AdminGuides() {
         )}
       >
         <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {quickSteps.map((step, index) => (
+          {quickSteps.map((stepIndex) => (
             <li
-              key={step.title}
+              key={`adminGuides.quickSteps.${stepIndex}`}
               className="rounded-2xl bg-surface-raised p-5 shadow-sm ring-1 ring-border/70"
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-sm font-semibold tabular-nums text-accent ring-1 ring-accent/15">
-                  {index + 1}
+                  {stepIndex + 1}
                 </span>
                 <h3 className="text-balance text-base font-semibold text-text">
-                  {t(`adminGuides.quickSteps.${index}.title`, step.title)}
+                  {t(`adminGuides.quickSteps.${stepIndex}.title`)}
                 </h3>
               </div>
               <p className="mt-3 text-pretty text-sm leading-6 text-text-secondary">
-                {t(`adminGuides.quickSteps.${index}.body`, step.body)}
+                {t(`adminGuides.quickSteps.${stepIndex}.body`)}
               </p>
             </li>
           ))}
@@ -663,9 +630,9 @@ export function AdminGuides() {
             </p>
           </div>
           <ul className="grid gap-3">
-            {safetyBasics.map((item, index) => (
+            {safetyBasics.map((itemIndex) => (
               <li
-                key={item}
+                key={`adminGuides.safety.directItems.${itemIndex}`}
                 className="flex items-start gap-3 rounded-2xl bg-surface p-4 text-sm leading-6 text-text-secondary ring-1 ring-border/60"
               >
                 <CheckCircle2
@@ -673,7 +640,7 @@ export function AdminGuides() {
                   aria-hidden="true"
                 />
                 <span className="text-pretty">
-                  {t(`adminGuides.safety.directItems.${index}`, item)}
+                  {t(`adminGuides.safety.directItems.${itemIndex}`)}
                 </span>
               </li>
             ))}

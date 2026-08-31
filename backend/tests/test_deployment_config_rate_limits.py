@@ -314,6 +314,17 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertGreaterEqual(body["summary"]["warnings"], 1)
 
         items_by_key = {item["key"]: item for item in body["items"]}
+        for item in items_by_key.values():
+            self.assertEqual(
+                item["label_key"],
+                f"adminDeployment.readiness.{item['key']}.label",
+            )
+            self.assertTrue(item["summary_key"].startswith("adminDeployment.readiness."))
+            self.assertTrue(item["summary_key"].endswith(".summary"))
+            self.assertTrue(item["next_action_key"].startswith("adminDeployment.readiness."))
+            self.assertTrue(item["next_action_key"].endswith(".nextAction"))
+            self.assertIsInstance(item["summary_values"], dict)
+            self.assertIsInstance(item["next_action_values"], dict)
         self.assertEqual(items_by_key["verifiable_inference"]["severity"], "warning")
         self.assertEqual(items_by_key["verifiable_inference"]["source"], "inference_verification")
         self.assertEqual(items_by_key["verifiable_inference"]["status"], "deferred_missing")
@@ -362,6 +373,11 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(lifecycle_item["label"], "Data Lifecycle Review")
         self.assertEqual(lifecycle_item["severity"], "warning")
         self.assertIn("1 unsupported Deployment Surface", lifecycle_item["summary"])
+        self.assertEqual(
+            lifecycle_item["summary_key"],
+            "adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.summary",
+        )
+        self.assertEqual(lifecycle_item["summary_values"], {"count": 1})
 
     def test_deployment_readiness_reports_current_verifiable_inference_as_ready(self) -> None:
         from datetime import datetime, timezone

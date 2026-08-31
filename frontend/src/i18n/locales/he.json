@@ -22,7 +22,8 @@
       "title": "מה מתאר אותך הכי טוב?",
       "description": "בחר את האפשרות המתאימה ביותר לצרכיך",
       "loadError": "טעינת סוגי המשתמשים נכשלה. אנא נסה שוב.",
-      "selectionLabel": "בחירת סוג משתמש"
+      "selectionLabel": "בחירת סוג משתמש",
+      "errorLabel": "שגיאה בטעינת סוג המשתמש"
     },
     "language": {
       "selectLabel": "בחר שפה",
@@ -65,7 +66,8 @@
       "encryptionBody": "שדות הפרופיל מוצפנים כברירת מחדל, אך מנהל המופע הזה שולט בהגדרות ברמת השדה ועשוי לאפשר לנתונים נבחרים להישמר או להיות משותפים בצורה שונה.",
       "adminControlNotice": "הטיפול בנתונים נקבע על ידי מנהל המופע הזה, כולל מה שעשוי להישמר ללא הצפנה או להיות משותף עם כלי AI.",
       "noWarrantyNotice": "תוכנת Enclave מסופקת כמות שהיא ללא אחריות. השימוש במופע זה כפוף למדיניות המנהל.",
-      "retentionNotice": "זמני שמירת נתונים ומחיקתם נקבעים על ידי מנהל מופע זה. צור עמם קשר לבקשות גישה, תיקון או מחיקה."
+      "retentionNotice": "זמני שמירת נתונים ומחיקתם נקבעים על ידי מנהל מופע זה. צור עמם קשר לבקשות גישה, תיקון או מחיקה.",
+      "errorLabel": "שגיאה בבקשת הקישור המהיר (Magic link)"
     },
     "verify": {
       "verifying": "מאמתים את הקישור שלך...",
@@ -125,20 +127,28 @@
       "databaseName": "מסד נתונים",
       "knowledgeGraph": "שאילתה לגרף הידע",
       "config": "תצורה",
-      "configName": "תצורה"
+      "configName": "תצורה",
+      "knowledgeSearch": "חיפוש במסמכים שהועלו ובנתוני ידע",
+      "knowledgeSearchName": "ידע",
+      "curatedResources": "מצא משאבי הפניה שאושרו על ידי המנהל וארגונים מהימנים",
+      "curatedResourcesName": "משאבים"
     },
     "documentScope": {
       "title": "בסיסי ידע",
       "description": "בחר מקורות לכלול בהקשר",
       "noSources": "אין מקורות זמינים",
       "clearAll": "נקה הכל",
-      "docsLabel": "מסמכים"
+      "docsLabel": "מסמכים",
+      "clearAllSelectedAria": "נקה את כל המסמכים שנבחרו",
+      "docsLabelWithCount": "מסמכים {{count}}"
     },
     "messages": {
       "searching": "מחפש \"{{term}}\"...",
       "searchingPrefix": "מחפש",
       "searchResults": "חיפשתי \"{{term}}\" עבורך:",
-      "newConversation": "שיחה חדשה"
+      "newConversation": "שיחה חדשה",
+      "copy": "העתק הודעה",
+      "copied": "ההודעה הועתקה"
     },
     "code": {
       "copy": "העתק",
@@ -157,7 +167,178 @@
       "roleUser": "אתה",
       "roleAssistant": "עוזר",
       "footer": "יוצא מ-{{instanceName}}",
-      "exportedOn": "יוצא ב-{{timestamp}}"
+      "exportedOn": "יוצא ב-{{timestamp}}",
+      "copiedExportNotice": "ייצוא זה יוצא מאחסון המוצר הפעיל ונמצא מחוץ למחזור חיי האחסון הפעיל (Active Storage Lifecycle) לאחר ההורדה."
+    },
+    "new": "צ'אט חדש",
+    "listTitle": "צ'ט",
+    "contextTitle": "הקשר",
+    "messageActions": "פעולות הודעה",
+    "actions": {
+      "stop": "עצור תגובה",
+      "stopDisabled": "אין תגובה לעצור.",
+      "regenerate": "צור תגובה מחדש",
+      "edit": "ערוך הודעה",
+      "waitForResponse": "המתן לסיום התגובה הנוכחית תחילה.",
+      "startConversation": "התחל או המשך שיחה תחילה.",
+      "resolveConfirmation": "פתור את אישור השינוי הממתין לפני שינוי ההיסטוריה."
+    },
+    "composerContextAria": "הקשר הכתיבה",
+    "sessions": {
+      "ariaLabel": "סשנים של צ'אט",
+      "current": "צ'אט נוכחי",
+      "empty": "ריק",
+      "messageCount_one": "{{count}} הודעה",
+      "messageCount_two": "{{count}} הודעות",
+      "messageCount_other": "{{count}} הודעות",
+      "deleteConfirmTitle": "למחוק את \"{{title}}\"?",
+      "rename": "שנה שם ל-{{title}}",
+      "delete": "מחק את {{title}}",
+      "resumeInvalid": "לא ניתן לטעון את השיחה.",
+      "renameEmpty": "נדרש כותרת לשיחה.",
+      "renameError": "לא ניתן לשנות את שם השיחה.",
+      "deleteError": "לא ניתן למחוק את השיחה.",
+      "loading": "טוען צ'אטים...",
+      "error": "לא ניתן לטעון צ'ט",
+      "saved": "צ'אט נשמר",
+      "deleteConfirmBody": "פעולה זו תסיר את השיחה השמורה ואת זיכרון הסשן שלה.",
+      "deleteCancel": "בטל מחיקת שיחה",
+      "cancel": "ביטול",
+      "deleteConfirm": "מחק שיחה",
+      "deleteDeleting": "מוחק...",
+      "renameInput": "כותרת השיחה",
+      "renameCancel": "בטל שינוי שם שיחה",
+      "renameSave": "שמור כותרת שיחה",
+      "renameSaving": "משנה שם...",
+      "open": "פתח סשנים של צ'אט",
+      "close": "סגור סשנים של צ'אט"
+    },
+    "currentChatAria": "צ'אט נוכחי",
+    "newFromCurrent": "התחל צ'אט חדש",
+    "documentsContextTitle": "מסמכים",
+    "errors": {
+      "requestLabel": "שגיאה בבקשת צ'אט"
+    },
+    "trace": {
+      "finalizing": "מסיים עיבוד תגובה...",
+      "collapse": "צמצם",
+      "expand": "הרחב",
+      "reasoning": "הסבר לוגי",
+      "thinking": "חשיבה",
+      "transcript": "תמליט {{label}}",
+      "reasoningSummaryAria": "סיכום הסבר לוגי",
+      "reasoningTranscriptAria": "תמליט הסבר לוגי",
+      "label": "עקבות (Trace)",
+      "toolCalls": "קריאות כלים",
+      "retrieval": "שליפה",
+      "input": "קלט",
+      "output": "פלט",
+      "retrievedSource": "מקור שנשלף",
+      "score": "ציון {{score}}",
+      "optionalDetailsAria": "פרטים אופציונליים של {{label}}"
+    },
+    "conversationMessagesAria": "הודעות שיחה",
+    "conversationSurfaceAria": "משטח שיחה",
+    "conversationThreadAria": "שרשור שיחה",
+    "activity": {
+      "label": "פעילות",
+      "summaryAria": "סיכום פעילות",
+      "detailsAria": "פרטי פעילות",
+      "timelineAria": "ציר זמן פעילות",
+      "show": "הצגת פעילות",
+      "hide": "הסתר פעילות",
+      "showOptional": "הצגת פרטים אופציונליים",
+      "hideOptional": "הסתר פרטים אופציונליים",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "בוצעה ניסיון קריאה ל-{{toolName}}.",
+        "retry": "מנסה שוב את הכלי לאחר ניסיון {{attempt}}.",
+        "running": "הכלי פועל.",
+        "completed": "הכלי הושלם.",
+        "guarded": "הכלי היה תחת הגנה.",
+        "failed": "הכלי נכשל.",
+        "rejected": "קריאת הכלי נדחתה.",
+        "timedOut": "פסק הזמן של הכלי עבר.",
+        "knowledgeSearch": {
+          "title": "חיפוש ידע"
+        },
+        "webSearch": {
+          "title": "חיפוש באינטרנט"
+        },
+        "curatedResources": {
+          "title": "משאבים שנבחרו"
+        },
+        "adminConfig": {
+          "title": "הגדרות מנהל"
+        },
+        "databaseQuery": {
+          "title": "שאילתת מסד נתונים"
+        }
+      },
+      "status": {
+        "running": "מבצע",
+        "succeeded": "הצליח",
+        "failed": "נכשל",
+        "guarded": "מוגן",
+        "timed_out": "פסק זמן עבר",
+        "rejected": "נדחה"
+      },
+      "toolSelection": {
+        "title": "בחירת כלים",
+        "failed": "בחירת הכלים נכשלה לפני שנרשמה בחירה ניתנת לשימוש.",
+        "partialFailure": "חלק מבחירות הכלים של המודל נדחו.",
+        "noneSelected": "לא נבחרו כלים.",
+        "selected": "נבחרו: {{selectedTools}}."
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "בקשת מודל",
+          "summary": "בקשת מודל: {{elapsedMs}} מילישניות."
+        },
+        "providerFirstEventWait": {
+          "title": "המתנה לאירוע הראשון של הספק",
+          "summary": "המתנה לאירוע הראשון של הספק: {{elapsedMs}} מילישניות."
+        },
+        "toolExecution": {
+          "title": "ביצוע כלי",
+          "summary": "ביצוע כלי: {{elapsedMs}} מילישניות."
+        },
+        "resourceDirectoryLookup": {
+          "title": "חיפוש בספריית משאבים",
+          "summary": "חיפוש בספריית משאבים: {{elapsedMs}} מילישניות."
+        },
+        "retrieval": {
+          "title": "שליפה",
+          "summary": "שליפה: {{elapsedMs}} מילישניות."
+        },
+        "retryDelay": {
+          "title": "השהיית ניסיון חוזר",
+          "summary": "השהיית ניסיון חוזר: {{elapsedMs}} מילישניות."
+        },
+        "totalTurn": {
+          "title": "סבב כולל",
+          "summary": "זמן תור כולל: {{elapsedMs}} מילישניות."
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "לא נמצאו קטעים רלוונטיים ממסמכים שהועלו.",
+        "retrieved": "שליפת {{count}} קטעים ממסמכים שהועלו עבור התשובה."
+      },
+      "webSearch": {
+        "prepared": "תוצאות חיפוש באינטרנט הוכנו עבור התשובה ({{count}})."
+      },
+      "curatedResources": {
+        "noAdditional": "לא נמצאו משאבים מאויתים נוספים.",
+        "noMatches": "לא נמצאו משאבים מאויתים המתאימים לבקשה זו.",
+        "returned": "הוחזרו {{count}} מתוך {{totalCount}} משאבים מאויתים."
+      },
+      "adminConfig": {
+        "completed": "פעולת הגדרת מנהל {{toolId}} הושלמה ({{outcome}}). הגדרות ששונו: {{changedSettings}}."
+      },
+      "databaseResultsRedacted": "תוצאות מסד הנתונים הוסרו מהמעקב (redacted).",
+      "databaseQuery": {
+        "rejected": "שאילתת מסד הנתונים נדחתה."
+      }
     }
   },
   "common": {
@@ -197,7 +378,17 @@
     "retry": "נסה שוב",
     "saved": "נשמר",
     "sending": "שולח...",
-    "gotIt": "הבנתי"
+    "gotIt": "הבנתי",
+    "send": "שלח",
+    "backToAdminDashboard": "חזרה ללוח הבקרה של המנהל",
+    "loadingPage": "טוען דף",
+    "pageLoadError": "טעינת הדף נכשלה. נא לרענן.",
+    "export": "ייצוא",
+    "reset": "איפוס",
+    "exit": "יציאה",
+    "none": "ללא",
+    "all": "הכל",
+    "warning": "אזהרה"
   },
   "settings": {
     "title": "הגדרות",
@@ -220,8 +411,23 @@
       "deploymentConfig": "הגדרות פריסה",
       "deploymentConfigDesc": "שירותים, SMTP, אחסון",
       "userConfig": "תצורת משתמש",
-      "userConfigDesc": "סוגי משתמשים ושאלות קליטה"
-    }
+      "userConfigDesc": "סוגי משתמשים ושאלות קליטה",
+      "guidedSetup": "הגדרה מונחית",
+      "guidedSetupDesc": "מעבר שלב אחר שלב דרך ההגדרה, מסמכים, משאבים ובדיקות.",
+      "guides": "מדריכי מנהל",
+      "guidesDesc": "הבנת מה המנהלים מגדירים ואיפה.",
+      "testUserSession": "בדיקת סשן משתמש",
+      "testUserSessionDesc": "צ'אט כמשתמש מדמה וסקירת משוב בטא.",
+      "diagnostics": "אבחון",
+      "diagnosticsDesc": "הרץ בדיקות smoke בזמן חקירת תקלות.",
+      "resourceDirectory": "ספריית משאבים",
+      "resourceDirectoryDesc": "ניהול ידני של משאבי הפניה מהימנים."
+    },
+    "diagnostics": "אבחון",
+    "adminWorkflows": "תהליכי עבודה למנהל",
+    "settingsSection": "הגדרות",
+    "dataAndContent": "נתונים ותוכן",
+    "operations": "פעולות"
   },
   "admin": {
     "confirmDelete": "האם אתה בטוח שברצונך למחוק רשומה זו?",
@@ -249,6 +455,7 @@
       "addUserType": "הוסף סוג משתמש",
       "onboardingFields": "שדות הרשמת משתמשים",
       "optionsCount_one": "אפשרות {{count}}",
+      "optionsCount_two": "{{count}} אפשרויות",
       "optionsCount_other": "{{count}} אפשרויות",
       "noFields": "אין שדות מותאמים אישית",
       "addField": "הוסף שדה",
@@ -263,7 +470,12 @@
       "instanceSectionTitle": "הגדרות מופע",
       "onboardingFieldsHint": "צור את השאלות שהמשתמשים עונים עליהן במהלך תהליך ההצטרפות.",
       "userSectionDesc": "הגדר סוגי משתמשים ואת השאלות שהמשתמשים עונים עליהן במהלך תהליך ההצטרפות.",
-      "userSectionTitle": "תצורת משתמש"
+      "userSectionTitle": "תצורת משתמש",
+      "fieldScopeFilterLabel": "סנן שאלות לפי סוג משתמש",
+      "noFieldsForScope": "אין שאלות הרלוונטיות לסוג משתמש זה עדיין.",
+      "reorderNeedsAllScope": "הצג את כל השאלות כדי לשנות את סדרן",
+      "fieldScopeGlobalHint": "שאלות שכל משתמש עונה עליהן, ללא קשר לסוגו.",
+      "fieldScopeTypeHint": "כל מה שמשתמש מסוג זה נשאל: השאלות הגלובליות שכולם עונים עליהן, בתוספת השאלות הייחודיות לו."
     },
     "database": {
       "backToSetup": "חזרה להגדרות מנהל",
@@ -294,10 +506,13 @@
       "clickToExpand": "לחץ להרחבה",
       "pagination": "מציג {{from}} עד {{to}} מתוך {{total}}",
       "tableCount_one": "טבלה {{count}}",
+      "tableCount_two": "{{count}} טבלאות",
       "tableCount_other": "{{count}} טבלאות",
       "rowCount_one": "שורה {{count}}",
+      "rowCount_two": "{{count}} שורות",
       "rowCount_other": "{{count}} שורות",
       "rowsInTable_one": "שורה {{count}} ב-{{table}}",
+      "rowsInTable_two": "{{count}} שורות ב-{{table}}",
       "rowsInTable_other": "{{count}} שורות ב-{{table}}",
       "connected": "SQLite מחובר",
       "selectTable": "בחר טבלה מסרגל הצד",
@@ -348,7 +563,14 @@
       "nip07Unavailable": "לא זוהתה הרחבת Nostr",
       "plaintextFieldIcon": "שדה טקסט רגיל",
       "primaryKeyIcon": "מפתח ראשי",
-      "unlockDecryption": "פתיחת נעילת פענוח"
+      "unlockDecryption": "פתיחת נעילת פענוח",
+      "safeQueryResults": "תוצאות שאילתה בטוחות",
+      "queryError": "שגיאת שאילתה",
+      "writeResult": "תוצאת כתיבה למסד הנתונים",
+      "emptyQueryResult": "תוצאת שאילתה ריקה",
+      "readOnly": "קריאה בלבד",
+      "tableLoadError": "שגיאה בטעינת טבלה",
+      "readOnlyHint": "עריכות ישירות במסד הנתונים מבוטלות; השתמש בתהליכי מנהל מבוקרים כדי לבצע שינויים."
     },
     "fields": {
       "nameRequired": "שם השדה הוא חובה",
@@ -438,7 +660,11 @@
       "removeFieldFailed": "הסרת שדה נכשלה",
       "reorderFailed": "שינוי סדר השדה נכשל",
       "loadUsersFailed": "טעינת המשתמשים נכשלה",
-      "updateTypeFailed": "כשל בעדכון סוג משתמש"
+      "updateTypeFailed": "כשל בעדכון סוג משתמש",
+      "loadSettingsFailed": "טעינת הגדרות נכשלה",
+      "externalConfigConflict": "Sage או מנהל אחר שינו את ההגדרות הללו בזמן שעבדת על העריכה. רענן את הדף לפני השמירה כדי לא לדרוס ערכים חדשים יותר.",
+      "externalSettingsConflict": "Sage או מנהל אחר שינו את ההטדרות הללו בזמן שעבדת על העריכה. רענן את הדף לפני השמירה.",
+      "externalUserConfigConflict": "Sage או מנהל אחר שינו את סוגי המשתמשים או את שאלות ה-Onboarding בזמן שעבדת על העריכה. רענן את הדף לפני שמירת הטיוטה."
     },
     "userMigration": {
       "title": "העברת סוג משתמש",
@@ -473,7 +699,10 @@
       "emailEncryptedHint": "אימייל (מוצפן)",
       "nameEncryptedHint": "שם (מוצפן)",
       "noUsersHint": "נסה לשנות את המסנן למעלה או לרענן.",
-      "pubkeyPresent": "מפתח ציבורי של Nostr קיים"
+      "pubkeyPresent": "מפתח ציבורי של Nostr קיים",
+      "usersErrorLabel": "שגיאת משתמשים במיגרציית סוג משתמש",
+      "errorLabel": "שגיאה במיגרציית סוג משתמש",
+      "summaryLabel": "סיכום מיגרציית סוג משתמש"
     },
     "configAssistant": {
       "openAria": "פתח את עוזר הניהול",
@@ -511,8 +740,40 @@
         "restartRequiredFor": "נדרשת הפעלה מחדש עבור: {{keys}}.",
         "restartRequiredNo": "נדרשת הפעלה מחדש: לא.",
         "restartCheckFailedHttp": "בדיקת צורך בהפעלה מחדש נכשלה (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "בדיקת צורך בהפעלה מחדש נכשלה (שגיאת רשת)."
-      }
+        "restartCheckFailedNetwork": "בדיקת צורך בהפעלה מחדש נכשלה (שגיאת רשת).",
+        "pageRefreshRecommended": "רענן דף זה כדי לראות עדכוני ערכת נושא."
+      },
+      "onboardingWelcome": "ברוכים הבאים — בואו נגדיר את המרחב שלכם. ענו על כמה שיותר מהשאלות הבאות בהודעה אחת (סמנו אותן במספרים, ודלגו על כל דבר שאינכם בטוחים לגביו):\n\n1. **שם** — איך כדאי לקרוא למרחב הזה? (מופיע בכותרת ובכרטיסיית הדפדפן)\n2. **תיאור** — משפט אחד על המטרה שלו (הערה פרטית, לא מוצגת למשתמשים)\n3. **שם העוזר** — איך כדאי לקרוא לעוזר ה-AI?\n4. **צבע דגש** — צבע ההדגשה לכפתורים וקישורים (שם כמו כחול/טורקיז, או קוד hex כמו #3B82F6)\n5. **ערכת נושא** — בהיר, כהה, או מערכת (התאמה למכשיר)?\n6. **שפת ברירת מחדל** — למשל, אנגלית או ספרדית (אופציונלי)\n7. **סלוגן** — שורה קצרה לכותרת (אופציונלי)\n8. **משתמשים חדשים** — לאפשר להם להיכנס מיד, או לאשר כל אדם בנפרד?\n9. **סוגי משתמשים** — אילו סוגי משתמשים (שאינם מנהלים) ישתמשו במרחב זה? (למשל: מורה ותלמיד) — אני אצור כל אחד עבורכם\n\nדוגמה: \"9. מורה ותלמיד\". אני אשמור הכל בשלב אחד — ותוכלו לעבור להגדרה ידנית בכל עת.",
+      "collapseSidebar": "צמצם את סרגל הצד של העוזר",
+      "expandSidebar": "פתח את סרגל הצד של עוזר המנהל",
+      "resize": "שנה את גודל פאנל עוזר המנהל",
+      "railLabel": "עוזר",
+      "shareSecretsHint": "כבוי כברירת מחדל. יש להפעיל תחילה את כלי ה-Config. כאשר הוא מופעל, ערכי הגדרת פריסת סודות (secret deployment) נחשפים בצד הלקוח ונשלחים ל-Sage עבור תהליך אב-טיפוס זה.",
+      "applyIntentUsePanel": "השתמש בפאנל השינויים הממתינים למטה ולחץ על Apply כדי לאשר עדכוני הגדרות אלו.",
+      "applyIntentNoPending": "אין שינויי הגדרות ממתינים ליישום. בקש מהעוזר להציע סט שינויים תחילה.",
+      "startNewConversation": "התחל שיחה חדשה עם העוזר",
+      "reducedContextNoticeLabel": "הודעה על הקטנת הקשר (context)",
+      "sessionMemoryNoticeLabel": "הודעה על דחיסת זיכרון הפעלה (Session Memory)",
+      "sessionMemoryNotice": "הקשר ישן יותר תומצת כדי להמשיך בשיחה זו.",
+      "reducedContextNotice": "חלק מההקשר הופחת כדי להתאים למכסת ספק המודל ({{sections}}). התשובות עשויות להיות פחות מלאות עד שתתחיל שיחה חדשה עם העושר.",
+      "reducedContextSections": {
+        "recentConversation": "היסטוריית שיחה אחרונה"
+      },
+      "approvalCardTitle": "אישור שינויי קונפיגורציה",
+      "applying": "מחיל",
+      "applied": "הוחל",
+      "rejected": "נדחה",
+      "failed": "נכשל",
+      "superseded": "הוחלף",
+      "hideDetails": "הסתר פרטים",
+      "reviewDetails": "סקירת פרטים",
+      "reject": "דחה",
+      "approve": "אשר",
+      "applyErrorLabel": "שגיאת החלת קונפיגורציה",
+      "onboardingTitle": "צ'אט הגדרה מונחה",
+      "onboardingContext": "שיחת הגדרה ממוקדת",
+      "directShareSecretsHint": "אופציונלי: כלול ערכי סוד פריסה (deployment secrets) שמורים בהקשר של שיחה זו. קריאת סודות ישירה אינה דורשת זאת.",
+      "directWritePrompt": "שאל לגבי קונפיטגורציית מנהל. Sage יכול לבחון הגדרות ולאחר אישור מולך בשיחה, להחיל שינויים נתמכים באופן ישיר."
     },
     "reachout": {
       "badgeDefault": "ברירת מחדל",
@@ -679,7 +940,16 @@
       "typographyTitle": "טיפוגרפיה",
       "userIconLabel": "אייקון משתמש",
       "userLabelLabel": "תווית משתמש",
-      "userLabelPlaceholder": "לדוגמה, אתה"
+      "userLabelPlaceholder": "לדוגמה, אתה",
+      "publicEmailDisplayNameLabel": "שם תצוגה ציבורי עבור האימייל (אופציונלי)",
+      "publicEmailDisplayNameHint": "משמש באימיילים של כניסה באמצעות magic-link. השאר ריק כדי להשתמש בשם ה-Instance.",
+      "defaultsTitle": "ברירת מחדל של ה-Instance",
+      "defaultsDesc": "הגדר את שפת הבסיס והערכת הנושא (theme) שישמשו לפני החלת בקרות דפדפן מקומיות.",
+      "defaultLanguageLabel": "שפת ברירת מחדל",
+      "defaultThemeLabel": "ערכת נושא ברירת מחדל",
+      "themeSystem": "מערכת",
+      "themeLight": "בהיר",
+      "themeDark": "כהה"
     },
     "userConfig": {
       "subtitle": "הגדר סוגי משתמשים ואת השאלות שהמשתמשים עונים עליהן במהלך תהליך ההצטרפות.",
@@ -687,6 +957,55 @@
       "typeDescription": "תיאור",
       "typeIcon": "אייקון סוג",
       "typeName": "שם הסוג"
+    },
+    "userApproval": {
+      "updateFailed": "עדכון אישור המשתמש נכשל.",
+      "approvedUser": "משתמש #{{id}} אושר.",
+      "revokedUser": "משתמש #{{id}} הוחזר למצב ממתין.",
+      "title": "אישור משתמשים",
+      "subtitle": "בחרו האם משתמשים מאומתים חדשים יוכלו להיכנס לצ'אט באופן מיידי או שימתינו לאישור מנהל.",
+      "requireManualLabel": "דרישת אישור ידני למשתמשים חדשים",
+      "requireManualHint": "כאשר האפשרות מופעלת, משתמשים חדשים יופנו למסך המתנה עד שניהול יאשר אותם.",
+      "loadingHint": "טוען...",
+      "saveButton": "שמירת אישור משתמשים",
+      "savedCalloutLabel": "אישור משתמשים נשמר",
+      "errorCalloutLabel": "שגיאה באישור משתמשים",
+      "pendingTitle": "אישורים ממתינים",
+      "pendingCount_zero": "{{count}} משתמשים זקוקים לאישור לפני גישה לצ'אט.",
+      "pendingCount_one": "משתמש {{count}} זקוק לאישור לפני גישה לצ'אט.",
+      "pendingCount_two": "{{count}} משתמשים זקוקים לאישור לפני גישה לצ'אט.",
+      "pendingCount_few": "{{count}} משתמשים זקוקים לאישור לפני גישה לצ'אט.",
+      "pendingCount_many": "{{count}} משתמשים זקוקים לאישור לפני גישה לצ'אט.",
+      "pendingCount_other": "{{count}} משתמשים זקוקים לאישור לפני גישה לצ'אט.",
+      "nonePending": "אין משתמשים הממתינים לאישור.",
+      "actionSavedCalloutLabel": "אישור משתמשים עודכן",
+      "actionErrorCalloutLabel": "עדכון אישור משתמשים נכשל",
+      "loadingUsers": "טוען משתמשים...",
+      "emptyState": "משתמשים חדשים הממתינים לאישור יופיעו כאן כאשר נדרש אישור ידני.",
+      "emailOnFile": "אימייל במערכת",
+      "nameOnFile": "שם במערכת",
+      "approveButton": "אשר",
+      "revokeButton": "בטל אישור"
+    },
+    "userRosterExport": {
+      "auditFailed": "לא ניתן היה לבצע ביקורת לייצוא רשימת המשתמשים. הגיליון לא הורד.",
+      "decryptUnavailable": "נדרשת תוסף דפדפן עם פענוח NIP-04 כדי להכין רשימה זו.",
+      "decryptFailed": "לא ניתן היה לפענח ערך רשימה מוצפן. לא נוצר גיליון.",
+      "prepared": "הרשימה המלאה מוכנה. ההורדה זמינה כעת.",
+      "prepareRequired": "יש להכין את הרשימה הנוכחית לפני ההורדה.",
+      "prepareButton": "הכנת רשימת משתמשים",
+      "downloadButton": "הורדת רשימה מוכנה",
+      "success": "גיליון רשימת המשתמשים הורד.",
+      "failed": "הייצוא של רשימת המשתמשים נכשל.",
+      "button": "ייצא משתמשים",
+      "successLabel": "ייצוא רשימת המשתמשים מוכן",
+      "errorLabel": "ייצוא רשימת המשתמשים נכשל"
+    },
+    "userIdentity": {
+      "decrypting": "מפענח שם/אימייל...",
+      "decryptFailed": "לא ניתן היה לפענח את השם/אימייל",
+      "unlockDetails": "פתח נעילה כדי להציג שם/אימייל",
+      "unlockButton": "פתח פרטים"
     }
   },
   "adminOnboarding": {
@@ -711,7 +1030,9 @@
     "legalResponsibilityNotice": "אתה אחראי להגדרה חוקית, גילוי מידע למשתמשים ומדיניות טיפול בנתונים עבור מופע זה.",
     "extracted": {
       "change_language_789b14": "שנה שפה"
-    }
+    },
+    "statusError": "בדיקת סטטוס המופע נכשלה",
+    "connectionError": "החיבור נכשל"
   },
   "errors": {
     "requestFailed": "הבקשה נכשלה",
@@ -745,11 +1066,228 @@
     "adminSessionExpired": "פג תוקף הפעילות של המנהל",
     "authenticationFailed": "האימות נכשל",
     "noNostrExtension": "לא נמצא תוסף Nostr",
-    "exportFailed": "הייצוא נכשל"
+    "exportFailed": "הייצוא נכשל",
+    "failedToRetryDeletionTombstone": "נכשל ניסיון חוזר למחיקת tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "נכשל אישור של משטח פריסה לא נתמך",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "נכשל אישור של קטגוריית משטח פריסה לא נתמכת",
+    "failedToPreviewRetention": "נכשל תצוגה מקדימה של מדיניות שמירת נתונים",
+    "failedToUpdateRetentionPolicy": "נכשל עדכון מדיניות שמירת נתונים",
+    "failedToRunScheduledRetention": "נכשל הרצת שמירת נתונים מתוזמנת",
+    "failedToUpdateArtifactEncryptionPosture": "נכשל עדכון מצב הצפנת ארטיפקטים",
+    "queryExecutionFailed": "ביצוע השאילתה נכשל"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "מנהלים יכולים"
+    },
+    "summary": {
+      "brand": {
+        "title": "מיתוג המופע",
+        "body": "שם, לוגו, ערכת נושא, זהות העוזר ותצוגת אימייל ציבורי."
+      },
+      "people": {
+        "title": "ניהול משתמשים",
+        "body": "סוגי משתמשים, שאלות קליטה, אישורים, הגירה וגישה."
+      },
+      "agent": {
+        "title": "עיצוב Sage",
+        "body": "חוקי פרומפט, הגדרות תגובה, גישה למסמכים וערכי ברירת מחדל של כלים."
+      },
+      "launch": {
+        "title": "השקה בטוחה",
+        "body": "אימייל, דומיינים, CORS, HTTPS, ניתוב מודלים, תקינות וסביבת זמן ריצה."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "מותג",
+        "title": "זהות ומראה",
+        "body": "הפוך את המופע (instance) למזוהה עם הארגון שלך.",
+        "detail1": "שם, סלוגן, שם העוזר ותווית משתמש.",
+        "detail2": "לוגו, favicon, אייקון, צבע דגש, ערכת נושא, טיפוגרפיה וסגנון צ'אט.",
+        "detail3": "שפת ברירת מחדל ושם תצוגה עבור אימייל ציבורי.",
+        "link": "פתח הגדרות מופע"
+      },
+      "people": {
+        "eyebrow": "גישה",
+        "title": "אנשים וגישה",
+        "body": "קבע מי יכול להשתמש במופע ומה תבקש מהם.",
+        "detail1": "סוגי משתמשים עבור קבוצות כמו צוות, חברים או לקוחות.",
+        "detail2": "שדות קליטה (onboarding), שאלות חובה, אפשרויות, placeholders ושדות לפי סוג.",
+        "detail3": "אישור ידני, הגירת משתמשים, ביטול גישה ומחיקה.",
+        "link": "פתח הגדרות משתמש"
+      },
+      "agent": {
+        "eyebrow": "התנהגות",
+        "title": "התנהגות הסוכן",
+        "body": "עצב את האופן שבו Sage עונה ואילו כלים פעילים כברירת מחדל.",
+        "detail1": "תבנית פרומפט, כללי התנהגות, נושאים אסורים והגדרות תגובה.",
+        "detail2": "ברירת מחדל עבור כלי Knowledge, Resources, Web, Config ו-Database.",
+        "detail3": "הגדרות גלובליות בתוספת דריסות לפי סוג משתמש.",
+        "link": "פתח הגדרות סוכן"
+      },
+      "docs": {
+        "eyebrow": "ידע",
+        "title": "ידע ממסמכים",
+        "body": "ספק לסוכן חומר מקור שהוא יוכל לחפש.",
+        "detail1": "העלה קובצי PDF, מדיניות, שאלות נפוצות (FAQs), מדריכים וספרים.",
+        "detail2": "המסמכים מפורקים (chunked), עוברים embedding והופכים לניתנים לחיפוש.",
+        "detail3": "Document Access שולט במה שניתן לבחור או להפעיל כברירת מחדל.",
+        "link": "פתח העלאת מסמכים"
+      },
+      "resources": {
+        "eyebrow": "מקורות",
+        "title": "מקורות מאומתים",
+        "body": "הוסף הפניות אמינות שהסוכן יוכל להמליץ עליהן.",
+        "detail1": "שמות, תיאורים, סוג משאב, שפות, כיסוי וסוגי עזרה.",
+        "detail2": "טלפון, אימייל, URL, ערוץ מאובטח, כתובת והערות.",
+        "detail3": "משאבים מאומתים מדורגים ראשונים. משאבים בארכיון נשארים מוסתרים מהמשתמשים.",
+        "link": "פתח ספריית משאבים"
+      },
+      "ops": {
+        "eyebrow": "תפעול",
+        "title": "תפעול וזמן ריצה",
+        "body": "שמור על המופע מחובר, נגיש ותקין.",
+        "detail1": "SMTP עבור קישורי אימייל קסומים, דומיינים, CORS, HTTPS וכתובות URL ציבוריות.",
+        "detail2": "ספק מודל, מודל embedding, חיפוש, אחסון ותקינות שירות.",
+        "detail3": "ייצוא משתני סביבת runtime, מוכנות, הגדרות לא מעודכנות והגירת מפתח מנהל.",
+        "link": "פתח הגדרות פריסה"
+      },
+      "title": "מה מנהלים מגדירים",
+      "body": "אלו ממשקי הבקרה העיקריים. ניתן להשתמש בדפים ישירות או לבקש מעוזר המנהל להכין שינויים."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "שאל",
+        "title": "עוזר מנהל",
+        "body": "שאל שאלות לגבי ההגדרה הנוכחית ובקש שינויי קונפיגורציה.",
+        "detail1": "קריאת קונפיגורציה בודקת את מצב המופע האמיתי במקום לנחש.",
+        "detail2": "שינויים מוצעים מועברים לשלב בדיקה.",
+        "detail3": "פעולת Apply מריצה את נקודות הקצה המאושרות של המנהל ללא צורך בתור מודל נוסף.",
+        "link": "פתח עוזר מנהל",
+        "directWriteDetail2": "Sage מבקש אישור בשיחה לפני פעולת כתיבה נתמכת.",
+        "directWriteDetail3": "לאחר שתאשר, Sage מפעיל את כלי הקונפיגורציה הישירים שלו ומדווח על התוצאה האמיתית."
+      },
+      "guided": {
+        "eyebrow": "התחל",
+        "title": "הגדרה מונחית",
+        "body": "השתמש בצ'אט מונחה אחד כדי ליצור הגדרה ראשונית מועילה.",
+        "detail1": "זהות, עוזר, שפה, מדיניות גישה, סוגי משתמשים, שאלות וכללי התנהגות.",
+        "detail2": "לאחר מכן העלה מסמכים, הוסף משאבים ובצע בדיקה.",
+        "link": "פתח הגדרה מונחית"
+      },
+      "test": {
+        "eyebrow": "אמת",
+        "title": "בדיקה ומשוב",
+        "body": "נסה את הסוכן מנקודת מבט של משתמש לפני ההשקה.",
+        "detail1": "בחר סוג משתמש, התחל סשן בדיקה, ושמור את הניסיון.",
+        "detail2": "סקור לוגים מוצפנים של גרסת בטא ודרג תשובות.",
+        "link": "פתח סשן משתמש לבדיקה"
+      },
+      "database": {
+        "eyebrow": "בדיקה",
+        "title": "סייר מסדי נתונים",
+        "body": "בדוק נתוני SQLite שמורים בזמן ניפוי שגיאות.",
+        "detail1": "השתמש בשאילתות SELECT לקריאה בלבד לצורך בדיקה.",
+        "detail2": "אל תשתמש בזה כנתיב לשינוי נתוני המוצר.",
+        "link": "פתח סייר מסדי נתונים"
+      },
+      "title": "תהליכי עבודה נפוצים למנהלים",
+      "body": "השתמש בהם בזמן ההגדרה, בדיקת האיכות, או חקירת נתונים."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "זמן ריצה",
+        "title": "זמן ריצה של שיחה אחת",
+        "body": "Knowledge, Resources, Web, Config, ו-Database הם סטים של כלים גלויים, ולא מערכות צ'אט נפרדות.",
+        "detail1": "המודל יכול להפעיל כלים פעילים כאשר הם מסייעים.",
+        "detail2": "Config ו-Database מופיעים רק עבור מנהלים שאושרו בשרת."
+      },
+      "auth": {
+        "eyebrow": "התחברות",
+        "title": "נתיבי התחברות שונים",
+        "body": "מנהלים משתמשים ב-NIP-07. משתמשים משתמשים בקישורי קסם (magic links) באימייל.",
+        "detail1": "מפתחות פרטיים של מנהלים נשארים ב-browser signer.",
+        "detail2": "SMTP חייב לעבוד לפני שקישורי קסם למשתמשים יעבדו בייצור."
+      },
+      "data": {
+        "eyebrow": "פרטיות",
+        "title": "גבולות נתונים חשובים",
+        "body": "שדות פרופיל מוצפנים נשארים מחוץ להקשר הצ'אט.",
+        "detail1": "רק שדות לא מוצפנים יכולים להיות מסומנים עבור הקשר צ'אט AI.",
+        "detail2": "סודות פריסה (Deployment secrets) נשמרים מוצפנים ומוצגים מוסתרים כברירת מחדל."
+      },
+      "ops": {
+        "eyebrow": "תפעול",
+        "title": "שינויים מסוימים דורשים מפעילים",
+        "body": "האפליקציה יכולה לשמור הגדרות זמן ריצה רצויות; היא אינה מאתחלת שירותים בשקט.",
+        "detail1": "ייצא את runtime env לאחר שינויים ב-provider, origin, CORS, או search.",
+        "detail2": "השתמש ב-readiness ובבריאות השירות כדי לאשר מה באמת רץ."
+      },
+      "title": "עובדות מוצר שכדאי לזכור",
+      "body": "הכללים הללו שומרים על הגדרה אמינה ומונעים חריגות לא מכוונות."
+    },
+    "ask": {
+      "prompt1": "מה עדיין חסר לפני שהמופע (instance) הזה יהיה מוכן למשתמשים?",
+      "prompt2": "סקור את סוגי המשתמשים הנוכחיים, שאלות ההצטרפות, התיעוד והמשאבים.",
+      "prompt3": "הכן שינויים לבדיקה: הגדר את טון העוזר ואת שפת ברירת המחדל.",
+      "title": "דברים טובים לשאול את עוזר המנהל",
+      "body": "בקש סקירה לפני שאתה מבקש שינויים. הוא יכול לבדוק את ההגדרה ולהכין סט שינויים.",
+      "directWriteBody": "בקש מ-Sage לבדוק או לשנות הגדרות נתמכות. הוא יאשר איתך את השינוי המיועד לפני הכתיבה.",
+      "directWritePrompt3": "הגדר את טון העוזר ואת שפת ברירת המחדל, ואשר איתי את השינוי המיועד תחילה."
+    },
+    "hero": {
+      "eyebrow": "מפת בקרת מנהל",
+      "shortVersion": {
+        "title": "גרסה קצרה",
+        "body": "מנהלים מגדירים את הזהות, המשתמשים, הידע, הכלים והגדרות ההפעלה. שינויי runtime מסוימים עדיין דורשים הפעלה מחדש של המפעיל."
+      }
+    },
+    "title": "מדריכי מנהל",
+    "subtitle": "מפה פשוטה של מה שמנהלים מגדירים, מה המוצר יכול לעשות, ומה דורש זהירות לפני ההשקה.",
+    "quickStart": {
+      "title": "מתחילים כאן",
+      "body": "בצע קודם כל את ההגדרות הקטנות והמועילות. שכלל אותן לאחר בדיקה עם שאלות אמיתיות."
+    },
+    "safety": {
+      "title": "יסודות הבטיחות",
+      "body": "מנהלים שולטים בגישה, בנתונים, בהתנהגות ובהגדרות runtime. התקדם בזהירות עם שינויים מסוכנים.",
+      "items": {
+        "0": "מנהלים מתחברים באמצעות NIP-07. משתמשים מתחברים באמצעות קישורי קסם באימייל.",
+        "1": "שדות משתמש מוצפנים כברירת מחדל. רק שדות בטקסט גלוי (plaintext) ניתנים לשיתוף עם הצ'אט.",
+        "2": "סודות יישארו מוסתרים אלא אם תשתף אותם עבור סשן המנהל הנוכחי.",
+        "3": "שינויי עוזר הם הצעות. אתה עדיין סוקר ולוחץ על 'החל'.",
+        "4": "הגדרות פריסה (Deployment Settings) שומרות את ערכי ה-runtime הרצויים. מפעילים עדיין מייצאים env ומפעילים שירותים מחדש בעת הצורך."
+      },
+      "directItems": {
+        "0": "מנהלים מתחברים באמצעות Nly-07. משתמשים מתחברים באמצעות קישורי קסם באימייל.",
+        "1": "שדות משתמש מוצפנים כברירת מחדל. רק שדות בטקסט גלוי (plaintext) ניתנים לשיתוף עם הצ'אט.",
+        "2": "סודות יישארו מוסתרים אלא אם תשתף אותם עבור סשן המנהל הנוכחי.",
+        "3": "Sage מאשר שינויי הגדרות איתך בצ'אט, ואז מחיל שינויים נתמכים ישירות.",
+        "4": "הגדרות פריסה (Deployment Settings) שומרות את ערכי ה-runtime הרצויים. מפעילים עדיין מייצאים env ומפענים שירותים מחדש בעת הצורך."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "התחבר כמנהל",
+        "body": "השתמש במפתח NIP-07 של המנהל. שמור עליו פרטי."
+      },
+      "1": {
+        "title": "הגדר את היסודות",
+        "body": "תן שם למופע (instance), בחר מראה, והגדר את זהות העוזר."
+      },
+      "2": {
+        "title": "הגדר את המשתמשים שלך",
+        "body": "צור סוגי משתמשים, שאלות קליטה וכללי אישור."
+      },
+      "3": {
+        "title": "הוסף ידע מהימן",
+        "body": "העלה מסמכים והוסף משאבים מאומתים."
+      },
+      "4": {
+        "title": "בדוק לפני ההשקה",
+        "body": "צ'אט כמשתמש, סקור משוב, ואז הזמן אנשים אמיתיים."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1324,55 @@
     "securityStep3Primary": "הרץ אימות הגדרות",
     "securityStep3Secondary": "סקור נתונים מאוחסנים",
     "user": "תצורת משתמש",
-    "userDesc": "הגדר סוגי משתמשים ושאלות קליטה"
+    "userDesc": "הגדר סוגי משתמשים ושאלות קליטה",
+    "subtitleSimple": "בחר היכן תרצה לעבוד במופע (instance) זה.",
+    "workflowsSectionLabel": "תהליכי עבודה למנהל",
+    "adminAssistant": "עוזר מנהל",
+    "adminAssistantDesc": "השתמש בצ'אט המנהל לקבלת עזרה בהגדרה ובסקירת שינויים.",
+    "guidedSetup": "הגדרה מונחית",
+    "guidedSetupDesc": "עבור בתהליך ההגדרה, המסמכים, המשאבים והבדיקות.",
+    "guides": "מדריכי מנהל",
+    "guidesDesc": "הבנת מה מנהלים מגדירים ואיפה.",
+    "testUserSession": "בדיקת סשן משתמש",
+    "testUserSessionDesc": "צ'אט כמשתמש מדמה וסקירת לוגים שמורים של גרסת בטא.",
+    "aiSetupTitle": "הגדרה באמצעות עוזר ה-AI",
+    "aiSetupBody": "תן לעוזר לאסוף את הפרטים הבסיסיים לשם והגדרה של המופע שלך במעבר אחד. ניתן לעבור להגדרה ידנית בכל עת.",
+    "aiSetupAction": "התחל הגדרה מונחית",
+    "readinessTitle": "מוכנות לפריסה",
+    "readinessDesc": "סקור מוכנות לפני הזמנת משתמשים. בדוק חסמים, אזהרות, שינויים הדורשים הפעלה מחדש ומצב שחזור במקום אחד.",
+    "readinessPrimary": "פתח סקירת מוכנות",
+    "firstRunPathTitle": "מסלול הרצה ראשונה למנהל",
+    "firstRunStep1Title": "הגדר בסיס (baseline) למופע",
+    "firstRunStep1Body": "הגדר מיתוג, שפה, ערכת נושא, שדות משתמש והגדרות Agent לפני הסקירה.",
+    "firstRunStep1Action": "פתח הגדרות מופע",
+    "firstRunStep2Title": "סקור מוכנות לפריסה",
+    "firstRunStep2Body": "בדוק חסמים, אזהרות, שינויים הדורשים הפעלה מחדש ומצב שחזור לפני הזמנת משתמשים.",
+    "firstRunStep2Action": "פתח אשף פריסה",
+    "firstRunStep3Title": "השתמש באבחון רק בזמן חקירה",
+    "firstRunStep3Body": "שמור את בדיקות ה-smoke והאבחונים נגישים מבלי להפוך אותם למסלול המוצר העיקרי.",
+    "firstRunStep3Action": "פתח אבחון",
+    "instanceDescSimple": "שם, זהות אימייל ציבורית, ערכת נושא ובקרת מיתוג.",
+    "aiDescSimple": "פרומפטים, התנהגות מודל וערכי ברירת מחדל למסמכים.",
+    "deploymentDescSimple": "הגדרות זמן ריצה, מצב תקינות ופרטי מוכנות.",
+    "resources": "ספריית משאבים",
+    "resourcesDesc": "ניהול עורכים של עורכי דין אמינים, ארגונים ללא כוונת רווח (NGOs) ומשאבי הפניה",
+    "resourcesDescSimple": "ניהול ידני של משאבי הפניה אמינים.",
+    "testFeedback": "בדיקה ומשוב",
+    "testFeedbackDesc": "צ'אט כמשתמש בדיקה ודירוג תשובות לשיפור ההגדרה שלך",
+    "diagnosticsSectionLabel": "אבחון",
+    "operationsSectionLabel": "פעולות",
+    "testDashboard": "אבחון",
+    "testDashboardDesc": "הפעלת בדיקות smoke פיתוח ובדיקת מודולי אבחון",
+    "testDashboardDescSimple": "הפעלת בדיקות smoke בעת חקירת בעיה.",
+    "iaChecklistTitle": "צ'קליסט סקירת ארכיטקטורת מידע למנהלים",
+    "iaChecklistBody": "שמירה על הפרדה בין הגדרות פריסה, הגדרות מופע, הגדרות סוכן, מוכנות למחזור חיים, מוכנות פריסה וממשקי אבחון במהלך סקירה אנושית.",
+    "humanReviewTitle": "העברה לסקירה אנושית",
+    "humanReviewStatus": "נדרש תמיכה בפריסה מועדפת (White-glove)",
+    "humanReviewBody": "החלת סביבת זמן ריצה נשארת מפורשת: ייצוא ארטיפקטים, החלתם עם תמיכת מפעיל, הפעלה מחדש של שירותים מושפעים ואימות ראיות מוכנות.",
+    "humanReviewAction": "סקירת מוכנות פריסה",
+    "settingsSectionLabel": "הגדרות",
+    "userManager": "מנהל משתמשים",
+    "userManagerDesc": "סקירת משתמשים, בדיקת סטטוס, ייצוא רשימות ואישור גישה."
   },
   "adminAI": {
     "title": "הגדרות AI",
@@ -871,7 +1457,18 @@
       "userInfoPlaceholder": "{user_info} — מוחלף בשדות הפרופיל של המשתמש הנוכחי, אם זמינים"
     },
     "revert": "שחזר",
-    "revertToGlobal": "שחזר לגלובלי"
+    "revertToGlobal": "שחזר לגלובלי",
+    "knowledgeSearchDisabledLabel": "חיפוש ידע כבוי",
+    "knowledgeSearchDisabledMessage": "מסמכים ברירת מחדל פעילים לא ישמשו עד ש'מקורות ידע' יוגדרו למסמכי ברירת מחדל נבחרים או לכל המסמכים הזמינים.",
+    "assembledPromptOutput": "פלט הנחיה (prompt) מורכב",
+    "saveError": "שמירה נכשלה",
+    "revertError": "ביטול נכשל",
+    "toggleError": "החלפת מצב נכשלה",
+    "loadErrorLabel": "שגיאה בטעינת הגדרות סוכן",
+    "previewErrorLabel": "שגיאה בתצוגה מקדימה של הגדרות סוכן",
+    "documentToggleErrorLabel": "שגיאה בהחלפת מסמך בהגדרות סוכן",
+    "documentDefaultsHintV2": "מסמכים המסומנים כ\"זמינים\" יכולים לשמש בחיפוש ידע. מסמכים המסומנים כ\"פעילים כברירת מחדל\" נכללים כאשר מקורות ידע מוגדרים למסמכי ברירת מחדל נבחרים.",
+    "externalChangeConflict": "Sage או מנהל אחר שינו את ההגדרה הזו בזמן שעבדת על עריכתה. בטל את הפעולה ופתח מחדש את העורך לפני השמירה."
   },
   "adminDeployment": {
     "title": "הגדרות פריסה",
@@ -969,7 +1566,9 @@
       "unknown": "לא ידוע",
       "usersMigrated": "משתמשים הועברו",
       "usersToMigrate": "משתמשים להעברה",
-      "warning": "זוהי פעולה מתקדמת. העברה שגויה עלולה לנעול אותך מנתונים מוצפנים. המשך רק אם אתה מבין את ההשלכות."
+      "warning": "זוהי פעולה מתקדמת. העברה שגויה עלולה לנעול אותך מנתונים מוצפנים. המשך רק אם אתה מבין את ההשלכות.",
+      "inputWarningLabel": "אזהרת הגירת מפתח Admin",
+      "destructiveWarningLabel": "אזהרת הרס בגיחת מפתח Admin"
     },
     "revealFailed": "נכשל בחשיפת הערך. בדוק את חיבור הרחבת Nostr שלך.",
     "searchHelp": {
@@ -1000,7 +1599,8 @@
       "overviewDesc": "הגדרות אבטחה שולטות באימות, ניהול סשנים וקיצורי פיתוח. ברירות המחדל מוגדרות לפיתוח מקומי.",
       "overviewNote": "בייצור, ודא שדגלי הסימולציה כבויים וש-FRONTEND_URL תואם לדומיין האמיתי שלך.",
       "overviewTitle": "סקירת אבטחה",
-      "overviewWhen": "סקור הגדרות אלו לפני פריסה לשרת הפונה לציבור."
+      "overviewWhen": "סקור הגדרות אלו לפני פריסה לשרת הפונה לציבור.",
+      "devNote": "השתמש ב-MOCK_EMAIL לבדיקת אימייל מקומית; סשנים של משתמש ו-admin עדיין דורשים תהליך אימות רגיל."
     },
     "sslHelp": {
       "ariaLabel": "עזרה בהגדרת SSL ו-HTTPS",
@@ -1101,7 +1701,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "תיקיית העלאות",
       "vector_database_eb5526": "מסד נתונים וקטורי"
-    }
+    },
+    "exportSageRuntimeEnv": "ייצוא סביבת Sage",
+    "readiness": {
+      "title": "מוכנות לפריסה",
+      "statusTitle": "מוכנות לפריסה: {{status}}",
+      "description": "בדוק את הראיות הנדרשות לפני שפריסת מופע יחיד (Single-Instance Deployment) זו תהיה מוכנה לפעולה רגילה.",
+      "openWizard": "פתח סקירת מוכנות",
+      "blockerCount": "{{count}} חסמים",
+      "warningCount": "{{count}} אזהרות",
+      "readyCount": "{{count}} מוכנים",
+      "empty": "טרם קיימות בדיקות מוכנות לפריסה.",
+      "conversationBlocking": "חוסם שיחות רגילות",
+      "blocker": "חסם",
+      "warning": "אזהרה",
+      "ready": "מוכן",
+      "reviewInferenceVerification": "בדיקת אימות הסקה (Inference)",
+      "reviewDataLifecycleStatus": "בדיקת סטטוס מחזור חיי נתונים",
+      "reviewDeploymentValidation": "בדיקת הגדרות פריסה",
+      "reviewRestartRequired": "בדיקת דרישת הפעלה מחדש",
+      "reviewOperationalReadiness": "בדיקת מוכנות תפעולית",
+      "reviewServiceHealth": "בדיקת תקינות השירות",
+      "reviewRuntimeEnv": "בדיקת ייצוא סביבת Runtime",
+      "deployment_settings_validation": {
+        "label": "אימות הגדרות פריסה",
+        "status": {
+          "invalid": {
+            "summary": "באימות הגדרות הפריסה יש שגיאות שיש לתקן.",
+            "nextAction": "בדוק את שגיאות אימות הגדרות הפריסה."
+          },
+          "warnings": {
+            "summary": "באימות הגדרות הפריסה קיימות אזהרות.",
+            "nextAction": "בדוק את אזהרות אימות הגדרות הפריסה."
+          },
+          "valid": {
+            "summary": "באימות הגדרות הפריסה אין שגיאות או אזהרות.",
+            "nextAction": "אין צורך בפעולה."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "הסקה ניתנת לאימות",
+        "status": {
+          "current": {
+            "summary": "לספק המודל שהוגדר יש רשומת אימות הסקה עדכנית.",
+            "nextAction": "אין צורך בפעולה. בדוק את רשומת אימות ההסקה הנוכחית כאשר טענות הספק משתנות."
+          },
+          "deferred_missing": {
+            "summary": "הסקה מוצפנת וניתנת לאימות אינה מאומתת כרגע עבור ספק המודל שהוגדר.",
+            "nextAction": "הגדר ספק מודל נתמך והרץ אימות הסקה לפני שתוכם את מוכנות הפריסה כסיום."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "בדיקת מחזור חיי נתונים",
+        "status": {
+          "needs_review": {
+            "summary": "בדיקת מחזור חיי נתונים דורשת בדיקת מנהל.",
+            "nextAction": "בדוק את מצב מחזור חיי האחסון הפעיל ורשום את בדיקת מחזור חיי הנתונים."
+          },
+          "stale": {
+            "summary": "בדיקת מחזור חיי הנתונים הרשומה אינה מעודכנת לאחר שינוי מחזור חיים נתמך.",
+            "nextAction": "בדוק את מצב מחזור חיי האחסון הפעיל הנוכחי ורשום בדיקת מחזור חיי נתונים חדשה."
+          },
+          "reviewed": {
+            "summary": "סקירת מחזור חיי הנתונים הושלמה.",
+            "nextAction": "אין צורך בפעולה אלא אם מצב מחזור החיים הנתמך ישתנה."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "אישורי משטח פריסה",
+        "status": {
+          "acknowledged": {
+            "summary": "קטגוריות משטח פריסה שאינן נתמכות אושרו.",
+            "nextAction": "אין צורך בפעולה."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — קטגוריות משטח פריסה שאינן נתמכות דורשות אישור מפעיל.",
+            "nextAction": "עבור על קטגוריות משטח הפריסה המופיעות ברשימה ואשר כל אחת מהן לפני שתתייחס למוכנות הפריסה כסיום המשימה."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "תרגול גיבוי ושחזור",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "נדרש תיעוד עדכני של תרגול גיבוי ושחזור על ידי המפעיל.",
+            "nextAction": "בצע ותעד תרגול גיבוי ושחזור עבור פריסה זו."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "נדרש הפעלה מחדש",
+        "status": {
+          "current": {
+            "summary": "לא חלו שינויים בהגדרות פריסה הדורשות הפעלה מחדש מאז הפעלת השירות.",
+            "nextAction": "אין צורך בפעולה."
+          },
+          "restart_required": {
+            "summary": "הגדרות פריסה הדורשות הפעלה מחדש השתנו לאחר הפעלת השירות. ({{changedSettings}})",
+            "nextAction": "החל את הגדרות הפריסה הרצויות והפעל מחדש את השירותים המושפעים לפני שתתייחס אליהם כעדכניים."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "קונפיגורציית Sage Runtime",
+        "status": {
+          "not_generated": {
+            "summary": "סביבת Sage runtime טרם הופקה מהגדרות הפריסה.",
+            "nextAction": "ייצא את סביבת Sage runtime לפני שתתייחס להגדרות הפריסה ככאלו שהוחלו על Sage."
+          },
+          "matches_desired": {
+            "summary": "קונפיגורציית Sage runtime הפעילה תואמת להגדרות הפריסה הרצויות.",
+            "nextAction": "אין צורך בפעולה."
+          },
+          "drifted": {
+            "summary": "קונפיגורציית Sage runtime הפעילה שונה מהגדרות הפריסה הרצויות.",
+            "nextAction": "בדוק את חוסר ההתאמה בקונפיגורציית Sage runtime, החל את סביבת Sage שהופקה, והפעל מחדש את Sage."
+          },
+          "current": {
+            "summary": "סביבת Sage runtime הופקה מהגדרות הפריסה הנוכחיות.",
+            "nextAction": "אין צורך בפעולה אלא אם הארטיפקט שהופק טרם הוחל בפריסה."
+          },
+          "stale": {
+            "summary": "הגדרות הפריסה השתנו לאחר הפקת סביבת Sage runtime.",
+            "nextAction": "ייצא סביבת Sage runtime חדשה והחל אותה דרך מסלול הפעלה מחדש של הפריסה."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "קונפיגורציית Core Backend Runtime",
+        "status": {
+          "not_generated": {
+            "summary": "סביבת core-backend runtime טרם הופקה מהגדרות הפריסה.",
+            "nextAction": "ייצא את סביבת core-backend runtime לפני שתתייחס להגדרות הפריסה ככאלו שהוחלו על core-backend."
+          },
+          "matches_desired": {
+            "summary": "קונפיגורציית core-backend runtime הפעילה תואמת להגדרות הפריסה הרצויות.",
+            "nextAction": "אין צורך בפעולה."
+          },
+          "drifted": {
+            "summary": "קונפיגורציית core-backend runtime הפעילה שונה מהגדרות הפריסה הרצויות.",
+            "nextAction": "בדוק סטיית הגדרות runtime של core-backend, החל את סביבת ה-core-backend שנוצרה, והפעל מחדש את core-backend."
+          },
+          "current": {
+            "summary": "סביבת ה-runtime של core-backend נוצרה מתוך הגדרות ה-Deployment הנוכחיות.",
+            "nextAction": "אין צורך בפעולה, אלא אם הארטיפקט שנוצר לא הוחל ב-Deployment."
+          },
+          "stale": {
+            "summary": "הגדרות ה-Deployment שונו לאחר יצירת סביבת ה-runtime של core-backend.",
+            "nextAction": "ייצא סביבת runtime חדשה של core-backend והחל אותה דרך תהליך הפעלה מחדש של ה-Deployment."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "אשף Deployment",
+      "step": "שלב {{current}} מתוך {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "מוכנות תפעולית",
+      "description": "בדוק תרגילי גיבוי, שחזור, ניטור והתאוששות לפני תחילת פעילות רגילה."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — מפתח ה-Tinfoil API שלך עבור ה-proxy המקומי.",
+      "apiKeyLabel": "מפתח Tinfoili API",
+      "ariaLabel": "עזרה בהגדרות ה-runtime של Sage",
+      "exampleConfig": "דוגמה להגדרה",
+      "goToPage": "עבור לעמוד",
+      "sageExtra": "הגדר את LLM_API_KEY למפתח ה-Tinfoil שלך מכתובת {{tinfoilSignupUrl}}. ה-stack ממפה אותו ל-Sage ול-Tinfoil proxy המקומי.",
+      "sageHint": "פרוטוטייפ זה מנתב תעבורת Agent Runtime דרך Sage ו-Tinfoil. LLM_API_KEY הוא המפתח הקנוני של ספק המודל.",
+      "modelField": "TINFOIL_MODEL — מזהה מודל Tinfoil ש-Sage צריך להשתמש בו (לדוגמה: glm-5-2).",
+      "overviewDesc": "פרוטוטייפ זה משתמש ב-Sage כ-Agent Runtime ציבורי וב-Tinfoil כטרנספורט של ספק המודל. הגדר את ספק המודל דרך הגדרות Deployment של LLM_*; ה-stack ממפה אותם ל-Tinfoil runtime של Sage.",
+      "overviewTitle": "סקירת Sage Runtime",
+      "providerField": "LLM_PROVIDER — יש להגדיר כ-\"sage\" עבור פרוטוטייפ זה."
+    },
+    "inferenceVerification": {
+      "current": "נוכחי",
+      "missing": "חסר",
+      "expired": "פג תוקף",
+      "failed": "נכשל",
+      "success": "הצלחה",
+      "statusLoadFailed": "טעינת סטטוס אימות inference נכשלה",
+      "historyLoadFailed": "טעינת היסטוריית אימות inference נכשלה",
+      "loadFailed": "טעינת אימות inference נכשלה",
+      "manualFailed": "אימות ידני נכשל",
+      "manualSucceeded": "אימות ידני הצליח",
+      "detailLoadFailed": "טעינת פרטי האישור נכשלה",
+      "ariaLabel": "אימות הסקה",
+      "title": "אימות הסקה",
+      "summary": "ראיות למנהלים בלבד לכך שההסקה המוגנת רצה על ספק המודל המצופה.",
+      "verifyNow": "אמת עכשיו",
+      "status": "סטטוס",
+      "checkedAt": "נבדק ב-",
+      "expiresAt": "פג תוקף ב-",
+      "expectedClaims": "טענות מצופות",
+      "expectedClaimsValue": "טענות מצופות: {{fingerprint}}",
+      "providerClaims": "טענות ספק",
+      "provider": "ספק",
+      "model": "מודל",
+      "endpoint": "נקודת קצה",
+      "history": "היסטוריית אימות",
+      "emptyHistory": "אין רשומות אימות עדיין.",
+      "recordTitle": "רשומה מס' {{id}}",
+      "inspectAttestation": "בדיקת אישור",
+      "fullAttestation": "חומר אישור מלא"
+    },
+    "lifecycle": {
+      "notStarted": "טרם החל",
+      "notConfigured": "לא הוגדר",
+      "plaintextByOperatorChoice": "Plaintext לפי בחירת המפעיל",
+      "allTombstones": "הכל",
+      "allTombstonesLabel": "כל ה-tombstones",
+      "incompleteTombstonesFilter": "לא הושלמו",
+      "incompleteTombstonesLabel": "tombstones לא הושלמו",
+      "completedTombstonesFilter": "הושלמו",
+      "completedTombstonesLabel": "tombstones הושלמו",
+      "title": "סטטוס מחזור חיי נתונים",
+      "description": "כיסוי פרטיות נוכחי בשליטת המפעיל על נתוני המופע.",
+      "scopeExcludes": "לא כולל: {{excludes}}",
+      "secureEraseStatus": "מחיקה מאובטחת: {{status}}",
+      "readinessStatus": "מוכנות מחזור חיים: {{status}}",
+      "readinessNonBlocking": "שיחות משתמשים אינן נחסמות על ידי אזהרות מוכנות מחזור חיים בגרסה v1.",
+      "readinessStaleReason": "סיבה: {{reason}}",
+      "contentEncryptionKey": "מפתח הצפנת תוכן: {{status}}",
+      "artifactEncryptionPosture": "מצב הצפנת ארטיפקטים: {{status}}",
+      "artifactPostureLabel": "מצב הצפנת ארטיפקטים",
+      "artifactPostureRequired": "נדרש",
+      "artifactPostureDisabled": "כבוי",
+      "retentionSchedulerStatus": "מתזמן שמירת מידע: {{status}}",
+      "schedulerObservation": "תצפית: {{status}}",
+      "schedulerEnabledClasses": "מחלקות פעילות במתזמן: {{classes}}",
+      "schedulerLastRunStatus": "סטטוס הרצה אחרונה: {{status}}",
+      "schedulerLastRun": "הרצה אחרונה: {{trigger}} על ידי {{actor}}",
+      "previewRetention": "תצוגה מקדימה של שמירת מידע",
+      "runScheduledRetention": "הפעלת הרצה מתוזמנת",
+      "previewRetentionResult": "תצוגה מקדימה: {{conversations}} שיחות, {{artifacts}} ארטיפקטים של מסמכים, {{skipped}} מחלקות שהושמטו.",
+      "scheduledRetentionResult": "הרצה מתוזמנת: {{status}} עם {{retries}} ניסיונות חוזרים של tombstone.",
+      "scheduledRetentionStatus": "מחלקות מתוזמנות: {{classes}}",
+      "auditCoverageStatus": "כיסוי ביקורת: {{audited}} נבדקו, {{exceptions}} חריגות, {{missing}} חסרים.",
+      "owner": "בעלים: {{owner}}",
+      "deletion": "מחיקה: {{status}}",
+      "retention": "שמירת מידע: {{status}}",
+      "audit": "ביקורת: {{status}}",
+      "confidentiality": "סודיות: {{status}}",
+      "incompleteTombstones": "tombstones לא הושלמו: {{count}}",
+      "completedTombstones": "tombstones הושלמו: {{count}}",
+      "retentionEnabled": "פעיל",
+      "retentionWindow": "חלון זמן",
+      "retentionDays": "ימים",
+      "scheduledEnforcement": "מתוזמן",
+      "saveRetentionPolicy": "שמירת מדיניות",
+      "empty": "סטטוס מחזור חיים אינו זמין.",
+      "retentionPolicySaveFailed": "לא ניתן לשמור את מדיניות השמירה.",
+      "retentionPreviewFailed": "לא ניתן להציג תצוגה מקדימה של השמירה.",
+      "scheduledRetentionFailed": "לא ניתן להריץ את השמירה המתוזמנת.",
+      "artifactPostureFailed": "לא ניתן לעדכן את מצב הצפנת הארטיפקט.",
+      "unsupportedSurfacesTitle": "משטחי פריסה לא נתמכיםים",
+      "unsupportedSurfacesDescription": "עקבות תפעוליים אלו נחשפים כאן אך נותרים מחוץ לשליטה של מחזור חיי המוצר.",
+      "unsupportedSurfaceAckFailed": "לא ניתן לעדכן את האישור.",
+      "acknowledgedSurface": "אושר",
+      "acknowledgeSurface": "אשר",
+      "tombstonesTitle": "סימני מחיקה (Tombstones)",
+      "tombstonesDescription": "נסה שוב מחיקות מחזור חיים לא הושלמו מבלי לחשוף תוכן שנמחק.",
+      "tombstoneStatusFilter": "מסנן סטטוס סימני מחיקה",
+      "tombstoneRetryFailed": "הניסיון החוזר נכשל.",
+      "tombstonesFetchFailed": "לא ניתן לטעון סימני מחיקה.",
+      "tombstoneClass": "מחלקה: {{className}}",
+      "tombstoneSource": "מקור: {{source}}",
+      "tombstoneRetries": "ניסיונות חוזרים: {{count}}",
+      "tombstoneUpdated": "עודכן: {{updated}}",
+      "retryTombstoneLabel": "נסה שוב מחיקת סימן {{id}}",
+      "retry": "נסה שוב",
+      "tombstonesEmpty": "אין סימני מחיקה הממתינים לניסיון חוזר."
+    },
+    "runtimeEnv": {
+      "unknown": "לא ידוע",
+      "title": "התאמת הגדרות זמן ריצה",
+      "description": "משווה בין הגדרות פריסה רצויות, סביבת Sage שנוצרה, ומצב ריצה גלוי.",
+      "desired": "רצוי",
+      "configuredKeys": "{{count}} מתוך {{total}} מפתחות הוגדרו",
+      "generated": "נוצר",
+      "exportedAt": "יצא ב-{{time}}",
+      "notExported": "לא נרשמה יצוא של סביבת Sage",
+      "running": "רץ",
+      "runningUnknown": "סטטוס ריצה טרם נבדק באופן ישיר.",
+      "coreBackend": "ליבת צד השרת",
+      "coreBackendHint": "התאמת משתני סביבה של ה-Backend",
+      "coreDesired": "מצב ליבה רצוי",
+      "coreConfiguredKeys": "Core backend: {{count}} מתוך {{total}} מפתחות הוגדרו",
+      "coreGenerated": "מצב ליבה שנוצר",
+      "coreNotExported": "לא נרשמה ייצוא של משתני סביבה ב-core backend",
+      "coreRunning": "מצב ליבה פעיל",
+      "coreRunningUnknown": "מצב הריצה של ה-core backend טרם נבדק ישירות.",
+      "coreExportedTitle": "ייצוא משתני סביבה של Core-backend הושלם",
+      "coreSensitiveArtifact": "יש להתייחס ל-core-backend.env כאל חומר פריסה רגיש.",
+      "coreExportDoesNotApply": "ייצוא הארטיפקט אינו משנה את תהליך ה-backend הרץ עד שמפעיל (Operator) יחיל אותו ויפעיל מחדש את core-backend.",
+      "exportedTitle": "ייצוא משתני סביבה של Sage הושלם",
+      "sensitiveArtifact": "יש להתייחס ל-sage.env כאל חומר פריסה רגיש.",
+      "exportDoesNotApply": "ייצוא הארטיקפקט אינו משנה את תהליך Sage הרץ עד שמפעיל (Operator) יחיל אותו ויפעיל מחדש את Sage."
+    },
+    "categorySettingsAria": "הגדרות {{category}}",
+    "exportCoreBackendRuntimeEnv": "ייצוא משתני סביבה של core-backend",
+    "restartCurrent": "אין צורך בהפעלה מחדש",
+    "restartCurrentDesc": "הגדרות פריסה (Deployment) שאינן דורשות הפעלה מחדש השתנו מאז תחילת השירות.",
+    "saveError": "שמירה נכשלה",
+    "openHelpAria": "פתח עזרה עבור {{label}}"
   },
   "upload": {
     "invalidFileType": "סוג קובץ לא חוקי. מותר: {{extensions}}",
@@ -1123,7 +2029,8 @@
       "processing": "מעבד",
       "chunked": "פוצל",
       "complete": "הושלם",
-      "failed": "נכשל"
+      "failed": "נכשל",
+      "completedWithErrors": "הושלם עם שגיאות"
     },
     "chunks": "{{processed}}/{{total}} חלקים",
     "deleteDocument": "מחק מסמך",
@@ -1172,7 +2079,21 @@
     "serverBusy": "השרת עסוק",
     "tryRefresh": "נסה שוב",
     "uploadedSuccess": "הועלה בהצלחה — העיבוד החל",
-    "uploadingStatus": "מעלה לשרת..."
+    "uploadingStatus": "מעלה לשרת...",
+    "uploadError": "העלאה נכשלה",
+    "documentDeletionError": "שגיאה במחיקת מסמך",
+    "navigationWarning": "המסמך שלך עדיין בתהליך העברה. צא רק לאחר שתחילת העיבוד, אחרת ייתכן שההעלאה לא תישמר.",
+    "duplicateInBatch": "שם מסמך כפול בbatch זה",
+    "documentsSelected": "{{count}} מסמכים",
+    "queueSummary": "{{valid}} מוכנים, {{rejected}} דלגו",
+    "skipped": "דלג",
+    "uploadedPartialSuccess": "{{count}} בתור, {{rejected}} דלגו",
+    "chooseFiles": "בחר קבצים",
+    "chooseFolder": "בחר תיקייה",
+    "uploadDocuments": "העלה מסמכים",
+    "replacingDocument": "מחליף את {{filename}}",
+    "recentDocumentsShowing": "מציג {{shown}} מתוך {{total}} מסמכים",
+    "showMore": "הצג עוד"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2135,11 @@
       "description": "הגדר אישורי SSL והגדרות HTTPS",
       "hint": "הגדר הגדרות TLS ו-Proxy בעת הגשה על גבי HTTPS. ברירות המחדל בטוחות לפיתוח מקומי; אפשר HTTPS רק לאחר התקנת האישורים.",
       "label": "SSL ואבטחה"
+    },
+    "llm": {
+      "label": "סביבת הריצה של סוכן Sage",
+      "description": "הגדרת Sage + Tinfoil inference",
+      "hint": "אב-טיפוס זה מנתב תעבורת Agent Runtime דרך Sage ומשתמש ב-Tinfoil כ-Model Provider transport. שינויים דורשים הפעלה מחדש."
     }
   },
   "promptSections": {
@@ -1240,6 +2166,12 @@
       "description": "איך ה-AI מבנה את תגובותיו",
       "hint": "שולט בהעדפות עיצוב כמו האם להשתמש בנקודות תבליט, כותרות או פסקאות שיחה. זה משפיע על אופן הצגת התשובות חזותית.",
       "placeholder": "השתמש בנקודות תבליט לרשימות, כותרות לסעיפים..."
+    },
+    "prompt_system": {
+      "label": "הנחיית מערכת",
+      "description": "זהות ליבה והוראות פעולה עבור ה-AI",
+      "hint": "השתמש בזה עבור זהות העוזר, המשימה, והגבולות העליונים שצריכים לחול לפני הטון, הכללים, הכלים או הקשר המסמכים. שינויים ישפיעו על שיחות חדשות.",
+      "placeholder": "אתה Sage, עוזר פרטי עבור מופע זה..."
     }
   },
   "parameters": {
@@ -1252,6 +2184,11 @@
       "label": "עומק ידע",
       "description": "כמה קטעי מסמכים להתייחס אליהם",
       "hint": "כאשר עונה על שאלות, ה-AI מחפש במסמכים שהעלית ומושך קטעים רלוונטיים. מספרים גבוהים יותר משמעם יותר הקשר אך תגובות איטיות יותר. מספרים נמוכים יותר מהירים יותר אך עשויים לפספס מידע רלוונטי. ברירת מחדל: 5"
+    },
+    "max_tokens": {
+      "label": "מקסימום Tokens",
+      "description": "אורך מקסימלי לכל תגובת AI",
+      "hint": "קובע את אורך התגובה המקסימלי. ערכים נמוכים שומרים על תשובות קצרות ומפחיתים עלויות; ערכים גבוהים מאפשרים הסברים ארוכים יותר. ברירת מחדל: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2196,21 @@
       "label": "חיפוש באינטרנט",
       "description": "אפשר ל-AI לחפש באינטרנט",
       "hint": "כאשר מופעל, ה-AI יכול לחפש באינטרנט מידע עדכני שאינו במסמכים שלך. השבת זאת אם אתה רוצה שתגובות יגיעו רק מבסיס הידע שהעלית."
+    },
+    "knowledgeSource": {
+      "none": "ללא",
+      "selected": "מסמכי ברירת מחדל שנבחרו",
+      "all": "כל המסמכים הזמינים"
+    },
+    "knowledge_source_default": {
+      "label": "מקורות ידע",
+      "description": "בחר אילו מקורות ידע שהועלו פעילים בשיחות משתמש",
+      "hint": "השתמש ב-\"none\" כדי שלא יהיה ידע מועלה כברירת מחדל, ב-\"selected\" עבור מסמכים שסומנו כ\"פעיל כברירת מחדל\", או ב-\"all\" עבור כל המסמכים הזמינים."
+    },
+    "user_default_tool_ids": {
+      "label": "ערכות כלי משתמש",
+      "description": "ערכות כלים הפעילות כברירת מחדל בשיחות משתמש",
+      "hint": "מערך JSON המשתמש בערכים \"curated-resources\", \"knowledge-search\", ו-\"web-search\". Knowledge Search נשלט גם על ידי מקורות ידע."
     }
   },
   "colors": {
@@ -1437,6 +2389,51 @@
       "description": "כתובת URL בסיסית לקריאה חוזרת של Webhook",
       "hint": "כתובת URL בסיסית המשמשת לבניית קריאות חוזרות של Webhook. דוגמה: https://api.example.com/webhooks. ברירת מחדל: http://localhost:8000.",
       "label": "כתובת URL של Webhook"
+    },
+    "LLM_PROVIDER": {
+      "label": "ספק מודל",
+      "description": "תווית Model Provider בצד ה-Python",
+      "hint": "השתמש ב-\"sage\" עבור אב-טיפוס זה. הגדרת פריסה זו תומכת באבחון בצד ה-Python ובמטא-נתוני אימות."
+    },
+    "LLM_MODEL": {
+      "label": "שם המודל",
+      "description": "שם/מזהה מודל",
+      "hint": "מזהה מודל ה-Tinfoil ש-Sage צריך להשתמש בו (למשל, \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "נקודת קצה של API",
+      "description": "כתובת בסיס של ה-Model Provider API",
+      "hint": "כתובת בסיס של Tinfoil proxy. ברירת מחדל: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "מפתח API",
+      "description": "מפתח API של Tinfoil (סודי)",
+      "hint": "השאר ריק כדי לשמור על הגדרות הפריסה (Deployment Settings) בסודיות."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "מגבלת קצב צ'אט",
+      "description": "בקשות צ'אט לדקה",
+      "hint": "מקסימום בקשות /llm/chat לדקה עבור משתמש קבוע, מנהל, token, או כתובת IP של לקוח. דורש הפעלה מחדש. ברירת מחדל: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "מגבלת קצב שאילתות שליפה",
+      "description": "בקשות שאילתת שליפה לדקה",
+      "hint": "מקסימום בקשות /query לדקה עבור משתמש קבוע, token, או כתובת IP של לקוח. דורש הפעלה מחדש. ברירת מחדל: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "מגבלת קצב העלאה",
+      "description": "בקשות העלאת מסמכים לדקה",
+      "hint": "מקסימום בקשות העלאת מסמכים לדקה עבור מנהל קבוע, token, או כתובת IP של לקוח. דורש הפעלה מחדש. ברירת מחדל: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "מגבלת קצב חיפוש וקטורי",
+      "description": "בקשות חיפוש וקטורי לדקה",
+      "hint": "מקסימום בקשות חיפוש וקטורי לדקה עבור משתמש קבוע, token, או כתובת IP של לקוח. דורש הפעלה מחדש. ברירת מחדל: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "מגבלת קצב ייצוא הגדרות",
+      "description": "ייצוא הגדרות פריסה בשעה",
+      "hint": "מקסימום ייצואי .env בשעה עבור סשן מנהל או כתובת IP של לקוח. דורש הפעטלה מחדש. ברירת מחדל: 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2470,11 @@
       "title": "מוכן להתחברות"
     },
     "subtitle": "הגדר את בסיס הידע הפרטי שלך בכמה צעדים.",
-    "title": "ברוך הבא ל-Enclave"
+    "title": "ברוך הבא ל-Enclave",
+    "keySafety": {
+      "title": "השתמש במפתח Nostr ייעודי למופע (Instance)",
+      "body": "אל תשתמש במפתח Nostr האישי שלך. צור או בחר מפתח מנהל ייעודי עבור מופע זה כדי לצמצם סיכוני מעקב ולהפריד את הגישה התפעולית."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2482,8 @@
       "notConfigured": "תכונה זו אינה מוגדרת.",
       "rateLimited": "יותר מדי הודעות. אנא נסה שוב מאוחר יותר.",
       "required": "הודעה נדרשת.",
-      "unavailable": "פנייה אינה זמינה."
+      "unavailable": "פנייה אינה זמינה.",
+      "formErrorLabel": "שגיאה בטופס Reachout"
     },
     "form": {
       "messageLabel": "הודעה",
@@ -1489,7 +2491,8 @@
       "send": "שלח"
     },
     "status": {
-      "success": "תודה. הודעתך נשלחה."
+      "success": "תודה. הודעתך נשלחה.",
+      "successLabel": "Reachout הצליח"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2527,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "ה-backend החזיר שגיאה בעת אימות האימות. זה לא מטופל כהתנתקות.",
       "unable_to_verify_admin_session_5f87b8": "לא ניתן לאמת סשן מנהל",
       "verifying_admin_session_87c53b": "מאמת סשן מנהל..."
-    }
+    },
+    "loadingAssistant": "טוען עוזר מנהל"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2742,332 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— אמת אסימון קישור קסם וקבל מידע סשן (סשן מבוסס עוגיות).",
       "verify_magic_link_token_183cf5": "אמת אסימון קישור קסם",
       "view_all_users_manage_approval_status_and_delete_03feec": "הצג את כל המשתמשים, נהל סטטוס אישור, ומחק משתמשים.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "הצג ועדכן הגדרות תצורה כלל-מופעלות."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "הצג ועדכן הגדרות תצורה כלל-מופעלות.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "בודק קישוריות לנתיב ספק המודל (Model Provider) שהוגדר."
+    },
+    "labels": {
+      "themePreference": "העדפת ערכת נושא",
+      "endpointGuidance": "הנחיות נקודת קצה (Endpoint)",
+      "healthResponseOutput": "פלט תגובת תקינות (Health)",
+      "jobs": "משימות",
+      "chunks": "מקטעים (Chunks)",
+      "rateLimitTestType": "סוג בדיקת מגבלת קצב",
+      "successfulRequests": "בקשות successful",
+      "successful": "הצליחו",
+      "blockedRequests": "בקשות שנחסמו"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "עקבות שיחה"
+  },
+  "branding": {
+    "logoAlt": "לוגו {{name}}"
+  },
+  "language": {
+    "english": "אנגלית",
+    "spanish": "ספרדית",
+    "french": "צרפתית",
+    "german": "גרמנית",
+    "portuguese": "פורטוגזית"
+  },
+  "home": {
+    "checkingInstanceStatus": "בודק סטטוס מופע..."
+  },
+  "adminGuidedSetup": {
+    "title": "הגדר את המופע שלך",
+    "subtitle": "העוזר שלך יאסוף את הפרטים הבסיסיים במעבר אחד.",
+    "manual": "הגדר ידנית במקום זאת",
+    "finish": "סיום והתחלת בדיקה",
+    "comingSoon": "שלב זה יגיע בקרוב ונבנה בנפרד.",
+    "steps": {
+      "initialize": {
+        "label": "אתחול",
+        "title": "אתחול",
+        "subtitle": "בוא נכסה את היסודות של המרחב שלך כדי שהסוכן שלך יתחיל עם התשתית הנכונה."
+      },
+      "docs": {
+        "label": "העלאת מסמכים",
+        "title": "העלה את מדריך השטח שלך",
+        "subtitle": "הוסף את חומרי המקור שהסוכן שלך עונה מהם — ספרים, מדריכים ומסמכי ייחוס."
+      },
+      "resources": {
+        "label": "משאבים מאויתים",
+        "title": "משאבים מאויתים",
+        "subtitle": "הוסף משאבים אמינים מהעולם האמיתי — אנשי קשר מרכזיים, עורכי דין, תמיכה חינוכית ובריאות הנפש — שאליהם הסוכן יוכל להפנות אנשים."
+      },
+      "test": {
+        "label": "בדיקה כמשתמש",
+        "title": "בדיקה בתור משתמש",
+        "subtitle": "בקרוב — נסו את העוזר כאחד מסוגי המשתמשים שלכם ודרגו את התשובות."
+      },
+      "feedback": {
+        "label": "משוב",
+        "title": "לולאת משוב",
+        "subtitle": "בקרוב — סקרו את איכות התשובות ושפרו את ההגדרות שלכם."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "בדיקה ומשוב",
+    "subtitle": "הריצו סשן משתמש בדיקה, ולאחר מכן סקרו לוגים מוצפנים של גרסת בטא ומשוב משיחות שנשמרו.",
+    "tabs": {
+      "test": "בדיקה כמשתמש",
+      "feedback": "משוב"
+    },
+    "test": {
+      "pickPersona": "בחרו פרסונה לבדיקה",
+      "pickPersonaBody": "הקצו משתמש בדיקה לאחד מסוגי המשתמשים שלכם, ואז שוחחו בתורו. הסשן נשמר כניסיון מוצפן שניתן לדרג תחת משוב.",
+      "userType": "סוג משתמש",
+      "genericUser": "משתמש כללי (ללא סוג)",
+      "start": "התחלת סשן",
+      "admin": "מנהל",
+      "testUserId": "משתמש בדיקה",
+      "endSave": "סיום ושמירת ניסיון",
+      "previewNotice": "מצב תצוגה מקדימה — התחזות מלאה טרם הוטמעה, לכן צ'אט זה רץ תחת סשן המנהל שלכם. התמליל עדיין נשמר לצורך סקירה.",
+      "chatEmpty": "שלחו הודעה בתור משתמש זה כדי להתחיל את הניסיון.",
+      "inputPlaceholder": "שלחו הודעה לעוזר בתור משתמש זה...",
+      "saved": "הניסיון נשמר (מוצפן). ניתן לסקור אותו תחת משוב.",
+      "startError": "התחלת סשן בדיקה נכשלה",
+      "saveError": "שמירת הניסיון נכשלה",
+      "impersonationUnavailable": "התחזות למשתמש בדיקה אינה זמינה עדיין",
+      "sessionTokenError": "לא ניתן היה ליצור טוקן סשן משתמש סינתטי",
+      "testingAs": "בודקים בתור {{persona}}",
+      "authFailed": "סשן המשתמש הסינתטי אינו מורשה יותר.",
+      "discardUnsavedConfirm": "להשליך את התורות שהסתיימו ולא נשמרו?",
+      "workspaceAria": "סביבת עבודה לשיחות משתמש בדיקה"
+    },
+    "feedback": {
+      "trials": "לוגי בטא",
+      "untitled": "שיחה ללא כותרת",
+      "turns": "תורות",
+      "turn": "תור",
+      "empty": "טרם נשמרו לוגים של בטא. הרץ Test User Session או המתן לשיחות משתמשים.",
+      "selectPrompt": "בחר לוג בטא כדי לעיין בתמלול ולדרג כל תור.",
+      "noNip04": "חבר תוסף Nostr (Alby, nos2x) כדי לפענח תמלולים — הם מוצפנים למפתח הניהול שלך.",
+      "sourceUser": "שיחת משתמש",
+      "sourceTest": "הפעלת משתמש לבדיקה",
+      "thumbUp": "תשובה טובה",
+      "thumbDown": "דורש שיפור",
+      "notePlaceholder": "הערה אופציונלית (נשמרת בהצפנה)…",
+      "exportNotDecrypted": "פתח ופענח את התמלול לפני הייצוא.",
+      "exportFeedbackNotDecrypted": "לא ניתן היה לפענח חלק מהערות המשוב. פתח מחדש את התמלול ואשר כל בקשת פענוח לפני הייצוא.",
+      "exportNeedsExtension": "ייצוא דורש תוסף Nostr. התמלולים מוצפנים במצב מנוחה והתוסף שלך הוא זה שמפענח אותם.",
+      "exportDecrypting": "עדיין מפענח. הייצוא יהיה זמין ברגע שכל בקשה תאושר.",
+      "exportWhyDisabled": "מדוע הייצוא מבוטל?",
+      "retryDecryption": "נסה פענוח מחדש",
+      "decryptPendingTitle": "בדוק את תוסף ה-Nostr שלך",
+      "decryptPendingBody": "התוסף מבקש אישור לפענח את התמלול הזה. ייתכן שהוא לא ייפתח מעצמו — לחץ על אייקון התוסף אם אינך רואה אותו. בחר באפשרות לזכור את הבחירה שלך כדי שהבקשה תופיע רק פעם אחת.",
+      "decryptProgress": "פענוח {{done}} מתוך {{total}}.",
+      "loadTrialsError": "שגיאה בטעינת הניסיונות",
+      "loadTranscriptError": "שגיאה בטעינת התמלול",
+      "saveError": "לא ניתן היה לשמור את המשוב",
+      "deleteError": "לא ניתן היה למחוק את לוג הסשן",
+      "exportError": "ייצוא הסשן נכשל",
+      "transcriptIntegrityError": "התמלול אינו זמין או חלקי ולא ניתן לייצא אותו.",
+      "decryptTranscriptError": "לא ניתן היה לפענח את התמלול. אשר את בקשת הפענוח בתוסף ה-Nostr שלך."
+    }
+  },
+  "adminResources": {
+    "title": "ספריית משאבים",
+    "subtitle": "תחזוקה ידנית של משאבי הפניה שנבדקו, אותם העוזר יכול לציין כאשר שיחה מגיעה להסלמה. רק משאבים במצב \"מוכן\" מוצגים למשתמשי קצה.",
+    "add": "הוספת משאב",
+    "addTitle": "הוספת משאב",
+    "editTitle": "עריכת משאב",
+    "empty": "טרם קיימים משאבים. הוסף משאב ידנית כאשר יש לך הפניה שנבדקה.",
+    "verified": "מאומת",
+    "missing": "חסר כדי לעלות לאוויר",
+    "name": "שם",
+    "type": "סוג משאב",
+    "languages": "שפות (קודי ISO מופרדים בפסיק)",
+    "description": "תיאור",
+    "descriptionHint": "מה שהעוזר צריך לומר לאדם על משאב זה.",
+    "scopeLevel": "רמת כיסוי",
+    "scopeCode": "קוד כיסוי",
+    "scopeCodeHint": "מדינה: קוד ISO (NI). תת-אזור/אזור: קוד UN M49 (013 = מרכז אמריקה). גלובלי: השאר ריק.",
+    "helpTypes": "סוגי עזרה",
+    "contact": "דרכי יצירת קשר",
+    "vettedBy": "נבדק על ידי",
+    "sourceNote": "הערת מקור",
+    "markVerified": "סמן כמאומת (מופיע ראשון)",
+    "archive": "ארכיון (הסתר ממשתמשי קצה)",
+    "deleteTitle": "למחוק משאב?",
+    "deleteBody": "פעולה זו תסיר את הרישום מהספרייה עבור {{name}}",
+    "coverage": "כיסוי",
+    "coverageHint": "בחר רמת כיסוי, ולאחר מכן חפש לפי שם או קוד.",
+    "coverageCodePlaceholder": "חיפוש לפי שם או קלו...",
+    "coverageLevelFirst": "בחר רמת כיסוי תחילה",
+    "coverageClear": "נקה קוד כיסוי",
+    "regionDirectoryUnavailable": "ספריית אזורים אינה זמינה. הזן קוד באופן ידני.",
+    "level": {
+      "country": "מדינה",
+      "subregion": "תת-אזור",
+      "region": "אזור",
+      "global": "גלובלי"
+    },
+    "addPointer": "הוסף מצביע",
+    "addRegion": "הוסף אזור",
+    "displayOrder": "סדר תצוגה",
+    "displayOrderHint": "מספרים נמוכים יותר מופיעים ראשונים לאחר רלוונטיות ואימות.",
+    "kind": "סוג",
+    "noSearchResults": "לא נמצאו משאבים התואמים לחיפוש זה.",
+    "order": "סדר",
+    "pointerLabel": "תווית מצביע {{number}}",
+    "pointerType": "סוג מצביע {{number}}",
+    "pointerValue": "ערך מצביע {{number}}",
+    "pointers": "מצביעים",
+    "regionNumber": "אזור {{number}}",
+    "regions": "אזורים",
+    "removePointer": "הסר מצביע",
+    "removeRegion": "הסר אזור",
+    "search": "חיפוש משאבים",
+    "searchPlaceholder": "שם, סוג, תג, מצביע או תיאור",
+    "tags": "תגיות (מופרדות בפסיק)",
+    "namePlaceholder": "למשל: Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, education, local",
+    "loadError": "טעינת משאבים נכשלה",
+    "loadDirectoryError": "טעינת התיקייה נכשלה",
+    "saveError": "שמירת המשאב נכשלה",
+    "deleteError": "מחיקת המשאב נכשלה"
+  },
+  "adminUserManager": {
+    "backToAdmin": "חזרה ללוח הבקרה של המנהל",
+    "eyebrow": "פעולות מנהל",
+    "title": "מנהל משתמשים",
+    "subtitle": "סקירת משתמשים, בדיקת הסטטוס שלהם ואישור גישה מלוח בקרה פשוט אחד.",
+    "unlockDetails": "פתח פרטים",
+    "refreshRoster": "רענן רשימה",
+    "exportVisible": "ייצא רשימה גלויה",
+    "prepareVisible": "הכן רשימה גלויה",
+    "downloadPrepared": "הורד רשימה מוכנה",
+    "exportPrepared": "הרשימה הגלויה המלאה מוכנה. ההורדה זמינה כעת.",
+    "rosterTitle": "רשימת משתמשים",
+    "rosterShown": "{{shown}} מוצגים מתוך {{total}} סה\"כ.",
+    "tableLabel": "רשימת משתמשים",
+    "tableRowsLabel": "שורות רשימת משתמשים",
+    "loadingLabel": "טוען רשימת משתמשים",
+    "loadingUsers": "טוען משתמשים...",
+    "loadRetry": "לא ניתן היה לטעון את רשימת המשתמשים. השתמש ב'רענן רשימה' כדי לנסות שוב.",
+    "emptyNoUsers": "אין משתמשים עדיין. משתמשים מאומתים חדשים יופיעו כאן.",
+    "emptyFiltered": "אין משתמשים התואמים לפילטרים אלו.",
+    "noUserType": "אין סוג משתמש",
+    "unknown": "לא ידוע",
+    "userFallback": "משתמש #{{id}}",
+    "approvalSuccess": "האישור עבור {{name}} בוצע.",
+    "exportSuccess": "גיליון רשימת המשתמשים הועבר.",
+    "metrics": {
+      "total": "סה\"כ משתמשים",
+      "totalDetail": "ברשימה",
+      "pendingApproval": "ממתינים לאישור",
+      "pendingDetail": "{{count}} ממתינים",
+      "approved": "מאושרים",
+      "approvedDetail": "יכולים להיכנס לצ'אט",
+      "incompleteProfiles": "פרופילים לא מלאים",
+      "incompleteDetail": "זקוקים לתשובות חובה"
+    },
+    "callouts": {
+      "loadFailed": "טעינת רשימת המשתמשים נכשלה",
+      "approvalUpdated": "אישור המשתמש עודכן",
+      "approvalFailed": "עדכון אישור המשתמש נכשל",
+      "exportReady": "ייצוא רשימת המשתמשים מוכן",
+      "exportFailed": "ייצוא רשימת המשתמשים נכשל"
+    },
+    "filters": {
+      "search": "חיפוש משתמשים",
+      "searchPlaceholder": "שם, אימייל, מפתח ציבורי, או #ID",
+      "approvalStatus": "סטטוס אישור",
+      "allApprovalStates": "כל מצבי האישור",
+      "pendingApproval": "ממתין לאישור",
+      "approved": "מאושר",
+      "allUserTypes": "כל סוגי המשתמשים"
+    },
+    "columns": {
+      "user": "משתמש",
+      "approval": "אישור",
+      "userType": "סוג משתמש",
+      "userProfile": "פרופיל משתמש",
+      "joined": "הצטרף",
+      "action": "פעולה"
+    },
+    "status": {
+      "approved": "מאושר",
+      "pending": "ממתין"
+    },
+    "actions": {
+      "approve": "אשר",
+      "approveUser": "אשר את {{name}}",
+      "viewUserDetails": "צפה בפרטי {{name}}"
+    },
+    "profile": {
+      "noQuestions": "אין שאלות",
+      "noQuestionsDetail": "אין שאלות קליטה רלוונטיות.",
+      "needsProfile": "נדרש פרופיל",
+      "missingRequiredOne": "חסרה תשובה אחת חובה",
+      "missingRequiredMany": "חסרות {{count}} תשובות חובה",
+      "noProfileYet": "אין פרופיל עדיין",
+      "noAnswersSaved": "לא נשמרו תשובות.",
+      "ready": "הפרופיל מוכן",
+      "answersSavedOne": "תשובה אחת נשמרה",
+      "answersSavedMany": "{{count}} תשובות נשמרו"
+    },
+    "identity": {
+      "decrypting": "מפענח שם ואימייל...",
+      "failed": "לא ניתן היה לפתוח את הפרטים המוצפנים.",
+      "unavailable": "הפרטים המוצפנים דורשים חותם דפדפן (browser signer).",
+      "locked": "הפרטים המוצפנים נעולים."
+    },
+    "errors": {
+      "loadUsers": "טעינת המשתמשים נכשלה.",
+      "loadUserTypes": "טעינת סוגי המשתמשים נכשלה.",
+      "loadQuestions": "טעינת שאלות ההצטרפות נכשלה.",
+      "approvalUpdate": "לא ניתן היה לעדכן את אישור המשתמש.",
+      "decryptUnavailable": "נדרשת תוסף דפדפן עם פענוח NIP-04 כדי להכין רשימה זו.",
+      "decryptRoster": "לא ניתן היה לפענח ערך רשימה מוצפן. לא נוצרה גיליון נתונים.",
+      "prepareRequired": "יש להכין את הרשימה הגלויה הנוכחית לפני ההורדה.",
+      "exportAudit": "לא ניתן היה לבצע ביקורת לייצוא רשימת המשתמשים.",
+      "exportRoster": "ייצוא רשימת המשתמשים נכשל."
+    },
+    "detail": {
+      "booleanYes": "כן",
+      "booleanNo": "לא",
+      "fieldUnlocked": "התשובה המוצפנת נפתחה בדפדפן זה.",
+      "decryptingField": "מפענח תשובה...",
+      "encryptedFieldUnavailable": "התשובה המוצפנת דורשת חותם דפדפן (browser signer).",
+      "encryptedFieldFailed": "לא ניתן היה לפתוח את התשובה המוצפנת.",
+      "encryptedFieldLocked": "התשובה המוצפנת נעולה.",
+      "notAnswered": "לא נענה",
+      "requiredMissing": "חסרה תשובה חובה.",
+      "backToUserManager": "חזרה למנהל המשתמשים",
+      "backToRoster": "חזרה לרשימת המשתמשים",
+      "eyebrow": "פרטי משתמש",
+      "notFoundTitle": "משתמש לא נמצא",
+      "notFoundBody": "משתמש זה אינו נמצא ברשימת המנהלים הנוכחית.",
+      "subtitle": "עבור על סטטוס המשתמש, תשובות הפרופיל ופרטי הגישה.",
+      "approvalStatus": "סטטוס אישור",
+      "waitingApproval": "ממתין לאישור",
+      "identityTitle": "זהות",
+      "name": "שם",
+      "nameUnavailable": "לא זמין",
+      "email": "אימייל",
+      "emailUnavailable": "לא זמין",
+      "userId": "מזהה משתמש",
+      "publicKey": "מפתח ציבורי",
+      "noPublicKey": "אין מפתח ציבורי",
+      "fieldsTitle": "שדות פרופיל",
+      "fieldsShown_one": "שדה {{count}} חל על משתמש זה.",
+      "fieldsShown_two": "{{count}} שדות חלים על משתמש זה.",
+      "fieldsShown_other": "{{count}} שדות חלים על משתמש זה.",
+      "noFields": "אין שדות onboarding החלים על משתמש זה.",
+      "required": "חובה",
+      "optional": "אופציונלי",
+      "encrypted": "מוצפן",
+      "plain": "טקסט גלוי",
+      "chatContext": "הקשר צ'אט"
+    }
+  },
+  "decryptStatus": {
+    "progress": "מפענח {{done}} מתוך {{total}}",
+    "checkExtension": "בדוק את תוסף ה-Nostr שלך",
+    "persistentApproval": "בחר באפשרות 'זכור' או 'תמיד' כדי שהבקשה תופיע רק פעם אחת."
   }
 }

@@ -22,7 +22,8 @@
       "title": "Co vás nejlépe vystihuje?",
       "description": "Vyberte možnost, která nejlépe odpovídá vašim potřebám",
       "loadError": "Nepodařilo se načíst typy uživatelů. Zkuste to prosím znovu.",
-      "selectionLabel": "Výběr typu uživatele"
+      "selectionLabel": "Výběr typu uživatele",
+      "errorLabel": "Chyba při načítání typu uživatele"
     },
     "language": {
       "selectLabel": "Vyberte jazyk",
@@ -65,7 +66,8 @@
       "encryptionBody": "Pole profilu jsou ve výchozím stavu šifrována, ale správce této instance řídí nastavení na úrovni polí a může povolit, aby vybraná data byla uložena nebo sdílena jinak.",
       "adminControlNotice": "Nakládání s daty konfiguruje správce této instance, včetně toho, co může být uloženo nešifrovaně nebo sdíleno s AI nástroji.",
       "noWarrantyNotice": "Software Enclave je poskytován tak, jak je, bez záruky. Používání této instance podléhá pravidlům správce.",
-      "retentionNotice": "Časové osy uchovávání a mazání dat nastavuje administrátor této instance. Kontaktujte ho pro žádosti o přístup, opravu nebo smazání."
+      "retentionNotice": "Časové osy uchovávání a mazání dat nastavuje administrátor této instance. Kontaktujte ho pro žádosti o přístup, opravu nebo smazání.",
+      "errorLabel": "Chyba při žádosti o magic link"
     },
     "verify": {
       "verifying": "Ověřování odkazu...",
@@ -125,20 +127,28 @@
       "config": "Konfigurace",
       "configName": "Konfigurace",
       "databaseName": "Databáze",
-      "webSearchName": "Web"
+      "webSearchName": "Web",
+      "knowledgeSearch": "Vyhledat nahrané dokumenty a znalostní fragmenty",
+      "knowledgeSearchName": "Znalosti",
+      "curatedResources": "Najděte doporučené zdroje schválené administrací a důvěryhodné organizace",
+      "curatedResourcesName": "Zdroje"
     },
     "documentScope": {
       "title": "Znalostní báze",
       "description": "Vyberte zdroje k zahrnutí do kontextu",
       "noSources": "Žádné zdroje nejsou k dispozici",
       "clearAll": "Vymazat vše",
-      "docsLabel": "Dokumenty"
+      "docsLabel": "Dokumenty",
+      "clearAllSelectedAria": "Vymazat všechny vybrané dokumenty",
+      "docsLabelWithCount": "Dokumentů {{count}}"
     },
     "messages": {
       "searching": "🔍 Hledám \"{{term}}\"...",
       "searchingPrefix": "Vyhledávání",
       "searchResults": "Vyhledal jsem \"{{term}}\" pro vás:",
-      "newConversation": "Nová konverzace"
+      "newConversation": "Nová konverzace",
+      "copy": "Zkopírovat zprávu",
+      "copied": "Zpráva byla zkopírována"
     },
     "code": {
       "copy": "Kopírovat",
@@ -157,7 +167,179 @@
       "roleUser": "Vy",
       "roleAssistant": "Asistent",
       "footer": "Exportováno z {{instanceName}}",
-      "exportedOn": "Exportováno {{timestamp}}"
+      "exportedOn": "Exportováno {{timestamp}}",
+      "copiedExportNotice": "Tento export opouští aktivní úložiště produktu a po stažení se nachází mimo životní cyklus Active Storage."
+    },
+    "new": "Nové chatování",
+    "listTitle": "Chaty",
+    "contextTitle": "Kontext",
+    "messageActions": "Akce u zprávy",
+    "actions": {
+      "stop": "Zastavit odpověď",
+      "stopDisabled": "Neexistuje žádná odpověď, kterou by bylo možné zastavit.",
+      "regenerate": "Generovat odpověď znovu",
+      "edit": "Upravit zprávu",
+      "waitForResponse": "Nejprve počkejte, až proběhne aktuální odpověď.",
+      "startConversation": "Nejprve spusťte nebo pokračujte v konverzaci.",
+      "resolveConfirmation": "Před změnou historie vyřešte čekající potvrzení změny (Change Confirmation)."
+    },
+    "composerContextAria": "Kontext kompozitoru",
+    "sessions": {
+      "ariaLabel": "Chatovací relace",
+      "current": "Aktuální chat",
+      "empty": "Prázdné",
+      "messageCount_one": "{{count}} zpráva",
+      "messageCount_few": "{{count}} zprávy",
+      "messageCount_many": "{{count}} zprávy",
+      "messageCount_other": "{{count}} zpráv",
+      "deleteConfirmTitle": "Smazat \"{{title}}\"?",
+      "rename": "Přejmenovat {{title}}",
+      "delete": "Smazat {{title}}",
+      "resumeInvalid": "Nepodařilo se načíst tuto konverzaci.",
+      "renameEmpty": "Název konverzace je povinný.",
+      "renameError": "Nepodařilo se přejmenovat konverzaci.",
+      "deleteError": "Nepodařilo se smazat konverzaci.",
+      "loading": "Načítání chatů...",
+      "error": "Nepodařilo se načíst chaty",
+      "saved": "Uložený chat",
+      "deleteConfirmBody": "Tímto se odstraní uložená konverzace a její paměť relace.",
+      "deleteCancel": "Zrušit smazání konverzace",
+      "cancel": "Zrušit",
+      "deleteConfirm": "Smazat konverzaci",
+      "deleteDeleting": "Smazání...",
+      "renameInput": "Název konverzace",
+      "renameCancel": "Zrušit přejmenování konverzace",
+      "renameSave": "Uložit název konverzace",
+      "renameSaving": "Přejmenovávání...",
+      "open": "Otevřít chatovací relace",
+      "close": "Zavřít chatovací relace"
+    },
+    "currentChatAria": "Aktuální chat",
+    "newFromCurrent": "Začít nový chat",
+    "documentsContextTitle": "Dokumenty",
+    "errors": {
+      "requestLabel": "Chyba požadavku na chat"
+    },
+    "trace": {
+      "finalizing": "Dokončování odpovědi...",
+      "collapse": "Sbalit",
+      "expand": "Rozbalit",
+      "reasoning": "Uvažování",
+      "thinking": "Přemýšlení",
+      "transcript": "Zápis {{label}}",
+      "reasoningSummaryAria": "Shrnutí uvažování",
+      "reasoningTranscriptAria": "Zápis uvažování",
+      "label": "Sledování",
+      "toolCalls": "Volání nástrojů",
+      "retrieval": "Vyhledávání",
+      "input": "Vstup",
+      "output": "Výstup",
+      "retrievedSource": "Vyhledaný zdroj",
+      "score": "skóre {{score}}",
+      "optionalDetailsAria": "Volné detaily {{label}}"
+    },
+    "conversationMessagesAria": "Zprávy v konverzaci",
+    "conversationSurfaceAria": "Rozhraní konverzace",
+    "conversationThreadAria": "Vlákno konverzace",
+    "activity": {
+      "label": "Aktivita",
+      "summaryAria": "Shrnutí aktivity",
+      "detailsAria": "Detaily aktivity",
+      "timelineAria": "Časová osa aktivity",
+      "show": "Zobrazit aktivitu",
+      "hide": "Skrýt aktivitu",
+      "showOptional": "Zobrazit volné detaily",
+      "hideOptional": "Skrýt volné detaily",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "Pokus o volání {{toolName}} byl proveden.",
+        "retry": "Znovupovolání nástroje po pokusu {{attempt}}.",
+        "running": "Nástroj běží.",
+        "completed": "Nástroj dokončil činnost.",
+        "guarded": "Nástroj byl pod dohledem.",
+        "failed": "Nástroj selhal.",
+        "rejected": "Volání nástroje bylo zamítnuto.",
+        "timedOut": "Časový limit nástroje vypršel.",
+        "knowledgeSearch": {
+          "title": "Vyhledávání v datech"
+        },
+        "webSearch": {
+          "title": "Webové vyhledávání"
+        },
+        "curatedResources": {
+          "title": "Kurátované zdroje"
+        },
+        "adminConfig": {
+          "title": "Konfigurace admina"
+        },
+        "databaseQuery": {
+          "title": "Dotaz do databáze"
+        }
+      },
+      "status": {
+        "running": "Probíhá",
+        "succeeded": "Úspěšně",
+        "failed": "Selhalo",
+        "guarded": "Chráněno",
+        "timed_out": "Časový limit vypršel",
+        "rejected": "Zamítnuto"
+      },
+      "toolSelection": {
+        "title": "Výběr nástroje",
+        "failed": "Výběr nástroje selhal dříve, než byl zaznamenán použitelný výběr.",
+        "partialFailure": "Některé výběry nástrojů modelu byly zamítnuty.",
+        "noneSelected": "Žádné nástroje nebyly vybrány.",
+        "selected": "Vybráno: {{selectedTools}}."
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "Požadavek modelu",
+          "summary": "Požadavek modelu: {{elapsedMs}} ms."
+        },
+        "providerFirstEventWait": {
+          "title": "Čekání na první událost poskytovatele",
+          "summary": "Čekání na první událost poskytovatele: {{elapsedMs}} ms."
+        },
+        "toolExecution": {
+          "title": "Exekuce nástroje",
+          "summary": "Exekuce nástroje: {{elapsedMs}} ms."
+        },
+        "resourceDirectoryLookup": {
+          "title": "Vyhledávání v adresáři zdrojů",
+          "summary": "Vyhledávání v adresáři zdrojů: {{elapsedMs}} ms."
+        },
+        "retrieval": {
+          "title": "Získávání dat",
+          "summary": "Získávání dat: {{elapsedMs}} ms."
+        },
+        "retryDelay": {
+          "title": "Zpoždění při pokusu",
+          "summary": "Zpoždění při pokusu: {{elapsedMs}} ms."
+        },
+        "totalTurn": {
+          "title": "Celkový čas tahu",
+          "summary": "Celkový čas: {{elapsedMs}} ms."
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "Nebyla nalezena žádná relevantní úryvky v nahraných dokumentech.",
+        "retrieved": "Pro odpověď byly získány {{count}} úryvky z nahraných dokumentů."
+      },
+      "webSearch": {
+        "prepared": "Pro odpověď byly připraveny výsledky webového vyhledávání ({{count}})."
+      },
+      "curatedResources": {
+        "noAdditional": "Nebyla nalezena žádná další vybraná data.",
+        "noMatches": "Žádná vybraná data neodpovídají tomuto požadavku.",
+        "returned": "Vráceno {{count}} z {{totalCount}} vybraných zdrojů."
+      },
+      "adminConfig": {
+        "completed": "Akce konfigurace administrátora {{toolId}} byla dokončena ({{outcome}}). Změněná nastavení: {{changedSettings}}."
+      },
+      "databaseResultsRedacted": "Výsledky z databáze byly z trasování anonymizovány.",
+      "databaseQuery": {
+        "rejected": "Dotaz do databáze byl zamítnut."
+      }
     }
   },
   "common": {
@@ -197,7 +379,17 @@
     "retry": "Zkusit znovu",
     "saved": "Uloženo",
     "sending": "Odesílám...",
-    "gotIt": "Rozumím"
+    "gotIt": "Rozumím",
+    "send": "Odeslat",
+    "backToAdminDashboard": "Zpět na administrační panel",
+    "loadingPage": "Načítání stránky",
+    "pageLoadError": "Selhalo načtení stránky. Obnovte ji prosím.",
+    "export": "Exportovat",
+    "reset": "Resetovat",
+    "exit": "Ukončit",
+    "none": "Žádné",
+    "all": "Vše",
+    "warning": "Varování"
   },
   "settings": {
     "title": "Nastavení",
@@ -220,8 +412,23 @@
       "deploymentConfig": "Konfigurace nasazení",
       "deploymentConfigDesc": "Služby, SMTP, úložiště",
       "userConfig": "Uživatelská konfigurace",
-      "userConfigDesc": "Typy uživatelů a otázky pro onboarding"
-    }
+      "userConfigDesc": "Typy uživatelů a otázky pro onboarding",
+      "guidedSetup": "Průvodce nastavením",
+      "guidedSetupDesc": "Projděte si nastavení, dokumenty, zdroje a testování.",
+      "guides": "Správcovské příručky",
+      "guidesDesc": "Chápejte, co správci konfigurují a kde.",
+      "testUserSession": "Testovací relace uživatele",
+      "testUserSessionDesc": "Chatujte jako simulovaný uživatel a zkontrolujte zpětnou vazbu beta verze.",
+      "diagnostics": "Diagnostika",
+      "diagnosticsDesc": "Během vyšetřování problémů spusťte dýmové testy.",
+      "resourceDirectory": "Adresář zdrojů",
+      "resourceDirectoryDesc": "Ručně spravujte důvěryhodné referenční zdroje."
+    },
+    "diagnostics": "Diagnostika",
+    "adminWorkflows": "Správcovské pracovní postupy",
+    "settingsSection": "Nastavení",
+    "dataAndContent": "Data a obsah",
+    "operations": "Operace"
   },
   "admin": {
     "confirmDelete": "Opravdu chcete smazat tento záznam?",
@@ -263,9 +470,15 @@
       "onboardingFieldsHint": "Vytvořte otázky, na které uživatelé odpovídají během onboardingu.",
       "optionsCount_one": "{{count}} možnost",
       "optionsCount_few": "{{count}} možnosti",
+      "optionsCount_many": "{{count}} možnosti",
       "optionsCount_other": "{{count}} možností",
       "userSectionDesc": "Nakonfigurujte typy uživatelů a otázky, na které uživatelé odpovídají během onboardingu.",
-      "userSectionTitle": "Konfigurace uživatelů"
+      "userSectionTitle": "Konfigurace uživatelů",
+      "fieldScopeFilterLabel": "Filtrovat otázky podle typu uživatele",
+      "noFieldsForScope": "Pro tento typ uživatele zatím neplatí žádné otázky.",
+      "reorderNeedsAllScope": "Zobrazit všechny otázky pro jejich přeuspořádání",
+      "fieldScopeGlobalHint": "Otázky, na které odpoví každý uživatel, bez ohledu na jeho typ.",
+      "fieldScopeTypeHint": "Vše, co je tohoto typu uživatele ptáno: globální otázky, na které odpovídá každý, plus ty vlastní."
     },
     "database": {
       "backToSetup": "Zpět na nastavení správce",
@@ -297,9 +510,11 @@
       "pagination": "Zobrazeno {{from}} až {{to}} z {{total}}",
       "tableCount_one": "{{count}} tabulka",
       "tableCount_few": "{{count}} tabulky",
+      "tableCount_many": "{{count}} tabulky",
       "tableCount_other": "{{count}} tabulek",
       "rowCount_one": "{{count}} řádek",
       "rowCount_few": "{{count}} řádky",
+      "rowCount_many": "{{count}} řádku",
       "rowCount_other": "{{count}} řádků",
       "rowsInTable": "{{count}} řádků v {{table}}",
       "connected": "SQLite připojen",
@@ -354,7 +569,15 @@
       "unlockDecryption": "Odemknout dešifrování",
       "rowsInTable_one": "{{count}} řádek v {{table}}",
       "rowsInTable_few": "{{count}} řádky v {{table}}",
-      "rowsInTable_other": "{{count}} řádků v {{table}}"
+      "rowsInTable_many": "{{count}} řádku v {{table}}",
+      "rowsInTable_other": "{{count}} řádků v {{table}}",
+      "safeQueryResults": "Výsledky bezpečného dotazu",
+      "queryError": "Chyba dotazu",
+      "writeResult": "Výsledek zápisu do databáze",
+      "emptyQueryResult": "Prázdný výsledek dotazu",
+      "readOnly": "Pouze pro čtení",
+      "tableLoadError": "Chyba načítání tabulky",
+      "readOnlyHint": "Přímé úpravy databáze jsou zakázány; ke změnám použijte auditované administrátorské procesy."
     },
     "fields": {
       "nameRequired": "Název pole je povinný",
@@ -444,7 +667,11 @@
       "removeFieldFailed": "Nepodařilo se odstranit pole",
       "reorderFailed": "Nepodařilo se změnit pořadí pole",
       "loadUsersFailed": "Nepodařilo se načíst uživatele",
-      "updateTypeFailed": "Nepodařilo se aktualizovat typ uživatele"
+      "updateTypeFailed": "Nepodařilo se aktualizovat typ uživatele",
+      "loadSettingsFailed": "Načtení nastavení se nezdařilo",
+      "externalConfigConflict": "Sage nebo jiný správce změnila tato nastavení, zatímco jste je upravovali. Před uložením tuto stránku znovu načtěte, abyste nepřepsali novější hodnoty.",
+      "externalSettingsConflict": "Sage nebo jiný správce změnila tato nastavení, zatímco jste je upravovali. Před uložením tuto stránku znovu načtěte.",
+      "externalUserConfigConflict": "Sage nebo jiný správce změnil typy uživatelů nebo otázky pro onboarding, zatímco jste je upravovali. Před uložením konceptu tuto stránku znovu načtěte."
     },
     "userMigration": {
       "title": "Migrace typu uživatele",
@@ -479,7 +706,10 @@
       "emailEncryptedHint": "E-mail (šifrovaný)",
       "nameEncryptedHint": "Jméno (šifrované)",
       "noUsersHint": "Zkuste změnit filtr výše nebo obnovit.",
-      "pubkeyPresent": "Přítomen Nostr pubkey"
+      "pubkeyPresent": "Přítomen Nostr pubkey",
+      "usersErrorLabel": "Chyba migrace uživatelů typu uživatele",
+      "errorLabel": "Chyba migrace typu uživatele",
+      "summaryLabel": "Souhrn migrace typu uživatele"
     },
     "configAssistant": {
       "openAria": "Otevřít asistenta správce",
@@ -517,8 +747,40 @@
         "restartRequiredFor": "Restart je vyžadován pro: {{keys}}.",
         "restartRequiredNo": "Restart vyžadován: ne.",
         "restartCheckFailedHttp": "Kontrola potřeby restartu selhala (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Kontrola potřeby restartu selhala (chyba sítě)."
-      }
+        "restartCheckFailedNetwork": "Kontrola potřeby restartu selhala (chyba sítě).",
+        "pageRefreshRecommended": "Pro zobrazení aktualizací tématu obnovte tuto stránku."
+      },
+      "onboardingWelcome": "Vítejte — pojďme nastavit váš prostor. Odpovězte, kolik chcete, v jedné zprávě (číslování, přeskočte vše, čemu nerozumíte):\n\n1. **Název** — jak bychom měli tento prostor nazývat? (zobrazí se v záhlaví a kartě prohlížeče)\n2. **Popis** — jedna věta o účelu (soukromá poznámka, uživatelům se nezobrazuje)\n3. **Název asistenta** — jak by se měl jmenovat AI pomocník?\n4. **Akcentová barva** — zvýrazňovací barva pro tlačítka a odkazy (název jako modrá/tyrkysová, nebo hex jako #3B82F6)\n5. **Téma** — světlé, tmavé, nebo systémové (podle zařízení)?\n6. **Výchozí jazyk** — např. angličtina nebo španělština (volitelné)\n7. **Slogan** — krátký řádek pro záhlaví (volitelné)\n8. **Noví uživatelé** — pustit je ihned, nebo schválit každého jednotlivě?\n9. **Typy uživatelů** — jaké typy ne-administrátorů budou tento prostor používat? (např. Učitel a Student) — každý z nich pro vás vytvořím\n\nPříklad: \"9. Učitel a Student\". Vše uložím v jednom kroku — a kdykoliv můžete přepnout na ruční nastavení.",
+      "collapseSidebar": "Sbalit postranní panel asistenta",
+      "expandSidebar": "Otevřít postranní panel administrátorského asistenta",
+      "resize": "Změnit velikost panelu administrátorského asistenta",
+      "railLabel": "Asistent",
+      "shareSecretsHint": "Ve výchozím nastavení vypnuto. Nejprve povolte nástroj konfigurace. Po povolení jsou tajné hodnoty nasazení konfigurace odhaleny na straně klienta a odeslány do Sage pro tento prototypový tok.",
+      "applyIntentUsePanel": "Použijte panel čekajících změn níže a klikněte na Použít pro potvrzení těchto aktualizací konfigurace.",
+      "applyIntentNoPending": "Nejsou k dispozici žádné čekající změny konfigurace k aplikaci. Nejprve požádejte asistenta o návrh sady změn.",
+      "startNewConversation": "Zahájit nový konverzaci asistenta",
+      "reducedContextNoticeLabel": "Upozornění na snížený kontext",
+      "sessionMemoryNoticeLabel": "Upozornění na kompresi paměti relace",
+      "sessionMemoryNotice": "Starší kontext byl shrnut, aby konverzace pokračovala.",
+      "reducedContextNotice": "Některý kontext byl snížen, aby se vešel do rozpočtu poskytovatele modelu ({{sections}}). Odpovědi mohou být méně úplné, dokud nezačnete novou konverzaci asistenta.",
+      "reducedContextSections": {
+        "recentConversation": "historie nedávných konverzací"
+      },
+      "approvalCardTitle": "Schválit změny konfigurace",
+      "applying": "Používá se",
+      "applied": "Použito",
+      "rejected": "Odmítnuto",
+      "failed": "Selhalo",
+      "superseded": "Nahrazeno",
+      "hideDetails": "Skrýt podrobnosti",
+      "reviewDetails": "Zkontrolovat podrobnosti",
+      "reject": "Odmítnout",
+      "approve": "Schválit",
+      "applyErrorLabel": "Chyba použití konfigurace",
+      "onboardingTitle": "Průvodce nastavením v chatu",
+      "onboardingContext": "Konverzace zaměřená na nastavení",
+      "directShareSecretsHint": "Volitelné: zahrnout uložené hodnoty tajných údajů nasazení do kontextu této konverzace. Přímý přístup k tajným údajům to nevyžaduje.",
+      "directWritePrompt": "Zeptejte se na správu konfigurace. Sage může zkontrolovat nastavení a po potvrzení s vámi v konverzaci přímo aplikovat podporované změny."
     },
     "reachout": {
       "badgeDefault": "Výchozí",
@@ -685,7 +947,16 @@
       "typographyTitle": "Typografie",
       "userIconLabel": "Ikona uživatele",
       "userLabelLabel": "Popisek uživatele",
-      "userLabelPlaceholder": "např. Vy"
+      "userLabelPlaceholder": "např. Vy",
+      "publicEmailDisplayNameLabel": "Veřejný zobrazovaný název e-mailu (volitelné)",
+      "publicEmailDisplayNameHint": "Používá se v e-mailech pro přihlášení pomocí magického odkazu. Nechte prázdné pro použití názvu instance.",
+      "defaultsTitle": "Výchozí nastavení instance",
+      "defaultsDesc": "Nastavte základní jazyk a motiv používané před tím, než se uplatní jakékoli místní ovládání prohlížeče.",
+      "defaultLanguageLabel": "Výchozí jazyk",
+      "defaultThemeLabel": "Výchozí motiv",
+      "themeSystem": "Systém",
+      "themeLight": "Světlý",
+      "themeDark": "Tmavý"
     },
     "userConfig": {
       "subtitle": "Nakonfigurujte typy uživatelů a otázky, na které uživatelé odpovídají během onboardingu.",
@@ -693,6 +964,55 @@
       "typeDescription": "Popis",
       "typeIcon": "Ikona typu",
       "typeName": "Název typu"
+    },
+    "userApproval": {
+      "updateFailed": "Aktualizace schválení uživatele se nezdařila.",
+      "approvedUser": "Uživatel #{{id}} byl schválen.",
+      "revokedUser": "Uživatel #{{id}} byl vrácen do čekajícího stavu.",
+      "title": "Schválení uživatelů",
+      "subtitle": "Zvolte, zda mohou noví autentizovaní uživatelé vstoupit do chatu okamžitě, nebo zda musí čekat na schválení administrátorem.",
+      "requireManualLabel": "Vyžadovat manuální schválení nových uživatelů",
+      "requireManualHint": "Pokud je tato funkce zapnutá, noví uživatelé se zobrazí na obrazovce s čekající schválením, dokud je administrátor neschválí.",
+      "loadingHint": "Načítání...",
+      "saveButton": "Uložit schválení uživatelů",
+      "savedCalloutLabel": "Schválení uživatelů bylo uloženo",
+      "errorCalloutLabel": "Chyba při schvalování uživatelů",
+      "pendingTitle": "Čekající schválení",
+      "pendingCount_zero": "{{count}} uživatelů vyžaduje schválení před přístupem k chatu.",
+      "pendingCount_one": "{{count}} uživatel vyžaduje schválení před přístupem k chatu.",
+      "pendingCount_two": "{{count}} uživatelů vyžaduje schválení před přístupem k chatu.",
+      "pendingCount_few": "{{count}} uživatelů vyžaduje schválení před přístupem k chatu.",
+      "pendingCount_many": "{{count}} uživatelů vyžaduje schválení před přístupem k chatu.",
+      "pendingCount_other": "{{count}} uživatelů vyžaduje schválení před přístupem k chatu.",
+      "nonePending": "Žádní uživatelé nečekají na schválení.",
+      "actionSavedCalloutLabel": "Schválení uživatelů bylo aktualizováno",
+      "actionErrorCalloutLabel": "Aktualizace schválení uživatelů se nezdařila",
+      "loadingUsers": "Načítání uživatelů...",
+      "emptyState": "Zde se zobrazí noví uživatelé čekající na schválení, pokud je vyžadováno manuální schválení.",
+      "emailOnFile": "E-mail v záznamu",
+      "nameOnFile": "Jméno v záznamu",
+      "approveButton": "Schválit",
+      "revokeButton": "Zrušit"
+    },
+    "userRosterExport": {
+      "auditFailed": "Export seznamu uživatelů nebyl možné provést audit. Tabulkový soubor nebyl stažen.",
+      "decryptUnavailable": "Pro přípravu tohoto seznamu je vyžadováno rozšíření prohlížeče s dešifrováním NIP-04.",
+      "decryptFailed": "Šifrovanou hodnotu seznamu nebylo možné dešifrovat. Tabulkový soubor nebyl vytvořen.",
+      "prepared": "Kompletní seznam je připraven. Stahování je nyní povoleno.",
+      "prepareRequired": "Před stažením seznamu jej nejprve připravte.",
+      "prepareButton": "Připravit seznam uživatelů",
+      "downloadButton": "Stáhnout připravený seznam",
+      "success": "Tabulkový soubor se seznamem uživatelů byl stažen.",
+      "failed": "Export seznamu uživatelů se nezdařil.",
+      "button": "Exportovat uživatele",
+      "successLabel": "Export seznamu uživatelů je připraven",
+      "errorLabel": "Export seznamu uživatelů selhal"
+    },
+    "userIdentity": {
+      "decrypting": "Šifrování jména/e-mailu...",
+      "decryptFailed": "Nepodařilo se dešifrovat jméno/e-mail",
+      "unlockDetails": "Odemkněte pro zobrazení jména/e-mailu",
+      "unlockButton": "Zobrazit podrobnosti"
     }
   },
   "adminOnboarding": {
@@ -717,7 +1037,9 @@
     "legalResponsibilityNotice": "Nesete odpovědnost za zákonnou konfiguraci, informování uživatelů a pravidla nakládání s daty pro tuto instanci.",
     "extracted": {
       "change_language_789b14": "Změnit jazyk"
-    }
+    },
+    "statusError": "Kontrola stavu instance selhala",
+    "connectionError": "Připojení selhalo"
   },
   "errors": {
     "requestFailed": "Požadavek selhal",
@@ -751,11 +1073,228 @@
     "adminSessionExpired": "Relace správce vypršela",
     "authenticationFailed": "Ověření selhalo",
     "noNostrExtension": "Nebyla nalezena žádná rozšíření Nostr",
-    "exportFailed": "Export selhal"
+    "exportFailed": "Export selhal",
+    "failedToRetryDeletionTombstone": "Nepodařilo se znovu spustit mazání tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "Nepodařilo se potvrdit nepodporovanou aplikační plochu",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Nepodařilo se potvrdit nepodporovanou kategorii aplikační plochy",
+    "failedToPreviewRetention": "Nepodařilo se zobrazit náhled retenční politiky",
+    "failedToUpdateRetentionPolicy": "Nepodařilo se aktualizovat retenční politiku",
+    "failedToRunScheduledRetention": "Nepodařilo se spustit plánovanou retenci",
+    "failedToUpdateArtifactEncryptionPosture": "Nepodařilo se aktualizovat úroveň šifrování artefaktů",
+    "queryExecutionFailed": "Provedení dotazu selhalo"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Správci mohou"
+    },
+    "summary": {
+      "brand": {
+        "title": "Branding instance",
+        "body": "Zobrazení názvu, loga, motivu, identity asistenta a veřejného e-mailu."
+      },
+      "people": {
+        "title": "Správa uživatelů",
+        "body": "Typy uživatelů, onboardingové dotazy, schvalování, migrace a přístup."
+      },
+      "agent": {
+        "title": "Formování Sage",
+        "body": "Pravidla promptů, nastavení odpovědí, přístup k dokumentům a výchozí hodnoty nástrojů."
+      },
+      "launch": {
+        "title": "Bezpečný start",
+        "body": "E-mail, domény, CORS, HTTPS, směrování modelů, stav systému a runtime env."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Značka",
+        "title": "Identita a vzhled",
+        "body": "Nastavte instanci tak, aby odpovídala vaší organizaci.",
+        "detail1": "Název, tagline, název asistenta a štítek uživatele.",
+        "detail2": "Logo, favicon, ikona, akcentní barva, téma, typografie a styl chatu.",
+        "detail3": "Výchozí jazyk a veřejné zobrazovací jméno e-mailu.",
+        "link": "Otevřít nastavení instance"
+      },
+      "people": {
+        "eyebrow": "Přístup",
+        "title": "Lidé a přístup",
+        "body": "Rozhodněte, kdo instanci používá a co od nich vyžadujete.",
+        "detail1": "Typy uživatelů pro skupiny jako zaměstnanci, členové nebo klienti.",
+        "detail2": "Pole při registraci, povinné dotazy, možnosti, zástupné symboly a pole podle typu.",
+        "detail3": "Ruční schvalování, migrace uživatelů, odebrání přístupu a mazání.",
+        "link": "Otevřít nastavení uživatelů"
+      },
+      "agent": {
+        "eyebrow": "Chování",
+        "title": "Chování agenta",
+        "body": "Upravte způsob, jakým Sage odpovídá, a které nástroje jsou padrãoně zapnuté.",
+        "detail1": "Šablona promptu, pravidla chování, zakázaná témata a nastavení odpovědí.",
+        "detail2": "Výchozí nastavení funkcí pro nástroje Knowledge, Resources, Web, Config a Database.",
+        "detail3": "Globální nastavení a přebírky podle typu uživatele.",
+        "link": "Otevřít nastavení agenta"
+      },
+      "docs": {
+        "eyebrow": "Znalosti",
+        "title": "Znalosti z dokumentů",
+        "body": "Poskytněte agentovi zdrojový materiál, který může prohledávat.",
+        "detail1": "Nahrajte PDF, zásady, FAQ, příručky a návody.",
+        "detail2": "Dokumenty jsou rozděleny na části, vektorizovány a zpřístupněny pro vyhledávání.",
+        "detail3": "Přístup k dokumentům určuje, co lze standardně vybrat nebo aktivovat.",
+        "link": "Otevřít nahrávání dokumentů"
+      },
+      "resources": {
+        "eyebrow": "Doporučení",
+        "title": "Prověřené zdroje",
+        "body": "Přidejte důvěryhodné referenční údaje, které může agent doporučit.",
+        "detail1": "Názvy, popisy, typy zdrojů, jazyky, rozsah a typy pomoci.",
+        "detail2": "Telefon, e-mail, URL, zabezpečený kanál, adresa a poznámky.",
+        "detail3": "Ověřené zdroje mají přednost. Archivované zdroje zůstávají uživatelům skryty.",
+        "link": "Otevřít adresář zdrojů"
+      },
+      "ops": {
+        "eyebrow": "Operace",
+        "title": "Operace a runtime",
+        "body": "Udržujte instanci připojenou, dostupnou a v pořádku.",
+        "detail1": "SMTP pro magické odkazy v e-mailu, domény, CORS, HTTPS a veřejná URL.",
+        "detail2": "Poskytovatel modelu, embedding model, vyhledávání, úložiště a stav služby.",
+        "detail3": "Export runtime env, připravenost, zastarálá nastavení a migrace admin klíče.",
+        "link": "Otevřít nastavení nasazení"
+      },
+      "title": "Co administrátoři konfigurují",
+      "body": "Toto jsou hlavní ovládací plochy. Stránky můžete používat přímo, nebo požádat Admin Assistant o přípravu změn."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Dotaz",
+        "title": "Administrátorský asistent",
+        "body": "Ptejte se na aktuální nastavení a žádejte o změny konfigurace.",
+        "detail1": "Konfigurace čte skutečný stav instance místo odhadování.",
+        "detail2": "Navrhované změny jsou připraveny k revizi.",
+        "detail3": "Apply spustí schválené admin endpointy bez dalšího kroku modelu.",
+        "link": "Otevřít Admin Assistant",
+        "directWriteDetail2": "Sage před podporovaným zápisem vyžaduje potvrzení v rámci konverzace.",
+        "directWriteDetail3": "Po potvrzení Sage zavolá své přímé konfigurační Tools a nahlásí skutečný výsledek."
+      },
+      "guided": {
+        "eyebrow": "Spustit",
+        "title": "Průvodce nastavením",
+        "body": "Využijte průvodcovou chatovací relaci k vytvoření užitečné první konfigurace.",
+        "detail1": "Identita, asistent, jazyk, přístupová politika, typy uživatelů, dotazy a pravidla chování.",
+        "detail2": "Poté nahrajte dokumenty, přidejte zdroje a otestujte.",
+        "link": "Otevřít průvodce nastavením"
+      },
+      "test": {
+        "eyebrow": "Validovat",
+        "title": "Testování a zpětná vazba",
+        "body": "Před spuštěním vyzkoušejte agenta z pohledu uživatele.",
+        "detail1": "Vyberte typ uživatele, spusťte testovací relaci a uložte zkušební verzi.",
+        "detail2": "Prohlížejte šifrované beta logy a hodnotte odpovědi.",
+        "link": "Otevřít testovací uživatelskou relaci"
+      },
+      "database": {
+        "eyebrow": "Prozkoumat",
+        "title": "Průzkumník databáze",
+        "body": "Při ladění zkoumejte uložená data SQLite.",
+        "detail1": "Pro inspekci používejte pouze SELECT dotazy pro čtení.",
+        "detail2": "Nepoužívejte jej jako cestu pro mutaci produktu.",
+        "link": "Otevřít průzkumník databáze"
+      },
+      "title": "Běžné administrativní postupy",
+      "body": "Použijte tyto postupy při nastavování, kontrole kvality nebo zkoumání dat."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Běhové prostředí",
+        "title": "Runtime jedné konverzace",
+        "body": "Knowledge, Resources, Web, Config a Database jsou viditelné sady nástrojů, nikoliv samostatné chatovací systémy.",
+        "detail1": "Model může volat povolené nástroje, pokud mu pomáhají.",
+        "detail2": "Config a Database jsou viditelné pouze pro administrátory ověřené serverem."
+      },
+      "auth": {
+        "eyebrow": "Přihlášení",
+        "title": "Různé cesty přihlášení",
+        "body": "Administrátoři používají NIP-07. Uživatelé používají e-mailové magic odkazy.",
+        "detail1": "Soukromé klíče administrátorů zůstávají v browser signer.",
+        "detail2": "SMTP musí v produkci fungovat dříve, než začnou fungovat magic odkazy pro uživatele."
+      },
+      "data": {
+        "eyebrow": "Soukromí",
+        "title": "Hranice dat jsou důležité",
+        "body": "Šifrovaná pole profilu zůstávají mimo kontext chatu.",
+        "detail1": "Pouze nešifrovaná pole lze označit pro kontext AI chatu.",
+        "detail2": "Deployment tajné údaje jsou uloženy šifrovaně a výchozí nastavení je zobrazuje maskovaně."
+      },
+      "ops": {
+        "eyebrow": "Provoz",
+        "title": "Některé změny vyžadují operátory",
+        "body": "Aplikace může uložit požadovaná runtime nastavení; nespouští služby skrytě znovu.",
+        "detail1": "Exportujte runtime env po změně providera, originu, CORS nebo vyhledávání.",
+        "detail2": "K potvrzení toho, co skutečně běží, využívejte stav připravenosti a zdraví služeb."
+      },
+      "title": "Klíčové vlastnosti produktu, které je třeba si pamatovat",
+      "body": "Tato pravidla zajišťují poctivost nastavení a brání neúmyslnému překračování oprávnění."
+    },
+    "ask": {
+      "prompt1": "Co ještě chybí, aby byla tato instance připravena pro uživatele?",
+      "prompt2": "Projděte si aktuální typy uživatelů, dotazy při registraci, dokumentaci a zdroje.",
+      "prompt3": "Připravte změny k revizi: nastavte tón asistenta a výchozí jazyk.",
+      "title": "Dobré věci, na které se zeptat Admin Assistanta",
+      "body": "Než požádáte o změny, požádejte o revizi. Dokáže zkontrolovat nastavení a připravit sadu změn.",
+      "directWriteBody": "Požádejte Sage, aby zkontroloval nebo změnil podporovanou konfiguraci. Před zápisem s vámi potvrdí zamýšlenou změnu.",
+      "directWritePrompt3": "Nastavte tón asistenta a výchozí jazyk a nejprve se o zamýšlenou změnu mnou informujte."
+    },
+    "hero": {
+      "eyebrow": "Mapa administrátorských ovládacích prvků",
+      "shortVersion": {
+        "title": "Krátká verze",
+        "body": "Administrátoři nastavují identitu, uživatele, znalosti, nástroje a nastavení spuštění. Některé změny za běhu stále vyžadují restart operátora."
+      }
+    },
+    "title": "Administrátorské příručky",
+    "subtitle": "Jednoduchá mapa toho, co administrátoři konfigurují, co produkt dokáže a na co je třeba dát pozor před spuštěním.",
+    "quickStart": {
+      "title": "Začněte zde",
+      "body": "Nejdříve proveďte malé užitečné nastavení. To doladíte poté, co jej otestujete na reálných dotazech."
+    },
+    "safety": {
+      "title": "Základy bezpečnosti",
+      "body": "Administrátoři ovládají přístup, data, chování a nastavení za běhu. S rizikovými změnami postupujte pomalu.",
+      "items": {
+        "0": "Administrátoři se přihlašují pomocí NIP-07. Uživatelé se přihlašují pomocí magických odkazů v e-mailu.",
+        "1": "Pole uživatelů jsou ve výchozím nastavení šifrována. Do chatu lze sdílet pouze pole v prostém textu.",
+        "2": "Hesla zůstanou maskovaná, pokud je nesdílíte pro aktuální administrátorskou relaci.",
+        "3": "Změny asistenta jsou návrhy. Vy je stále revidujete a klikáte na Použít.",
+        "4": "Deployment Settings ukládají požadované hodnoty za běhu. Operátoři stále exportují env a při potřebě restartují služby."
+      },
+      "directItems": {
+        "0": "Administrátoři se přihlašují pomocí NIP-07. Uživatelé se přihlašují pomocí magických odkazů v e-mailu.",
+        "1": "Pole uživatelů jsou ve výchozím nastavení šifrována. Do chatu lze sdílet pouze pole v prostém textu.",
+        "2": "Hesla zůstanou maskovaná, pokud je nesdílíte pro aktuální administrátorskou relaci.",
+        "3": "Sage s vámi v chatu potvrdí změny konfigurace a poté přímo aplikuje podporované změny.",
+        "4": "Deployment Settings ukládají požadované hodnoty za běhu. Operátoři stále exportují env a při potřebě restartují služby."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Přihlásit se jako administrátor",
+        "body": "Použijte administrátorský klíč NIP-07. Uchovávejte jej v soukromí."
+      },
+      "1": {
+        "title": "Nastavte základy",
+        "body": "Pojmenujte instanci, zvolte vzhled a nastavte identitu asistenta."
+      },
+      "2": {
+        "title": "Definujte své uživatele",
+        "body": "Vytvářejte typy uživatelů, uvítací dotazy a pravidla schvalování."
+      },
+      "3": {
+        "title": "Přidejte důvěryhodné znalosti",
+        "body": "Nahrajte dokumenty a přidejte prověřené zdroje."
+      },
+      "4": {
+        "title": "Testujte před spuštěním",
+        "body": "Chatujte jako uživatel, projděte si zpětnou vazbu a poté pozvěte skutečné lidi."
+      }
     }
   },
   "adminDashboard": {
@@ -792,7 +1331,55 @@
     "securityStep3Primary": "Spustit ověření konfigurace",
     "securityStep3Secondary": "Zkontrolovat uložená data",
     "user": "Konfigurace uživatele",
-    "userDesc": "Definujte typy uživatelů a otázky pro onboarding"
+    "userDesc": "Definujte typy uživatelů a otázky pro onboarding",
+    "subtitleSimple": "Vyberte si, kde chcete na této instanci pracovat.",
+    "workflowsSectionLabel": "Administrativní workflow",
+    "adminAssistant": "Administrativní asistent",
+    "adminAssistantDesc": "Používejte administrativní chat pro pomoc s konfigurací a kontrolu změn.",
+    "guidedSetup": "Průvodce nastavením",
+    "guidedSetupDesc": "Projděte si nastavení, dokumenty, zdroje a testování.",
+    "guides": "Administrativní příručky",
+    "guidesDesc": "Zjistěte, co administrátoři konfigurují a kde.",
+    "testUserSession": "Testovací uživatelská relace",
+    "testUserSessionDesc": "Chatujte jako simulovaný uživatel a projděte si uložené beta logy.",
+    "aiSetupTitle": "Nastavte se s AI asistentem",
+    "aiSetupBody": "Nechte asistenta jedním tahem zpracovat základy pro pojmenování a konfiguraci vaší instance. Do manuálního nastavení můžete kdykoli přepnout.",
+    "aiSetupAction": "Spustit průvodce nastavením",
+    "readinessTitle": "Připravenost na nasazení",
+    "readinessDesc": "Před pozváním uživatelů zkontrolujte připravenost. Na jednom místě najdete překážky, varování, změny vyžadující restart a stav obnovy.",
+    "readinessPrimary": "Otevřít kontrolu připravenosti",
+    "firstRunPathTitle": "První spuštění pro administrátory",
+    "firstRunStep1Title": "Konfigurujte základní nastavení instance",
+    "firstRunStep1Body": "Před kontrolou nastavte branding, jazyk, motiv, uživatelská pole a Agent Settings.",
+    "firstRunStep1Action": "Otevřít nastavení instance",
+    "firstRunStep2Title": "Zkontrolovat připravenost na nasazení",
+    "firstRunStep2Body": "Před pozváním uživatelů zkontrolujte překážky, varování, změny vyžadující restart a stav obnovy.",
+    "firstRunStep2Action": "Otevřít průvodce nasazením",
+    "firstRunStep3Title": "Diagnostiku používejte pouze při vyšetřování",
+    "firstRunStep3Body": "Udržujte smoke testy a diagnostiku dostupné, aniž by byly hlavní cestou produktu.",
+    "firstRunStep3Action": "Otevřít diagnostiku",
+    "instanceDescSimple": "Název, veřejná e-mailová identita, motiv a ovládání brandingu.",
+    "aiDescSimple": "Prompty, chování modelu a výchozí nastavení dokumentů.",
+    "deploymentDescSimple": "Nastavení za běhu, stav systému a podrobnosti o připravenosti.",
+    "resources": "Adresa zdrojů",
+    "resourcesDesc": "Kurátorujte důvěryhodné právníky, neziskové organizace a doporučené zdroje",
+    "resourcesDescSimple": "Ručně kurátojte důvěryhodné doporučené zdroje.",
+    "testFeedback": "Testování a zpětná vazba",
+    "testFeedbackDesc": "Chatujte jako testovací uživatel a hodnotte odpovědi pro doladění svého nastavení",
+    "diagnosticsSectionLabel": "Diagnostika",
+    "operationsSectionLabel": "Operace",
+    "testDashboard": "Diagnostika",
+    "testDashboardDesc": "Spouštějte vývojové smoke testy a kontrolujte diagnostické moduly",
+    "testDashboardDescSimple": "Spouštějte smoke testy při vyšetřování problému.",
+    "iaChecklistTitle": "Kontrolní seznam pro revizi informační architektury administrátorem",
+    "iaChecklistBody": "Při lidské kontrole udržujte Nastavení nasazení, Nastavení instance, Nastavení agenta, Připravenost životního cyklu, Připravenost nasazení a diagnostické plochy oddělené.",
+    "humanReviewTitle": "Předání k lidské kontrole",
+    "humanReviewStatus": "Vyžadována prémiová podpora nasazení",
+    "humanReviewBody": "Aplikace prostředí za běhu zůstává explicitní: exportujte artefakty, aplikujte je s podporou operátora, restartujte dotčené služby a ověřte důkazy o připravenosti.",
+    "humanReviewAction": "Revize připravenosti nasazení",
+    "settingsSectionLabel": "Nastavení",
+    "userManager": "Správce uživatelů",
+    "userManagerDesc": "Prohlížejte uživatele, kontrolujte stav, exportujte seznamy a schvalujte přístup."
   },
   "adminAI": {
     "title": "Konfigurace AI",
@@ -877,7 +1464,18 @@
       "userInfoPlaceholder": "{user_info} — nahrazeno poli profilu aktuálního uživatele, pokud jsou k dispozici"
     },
     "revert": "Vrátit zpět",
-    "revertToGlobal": "Vrátit na globální"
+    "revertToGlobal": "Vrátit na globální",
+    "knowledgeSearchDisabledLabel": "Vyhledávání v znalostech je vypnuté",
+    "knowledgeSearchDisabledMessage": "Aktivní výchozí dokumenty nebudou používány, dokud nebudou Zdroje znalostí nastaveny na vybrané výchozí dokumenty nebo na všechny dostupné dokumenty.",
+    "assembledPromptOutput": "Sestavený výstup promptu",
+    "saveError": "Uložení se nezdařilo",
+    "revertError": "Vrácení se nezdařilo",
+    "toggleError": "Přepnutí se nezdařilo",
+    "loadErrorLabel": "Chyba načítání nastavení agenta",
+    "previewErrorLabel": "Chyba náhledu nastavení agenta",
+    "documentToggleErrorLabel": "Chyba přepínání dokumentu v nastavení agenta",
+    "documentDefaultsHintV2": "Dokumenty označené jako „Dostupné“ může vyhledávání v znalostech používat. Dokumenty označené jako „Výchozí aktivní“ jsou zahrnuty, pokud jsou Zdroje znalostí nastaveny na vybrané výchozí dokumenty.",
+    "externalChangeConflict": "Sage nebo jiný administrátor tuto položku změnil během vašeho 편집ování. Před uložením zrušte operaci a editor znovu otevřete."
   },
   "adminDeployment": {
     "title": "Konfigurace nasazení",
@@ -975,7 +1573,9 @@
       "unknown": "Neznámý",
       "usersMigrated": "Migrovaní uživatelé",
       "usersToMigrate": "Uživatelé k migraci",
-      "warning": "Toto je pokročilá operace. Nesprávná migrace vás může uzamknout ze šifrovaných dat. Pokračujte pouze pokud rozumíte důsledkům."
+      "warning": "Toto je pokročilá operace. Nesprávná migrace vás může uzamknout ze šifrovaných dat. Pokračujte pouze pokud rozumíte důsledkům.",
+      "inputWarningLabel": "Varování při migraci Admin klíče",
+      "destructiveWarningLabel": "Varování před ztrátou dat při migraci Admin klíče"
     },
     "revealFailed": "Nepodařilo se odhalit hodnotu. Zkontrolujte připojení rozšíření Nostr.",
     "searchHelp": {
@@ -1006,7 +1606,8 @@
       "overviewDesc": "Nastavení zabezpečení řídí autentizaci, správu relací a vývojové zkratky. Výchozí nastavení jsou nakonfigurována pro lokální vývoj.",
       "overviewNote": "V produkci se ujistěte, že simulační příznaky jsou vypnuté a FRONTEND_URL odpovídá vaší skutečné doméně.",
       "overviewTitle": "Přehled zabezpečení",
-      "overviewWhen": "Zkontrolujte tato nastavení před nasazením na veřejně přístupný server."
+      "overviewWhen": "Zkontrolujte tato nastavení před nasazením na veřejně přístupný server.",
+      "devNote": "Pro lokální testování e-mailů použijte MOCK_EMAIL; uživatelské a admin relace stále vyžadují standardní proces ověření."
     },
     "sslHelp": {
       "ariaLabel": "Nápověda ke konfiguraci SSL a HTTPS",
@@ -1107,7 +1708,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Složka pro nahrávání",
       "vector_database_eb5526": "Vektorová databáze"
-    }
+    },
+    "exportSageRuntimeEnv": "Exportovat Sage env",
+    "readiness": {
+      "title": "Připravenost nasazení",
+      "statusTitle": "Připravenost nasazení: {{status}}",
+      "description": "Předtím, než bude toto nasazení jedné instance (Single-Instance Deployment) připraveno pro běžný provoz, zkontrolujte potřebné důkazy.",
+      "openWizard": "Otevřít kontrolu připravenosti",
+      "blockerCount": "{{count}} blokující položek",
+      "warningCount": "{{count}} varování",
+      "readyCount": "{{count}} připraveno",
+      "empty": "Kontroly připravenosti k nasazení ještě nejsou k dispozici.",
+      "conversationBlocking": "Blokuje běžné konverzace",
+      "blocker": "Blokující položka",
+      "warning": "Varování",
+      "ready": "Připraveno",
+      "reviewInferenceVerification": "Prověřit ověření inference",
+      "reviewDataLifecycleStatus": "Prověřit stav životního cyklu dat",
+      "reviewDeploymentValidation": "Prověřit nastavení nasazení",
+      "reviewRestartRequired": "Prověřit vyžadovaný restart",
+      "reviewOperationalReadiness": "Prověřit provozní připravenost",
+      "reviewServiceHealth": "Prověřit stav služby",
+      "reviewRuntimeEnv": "Prověřit export runtime prostředí",
+      "deployment_settings_validation": {
+        "label": "Validace nastavení nasazení",
+        "status": {
+          "invalid": {
+            "summary": "Validace nastavení nasazení obsahuje chyby, které je nutné opravit.",
+            "nextAction": "Prověřte chyby validace nastavení nasazení."
+          },
+          "warnings": {
+            "summary": "Validace nastavení nasazení obsahuje doporučení.",
+            "nextAction": "Prověřte varování validace nastavení nasazení."
+          },
+          "valid": {
+            "summary": "Validace nastavení nasazení neobsahuje žádné chyby ani varování.",
+            "nextAction": "Žádná akce není vyžadována."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Ověřitelná inference",
+        "status": {
+          "current": {
+            "summary": "Konfigurovaný poskytovatel modelu má aktuální záznam o ověření inference.",
+            "nextAction": "Žádná akce není vyžadována. V případě změny nároků poskytovatele prověřte aktuální záznam o ověření inference."
+          },
+          "deferred_missing": {
+            "summary": "Šifrovaná a ověřitelná inference není pro konfigurovaného poskytovatele modelu momentálně ověřena.",
+            "nextAction": "Před považováním připravenosti k nasazení za dokončenou nakonfigurujte podporovaného poskytovatele modelu a spusťte ověření inference."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Kontrola životního cyklu dat",
+        "status": {
+          "needs_review": {
+            "summary": "Kontrola životního cyklu dat vyžaduje schválení administrátorem.",
+            "nextAction": "Prověřte stav životního cyklu aktivního úložiště a zaznamenejte kontrolu životního cyklu dat."
+          },
+          "stale": {
+            "summary": "Zaznamenaná kontrola životního cyklu dat je zastaralá po provedené změně v podpořeném životním cyklu.",
+            "nextAction": "Prověřte aktuální stav životního cyklu aktivního úložiště a zaznamenejte novou kontrolu životního cyklu dat."
+          },
+          "reviewed": {
+            "summary": "Revize životního cyklu dat byla dokončena.",
+            "nextAction": "Není vyžadována žádná akce, pokud se nezmění podpora životního cyklu."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Potvrzení plochy nasazení",
+        "status": {
+          "acknowledged": {
+            "summary": "Kategorie nepodporovaných ploch nasazení byly potvrzeny.",
+            "nextAction": "Není vyžadována žádná akce."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Kategorie nepodporovaných ploch nasazení vyžadují potvrzení operátorem.",
+            "nextAction": "Projděte uvedené kategorie ploch nasazení a každou z nich potvrďte, než označíte připravenost k nasazení jako dokončenou."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Cvičení obnovy a zálohování",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Je vyžadován nedávný záznam o cvičení obnovy a zálohování operátorem.",
+            "nextAction": "Provedete a zaznamenejte cvičení obnovy a zálohování pro toto nasazení."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Vyžadován restart",
+        "status": {
+          "current": {
+            "summary": "Žádná nastavení nasazení vyžadující restart se od spuštění služby nezměnila.",
+            "nextAction": "Není vyžadována žádná akce."
+          },
+          "restart_required": {
+            "summary": "Nastavení nasazení vyžadující restart byla po spuštění služby změněna. ({{changedSettings}})",
+            "nextAction": "Aplikujte požadovaná nastavení nasazení a restartujte dotčené služby, než je označíte za aktuální."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Konfigurace Sage runtime",
+        "status": {
+          "not_generated": {
+            "summary": "Runtime prostředí Sage ještě nebylo vygenerováno z nastavení nasazení.",
+            "nextAction": "Exportujte runtime prostředí Sage, než začnete považovat nastavení nasazení za aplikované na Sage."
+          },
+          "matches_desired": {
+            "summary": "Aktuální konfigurace Sage runtime odpovídá požadovaným nastavením nasazení.",
+            "nextAction": "Není vyžadována žádná akce."
+          },
+          "drifted": {
+            "summary": "Aktuální konfigurace Sage runtime se liší od požadovaných nastavení nasazení.",
+            "nextAction": "Prozkoumejte odchylku konfigurace Sage runtime, aplikujte vygenerované prostředí Sage a restartujte Sage."
+          },
+          "current": {
+            "summary": "Runtime prostředí Sage bylo vygenerováno z aktuálních nastavení nasazení.",
+            "nextAction": "Není vyžadována žádná akce, pokud vygenerovaný artefakt nebyl aplikován do nasazení."
+          },
+          "stale": {
+            "summary": "Nastavení nasazení byla změněna poté, co bylo runtime prostředí Sage vygenerováno.",
+            "nextAction": "Exportujte nové runtime prostředí Sage a aplikujte jej prostřednictvím procesu restartu nasazení."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Konfigurace runtime Core Backend",
+        "status": {
+          "not_generated": {
+            "summary": "Runtime prostředí Core-backend ještě nebylo vygenerováno z nastavení nasazení.",
+            "nextAction": "Exportujte runtime prostředí core-backend, než začnete považovat nastavení nasazení za aplikované na core-backend."
+          },
+          "matches_desired": {
+            "summary": "Aktuální konfigurace runtime core-backend odpovídá požadovaným nastavením nasazení.",
+            "nextAction": "Není vyžadována žádná akce."
+          },
+          "drifted": {
+            "summary": "Aktuální konfigurace runtime core-backend se liší od požadovaných nastavení nasazení.",
+            "nextAction": "Prozkoumejte odchylku konfigurace runtime core-backend, použijte vygenerované prostředí core-backend a restartujte core-backend."
+          },
+          "current": {
+            "summary": "Runtime prostředí core-backend bylo vygenerováno z aktuálních Deployment Settings.",
+            "nextAction": "Žádná akce není vyžadována, pokud nebyl vygenerovaný artefakt aplikován do Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings se změnily poté, co bylo runtime prostředí core-backend vygenerováno.",
+            "nextAction": "Exportujte nové runtime prostředí core-backend a aplikujte jej prostřednictvím procesu restartu Deployment."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Průvodce nasazením",
+      "step": "Krok {{current}} z {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Operační připravenost",
+      "description": "Před zahájením běžného provozu si projděte postupy pro zálohování, obnovu, monitoring a zotavení."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — váš Tinfoil API klíč pro lokální proxy.",
+      "apiKeyLabel": "Klíč API Tinfoil",
+      "ariaLabel": "Nápověda k runtime konfiguraci Sage",
+      "exampleConfig": "Příklad konfigurace",
+      "goToPage": "Přejít na stránku",
+      "sageExtra": "Nastavte LLM_API_KEY na váš Tinfoil klíč z {{tinfoilSignupUrl}}. Stack jej mapuje na Sage a lokální Tinfoil proxy.",
+      "sageHint": "Tento prototyp směruje provoz Agent Runtime přes Sage a Tinfoil. LLM_API_KEY je kanonický klíč Model Provider.",
+      "modelField": "TINFOIL_MODEL — identifikátor modelu Tinfoil, který by měl Sage použít (například: glm-5-2).",
+      "overviewDesc": "Tento prototyp používá Sage jako veřejný Agent Runtime a Tinfoil jako transport pro Model Provider. Model Provider nakonfigurujte prostřednictvím LLM_* Deployment Settings; stack je mapuje na Tinfoil runtime v Sage.",
+      "overviewTitle": "Přehled Sage Runtime",
+      "providerField": "LLM_PROVIDER — pro tento prototyp nastavte na \"sage\"."
+    },
+    "inferenceVerification": {
+      "current": "Aktuální",
+      "missing": "Chybějící",
+      "expired": "Vypršelo",
+      "failed": "Selhalo",
+      "success": "Úspěch",
+      "statusLoadFailed": "Nepodařilo se načíst stav ověření inference",
+      "historyLoadFailed": "Nepodařilo se načíst historii ověření inference",
+      "loadFailed": "Nepodařilo se provést ověření inference",
+      "manualFailed": "Manuální ověření selhalo",
+      "manualSucceeded": "Manuální ověření proběhlo úspěšně",
+      "detailLoadFailed": "Nepodařilo se načíst podrobnosti o potvrzení",
+      "ariaLabel": "Ověření inference",
+      "title": "Ověření inference",
+      "summary": "Důkaz určený pouze pro administrátory, že chráněná inference běží u očekávaného poskytovatele modelu.",
+      "verifyNow": "Ověřit nyní",
+      "status": "Stav",
+      "checkedAt": "Kontrolovaný",
+      "expiresAt": "Platnost do",
+      "expectedClaims": "Očekávané údaje",
+      "expectedClaimsValue": "Očekávané údaje: {{fingerprint}}",
+      "providerClaims": "Údaje poskytovatele",
+      "provider": "Poskytovatel",
+      "model": "Model",
+      "endpoint": "Koncový bod",
+      "history": "Historie ověření",
+      "emptyHistory": "Zatím zde nejsou žádné záznamy o ověření.",
+      "recordTitle": "Záznam č. {{id}}",
+      "inspectAttestation": "Prozkoumat potvrzení",
+      "fullAttestation": "Úplný materiál potvrzení"
+    },
+    "lifecycle": {
+      "notStarted": "Nezahájeno",
+      "notConfigured": "Nekonfigurováno",
+      "plaintextByOperatorChoice": "Plodný text dle volby operátora",
+      "allTombstones": "Vše",
+      "allTombstonesLabel": "Všechny pomníky",
+      "incompleteTombstonesFilter": "Neúplné",
+      "incompleteTombstonesLabel": "Neúplné pomníky",
+      "completedTombstonesFilter": "Dokončené",
+      "completedTombstonesLabel": "Dokončené pomníky",
+      "title": "Stav životního cyklu dat",
+      "description": "Aktuální úroveň ochrany soukromí řízená operátorem pro data instance.",
+      "scopeExcludes": "Vylučuje: {{excludes}}",
+      "secureEraseStatus": "Bezpečné mazání: {{status}}",
+      "readinessStatus": "Připravenost životního cyklu: {{status}}",
+      "readinessNonBlocking": "Uživatelova konverzace nejsou v v1 blokovány varováními připravenosti životního cyklu.",
+      "readinessStaleReason": "Důvod: {{reason}}",
+      "contentEncryptionKey": "Šifrovací klíč obsahu: {{status}}",
+      "artifactEncryptionPosture": "Stav šifrování artefaktů: {{status}}",
+      "artifactPostureLabel": "Stav šifrování artefaktů",
+      "artifactPostureRequired": "Vyžadováno",
+      "artifactPostureDisabled": "Vypnuto",
+      "retentionSchedulerStatus": "Plánovač retence: {{status}}",
+      "schedulerObservation": "Pozorování: {{status}}",
+      "schedulerEnabledClasses": "Aktivované třídy plánovače: {{classes}}",
+      "schedulerLastRunStatus": "Stav posledního běhu: {{status}}",
+      "schedulerLastRun": "Poslední běh: {{trigger}} provedl {{actor}}",
+      "previewRetention": "Náhled retence",
+      "runScheduledRetention": "Spustit naplánované",
+      "previewRetentionResult": "Náhled: {{conversations}} konverzací, {{artifacts}} dokumentových artefaktů, {{skipped}} vynechaných tříd.",
+      "scheduledRetentionResult": "Naplánovaný běh: {{status}} s {{retries}} pokusy o tombstone.",
+      "scheduledRetentionStatus": "Naplánované třídy: {{classes}}",
+      "auditCoverageStatus": "Rozsah auditu: {{audited}} auditováno, {{exceptions}} výjimky, {{missing}} chybí.",
+      "owner": "Vlastník: {{owner}}",
+      "deletion": "Smazání: {{status}}",
+      "retention": "Retence: {{status}}",
+      "audit": "Audit: {{status}}",
+      "confidentiality": "Důvěrnost: {{status}}",
+      "incompleteTombstones": "Neúplné tombstone: {{count}}",
+      "completedTombstones": "Dokončené tombstone: {{count}}",
+      "retentionEnabled": "Aktivováno",
+      "retentionWindow": "Okno",
+      "retentionDays": "dne",
+      "scheduledEnforcement": "Naplánováno",
+      "saveRetentionPolicy": "Uložit pravidlo",
+      "empty": "Stav životního cyklu není k dispozici.",
+      "retentionPolicySaveFailed": "Nelze uložit pravidla retence.",
+      "retentionPreviewFailed": "Nelze zobrazit náhled retence.",
+      "scheduledRetentionFailed": "Nelze spustit plánovanou retenci.",
+      "artifactPostureFailed": "Nelze aktualizovat nastavení šifrování artefaktů.",
+      "unsupportedSurfacesTitle": "Nepodporované nasazovací plochy",
+      "unsupportedSurfacesDescription": "Tyto provozní stopy jsou zde uvedeny, ale nacházejí se mimo kontrolu životního cyklu produktu.",
+      "unsupportedSurfaceAckFailed": "Nelze aktualizovat potvrzení.",
+      "acknowledgedSurface": "Potvrzeno",
+      "acknowledgeSurface": "Potvrdit",
+      "tombstonesTitle": "Záznamy o smazání (Tombstones)",
+      "tombstonesDescription": "Znovu se pokusit o nedokončené mazání v rámci životního cyklu, aniž by byla odhalena smazaná obsah.",
+      "tombstoneStatusFilter": "Filtr stavu záznamu o smazání",
+      "tombstoneRetryFailed": "Znovupovolání selhalo.",
+      "tombstonesFetchFailed": "Nelze načíst záznamy o smazání.",
+      "tombstoneClass": "Třída: {{className}}",
+      "tombstoneSource": "Zdroj: {{source}}",
+      "tombstoneRetries": "Počet pokusů: {{count}}",
+      "tombstoneUpdated": "Aktualizováno: {{updated}}",
+      "retryTombstoneLabel": "Znovu se pokusit o smazání záznamu {{id}}",
+      "retry": "Znovu zkusit",
+      "tombstonesEmpty": "Žádné záznamy o smazání nečekají na opětovné pokusy."
+    },
+    "runtimeEnv": {
+      "unknown": "Neznámé",
+      "title": "Soulad konfigrace za běhu",
+      "description": "Porovnává požadovaná nastavení nasazení, vygenerované prostředí Sage a pozorovatelné běžící stav.",
+      "desired": "Požadované",
+      "configuredKeys": "Konfigurováno klíčů: {{count}} ze {{total}}",
+      "generated": "Vygenerováno",
+      "exportedAt": "Exportováno {{time}}",
+      "notExported": "Nebylo zaznamenáno žádné exportování prostředí Sage",
+      "running": "Spuštěno",
+      "runningUnknown": "Běžící stav ještě není přímo zprostředkován.",
+      "coreBackend": "Jádro backendu",
+      "coreBackendHint": "Soulad procesů prostředí backendu",
+      "coreDesired": "Cílový stav jádra",
+      "coreConfiguredKeys": "Jádro backend: nakonfigurováno {{count}} ze {{total}} klíčů",
+      "coreGenerated": "Vygenerováno jádrem",
+      "coreNotExported": "Nebyly zaznamenány žádné exporty prostředí jádra backendu",
+      "coreRunning": "Jádro běží",
+      "coreRunningUnknown": "Stav běhu backendu jádra ještě není přímo zprostředkován.",
+      "coreExportedTitle": "Prostředí core-backend exportováno",
+      "coreSensitiveArtifact": "S souborem core-backend.env nakládejte jako s citlivým deployment materiálem.",
+      "coreExportDoesNotApply": "Export artefaktu nezmění běžící proces backendu, dokud jej Operátor neaplikuje a nerestartuje core-backend.",
+      "exportedTitle": "Prostředí Sage exportováno",
+      "sensitiveArtifact": "S souborem sage.env nakládejte jako s citlivým deployment materiálem.",
+      "exportDoesNotApply": "Export artefaktu nezmění běžící proces Sage, dokud jej Operátor neaplikuje a nerestartuje Sage."
+    },
+    "categorySettingsAria": "Nastavení {{category}}",
+    "exportCoreBackendRuntimeEnv": "Exportovat prostředí core-backend",
+    "restartCurrent": "Restart není vyžadován",
+    "restartCurrentDesc": "Nastavení deploymentu typu „Restart není vyžadován“ se od spuštění služby nezměnila.",
+    "saveError": "Uložení se nepodařilo",
+    "openHelpAria": "Otevřít nápovědu pro {{label}}"
   },
   "upload": {
     "invalidFileType": "Neplatný typ souboru. Povoleno: {{extensions}}",
@@ -1129,7 +2036,8 @@
       "processing": "Zpracovává se",
       "chunked": "Rozděleno",
       "complete": "Dokončeno",
-      "failed": "Selhalo"
+      "failed": "Selhalo",
+      "completedWithErrors": "Dokončeno s chybami"
     },
     "chunks": "{{processed}}/{{total}} částí",
     "deleteDocument": "Smazat dokument",
@@ -1178,7 +2086,21 @@
     "serverBusy": "Server je zaneprázdněn",
     "tryRefresh": "Zkusit znovu",
     "uploadedSuccess": "Úspěšně nahráno – zpracování zahájeno",
-    "uploadingStatus": "Nahrávání na server..."
+    "uploadingStatus": "Nahrávání na server...",
+    "uploadError": "Nahrávání se nepodařilo",
+    "documentDeletionError": "Chyba při mazání dokumentu",
+    "navigationWarning": "Váš dokument se stále přenáší. Odejděte až poté, co začne zpracování, jinak nemusí být nahrávání uloženo.",
+    "duplicateInBatch": "V této dávce se duplikuje název dokumentu",
+    "documentsSelected": "{{count}} dokumentů",
+    "queueSummary": "{{valid}} připraveno, {{rejected}} přeskočeno",
+    "skipped": "Přeskočeno",
+    "uploadedPartialSuccess": "{{count}} ve frontě, {{rejected}} přeskočeno",
+    "chooseFiles": "Vybrat soubory",
+    "chooseFolder": "Vybrat složku",
+    "uploadDocuments": "Nahrát dokumenty",
+    "replacingDocument": "Nahrazuji {{filename}}",
+    "recentDocumentsShowing": "Zobrazeno {{shown}} z {{total}} dokumentů",
+    "showMore": "Zobrazit více"
   },
   "configCategories": {
     "embedding": {
@@ -1220,6 +2142,11 @@
       "description": "Nakonfigurujte SSL certifikáty a nastavení HTTPS",
       "hint": "Nakonfigurujte TLS a nastavení proxy při obsluze přes HTTPS. Výchozí nastavení jsou bezpečná pro lokální vývoj; HTTPS povolte až po připojení certifikátů.",
       "label": "SSL a zabezpečení"
+    },
+    "llm": {
+      "label": "Běhové prostředí agenta Sage",
+      "description": "Konfigurace Sage + Tinfoil inference",
+      "hint": "Tento prototyp směruje provoz Agent Runtime přes Sage a používá Tinfoil jako transport Model Provider. Změny vyžadují restart."
     }
   },
   "promptSections": {
@@ -1246,6 +2173,12 @@
       "description": "Jak AI strukturuje své odpovědi",
       "hint": "Ovládá preference formátování, jako zda používat odrážky, nadpisy nebo konverzační odstavce. Toto ovlivňuje, jak jsou odpovědi vizuálně prezentovány.",
       "placeholder": "Používejte odrážky pro seznamy, nadpisy pro sekce..."
+    },
+    "prompt_system": {
+      "label": "Systémový prompt",
+      "description": "Základní identita a provozní instrukce pro AI",
+      "hint": "Použijte toto pro identitu asistenta, misi a nejvyšší úrovně omezení, která mají platit před tónem, pravidly, nástroji nebo kontextem dokumentů. Změny ovlivňují nové konverzace.",
+      "placeholder": "Jste Sage, soukromý asistent pro tuto instanci..."
     }
   },
   "parameters": {
@@ -1258,6 +2191,11 @@
       "label": "Hloubka znalostí",
       "description": "Kolik částí dokumentů se má použít jako reference",
       "hint": "Při odpovídání na otázky AI prohledává vaše nahrané dokumenty a získává relevantní části. Vyšší čísla znamenají více kontextu, ale pomalejší odpovědi. Nižší čísla jsou rychlejší, ale mohou minout relevantní informace. Výchozí: 5"
+    },
+    "max_tokens": {
+      "label": "Max. tokenů",
+      "description": "Maximální délka každé odpovědi AI",
+      "hint": "Omezuje délku odpovědi. Nižší hodnoty udržují odpovědi stručné a snižují náklady; vyšší hodnoty umožňují delší vysvětlení. Výchozí: 2048"
     }
   },
   "defaults": {
@@ -1265,6 +2203,21 @@
       "label": "Webové vyhledávání",
       "description": "Povolit AI prohledávat internet",
       "hint": "Když je povoleno, AI může prohledávat web pro aktuální informace, které nejsou ve vašich dokumentech. Zakažte toto, pokud chcete, aby odpovědi pocházely pouze z vaší nahrané znalostní báze."
+    },
+    "knowledgeSource": {
+      "none": "Žádné",
+      "selected": "Vybrané výchozí dokumenty",
+      "all": "Všechny dostupné dokumenty"
+    },
+    "knowledge_source_default": {
+      "label": "Zdroje znalostí",
+      "description": "Vyberte, které nahrané zdroje znalostí jsou aktivní v konverzacích uživatelů",
+      "hint": "Použijte \"none\" pro žádné nahrané znalosti ve výchozím nastavení, \"selected\" pro dokumenty označené jako Defaultně aktivní, nebo \"all\" pro všechny dostupné dokumenty."
+    },
+    "user_default_tool_ids": {
+      "label": "Sady uživatelských nástrojů",
+      "description": "Sady nástrojů aktivní ve výchozím nastavení v konverzacích uživatelů",
+      "hint": "JSON pole obsahující libovolně \"curated-resources\", \"knowledge-search\" a \"web-search\". Knowledge Search je také řízeno pomocí Zdroje znalostí."
     }
   },
   "colors": {
@@ -1443,6 +2396,51 @@
       "description": "Základní URL pro callback webhooku",
       "hint": "Základní URL používaná pro konstrukci callbacků webhooku. Příklad: https://api.example.com/webhooks. Výchozí: http://localhost:8000.",
       "label": "URL webhooku"
+    },
+    "LLM_PROVIDER": {
+      "label": "Poskytovatel modelu",
+      "description": "Label Model Provider na straně Pythonu",
+      "hint": "Pro tento prototyp použijte \"sage\". Toto nastavení nasazení podporuje diagnostiku na straně Pythonu a metadata pro ověření."
+    },
+    "LLM_MODEL": {
+      "label": "Název modelu",
+      "description": "Název/identifikátor modelu",
+      "hint": "Identifikátor modelu Tinfoil, který by měl Sage používat (např. \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "Koncový bod API",
+      "description": "Základní URL API Model Provideru",
+      "hint": "Základní URL proxy Tinfoil. Výchozí: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API klíč",
+      "description": "Tinfoil API klíč (tajný)",
+      "hint": "Nechte prázdné, pokud chcete ponechat nastavení nasazení (Deployment Settings) tajné."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Limit četnosti chatu",
+      "description": "Počet požadavků na chat za minutu",
+      "hint": "Maximální počet požadavků /llm/chat za minutu pro jednoho stabilního uživatele, admina, token nebo IP adresu klienta. Vyžaduje restart. Výchozí hodnota: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Limit četnosti dotazů pro retrieval",
+      "description": "Počet požadavků na dotazy retrieval za minutu",
+      "hint": "Maximální počet požadavků /query za minutu pro jednoho stabilního uživatele, token nebo IP adresu klienta. Vyžaduje restart. Výchozí hodnota: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Limit četnosti nahrávání",
+      "description": "Počet požadavků na nahrávání dokumentů za minutu",
+      "hint": "Maximální počet požadavků na nahrávání dokumentů za minutu pro jednoho stabilního admina, token nebo IP adresu klienta. Vyžaduje restart. Výchozí hodnota: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Limit četnosti vektorového vyhledávání",
+      "description": "Počet požadavků na vektorové vyhledávání za minutu",
+      "hint": "Maximální počet požadavků na vektorové vyhledávání za minutu pro jednoho stabilního uživatele, token nebo IP adresu klienta. Vyžaduje restart. Výchozí hodnota: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Limit četnosti exportu konfigurace",
+      "description": "Počet exportů konfigurace nasazení za hodinu",
+      "hint": "Maximální počet exportů .env za hodinu na jednu administrativní relaci nebo IP adresu klienta. Vyžaduje restart. Výchozí hodnota: 5."
     }
   },
   "instanceInitiation": {
@@ -1479,7 +2477,11 @@
       "title": "Připraveno k připojení"
     },
     "subtitle": "Nastavte svou soukromou znalostní bázi v několika krocích.",
-    "title": "Vítejte v Enclave"
+    "title": "Vítejte v Enclave",
+    "keySafety": {
+      "title": "Použít klíč Nostr specifický pro danou instanci",
+      "body": "Nepoužívejte svůj osobní klíč Nostr. Pro snížení rizika sledování a oddělení operačního přístupu si pro tuto instanci vytvořte nebo vyberte dedikovaný administrativní klíč."
+    }
   },
   "reachout": {
     "errors": {
@@ -1487,7 +2489,8 @@
       "notConfigured": "Tato funkce není nakonfigurována.",
       "rateLimited": "Příliš mnoho zpráv. Zkuste to prosím později.",
       "required": "Zpráva je povinná.",
-      "unavailable": "Kontakt není k dispozici."
+      "unavailable": "Kontakt není k dispozici.",
+      "formErrorLabel": "Chyba formuláře kontaktu"
     },
     "form": {
       "messageLabel": "Zpráva",
@@ -1495,7 +2498,8 @@
       "send": "Odeslat"
     },
     "status": {
-      "success": "Děkujeme. Vaše zpráva byla odeslána."
+      "success": "Děkujeme. Vaše zpráva byla odeslána.",
+      "successLabel": "Úspěch kontaktu"
     },
     "mode": {
       "feedback": {
@@ -1530,7 +2534,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Backend vrátil chybu při ověřování autentizace. Toto se nepovažuje za odhlášení.",
       "unable_to_verify_admin_session_5f87b8": "Nelze ověřit relaci administrátora",
       "verifying_admin_session_87c53b": "Ověřování relace administrátora..."
-    }
+    },
+    "loadingAssistant": "Načítání administrátorského asistenta"
   },
   "initiationGate": {
     "extracted": {
@@ -1744,7 +2749,333 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Ověřit token kouzelného odkazu a získat informace o relaci (relace založená na souborech cookie).",
       "verify_magic_link_token_183cf5": "Ověřit token kouzelného odkazu",
       "view_all_users_manage_approval_status_and_delete_03feec": "Zobrazit všechny uživatele, spravovat stav schválení a mazat uživatele.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Zobrazit a aktualizovat nastavení konfigurace celé instance."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Zobrazit a aktualizovat nastavení konfigurace celé instance.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testuje připojení k nakonfigurátorané cestě poskytovatele modelů (Model Provider)."
+    },
+    "labels": {
+      "themePreference": "Preferované téma",
+      "endpointGuidance": "Pokyny pro endpoint",
+      "healthResponseOutput": "Výstup odpovědi kontroly stavu (Health response)",
+      "jobs": "Úlohy",
+      "chunks": "Úryvky",
+      "rateLimitTestType": "Typ testu limitu požadavků",
+      "successfulRequests": "Úspěšné požadavky",
+      "successful": "Úspěšně",
+      "blockedRequests": "Blokované požadavky"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Stopa konverzace"
+  },
+  "branding": {
+    "logoAlt": "Logo {{name}}"
+  },
+  "language": {
+    "english": "Angličtina",
+    "spanish": "Španělština",
+    "french": "Francouzština",
+    "german": "Němčina",
+    "portuguese": "Portugalština"
+  },
+  "home": {
+    "checkingInstanceStatus": "Kontroluji stav instance..."
+  },
+  "adminGuidedSetup": {
+    "title": "Nastavte svou instanci",
+    "subtitle": "Váš asistent shromáždí základní údaje v jednom průchodu.",
+    "manual": "Místo toho konfigurujte manuálně",
+    "finish": "Dokončit a zahájit testování",
+    "comingSoon": "Tato fáze brzy přijde a je vyvíjena samostatně.",
+    "steps": {
+      "initialize": {
+        "label": "Inicializovat",
+        "title": "Inicializovat",
+        "subtitle": "Projdeme základy vašeho prostoru, aby váš agent začal se správnou základnou."
+      },
+      "docs": {
+        "label": "Nahrát dokumenty",
+        "title": "Nahrajte svou průvodcovskou příručku",
+        "subtitle": "Přidejte zdrojový materiál, ze kterého váš agent čerpá — knihy, průvodce a referenční dokumenty."
+      },
+      "resources": {
+        "label": "Vybrané zdroje",
+        "title": "Vybrané zdroje",
+        "subtitle": "Přidejte důvěryhodné reálné zdroje — klíčové kontakty, právníky, vzdělávací a psychologickou podporu — na které může agent uživatele odkázat."
+      },
+      "test": {
+        "label": "Testovat jako uživatel",
+        "title": "Testovat jako uživatel",
+        "subtitle": "Brzy se přidá — vyzkoušejte asistenta v roli jednoho ze svých typů uživatelů a ohodnoťte odpovědi."
+      },
+      "feedback": {
+        "label": "Zpětná vazba",
+        "title": "Zpětná vazba",
+        "subtitle": "Brzy se přidá — kontrolujte kvalitu odpovědí a upravujte své nastavení."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Testování a zpětná vazba",
+    "subtitle": "Spusťte testovací uživatelskou relaci, poté zkontrolujte šifrované beta logy a zpětnou vazbu ze uložených konverzací.",
+    "tabs": {
+      "test": "Testovat jako uživatel",
+      "feedback": "Zpětná vazba"
+    },
+    "test": {
+      "pickPersona": "Vyberte personu k testování",
+      "pickPersonaBody": "Vytvořte testovacího uživatele pro jeden ze svých typů uživatelů a poté s ním chatujte. Relace je uložena jako šifrovaný testovací záznam, který můžete ohodnotit v sekci Zpětná vazba.",
+      "userType": "Typ uživatele",
+      "genericUser": "Obecný uživatel (bez typu)",
+      "start": "Spustit relaci",
+      "admin": "Správce",
+      "testUserId": "Testovací uživatel",
+      "endSave": "Ukončit a uložit test",
+      "previewNotice": "Náhledový režim — skutečné převzetí identity ještě není plně propojeno, takže tento chat probíhá ve vaší admin relaci. Záznam se však stále ukládá pro pozdější kontrolu.",
+      "chatEmpty": "Pošlete zprávu jako tento uživatel, abyste zahájili testování.",
+      "inputPlaceholder": "Napište asistentovi jako tento uživatel...",
+      "saved": "Test je uložen (šifrován). Zkontrolujte jej v sekci Zpětná vazba.",
+      "startError": "Nepodařilo se spustit testovací relaci",
+      "saveError": "Nepodařilo se uložit test",
+      "impersonationUnavailable": "Převzetí identity testovacího uživatele ještě není k dispozici",
+      "sessionTokenError": "Nepodařilo se vytvořit token syntetické uživatelské relace",
+      "testingAs": "Testování jako {{persona}}",
+      "authFailed": "Syntetická uživatelská relace již není autorizována.",
+      "discardUnsavedConfirm": "Odstranit dokončené tahy, které nebyly uloženy?",
+      "workspaceAria": "Pracovní prostor konverzací testovacího uživatele"
+    },
+    "feedback": {
+      "trials": "Beta logy",
+      "untitled": "Bez názvu",
+      "turns": "tahů",
+      "turn": "Tah",
+      "empty": "Zatím nejsou uloženy žádné beta logy. Spusťte Test User Session nebo počkejte na uživatelské konverzace.",
+      "selectPrompt": "Vyberte beta log, abyste mohli zkontrolovat jeho přepis a ohodnotit každý tah.",
+      "noNip04": "Připojte Nostr rozšíření (Alby, nos2x) pro dešifrování přepisů — jsou šifrovány vaším admin klíčem.",
+      "sourceUser": "Uživatelská konverzace",
+      "sourceTest": "Testovací relace uživatele",
+      "thumbUp": "Dobrá odpověď",
+      "thumbDown": "Vyžaduje vylepšení",
+      "notePlaceholder": "Volná poznámka (uložena šifrovaně)…",
+      "exportNotDecrypted": "Před exportem přepis otevřete a dešifrujte.",
+      "exportFeedbackNotDecrypted": "Některé komentáře k zpětné vazbě nešlo dešifrovat. Před exportem přepis znovu otevřete a schvalte všechny požadavky na dešifrování.",
+      "exportNeedsExtension": "Export vyžaduje Nostr rozšíření. Přepisy jsou v klidu šifrovány a právě vaše rozšíření je dešifruje.",
+      "exportDecrypting": "Probíhá dešifrování. Export bude k dispozici, jakmile bude každý požadavek schválen.",
+      "exportWhyDisabled": "Proč je export zakázán?",
+      "retryDecryption": "Zkusit dešifrování znovu",
+      "decryptPendingTitle": "Zkontrolujte své Nostr rozšíření",
+      "decryptPendingBody": "Požaduje oprávnění k dešifrování tohoto přepisu. Nemusí se otevřít samo — pokud jej nevidíte, klikněte na ikonu rozšíření. Zvolte možnost zapamatovat si volbu, aby se vás to neptalo pokaždé.",
+      "decryptProgress": "Dešifrováno {{done}} z {{total}}.",
+      "loadTrialsError": "Nepodařilo se načíst testy",
+      "loadTranscriptError": "Nepodařilo se načíst přepis",
+      "saveError": "Zpětnou vazbu nešlo uložit",
+      "deleteError": "Log relace nešlo smazat",
+      "exportError": "Export relace selhal",
+      "transcriptIntegrityError": "Přepis není k dispozici nebo je neúplný a nelze jej exportovat.",
+      "decryptTranscriptError": "Nepodačilo se dešifrovat přepis. Schvalte požadavek na dešifrování ve svém Nostr rozšíření."
+    }
+  },
+  "adminResources": {
+    "title": "Adresa zdrojů",
+    "subtitle": "Ručně spravujte prověřené doporučené zdroje, které může asistent zmínit, pokud situace v konverzaci eskaluje. Koncovým uživatelům jsou zobrazeny pouze „připravené“ zdroje.",
+    "add": "Přidat zdroj",
+    "addTitle": "Přidat zdroj",
+    "editTitle": "Upravit zdroj",
+    "empty": "Zatím žádné zdroje. Přidejte jeden ručně, jakmile budete mít prověřený odkaz.",
+    "verified": "ověřeno",
+    "missing": "Chybí pro spuštění do provozu",
+    "name": "Název",
+    "type": "Typ zdroje",
+    "languages": "Jazyky (ISO kódy oddělené čárkou)",
+    "description": "Popis",
+    "descriptionHint": "Co má asistent uživateli o tomto zdroji sdělit.",
+    "scopeLevel": "Úroveň pokrytí",
+    "scopeCode": "Kód pokrytí",
+    "scopeCodeHint": "Země: ISO kód (NI). Subregion/region: kód UN M49 (013 = Střední Amerika). Globální: ponechte prázdné.",
+    "helpTypes": "Typy pomoci",
+    "contact": "Způsoby kontaktu",
+    "vettedBy": "Prověřil/a",
+    "sourceNote": "Poznámka ke zdroji",
+    "markVerified": "Označit jako ověřené (upřednostnit)",
+    "archive": "Archivovat (skrýt koncovým uživatelům)",
+    "deleteTitle": "Smazat tento zdroj?",
+    "deleteBody": "Tímto odstraníte záznam v adresáři pro {{name}}",
+    "coverage": "Pokrytí",
+    "coverageHint": "Vyberte úroveň pokrytí a poté vyhledejte její název nebo kód.",
+    "coverageCodePlaceholder": "Hledat podle názvu nebo kódu…",
+    "coverageLevelFirst": "Nejprve vyberte úroveň pokrytí",
+    "coverageClear": "Vymazat kód pokrytí",
+    "regionDirectoryUnavailable": "Adresář regionů není k dispozici. Zadejte kód ručně.",
+    "level": {
+      "country": "Země",
+      "subregion": "Podoblast",
+      "region": "Region",
+      "global": "Globální"
+    },
+    "addPointer": "Přidat odkaz",
+    "addRegion": "Přidat region",
+    "displayOrder": "Pořadí zobrazení",
+    "displayOrderHint": "Nižší čísla se zobrazují jako první po relevanci a ověření.",
+    "kind": "Druh",
+    "noSearchResults": "Pro toto vyhledávání nebyly nalezeny žádné zdroje.",
+    "order": "Řazení",
+    "pointerLabel": "Štítek odkazu {{number}}",
+    "pointerType": "Typ odkazu {{number}}",
+    "pointerValue": "Hodnota ukazatele {{number}}",
+    "pointers": "Ukazatele",
+    "regionNumber": "Region {{number}}",
+    "regions": "Regiony",
+    "removePointer": "Odstranit ukazatel",
+    "removeRegion": "Odstranit region",
+    "search": "Vyhledat zdroje",
+    "searchPlaceholder": "Název, druh, štítek, ukazatel nebo popis",
+    "tags": "Štítky (oddělené čárkou)",
+    "namePlaceholder": "např. Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, education, local",
+    "loadError": "Nepodařilo se načíst zdroje",
+    "loadDirectoryError": "Nepodařilo se načíst adresář",
+    "saveError": "Nepodařilo se uložit zdroj",
+    "deleteError": "Nepodařilo se smazat zdroj"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Zpět na administrátorský panel",
+    "eyebrow": "Administrativní operace",
+    "title": "Správce uživatelů",
+    "subtitle": "Prohlížejte uživatele, sledujte jejich stav a schvalujte přístup z jednoho přehledného ovládacího panelu.",
+    "unlockDetails": "Zobrazit podrobnosti",
+    "refreshRoster": "Obnovit seznam",
+    "exportVisible": "Exportovat zobrazený seznam",
+    "prepareVisible": "Připravit zobrazený seznam",
+    "downloadPrepared": "Stáhnout připravený seznam",
+    "exportPrepared": "Kompletní zobrazený seznam je připraven. Stahování je nyní povoleno.",
+    "rosterTitle": "Seznam uživatelů",
+    "rosterShown": "{{shown}} z celkových {{total}}.",
+    "tableLabel": "Seznam uživatelů",
+    "tableRowsLabel": "Řádky seznamu uživatelů",
+    "loadingLabel": "Načítání seznamu uživatelů",
+    "loadingUsers": "Načítání uživatelů...",
+    "loadRetry": "Seznam uživatelů se nepodařilo načíst. Pro opětovnou zprávu použijte Obnovit seznam.",
+    "emptyNoUsers": "Zatím žádní uživatelé. Zde se objeví noví autentizovaní uživatelé.",
+    "emptyFiltered": "Žádní uživatelé neodpovídají vybraným filtrům.",
+    "noUserType": "Žádný typ uživatele",
+    "unknown": "Neznámé",
+    "userFallback": "Uživatel #{{id}}",
+    "approvalSuccess": "{{name}} schválen.",
+    "exportSuccess": "Tabulka seznamu uživatelů byla stažena.",
+    "metrics": {
+      "total": "Celkem uživatelů",
+      "totalDetail": "v seznamu",
+      "pendingApproval": "Čeká na schválení",
+      "pendingDetail": "{{count}} čekajících",
+      "approved": "Schválen",
+      "approvedDetail": "mohou vstoupit do chatu",
+      "incompleteProfiles": "Neúplné profily",
+      "incompleteDetail": "vyžadují povinné odpovědi"
+    },
+    "callouts": {
+      "loadFailed": "Načtení seznamu uživatelů selhalo",
+      "approvalUpdated": "Schválení uživatele aktualizováno",
+      "approvalFailed": "Aktualizace schválení uživatele se nezdařila",
+      "exportReady": "Export seznamu uživatelů je připraven",
+      "exportFailed": "Export seznamu uživatelů selhal"
+    },
+    "filters": {
+      "search": "Hledat uživatele",
+      "searchPlaceholder": "Jméno, e-mail, veřejný klíč nebo #ID",
+      "approvalStatus": "Stav schválení",
+      "allApprovalStates": "Všechny stavy schválení",
+      "pendingApproval": "Čeká na schválení",
+      "approved": "Schváleno",
+      "allUserTypes": "Všechny typy uživatelů"
+    },
+    "columns": {
+      "user": "Uživatel",
+      "approval": "Schválení",
+      "userType": "Typ uživatele",
+      "userProfile": "Profil uživatele",
+      "joined": "Připojil se",
+      "action": "Akce"
+    },
+    "status": {
+      "approved": "Schváleno",
+      "pending": "Čekající"
+    },
+    "actions": {
+      "approve": "Schválit",
+      "approveUser": "Schválit {{name}}",
+      "viewUserDetails": "Zobrazit podrobnosti o {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Žádné dotazy",
+      "noQuestionsDetail": "Žádné onboardingové dotazy se nevztahují.",
+      "needsProfile": "Vyžaduje profil",
+      "missingRequiredOne": "Chybí 1 povinná odpověď",
+      "missingRequiredMany": "Chybí {{count}} povinných odpovědí",
+      "noProfileYet": "Profil ještě neexistuje",
+      "noAnswersSaved": "Žádné odpovědi nebyly uloženy.",
+      "ready": "Profil je připraven",
+      "answersSavedOne": "1 odpověď uložena",
+      "answersSavedMany": "{{count}} odpovědí uloženo"
+    },
+    "identity": {
+      "decrypting": "Dekryptuji jméno a e-mail...",
+      "failed": "Šifrovaná data nešla odemknout.",
+      "unavailable": "Pro šifrovaná data je potřeba signatář prohlížeče.",
+      "locked": "Šifrovaná data jsou uzamčena."
+    },
+    "errors": {
+      "loadUsers": "Nepodařilo se načíst uživatele.",
+      "loadUserTypes": "Nepodařilo se načíst typy uživatelů.",
+      "loadQuestions": "Nepodařilo se načíst uvítací otázky.",
+      "approvalUpdate": "Nepodařilo se aktualizovat schválení uživatele.",
+      "decryptUnavailable": "Pro přípravu tohoto seznamu je vyžadováno rozšíření prohlížeče s dešifrováním NIP-04.",
+      "decryptRoster": "Šifrovanou hodnotu seznamu nešlo dešifrovat. Tabulkový soubor nebyl vytvořen.",
+      "prepareRequired": "Před stažením připravte aktuálně zobrazený seznam.",
+      "exportAudit": "Export seznamu uživatelů nešel provést audit.",
+      "exportRoster": "Nepodařilo se exportovat seznam uživatelů."
+    },
+    "detail": {
+      "booleanYes": "Ano",
+      "booleanNo": "Ne",
+      "fieldUnlocked": "Šifrovaná odpověď byla v tomto prohlížeči odemčena.",
+      "decryptingField": "Dešifrování odpovědi...",
+      "encryptedFieldUnavailable": "Pro šifrovanou odpověď je potřeba signatář prohlížeče.",
+      "encryptedFieldFailed": "Šifrovanou odpověď nešlo odemknout.",
+      "encryptedFieldLocked": "Šifrovaná odpověď je uzamčena.",
+      "notAnswered": "Není odpovězeno",
+      "requiredMissing": "Chybí povinná odpověď.",
+      "backToUserManager": "Zpět na správce uživatelů",
+      "backToRoster": "Zpět na seznam uživatelů",
+      "eyebrow": "Údaje o uživateli",
+      "notFoundTitle": "Uživatel nebyl nalezen",
+      "notFoundBody": "Tento uživatel není v aktuálním seznamu administrátorů.",
+      "subtitle": "Zkontrolujte stav tohoto uživatele, odpovědi v profilu a údaje o přístupu.",
+      "approvalStatus": "Stav schválení",
+      "waitingApproval": "čeká na schválení",
+      "identityTitle": "Identita",
+      "name": "Jméno",
+      "nameUnavailable": "Není k dispozici",
+      "email": "E-mail",
+      "emailUnavailable": "Není k dispozici",
+      "userId": "ID uživatele",
+      "publicKey": "Veřejný klíč",
+      "noPublicKey": "Žádný veřejný klíč",
+      "fieldsTitle": "Profilové údaje",
+      "fieldsShown_one": "{{count}} pole se vztahuje k tomuto uživateli.",
+      "fieldsShown_few": "{{count}} pole se vztahují k tomuto uživateli.",
+      "fieldsShown_many": "{{count}} pole se vztahuje k tomuto uživateli.",
+      "fieldsShown_other": "{{count}} polí se vztahuje k tomuto uživateli.",
+      "noFields": "Žádné uváděcí údaje se nevztahují k tomuto uživateli.",
+      "required": "Povinné",
+      "optional": "Nepovinné",
+      "encrypted": "Šifrované",
+      "plain": "Nešifrované",
+      "chatContext": "Kontext chatu"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Dešifrování {{done}} z {{total}}",
+    "checkExtension": "zkontrolujte své Nostr rozšíření",
+    "persistentApproval": "Zvolte možnost „pamatovat si“ nebo „vždy“, aby se vás to neptalo pokaždé."
   }
 }

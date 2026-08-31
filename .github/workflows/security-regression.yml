@@ -30,6 +30,7 @@ jobs:
         run: |
           python -m unittest \
             backend.tests.test_magic_link_enumeration \
+            backend.tests.test_magic_link_localization \
             backend.tests.test_ingest_batch_replacement \
             backend.tests.test_query_retrieval_hydration \
             backend.tests.test_sql_safety \
@@ -66,6 +67,33 @@ jobs:
             src/components/chat/ChatMessage.test.tsx \
             src/pages/AdminDeploymentConfig.test.tsx \
             src/pages/UserAuth.test.tsx
+
+  localization-contract:
+    name: Localization contract
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    # The i18n suite was previously only reachable through the local pre-commit
+    # hook, so untranslated strings shipped whenever that hook was bypassed.
+    # Running it here is what actually enforces the contract:
+    #   - every English key exists in the priority locales
+    #   - interpolation placeholders and plural categories match
+    #   - every t('key') used in code exists in en.json
+    #   - registered dynamic key families resolve
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Run localization contract tests
+        run: npm test -- --run src/i18n/
 
   frontend-production-runtime:
     name: Frontend production runtime contract

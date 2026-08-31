@@ -36,7 +36,17 @@
     "retry": "重試",
     "saved": "已儲存",
     "sending": "正在傳送...",
-    "gotIt": "知道了"
+    "gotIt": "知道了",
+    "send": "傳送",
+    "backToAdminDashboard": "返回管理員控制台",
+    "loadingPage": "正在載入頁面",
+    "pageLoadError": "頁面載入失敗。請重新整理。",
+    "export": "匯出",
+    "reset": "重設",
+    "exit": "退出",
+    "none": "無",
+    "all": "全部",
+    "warning": "警告"
   },
   "settings": {
     "title": "設定",
@@ -59,8 +69,23 @@
       "deploymentConfig": "部署設定",
       "deploymentConfigDesc": "服務、SMTP、儲存",
       "userConfig": "使用者配置",
-      "userConfigDesc": "使用者類型和入門問題"
-    }
+      "userConfigDesc": "使用者類型和入門問題",
+      "guidedSetup": "引導式設定",
+      "guidedSetupDesc": "逐步完成設定、文件、資源與測試。",
+      "guides": "管理員指南",
+      "guidesDesc": "了解管理員的配置內容與位置。",
+      "testUserSession": "測試使用者工作階段",
+      "testUserSessionDesc": "以模擬使用者身份進行聊天並查看 Beta 版回饋。",
+      "diagnostics": "診斷",
+      "diagnosticsDesc": "在調查問題時執行冒煙測試。",
+      "resourceDirectory": "資源目錄",
+      "resourceDirectoryDesc": "手動整理受信任的推薦資源。"
+    },
+    "diagnostics": "診斷",
+    "adminWorkflows": "管理員工作流",
+    "settingsSection": "設定",
+    "dataAndContent": "數據與內容",
+    "operations": "營運"
   },
   "admin": {
     "confirmDelete": "你確定要刪除此記錄嗎？",
@@ -103,7 +128,12 @@
       "optionsCount_one": "{{count}} 個選項",
       "optionsCount_other": "{{count}} 個選項",
       "userSectionDesc": "設定使用者類型以及使用者在入門期間回答的問題。",
-      "userSectionTitle": "使用者設定"
+      "userSectionTitle": "使用者設定",
+      "fieldScopeFilterLabel": "依使用者類型篩選問題",
+      "noFieldsForScope": "此使用者類型尚無適用問題。",
+      "reorderNeedsAllScope": "顯示所有問題以便重新排序",
+      "fieldScopeGlobalHint": "所有使用者（無論其類型）皆須回答的問題。",
+      "fieldScopeTypeHint": "此使用者類型會收到的所有問題：包含所有人皆須回答的全局問題，以及其專屬問題。"
     },
     "database": {
       "backToSetup": "返回管理設定",
@@ -188,7 +218,14 @@
       "nip07Unavailable": "未偵測到 Nostr 擴充功能",
       "plaintextFieldIcon": "純文字欄位",
       "primaryKeyIcon": "主鍵",
-      "unlockDecryption": "解除解密鎖定"
+      "unlockDecryption": "解除解密鎖定",
+      "safeQueryResults": "安全查詢結果",
+      "queryError": "查詢錯誤",
+      "writeResult": "資料庫寫入結果",
+      "emptyQueryResult": "查詢結果為空",
+      "readOnly": "唯讀",
+      "tableLoadError": "資料表載入錯誤",
+      "readOnlyHint": "已禁用直接編輯資料庫；請使用經過稽核的管理流程進行變更。"
     },
     "fields": {
       "nameRequired": "欄位名稱為必填",
@@ -278,7 +315,11 @@
       "removeFieldFailed": "移除欄位失敗",
       "reorderFailed": "重新排序欄位失敗",
       "loadUsersFailed": "載入使用者失敗",
-      "updateTypeFailed": "更新使用者類型失敗"
+      "updateTypeFailed": "更新使用者類型失敗",
+      "loadSettingsFailed": "載入設定失敗",
+      "externalConfigConflict": "Sage 或其他管理員在您編輯時更改了這些設定。請在儲存前重新整理此頁面，以免覆蓋較新的值。",
+      "externalSettingsConflict": "Sage 或其他管理員在您編輯時更改了這些設定。請在儲存前重新整理此頁面。",
+      "externalUserConfigConflict": "Sage 或其他管理員在您編輯時更改了使用者類型或引導問題。請在儲存草稿前重新整理此頁面。"
     },
     "userMigration": {
       "title": "使用者類型遷移",
@@ -313,7 +354,10 @@
       "emailEncryptedHint": "電子郵件（已加密）",
       "nameEncryptedHint": "姓名（已加密）",
       "noUsersHint": "嘗試更改上方篩選器或重新整理。",
-      "pubkeyPresent": "Nostr 公鑰存在"
+      "pubkeyPresent": "Nostr 公鑰存在",
+      "usersErrorLabel": "使用者類型遷移錯誤",
+      "errorLabel": "使用者類型遷移錯誤",
+      "summaryLabel": "使用者類型遷移摘要"
     },
     "configAssistant": {
       "openAria": "開啟管理員助手",
@@ -351,8 +395,40 @@
         "restartRequiredFor": "以下項目需要重新啟動：{{keys}}。",
         "restartRequiredNo": "不需要重新啟動。",
         "restartCheckFailedHttp": "重新啟動需求檢查失敗（HTTP {{status}}）。",
-        "restartCheckFailedNetwork": "重新啟動需求檢查失敗（網路錯誤）。"
-      }
+        "restartCheckFailedNetwork": "重新啟動需求檢查失敗（網路錯誤）。",
+        "pageRefreshRecommended": "請重新整理此頁面以查看主題更新。"
+      },
+      "onboardingWelcome": "歡迎 — 讓我們開始設定您的空間。您可以在一則訊息中回答您想回答的所有問題（請使用編號，並跳過任何您不確定的部分）：\n\n1. **名稱** — 這個空間要叫什麼名字？（會顯示在頁首與瀏覽器分頁）\n2. **描述** — 用一句話說明用途（私人筆記，不會顯示給使用者看）\n3. **助手名稱** — AI 助手要叫什麼名字？\n4. **強調色** — 按鈕與連結的高亮顏色（可以使用名稱如 blue/teal，或十六進位碼如 #3B82F6）\n5. **主題** — 淺色、深色，或隨系統（配合裝置設定）？\n6. **預設語言** — 例如：英文或西班牙文（選填）\n7. **標語** — 頁首使用的簡短標語（選填）\n8. **新使用者** — 直接允許加入，還是逐一審核？\n9. **使用者類型** — 哪些非管理員角色會使用此空間？（例如：教師與學生）— 我會為您建立好每一種角色\n\n範例：「9. 教師與學生」。我會一次性儲存所有設定 — 且您隨時可以切換回手動設定。",
+      "collapseSidebar": "收合助手側邊欄",
+      "expandSidebar": "開啟管理助手側邊欄",
+      "resize": "調整管理助手面板大小",
+      "railLabel": "助手",
+      "shareSecretsHint": "預設為關閉。請先啟用設定工具。啟用後，機密部署的設定值將會在用戶端揭露，並在本次原型流程中傳送至 Sage。",
+      "applyIntentUsePanel": "請使用下方的待處理變更面板，並點擊「套用」以確認這些設定更新。",
+      "applyIntentNoPending": "目前沒有待套用的配置變更。請先要求助手提出一組變更方案。",
+      "startNewConversation": "開始新的助手對話",
+      "reducedContextNoticeLabel": "上下文縮減通知",
+      "sessionMemoryNoticeLabel": "對話記憶壓縮通知",
+      "sessionMemoryNotice": "為了維持對話進行，較舊的上下文已進行摘要處理。",
+      "reducedContextNotice": "部分上下文已進行縮減，以符合模型供應商的額度限制 ({{sections}})。在您開始新的助手對話之前，回答內容可能會不夠完整。",
+      "reducedContextSections": {
+        "recentConversation": "最近的對話紀錄"
+      },
+      "approvalCardTitle": "核准組態變更",
+      "applying": "套用中",
+      "applied": "已套用",
+      "rejected": "已拒絕",
+      "failed": "失敗",
+      "superseded": "已取代",
+      "hideDetails": "隱藏詳細資訊",
+      "reviewDetails": "檢視詳細資訊",
+      "reject": "拒絕",
+      "approve": "核准",
+      "applyErrorLabel": "組態套用錯誤",
+      "onboardingTitle": "引導式設定對話",
+      "onboardingContext": "專注於設定的對話",
+      "directShareSecretsHint": "選填：在此對話的內容中包含已儲存的部署密鑰值。直接讀取密鑰不需要此設定。",
+      "directWritePrompt": "詢問管理員組態。Sage 可以檢查設定，並在對話中與您確認後，直接套用支援的變更。"
     },
     "reachout": {
       "badgeDefault": "預設",
@@ -519,7 +595,16 @@
       "typographyTitle": "字體排版",
       "userIconLabel": "使用者圖示",
       "userLabelLabel": "使用者標籤",
-      "userLabelPlaceholder": "例如，您"
+      "userLabelPlaceholder": "例如，您",
+      "publicEmailDisplayNameLabel": "公開電子郵件顯示名稱 (選填)",
+      "publicEmailDisplayNameHint": "用於 magic-link 登入郵件。若留白則使用 Instance 名稱。",
+      "defaultsTitle": "Instance 預設值",
+      "defaultsDesc": "在套用任何本地瀏覽器控制項之前，設定基準語言與主題。",
+      "defaultLanguageLabel": "預設語言",
+      "defaultThemeLabel": "預設主題",
+      "themeSystem": "系統",
+      "themeLight": "淺色",
+      "themeDark": "深色"
     },
     "userConfig": {
       "subtitle": "設定使用者類型以及使用者在 onboarding 期間回答的問題。",
@@ -527,6 +612,55 @@
       "typeDescription": "描述",
       "typeIcon": "類型圖示",
       "typeName": "類型名稱"
+    },
+    "userApproval": {
+      "updateFailed": "更新使用者核准失敗。",
+      "approvedUser": "使用者 #{{id}} 已核准。",
+      "revokedUser": "使用者 #{{id}} 已移回待處理狀態。",
+      "title": "使用者審核",
+      "subtitle": "選擇新的已驗證使用者可以立即進入聊天，還是需要等待管理員審核。",
+      "requireManualLabel": "對新使用者進行手動審核",
+      "requireManualHint": "啟用後，新使用者在管理員核准前，將停留在待審核畫面。",
+      "loadingHint": "載入中...",
+      "saveButton": "儲存使用者審核設定",
+      "savedCalloutLabel": "使用者審核已儲存",
+      "errorCalloutLabel": "使用者審核錯誤",
+      "pendingTitle": "待審核項目",
+      "pendingCount_zero": "有 {{count}} 位使用者在取得聊天權限前需要審核。",
+      "pendingCount_one": "有 {{count}} 位使用者在取得聊天權限前需要審核。",
+      "pendingCount_two": "有 {{count}} 位使用者在取得聊天權限前需要審核。",
+      "pendingCount_few": "有 {{count}} 位使用者在取得聊天權限前需要審核。",
+      "pendingCount_many": "有 {{count}} 位使用者在取得聊天權限前需要審核。",
+      "pendingCount_other": "有 {{count}} 位使用者在取得聊天權限前需要審核。",
+      "nonePending": "目前沒有使用者正在等待審核。",
+      "actionSavedCalloutLabel": "使用者審核已更新",
+      "actionErrorCalloutLabel": "使用者審核更新失敗",
+      "loadingUsers": "正在載入使用者...",
+      "emptyState": "當需要手動審核時，等待審核的新使用者將顯示於此。",
+      "emailOnFile": "登記的電子郵件",
+      "nameOnFile": "登記的姓名",
+      "approveButton": "核准",
+      "revokeButton": "撤銷"
+    },
+    "userRosterExport": {
+      "auditFailed": "使用者名單匯出無法進行稽核。試算表未下載。",
+      "decryptUnavailable": "準備此名單需要具備 NIP-0CA 解密功能的瀏覽器擴充功能。",
+      "decryptFailed": "無法解密加密的名單數值。未建立試算表。",
+      "prepared": "完整名單已準備就緒。現在可以下載。",
+      "prepareRequired": "請在下載前先準備目前的名單。",
+      "prepareButton": "準備使用者名單",
+      "downloadButton": "下載已準備好的名單",
+      "success": "使用者名單試算表已下載。",
+      "failed": "匯出使用者名單失敗。",
+      "button": "匯出使用者",
+      "successLabel": "使用者名單匯出就緒",
+      "errorLabel": "使用者名單匯出失敗"
+    },
+    "userIdentity": {
+      "decrypting": "正在解密姓名/電子郵件...",
+      "decryptFailed": "無法解密姓名/電子郵件",
+      "unlockDetails": "解鎖以顯示姓名/電子郵件",
+      "unlockButton": "解鎖詳細資訊"
     }
   },
   "adminOnboarding": {
@@ -551,7 +685,9 @@
     "legalResponsibilityNotice": "你有責任確保此實例的設定合法，並制定適當的使用者告知和資料處理政策。",
     "extracted": {
       "change_language_789b14": "更改語言"
-    }
+    },
+    "statusError": "檢查實例狀態失敗",
+    "connectionError": "連線失敗"
   },
   "onboarding": {
     "nostr": {
@@ -576,7 +712,8 @@
       "title": "哪個最能描述你？",
       "description": "選擇最符合你需求的選項",
       "loadError": "載入使用者類型失敗。請重試。",
-      "selectionLabel": "使用者類型選擇"
+      "selectionLabel": "使用者類型選擇",
+      "errorLabel": "使用者類型載入錯誤"
     },
     "language": {
       "selectLabel": "選擇語言",
@@ -619,7 +756,8 @@
       "encryptionBody": "個人資料欄位預設加密，但此實例管理員控制欄位層級設定，可能會允許部分資料以不同方式儲存或分享。",
       "adminControlNotice": "資料處理方式由此實例管理員設定，包括哪些資料可能以未加密形式儲存或與 AI 工具分享。",
       "noWarrantyNotice": "Enclave 軟體按原樣提供，不附帶任何保證。使用此實例須遵守管理員的相關政策。",
-      "retentionNotice": "資料保留和刪除時間表由本實例管理員設定。請聯絡他們以提出存取、更正或刪除請求。"
+      "retentionNotice": "資料保留和刪除時間表由本實例管理員設定。請聯絡他們以提出存取、更正或刪除請求。",
+      "errorLabel": "Magic link 請求錯誤"
     },
     "verify": {
       "verifying": "正在驗證你的連結...",
@@ -679,20 +817,28 @@
       "databaseName": "資料庫",
       "knowledgeGraph": "查詢知識圖譜",
       "config": "配置",
-      "configName": "配置"
+      "configName": "配置",
+      "knowledgeSearch": "搜尋已上傳的文件與知識片段",
+      "knowledgeSearchName": "知識庫",
+      "curatedResources": "尋找管理員審核過的推薦資源與受信任的組織",
+      "curatedResourcesName": "資源"
     },
     "documentScope": {
       "title": "知識庫",
       "description": "選擇要包含在上下文中的來源",
       "noSources": "沒有可用的來源",
       "clearAll": "清除全部",
-      "docsLabel": "文件"
+      "docsLabel": "文件",
+      "clearAllSelectedAria": "清除所有已選文件",
+      "docsLabelWithCount": "文件 {{count}} 份"
     },
     "messages": {
       "searching": "正在搜尋「{{term}}」...",
       "searchingPrefix": "搜尋中",
       "searchResults": "我為你搜尋了「{{term}}」：",
-      "newConversation": "新對話"
+      "newConversation": "新對話",
+      "copy": "複製訊息",
+      "copied": "已複製訊息"
     },
     "code": {
       "copy": "複製",
@@ -711,7 +857,177 @@
       "roleUser": "你",
       "roleAssistant": "助手",
       "footer": "從{{instanceName}}匯出",
-      "exportedOn": "匯出時間：{{timestamp}}"
+      "exportedOn": "匯出時間：{{timestamp}}",
+      "copiedExportNotice": "此匯出檔案離開了主動產品儲存空間，且在下載後不屬於 Active Storage 生命週期。"
+    },
+    "new": "新對話",
+    "listTitle": "對話列表",
+    "contextTitle": "上下文",
+    "messageActions": "訊息操作",
+    "actions": {
+      "stop": "停止回應",
+      "stopDisabled": "目前沒有正在進行的回應。",
+      "regenerate": "重新生成回應",
+      "edit": "編輯訊息",
+      "waitForResponse": "請先等待目前的回應完成。",
+      "startConversation": "請先開始或恢復對話。",
+      "resolveConfirmation": "在更改歷史之前，請先處理待處理的變更確認 (Change Confirmation)。"
+    },
+    "composerContextAria": "輸入框上下文",
+    "sessions": {
+      "ariaLabel": "聊天對話",
+      "current": "目前聊天",
+      "empty": "空白",
+      "messageCount_one": "{{count}} 則訊息",
+      "messageCount_other": "{{count}} 則訊息",
+      "deleteConfirmTitle": "刪除 \"{{title}}\"？",
+      "rename": "重新命名 {{title}}",
+      "delete": "刪除 {{title}}",
+      "resumeInvalid": "無法載入該對話。",
+      "renameEmpty": "對話標題為必填項目。",
+      "renameError": "無法重新命名對話。",
+      "deleteError": "無法刪除對話。",
+      "loading": "正在載入聊天...",
+      "error": "無法載入聊天",
+      "saved": "已儲存的聊天",
+      "deleteConfirmBody": "這將移除已儲存的對話及其對話記憶。",
+      "deleteCancel": "取消刪除對話",
+      "cancel": "取消",
+      "deleteConfirm": "刪除對話",
+      "deleteDeleting": "正在刪除...",
+      "renameInput": "對話標題",
+      "renameCancel": "取消重新命名對話",
+      "renameSave": "儲存對話標題",
+      "renameSaving": "正在重新命名...",
+      "open": "開啟聊天對話",
+      "close": "關閉聊天對ের"
+    },
+    "currentChatAria": "目前聊天",
+    "newFromCurrent": "開始新聊天",
+    "documentsContextTitle": "文件",
+    "errors": {
+      "requestLabel": "聊天請求錯誤"
+    },
+    "trace": {
+      "finalizing": "正在完成回應...",
+      "collapse": "收合",
+      "expand": "展開",
+      "reasoning": "推理",
+      "thinking": "思考中",
+      "transcript": "{{label}} 逐字稿",
+      "reasoningSummaryAria": "推理摘要",
+      "reasoningTranscriptAria": "推理逐字稿",
+      "label": "追蹤",
+      "toolCalls": "工具呼叫",
+      "retrieval": "檢索",
+      "input": "輸入",
+      "output": "輸出",
+      "retrievedSource": "已檢索來源",
+      "score": "分數 {{score}}",
+      "optionalDetailsAria": "{{label}} 選填詳細資訊"
+    },
+    "conversationMessagesAria": "對話訊息",
+    "conversationSurfaceAria": "對話介面",
+    "conversationThreadAria": "對話串",
+    "activity": {
+      "label": "活動",
+      "summaryAria": "活動摘要",
+      "detailsAria": "活動詳細資訊",
+      "timelineAria": "活動時間軸",
+      "show": "顯示活動",
+      "hide": "隱藏活動",
+      "showOptional": "顯示選填詳細資訊",
+      "hideOptional": "隱藏選填詳細資訊",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "嘗試呼叫 {{toolName}}。",
+        "retry": "在第 {{attempt}} 次嘗試後正在重試工具。",
+        "running": "工具執行中。",
+        "completed": "工具已完成。",
+        "guarded": "工具受到保護。",
+        "failed": "工具執行失敗。",
+        "rejected": "工具呼叫已被拒絕。",
+        "timedOut": "工具執行逾時。",
+        "knowledgeSearch": {
+          "title": "知識搜尋"
+        },
+        "webSearch": {
+          "title": "網路搜尋"
+        },
+        "curatedResources": {
+          "title": "精選資源"
+        },
+        "adminConfig": {
+          "title": "管理員配置"
+        },
+        "databaseQuery": {
+          "title": "資料庫查詢"
+        }
+      },
+      "status": {
+        "running": "執行中",
+        "succeeded": "成功",
+        "failed": "失敗",
+        "guarded": "受保護",
+        "timed_out": "已逾時",
+        "rejected": "已拒絕"
+      },
+      "toolSelection": {
+        "title": "工具選擇",
+        "failed": "在記錄可用選擇之前，工具選擇失敗。",
+        "partialFailure": "模型的部分工具選擇已被拒絕。",
+        "noneSelected": "未選擇任何工具。",
+        "selected": "已選擇：{{selectedTools}}。"
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "模型請求",
+          "summary": "模型請求：{{elapsedMs}} ms。"
+        },
+        "providerFirstEventWait": {
+          "title": "供應商首個事件等待時間",
+          "summary": "供應商首個事件等待時間：{{elapsedMs}} ms。"
+        },
+        "toolExecution": {
+          "title": "工具執行",
+          "summary": "工具執行：{{elapsedMs}} ms。"
+        },
+        "resourceDirectoryLookup": {
+          "title": "資源目錄查詢",
+          "summary": "資源目錄查詢：{{elapsedMs}} ms。"
+        },
+        "retrieval": {
+          "title": "檢索",
+          "summary": "檢索：{{elapsedMs}} ms。"
+        },
+        "retryDelay": {
+          "title": "重試延遲",
+          "summary": "重試延遲：{{elapsedMs}} ms。"
+        },
+        "totalTurn": {
+          "title": "總回合時間",
+          "summary": "總回合耗時：{{elapsedMs}} ms。"
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "找不到相關的上傳文件段落。",
+        "retrieved": "已檢索 {{count}} 個上傳文件段落以生成答案。"
+      },
+      "webSearch": {
+        "prepared": "已準備好網路搜尋結果以生成答案 ({{count}})。"
+      },
+      "curatedResources": {
+        "noAdditional": "找不到額外的精選資源。",
+        "noMatches": "沒有精選資源符合此請求。",
+        "returned": "已回傳 {{count}} / {{totalCount}} 個精選資源。"
+      },
+      "adminConfig": {
+        "completed": "管理員配置操作 {{toolId}} 已完成 ({{outcome}})。已更改設定：{{changedSettings}}。"
+      },
+      "databaseResultsRedacted": "資料庫結果已從追蹤紀錄中遮蔽。",
+      "databaseQuery": {
+        "rejected": "資料庫查詢已被拒絕。"
+      }
     }
   },
   "errors": {
@@ -746,11 +1062,228 @@
     "adminSessionExpired": "管理員工作階段已過期",
     "authenticationFailed": "驗證失敗",
     "noNostrExtension": "找不到Nostr擴充功能",
-    "exportFailed": "匯出失敗"
+    "exportFailed": "匯出失敗",
+    "failedToRetryDeletionTombstone": "重新嘗試刪除墓碑 (tombstone) 失敗",
+    "failedToAcknowledgeUnsupportedSurface": "無法確認不支援的部署介面",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "無法確認不支援的部署介面類別",
+    "failedToPreviewRetention": "預覽保留政策失敗",
+    "failedToUpdateRetentionPolicy": "更新保留政策失敗",
+    "failedToRunScheduledRetention": "執行排程保留失敗",
+    "failedToUpdateArtifactEncryptionPosture": "更新人工製品加密狀態失敗",
+    "queryExecutionFailed": "查詢執行失敗"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "管理員可以"
+    },
+    "summary": {
+      "brand": {
+        "title": "品牌化實例",
+        "body": "名稱、Logo、主題、助手身份以及公開電子郵件顯示。"
+      },
+      "people": {
+        "title": "管理人員",
+        "body": "使用者類型、引導問題、核准、遷移與存取權限。"
+      },
+      "agent": {
+        "title": "塑造 Sage",
+        "body": "提示詞規則、回應設定、文件存取權限與工具預設值。"
+      },
+      "launch": {
+        "title": "安全啟動",
+        "body": "電子郵件、網域、CORS、HTTPS、模型路由、健康狀況及執行環境。"
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "品牌",
+        "title": "身分與外觀",
+        "body": "讓您的實例展現組織特色。",
+        "detail1": "名稱、標語、助手名稱及使用者標籤。",
+        "detail2": "Logo、favicon、圖示、強調色、主題、字體及聊天樣式。",
+        "detail3": "預設語言與公開顯示的電子郵件名稱。",
+        "link": "開啟實例設定"
+      },
+      "people": {
+        "eyebrow": "權限",
+        "title": "人員與存取權限",
+        "body": "決定誰可以使用此實例，以及您需要向他們收集哪些資訊。",
+        "detail1": "針對員工、成員或客戶等群組設定使用者類型。",
+        "detail2": "註冊欄位、必填問題、選項、佔位符以及各類型的特定欄位。",
+        "detail3": "手動審核、使用者遷移、撤銷存取權及刪除。",
+        "link": "開啟使用者設定"
+      },
+      "agent": {
+        "eyebrow": "行為",
+        "title": "代理人行為",
+        "body": "塑造 Sage 的回答方式，並設定預設啟用的工具。",
+        "detail1": "提示詞範本、行為規則、禁止主題及回應設定。",
+        "detail2": "Knowledge、Resources、Web、Config 與 Database 工具的預設功能。",
+        "detail3": "全域設定以及針對不同使用者類型的覆寫設定。",
+        "link": "開啟代理人設定"
+      },
+      "docs": {
+        "eyebrow": "知識庫",
+        "title": "文件知識",
+        "body": "為代理人提供可供搜尋的原始資料。",
+        "detail1": "上傳 PDF、政策、常見問題 (FAQ)、手冊及指南。",
+        "detail2": "文件會經過分塊、向量化並建立可搜尋索引。",
+        "detail3": "文件存取權控制預設可選取或啟用的內容。",
+        "link": "開啟文件上傳"
+      },
+      "resources": {
+        "eyebrow": "參考資料",
+        "title": "經過審核的資源",
+        "body": "新增代理可以推薦的信任轉介資源。",
+        "detail1": "包含名稱、描述、資源類型、語言、涵蓋範圍及說明類型。",
+        "detail2": "包含電話、電子郵件、URL、安全通道、地址及備註。",
+        "detail3": "已驗證的資源會優先顯示。已封存的資源對使用者隱藏。",
+        "link": "開啟資源目錄"
+      },
+      "ops": {
+        "eyebrow": "營運",
+        "title": "營運與執行階段",
+        "body": "確保實例保持連線、可存取且運行健康。",
+        "detail1": "用於電子郵件魔術連結的 SMTP、網域、CORS、HTTPS 及公開 URL。",
+        "detail2": "模型供應商、嵌入模型、搜尋、儲存及服務健康狀態。",
+        "detail3": "執行階段環境變數匯出、就緒狀態、過時設定及管理員金鑰遷移。",
+        "link": "開啟部署設定"
+      },
+      "title": "管理員可進行的配置",
+      "body": "這些是主要的控制介面。您可以直接使用這些頁面，或要求 Admin Assistant 準備變更。"
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "詢問",
+        "title": "管理員助理",
+        "body": "詢問有關目前設定的問題，並要求變更配置。",
+        "detail1": "配置讀取會檢查真實的實例狀態，而非進行猜測。",
+        "detail2": "建議的變更會進入暫存狀態以供審查。",
+        "detail3": "執行 Apply 會直接執行核准的管理員端點，無需額外的模型對話。",
+        "link": "開啟 Admin Assistant",
+        "directWriteDetail2": "在執行支援的寫入操作前，Sage 會要求對話式確認。",
+        "directWriteDetail3": "您確認後，Sage 會呼叫其直接配置工具並回報真實結果。"
+      },
+      "guided": {
+        "eyebrow": "開始",
+        "title": "引導式設定",
+        "body": "透過單次引導式對話來建立實用的初步配置。",
+        "detail1": "包含身分、助手、語言、存取策略、使用者類型、問題及行為規則。",
+        "detail2": "接著上傳文件、新增資源並進行測試。",
+        "link": "開啟引導式設定"
+      },
+      "test": {
+        "eyebrow": "驗證",
+        "title": "測試與回饋",
+        "body": "在正式上線前，從使用者的角度來測試代理。",
+        "detail1": "選擇使用者類型、開始測試工作階段，並儲存測試結果。",
+        "detail2": "查看加密的 beta 日誌並對回答進行評分。",
+        "link": "開啟測試使用者工作階段"
+      },
+      "database": {
+        "eyebrow": "檢查",
+        "title": "資料庫瀏覽器",
+        "body": "在除錯時檢查儲存的 SQLite 資料。",
+        "detail1": "請使用唯讀的 SELECT 查詢進行檢查。",
+        "detail2": "請勿將其作為產品變更的路徑。",
+        "link": "開啟資料庫瀏覽器"
+      },
+      "title": "常見管理工作流",
+      "body": "在進行設定、品質檢查或調查資料時請使用這些功能。"
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "執行時期",
+        "title": "單一對話執行時期",
+        "body": "Knowledge、Resources、Web、Config 和 Database 是可見的工具集，而非獨立的聊天系統。",
+        "detail1": "當工具有所幫助時，模型可以呼叫已啟用的工具。",
+        "detail2": "Config 和 Database 僅對經過伺服器驗證的管理員顯示。"
+      },
+      "auth": {
+        "eyebrow": "登入",
+        "title": "不同的登入路徑",
+        "body": "管理員使用 NIP-07。使用者使用電子郵件魔術連結。",
+        "detail1": "管理員的私鑰保留在瀏覽器簽署器中。",
+        "detail2": "在正式環境中，SMTP 必須在使用者魔術連結生效前運作正常。"
+      },
+      "data": {
+        "eyebrow": "隱私",
+        "title": "資料邊界至關重要",
+        "body": "加密的個人資料欄位不會出現在對話內容中。",
+        "detail1": "只有未加密的欄位才能被標記用於 AI 對話內容。",
+        "detail2": "部署密鑰以加密方式儲存，且預設顯示遮罩。"
+      },
+      "ops": {
+        "eyebrow": "維運",
+        "title": "某些變更需要操作員介入",
+        "body": "應用程式可以儲存所需的執行時期設定；它不會在背景靜默重啟服務。",
+        "detail1": "在 provider、origin、CORS 或搜尋變更後，請匯出執行時期環境變數。",
+        "detail2": "利用就緒狀態 (readiness) 和服務健康狀況來確認實際運行的狀態。"
+      },
+      "title": "需記住的產品核心原則",
+      "body": "這些規則能確保設定的誠信，並防止意外的權限擴張。"
+    },
+    "ask": {
+      "prompt1": "在此實例準備好供使用者使用之前，還有哪些部分尚待完成？",
+      "prompt2": "檢查目前的用戶類型、新手引導問題、文件與資源。",
+      "prompt3": "準備待審核的變更：設定助手語氣與預設語言。",
+      "title": "適合詢問管理助手的問題",
+      "body": "在要求變更之前，請先要求進行審核。它可以檢查設定並準備變更集。",
+      "directWriteBody": "要求 Sage 檢查或變更支援的配置。它會在執行寫入前與您確認預期的變更。",
+      "directWritePrompt3": "設定助手的語氣與預設語言，並請先與我確認預期的變更。"
+    },
+    "hero": {
+      "eyebrow": "管理控制圖譜",
+      "shortVersion": {
+        "title": "簡短版本",
+        "body": "管理員負責設定身分、使用者、知識、工具與啟動設定。部分執行時的變更仍需要操作員重啟。"
+      }
+    },
+    "title": "管理指南",
+    "subtitle": "一份簡單的圖譜，說明管理員的配置內容、產品功能，以及啟動前需要注意的事項。",
+    "quickStart": {
+      "title": "從這裡開始",
+      "body": "先完成簡單且實用的設定。在透過實際問題進行測試後，再進行優化。"
+    },
+    "safety": {
+      "title": "安全基礎",
+      "body": "管理員控制存取、數據、行為與執行時設定。進行高風險變更時請務必謹慎。",
+      "items": {
+        "0": "管理員使用 NIP-07 登入。使用者使用電子郵件魔術連結登入。",
+        "1": "使用者欄位預設皆已加密。只有明文欄位可以與聊天分享。",
+        "2": "除非您在目前的管理工作階段中分享，否則金鑰將保持遮罩狀態。",
+        "3": "助手的變更僅為提案。您仍須進行審核並點擊「套用」。",
+        "4": "部署設定儲存了預期的執行時數值。操作員仍需在需要時匯出 env 並重啟服務。"
+      },
+      "directItems": {
+        "0": "管理員使用 NIP-07 登入。使用者使用電子郵件魔術連結登入。",
+        "1": "使用者欄位預設皆已加密。只有明文欄位可以與聊天分享。",
+        "2": "除非您在目前的管理工作階段中分享，否則金鑰將保持遮罩狀態。",
+        "3": "Sage 會在聊天中與您確認配置變更，然後直接套用支援的變更。",
+        "4": "部署設定儲存了預期的執行時數值。操作員仍需在需要時匯出 env 並重啟服務。"
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "以管理員身分登入",
+        "body": "使用管理員 NIP-07 金鑰。請務必妥善保管。"
+      },
+      "1": {
+        "title": "設定基礎項目",
+        "body": "為實例命名、選擇外觀，並設定助手身分。"
+      },
+      "2": {
+        "title": "定義您的使用者",
+        "body": "建立使用者類型、新手引導問題與審核規則。"
+      },
+      "3": {
+        "title": "新增可信知識",
+        "body": "上傳文件並新增經過審核的資源。"
+      },
+      "4": {
+        "title": "上線前測試",
+        "body": "以使用者身份進行對話、查看回饋，接著再邀請真實用戶。"
+      }
     }
   },
   "adminDashboard": {
@@ -787,7 +1320,55 @@
     "securityStep3Primary": "執行設定驗證",
     "securityStep3Secondary": "審查已儲存資料",
     "user": "使用者配置",
-    "userDesc": "定義使用者類型和 onboarding 問題"
+    "userDesc": "定義使用者類型和 onboarding 問題",
+    "subtitleSimple": "選擇您要在此實例中進行的工作內容。",
+    "workflowsSectionLabel": "管理員工作流",
+    "adminAssistant": "管理員助手",
+    "adminAssistantDesc": "使用管理員聊天功能來獲取配置協助與變更審核。",
+    "guidedSetup": "引導式設定",
+    "guidedSetupDesc": "逐步完成設定、文件、資源與測試。",
+    "guides": "管理員指南",
+    "guidesDesc": "了解管理員配置了哪些內容以及配置位置。",
+    "testUserSession": "測試使用者工作階段",
+    "testUserSessionDesc": "以模擬使用者身份進行對話，並查看已儲存的 Beta 日誌。",
+    "aiSetupTitle": "使用 AI 助手進行設定",
+    "aiSetupBody": "讓助手一次性完成實例命名與配置的基本資訊收集。您可以隨時切換至手動設定。",
+    "aiSetupAction": "開始引導式設定",
+    "readinessTitle": "部署就緒狀態",
+    "readinessDesc": "在邀請使用者前檢查就緒情況。在同一處檢查阻礙因素、警告、需要重啟的變更以及復原態勢。",
+    "readinessPrimary": "開啟就緒狀態審查",
+    "firstRunPathTitle": "管理員首次執行流程",
+    "firstRunStep1Title": "配置實例基準",
+    "firstRunStep1Body": "在審查前設定品牌、語言、主題、使用者欄位與 Agent Settings。",
+    "firstRunStep1Action": "開啟實例設定",
+    "firstRunStep2Title": "審查部署就緒狀態",
+    "firstRunStep2Body": "在邀請使用者前，檢查阻礙因素、警告、需要重啟的變更以及復原態勢。",
+    "firstRunStep2Action": "開啟部署精靈",
+    "firstRunStep3Title": "僅在調查時使用診斷功能",
+    "firstRunStep3Body": "保持冒煙測試與診斷功能的可及性，但不將其作為產品的主要路徑。",
+    "firstRunStep3Action": "開啟診斷功能",
+    "instanceDescSimple": "名稱、公開電子郵件身分、主題與品牌控制。",
+    "aiDescSimple": "提示詞、模型行為與文件預設值。",
+    "deploymentDescSimple": "執行階段設定、健康狀況與就緒詳細資訊。",
+    "resources": "資源目錄",
+    "resourcesDesc": "整理受信任的律師、NGO 及轉介資源",
+    "resourcesDescSimple": "手動整理受信任的轉介資源。",
+    "testFeedback": "測試與回饋",
+    "testFeedbackDesc": "以測試使用者身份進行對話，並對回答進行評分以優化您的設定",
+    "diagnosticsSectionLabel": "診斷",
+    "operationsSectionLabel": "營運",
+    "testDashboard": "診斷",
+    "testDashboardDesc": "執行開發冒煙測試並檢查診斷模組",
+    "testDashboardDescSimple": "在調查問題時執行冒煙測試。",
+    "iaChecklistTitle": "管理員資訊架構審查清單",
+    "iaChecklistBody": "在人工審查期間，請保持 Deployment Settings、Instance Settings、Agent Settings、Lifecycle Readiness、Deployment Readiness 與診斷介面的獨立性。",
+    "humanReviewTitle": "人工審查交接",
+    "humanReviewStatus": "需要專人部署支援",
+    "humanReviewBody": "執行階段環境套用保持明確：匯出成品、透過維運人員支援進行套用、重啟受影響的服務，並驗證就緒證明。",
+    "humanReviewAction": "審查部署就緒狀態",
+    "settingsSectionLabel": "設定",
+    "userManager": "使用者管理員",
+    "userManagerDesc": "審查使用者、檢查狀態、匯出名單並核准存取權限。"
   },
   "adminAI": {
     "title": "AI 設定",
@@ -872,7 +1453,18 @@
       "userInfoPlaceholder": "{user_info} — 替換為目前使用者的個人資料欄位（如有）"
     },
     "revert": "還原",
-    "revertToGlobal": "還原為全域"
+    "revertToGlobal": "還原為全域",
+    "knowledgeSearchDisabledLabel": "知識搜尋已關閉",
+    "knowledgeSearchDisabledMessage": "在將知識來源設定為「選定的預設文件」或「所有可用文件」之前，不會使用目前啟用的預設文件。",
+    "assembledPromptOutput": "組合後的提示詞輸出",
+    "saveError": "儲存失敗",
+    "revertError": "還原失敗",
+    "toggleError": "切換失敗",
+    "loadErrorLabel": "Agent 設定載入錯誤",
+    "previewErrorLabel": "Agent 設定預覽錯誤",
+    "documentToggleErrorLabel": "Agent 設定文件切換錯誤",
+    "documentDefaultsHintV2": "標記為「可用」的文件可供知識搜尋使用。當知識來源設定為「選定的預設文件」時，會包含標記為「預設啟用」的文件。",
+    "externalChangeConflict": "您在編輯時，Sage 或其他管理員已更改此設定。請在儲存前取消並重新開啟編輯器。"
   },
   "adminDeployment": {
     "title": "部署設定",
@@ -970,7 +1562,9 @@
       "unknown": "未知",
       "usersMigrated": "已遷移的使用者",
       "usersToMigrate": "待遷移的使用者",
-      "warning": "這是一項進階操作。不正確的遷移可能會使你無法存取加密資料。請僅在了解其影響時才繼續。"
+      "warning": "這是一項進階操作。不正確的遷移可能會使你無法存取加密資料。請僅在了解其影響時才繼續。",
+      "inputWarningLabel": "管理員金鑰遷移警告",
+      "destructiveWarningLabel": "管理員金鑰遷移破壞性警告"
     },
     "revealFailed": "無法顯示該值。請檢查你的 Nostr 擴充功能連線。",
     "searchHelp": {
@@ -1001,7 +1595,8 @@
       "overviewDesc": "安全性設定控制驗證、工作階段處理和開發捷徑。預設值已為本機開發進行設定。",
       "overviewNote": "在正式環境中，請確保模擬旗標已關閉且 FRONTEND_URL 與你的實際網域匹配。",
       "overviewTitle": "安全性概覽",
-      "overviewWhen": "在部署到公開伺服器之前檢視這些設定。"
+      "overviewWhen": "在部署到公開伺服器之前檢視這些設定。",
+      "devNote": "使用 MOCK_EMAIL 進行本地電子郵件測試；使用者與管理員工作階段仍需經過正常的驗證流程。"
     },
     "sslHelp": {
       "ariaLabel": "SSL 與 HTTPS 設定說明",
@@ -1102,7 +1697,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "上傳資料夾",
       "vector_database_eb5526": "向量資料庫"
-    }
+    },
+    "exportSageRuntimeEnv": "匯出 Sage 環境",
+    "readiness": {
+      "title": "部署就緒狀態",
+      "statusTitle": "部署就緒狀態：{{status}}",
+      "description": "在以此單一實例部署進入正常運作之前，請檢查所需的證明文件。",
+      "openWizard": "開啟就緒狀態審查",
+      "blockerCount": "{{count}} 個阻礙因素",
+      "warningCount": "{{count}} 個警告",
+      "readyCount": "{{count}} 個就緒",
+      "empty": "目前尚無部署就緒檢查。",
+      "conversationBlocking": "會阻礙正常對話",
+      "blocker": "阻礙因素",
+      "warning": "警告",
+      "ready": "就緒",
+      "reviewInferenceVerification": "檢查推論驗證",
+      "reviewDataLifecycleStatus": "檢查資料生命週期狀態",
+      "reviewDeploymentValidation": "檢查部署設定",
+      "reviewRestartRequired": "檢查需要重新啟動",
+      "reviewOperationalReadiness": "檢查營運就緒狀態",
+      "reviewServiceHealth": "檢查服務健康狀況",
+      "reviewRuntimeEnv": "檢查執行階段環境匯出",
+      "deployment_settings_validation": {
+        "label": "部署設定驗證",
+        "status": {
+          "invalid": {
+            "summary": "部署設定驗證存在必須修復的錯誤。",
+            "nextAction": "檢查部署設定驗證錯誤。"
+          },
+          "warnings": {
+            "summary": "部署設定驗證包含建議性警告。",
+            "nextAction": "檢查部署設定驗證警告。"
+          },
+          "valid": {
+            "summary": "部署設定驗證無錯誤或警告。",
+            "nextAction": "無需採取行動。"
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "可驗證推論",
+        "status": {
+          "current": {
+            "summary": "已配置的模型提供者目前擁有推論驗證紀錄。",
+            "nextAction": "無需採取行動。當提供者聲明變更時，請檢查目前的推論驗證紀錄。"
+          },
+          "deferred_missing": {
+            "summary": "目前尚未針對已配置的模型提供者進行加密與可驗證推論驗證。",
+            "nextAction": "在將部署就緒視為完成之前，請配置支援的模型提供者並執行推論驗證。"
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "資料生命週期審查",
+        "status": {
+          "needs_review": {
+            "summary": "資料生命週期審查需要管理員審查。",
+            "nextAction": "審查目前的活動儲存生命週期狀態，並記錄資料生命週期審查結果。"
+          },
+          "stale": {
+            "summary": "在支援的生命週期變更後，已記錄的資料生命週期審查已過時。",
+            "nextAction": "審查目前的活動儲存生命週期狀態，並記錄新的資料生命週期審查結果。"
+          },
+          "reviewed": {
+            "summary": "資料生命週期審查已完成。",
+            "nextAction": "除非支援的生命週期狀態發生變化，否則無需採取任何行動。"
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "部署介面確認",
+        "status": {
+          "acknowledged": {
+            "summary": "已確認不支援的部署介面類別。",
+            "nextAction": "無需採取任何行動。"
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — 不支援的部署介面類別需要操作員確認。",
+            "nextAction": "請檢查列出的部署介面類別，並在將部署就緒狀態視為完成之前，逐一進行確認。"
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "備份與還原演練",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "需要最近的操作員備份與還原演練記錄。",
+            "nextAction": "請針對此部署完成並記錄一次備份與還原演練。"
+          }
+        }
+      },
+      "restart_required": {
+        "label": "需要重新啟動",
+        "status": {
+          "current": {
+            "summary": "自服務啟動以來，沒有任何需要重新啟動的部署設定發生變更。",
+            "nextAction": "無需採取任何行動。"
+          },
+          "restart_required": {
+            "summary": "需要重新啟動的部署設定在服務啟動後發生了變更。 ({{changedSettings}})",
+            "nextAction": "請套用所需的部署設定，並在將其視為目前狀態之前重新啟動受影響的服務。"
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage 執行階段配置",
+        "status": {
+          "not_generated": {
+            "summary": "尚未根據部署設定生成 Sage 執行階段環境。",
+            "nextAction": "在將部署設定視為已套用於 Sage 之前，請先匯出 Sage 執行階段環境。"
+          },
+          "matches_desired": {
+            "summary": "正在執行的 Sage 執行階段配置與所需的部署設定相符。",
+            "nextAction": "無需採取任何行動。"
+          },
+          "drifted": {
+            "summary": "正在執行的 Sage 執行階段配置與所需的部署設定不符。",
+            "nextAction": "請調查 Sage 執行階段配置的偏差，套用生成的 Sage 環境，並重新啟動 Sage。"
+          },
+          "current": {
+            "summary": "已根據目前的部署設定生成 Sage 執行階段環境。",
+            "nextAction": "除非生成的成品尚未套用於部署，否則無需採取任何行動。"
+          },
+          "stale": {
+            "summary": "部署設定在 Sage 執行階段環境生成後發生了變更。",
+            "nextAction": "請匯出新的 Sage 執行階段環境，並透過部署重新啟動路徑進行套用。"
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "核心後端執行階段配置",
+        "status": {
+          "not_generated": {
+            "summary": "核心後端執行階段環境尚未根據部署設定生成。",
+            "nextAction": "在將部署設定視為已套用於核心後端之前，請先匯出核心後端執行階段環境。"
+          },
+          "matches_desired": {
+            "summary": "正在執行的核心後端執行階段配置與所需的部署設定相符。",
+            "nextAction": "無需採取任何行動。"
+          },
+          "drifted": {
+            "summary": "正在執行的核心後端執行階段配置與所需的部署設定不符。",
+            "nextAction": "檢查 core-backend 執行階段配置偏差，套用生成的 core-backend 環境，並重啟 core-backend。"
+          },
+          "current": {
+            "summary": "已根據目前的部署設定生成 core-backend 執行階段環境。",
+            "nextAction": "除非生成的成品尚未套用到部署中，否則無需採取任何行動。"
+          },
+          "stale": {
+            "summary": "在 core-backend 執行階段環境生成後，部署設定已發生變更。",
+            "nextAction": "匯出全新的 core-backend 執行階段環境，並透過部署重啟流程進行套用。"
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "部署精靈",
+      "step": "第 {{current}} 步，共 {{total}} 步"
+    },
+    "operationalReadiness": {
+      "title": "營運就緒狀態",
+      "description": "在正式營運前，請檢查備份、還原、監控及復原演練。"
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — 用於本地代理的 Tinfoil API 金鑰。",
+      "apiKeyLabel": "Tinfoil API 金鑰",
+      "ariaLabel": "Sage 執行階段配置說明",
+      "exampleConfig": "配置範例",
+      "goToPage": "前往頁面",
+      "sageExtra": "將 LLM_API_KEY 設定為來自 {{tinfoilSignupUrl}} 的 Tinfoil 金鑰。系統堆疊會將其映射至 Sage 與本地 Tinfoil 代理。",
+      "sageHint": "此原型透過 Sage 與 Tinfoil 路由 Agent Runtime 流量。LLM_API_KEY 為標準的模型供應商金鑰。",
+      "modelField": "TINFOIL_MODEL — Sage 應使用的 Tinfoil 模型識別碼（例如：glm-5-2）。",
+      "overviewDesc": "此原型使用 Sage 作為公開的 Agent Runtime，並使用 Tinfoil 作為模型供應商傳輸層。請透過 LLM_* 部署設定來配置模型供應商；系統堆疊會將其映射至 Sage 的 Tinfoil 執行階段。",
+      "overviewTitle": "Sage 執行階段概覽",
+      "providerField": "LLM_PROVIDER — 此原型請設定為 \"sage\"。"
+    },
+    "inferenceVerification": {
+      "current": "目前",
+      "missing": "缺失",
+      "expired": "已過期",
+      "failed": "失敗",
+      "success": "成功",
+      "statusLoadFailed": "載入推論驗證狀態失敗",
+      "historyLoadFailed": "載入推論驗證歷史失敗",
+      "loadFailed": "載入推論驗證失敗",
+      "manualFailed": "手動驗證失敗",
+      "manualSucceeded": "手動驗證成功",
+      "detailLoadFailed": "載入證明詳情失敗",
+      "ariaLabel": "推論驗證",
+      "title": "推論驗證",
+      "summary": "僅限管理員查看的證據，證明受保護的推論正在預期的模型提供商上執行。",
+      "verifyNow": "立即驗證",
+      "status": "狀態",
+      "checkedAt": "檢查時間",
+      "expiresAt": "到期時間",
+      "expectedClaims": "預期聲明",
+      "expectedClaimsValue": "預期聲明：{{fingerprint}}",
+      "providerClaims": "提供商聲明",
+      "provider": "提供商",
+      "model": "模型",
+      "endpoint": "端點",
+      "history": "驗證歷史紀錄",
+      "emptyHistory": "尚無驗證紀錄。",
+      "recordTitle": "紀錄 #{{id}}",
+      "inspectAttestation": "檢查證明",
+      "fullAttestation": "完整證明資料"
+    },
+    "lifecycle": {
+      "notStarted": "未開始",
+      "notConfigured": "未配置",
+      "plaintextByOperatorChoice": "由營運商選擇明文",
+      "allTombstones": "全部",
+      "allTombstonesLabel": "所有墓碑 (tombstones)",
+      "incompleteTombstonesFilter": "未完成",
+      "incompleteTombstonesLabel": "未完成的墓碑 (tombstones)",
+      "completedTombstonesFilter": "已完成",
+      "completedTombstonesLabel": "已完成的墓碑 (tombstones)",
+      "title": "資料生命週期狀態",
+      "description": "目前跨實例資料由營運商控制的隱私保護範圍。",
+      "scopeExcludes": "不包含：{{excludes}}",
+      "secureEraseStatus": "安全抹除：{{status}}",
+      "readinessStatus": "生命週期就緒狀態：{{status}}",
+      "readinessNonBlocking": "在 v1 版本中，使用者對話不會因生命週期就緒警告而受阻。",
+      "readinessStaleReason": "原因：{{reason}}",
+      "contentEncryptionKey": "內容加密金鑰：{{status}}",
+      "artifactEncryptionPosture": "物件加密狀態：{{status}}",
+      "artifactPostureLabel": "物件加密狀態",
+      "artifactPostureRequired": "需要",
+      "artifactPostureDisabled": "已停用",
+      "retentionSchedulerStatus": "保留排程器：{{status}}",
+      "schedulerObservation": "觀察結果：{{status}}",
+      "schedulerEnabledClasses": "已啟用的排程類別：{{classes}}",
+      "schedulerLastRunStatus": "上次執行狀態：{{status}}",
+      "schedulerLastRun": "上次執行：由 {{actor}} 透過 {{trigger}} 觸發",
+      "previewRetention": "預覽保留政策",
+      "runScheduledRetention": "執行排程",
+      "previewRetentionResult": "預覽結果：{{conversations}} 則對話、{{artifacts}} 個文件物件、{{skipped}} 個跳過的類別。",
+      "scheduledRetentionResult": "排程執行結果：{{status}}，包含 {{retries}} 次墓碑 (tombstone) 重試。",
+      "scheduledRetentionStatus": "已排程類別：{{classes}}",
+      "auditCoverageStatus": "稽核覆蓋範圍：{{audited}} 已稽核、{{exceptions}} 例外、{{missing}} 缺失。",
+      "owner": "擁有者：{{owner}}",
+      "deletion": "刪除：{{status}}",
+      "retention": "保留：{{status}}",
+      "audit": "稽核：{{status}}",
+      "confidentiality": "機密性：{{status}}",
+      "incompleteTombstones": "未完成的墓碑 (tombstones)：{{count}}",
+      "completedTombstones": "已完成的墓碑 (tombstones)：{{count}}",
+      "retentionEnabled": "已啟用",
+      "retentionWindow": "週期",
+      "retentionDays": "天",
+      "scheduledEnforcement": "已排程",
+      "saveRetentionPolicy": "儲存政策",
+      "empty": "無法取得生命週期狀態。",
+      "retentionPolicySaveFailed": "無法儲存保留策略。",
+      "retentionPreviewFailed": "無法預覽保留內容。",
+      "scheduledRetentionFailed": "無法執行排程保留。",
+      "artifactPostureFailed": "無法更新成品加密狀態。",
+      "unsupportedSurfacesTitle": "不支援的部署介面",
+      "unsupportedSurfacesDescription": "這些操作追蹤在此處揭露，但仍不在產品生命週期的控制範圍內。",
+      "unsupportedSurfaceAckFailed": "無法更新確認狀態。",
+      "acknowledgedSurface": "已確認",
+      "acknowledgeSurface": "確認",
+      "tombstonesTitle": "刪除標記 (Tombstones)",
+      "tombstonesDescription": "在不暴露已刪除內容的情況下，重新嘗試未完成的生命週期刪除。",
+      "tombstoneStatusFilter": "刪除標記狀態篩選",
+      "tombstoneRetryFailed": "重新嘗試失敗。",
+      "tombstonesFetchFailed": "無法載入刪除標記。",
+      "tombstoneClass": "類別：{{className}}",
+      "tombstoneSource": "來源：{{source}}",
+      "tombstoneRetries": "重試次數：{{count}}",
+      "tombstoneUpdated": "更新時間：{{updated}}",
+      "retryTombstoneLabel": "重新嘗試刪除標記 {{id}}",
+      "retry": "重試",
+      "tombstonesEmpty": "目前沒有等待重試的刪除標記。"
+    },
+    "runtimeEnv": {
+      "unknown": "未知",
+      "title": "執行階段配置一致性",
+      "description": "比較預期的部署設定、產生的 Sage 環境以及可觀測的執行狀態。",
+      "desired": "預期",
+      "configuredKeys": "已配置 {{count}} / {{total}} 個金鑰",
+      "generated": "已產生",
+      "exportedAt": "匯出時間：{{time}}",
+      "notExported": "未記錄 Sage 環境匯出紀錄",
+      "running": "執行中",
+      "runningUnknown": "尚未直接檢查執行狀態。",
+      "coreBackend": "核心後端",
+      "coreBackendHint": "後端程序環境對齊",
+      "coreDesired": "核心預期狀態",
+      "coreConfiguredKeys": "核心後端：已配置 {{count}} / {{total}} 個金鑰",
+      "coreGenerated": "核心已生成",
+      "coreNotExported": "未記錄到核心後端環境匯出",
+      "coreRunning": "核心運行中",
+      "coreRunningUnknown": "核心後端運行狀態尚未直接進行內省。",
+      "coreExportedTitle": "核心後端環境已匯出",
+      "coreSensitiveArtifact": "請將 core-backend.env 視為敏感的部署資料。",
+      "coreExportDoesNotApply": "匯出成品不會改變正在運行的後端程序，直到管理員套用並重啟 core-backend 為止。",
+      "exportedTitle": "Sage 環境已匯出",
+      "sensitiveArtifact": "請將 sage.env 視為敏感的部署資料。",
+      "exportDoesNotApply": "匯出成品不會改變正在運行的 Sage 程序，直到管理員套用並重啟 Sage 為止。"
+    },
+    "categorySettingsAria": "{{category}} 設定",
+    "exportCoreBackendRuntimeEnv": "匯出 core-backend 環境",
+    "restartCurrent": "無需重啟",
+    "restartCurrentDesc": "自服務啟動以來，沒有任何需要重啟的部署設定發生變更。",
+    "saveError": "儲存失敗",
+    "openHelpAria": "開啟 {{label}} 的說明"
   },
   "upload": {
     "invalidFileType": "無效的檔案類型。允許: {{extensions}}",
@@ -1124,7 +2025,8 @@
       "processing": "處理中",
       "chunked": "已分塊",
       "complete": "完成",
-      "failed": "失敗"
+      "failed": "失敗",
+      "completedWithErrors": "完成但包含錯誤"
     },
     "chunks": "{{processed}}/{{total}} 個區塊",
     "deleteDocument": "刪除文件",
@@ -1173,7 +2075,21 @@
     "serverBusy": "伺服器忙碌中",
     "tryRefresh": "重試",
     "uploadedSuccess": "上傳成功 — 開始處理",
-    "uploadingStatus": "正在上傳至伺服器..."
+    "uploadingStatus": "正在上傳至伺服器...",
+    "uploadError": "上傳失敗",
+    "documentDeletionError": "文件刪除錯誤",
+    "navigationWarning": "您的文件仍在傳輸中。請務必在處理開始後再離開，否則上傳內容可能無法儲存。",
+    "duplicateInBatch": "此批次中存在重複的文件名稱",
+    "documentsSelected": "{{count}} 個文件",
+    "queueSummary": "{{valid}} 個就緒，{{rejected}} 個跳過",
+    "skipped": "已跳過",
+    "uploadedPartialSuccess": "{{count}} 個已排隊，{{rejected}} 個已跳過",
+    "chooseFiles": "選擇檔案",
+    "chooseFolder": "選擇資料夾",
+    "uploadDocuments": "上傳文件",
+    "replacingDocument": "正在替換 {{filename}}",
+    "recentDocumentsShowing": "顯示 {{total}} 個文件中的 {{shown}} 個",
+    "showMore": "顯示更多"
   },
   "configCategories": {
     "embedding": {
@@ -1215,6 +2131,11 @@
       "description": "設定 SSL 憑證和 HTTPS 設定",
       "hint": "透過 HTTPS 提供服務時設定 TLS 和代理設定。預設值對於本地開發是安全的；僅在憑證掛載後啟用 HTTPS。",
       "label": "SSL 和安全性"
+    },
+    "llm": {
+      "label": "Sage 代理執行環境",
+      "description": "配置 Sage + Tinfoil 推論",
+      "hint": "此原型將 Agent Runtime 的流量透過 Sage 進行路由，並使用 Tinfoil 作為模型提供者 (Model Provider) 的傳輸媒介。變更後需要重啟。"
     }
   },
   "promptSections": {
@@ -1241,6 +2162,12 @@
       "description": "AI 如何組織其回應",
       "hint": "控制格式偏好，如是否使用項目符號、標題或對話式段落。這會影響答案的視覺呈現方式。",
       "placeholder": "列表使用項目符號，章節使用標題..."
+    },
+    "prompt_system": {
+      "label": "系統提示詞 (System Prompt)",
+      "description": "AI 的核心身份與操作指令",
+      "hint": "用於設定助手身份、任務以及最高層級的規範，這些規範應優先於語氣、規則、工具或文件上下文。變更將影響新的對話。",
+      "placeholder": "您是 Sage，此實例的私人助手..."
     }
   },
   "parameters": {
@@ -1253,6 +2180,11 @@
       "label": "知識深度",
       "description": "參考多少文件區段",
       "hint": "回答問題時，AI 會搜尋你上傳的文件並提取相關區段。較高的數字意味著更多上下文但回應較慢。較低的數字更快但可能遺漏相關資訊。預設值：5"
+    },
+    "max_tokens": {
+      "label": "最大 Token 數",
+      "description": "每次 AI 回應的最大長度",
+      "hint": "限制回應的最大長度。較低的值可保持回答簡潔並降低成本；較高的值則允許更長的解釋。預設值：2048"
     }
   },
   "defaults": {
@@ -1260,6 +2192,21 @@
       "label": "網路搜尋",
       "description": "允許 AI 搜尋網際網路",
       "hint": "啟用後，AI 可以搜尋網路以獲取文件中沒有的最新資訊。如果你希望回應只來自上傳的知識庫，請停用此功能。"
+    },
+    "knowledgeSource": {
+      "none": "無",
+      "selected": "已選定的預設文件",
+      "all": "所有可用文件"
+    },
+    "knowledge_source_default": {
+      "label": "知識來源",
+      "description": "選擇哪些已上傳的知識來源會在使用者對話中啟用",
+      "hint": "使用 \"none\" 表示預設不使用任何上傳的知識；使用 \"selected\" 表示使用標記為「預設啟用」的文件；或使用 \"all\" 表示使用所有可用文件。"
+    },
+    "user_default_tool_ids": {
+      "label": "使用者工具集",
+      "description": "在使用者對話中預設啟用的工具集",
+      "hint": "使用 JSON 陣列，包含 \"curated-resources\"、\"knowledge-search\" 與 \"web-search\"。Knowledge Search 也受知識來源控制。"
     }
   },
   "colors": {
@@ -1438,6 +2385,51 @@
       "description": "Webhook 回呼基礎 URL",
       "hint": "用於建構 Webhook 回呼的基礎 URL。範例：https://api.example.com/webhooks。預設：http://localhost:8000。",
       "label": "Webhook 網址"
+    },
+    "LLM_PROVIDER": {
+      "label": "模型提供者",
+      "description": "Python 端模型提供者標籤",
+      "hint": "此原型請使用 \"sage\"。此部署設定支援 Python 端的診斷與驗證元數據 (metadata)。"
+    },
+    "LLM_MODEL": {
+      "label": "模型名稱",
+      "description": "模型名稱/識別碼",
+      "hint": "Sage 應使用的 Tinfoil 模型識別碼 (例如 \"glm-5-2\")。"
+    },
+    "LLM_API_URL": {
+      "label": "API 端點",
+      "description": "模型提供者 API 基本 URL",
+      "hint": "Tinfoil 代理基本 URL。預設值：http://tinfoil-proxy:8089/v1。"
+    },
+    "LLM_API_KEY": {
+      "label": "API 金鑰",
+      "description": "Tinfoil API 金鑰 (密鑰)",
+      "hint": "保持空白以隱藏目前的部署設定。"
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "聊天速率限制",
+      "description": "每分鐘聊天請求數",
+      "hint": "每個穩定使用者、管理員、Token 或用戶端 IP 每分鐘最大 /llm/chat 請求數。需要重啟。預設值：120。"
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "檢索查詢速率限制",
+      "description": "每分鐘檢索查詢請求數",
+      "hint": "每個穩定使用者、Token 或用戶端 IP 每分鐘最大 /query 請求數。需要重啟。預設值：90。"
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "上傳速率限制",
+      "description": "每分鐘文件上傳請求數",
+      "hint": "每個穩定管理員、Token 或用戶端 IP 每分鐘最大文件上傳請求數。需要重啟。預設值：20。"
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "向量搜尋速率限制",
+      "description": "每分鐘向量搜尋請求數",
+      "hint": "每個穩定使用者、Token 或用戶端 IP 每分鐘最大向量搜尋請求數。需要重啟。預設值：30。"
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "配置匯出速率限制",
+      "description": "每小時部署配置匯出次數",
+      "hint": "每個管理員工作階段或用戶端 IP 每小時最大 .env 匯出次數。需要重啟。預設值：5。"
     }
   },
   "instanceInitiation": {
@@ -1474,7 +2466,11 @@
       "title": "準備連接"
     },
     "subtitle": "只需幾個步驟即可設定你的私有知識庫。",
-    "title": "歡迎使用 Enclave"
+    "title": "歡迎使用 Enclave",
+    "keySafety": {
+      "title": "使用實例專用的 Nostr 金鑰",
+      "body": "請勿使用您的個人 Nostr 金鑰。請為此實例建立或選擇一個專用的管理員金鑰，以降低監控風險並保持操作權限分離。"
+    }
   },
   "reachout": {
     "errors": {
@@ -1482,7 +2478,8 @@
       "notConfigured": "此功能未設定。",
       "rateLimited": "訊息過多。請稍後再試。",
       "required": "訊息為必填項。",
-      "unavailable": "無法聯繫。"
+      "unavailable": "無法聯繫。",
+      "formErrorLabel": "Reachout 表單錯誤"
     },
     "form": {
       "messageLabel": "訊息",
@@ -1490,7 +2487,8 @@
       "send": "傳送"
     },
     "status": {
-      "success": "謝謝。您的訊息已傳送。"
+      "success": "謝謝。您的訊息已傳送。",
+      "successLabel": "Reachout 成功"
     },
     "mode": {
       "feedback": {
@@ -1525,7 +2523,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "後端在驗證身份時返回錯誤。這不視為登出。",
       "unable_to_verify_admin_session_5f87b8": "無法驗證管理員會話",
       "verifying_admin_session_87c53b": "正在驗證管理員會話..."
-    }
+    },
+    "loadingAssistant": "正在載入管理助手"
   },
   "initiationGate": {
     "extracted": {
@@ -1739,7 +2738,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— 驗證魔術鏈接令牌並獲取會話信息（基於cookie的會話）。",
       "verify_magic_link_token_183cf5": "驗證魔術鏈接令牌",
       "view_all_users_manage_approval_status_and_delete_03feec": "查看所有用戶、管理批准狀態並刪除用戶。",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "查看和更新實例範圍的配置設置。"
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "查看和更新實例範圍的配置設置。",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "測試與已配置模型供應商路徑的連線狀態。"
+    },
+    "labels": {
+      "themePreference": "主題偏好",
+      "endpointGuidance": "端點指南",
+      "healthResponseOutput": "健康檢查回應輸出",
+      "jobs": "工作",
+      "chunks": "區塊",
+      "rateLimitTestType": "速率限制測試類型",
+      "successfulRequests": "成功請求數",
+      "successful": "成功",
+      "blockedRequests": "被阻斷的請求數"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "對話追蹤"
+  },
+  "branding": {
+    "logoAlt": "{{name}} 標誌"
+  },
+  "language": {
+    "english": "英文",
+    "spanish": "西班牙文",
+    "french": "法文",
+    "german": "德文",
+    "portuguese": "葡萄牙文"
+  },
+  "home": {
+    "checkingInstanceStatus": "正在檢查實例狀態..."
+  },
+  "adminGuidedSetup": {
+    "title": "設定您的實例",
+    "subtitle": "您的助手將一次性完成基本資訊的收集。",
+    "manual": "改為手動配置",
+    "finish": "完成並開始測試",
+    "comingSoon": "此階段即將推出，目前正在獨立開發中。",
+    "steps": {
+      "initialize": {
+        "label": "初始化",
+        "title": "初始化",
+        "subtitle": "讓我們處理您空間的基本設定，讓您的代理程式擁有正確的基礎。"
+      },
+      "docs": {
+        "label": "上傳文件",
+        "title": "上傳您的實務指南",
+        "subtitle": "添加代理程式用來回答的來源材料 — 包括書籍、指南和參考文件。"
+      },
+      "resources": {
+        "label": "精選資源",
+        "title": "精選資源",
+        "subtitle": "添加值得信賴的真實世界資源 — 例如關鍵聯絡人、律師、教育與心理健康支援 — 供代理程式引導使用者參考。"
+      },
+      "test": {
+        "label": "以使用者身分測試",
+        "title": "以使用者身分進行測試",
+        "subtitle": "即將推出 — 您可以嘗試以其中一種使用者類型來體驗助手，並對回答進行評分。"
+      },
+      "feedback": {
+        "label": "意見回饋",
+        "title": "回饋機制",
+        "subtitle": "即將推出 — 審查回答品質並持續優化您的設定。"
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "測試與回饋",
+    "subtitle": "執行測試使用者工作階段，接著審查加密的 Beta 日誌以及儲存對話中的意見回饋。",
+    "tabs": {
+      "test": "以使用者身分測試",
+      "feedback": "意見回饋"
+    },
+    "test": {
+      "pickPersona": "選擇測試角色",
+      "pickPersonaBody": "為其中一種使用者類型配置一名測試使用者，然後以該身分進行對話。此工作階段將作為加密試用紀錄儲存，您可以在「意見回饋」中進行評分。",
+      "userType": "使用者類型",
+      "genericUser": "一般使用者 (無特定類型)",
+      "start": "開始工作階段",
+      "admin": "管理員",
+      "testUserId": "測試使用者",
+      "endSave": "結束並儲存試用",
+      "previewNotice": "預覽模式 — 真正的身分模擬功能尚未串接完成，因此此對話將在您的管理員工作階段下執行。對話紀錄仍會儲存以供審查。",
+      "chatEmpty": "請以此使用者身分傳送訊息以開始試用。",
+      "inputPlaceholder": "以此使用者身分傳送訊息給助手…",
+      "saved": "試用已儲存 (已加密)。請至「意見回饋」中進行審查。",
+      "startError": "無法啟動測試工作階段",
+      "saveError": "無法儲存試用紀錄",
+      "impersonationUnavailable": "測試使用者模擬功能尚未提供",
+      "sessionTokenError": "無法建立合成使用者工作階段權杖",
+      "testingAs": "正在以 {{persona}} 身分進行測試",
+      "authFailed": "合成使用者工作階段已不再獲得授權。",
+      "discardUnsavedConfirm": "是否要捨棄尚未儲存的已完成回合？",
+      "workspaceAria": "測試使用者對話工作區"
+    },
+    "feedback": {
+      "trials": "Beta 日誌",
+      "untitled": "未命名對話",
+      "turns": "輪次",
+      "turn": "輪次",
+      "empty": "尚未儲存 Beta 日誌。請執行測試使用者工作階段或等待使用者對話。",
+      "selectPrompt": "選擇一個 Beta 日誌以查看其逐字稿並對每一輪進行評分。",
+      "noNip04": "請連接 Nostr 擴充功能 (Alby, nos2x) 以解密逐字稿 — 這些內容已使用您的管理員金鑰加密。",
+      "sourceUser": "使用者對話",
+      "sourceTest": "測試使用者工作階段",
+      "thumbUp": "回答良好",
+      "thumbDown": "需要改進",
+      "notePlaceholder": "選填備註 (將加密儲存)…",
+      "exportNotDecrypted": "請在匯出前開啟並解密逐字稿。",
+      "exportFeedbackNotDecrypted": "部分回饋評論無法解密。請重新開啟逐字稿，並在匯出前核准所有解密請求。",
+      "exportNeedsExtension": "匯出功能需要 Nostr 擴充功能。逐字稿在儲存時已加密，需透過您的擴充功能進行解密。",
+      "exportDecrypting": "仍在解密中。待所有請求都獲得核准後，即可進行匯出。",
+      "exportWhyDisabled": "為什麼匯出功能被停用？",
+      "retryDecryption": "重試解密",
+      "decryptPendingTitle": "請檢查您的 Nostr 擴充功能",
+      "decryptPendingBody": "擴充功能正在請求解密此逐字稿的權限。它可能不會自動開啟 — 如果您沒看到它，請點擊擴充功能圖示。請選擇「記住此選擇」的選項，以便之後不再重複詢問。",
+      "decryptProgress": "已解密 {{done}} / {{total}}。",
+      "loadTrialsError": "載入測試失敗",
+      "loadTranscriptError": "載入逐字稿失敗",
+      "saveError": "無法儲存回饋",
+      "deleteError": "無法刪除工作階段日誌",
+      "exportError": "工作階段匯出失敗",
+      "transcriptIntegrityError": "逐字稿無法使用或不完整，因此無法匯出。",
+      "decryptTranscriptError": "無法解密逐字稿。請在您的 Nostr 擴充功能中核准解密請求。"
+    }
+  },
+  "adminResources": {
+    "title": "資源目錄",
+    "subtitle": "手動維護經過審核的轉介資源，以便在對話升級時由助手提及。僅向終端使用者顯示「就緒」的資源。",
+    "add": "新增資源",
+    "addTitle": "新增資源",
+    "editTitle": "編輯資源",
+    "empty": "尚無資源。當您有經過審核的轉介資訊時，請手動新增。",
+    "verified": "已驗證",
+    "missing": "缺少上線必要資訊",
+    "name": "名稱",
+    "type": "資源類型",
+    "languages": "語言（以逗號分隔的 ISO 代碼）",
+    "description": "描述",
+    "descriptionHint": "助手應向使用者說明此資源的內容。",
+    "scopeLevel": "涵蓋範圍層級",
+    "scopeCode": "涵蓋範圍代碼",
+    "scopeCodeHint": "國家：ISO 代碼 (NI)。次區域/區域：UN M49 代碼 (013 = 中美洲)。全球：留白。",
+    "helpTypes": "協助類型",
+    "contact": "聯絡方式",
+    "vettedBy": "審核人",
+    "sourceNote": "來源備註",
+    "markVerified": "標記為已驗證（優先顯示）",
+    "archive": "封存（對終端使用者隱藏）",
+    "deleteTitle": "刪除資源？",
+    "deleteBody": "這將移除 {{name}} 的目錄項目",
+    "coverage": "涵蓋範圍",
+    "coverageHint": "選擇一個涵蓋範圍層級，然後搜尋其名稱或代碼。",
+    "coverageCodePlaceholder": "依名稱或代碼搜尋…",
+    "coverageLevelFirst": "請先選擇涵蓋範圍層級",
+    "coverageClear": "清除涵蓋範圍代碼",
+    "regionDirectoryUnavailable": "區域目錄無法使用。請手動輸入代碼。",
+    "level": {
+      "country": "國家",
+      "subregion": "次區域",
+      "region": "區域",
+      "global": "全球"
+    },
+    "addPointer": "新增指標",
+    "addRegion": "新增區域",
+    "displayOrder": "顯示順序",
+    "displayOrderHint": "在相關性與驗證之後，數字越小越優先顯示。",
+    "kind": "類型",
+    "noSearchResults": "找不到符合此搜尋條件的資源。",
+    "order": "排序",
+    "pointerLabel": "指標 {{number}} 標籤",
+    "pointerType": "指標 {{number}} 類型",
+    "pointerValue": "指標 {{number}} 的值",
+    "pointers": "指標",
+    "regionNumber": "區域 {{number}}",
+    "regions": "區域",
+    "removePointer": "移除指標",
+    "removeRegion": "移除區域",
+    "search": "搜尋資源",
+    "searchPlaceholder": "名稱、類型、標籤、指標或描述",
+    "tags": "標籤 (以逗號分隔)",
+    "namePlaceholder": "例如：中美洲人權委員會",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, education, local",
+    "loadError": "載入資源失敗",
+    "loadDirectoryError": "載入目錄失敗",
+    "saveError": "儲存資源失敗",
+    "deleteError": "刪除資源失敗"
+  },
+  "adminUserManager": {
+    "backToAdmin": "返回管理控制台",
+    "eyebrow": "管理操作",
+    "title": "使用者管理員",
+    "subtitle": "透過簡單的儀表板審核使用者、了解其狀態並核准存取權限。",
+    "unlockDetails": "展開詳細資訊",
+    "refreshRoster": "重新整理名單",
+    "exportVisible": "匯出目前顯示的名單",
+    "prepareVisible": "準備目前顯示的名單",
+    "downloadPrepared": "下載已準備好的名單",
+    "exportPrepared": "完整的顯示名單已準備就緒。現在可以下載。",
+    "rosterTitle": "使用者名單",
+    "rosterShown": "總共 {{total}} 位，目前顯示 {{shown}} 位。",
+    "tableLabel": "使用者名單",
+    "tableRowsLabel": "使用者名單列",
+    "loadingLabel": "正在載入使用者名單",
+    "loadingUsers": "正在載入使用者...",
+    "loadRetry": "使用者名單無法載入。請使用「重新整理名單」再試一次。",
+    "emptyNoUsers": "尚無使用者。新的已驗證使用者將顯示於此。",
+    "emptyFiltered": "沒有符合這些篩選條件的使用者。",
+    "noUserType": "無使用者類型",
+    "unknown": "未知",
+    "userFallback": "使用者 #{{id}}",
+    "approvalSuccess": "已核准 {{name}}。",
+    "exportSuccess": "使用者名單試算表已下載。",
+    "metrics": {
+      "total": "總使用者人數",
+      "totalDetail": "於名單中",
+      "pendingApproval": "待核准",
+      "pendingDetail": "{{count}} 位待處理",
+      "approved": "已核准",
+      "approvedDetail": "可進入聊天",
+      "incompleteProfiles": "資料不完整的個人檔案",
+      "incompleteDetail": "需要填寫必填問題"
+    },
+    "callouts": {
+      "loadFailed": "使用者名單載入失敗",
+      "approvalUpdated": "使用者核准狀態已更新",
+      "approvalFailed": "使用者審核更新失敗",
+      "exportReady": "使用者名單匯出就緒",
+      "exportFailed": "使用者名單匯出失敗"
+    },
+    "filters": {
+      "search": "搜尋使用者",
+      "searchPlaceholder": "姓名、電子郵件、公鑰或 #ID",
+      "approvalStatus": "審核狀態",
+      "allApprovalStates": "所有審核狀態",
+      "pendingApproval": "待審核",
+      "approved": "已核准",
+      "allUserTypes": "所有使用者類型"
+    },
+    "columns": {
+      "user": "使用者",
+      "approval": "審核",
+      "userType": "使用者類型",
+      "userProfile": "使用者個人資料",
+      "joined": "加入時間",
+      "action": "操作"
+    },
+    "status": {
+      "approved": "已核准",
+      "pending": "待處理"
+    },
+    "actions": {
+      "approve": "核准",
+      "approveUser": "核准 {{name}}",
+      "viewUserDetails": "查看 {{name}} 的詳細資訊"
+    },
+    "profile": {
+      "noQuestions": "無問題",
+      "noQuestionsDetail": "不適用任何新手引導問題。",
+      "needsProfile": "需要個人資料",
+      "missingRequiredOne": "缺少 1 個必填答案",
+      "missingRequiredMany": "缺少 {{count}} 個必填答案",
+      "noProfileYet": "尚未建立個人資料",
+      "noAnswersSaved": "尚未儲存任何答案。",
+      "ready": "個人資料已就緒",
+      "answersSavedOne": "已儲存 1 個答案",
+      "answersSavedMany": "已儲存 {{count}} 個答案"
+    },
+    "identity": {
+      "decrypting": "正在解密姓名與電子郵件...",
+      "failed": "無法解鎖加密詳細資訊。",
+      "unavailable": "加密詳細資訊需要瀏覽器簽署器。",
+      "locked": "加密詳細資訊已鎖定。"
+    },
+    "errors": {
+      "loadUsers": "載入使用者失敗。",
+      "loadUserTypes": "載入使用者類型失敗。",
+      "loadQuestions": "載入新手引導問題失敗。",
+      "approvalUpdate": "無法更新使用者審核狀態。",
+      "decryptUnavailable": "準備此名冊需要具備 NIP-04 解密功能的瀏覽器擴充功能。",
+      "decryptRoster": "無法解密加密的名冊值。未建立試算表。",
+      "prepareRequired": "請在下載前先準備目前顯示的名冊。",
+      "exportAudit": "無法對使用者名冊匯出進行稽核。",
+      "exportRoster": "匯出使用者名冊失敗。"
+    },
+    "detail": {
+      "booleanYes": "是",
+      "booleanNo": "否",
+      "fieldUnlocked": "加密答案已在此瀏覽器中解鎖。",
+      "decryptingField": "正在解密答案...",
+      "encryptedFieldUnavailable": "加密答案需要瀏覽器簽署器。",
+      "encryptedFieldFailed": "無法解鎖加密答案。",
+      "encryptedFieldLocked": "加密答案已鎖定。",
+      "notAnswered": "未回答",
+      "requiredMissing": "缺少必要答案。",
+      "backToUserManager": "返回使用者管理員",
+      "backToRoster": "返回使用者名冊",
+      "eyebrow": "使用者詳細資訊",
+      "notFoundTitle": "找不到使用者",
+      "notFoundBody": "此使用者不在目前的管理員名冊中。",
+      "subtitle": "查看此使用者的狀態、個人資料回答及存取詳細資訊。",
+      "approvalStatus": "審核狀態",
+      "waitingApproval": "等待審核中",
+      "identityTitle": "身分",
+      "name": "姓名",
+      "nameUnavailable": "不可用",
+      "email": "電子郵件",
+      "emailUnavailable": "無法使用",
+      "userId": "使用者 ID",
+      "publicKey": "公鑰",
+      "noPublicKey": "無公鑰",
+      "fieldsTitle": "個人資料欄位",
+      "fieldsShown_one": "此使用者套用了 {{count}} 個欄位。",
+      "fieldsShown_other": "此使用者套用了 {{count}} 個欄位。",
+      "noFields": "此使用者沒有套用任何新手引導欄位。",
+      "required": "必填",
+      "optional": "選填",
+      "encrypted": "已加密",
+      "plain": "明文",
+      "chatContext": "聊天上下文"
+    }
+  },
+  "decryptStatus": {
+    "progress": "正在解密 {{done}} / {{total}}",
+    "checkExtension": "請檢查您的 Nostr 擴充功能",
+    "persistentApproval": "選擇「記住」或「總是」選項，以便僅詢問一次。"
   }
 }

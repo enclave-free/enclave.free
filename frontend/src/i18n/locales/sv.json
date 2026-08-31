@@ -22,7 +22,8 @@
       "title": "Vad beskriver dig bäst?",
       "description": "Välj det alternativ som bäst passar dina behov",
       "loadError": "Kunde inte ladda användartyper. Försök igen.",
-      "selectionLabel": "Val av användartyp"
+      "selectionLabel": "Val av användartyp",
+      "errorLabel": "Fel vid laddning av användartyp"
     },
     "language": {
       "selectLabel": "Välj ett språk",
@@ -65,7 +66,8 @@
       "encryptionBody": "Profilfält är krypterade som standard, men administratören för denna instans styr inställningar på fältnivå och kan tillåta att vald data lagras eller delas på annat sätt.",
       "adminControlNotice": "Datahantering konfigureras av administratören för denna instans, inklusive vad som kan lagras okrypterat eller delas med AI-verktyg.",
       "noWarrantyNotice": "Enclave-programvaran tillhandahålls i befintligt skick utan garanti. Användning av denna instans omfattas av administratörens policyer.",
-      "retentionNotice": "Databevaring och raderingsfrister ställs in av denna instansadministratör. Kontakta dem för åtkomst-, korrigerings- eller raderingsförfrågningar."
+      "retentionNotice": "Databevaring och raderingsfrister ställs in av denna instansadministratör. Kontakta dem för åtkomst-, korrigerings- eller raderingsförfrågningar.",
+      "errorLabel": "Fel vid begäran om Magic link"
     },
     "verify": {
       "verifying": "Verifierar din länk...",
@@ -125,20 +127,28 @@
       "databaseName": "Databas",
       "knowledgeGraph": "Sök i kunskapsgrafen",
       "config": "Konfiguration",
-      "configName": "Konfiguration"
+      "configName": "Konfiguration",
+      "knowledgeSearch": "Sök i uppladdade dokument och kunskapsdelar",
+      "knowledgeSearchName": "Kunskap",
+      "curatedResources": "Hitta administratörsgranskade referensresurser och betrodda organisationer",
+      "curatedResourcesName": "Resurser"
     },
     "documentScope": {
       "title": "Kunskapsbaser",
       "description": "Välj källor att inkludera i kontexten",
       "noSources": "Inga källor tillgängliga",
       "clearAll": "Rensa alla",
-      "docsLabel": "Dokument"
+      "docsLabel": "Dokument",
+      "clearAllSelectedAria": "Rensa alla valda dokument",
+      "docsLabelWithCount": "Dokument {{count}}"
     },
     "messages": {
       "searching": "Söker efter \"{{term}}\"...",
       "searchingPrefix": "Söker",
       "searchResults": "Jag sökte efter \"{{term}}\" åt dig:",
-      "newConversation": "Ny konversation"
+      "newConversation": "Ny konversation",
+      "copy": "Kopiera meddelande",
+      "copied": "Meddelande kopierat"
     },
     "code": {
       "copy": "Kopiera",
@@ -157,7 +167,177 @@
       "roleUser": "Du",
       "roleAssistant": "Assistent",
       "footer": "Exporterad från {{instanceName}}",
-      "exportedOn": "Exporterad {{timestamp}}"
+      "exportedOn": "Exporterad {{timestamp}}",
+      "copiedExportNotice": "Denna export lämnar aktiv produktlagring och ligger utanför Active Storage Lifecycle efter nedladdning."
+    },
+    "new": "Ny chatt",
+    "listTitle": "Chattar",
+    "contextTitle": "Kontext",
+    "messageActions": "Meddelandeåtgärder",
+    "actions": {
+      "stop": "Stoppa svar",
+      "stopDisabled": "Det finns inget svar att stoppa.",
+      "regenerate": "Generera svar igen",
+      "edit": "Redigera meddelande",
+      "waitForResponse": "Vänta tills det nuvarande svaret är klart.",
+      "startConversation": "Starta eller återuppta en konversation först.",
+      "resolveConfirmation": "Bekräfta ändringen (Change Confirmation) som väntar innan historiken ändras."
+    },
+    "composerContextAria": "Kontext för meddelandeskapare",
+    "sessions": {
+      "ariaLabel": "Chatsessioner",
+      "current": "Nuvarande chatt",
+      "empty": "Tom",
+      "messageCount_one": "{{count}} meddelande",
+      "messageCount_other": "{{count}} meddelanden",
+      "deleteConfirmTitle": "Radera \"{{title}}\"?",
+      "rename": "Byt namn på {{title}}",
+      "delete": "Radera {{title}}",
+      "resumeInvalid": "Kunde inte ladda konversationen.",
+      "renameEmpty": "Konversationstitel krävs.",
+      "renameError": "Kunde inte byta namn på konversationen.",
+      "deleteError": "Kunde inte radera konversationen.",
+      "loading": "Laddar chattar...",
+      "error": "Kunde inte ladda chattar",
+      "saved": "Sparad chatt",
+      "deleteConfirmBody": "Detta tar bort den sparade konversationen och dess session-minne.",
+      "deleteCancel": "Avbryt radering av konversation",
+      "cancel": "Avbryt",
+      "deleteConfirm": "Radera konversation",
+      "deleteDeleting": "Raderar...",
+      "renameInput": "Konversationstitel",
+      "renameCancel": "Avbryt namnbyte av konversation",
+      "renameSave": "Spara konversationstitel",
+      "renameSaving": "Byter namn...",
+      "open": "Öppna chatsessioner",
+      "close": "Stäng chatsessioner"
+    },
+    "currentChatAria": "Nuvarande chatt",
+    "newFromCurrent": "Starta en ny chatt",
+    "documentsContextTitle": "Dokument",
+    "errors": {
+      "requestLabel": "Fel vid chattförfrågan"
+    },
+    "trace": {
+      "finalizing": "Slutför svar...",
+      "collapse": "Fäll ihop",
+      "expand": "Expandera",
+      "reasoning": "Resonemang",
+      "thinking": "Tänker",
+      "transcript": "{{label}} transkription",
+      "reasoningSummaryAria": "Sammanfattning av resonemang",
+      "reasoningTranscriptAria": "Transkription av resonemang",
+      "label": "Spår",
+      "toolCalls": "Verktygsanrop",
+      "retrieval": "Hämtning",
+      "input": "Inmatning",
+      "output": "Utmatning",
+      "retrievedSource": "Hämtad källa",
+      "score": "poäng {{score}}",
+      "optionalDetailsAria": "valfria detaljer för {{label}}"
+    },
+    "conversationMessagesAria": "Konversationsmeddelanden",
+    "conversationSurfaceAria": "Konversationsyta",
+    "conversationThreadAria": "Konversationsstråd",
+    "activity": {
+      "label": "Aktivitet",
+      "summaryAria": "Aktivitetssammanfattning",
+      "detailsAria": "Aktivitetsdetaljer",
+      "timelineAria": "Aktivitetstidslinje",
+      "show": "Visa aktivitet",
+      "hide": "Dölj aktivitet",
+      "showOptional": "Visa valfria detaljer",
+      "hideOptional": "Dölj valfria detalser",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "Anrop av {{toolName}} försökt.",
+        "retry": "Försöker igen med verktyget efter försök {{attempt}}.",
+        "running": "Verktyget körs.",
+        "completed": "Verktyget slutfördes.",
+        "guarded": "Verktyget var bevakat.",
+        "failed": "Verktyget misslyckades.",
+        "rejected": "Verktygsanropet avvisades.",
+        "timedOut": "Verktyget tog för lång tid.",
+        "knowledgeSearch": {
+          "title": "Kunskapssökning"
+        },
+        "webSearch": {
+          "title": "Webbsökning"
+        },
+        "curatedResources": {
+          "title": "Kurerade resurser"
+        },
+        "adminConfig": {
+          "title": "Admin-konfiguration"
+        },
+        "databaseQuery": {
+          "title": "Databasfråga"
+        }
+      },
+      "status": {
+        "running": "Körs",
+        "succeeded": "Lyckades",
+        "failed": "Misslyckades",
+        "guarded": "Skyddad",
+        "timed_out": "Tog för lång tid",
+        "rejected": "Avvisad"
+      },
+      "toolSelection": {
+        "title": "Verktygsval",
+        "failed": "Verktygsvalet misslyckades innan ett användbart val registrerades.",
+        "partialFailure": "Några av modellens verktygsval avvisades.",
+        "noneSelected": "Inga verktyg valdes.",
+        "selected": "Valda: {{selectedTools}}."
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "Modellanrop",
+          "summary": "Modellanrop: {{elapsedMs}} ms."
+        },
+        "providerFirstEventWait": {
+          "title": "Väntetid för leverantörens första händelse",
+          "summary": "Väntetid för leverantörens första händelse: {{elapsedMs}} ms."
+        },
+        "toolExecution": {
+          "title": "Verktygsutförande",
+          "summary": "Verktygsutförande: {{elapsedMs}} ms."
+        },
+        "resourceDirectoryLookup": {
+          "title": "Uppslag i resurskatalog",
+          "summary": "Uppslag i resurskatalog: {{elapsedMs}} ms."
+        },
+        "retrieval": {
+          "title": "Hämtning",
+          "summary": "Hämtning: {{elapsedMs}} ms."
+        },
+        "retryDelay": {
+          "title": "Fördröjning vid försök",
+          "summary": "Fördröjning vid försök: {{elapsedMs}} ms."
+        },
+        "totalTurn": {
+          "title": "Total tur",
+          "summary": "Total tid: {{elapsedMs}} ms."
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "Inga relevanta stycken från uppladdade dokument hittades.",
+        "retrieved": "Hämtade {{count}} stycken från uppladdade dokument för svaret."
+      },
+      "webSearch": {
+        "prepared": "Webbsökningsresultat förbereddes för svaret ({{count}})."
+      },
+      "curatedResources": {
+        "noAdditional": "Inga ytterligare kurerade resurser hittades.",
+        "noMatches": "Inga kurerade resurser matchade denna förfrågan.",
+        "returned": "Returnerade {{count}} av {{totalCount}} kurerade resurser."
+      },
+      "adminConfig": {
+        "completed": "Administrativ konfigurationsåtgärd {{toolId}} slutförd ({{outcome}}). Ändrade inställningar: {{changedSettings}}."
+      },
+      "databaseResultsRedacted": "Databasresultat har maskats i spårningen.",
+      "databaseQuery": {
+        "rejected": "Databasfrågan avvisades."
+      }
     }
   },
   "common": {
@@ -197,7 +377,17 @@
     "retry": "Försök igen",
     "saved": "Sparad",
     "sending": "Skickar...",
-    "gotIt": "Fattat"
+    "gotIt": "Fattat",
+    "send": "Skicka",
+    "backToAdminDashboard": "Tillbaka till adminpanelen",
+    "loadingPage": "Laddar sida",
+    "pageLoadError": "Kunde inte ladda sidan. Vänligen uppdatera.",
+    "export": "Exportera",
+    "reset": "Återställ",
+    "exit": "Avsluta",
+    "none": "Ingen",
+    "all": "Alla",
+    "warning": "Varning"
   },
   "settings": {
     "title": "Inställningar",
@@ -220,8 +410,23 @@
       "deploymentConfig": "Distributionskonfiguration",
       "deploymentConfigDesc": "Tjänster, SMTP, lagring",
       "userConfig": "Användarkonfiguration",
-      "userConfigDesc": "Användartyper och introduktionsfrågor"
-    }
+      "userConfigDesc": "Användartyper och introduktionsfrågor",
+      "guidedSetup": "Guidad installation",
+      "guidedSetupDesc": "Gå igenom installation, dokument, resurser och testning.",
+      "guides": "Admin-guider",
+      "guidesDesc": "Förstå vad administratörer konfigurerar och var.",
+      "testUserSession": "Testa användarsession",
+      "testUserSessionDesc": "Chatta som en simulerad användare och granska beta-feedback.",
+      "diagnostics": "Diagnostik",
+      "diagnosticsDesc": "Kör röktest (smoke checks) vid felsökning.",
+      "resourceDirectory": "Resurskatalog",
+      "resourceDirectoryDesc": "Kurera betrodda referensresurser manuellt."
+    },
+    "diagnostics": "Diagnostik",
+    "adminWorkflows": "Admin-arbetsflöden",
+    "settingsSection": "Inställningar",
+    "dataAndContent": "Data & innehåll",
+    "operations": "Drift"
   },
   "admin": {
     "confirmDelete": "Är du säker på att du vill ta bort denna post?",
@@ -263,7 +468,12 @@
       "instanceSectionTitle": "Instanskonfiguration",
       "onboardingFieldsHint": "Skapa frågorna användarna svarar på under introduktionen.",
       "userSectionDesc": "Konfigurera användartyper och frågorna användarna svarar på under introduktionen.",
-      "userSectionTitle": "Användarkonfiguration"
+      "userSectionTitle": "Användarkonfiguration",
+      "fieldScopeFilterLabel": "Filtrera frågor efter användartyp",
+      "noFieldsForScope": "Inga frågor gäller för denna användartyp ännu.",
+      "reorderNeedsAllScope": "Visa alla frågor för att kunna ändra ordningen",
+      "fieldScopeGlobalHint": "Frågor som alla användare svarar på, oavsett typ.",
+      "fieldScopeTypeHint": "Allt som denna användartyp får svara på: de globala frågorna som alla svarar på, plus deras egna."
     },
     "database": {
       "backToSetup": "Tillbaka till admininställningar",
@@ -348,7 +558,14 @@
       "nip07Unavailable": "Inget Nostr-tillägg hittades",
       "plaintextFieldIcon": "Klartextfält",
       "primaryKeyIcon": "Primärnyckel",
-      "unlockDecryption": "Lås upp dekryptering"
+      "unlockDecryption": "Lås upp dekryptering",
+      "safeQueryResults": "Säkra frågeresultat",
+      "queryError": "Frågefel",
+      "writeResult": "Resultat av databasskrivning",
+      "emptyQueryResult": "Tomt frågeresultat",
+      "readOnly": "Skrivskyddad",
+      "tableLoadError": "Fel vid laddning av tabell",
+      "readOnlyHint": "Direkta databasredigeringar är inaktiverade; använd granskade administratörsflöden för att göra ändringar."
     },
     "fields": {
       "nameRequired": "Fältnamn krävs",
@@ -438,7 +655,11 @@
       "removeFieldFailed": "Kunde inte ta bort fält",
       "reorderFailed": "Kunde inte ändra ordningen på fältet",
       "loadUsersFailed": "Kunde inte ladda användare",
-      "updateTypeFailed": "Kunde inte uppdatera användartyp"
+      "updateTypeFailed": "Kunde inte uppdatera användartyp",
+      "loadSettingsFailed": "Misslyckades med att ladda inställningar",
+      "externalConfigConflict": "Sage eller en annan administratör ändrade dessa inställningar medan du redigerade. Ladda om den här sidan innan du sparar så att du inte skriver över de nyare värdena.",
+      "externalSettingsConflict": "Sage eller en annan administratör ändrade dessa instansinställningar medan du redigerade. Ladda om den här sidan innan du sparar.",
+      "externalUserConfigConflict": "Sage eller en annan administratör ändrade användartyper eller onboarding-frågor medan du redigerade. Ladda om den här sidan innan du sparar ditt utkast."
     },
     "userMigration": {
       "title": "Migrering av användartyp",
@@ -473,7 +694,10 @@
       "emailEncryptedHint": "E-post (krypterad)",
       "nameEncryptedHint": "Namn (krypterad)",
       "noUsersHint": "Försök att ändra filtret ovan eller uppdatera.",
-      "pubkeyPresent": "Nostr pubkey finns"
+      "pubkeyPresent": "Nostr pubkey finns",
+      "usersErrorLabel": "Fel vid migrering av användartyp",
+      "errorLabel": "Fel vid migrering av användartyp",
+      "summaryLabel": "Sammanfattning av migrering av användartyp"
     },
     "configAssistant": {
       "openAria": "Öppna adminassistent",
@@ -511,8 +735,40 @@
         "restartRequiredFor": "Omstart krävs för: {{keys}}.",
         "restartRequiredNo": "Omstart krävs: nej.",
         "restartCheckFailedHttp": "Kontroll av omstartskrav misslyckades (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Kontroll av omstartskrav misslyckades (nätverksfel)."
-      }
+        "restartCheckFailedNetwork": "Kontroll av omstartskrav misslyckades (nätverksfel).",
+        "pageRefreshRecommended": "Uppdatera den här sidan för att se temaändringar."
+      },
+      "onboardingWelcome": "Välkommen — låt oss ställa in din yta. Svara på så många du vill i ett meddelande (numrera dem, och hoppa över det du är osäker på):\n\n1. **Namn** — vad ska vi kalla den här ytan? (visas i sidhuvudet & webbläsarfliken)\n2. **Beskrivning** — en mening om vad den används till (en privat anteckning, visas inte för användare)\n3. **Assistentens namn** — vad ska AI-hjälparen heta?\n4. **Accentfärg** — framhävningsfärg för knappar & länkar (ett namn som blå/turkos, eller en hex-kod som #3B82F6)\n5. **Tema** — ljust, mörkt eller system (matcha enheten)?\n6. **Standardspråk** — t.ex. engelska eller spanska (valfritt)\n7. **Tagline** — en kort rad för sidhuvudet (valfritt)\n8. **Nya användare** — släpp in dem direkt, eller godkänn varje person?\n9. **Användartyper** — vilka typer av icke-administratörer kommer att använda detta? (t.ex. Lärare och Elev) — Jag skapar varje typ åt dig.\n\nExempel: \"9. Lärare och Elev\". Jag sparar allt i ett steg — och du kan byta till manuell konfiguration när som helst.",
+      "collapseSidebar": "Dölj assistentens sidofält",
+      "expandSidebar": "Öppna administratörens assistent-sidoföl",
+      "resize": "Ändra storlek på administratörens assistentpanel",
+      "railLabel": "Assistent",
+      "shareSecretsHint": "Avstängd som standard. Aktivera konfigurationsverktyget först. När det är aktiverat visas konfigurationsvärden för hemliga utplaceringar på klientsidan och skickas till Sage för detta prototypflöde.",
+      "applyIntentUsePanel": "Använd panelen för kommande ändringar nedan och klicka på Tillämpa för att bekräfta dessa konfigurationsuppdateringar.",
+      "applyIntentNoPending": "Det finns inga kommande konfigurationsändringar att tillämpa. Be assistenten att föreslå en ändringssats först.",
+      "startNewConversation": "Starta ny konversation med assistenten",
+      "reducedContextNoticeLabel": "Meddelande om reducerad kontext",
+      "sessionMemoryNoticeLabel": "Meddelande om komprimering av sessionsminne",
+      "sessionMemoryNotice": "Äldre kontext sammanfattades för att kunna fortsätta denna konversation.",
+      "reducedContextNotice": "Viss kontext har reducerats för att hålla sig inom budgeten för modellleverantören ({{sections}}). Svaren kan vara mindre kompletta tills du startar en ny konversation med assistenten.",
+      "reducedContextSections": {
+        "recentConversation": "senaste konversationshistorik"
+      },
+      "approvalCardTitle": "Godkänn konfigurationsändringar",
+      "applying": "Tillämpar",
+      "applied": "Tillämpad",
+      "rejected": "Avvisad",
+      "failed": "Misslyckades",
+      "superseded": "Ersatt",
+      "hideDetails": "Dölj detaljer",
+      "reviewDetails": "Granska detaljer",
+      "reject": "Avvisa",
+      "approve": "Godkänn",
+      "applyErrorLabel": "Fel vid tillämpning av konfiguration",
+      "onboardingTitle": "Guidad konfigurationschatt",
+      "onboardingContext": "Fokuserad konfigurationskonversation",
+      "directShareSecretsHint": "Valfritt: inkludera sparade hemliga värden för driftsättning i denna konversations kontext. Direkta läsningar av hemligheter kräver inte detta.",
+      "directWritePrompt": "Fråga om administratörskonfiguration. Sage kan granska inställningar och, efter att ha bekräftat med dig i konversationen, tillämpa stödda ändringar direkt."
     },
     "reachout": {
       "badgeDefault": "Standard",
@@ -679,7 +935,16 @@
       "typographyTitle": "Typografi",
       "userIconLabel": "Användarikon",
       "userLabelLabel": "Användaretikett",
-      "userLabelPlaceholder": "t.ex. Du"
+      "userLabelPlaceholder": "t.ex. Du",
+      "publicEmailDisplayNameLabel": "Visningsnamn för publik e-post (valfritt)",
+      "publicEmailDisplayNameHint": "Används i e-postmeddelanden med magic-link. Lämna tomt för att använda instansens namn.",
+      "defaultsTitle": "Standardinställningar för instansen",
+      "defaultsDesc": "Ställ in baslinjespråk och tema som används innan lokala webbläsarinställningar tillämpas.",
+      "defaultLanguageLabel": "Standardspråk",
+      "defaultThemeLabel": "Standardtema",
+      "themeSystem": "System",
+      "themeLight": "Ljust",
+      "themeDark": "Mörkt"
     },
     "userConfig": {
       "subtitle": "Konfigurera användartyper och frågorna användarna svarar på under introduktionen.",
@@ -687,6 +952,55 @@
       "typeDescription": "Beskrivning",
       "typeIcon": "Typikon",
       "typeName": "Typnamn"
+    },
+    "userApproval": {
+      "updateFailed": "Misslyckades med att uppdatera användargodkännande.",
+      "approvedUser": "Användare #{{id}} godkänd.",
+      "revokedUser": "Användare #{{id}} flyttades tillbaka till väntande.",
+      "title": "Godkännande av användare",
+      "subtitle": "Välj om nya autentiserade användare kan gå direkt in i chatten eller om de ska vänta på godkännande av en administratör.",
+      "requireManualLabel": "Kräv manuellt godkännande för nya användare",
+      "requireManualHint": "När detta är aktiverat hamnar nya användare på en skärm för väntande godkännande tills en administratör har godkänt dem.",
+      "loadingHint": "Laddar...",
+      "saveButton": "Spara godkännande av användare",
+      "savedCalloutLabel": "Godkännande av användare har sparats",
+      "errorCalloutLabel": "Fel vid godkännande av användare",
+      "pendingTitle": "Väntande godkännanden",
+      "pendingCount_zero": "{{count}} användare behöver godkännande innan de får tillgång till chatten.",
+      "pendingCount_one": "{{count}} användare behöver godkännande innan hen får tillgång till chatten.",
+      "pendingCount_two": "{{count}} användare behöver godkännande innan de får tillgång till chatten.",
+      "pendingCount_few": "{{count}} användare behöver godkännande innan de får tillgång till chatten.",
+      "pendingCount_many": "{{count}} användare behöver godkännande innan de får tillgång till chatten.",
+      "pendingCount_other": "{{count}} användare behöver godkännande innan de får tillgång till chatten.",
+      "nonePending": "Inga användare väntar på godkännande.",
+      "actionSavedCalloutLabel": "Godkännande av användare har uppdaterats",
+      "actionErrorCalloutLabel": "Uppdatering av godkännande av användare misslyckades",
+      "loadingUsers": "Laddar användare...",
+      "emptyState": "Nya användare som väntar på godkännande kommer att visas här när manuellt godkännande krävs.",
+      "emailOnFile": "E-post registrerad",
+      "nameOnFile": "Namn registrerat",
+      "approveButton": "Godkänn",
+      "revokeButton": "Återkalla"
+    },
+    "userRosterExport": {
+      "auditFailed": "Export av användarlista kunde inte granskas. Kalkylbladet laddades inte ner.",
+      "decryptUnavailable": "Ett webbläsartillägg med NIP-0ming dekryptering krävs för att förbereda denna lista.",
+      "decryptFailed": "Ett krypterat listvärde kunde inte dekrypteras. Inget kalkylblad skapades.",
+      "prepared": "Den kompletta listan är förberedd. Nedladdning är nu möjlig.",
+      "prepareRequired": "Förbered den aktuella listan innan du laddar ner den.",
+      "prepareButton": "Förbered användarlista",
+      "downloadButton": "Ladda ner förberedd lista",
+      "success": "Användarlistan i kalkylblad har laddats ner.",
+      "failed": "Misslyckades med att exportera användarlistan.",
+      "button": "Exportera användare",
+      "successLabel": "Export av användarlista är klar",
+      "errorLabel": "Misslyckades med export av användarlista"
+    },
+    "userIdentity": {
+      "decrypting": "Dekrypterar namn/e-post...",
+      "decryptFailed": "Kunde inte dekryptera namn/e-post",
+      "unlockDetails": "Lås upp för att visa namn/e-post",
+      "unlockButton": "Lås upp detaljer"
     }
   },
   "adminOnboarding": {
@@ -711,7 +1025,9 @@
     "legalResponsibilityNotice": "Du ansvarar för laglig konfiguration, användarinformation och policyer för datahantering för denna instans.",
     "extracted": {
       "change_language_789b14": "Ändra språk"
-    }
+    },
+    "statusError": "Misslyckades med att kontrollera instansens status",
+    "connectionError": "Misslyckades med att ansluta"
   },
   "errors": {
     "requestFailed": "Förfrågan misslyckades",
@@ -745,11 +1061,228 @@
     "adminSessionExpired": "Administratörssessionen har gått ut",
     "authenticationFailed": "Autentiseringen misslyckades",
     "noNostrExtension": "Inget Nostr-tillägg hittades",
-    "exportFailed": "Export misslyckades"
+    "exportFailed": "Export misslyckades",
+    "failedToRetryDeletionTombstone": "Misslyckades med att försöka igen för radering av tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "Misslyckades med att bekräfta ej stödd driftsyta",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Misslyckades med att bekräfta ej stödd kategori för driftsyta",
+    "failedToPreviewRetention": "Misslyckades med att förhandsgranska lagringspolicy",
+    "failedToUpdateRetentionPolicy": "Misslyckades med att uppdatera lagringspolicy",
+    "failedToRunScheduledRetention": "Misslyckades med att köra schemalagd lagring",
+    "failedToUpdateArtifactEncryptionPosture": "Misslyckades med att uppdatera krypteringsläge för artefakter",
+    "queryExecutionFailed": "Frågeexekvering misslyckades"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Administratörer kan"
+    },
+    "summary": {
+      "brand": {
+        "title": "Varumärkesprofilera instansen",
+        "body": "Namn, logotyp, tema, assistentens identitet och visning av offentlig e-post."
+      },
+      "people": {
+        "title": "Hantera användare",
+        "body": "Användartyper, onboarding-frågor, godkännanden, migrering och åtkomst."
+      },
+      "agent": {
+        "title": "Forma Sage",
+        "body": "Prompt-regler, svarsinställningar, dokumentåtkomst och standardinställningar för verktyg."
+      },
+      "launch": {
+        "title": "Lansera säkert",
+        "body": "E-post, domäner, CORS, HTTPS, modell-routing, hälsa och runtime-miljö."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Varumärke",
+        "title": "Identitet och utseende",
+        "body": "Gör att instansen känns som din organisation.",
+        "detail1": "Namn, tagline, assistentnamn och användarlabel.",
+        "detail2": "Logotyp, favicon, ikon, accentfärg, tema, typografi och chattstil.",
+        "detail3": "Standardspråk och visningsnamn för offentlig e-post.",
+        "link": "Öppna instansinställningar"
+      },
+      "people": {
+        "eyebrow": "Åtkomst",
+        "title": "Personer och åtkomst",
+        "body": "Bestäm vem som använder instansen och vad du frågar dem om.",
+        "detail1": "Användartyper för grupper som personal, medlemmar eller klienter.",
+        "detail2": "Onboarding-fält, obligatoriska frågor, alternativ, platshållare och fält per typ.",
+        "detail3": "Manuell godkännande, användarmigrering, återkallande av åtkomst och radering.",
+        "link": "Öppna användarinställningar"
+      },
+      "agent": {
+        "eyebrow": "Beteende",
+        "title": "Agentens beteende",
+        "body": "Forma hur Sage svarar och vilka verktyg som är aktiverade som standard.",
+        "detail1": "Prompt-mall, beteenderegler, förbjudna ämnen och svarsinställningar.",
+        "detail2": "Standardinställningar för verktyg inom Knowledge, Resources, Web, Config och Database.",
+        "detail3": "Globala inställningar plus överstyrningar per användartyp.",
+        "link": "Öppna agentinställningar"
+      },
+      "docs": {
+        "eyebrow": "Kunskap",
+        "title": "Dokumentkunskap",
+        "body": "Ge agenten källmaterial som den kan söka i.",
+        "detail1": "Ladda upp PDF:er, policyer, FAQ:er, handböcker och guider.",
+        "detail2": "Dokument delas upp i bitar, bäddas in och görs sökbara.",
+        "detail3": "Dokumentåtkomst styr vad som kan väljas eller vara aktivt som standard.",
+        "link": "Öppna dokumentuppladdning"
+      },
+      "resources": {
+        "eyebrow": "Referenser",
+        "title": "Granskade resurser",
+        "body": "Lägg till betrodda hänvisningar som agenten kan rekommendera.",
+        "detail1": "Namn, beskrivningar, resurstyp, språk, täckning och hjälptyper.",
+        "detail2": "Telefon, e-post, URL, säker kanal, adress och anteckningar.",
+        "detail3": "Verifierade resurser rankas först. Arkiverade resurser förblir dolda för användare.",
+        "link": "Öppna resurskatalogen"
+      },
+      "ops": {
+        "eyebrow": "Drift",
+        "title": "Drift och runtime",
+        "body": "Håll instansen ansluten, nåbar och hälsosam.",
+        "detail1": "SMTP för magiska e-postlänkar, domäner, CORS, HTTPS och publika URL:er.",
+        "detail2": "Modellleverantör, embedding-modell, sökning, lagring och tjänststatus.",
+        "detail3": "Export av runtime-miljö, redo-status, föråldrade inställningar och migrering av admin-nyckel.",
+        "link": "Öppna driftsinställningar"
+      },
+      "title": "Vad administratörer konfigurerar",
+      "body": "Detta är de huvudsakliga kontrollytorna. Du kan använda sidorna direkt eller be Admin Assistant att förbereda ändringar."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Fråga",
+        "title": "Administratörsassistent",
+        "body": "Ställ frågor om nuvarande konfiguration och begär ändringar.",
+        "detail1": "Konfigurationsläsning granskar den faktiska instansstatusen istället för att gissa.",
+        "detail2": "Föreslagna ändringar förbereds för granskning.",
+        "detail3": "Apply kör de godkända admin-slutpunkterna utan ytterligare ett modellsteg.",
+        "link": "Öppna Admin Assistant",
+        "directWriteDetail2": "Sage ber om konversationsbaserad bekräftelse före en understödd skrivning.",
+        "directWriteDetail3": "Efter att du har bekräftat anropar Sage sina verktyg för direktkonfiguration och rapporterar det faktiska resultatet."
+      },
+      "guided": {
+        "eyebrow": "Starta",
+        "title": "Guidad konfiguration",
+        "body": "Använd en guidad chatt för att skapa en användbar första konfiguration.",
+        "detail1": "Identitet, assistent, språk, åtkomstpolicy, användartyper, frågor och beteenderegler.",
+        "detail2": "Ladda sedan upp dokument, lägg till resurser och testa.",
+        "link": "Öppna guidad konfiguration"
+      },
+      "test": {
+        "eyebrow": "Validera",
+        "title": "Test och feedback",
+        "body": "Prova agenten ur ett användarperspektiv före lansering.",
+        "detail1": "Välj en användartyp, starta en testsession och spara testperioden.",
+        "detail2": "Granska krypterade beta-loggar och betygsätt svar.",
+        "link": "Öppna testanvändarsession"
+      },
+      "database": {
+        "eyebrow": "Granska",
+        "title": "Databasutforskare",
+        "body": "Granska lagrad SQLite-data vid felsökning.",
+        "detail1": "Använd skrivskyddade SELECT-frågor för granskning.",
+        "detail2": "Använd inte detta som en väg för produktmutationer.",
+        "link": "Öppna databasutforskare"
+      },
+      "title": "Vanliga admin-arbetsflöden",
+      "body": "Använd dessa när du konfigurerar, kontrollerar kvalitet eller undersöker data."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Körning",
+        "title": "En konversations körning",
+        "body": "Knowledge, Resources, Web, Config och Database är synliga verktygsset, inte separata chatsystem.",
+        "detail1": "Modellen kan anropa aktiverade verktyg när de är till hjälp.",
+        "detail2": "Config och Database visas endast för servervaliderade administratörer."
+      },
+      "auth": {
+        "eyebrow": "Inloggning",
+        "title": "Olika inloggningsvägar",
+        "body": "Administratörer använder NIP-07. Användare använder magiska e-postlänk.",
+        "detail1": "Administratörers privata nycklar stannar i webbläsarens signeringsmodul.",
+        "detail2": "SMTP måste fungera innan användarnas magiska länkar fungerar i produktion."
+      },
+      "data": {
+        "eyebrow": "Integritet",
+        "title": "Datagränser är viktiga",
+        "body": "Krypterade profilfält hålls utanför chat-kontexten.",
+        "detail1": "Endast okrypterade fält kan markeras för AI-chat-kontext.",
+        "detail2": "Deployment-hemligheter lagras krypterade och visas maskerade som standard."
+      },
+      "ops": {
+        "eyebrow": "Drift",
+        "title": "Vissa ändringar kräver operatörer",
+        "body": "Appen kan spara önskade inställningar för körning; den startar inte om tjänster i tysthet.",
+        "detail1": "Exportera runtime-miljö efter ändringar i provider, origin, CORS eller sökning.",
+        "detail2": "Använd readiness och tjänststatus för att bekräfta vad som faktiskt körs."
+      },
+      "title": "Viktiga produktfakta att komma ihåg",
+      "body": "Dessa regler säkerställer en ärlig konfiguration och förhindrar oavsiktliga övertramp."
+    },
+    "ask": {
+      "prompt1": "Vad saknas fortfarande innan denna instans är redo för användare?",
+      "prompt2": "Granska nuvarande användartyper, onboarding-frågor, dokumentation och resurser.",
+      "prompt3": "Förbered ändringar för granskning: ställ in assistentens tonläge och standardspråk.",
+      "title": "Bra saker att fråga Admin Assistant om",
+      "body": "Be om en granskning innan du ber om ändringar. Den kan inspektera konfigurationen och förbereda ett ändringsset.",
+      "directWriteBody": "Be Sage att inspektera eller ändra stödd konfiguration. Den kommer att bekräfta den avsedda ändringen med dig innan den skrivs.",
+      "directWritePrompt3": "Ställ in assistentens tonläge och standardspråk, och bekräfta först den avsedda ändringen med mig."
+    },
+    "hero": {
+      "eyebrow": "Administrativ kontrollkarta",
+      "shortVersion": {
+        "title": "Kort version",
+        "body": "Administratörer ställer in identitet, användare, kunskap, verktyg och startinställningar. Vissa ändringar i runtime kräver fortfarande en omstart av operatören."
+      }
+    },
+    "title": "Admin-guider",
+    "subtitle": "En enkel karta över vad administratörer konfigurerar, vad produkten kan göra och vad som behöver hanteras före lansering.",
+    "quickStart": {
+      "title": "Kom igång här",
+      "body": "Gör först den lilla, användbara konfigurationen. Polera den efter testning med riktiga frågor."
+    },
+    "safety": {
+      "title": "Grundläggande säkerhet",
+      "body": "Administratörer kontrollerar åtkomst, data, beteende och runtime-inställningar. Var försiktig med riskfyllda ändringar.",
+      "items": {
+        "0": "Administratörer loggar in med NIP-07. Användare loggar in med magiska e-postlänkar.",
+        "1": "Användarfält är krypterade som standard. Endast klartextfält kan delas med chatten.",
+        "2": "Hemligheter förblir maskerade om du inte delar dem för den aktuella administratörssessionen.",
+        "3": "Assistentens ändringar är förslag. Du granskar och klickar fortfarande på Använd.",
+        "4": "Deployment Settings sparar önskade runtime-värden. Operatörer exporterar fortfarande env och startar om tjänster vid behov."
+      },
+      "directItems": {
+        "0": "Administratörer loggar in med NIP-07. Användare loggar in med magiska e-postlänkar.",
+        "1": "Användarfält är krypterade som standard. Endast klartextfält kan delas med chatten.",
+        "2": "Hemligheter förblir maskerade om du inte delar dem för den aktuella administratörssessionen.",
+        "3": "Sage bekräftar konfigurationsändringar med dig i chatten och tillämpar sedan stödda ändringar direkt.",
+        "4": "Deployment Settings sparar önskade runtime-värden. Operatörer exporterar fortfarande env och startar om tjänster vid behov."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Logga in som administratör",
+        "body": "Använd administratörens NIP-07-nyckel. Håll den privat."
+      },
+      "1": {
+        "title": "Ställ in grunderna",
+        "body": "Namnge instansen, välj utseende och ställ in assistentens identitet."
+      },
+      "2": {
+        "title": "Definiera dina användare",
+        "body": "Skapa användartyper, onboarding-frågor och godkännanderegler."
+      },
+      "3": {
+        "title": "Lägg till pålitlig kunskap",
+        "body": "Ladda upp dokument och lägg till granskade resurser."
+      },
+      "4": {
+        "title": "Testa före lansering",
+        "body": "Chatta som en användare, granska feedback och bjud sedan in riktiga personer."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1319,55 @@
     "securityStep3Primary": "Kör konfigurationsvalidering",
     "securityStep3Secondary": "Granska lagrad data",
     "user": "Användarkonfiguration",
-    "userDesc": "Definiera användartyper och introduktionsfrågor"
+    "userDesc": "Definiera användartyper och introduktionsfrågor",
+    "subtitleSimple": "Välj var du vill arbeta på denna instans.",
+    "workflowsSectionLabel": "Admin-arbetsflöden",
+    "adminAssistant": "Admin-assistent",
+    "adminAssistantDesc": "Använd admin-chatten för konfigurationshjälp och granskning av ändringar.",
+    "guidedSetup": "Guidad konfiguration",
+    "guidedSetupDesc": "Gå igenom konfiguration, dokument, resurser och testning.",
+    "guides": "Admin-guider",
+    "guidesDesc": "Förstå vad administratörer konfigurerar och var.",
+    "testUserSession": "Testa användarsession",
+    "testUserSessionDesc": "Chatta som en simulerad användare och granska sparade beta-loggar.",
+    "aiSetupTitle": "Konfigurera med AI-assistenten",
+    "aiSetupBody": "Låt assistenten samla in det grundläggande för namngivning och konfiguration av din instans i ett steg. Du kan när som helst byta till manuell konfiguration.",
+    "aiSetupAction": "Starta guidad konfiguration",
+    "readinessTitle": "Driftsberedskap",
+    "readinessDesc": "Granska beredskapen innan du bjuder in användare. Kontrollera hinder, varningar, ändringar som kräver omstart och återställningsläge på ett och samma ställe.",
+    "readinessPrimary": "Öppna beredskapsgranskning",
+    "firstRunPathTitle": "Admin-flöde vid första körning",
+    "firstRunStep1Title": "Konfigurera instansens baslinje",
+    "firstRunStep1Body": "Ställ in varumärke, språk, tema, användarfält och Agent Settings före granskning.",
+    "firstRunStep1Action": "Öppna inställningar för instans",
+    "firstRunStep2Title": "Granska driftsberedskap",
+    "firstRunStep2Body": "Kontrollera hinder, varningar, ändringar som kräver omstart och återställningsläge innan du bjuder in användare.",
+    "firstRunStep2Action": "Öppna konfigurationsguide",
+    "firstRunStep3Title": "Använd endast diagnostik vid undersökning",
+    "firstRunStep3Body": "Håll röktest och diagnostik tillgängliga utan att göra dem till den primära produktvägen.",
+    "firstRunStep3Action": "Öppna diagnostik",
+    "instanceDescSimple": "Namn, offentlig e-postidentitet, tema och varumärkeskontroller.",
+    "aiDescSimple": "Prompter, modellbeteende och dokumentstandardinställningar.",
+    "deploymentDescSimple": "Inställningar för körtid, hälsa och status för redohet.",
+    "resources": "Resurskatalog",
+    "resourcesDesc": "Kuratera betrodda advokater, NGO:er och hänvisningsresurser",
+    "resourcesDescSimple": "Kuratera manuellt betrodda hänvisningsresurser.",
+    "testFeedback": "Test och återkoppling",
+    "testFeedbackDesc": "Chatta som en testanvändare och betygsätt svar för att förfina din konfiguration",
+    "diagnosticsSectionLabel": "Diagnostik",
+    "operationsSectionLabel": "Drift",
+    "testDashboard": "Diagnostik",
+    "testDashboardDesc": "Kör röktest för utveckling och inspektera diagnostikmoduler",
+    "testDashboardDescSimple": "Kör röktest vid felsökning.",
+    "iaChecklistTitle": "Checklista för granskning av informationsarkitektur för administratörer",
+    "iaChecklistBody": "Håll Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness och diagnostiska ytor åtskilda under mänsklig granskning.",
+    "humanReviewTitle": "Överlämning för mänsklig granskning",
+    "humanReviewStatus": "Premium-support för driftsättning krävs",
+    "humanReviewBody": "Tillämpning av runtime-miljö förblir explicit: exportera artefakter, tillämpa dem med operatörsstöd, starta om berörda tjänster och verifiera bevis på redohet.",
+    "humanReviewAction": "Granska Deployment Readiness",
+    "settingsSectionLabel": "Inställningar",
+    "userManager": "Användarhanterare",
+    "userManagerDesc": "Granska användare, kontrollera status, exportera listor och godkänn åtkomst."
   },
   "adminAI": {
     "title": "AI-konfiguration",
@@ -871,7 +1452,18 @@
       "userInfoPlaceholder": "{user_info} — ersätts med den aktuella användarens profilfält, om tillgängliga"
     },
     "revert": "Återställ",
-    "revertToGlobal": "Återställ till global"
+    "revertToGlobal": "Återställ till global",
+    "knowledgeSearchDisabledLabel": "Kunskapssökning är avstängd",
+    "knowledgeSearchDisabledMessage": "Aktiva standarddokument kommer inte att användas förrän Kunskapskällor är inställt på valda standarddokument eller alla tillgängliga dokument.",
+    "assembledPromptOutput": "Sammansatt prompt-utdata",
+    "saveError": "Misslyckades med att spara",
+    "revertError": "Misslyckades med att återställa",
+    "toggleError": "Växling misslyckades",
+    "loadErrorLabel": "Fel vid laddning av Agentinställningar",
+    "previewErrorLabel": "Fel vid förhandsgranskning av Agentinställningar",
+    "documentToggleErrorLabel": "Fel vid växling av dokument i Agentinställningar",
+    "documentDefaultsHintV2": "Dokument markerade som \"Tillgängliga\" kan användas av Kunskapssökning. Dokument markerade som \"Standardaktiva\" inkluderas när Kunskapskällor är inställt på valda standarddokument.",
+    "externalChangeConflict": "Sage eller en annan administratör ändrade denna inställning medan du redigerade. Avbryt och öppna redigeraren igen innan du sparar."
   },
   "adminDeployment": {
     "title": "Driftkonfiguration",
@@ -969,7 +1561,9 @@
       "unknown": "Okänd",
       "usersMigrated": "Användare migrerade",
       "usersToMigrate": "Användare att migrera",
-      "warning": "Detta är en avancerad operation. Felaktig migrering kan låsa dig ute från krypterad data. Fortsätt bara om du förstår konsekvenserna."
+      "warning": "Detta är en avancerad operation. Felaktig migrering kan låsa dig ute från krypterad data. Fortsätt bara om du förstår konsekvenserna.",
+      "inputWarningLabel": "Varning vid migrering av admin-nyckel",
+      "destructiveWarningLabel": "Varning för destruktiv migrering av admin-nyckel"
     },
     "revealFailed": "Kunde inte visa värdet. Kontrollera anslutningen till ditt Nostr-tillägg.",
     "searchHelp": {
@@ -1000,7 +1594,8 @@
       "overviewDesc": "Säkerhetsinställningar styr autentisering, sessionshantering och utvecklingsgenvägar. Standardvärden är konfigurerade för lokal utveckling.",
       "overviewNote": "I produktion, se till att simuleringsflaggor är avstängda och att FRONTEND_URL matchar din riktiga domän.",
       "overviewTitle": "Översikt av säkerhet",
-      "overviewWhen": "Granska dessa inställningar innan du driftsätter på en publikt tillgänglig server."
+      "overviewWhen": "Granska dessa inställningar innan du driftsätter på en publikt tillgänglig server.",
+      "devNote": "Använd MOCK_EMAIL för lokal e-posttestning; användar- och adminsessioner kräver fortfarande det normala verifieringsflödet."
     },
     "sslHelp": {
       "ariaLabel": "Hjälp för SSL- och HTTPS-konfiguration",
@@ -1101,7 +1696,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Uppladdningsmapp",
       "vector_database_eb5526": "Vektordatabas"
-    }
+    },
+    "exportSageRuntimeEnv": "Exportera Sage-miljö",
+    "readiness": {
+      "title": "Klarhet för driftsättning",
+      "statusTitle": "Klarhet för driftsättning: {{status}}",
+      "description": "Granska bevisen som behövs innan denna Single-Instance-driftsättning är redo för normal drift.",
+      "openWizard": "Öppna granskning av klarhet",
+      "blockerCount": "{{count}} hinder",
+      "warningCount": "{{count}} varningar",
+      "readyCount": "{{count}} redo",
+      "empty": "Inga kontroller för driftsberedskap är tillgängliga ännu.",
+      "conversationBlocking": "Blockerar normala konversationer",
+      "blocker": "Hinder",
+      "warning": "Varning",
+      "ready": "Redo",
+      "reviewInferenceVerification": "Granska verifiering av inferens",
+      "reviewDataLifecycleStatus": "Granska status för datalivscykel",
+      "reviewDeploymentValidation": "Granska driftsinställningar",
+      "reviewRestartRequired": "Granska om omstart krävs",
+      "reviewOperationalReadiness": "Granska operativ beredskap",
+      "reviewServiceHealth": "Granska tjänstens hälsa",
+      "reviewRuntimeEnv": "Granska export av runtime-miljö",
+      "deployment_settings_validation": {
+        "label": "Validering av driftsinställningar",
+        "status": {
+          "invalid": {
+            "summary": "Valideringen av driftsinställningar har fel som måste åtgärdas.",
+            "nextAction": "Granska valideringsfel för driftsinställningar."
+          },
+          "warnings": {
+            "summary": "Valideringen av driftsinställningar har informativa varningar.",
+            "nextAction": "Granska valideringsvarningar för driftsinställningar."
+          },
+          "valid": {
+            "summary": "Valideringen av driftsinställningar har inga fel eller varningar.",
+            "nextAction": "Ingen åtgärd krävs."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Verifierbar inferens",
+        "status": {
+          "current": {
+            "summary": "Den konfigurerade modellleverantören har ett aktuellt verifieringsprotokoll för inferens.",
+            "nextAction": "Ingen åtgärd krävs. Granska det aktuella verifieringsprotokollet för inferens när leverantörens anspråk ändras."
+          },
+          "deferred_missing": {
+            "summary": "Krypterad och verifierbar inferens är för närvarande inte verifierad för den konfigurerade modellleverantören.",
+            "nextAction": "Konfigurera en stödd modellleverantör och kör verifiering av inferens innan driftsberedskap betraktas som fullständig."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Granskning av datalivscykel",
+        "status": {
+          "needs_review": {
+            "summary": "Granskning av datalivscykel behöver administratörsgranskning.",
+            "nextAction": "Granska status för aktiv lagringslivscykel och registrera granskning av datalivscykel."
+          },
+          "stale": {
+            "summary": "Den registrerade granskningen av datalivscykel är inaktuell efter en stödd livscykeländring.",
+            "nextAction": "Granska den aktuella statusen för aktiv lagringslivscykel och registrera en ny granskning av datalivscykel."
+          },
+          "reviewed": {
+            "summary": "Granskning av datalivscykel har slutförts.",
+            "nextAction": "Ingen åtgärd krävs såvida inte den understödda livscykelstatusen ändras."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Bekräftelser av driftsyta",
+        "status": {
+          "acknowledged": {
+            "summary": "Kategorier för icke-stödd driftsyta har bekräftats.",
+            "nextAction": "Ingen åtgärd krävs."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Kategorier för icke-stödd driftsyta behöver bekräftas av operatören.",
+            "nextAction": "Granska de listade kategorierna för driftsyta och bekräfta varje kategori innan driftsberedskapen betraktas som slutförd."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Övning för backup och återställning",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Ett aktuellt protokoll för operatörens övning för backup och återställning krävs.",
+            "nextAction": "Genomför och registrera en övning för backup och återställning för denna driftsättning."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Omstart krävs",
+        "status": {
+          "current": {
+            "summary": "Inga driftsinställningar som kräver omstart har ändrats sedan tjänsten startades.",
+            "nextAction": "Ingen åtgärd krävs."
+          },
+          "restart_required": {
+            "summary": "Driftsinställningar som kräver omstart ändrades efter att tjänsten startades. ({{changedSettings}})",
+            "nextAction": "Tillämpa de önskade driftsinställningarna och starta om de berörda tjänsterna innan de betraktas som aktuella."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage runtime-konfiguration",
+        "status": {
+          "not_generated": {
+            "summary": "Sage runtime-miljö har ännu inte genererats från driftsinställningarna.",
+            "nextAction": "Exportera Sage runtime-miljön innan driftsinställningarna betraktas som tillämpade på Sage."
+          },
+          "matches_desired": {
+            "summary": "Körande Sage runtime-konfiguration matchar önskade driftsinställningar.",
+            "nextAction": "Ingen åtgärd krävs."
+          },
+          "drifted": {
+            "summary": "Körande Sage runtime-konfiguration skiljer sig från önskade driftsinställningar.",
+            "nextAction": "Undersök avvikelser i Sage runtime-konfigurationen, tillämpa den genererade Sage-miljön och starta om Sage."
+          },
+          "current": {
+            "summary": "Sage runtime-miljö har genererats från aktuella driftsinställningar.",
+            "nextAction": "Ingen åtgärd krävs såvida inte det genererade artefaktet inte har tillämpats på driftsättningen."
+          },
+          "stale": {
+            "summary": "Driftsinställningar ändrades efter att Sage runtime-miljön genererades.",
+            "nextAction": "Exportera en ny Sage runtime-miljö och tillämpa den via omstartsprocessen för driftsättningen."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Konfiguration för core-backend runtime",
+        "status": {
+          "not_generated": {
+            "summary": "Core-backend runtime-miljö har ännu inte genererats från driftsinställningarna.",
+            "nextAction": "Exportera core-backend runtime-miljön innan driftsinställningarna betraktas som tillämpade på core-backend."
+          },
+          "matches_desired": {
+            "summary": "Körande core-backend runtime-konfiguration matchar önskade driftsinställningar.",
+            "nextAction": "Ingen åtgärd krävs."
+          },
+          "drifted": {
+            "summary": "Körande core-backend runtime-konfiguration skiljer sig från önskade driftsinställningar.",
+            "nextAction": "Undersök avvikelse i core-backend runtime-konfiguration, applicera den genererade core-backend-miljön och starta om core-backend."
+          },
+          "current": {
+            "summary": "Core-backend runtime-miljö har genererats från nuvarande driftsinställningar.",
+            "nextAction": "Ingen åtgärd krävs såvida inte den genererade artefakten inte har applicerats på driftsättningen."
+          },
+          "stale": {
+            "summary": "Driftsinställningar ändrades efter att core-backend runtime-miljön genererades.",
+            "nextAction": "Exportera en ny core-backend runtime-miljö och applicera den via omstartsprocessen för driftsättning."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Driftsättningsguide",
+      "step": "Steg {{current}} av {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Driftsberedskap",
+      "description": "Granska säkerhetskopiering, återställning, övervakning och återställningsövningar före normal drift."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — din Tinfoil API-nyckel för den lokala proxyn.",
+      "apiKeyLabel": "Tinfoil API-nyckel",
+      "ariaLabel": "Hjälp för Sage runtime-konfiguration",
+      "exampleConfig": "Exempelkonfiguration",
+      "goToPage": "Gå till sida",
+      "sageExtra": "Ange LLM_API_KEY till din Tinfoil-nyckel från {{tinfoilSignupUrl}}. Stacken mappar den till Sage och den lokala Tinfoil-proxyn.",
+      "sageHint": "Denna prototyp dirigerar Agent Runtime-trafik genom Sage och Tinfoil. LLM_API_KEY är den officiella nyckeln för Model Provider.",
+      "modelField": "TINFOIL_MODEL — Tinfoil-modellens identifierare som Sage ska använda (till exempel: glm-5-2).",
+      "overviewDesc": "Denna prototyp använder Sage som den publika Agent Runtime och Tinfoil som transport för Model Provider. Konfigurera Model Provider via LLM_* driftsinställningar; stacken mappar dem till Sages Tinfoil runtime.",
+      "overviewTitle": "Översikt av Sage Runtime",
+      "providerField": "LLM_PROVIDER — ställs in på \"sage\" för denna prototyp."
+    },
+    "inferenceVerification": {
+      "current": "Nuvarande",
+      "missing": "Saknas",
+      "expired": "Utgången",
+      "failed": "Misslyckades",
+      "success": "Lyckades",
+      "statusLoadFailed": "Misslyckades med att ladda status för inferensverifiering",
+      "historyLoadFailed": "Misslyckades med att ladda historik för inferensverifiering",
+      "loadFailed": "Misslyckades med att ladda inferensverifiering",
+      "manualFailed": "Manuell verifiering misslyckades",
+      "manualSucceeded": "Manuell verifiering lyckades",
+      "detailLoadFailed": "Misslyckades med att ladda attesteringsdetaljer",
+      "ariaLabel": "Inferensverifiering",
+      "title": "Inferensverifiering",
+      "summary": "Endast för administratörer: bevis på att skyddad inferens körs på förväntad Model Provider.",
+      "verifyNow": "Verifiera nu",
+      "status": "Status",
+      "checkedAt": "Kontrollerad",
+      "expiresAt": "Går ut",
+      "expectedClaims": "Förväntade claims",
+      "expectedClaimsValue": "Förväntade claims: {{fingerprint}}",
+      "providerClaims": "Leverantörsanspråk",
+      "provider": "Leverantör",
+      "model": "Modell",
+      "endpoint": "Slutpunkt",
+      "history": "Verifieringshistorik",
+      "emptyHistory": "Inga verifieringsposter ännu.",
+      "recordTitle": "Post #{{id}}",
+      "inspectAttestation": "Granska attestering",
+      "fullAttestation": "Fullständigt attesteringsmaterial"
+    },
+    "lifecycle": {
+      "notStarted": "Ej påbörjad",
+      "notConfigured": "Ej konfigurerad",
+      "plaintextByOperatorChoice": "Klartext enligt operatörens val",
+      "allTombstones": "Alla",
+      "allTombstonesLabel": "Alla tombstones",
+      "incompleteTombstonesFilter": "Ofullständiga",
+      "incompleteTombstonesLabel": "Ofullständiga tombstones",
+      "completedTombstonesFilter": "Slutförda",
+      "completedTombstonesLabel": "Slutförda tombstones",
+      "title": "Status för datalivscykel",
+      "description": "Nuvarande operatörskontrollerade integritetstäckning för instansdata.",
+      "scopeExcludes": "Exkluderar: {{excludes}}",
+      "secureEraseStatus": "Säker radering: {{status}}",
+      "readinessStatus": "Livscykelberedskap: {{status}}",
+      "readinessNonBlocking": "Användarkonversationer blockeras inte av varningar om livscykelberedskap i v1.",
+      "readinessStaleReason": "Orsak: {{reason}}",
+      "contentEncryptionKey": "Nyckel för innehållskryptering: {{status}}",
+      "artifactEncryptionPosture": "Krypteringsstatus för artefakter: {{status}}",
+      "artifactPostureLabel": "Krypteringsstatus för artefakter",
+      "artifactPostureRequired": "Krävs",
+      "artifactPostureDisabled": "Inaktiverad",
+      "retentionSchedulerStatus": "Schemaläggare för lagring: {{status}}",
+      "schedulerObservation": "Observation: {{status}}",
+      "schedulerEnabledClasses": "Klasser som aktiverats i schemaläggaren: {{classes}}",
+      "schedulerLastRunStatus": "Status för senaste körning: {{status}}",
+      "schedulerLastRun": "Senaste körning: {{trigger}} av {{actor}}",
+      "previewRetention": "Förhandsgranska lagring",
+      "runScheduledRetention": "Kör schemalagd",
+      "previewRetentionResult": "Förhandsgranskning: {{conversations}} konversationer, {{artifacts}} dokumentartefakter, {{skipped}} hoppade klasser.",
+      "scheduledRetentionResult": "Schemalagd körning: {{status}} med {{retries}} försök med tombstone.",
+      "scheduledRetentionStatus": "Schemalagda klasser: {{classes}}",
+      "auditCoverageStatus": "Granskningstäckning: {{audited}} granskade, {{exceptions}} undantag, {{missing}} saknas.",
+      "owner": "Ägare: {{owner}}",
+      "deletion": "Radering: {{status}}",
+      "retention": "Lagring: {{status}}",
+      "audit": "Granskning: {{status}}",
+      "confidentiality": "Konfidentialitet: {{status}}",
+      "incompleteTombstones": "Ofullständiga tombstones: {{count}}",
+      "completedTombstones": "Slutförda tombstones: {{count}}",
+      "retentionEnabled": "Aktiverad",
+      "retentionWindow": "Fönster",
+      "retentionDays": "dagar",
+      "scheduledEnforcement": "Schemalagd",
+      "saveRetentionPolicy": "Spara policy",
+      "empty": "Livscykelstatus är inte tillgänglig.",
+      "retentionPolicySaveFailed": "Kunde inte spara gallringspolicy.",
+      "retentionPreviewFailed": "Kunde inte förhandsgranska gallring.",
+      "scheduledRetentionFailed": "Kunde inte köra schemalagd gallring.",
+      "artifactPostureFailed": "Kunde inte uppdatera artefaktkrypteringsläge.",
+      "unsupportedSurfacesTitle": "Ostödda driftsytor",
+      "unsupportedSurfacesDescription": "Dessa operativa spår visas här men ligger utanför kontrollen för produktens livscykel.",
+      "unsupportedSurfaceAckFailed": "Kunde inte uppdatera bekräftelse.",
+      "acknowledgedSurface": "Bekräftad",
+      "acknowledgeSurface": "Bekräfta",
+      "tombstonesTitle": "Raderingsmarkörer",
+      "tombstonesDescription": "Försök igen med ofullständiga livscykelraderingar utan att exponera borttagen information.",
+      "tombstoneStatusFilter": "Filter för raderingsmarkörstatus",
+      "tombstoneRetryFailed": "Försöket misslyckades.",
+      "tombstonesFetchFailed": "Kunde inte ladda raderingsmarkörer.",
+      "tombstoneClass": "Klass: {{className}}",
+      "tombstoneSource": "Källa: {{source}}",
+      "tombstoneRetries": "Försök: {{count}}",
+      "tombstoneUpdated": "Uppdaterad: {{updated}}",
+      "retryTombstoneLabel": "Försök igen med raderingsmarkör {{id}}",
+      "retry": "Försök igen",
+      "tombstonesEmpty": "Inga raderingsmarkörer väntar på nytt försök."
+    },
+    "runtimeEnv": {
+      "unknown": "Okänd",
+      "title": "Matchning av runtime-konfiguration",
+      "description": "Jämför önskade driftsinställningar, genererad Sage-miljö och observerbart körläge.",
+      "desired": "Önskat",
+      "configuredKeys": "{{count}} av {{total}} nycklar konfigurerade",
+      "generated": "Genererad",
+      "exportedAt": "Exporterad {{time}}",
+      "notExported": "Ingen Sage-miljöexport registrerad",
+      "running": "Körs",
+      "runningUnknown": "Körläge kan ännu inte undersökas direkt.",
+      "coreBackend": "Kärnbackend",
+      "coreBackendHint": "Matchning av backend-miljö",
+      "coreDesired": "Önskat kärntillstånd",
+      "coreConfiguredKeys": "Core backend: {{count}} av {{total}} nycklar konfigurerade",
+      "coreGenerated": "Genererat kärntillstånd",
+      "coreNotExported": "Ingen export av core backend-miljö registrerad",
+      "coreRunning": "Kärntillstånd i drift",
+      "coreRunningUnknown": "Core backend-körstatus kan ännu inte läsas av direkt.",
+      "coreExportedTitle": "Core-backend-miljö exporterad",
+      "coreSensitiveArtifact": "Behandla core-backend.env som känsligt driftsmaterial.",
+      "coreExportDoesNotApply": "Export av artefakten ändrar inte den körande backend-processen förrän en operatör tillämpar den och startar om core-backend.",
+      "exportedTitle": "Sage-miljö exporterad",
+      "sensitiveArtifact": "Behandla sage.env som känsligt driftsmaterial.",
+      "exportDoesNotApply": "Export av artefakten ändrar inte den körande Sage-processen förrän en operatör tillämpar den och startar om Sage."
+    },
+    "categorySettingsAria": "Inställningar för {{category}}",
+    "exportCoreBackendRuntimeEnv": "Exportera core-backend-miljö",
+    "restartCurrent": "Ingen omstart krävs",
+    "restartCurrentDesc": "Inga inställningar som kräver omstart har ändrats sedan tjänsten startades.",
+    "saveError": "Sparandet misslyckades",
+    "openHelpAria": "Öppna hjälp för {{label}}"
   },
   "upload": {
     "invalidFileType": "Ogiltig filtyp. Tillåtet: {{extensions}}",
@@ -1123,7 +2024,8 @@
       "processing": "Bearbetar",
       "chunked": "Uppdelad",
       "complete": "Klar",
-      "failed": "Misslyckades"
+      "failed": "Misslyckades",
+      "completedWithErrors": "Slutfördes med fel"
     },
     "chunks": "{{processed}}/{{total}} delar",
     "deleteDocument": "Ta bort dokument",
@@ -1172,7 +2074,21 @@
     "serverBusy": "Servern är upptagen",
     "tryRefresh": "Försök igen",
     "uploadedSuccess": "Uppladdningen lyckades – bearbetning startade",
-    "uploadingStatus": "Laddar upp till server..."
+    "uploadingStatus": "Laddar upp till server...",
+    "uploadError": "Uppladdningen misslyckades",
+    "documentDeletionError": "Fel vid borttagning av dokument",
+    "navigationWarning": "Ditt dokument håller fortfarande på att överföras. Lämna endast efter att bearbetningen har startat, annars kan uppladdningen misslyckas med att sparas.",
+    "duplicateInBatch": "Dubblett av dokumentnamn i detta parti",
+    "documentsSelected": "{{count}} dokument",
+    "queueSummary": "{{valid}} redo, {{rejected}} hoppade över",
+    "skipped": "Hoppade över",
+    "uploadedPartialSuccess": "{{count}} i kö, {{rejected}} hoppade över",
+    "chooseFiles": "Välj filer",
+    "chooseFolder": "Välj mapp",
+    "uploadDocuments": "Ladda upp dokument",
+    "replacingDocument": "Ersätter {{filename}}",
+    "recentDocumentsShowing": "Visar {{shown}} av {{total}} dokument",
+    "showMore": "Visa fler"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2130,11 @@
       "description": "Konfigurera SSL-certifikat och HTTPS-inställningar",
       "hint": "Konfigurera TLS- och proxyinställningar när du använder HTTPS. Standardinställningarna är säkra för lokal utveckling; aktivera HTTPS först efter att certifikaten har monterats.",
       "label": "SSL & Säkerhet"
+    },
+    "llm": {
+      "label": "Körmiljö för Sage-agenten",
+      "description": "Konfigurera Sage + Tinfoil-inferens",
+      "hint": "Denna prototyp dirigerar Agent Runtime-trafik genom Sage och använder Tinfoill som transport för Model Provider. Ändringar kräver omstart."
     }
   },
   "promptSections": {
@@ -1240,6 +2161,12 @@
       "description": "Hur AI:n strukturerar sina svar",
       "hint": "Styr formateringspreferenser som om punktlistor, rubriker eller konversationsstycken ska användas. Detta påverkar hur svar presenteras visuellt.",
       "placeholder": "Använd punktlistor för listor, rubriker för sektioner..."
+    },
+    "prompt_system": {
+      "label": "Systemprompt",
+      "description": "Kärnidentitet och instruktioner för AI:n",
+      "hint": "Använd denna för assistentens identitet, uppdrag och övergripande begränsningar som ska gälla före tonläge, regler, verktyg eller dokumentkontext. Ändringar påverkar nya konversationer.",
+      "placeholder": "Du är Sage, en privat assistent för denna instans..."
     }
   },
   "parameters": {
@@ -1252,6 +2179,11 @@
       "label": "Kunskapsdjup",
       "description": "Hur många dokumentavsnitt som ska refereras",
       "hint": "När AI:n svarar på frågor söker den igenom dina uppladdade dokument och hämtar relevanta avsnitt. Högre värden betyder mer kontext men långsammare svar. Lägre värden är snabbare men kan missa relevant information. Standard: 5"
+    },
+    "max_tokens": {
+      "label": "Max antal tokens",
+      "description": "Maximal längd för varje AI-svar",
+      "hint": "Begränsar hur långt ett svar kan vara. Lägre värden håller svaren korta och minskar kostnaden; högre värden tillåter längre förklaringar. Standard: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2191,21 @@
       "label": "Webbsökning",
       "description": "Tillåt AI:n att söka på internet",
       "hint": "När det är aktiverat kan AI:n söka på webben efter aktuell information som inte finns i dina dokument. Inaktivera detta om du vill att svar endast ska komma från din uppladdade kunskapsbas."
+    },
+    "knowledgeSource": {
+      "none": "Ingen",
+      "selected": "Valda standarddokument",
+      "all": "Alla tillgängliga dokument"
+    },
+    "knowledge_source_default": {
+      "label": "Kunskapskällor",
+      "description": "Välj vilka uppladdade kunskapskällor som är aktiva i användarkonversationer",
+      "hint": "Använd \"none\" för ingen uppladdad kunskap som standard, \"selected\" för dokument markerade som Aktiva som standard, eller \"all\" för alla tillgängliga dokument."
+    },
+    "user_default_tool_ids": {
+      "label": "Användarens verktygsuppsättningar",
+      "description": "Verktygsuppsättningar som är aktiva som standard i användarkonversationer",
+      "hint": "JSON-array som använder någon av \"curated-resources\", \"knowledge-search\" och \"web-search\". Knowledge Search styrs även av kunskapskällor."
     }
   },
   "colors": {
@@ -1437,6 +2384,51 @@
       "description": "Webbhook-återkallnings-bas-URL",
       "hint": "Bas-URL som används för att konstruera webbhook-återkallningar. Exempel: https://api.example.com/webhooks. Standard: http://localhost:8000.",
       "label": "Webbhook-URL"
+    },
+    "LLM_PROVIDER": {
+      "label": "Modellleverantör",
+      "description": "Model Provider-etikett på Python-sidan",
+      "hint": "Använd \"sage\" för denna prototyp. Denna driftsättningsinställning stöder diagnostik och verifieringsmetadata på Python-sidan."
+    },
+    "LLM_MODEL": {
+      "label": "Modellnamn",
+      "description": "Modellnamn/identifierare",
+      "hint": "Tinfoil-modellidentifieraren som Sage ska använda (t.ex. \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "API-slutpunkt",
+      "description": "Bas-URL för Model Provider API",
+      "hint": "Tinfoil proxy bas-URL. Standard: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API-nyckel",
+      "description": "Tinfoil API-nyckel (hemlig)",
+      "hint": "Lämna tom för att hålla nuvarande driftsinställningar hemliga."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Hastighetsbegränsning för chatt",
+      "description": "Chattförfrågningar per minut",
+      "hint": "Maximalt antal /llm/chat-förfrågningar per minut per stabil användare, admin, token eller klient-IP. Kräver omstart. Standard: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Hastighetsbegränsning för sökfrågor",
+      "description": "Sökförfrågningar per minut",
+      "hint": "Maximalt antal /query-förfrågningar per minut per stabil användare, token eller klient-IP. Kräver omstart. Standard: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Hastighetsbegränsning för uppladdning",
+      "description": "Uppladdningsförfrågningar för dokument per minut",
+      "hint": "Maximalt antal uppladdningsförfrågningar för dokument per minut per stabil admin, token eller klient-IP. Kräver omstart. Standard: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Hastighetsbegränsning för vektorsökning",
+      "description": "Vektorsökningsförfrågningar per minut",
+      "hint": "Maximalt antal vektorsökningsförfrågningar per minut per stabil användare, token eller klient-IP. Kräver omstart. Standard: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Hastighetsbegränsning för konf-export",
+      "description": "Export av driftskonfiguration per timme",
+      "hint": "Maximalt antal .env-exporter per timme per admin-session eller klient-IP. Kräver omstart. Standard: 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2465,11 @@
       "title": "Redo att ansluta"
     },
     "subtitle": "Konfigurera din privata kunskapsbas i några få steg.",
-    "title": "Välkommen till Enclave"
+    "title": "Välkommen till Enclave",
+    "keySafety": {
+      "title": "Använd en instansspecifik Nostr-nyckel",
+      "body": "Använd inte din personliga Nostr-nyckel. Skapa eller välj en dedikerad admin-nyckel för denna instans för att minska övervakningsrisken och hålla operativ åtkomst separat."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2477,8 @@
       "notConfigured": "Denna funktion är inte konfigurerad.",
       "rateLimited": "För många meddelanden. Försök igen senare.",
       "required": "Meddelande krävs.",
-      "unavailable": "Reachout är inte tillgängligt."
+      "unavailable": "Reachout är inte tillgängligt.",
+      "formErrorLabel": "Fel i Reachout-formuläret"
     },
     "form": {
       "messageLabel": "Meddelande",
@@ -1489,7 +2486,8 @@
       "send": "Skicka"
     },
     "status": {
-      "success": "Tack. Ditt meddelande skickades."
+      "success": "Tack. Ditt meddelande skickades.",
+      "successLabel": "Reachout lyckades"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2522,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Backendet returnerade ett fel vid validering av autentisering. Detta behandlas inte som en utloggning.",
       "unable_to_verify_admin_session_5f87b8": "Det gick inte att verifiera administratörssessionen",
       "verifying_admin_session_87c53b": "Verifierar administratörssession..."
-    }
+    },
+    "loadingAssistant": "Laddar adminassistent"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2737,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Verifiera en magic link-token och hämta sessionsinformation (cookie-baserad session).",
       "verify_magic_link_token_183cf5": "Verifiera Magic Link-token",
       "view_all_users_manage_approval_status_and_delete_03feec": "Visa alla användare, hantera godkännandestatus och ta bort användare.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Visa och uppdatera instansövergripande konfigurationsinställningar."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Visa och uppdatera instansövergripande konfigurationsinställningar.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testar anslutning till den konfigurerade Model Provider-sökvägen."
+    },
+    "labels": {
+      "themePreference": "Temapreferens",
+      "endpointGuidance": "Endpoint-vägledning",
+      "healthResponseOutput": "Utdata för hälsosvar",
+      "jobs": "Jobb",
+      "chunks": "Segment",
+      "rateLimitTestType": "Typ av hastighetsbegränsningstest",
+      "successfulRequests": "Lyckade förfrågningar",
+      "successful": "Lyckad",
+      "blockedRequests": "Blockerade förfrågningar"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Konversationslogg"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logotyp"
+  },
+  "language": {
+    "english": "Engelska",
+    "spanish": "Spanska",
+    "french": "Franska",
+    "german": "Tyska",
+    "portuguese": "Portugisiska"
+  },
+  "home": {
+    "checkingInstanceStatus": "Kontrollerar instansstatus..."
+  },
+  "adminGuidedSetup": {
+    "title": "Konfigurera din instans",
+    "subtitle": "Din assistent kommer att samla in det grundläggande i ett steg.",
+    "manual": "Konfigurera manuellt istället",
+    "finish": "Slutför & börja testa",
+    "comingSoon": "Denna fas kommer snart och byggs separat.",
+    "steps": {
+      "initialize": {
+        "label": "Initiera",
+        "title": "Initiera",
+        "subtitle": "Låt oss gå igenom det grundläggande för din yta så att din agent börjar med rätt grundförutsättningar."
+      },
+      "docs": {
+        "label": "Ladda upp dokument",
+        "title": "Ladda upp din fältguide",
+        "subtitle": "Lägg till källmaterialet som din agent svarar utifrån — böcker, guider och referensdokument."
+      },
+      "resources": {
+        "label": "Kurerade resurser",
+        "title": "Kurerade resurser",
+        "subtitle": "Lägg till pålitliga resurser från verkligheten — viktiga kontakter, jurister, utbildnings- och psykisk hälso-stöd — som agenten kan hänvisa personer till."
+      },
+      "test": {
+        "label": "Testa som användare",
+        "title": "Testa som en användare",
+        "subtitle": "Kommer snart — prova assistenten som en av dina användartyper och betygsätt svaren."
+      },
+      "feedback": {
+        "label": "Återkoppling",
+        "title": "Feedback-loop",
+        "subtitle": "Kommer snart — granska svarens kvalitet och iterera på din konfiguration."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Test och återkoppling",
+    "subtitle": "Kör en testsession som användare, granska sedan krypterade beta-loggar och feedback från sparade konversationer.",
+    "tabs": {
+      "test": "Testa som användare",
+      "feedback": "Återkoppling"
+    },
+    "test": {
+      "pickPersona": "Välj en persona att testa",
+      "pickPersonaBody": "Skapa en testanvändare för en av dina användartyper och chatta sedan som dem. Sessionen sparas som ett krypterat test som du kan betygsätta under Feedback.",
+      "userType": "Användartyp",
+      "genericUser": "Generisk användare (ingen typ)",
+      "start": "Starta session",
+      "admin": "Administratör",
+      "testUserId": "Testanvändare",
+      "endSave": "Avsluta & spara test",
+      "previewNotice": "Förhandsvisningsläge — riktig impersonation är inte ansluten än, så denna chatt körs under din admin-session. Transkriptionen sparas ändå för granskning.",
+      "chatEmpty": "Skicka ett meddelande som denna användare för att påbörja testet.",
+      "inputPlaceholder": "Meddelande till assistenten som denna användare...",
+      "saved": "Test sparat (krypterat). Granska det under Feedback.",
+      "startError": "Misslyckades med att starta en testsession",
+      "saveError": "Misslyckades med att spara testet",
+      "impersonationUnavailable": "Impersonation av testanvändare är inte tillgänglig än",
+      "sessionTokenError": "Kunde inte skapa en syntetisk sessionstoken för användaren",
+      "testingAs": "Testar som {{persona}}",
+      "authFailed": "Den syntetiska användarsessionen är inte längre auktoriserad.",
+      "discardUnsavedConfirm": "Kassera avslutade vändor som inte har sparats?",
+      "workspaceAria": "Arbetsyta för konversation med testanvändare"
+    },
+    "feedback": {
+      "trials": "Beta-loggar",
+      "untitled": "Namnlös konversation",
+      "turns": "vändor",
+      "turn": "Vända",
+      "empty": "Inga sparade beta-loggar än. Kör en Test User Session eller vänta på användarsamtal.",
+      "selectPrompt": "Välj en beta-logg för att granska dess transkription och betygsätta varje vända.",
+      "noNip04": "Anslut ett Nostr-tillägg (Alby, nos2x) för att dekryptera transkriptioner — de är krypterade med din admin-nyckel.",
+      "sourceUser": "Användarsamtal",
+      "sourceTest": "Testanvändarsession",
+      "thumbUp": "Bra svar",
+      "thumbDown": "Behöver förbättras",
+      "notePlaceholder": "Valfri notering (sparas krypterat)…",
+      "exportNotDecrypted": "Öppna och dekryptera transkriptionen innan export.",
+      "exportFeedbackNotDecrypted": "Vissa feedback-kommentarer kunde inte dekrypteras. Öppna transkriptionen igen och godkänn varje dekrypteringsförfrågan innan export.",
+      "exportNeedsExtension": "Export kräver ett Nostr-tillägg. Transkriptioner är krypterade vid vila och det är ditt tillägg som dekrypterar dem.",
+      "exportDecrypting": "Dekrypterar fortfarande. Export blir tillgänglig när varje förfrågan har godkänts.",
+      "exportWhyDisabled": "Varför är export inaktiverad?",
+      "retryDecryption": "Försök igen med dekryptering",
+      "decryptPendingTitle": "Kontrollera ditt Nostr-tillägg",
+      "decryptPendingBody": "Det efterfrågar tillåtelse att dekryptera denna transkription. Den kanske inte öppnas automatiskt — klicka på tilläggsikonen om du inte ser den. Välj alternativet att komma ihrig med ditt val så att den bara frågar en gång.",
+      "decryptProgress": "Dekrypterat {{done}} av {{total}}.",
+      "loadTrialsError": "Misslyckades med att ladda försök",
+      "loadTranscriptError": "Misslyckades med att ladda transkription",
+      "saveError": "Feedback kunde inte sparas",
+      "deleteError": "Sessionsloggen kunde inte raderas",
+      "exportError": "Export av session misslyckades",
+      "transcriptIntegrityError": "Transkriptionen är otillgänglig eller ofullständig och kan inte exporteras.",
+      "decryptTranscriptError": "Kunde inte dekryptera transkriptionen. Godkänn dekrypteringsförfrågan i ditt Nostr-tillägg."
+    }
+  },
+  "adminResources": {
+    "title": "Resurskatalog",
+    "subtitle": "Underhåll manuellt granskade hänvisningsresurser som assistenten kan nämna när en konversation eskalerar. Endast \"ready\" resurser visas för slutanvändare.",
+    "add": "Lägg till resurs",
+    "addTitle": "Lägg till resurs",
+    "editTitle": "Redigera resurs",
+    "empty": "Inga resurser än. Lägg till en manuellt när du har en granskad hänvisning.",
+    "verified": "verifierad",
+    "missing": "Saknas för att gå live",
+    "name": "Namn",
+    "type": "Resurstyp",
+    "languages": "Språk (kommateckenseparerade ISO-koder)",
+    "description": "Beskrivning",
+    "descriptionHint": "Vad assistenten ska berätta för personen om denna resurs.",
+    "scopeLevel": "Täckningsnivå",
+    "scopeCode": "Täckningskod",
+    "scopeCodeHint": "Land: ISO-kod (NI). Subregion/region: UN M49-kod (013 = Centralamerika). Globalt: lämna tomt.",
+    "helpTypes": "Typer av hjälp",
+    "contact": "Kontaktmetoder",
+    "vettedBy": "Granskad av",
+    "sourceNote": "Källnotering",
+    "markVerified": "Markera som verifierad (rankas först)",
+    "archive": "Arkivera (dölj för slutanvändare)",
+    "deleteTitle": "Radera resurs?",
+    "deleteBody": "Detta tar bort katalogposten för {{name}}",
+    "coverage": "Täckning",
+    "coverageHint": "Välj en täckningsnivå, sök sedan på dess namn eller kod.",
+    "coverageCodePlaceholder": "Sök efter namn eller kod…",
+    "coverageLevelFirst": "Välj en täckningsnivå först",
+    "coverageClear": "Rensa täckningskod",
+    "regionDirectoryUnavailable": "Regionkatalogen är inte tillgänglig. Ange en kod manuellt.",
+    "level": {
+      "country": "Land",
+      "subregion": "Delregion",
+      "region": "Region",
+      "global": "Globalt"
+    },
+    "addPointer": "Lägg till pekare",
+    "addRegion": "Lägg till region",
+    "displayOrder": "Visningsordning",
+    "displayOrderHint": "Lägre nummer visas först efter relevans och verifiering.",
+    "kind": "Typ",
+    "noSearchResults": "Inga resurser matchar denna sökning.",
+    "order": "Ordning",
+    "pointerLabel": "Etikett för pekare {{number}}",
+    "pointerType": "Typ för pekare {{number}}",
+    "pointerValue": "Pekarvärde {{number}}",
+    "pointers": "Pekare",
+    "regionNumber": "Region {{number}}",
+    "regions": "Regioner",
+    "removePointer": "Ta bort pekare",
+    "removeRegion": "Ta bort region",
+    "search": "Sök resurser",
+    "searchPlaceholder": "Namn, typ, tagg, pekare eller beskrivning",
+    "tags": "Taggar (kommateckenseparerade)",
+    "namePlaceholder": "t.ex. Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, utbildning, lokal",
+    "loadError": "Misslyckades med att ladda resurser",
+    "loadDirectoryError": "Misslyckades med att ladda katalog",
+    "saveError": "Misslyckades med att spara resurs",
+    "deleteError": "Misslyckades med att radera resurs"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Tillbaka till adminpanelen",
+    "eyebrow": "Adminoperationer",
+    "title": "Användarhanterare",
+    "subtitle": "Granska användare, se deras status och godkänn åtkomst från en enkel instrumentpanel.",
+    "unlockDetails": "Visa detaljer",
+    "refreshRoster": "Uppdatera lista",
+    "exportVisible": "Exportera synlig lista",
+    "prepareVisible": "Förbered synlig lista",
+    "downloadPrepared": "Ladda ner förberedd lista",
+    "exportPrepared": "Den kompletta synliga listan är förberedd. Nedladdning är nu möjlig.",
+    "rosterTitle": "Användarlista",
+    "rosterShown": "{{shown}} visade av {{total}} totalt.",
+    "tableLabel": "Användarlista",
+    "tableRowsLabel": "Rader i användarlista",
+    "loadingLabel": "Laddar användarlista",
+    "loadingUsers": "Laddar användare...",
+    "loadRetry": "Användarlistan kunde inte laddas. Använd 'Uppdatera lista' för att försöka igen.",
+    "emptyNoUsers": "Inga användare än. Nya autentiserade användare kommer att visas här.",
+    "emptyFiltered": "Inga användare matchar dessa filter.",
+    "noUserType": "Ingen användartyp",
+    "unknown": "Okänd",
+    "userFallback": "Användare #{{id}}",
+    "approvalSuccess": "{{name}} godkänd.",
+    "exportSuccess": "Användarlista i kalkylblad nedladdad.",
+    "metrics": {
+      "total": "Totalt antal användare",
+      "totalDetail": "i listan",
+      "pendingApproval": "Väntar på godkännande",
+      "pendingDetail": "{{count}} väntande",
+      "approved": "Godkänd",
+      "approvedDetail": "kan gå med i chatten",
+      "incompleteProfiles": "Ofullständiga profiler",
+      "incompleteDetail": "behöver obligatoriska svar"
+    },
+    "callouts": {
+      "loadFailed": "Misslyckades med att ladda användarlista",
+      "approvalUpdated": "Användargodkännande uppdaterat",
+      "approvalFailed": "Uppdatering av användargodkännande misslyckades",
+      "exportReady": "Export av användarlista är klar",
+      "exportFailed": "Export av användarlista misslyckades"
+    },
+    "filters": {
+      "search": "Sök användare",
+      "searchPlaceholder": "Namn, e-post, publik nyckel eller #ID",
+      "approvalStatus": "Godkännandestatus",
+      "allApprovalStates": "Alla godkännandestatusar",
+      "pendingApproval": "Väntar på godkännande",
+      "approved": "Godkänd",
+      "allUserTypes": "Alla användartyper"
+    },
+    "columns": {
+      "user": "Användare",
+      "approval": "Godkännande",
+      "userType": "Användartyp",
+      "userProfile": "Användarprofil",
+      "joined": "Gick med",
+      "action": "Åtgärd"
+    },
+    "status": {
+      "approved": "Godkänd",
+      "pending": "Väntar"
+    },
+    "actions": {
+      "approve": "Godkänn",
+      "approveUser": "Godkänn {{name}}",
+      "viewUserDetails": "Visa detaljer för {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Inga frågor",
+      "noQuestionsDetail": "Inga onboarding-frågor är tillämpliga.",
+      "needsProfile": "Behöver profil",
+      "missingRequiredOne": "1 obligatoriskt svar saknas",
+      "missingRequiredMany": "{{count}} obligatoriska svar saknas",
+      "noProfileYet": "Ingen profil än",
+      "noAnswersSaved": "Inga svar har sparats.",
+      "ready": "Profil klar",
+      "answersSavedOne": "1 svar sparat",
+      "answersSavedMany": "{{count}} svar sparade"
+    },
+    "identity": {
+      "decrypting": "Dekrypterar namn och e-post...",
+      "failed": "Krypterad information kunde inte låsas upp.",
+      "unavailable": "Krypterad information kräver en signator i webbläsaren.",
+      "locked": "Krypterad information är låst."
+    },
+    "errors": {
+      "loadUsers": "Misslyckades med att ladda användare.",
+      "loadUserTypes": "Misslyckades med att ladda användartyper.",
+      "loadQuestions": "Misslyckades med att ladda onboarding-frågor.",
+      "approvalUpdate": "Användargodkännande kunde inte uppdateras.",
+      "decryptUnavailable": "Ett webbläsartillägg med NIP-04-dekryptering krävs för att förbereda denna lista.",
+      "decryptRoster": "Ett krypterat listvärde kunde inte dekrypteras. Ingen kalkylblad skapades.",
+      "prepareRequired": "Förbered den nuvarande synliga listan innan du laddar ner den.",
+      "exportAudit": "Export av användarlista kunde inte granskas.",
+      "exportRoster": "Misslyckades med att exportera användarlista."
+    },
+    "detail": {
+      "booleanYes": "Ja",
+      "booleanNo": "Nej",
+      "fieldUnlocked": "Krypterat svar har låsts upp i denna webbläsare.",
+      "decryptingField": "Dekrypterar svar...",
+      "encryptedFieldUnavailable": "Krypterat svar kräver en signator i webbläsaren.",
+      "encryptedFieldFailed": "Krypterat svar kunde inte låsas upp.",
+      "encryptedFieldLocked": "Krypterat svar är låst.",
+      "notAnswered": "Ej besvarat",
+      "requiredMissing": "Obligatoriskt svar saknas.",
+      "backToUserManager": "Tillbaka till User Manager",
+      "backToRoster": "Tillbaka till användarlista",
+      "eyebrow": "Användarinformation",
+      "notFoundTitle": "Användare hittades inte",
+      "notFoundBody": "Denna användare finns inte i den nuvarande administratörslistan.",
+      "subtitle": "Granska denna användares status, profilsvar och åtkomstdetaljer.",
+      "approvalStatus": "Godkännandestatus",
+      "waitingApproval": "väntar på godkännande",
+      "identityTitle": "Identitet",
+      "name": "Namn",
+      "nameUnavailable": "Ej tillgängligt",
+      "email": "E-post",
+      "emailUnavailable": "Inte tillgänglig",
+      "userId": "Användar-ID",
+      "publicKey": "Publik nyckel",
+      "noPublicKey": "Ingen publik nyckel",
+      "fieldsTitle": "Profilfält",
+      "fieldsShown_one": "{{count}} fält gäller för denna användare.",
+      "fieldsShown_other": "{{count}} fält gäller för denna användare.",
+      "noFields": "Inga onboarding-fält gäller för denna användare.",
+      "required": "Obligatorisk",
+      "optional": "Valfri",
+      "encrypted": "Krypterad",
+      "plain": "Okrypterad",
+      "chatContext": "Chattkontext"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Dekrypterar {{done}} av {{total}}",
+    "checkExtension": "kontrollera din Nostr-tillägg",
+    "persistentApproval": "Välj alternativet kom ihåg eller alltid så efterfrågas det bara en gång."
   }
 }

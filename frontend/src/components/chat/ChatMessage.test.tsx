@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatMessage } from './ChatMessage';
 import { InstanceConfigProvider } from '../../context/InstanceConfigContext';
 import { ThemeProvider } from '../../theme';
+import i18n from '../../i18n';
 import {
   DEFAULT_INSTANCE_CONFIG,
   INSTANCE_CONFIG_KEY,
@@ -80,7 +81,7 @@ describe('ChatMessage', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
     if (originalClipboardDescriptor) {
       Object.defineProperty(
@@ -95,6 +96,7 @@ describe('ChatMessage', () => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
     document.documentElement.classList.remove('dark');
+    await i18n.changeLanguage('en');
   });
 
   function stubClipboard() {
@@ -545,6 +547,157 @@ describe('ChatMessage', () => {
     controlledDetailIds?.forEach((id) => {
       expect(document.getElementById(id)).not.toHaveAttribute('hidden');
     });
+  });
+
+  it('localizes Activity chrome and disclosure accessibility labels', async () => {
+    await i18n.changeLanguage('es');
+    renderMessage('Respuesta disponible.', 'assistant', {
+      visibility: 'detailed',
+      activity_steps: [
+        {
+          id: 'reasoning',
+          kind: 'reasoning',
+          title: 'Reasoning',
+          status: 'completed',
+          summary: 'Resumen del paso.',
+        },
+      ],
+    });
+
+    expect(screen.getByText('Actividad')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Mostrar actividad' })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Detalles de actividad')).toBeInTheDocument();
+  });
+
+  it('prefers localized Activity message keys over English compatibility text', async () => {
+    const user = userEvent.setup();
+    await i18n.changeLanguage('es');
+    renderMessage('Respuesta disponible.', 'assistant', {
+      visibility: 'detailed',
+      activity_steps: [
+        {
+          id: 'database-query',
+          kind: 'tool',
+          title: 'Database Query',
+          titleKey: 'chat.activity.tool.databaseQuery.title',
+          titleValues: { toolId: 'db-query' },
+          status: 'rejected',
+          statusKey: 'chat.activity.status.rejected',
+          statusValues: {},
+          summary: 'Database results were redacted from the trace.',
+          summaryKey: 'chat.activity.databaseResultsRedacted',
+          summaryValues: { toolId: 'db-query' },
+        },
+      ],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar actividad' }));
+
+    expect(screen.getByText('Consulta de base de datos')).toBeInTheDocument();
+    expect(screen.getByText('Rechazado')).toBeInTheDocument();
+    expect(document.querySelector('svg.lucide-database')).toHaveClass(
+      'text-danger'
+    );
+    expect(
+      screen.getByText(
+        'Los resultados de la base de datos se ocultaron del registro.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Database Query')).not.toBeInTheDocument();
+  });
+
+  it('interpolates a localized built-in tool name into a keyed attempt summary', async () => {
+    const user = userEvent.setup();
+    await i18n.changeLanguage('es');
+    renderMessage('Respuesta disponible.', 'assistant', {
+      visibility: 'detailed',
+      activity_steps: [
+        {
+          id: 'knowledge-search-attempt',
+          kind: 'tool',
+          title: 'Knowledge Search',
+          titleKey: 'chat.activity.tool.knowledgeSearch.title',
+          status: 'running',
+          statusKey: 'chat.activity.status.running',
+          summary: 'Knowledge Search call attempted.',
+          summaryKey: 'chat.activity.tool.attempted',
+          summaryValues: { toolId: 'knowledge_search' },
+        },
+      ],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar actividad' }));
+
+    expect(screen.getByText('Búsqueda de conocimiento')).toBeInTheDocument();
+    expect(
+      screen.getByText('Se intentó llamar a Búsqueda de conocimiento.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\{\{toolName\}\}/)).not.toBeInTheDocument();
+  });
+
+  it('keeps localized Activity rendering RTL for Arabic', async () => {
+    const user = userEvent.setup();
+    await i18n.changeLanguage('ar');
+    renderMessage('الإجابة متاحة.', 'assistant', {
+      visibility: 'detailed',
+      activity_steps: [
+        {
+          id: 'database-query',
+          kind: 'tool',
+          title: 'Database Query',
+          titleKey: 'chat.activity.tool.databaseQuery.title',
+          status: 'rejected',
+          statusKey: 'chat.activity.status.rejected',
+          summary: 'Database results were redacted from the trace.',
+          summaryKey: 'chat.activity.databaseResultsRedacted',
+        },
+      ],
+    });
+
+    expect(document.documentElement.dir).toBe('rtl');
+    await user.click(screen.getByRole('button', { name: 'إظهار النشاط' }));
+
+    expect(screen.getByText('استعلام قاعدة البيانات')).toBeInTheDocument();
+    expect(screen.getByText('مرفوض')).toBeInTheDocument();
+    expect(document.querySelector('svg.lucide-database')).toHaveClass(
+      'text-danger'
+    );
+    expect(
+      screen.getByText('تم إخفاء نتائج قاعدة البيانات من التتبّع.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Database Query')).not.toBeInTheDocument();
+  });
+
+  it('uses raw timing semantics for the localized running Activity icon', async () => {
+    const user = userEvent.setup();
+    await i18n.changeLanguage('ar');
+    renderMessage(
+      'الإجابة متاحة.',
+      'assistant',
+      {
+        visibility: 'detailed',
+        activity_steps: [
+          {
+            id: 'provider-wait',
+            kind: 'timing',
+            title: 'Provider first-event wait',
+            titleKey: 'chat.activity.timing.providerFirstEventWait.title',
+            status: 'running',
+            statusKey: 'chat.activity.status.running',
+          },
+        ],
+      },
+      { activityAudience: 'admin' }
+    );
+
+    await user.click(screen.getByRole('button', { name: 'إظهار النشاط' }));
+
+    expect(screen.getByText('انتظار أول حدث من المزوّد')).toBeInTheDocument();
+    expect(document.querySelector('svg.lucide-loader-circle')).toHaveClass(
+      'animate-spin'
+    );
   });
 
   it('collapses and restores the complete Activity body from its accessible header control', async () => {

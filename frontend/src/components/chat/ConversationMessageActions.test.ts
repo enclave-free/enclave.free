@@ -31,7 +31,8 @@ describe('Conversation message actions', () => {
       expect.objectContaining({
         id: 'regenerate',
         disabled: true,
-        disabledReason: 'Wait for the current response to finish first.',
+        disabledReasonKey: 'chat.actions.waitForResponse',
+        disabledReasonDefault: 'Wait for the current response to finish first.',
       }),
     ]);
 
@@ -47,7 +48,8 @@ describe('Conversation message actions', () => {
       expect.objectContaining({
         id: 'edit',
         disabled: true,
-        disabledReason:
+        disabledReasonKey: 'chat.actions.resolveConfirmation',
+        disabledReasonDefault:
           'Resolve the pending Change Confirmation before changing history.',
       }),
     ]);

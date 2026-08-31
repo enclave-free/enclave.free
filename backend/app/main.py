@@ -740,8 +740,14 @@ async def send_magic_link(
     # Generate token
     token = auth.create_magic_link_token(email, name)
 
-    # Send email (or log in mock mode)
-    success = await asyncio.to_thread(auth.send_magic_link_email, email, token)
+    # Send email (or log in mock mode). Keep the two-argument call for requests
+    # without a locale so existing delivery adapters remain compatible; an
+    # explicit value is passed through and normalized by the renderer.
+    locale = auth.normalize_magic_link_locale(body.locale)
+    if body.locale is None:
+        success = await asyncio.to_thread(auth.send_magic_link_email, email, token)
+    else:
+        success = await asyncio.to_thread(auth.send_magic_link_email, email, token, locale)
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send magic link email")

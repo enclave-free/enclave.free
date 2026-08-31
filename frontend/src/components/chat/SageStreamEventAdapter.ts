@@ -62,11 +62,12 @@ export function adaptSageStreamEvent(
       };
     }
     case 'trace_final': {
-      if (!assistantTurnId || !isConversationTrace(payload.trace)) return null;
+      const trace = readConversationTrace(payload.trace);
+      if (!assistantTurnId || !trace) return null;
       return {
         type: 'assistantTraceSettled',
         assistantTurnId,
-        trace: payload.trace,
+        trace,
       };
     }
     case 'done':
@@ -152,7 +153,7 @@ function formatElapsedTime(elapsedMs: number): string {
 
 function isConversationTrace(value: unknown): value is ConversationTrace {
   if (!value || typeof value !== 'object') return false;
-  const trace = value as Record<string, unknown>;
+  const trace = value as unknown as Record<string, unknown>;
   if (
     !['off', 'minimal', 'summary', 'detailed'].includes(
       String(trace.visibility)
@@ -177,10 +178,32 @@ function isConversationTrace(value: unknown): value is ConversationTrace {
   return true;
 }
 
+function readConversationTrace(value: unknown): ConversationTrace | null {
+  if (!isConversationTrace(value)) return null;
+  const trace = value as unknown as Record<string, unknown>;
+  const normalized = { ...trace } as Record<string, unknown>;
+  if (Array.isArray(trace.activity_steps)) {
+    normalized.activity_steps = trace.activity_steps
+      .map(readActivityStepValue)
+      .filter((step): step is ConversationActivityStep => Boolean(step));
+  }
+  if (Array.isArray(trace.trace_deltas)) {
+    normalized.trace_deltas = trace.trace_deltas
+      .map((delta) => readTraceDelta({ trace_delta: delta }))
+      .filter((item): item is ConversationTraceDelta => Boolean(item));
+  }
+  return normalized as unknown as ConversationTrace;
+}
+
 function readActivityStep(
   payload: Record<string, unknown>
 ): ConversationActivityStep | null {
-  const raw = payload.activity_step;
+  return readActivityStepValue(payload.activity_step);
+}
+
+export function readActivityStepValue(
+  raw: unknown
+): ConversationActivityStep | null {
   if (!raw || typeof raw !== 'object') return null;
   const step = raw as Record<string, unknown>;
   if (
@@ -195,12 +218,30 @@ function readActivityStep(
     id: step.id,
     kind: step.kind,
     title: step.title,
+    titleKey: readOptionalString(step.title_key),
+    titleValues: readOptionalObject(step.title_values),
     status: step.status,
+    statusKey: readOptionalString(step.status_key),
+    statusValues: readOptionalObject(step.status_values),
     summary: typeof step.summary === 'string' ? step.summary : undefined,
+    summaryKey: readOptionalString(step.summary_key),
+    summaryValues: readOptionalObject(step.summary_values),
     warnings: Array.isArray(step.warnings)
       ? step.warnings.filter(
           (warning): warning is string => typeof warning === 'string'
         )
       : undefined,
   };
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function readOptionalObject(
+  value: unknown
+): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }

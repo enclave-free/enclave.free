@@ -9,6 +9,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdminResourcesDirectory } from './AdminResourcesDirectory';
 import { adminFetch } from '../utils/adminApi';
+import i18n from '../i18n';
 
 vi.mock('../utils/adminApi', () => ({
   ADMIN_RESOURCES_CHANGED_EVENT: 'enclave:admin-resources-changed',
@@ -52,6 +53,7 @@ describe('AdminResourcesDirectory', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    void i18n.changeLanguage('en');
   });
 
   it('labels create/edit and delete modals as accessible dialogs', async () => {
@@ -143,6 +145,30 @@ describe('AdminResourcesDirectory', () => {
     expect(
       screen.queryByText('Failed to load directory')
     ).not.toBeInTheDocument();
+  });
+
+  it('localizes Resource editor placeholders', async () => {
+    await i18n.changeLanguage('es');
+    mockAdminFetch.mockResolvedValue(jsonResponse({ resources: [] }));
+
+    render(
+      <MemoryRouter>
+        <AdminResourcesDirectory />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Agregar recurso' })
+    );
+    expect(
+      screen.getByPlaceholderText(
+        'p. ej., Asesoría de Derechos Humanos de Centroamérica'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('es, en')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('bitcoin, educación, local')
+    ).toBeInTheDocument();
   });
 
   it('uses manual coverage codes when region taxonomy entries are malformed', async () => {

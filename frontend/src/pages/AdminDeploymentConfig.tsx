@@ -585,6 +585,71 @@ export function AdminDeploymentConfig() {
     return 'border-border bg-surface-muted text-text-muted';
   };
 
+  /**
+   * Deployment readiness text is authored in the Enclave Control Plane
+   * (`backend/app/deployment_config.py`). Earlier responses carried only
+   * finished English prose, which rendered in every locale.
+   *
+   * Translate the stable message descriptors and preserve the English fields
+   * as compatibility fallbacks. Runtime counts and technical setting names are
+   * supplied separately as interpolation values. See #647.
+   */
+  const readinessLabel = (item: DeploymentReadinessItem) =>
+    !item.label_key ||
+    item.label_key === `adminDeployment.readiness.${item.key}.label`
+      ? t(`adminDeployment.readiness.${item.key}.label`, item.label)
+      : item.label;
+
+  const readinessMessage = (
+    item: DeploymentReadinessItem,
+    field: 'summary' | 'nextAction'
+  ) => {
+    const isSummary = field === 'summary';
+    const key = isSummary ? item.summary_key : item.next_action_key;
+    const fallback = isSummary ? item.summary : item.next_action;
+    const values = isSummary ? item.summary_values : item.next_action_values;
+    const derivedKey = `adminDeployment.readiness.${item.key}.status.${item.status}.${field}`;
+    const options = { defaultValue: fallback, ...values };
+
+    if (isSummary) {
+      if (
+        key ===
+        'adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.summary'
+      ) {
+        return t(
+          'adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.summary',
+          options
+        );
+      }
+      if (key && key !== derivedKey) return fallback;
+      return t(
+        `adminDeployment.readiness.${item.key}.status.${item.status}.summary`,
+        options
+      );
+    }
+
+    if (
+      key ===
+      'adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.nextAction'
+    ) {
+      return t(
+        'adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.nextAction',
+        options
+      );
+    }
+    if (key && key !== derivedKey) return fallback;
+    return t(
+      `adminDeployment.readiness.${item.key}.status.${item.status}.nextAction`,
+      options
+    );
+  };
+
+  const readinessSummary = (item: DeploymentReadinessItem) =>
+    readinessMessage(item, 'summary');
+
+  const readinessNextAction = (item: DeploymentReadinessItem) =>
+    readinessMessage(item, 'nextAction');
+
   const readinessReviewTarget = (item: DeploymentReadinessItem) => {
     if (item.source === 'inference_verification') {
       return {
@@ -721,7 +786,7 @@ export function AdminDeploymentConfig() {
       setTombstoneRetryError(
         err instanceof Error
           ? err.message
-          : 'errors.failedToRetryDeletionTombstone'
+          : t('errors.failedToRetryDeletionTombstone')
       );
     } finally {
       setRetryingTombstoneId(null);
@@ -740,7 +805,7 @@ export function AdminDeploymentConfig() {
       setUnsupportedSurfaceError(
         err instanceof Error
           ? err.message
-          : 'errors.failedToAcknowledgeUnsupportedSurface'
+          : t('errors.failedToAcknowledgeUnsupportedSurface')
       );
     } finally {
       setAcknowledgingSurfaceKey(null);
@@ -759,7 +824,7 @@ export function AdminDeploymentConfig() {
       setUnsupportedSurfaceError(
         err instanceof Error
           ? err.message
-          : 'errors.failedToAcknowledgeUnsupportedSurfaceCategory'
+          : t('errors.failedToAcknowledgeUnsupportedSurfaceCategory')
       );
     } finally {
       setAcknowledgingSurfaceCategory(null);
@@ -807,7 +872,7 @@ export function AdminDeploymentConfig() {
       setRetentionPolicyError(
         err instanceof Error
           ? err.message
-          : 'errors.failedToUpdateRetentionPolicy'
+          : t('errors.failedToUpdateRetentionPolicy')
       );
     } finally {
       setSavingRetentionPolicyKey(null);
@@ -821,7 +886,9 @@ export function AdminDeploymentConfig() {
       setRetentionPreview(await previewRetention());
     } catch (err) {
       setRetentionPreviewError(
-        err instanceof Error ? err.message : 'errors.failedToPreviewRetention'
+        err instanceof Error
+          ? err.message
+          : t('errors.failedToPreviewRetention')
       );
     } finally {
       setRetentionPreviewLoading(false);
@@ -837,7 +904,7 @@ export function AdminDeploymentConfig() {
       setScheduledRetentionError(
         err instanceof Error
           ? err.message
-          : 'errors.failedToRunScheduledRetention'
+          : t('errors.failedToRunScheduledRetention')
       );
     } finally {
       setScheduledRetentionLoading(false);
@@ -855,7 +922,7 @@ export function AdminDeploymentConfig() {
       setArtifactPostureError(
         err instanceof Error
           ? err.message
-          : 'errors.failedToUpdateArtifactEncryptionPosture'
+          : t('errors.failedToUpdateArtifactEncryptionPosture')
       );
     } finally {
       setArtifactPostureUpdating(false);
@@ -901,7 +968,9 @@ export function AdminDeploymentConfig() {
       // Refresh health after config change
       refreshHealth();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+      setSaveError(
+        err instanceof Error ? err.message : t('adminDeployment.saveError')
+      );
     } finally {
       setSaving(false);
     }
@@ -1834,7 +1903,13 @@ export function AdminDeploymentConfig() {
                       );
                     }}
                     className="text-text-muted hover:text-accent transition-colors"
-                    aria-label={`Open help for ${label}`}
+                    aria-label={t(
+                      'adminDeployment.openHelpAria',
+                      'Open help for {{label}}',
+                      {
+                        label,
+                      }
+                    )}
                     aria-expanded={openHelpItemKey === item.key}
                     aria-controls={`help-item-popover-${item.key}`}
                     aria-describedby={
@@ -2377,13 +2452,13 @@ export function AdminDeploymentConfig() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-text">
-                        {item.label}
+                        {readinessLabel(item)}
                       </p>
                       <p className="mt-1 text-xs text-text-secondary">
-                        {item.summary}
+                        {readinessSummary(item)}
                       </p>
                       <p className="mt-2 text-xs text-text-muted">
-                        {item.next_action}
+                        {readinessNextAction(item)}
                       </p>
                     </div>
                     <span
@@ -2450,13 +2525,13 @@ export function AdminDeploymentConfig() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-text">
-                    {wizardItem.label}
+                    {readinessLabel(wizardItem)}
                   </p>
                   <p className="mt-1 text-xs text-text-secondary">
-                    {wizardItem.summary}
+                    {readinessSummary(wizardItem)}
                   </p>
                   <p className="mt-2 text-xs text-text-muted">
-                    {wizardItem.next_action}
+                    {readinessNextAction(wizardItem)}
                   </p>
                 </div>
                 <span

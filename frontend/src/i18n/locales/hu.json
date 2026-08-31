@@ -22,7 +22,8 @@
       "title": "Mi jellemez a legjobban?",
       "description": "Válaszd ki az igényeidnek leginkább megfelelő lehetőséget",
       "loadError": "A felhasználótípusok betöltése sikertelen. Kérlek, próbáld újra.",
-      "selectionLabel": "Felhasználótípus választás"
+      "selectionLabel": "Felhasználótípus választás",
+      "errorLabel": "Hiba a felhasználótípus betöltésekor"
     },
     "language": {
       "selectLabel": "Válassz nyelvet",
@@ -65,7 +66,8 @@
       "encryptionBody": "A profilmezők alapértelmezetten titkosítottak, de a példány adminisztrátora szabályozza a mezőszintű beállításokat, és engedélyezheti egyes adatok eltérő tárolását vagy megosztását.",
       "adminControlNotice": "Az adatkezelést a példány adminisztrátora konfigurálja, beleértve azt is, hogy mi tárolható titkosítás nélkül, illetve mi osztható meg AI eszközökkel.",
       "noWarrantyNotice": "A Enclave szoftver jelenlegi állapotában, garancia nélkül kerül rendelkezésre bocsátásra. A példány használata az adminisztrátor szabályzatainak hatálya alá tartozik.",
-      "retentionNotice": "Az adatmegőrzési és törlési időszakokat a példány adminisztrátora határozza meg. Keresse fel őket hozzáférési, javítási vagy törlési kérelmekkel."
+      "retentionNotice": "Az adatmegőrzési és törlési időszakokat a példány adminisztrátora határozza meg. Keresse fel őket hozzáférési, javítási vagy törlési kérelmekkel.",
+      "errorLabel": "Hiba a Magic link kérés során"
     },
     "verify": {
       "verifying": "Link ellenőrzése...",
@@ -125,20 +127,28 @@
       "databaseName": "Adatbázis",
       "knowledgeGraph": "Tudásgráf lekérdezése",
       "config": "Konfiguráció",
-      "configName": "Konfiguráció"
+      "configName": "Konfiguráció",
+      "knowledgeSearch": "Feltöltött dokumentumok és tudásrészletek keresése",
+      "knowledgeSearchName": "Tudásbázis",
+      "curatedResources": "Admin által ellenőrzött ajánlóforrások és megbízható szervezetek keresése",
+      "curatedResourcesName": "Források"
     },
     "documentScope": {
       "title": "Tudásbázisok",
       "description": "Válaszd ki a kontextusba bevonandó forrásokat",
       "noSources": "Nincsenek elérhető források",
       "clearAll": "Összes törlése",
-      "docsLabel": "Dokumentumok"
+      "docsLabel": "Dokumentumok",
+      "clearAllSelectedAria": "A kiválasztott dokumentumok törlése",
+      "docsLabelWithCount": "Dokumentum {{count}}"
     },
     "messages": {
       "searching": "Keresés: \"{{term}}\"...",
       "searchingPrefix": "Keresés",
       "searchResults": "Ezt kerestem neked: \"{{term}}\":",
-      "newConversation": "Új beszélgetés"
+      "newConversation": "Új beszélgetés",
+      "copy": "Üzenet másolása",
+      "copied": "Üzenet másolva"
     },
     "code": {
       "copy": "Masolas",
@@ -157,7 +167,177 @@
       "roleUser": "Ön",
       "roleAssistant": "Asszisztens",
       "footer": "Exportálva innen: {{instanceName}}",
-      "exportedOn": "Exportálva: {{timestamp}}"
+      "exportedOn": "Exportálva: {{timestamp}}",
+      "copiedExportNotice": "Ez az export kilép a termék aktív tárolójából, és letöltés után kívül esik az Active Storage Lifecycle körről."
+    },
+    "new": "Új chat",
+    "listTitle": "Chatok",
+    "contextTitle": "Kontextus",
+    "messageActions": "Üzenet műveletek",
+    "actions": {
+      "stop": "Válasz leállítása",
+      "stopDisabled": "Nincs leállítható válasz.",
+      "regenerate": "Válasz újragenerálása",
+      "edit": "Üzenet szerkesztése",
+      "waitForResponse": "Várja meg, amíg a jelenlegi válasz befejeződik.",
+      "startConversation": "Előbb indítson vagy folytasson egy beszélgetést.",
+      "resolveConfirmation": "A történet megváltoztatása előtt oldja fel a függőben lévő Változás megerősítését."
+    },
+    "composerContextAria": "Író kontextus",
+    "sessions": {
+      "ariaLabel": "Chat szelek",
+      "current": "Aktuális chat",
+      "empty": "Üres",
+      "messageCount_one": "{{count}} üzenet",
+      "messageCount_other": "{{count}} üzenet",
+      "deleteConfirmTitle": "Törölje a \"{{title}}\" elemet?",
+      "rename": "{{title}} átnevezése",
+      "delete": "{{title}} törlése",
+      "resumeInvalid": "Nem sikerült betölteni a beszélgetést.",
+      "renameEmpty": "A beszélgetés címe kötelező.",
+      "renameError": "Nem sikerült átnevezni a beszélgetést.",
+      "deleteError": "Nem sikerült törölni a beszélgetést.",
+      "loading": "Chatek betöltése...",
+      "error": "Nem sikerült betölteni a chateket",
+      "saved": "Mentett chat",
+      "deleteConfirmBody": "Ez eltávolítja a mentett beszélgetést és annak Session Memory tartalmát.",
+      "deleteCancel": "A beszélgetés törlésének törlése",
+      "cancel": "Mégse",
+      "deleteConfirm": "Beszélgetés törlése",
+      "deleteDeleting": "Törlés...",
+      "renameInput": "Beszélgetés címe",
+      "renameCancel": "A beszélgetés átnevezésének törlése",
+      "renameSave": "Beszélgetés cím mentése",
+      "renameSaving": "Átnevezés...",
+      "open": "Chat szelek megnyitása",
+      "close": "Chat szelek bezárása"
+    },
+    "currentChatAria": "Aktuális chat",
+    "newFromCurrent": "Új chat indítása",
+    "documentsContextTitle": "Dokumentumok",
+    "errors": {
+      "requestLabel": "Chat kérés hiba"
+    },
+    "trace": {
+      "finalizing": "Válasz véglegesítése...",
+      "collapse": "Összehúzás",
+      "expand": "Kibontás",
+      "reasoning": "Érvrendelés",
+      "thinking": "Gondolkodás",
+      "transcript": "{{label}} leirat",
+      "reasoningSummaryAria": "Érvrendelési összefoglaló",
+      "reasoningTranscriptAria": "Érvrendelési leirat",
+      "label": "Nyomozás",
+      "toolCalls": "Eszközhívások",
+      "retrieval": "Keresés",
+      "input": "Bemenet",
+      "output": "Kimenet",
+      "retrievedSource": "Keresett forrás",
+      "score": "pontosítás {{score}}",
+      "optionalDetailsAria": "{{label}} opcionális részletek"
+    },
+    "conversationMessagesAria": "Üzenetek az உரányban",
+    "conversationSurfaceAria": "Üzenetfelület",
+    "conversationThreadAria": "Üzenetfolyam",
+    "activity": {
+      "label": "Tevékenység",
+      "summaryAria": "Tevékenység összefoglaló",
+      "detailsAria": "Tevékerdettség részletei",
+      "timelineAria": "Tevékenységi idővonal",
+      "show": "Tevékenység megjelenítése",
+      "hide": "Tevékenység elrejtése",
+      "showOptional": "Opcionális részletek megjelenítése",
+      "hideOptional": "Opcionális részletek elrejtése",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "{{toolName}} hívás megpróbálva.",
+        "retry": "Eszköz újrapróbálása a(z) {{attempt}}. kísérlet után.",
+        "running": "Az eszköz fut.",
+        "completed": "Az eszköz befejezte.",
+        "guarded": "Az eszközt korlátozták.",
+        "failed": "A folyamat (eszköz) sikertelen.",
+        "rejected": "Az eszközhívást elutasították.",
+        "timedOut": "Időtúllépés az eszköznél.",
+        "knowledgeSearch": {
+          "title": "Tudáskeresés"
+        },
+        "webSearch": {
+          "title": "Webkeresés"
+        },
+        "curatedResources": {
+          "title": "Kuratál t Ressourcen"
+        },
+        "adminConfig": {
+          "title": "Admin konfiguráció"
+        },
+        "databaseQuery": {
+          "title": "Adatbázis lekérdezés"
+        }
+      },
+      "status": {
+        "running": "Folyامban",
+        "succeeded": "Sikeres",
+        "failed": "Sikertelen",
+        "guarded": "Védett",
+        "timed_out": "Időtúllépés",
+        "rejected": "Elutasítva"
+      },
+      "toolSelection": {
+        "title": "Eszközválasztás",
+        "failed": "Az eszközválasztás sikertelen volt, mielőtt használható választás került volna rögzítésre.",
+        "partialFailure": "A modell néhány eszközválasztása elutasításra került.",
+        "noneSelected": "Nem történt eszközválasztás.",
+        "selected": "Kiválasztva: {{selectedTools}}."
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "Modell kérés",
+          "summary": "Modell kérés: {{elapsedMs}} ms."
+        },
+        "providerFirstEventWait": {
+          "title": "Várakozás az első szolgáltatói eseményre",
+          "summary": "Várakozás az első szolgáltatói eseményre: {{elapsedMs}} ms."
+        },
+        "toolExecution": {
+          "title": "Eszköz futtatása",
+          "summary": "Eszköz futtatása: {{elapsedMs}} ms."
+        },
+        "resourceDirectoryLookup": {
+          "title": "Fájl répertoire lekérdezése",
+          "summary": "Fájl répertoire lekérdezése: {{elapsedMs}} ms."
+        },
+        "retrieval": {
+          "title": "Lekérés",
+          "summary": "Lekérés: {{elapsedMs}} ms."
+        },
+        "retryDelay": {
+          "title": "Újrapróbálási késleltetés",
+          "summary": "Újrapróbálási késleltetés: {{elapsedMs}} ms."
+        },
+        "totalTurn": {
+          "title": "Összesített fordulatszám",
+          "summary": "Összes futási idő: {{elapsedMs}} ms."
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "Nem található releváns részlet a feltöltött dokumentumokból.",
+        "retrieved": "A válaszhoz {{count}} feltöltött dokumentum-részletet abgerufen."
+      },
+      "webSearch": {
+        "prepared": "Webes keresési eredmények készültek a válaszhoz ({{count}})."
+      },
+      "curatedResources": {
+        "noAdditional": "Nem található további válogatott forrás.",
+        "noMatches": "A kéréshez nem tartozott válogatott forrás.",
+        "returned": "A {{totalCount}} válogatott forrásból {{count}} lett visszaadva."
+      },
+      "adminConfig": {
+        "completed": "Az adminisztrációs konfigurációs művelet {{toolId}} befejeződött ({{outcome}}). Megváltozott beállítások: {{changedSettings}}."
+      },
+      "databaseResultsRedacted": "Az adatbázis-eredmények törölték a nyomozásból.",
+      "databaseQuery": {
+        "rejected": "Az adatbázis-lekérdezés elutasításra került."
+      }
     }
   },
   "common": {
@@ -197,7 +377,17 @@
     "retry": "Újrapróbálkozás",
     "saved": "Mentve",
     "sending": "Küldés...",
-    "gotIt": "Értem"
+    "gotIt": "Értem",
+    "send": "Küldés",
+    "backToAdminDashboard": "Vissza az Admin Dashboardra",
+    "loadingPage": "Oldal betöltése...",
+    "pageLoadError": "Nem sikerült betölteni az oldalt. Kérjük, frissítse.",
+    "export": "Exportálás",
+    "reset": "Alaphelyzet visszaállítása",
+    "exit": "Kilépés",
+    "none": "Nincs",
+    "all": "Összes",
+    "warning": "Figyelmeztetés"
   },
   "settings": {
     "title": "Beállítások",
@@ -220,8 +410,23 @@
       "deploymentConfig": "Telepítési konfiguráció",
       "deploymentConfigDesc": "Szolgáltatások, SMTP, tárhely",
       "userConfig": "Felhasználói konfiguráció",
-      "userConfigDesc": "Felhasználói típusok és bevezetési kérdések"
-    }
+      "userConfigDesc": "Felhasználói típusok és bevezetési kérdések",
+      "guidedSetup": "Beállítási útmutató",
+      "guidedSetupDesc": "Lépésről lépésre beállítás, dokumentumok, erőforrások és tesztelés.",
+      "guides": "Admin útmutatók",
+      "guidesDesc": "Tudja meg, mit és hol konfigurálnak az adminok.",
+      "testUserSession": "Felhasználói munkamenet tesztelése",
+      "testUserSessionDesc": "Chatoljon szimulált felhasználóként, és tekintse át a béta visszajelzéseket.",
+      "diagnostics": "Diagnosztika",
+      "diagnosticsDesc": "Futtass teszteket futtasson a hibaelégés vizsgálata során.",
+      "resourceDirectory": "Forrás directory",
+      "resourceDirectoryDesc": "Kuratálja manuálisan a megbízható hivatkozási forrásokat."
+    },
+    "diagnostics": "Diagnosztika",
+    "adminWorkflows": "Admin munkafolyamatok",
+    "settingsSection": "Beállítások",
+    "dataAndContent": "Adatok és tartalom",
+    "operations": "Operációk"
   },
   "admin": {
     "confirmDelete": "Biztosan törölni szeretnéd ezt a rekordot?",
@@ -263,7 +468,12 @@
       "instanceSectionTitle": "Példány beállítások",
       "onboardingFieldsHint": "Hozza létre azokat a kérdéseket, amelyekre a felhasználók válaszolnak a bevezetés során.",
       "userSectionDesc": "Konfiguráld a felhasználótípusokat és a bevezetéskor feltett kérdéseket.",
-      "userSectionTitle": "Felhasználói konfiguráció"
+      "userSectionTitle": "Felhasználói konfiguráció",
+      "fieldScopeFilterLabel": "Kérdések szűrése felhasználótípus szerint",
+      "noFieldsForScope": "Ehhez a felhasználótípushoz még nincs kérdés.",
+      "reorderNeedsAllScope": "Mutassa meg az összes kérdést a sorrend átrendezéséhez",
+      "fieldScopeGlobalHint": "A kérdéseket minden felhasználónak meg kell válaszdania, típusától függetlenül.",
+      "fieldScopeTypeHint": "Minden, amit ennek a felhasználótípusnak megkérdezik: a globális kérdéseket, amelyeket mindenki megválaszol, plusz a sajátjait is."
     },
     "database": {
       "backToSetup": "Vissza az admin beállításokhoz",
@@ -348,7 +558,14 @@
       "nip07Unavailable": "Nem található Nostr bővítmény",
       "plaintextFieldIcon": "Egyszerű szöveges mező",
       "primaryKeyIcon": "Elsődleges kulcs",
-      "unlockDecryption": "Dekódolás feloldása"
+      "unlockDecryption": "Dekódolás feloldása",
+      "safeQueryResults": "Biztonságos lekérdezési eredmények",
+      "queryError": "Lekérdezési hiba",
+      "writeResult": "Adatbázis írási eredmény",
+      "emptyQueryResult": "Üres lekérdezési eredmény",
+      "readOnly": "Csak olvasható",
+      "tableLoadError": "Táblátöltési hiba",
+      "readOnlyHint": "A közvetlen adatbázis-szerkesztés le van tiltva; a változtatásokhoz használjon ellenőrzött rendszergazdai folyamatokat."
     },
     "fields": {
       "nameRequired": "A mező neve kötelező",
@@ -438,7 +655,11 @@
       "removeFieldFailed": "Nem sikerült eltávolítani a mezőt",
       "reorderFailed": "Nem sikerült átrendezni a mezőt",
       "loadUsersFailed": "Nem sikerült betölteni a felhasználókat",
-      "updateTypeFailed": "Sikertelen felhasználói típus frissítés"
+      "updateTypeFailed": "Sikertelen felhasználói típus frissítés",
+      "loadSettingsFailed": "A beállítások betöltése sikertelen",
+      "externalConfigConflict": "A Sage vagy egy másik rendszergazda megváltoztatta ezeket a beállításokat, miközben Ön szerkesztette. Mentés előtt töltje újra ezt az oldalt, hogy ne írja felül az újabb értékeket.",
+      "externalSettingsConflict": "A Sage vagy egy másik rendszergazda megváltoztatta ezeket a berendeléseket, miközben Ön szerkesztette. Mentés előtt töltje újra ezt az oldalt.",
+      "externalUserConfigConflict": "A Sage vagy egy másik rendszergazda megváltoztatta a Felhasználótípusokat vagy a Beállítási Kérdéseket, miközben Ön szerkesztette. Mentés előtt töltje újra ezt az oldalt a tervezete mentése előtt."
     },
     "userMigration": {
       "title": "Felhasználótípus migrálás",
@@ -473,7 +694,10 @@
       "emailEncryptedHint": "E-mail (titkosított)",
       "nameEncryptedHint": "Név (titkosított)",
       "noUsersHint": "Próbálja megváltoztatni a fenti szűrőt vagy frissíteni.",
-      "pubkeyPresent": "Nostr nyilvános kulcs jelen van"
+      "pubkeyPresent": "Nostr nyilvános kulcs jelen van",
+      "usersErrorLabel": "Felhasználótípus-átváltási hiba felhasználóknál",
+      "errorLabel": "Felhasználótípus-átváltási hiba",
+      "summaryLabel": "Felhasználótípus-átváltási összefoglaló"
     },
     "configAssistant": {
       "openAria": "Admin asszisztens megnyitása",
@@ -511,8 +735,40 @@
         "restartRequiredFor": "Újraindítás szükséges ehhez: {{keys}}.",
         "restartRequiredNo": "Újraindítás szükséges: nem.",
         "restartCheckFailedHttp": "Az újraindítási szükséglet ellenőrzése sikertelen (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Az újraindítási szükséglet ellenőrzése sikertelen (hálózati hiba)."
-      }
+        "restartCheckFailedNetwork": "Az újraindítási szükséglet ellenőrzése sikertelen (hálózati hiba).",
+        "pageRefreshRecommended": "Frissítse ezt az oldalt a tema frissítések megtekintéséhez."
+      },
+      "onboardingWelcome": "Üdvözöljük — állítsuk be a helyszínt. Annyira válaszoljon rá, amennyire szeretne egyetlen üzenetben (számozza őket, és hagyja ki, ami nem biztos):\n\n1. **Név** — hogyan nevezzük ezt a helyet? (a fejlécben és a böngésző fülén is megjelenik)\n2. **Leírás** — egy mondat arról, mire való (privát megjegyzés, nem látható a felhasználóknak)\n3. **Asszisztens neve** — hogyan szóljon az AI segédnek?\n4. **Accent szín** — a gombok és linkek kiemelő színe (például kék/turkis, vagy hex kód, mint az #3B82F6)\n5. **Tema** — világos, sötét vagy rendszer (az eszközéhez igazodó)?\n6. **Alap nyelv** — pl. angol vagy spanyol (opcionális)\n7. **Szlogen** — egy rövid sor a fejlécbe (opcionális)\n8. **Új felhasználók** — azonnal engedélyezi a belépést, vagy mindenkit jóvá kell hagyni?\n9. **Felhasználótípusok** — milyen nem admin felhasználók fogják használni? (pl. Tanár és Diák) — minden egyeset létrehozok Önnek\n\nPélda: \"9. Tanár és Diák\". Mindent egy lépésben elmentek — és bármikor átválthat a manuális beállításra is.",
+      "collapseSidebar": "Behajtás az asszisztens oldalsáv bezárásához",
+      "expandSidebar": "Megnyitás az admin asszisztens oldalsáv megnyitásához",
+      "resize": "Az admin asszisztens panel átméretezése",
+      "railLabel": "Asszisztens",
+      "shareSecretsHint": "Alapértelmezetten kikapcsolva. Előbb engedélyezze a Config eszközt. Ha engedélyezve van, a titkos telepítési konfigurációs értékek láthatóvá válnak a kliens oldalon, és elküldődnek a Sage felé ennek a prototípus folyamatnak.",
+      "applyIntentUsePanel": "Használja az alatta lévő függőben lévő módosítások panelját, és kattintson a Módosításokra a konfigurációs frissítések megerősítéséhez.",
+      "applyIntentNoPending": "Nincsenek függőben lévő konfigurációs módosítások alkalmazáshoz. Kérje az asszisztenset, hogy előbb javasoljon egy módosítási készletet.",
+      "startNewConversation": "Új asszisztens beszélgetés indítása",
+      "reducedContextNoticeLabel": "Csökkentett kontextus figyelmeztetés",
+      "sessionMemoryNoticeLabel": "Session Memory tömörítés figyelmeztetés",
+      "sessionMemoryNotice": "A korábbi kontextust összefoglaltuk, hogy ez a beszélgetés folytatódhasson.",
+      "reducedContextNotice": "Néhány kontextust csökkentettünk, hogy megfeleljen a Model Provider keretnek ({{sections}}). A válaszok addig kevésbé teljes lehetnek, amíg új asszisztens beszélgetést nem indít.",
+      "reducedContextSections": {
+        "recentConversation": "a legutóbbi beszélgetés előzményei"
+      },
+      "approvalCardTitle": "Konfigurációs változtatások jóváhagyása",
+      "applying": "Alkalmazás alatt",
+      "applied": "Alkalmazva",
+      "rejected": "Elutasítva",
+      "failed": "Sikertelen",
+      "superseded": "Felülvetett",
+      "hideDetails": "Részletek elrejtése",
+      "reviewDetails": "Részletek áttekintése",
+      "reject": "Elutasítás",
+      "approve": "Jóváhagyás",
+      "applyErrorLabel": "Konfigurációs alkalmazási hiba",
+      "onboardingTitle": "Beállítási segédchat",
+      "onboardingContext": "Fókuszált beállítási beszélgetés",
+      "directShareSecretsHint": "Opcionális: tartalmazza a tárolt telepítési titkok értékeit ennek a beszélgetésnek a kontextusában. A titkok közvetlen olvasásához erre nincs szükség.",
+      "directWritePrompt": "Kérdezzen a rendszergazdai konfigurációról. A Sage ellenőrzi a beállításokat, és miután Önnel egyeztet a beszélgetés során, közvetlenül alkalmazhatja a támogatott változtatásokat."
     },
     "reachout": {
       "badgeDefault": "Alapértelmezett",
@@ -679,7 +935,16 @@
       "typographyTitle": "Tipográfia",
       "userIconLabel": "Felhasználói ikon",
       "userLabelLabel": "Felhasználói címke",
-      "userLabelPlaceholder": "pl. Te"
+      "userLabelPlaceholder": "pl. Te",
+      "publicEmailDisplayNameLabel": "Nyilvános e-mail megjelenítési név (opcionális)",
+      "publicEmailDisplayNameHint": "A magic-link bejelentkezési e-malekban használatos. Hagysa üresen az Instance név használatához.",
+      "defaultsTitle": "Instance alapbeállítások",
+      "defaultsDesc": "Állítsa be az alap nyelvét és témáját, amelyet a helyi böngésző beállításai előtt alkalmaznak.",
+      "defaultLanguageLabel": "Alap nyelv",
+      "defaultThemeLabel": "Alap tema",
+      "themeSystem": "Rendszer",
+      "themeLight": "Világos",
+      "themeDark": "Sötét"
     },
     "userConfig": {
       "subtitle": "Konfigurálja a felhasználói típusokat és azokat a kérdéseket, amelyekre a felhasználók válaszolnak a bevezetés során.",
@@ -687,6 +952,55 @@
       "typeDescription": "Leírás",
       "typeIcon": "Típus ikon",
       "typeName": "Típus neve"
+    },
+    "userApproval": {
+      "updateFailed": "Nem sikerült frissíteni a felhasználói jóváhagyást.",
+      "approvedUser": "#{{id}} felhasználó jóváhagyva.",
+      "revokedUser": "#{{id}} felhasználó vissza került a függőben lévők közé.",
+      "title": "Felhasználói jóváhagyás",
+      "subtitle": "Válaszd ki, hogy az új, hitelesített felhasználók azonnal beléphetnek a chatbe, vagy várjanak az Admin jóváhagyására.",
+      "requireManualLabel": "Manuális jóváhagyás kérése az új felhasználóktól",
+      "requireManualHint": "Ha be van kapcsolva, az új felhasználók a jóváhagyásra váró képernyőn maradnak, amíg az Admin nem hagyja jóvá őket.",
+      "loadingHint": "Betöltés...",
+      "saveButton": "A felhasználói jóváhagyás mentve",
+      "savedCalloutLabel": "A felhasználói jóváhagyás mentve",
+      "errorCalloutLabel": "Hiba a felhasználói jóváhagyás során",
+      "pendingTitle": "Függőben lévő jóváhagyások",
+      "pendingCount_zero": "{{count}} felhasználónak jóváhagyásra van szüksége a chat eléréséhez.",
+      "pendingCount_one": "{{count}} felhasználónak jóváhagyásra van szüksége a chat eléréséhez.",
+      "pendingCount_two": "{{count}} felhasználónak jóváhagyásra van szüksége a chat eléréséhez.",
+      "pendingCount_few": "{{count}} felhasználónak jóváhagyásra van szüksége a chat eléréséhez.",
+      "pendingCount_many": "{{count}} felhasználónak jóváhagyásra van szüksége a chat eléréséhez.",
+      "pendingCount_other": "{{count}} felhasználónak jóváhagyásra van szüksége a chat eléréséhez.",
+      "nonePending": "Nincs jóváhagyrásra váró felhasználó.",
+      "actionSavedCalloutLabel": "A felhasználói jóváhagyás frissítve",
+      "actionErrorCalloutLabel": "A felhasználói jóváhagyás frissítése sikertelen volt",
+      "loadingUsers": "Felhasználók betöltése...",
+      "emptyState": "Az új, jóváhagyásra váró felhasználók itt fognak megjelenni, ha manuális jóváhagyás szükséges.",
+      "emailOnFile": "Regisztrált e-mail cím",
+      "nameOnFile": "Regisztrált név",
+      "approveButton": "Jóváhagyás",
+      "revokeButton": "Visszavonás"
+    },
+    "userRosterExport": {
+      "auditFailed": "A felhasználói lista exportja nem ellenőrizhető. A táblázat nem lett letöltve.",
+      "decryptUnavailable": "NIP-04 titkosfeltétel-feloldáshoz böngészőbővítmény szükséges a lista elkészítéséhez.",
+      "decryptFailed": "Egy titkosított listaérték nem olvasható fel. A táblázat nem készült el.",
+      "prepared": "A teljes lista elkészült. A letöltés most elérhető.",
+      "prepareRequired": "A letöltés előtt készítse elő a jelenlegi listát.",
+      "prepareButton": "Felhasználói lista elkészítése",
+      "downloadButton": "Elkészített lista letöltése",
+      "success": "A felhasználói lista táblázat letöltve.",
+      "failed": "Nem siker exportálni a felhasználói listát.",
+      "button": "Felhasználók exportálása",
+      "successLabel": "A felhasználói lista exportálása kész",
+      "errorLabel": "A felhasználói lista exportálása sikertelen"
+    },
+    "userIdentity": {
+      "decrypting": "Név/e-mail dekódolása...",
+      "decryptFailed": "Nem sikerült dekódolni a nevet/e-mail címet",
+      "unlockDetails": "A név/e-mail megjelenítéséhez nyissa fel",
+      "unlockButton": "Részletek feloldása"
     }
   },
   "adminOnboarding": {
@@ -711,7 +1025,9 @@
     "legalResponsibilityNotice": "Te felelsz a példány jogszerű konfigurálásáért, a felhasználói tájékoztatásért és az adatkezelési szabályzatokért.",
     "extracted": {
       "change_language_789b14": "Nyelv módosítása"
-    }
+    },
+    "statusError": "Nem sikerült ellenőrizni az instanciát",
+    "connectionError": "Sikertelen csatlakozás"
   },
   "errors": {
     "requestFailed": "A kérés sikertelen",
@@ -745,11 +1061,228 @@
     "adminSessionExpired": "A rendszergazda munkamenet lejárt",
     "authenticationFailed": "A hitelesítés sikertelen",
     "noNostrExtension": "Nem található Nostr bővítmény",
-    "exportFailed": "Exportálás sikertelen"
+    "exportFailed": "Exportálás sikertelen",
+    "failedToRetryDeletionTombstone": "A törlési jelölés (tombstone) újrapróbálata sikertelen volt",
+    "failedToAcknowledgeUnsupportedSurface": "Nem sikerült visszaigazolni a nem támogatott telepítési felületet",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Nem sikerült visszaigazolni a nem támogatott telepítési felület kategóriát",
+    "failedToPreviewRetention": "Nem sikerült megtekinteni az élettartam-szabályt",
+    "failedToUpdateRetentionPolicy": "Nem sikerült frissíteni az élettartam-szabályt",
+    "failedToRunScheduledRetention": "Nem sikerült futtatni az ütemezett élettartam-kezelést",
+    "failedToUpdateArtifactEncryptionPosture": "Nem sikerült frissíteni az artefaktum-titkosítási beállításokat",
+    "queryExecutionFailed": "A lekérdezés végrehajtása sikertelen volt"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Az adminok megtehetik"
+    },
+    "summary": {
+      "brand": {
+        "title": "Az instance márkanevése",
+        "body": "Név, logó, tema, asszisztens identitás és nyilvános e-mail megjelenítés."
+      },
+      "people": {
+        "title": "Felhasználók kezelése",
+        "body": "Felhasználótípusok, onboarding kérdések, jóváhagyások, migráció és hozzáférés."
+      },
+      "agent": {
+        "title": "Sage alakítása",
+        "body": "Prompt szabályok, válaszadási beállítások, dokumentum-hozzáférés és alapértelmezett eszközök."
+      },
+      "launch": {
+        "title": "Biztonságos indítás",
+        "body": "Email, domainok, CORS, HTTPS, modell-irányítás, állapot és futtatási környezet."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Márka",
+        "title": "Identitás és megjelenés",
+        "body": "Tegye a példányt a szervezete részének.",
+        "detail1": "Név, slogan, asszisztens neve és felhasználói címke.",
+        "detail2": "Logo, favicon, ikon, hangsúlyozott szín, téma, tipográfia és chat stílus.",
+        "detail3": "Alapértelmezett nyelv és nyilvános e-mail megjelenítés.",
+        "link": "Instance Beállítások megnyitása"
+      },
+      "people": {
+        "eyebrow": "Hozzáférés",
+        "title": "Felhasználók és hozzáférés",
+        "body": "Döntse el, ki használja a példányt, és mit kérhet tőlük.",
+        "detail1": "Felhasználótípusok csoportokhoz, például személyzet, tagok vagy ügyfelek.",
+        "detail2": "Regisztrációs mezők, kötelező kérdések, opciók, helyőrzők és típusonkénti mezők.",
+        "detail3": "Manuális jóváhagyás, felhasználó-migráció, hozzáférés visszavonása és törlés.",
+        "link": "Felhasználói Beállítások megnyitása"
+      },
+      "agent": {
+        "eyebrow": "Viselkedés",
+        "title": "Ügynök viselkedése",
+        "body": "Alakítsa ki, hogyan válaszol a Sage, és mely eszközök legyenek alapértelmezettül bekapcsolva.",
+        "detail1": "Prompt sablon, viselkedési szabályok, tiltott témák és válaszadási beállítások.",
+        "detail2": "Alapértelmezett funkciók a Knowledge, Resources, Web, Config és Database eszközökhöz.",
+        "detail3": "Globális beállítások, valamint felhasználótípusonkénti felülbírálások.",
+        "link": "Ügynök Beállítások megnyitása"
+      },
+      "docs": {
+        "eyebrow": "Tudás",
+        "title": "Dokumentum tudás",
+        "body": "Adjon az ügynöknek forrásanyagot, amelyet kereshet.",
+        "detail1": "PDF-ek, szabályzatok, GYIK, kézikönyvek és útmutatók feltöltése.",
+        "detail2": "A dokumentumokat daraboljuk, beágyazzuk és kereshetővé tesszük.",
+        "detail3": "A Dokumentum Hozzáférés szabályozza, mi választható ki vagy legyen alapértelmezettileg aktív.",
+        "link": "Dokumentum Feltöltés megnyitása"
+      },
+      "resources": {
+        "eyebrow": "Hivatkozások",
+        "title": "Ellenőrzött források",
+        "body": "Adjon meg bízható ajánlókat, amelyeket az ügynök javasolhat.",
+        "detail1": "Név, leírás, erőforstípus, nyelvek, lefedettség és súgó típusok.",
+        "detail2": "Telefon, e-mail, URL, biztonságos csatorna, cím és megjegyzések.",
+        "detail3": "A hitelesített erőforrások az első helyen szerepelnek. A archivált erőforrások rejtve maradnak a felhasználók számára.",
+        "link": "Összes erőforrás-jegyzék megnyitása"
+      },
+      "ops": {
+        "eyebrow": "Operációk",
+        "title": "Operációk és futási környezet",
+        "body": "Tartsa a példányt csatlakoztatva, elérhetően és egészségesen.",
+        "detail1": "SMTP az e-mail magic linkekhez, domainek, CORS, HTTPS és nyilvános URL-ek.",
+        "detail2": "Modell szolgáltató, embedding modell, keresés, tárolás és szolgáltatás állapota.",
+        "detail3": "Runtime env export, készenlét, elavult beállítások és admin kulcs migráció.",
+        "link": "Telepítési beállítások megnyitása"
+      },
+      "title": "Mit konfigurálnak a rendszergazdák",
+      "body": "Ezek a fő kezelőfelületek. Használhatja az oldalakat közvetlenül, vagy kérheti az Admin Assistentet a módosítások előkészítésére."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Kérdezzen",
+        "title": "Admin Assistent",
+        "body": "Teszzen fel kérdéseket a jelenlegi beállításokkal kapcsolatban, és kérjen konfigurációs módosításokat.",
+        "detail1": "A konfigurációs olvasás a valós példányállapotot vizsgálja, nem csak találgata.",
+        "detail2": "A javasolt módosítások ellenőrzésre kerülnek.",
+        "detail3": "Az alkalmazás futtatja a jóváhagyott admin végpontokat további modell-interakció nélkül.",
+        "link": "Admin Assistent megnyitása",
+        "directWriteDetail2": "A Sage beszélgetésre alapozott megerősítést kér minden támogatott írási művelet előtt.",
+        "directWriteDetail3": "A megerősítést követően a Sage meghívja közvetlen konfigurációs eszközeit, és jelentve a valós eredményt."
+      },
+      "guided": {
+        "eyebrow": "Indítás",
+        "title": "Útbaigazított beállítás",
+        "body": "Használjon egy útbaigazított chatet az első hasznos konfiguráció létrehozásához.",
+        "detail1": "Identitás, asszisztens, nyelv, hozzáférés-szabályzat, felhasználótípusok, kérdések és viselkedési szabályok.",
+        "detail2": "Ezután töltse fel a dokumentumokat, adjon hozzá erőforrásokat és teszteljen.",
+        "link": "Útbaigazított beállítás megnyitása"
+      },
+      "test": {
+        "eyebrow": "Ellenőrzés",
+        "title": "Tesztelés és visszajelzés",
+        "body": "Próbálja ki az ügynököt felhasználói szempontból a bevezetés előtt.",
+        "detail1": "Válasszon egy felhasználótípust, indítson egy teszt-alkalmat, és mentse el a próbálatot.",
+        "detail2": "Ellenőrizze a titkosított béta naplót, és értékelje a válaszokat.",
+        "link": "Teszt felhasználói alkalom megnyitása"
+      },
+      "database": {
+        "eyebrow": "Megtekintés",
+        "title": "Adatbázis-böngésző",
+        "body": "Ellenőrizze a tárolt SQLite adatokat a hibakeresés során.",
+        "detail1": "A megtekintéshez használjon olvasható SELECT lekérdezéseket.",
+        "detail2": "Ne használja termékadatok módosítására.",
+        "link": "Adatbázis-böngésző megnyitása"
+      },
+      "title": "Gyakori adminisztrátori munkafolyamatok",
+      "body": "Használja ezeket a beállítások során, a minőség ellenőrzéséhez vagy az adatok vizsgálatához."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Futási környezet",
+        "title": "Egyetlen beszélgetés runtime értéke",
+        "body": "A Knowledge, Resources, Web, Config és Database látható eszközcsoportok, nem külön chat-rendszerek.",
+        "detail1": "A modell bekapcsolt eszközöket is hívhat, ha azok segítenek.",
+        "detail2": "A Config és a Database csak a szerver által hitelesített adminok számára jelenik meg."
+      },
+      "auth": {
+        "eyebrow": "Bejelentkezés",
+        "title": "Különböző bejelentkezési utak",
+        "body": "Az adminok NIP-07-et használnak. A felhasználók e-mail magic linket használnak.",
+        "detail1": "Az admin privát kulcsok a böngésző signerben maradnak.",
+        "detail2": "A termékben az SMTP-nek működnie kell, mielőtt a felhasználói magic linkek működnének."
+      },
+      "data": {
+        "eyebrow": "Adatvédelem",
+        "title": "A adat határai számítanak",
+        "body": "A titkosított profil mezők nem kerülnek bele a chat kontextusba.",
+        "detail1": "Csak a titkosítatlan mezők jelölhetők az AI chat kontextushoz.",
+        "detail2": "A deployment titkok titkosítva vannak tárolva, és alapértelmezés szerint maszkolva jelennek meg."
+      },
+      "ops": {
+        "eyebrow": "Üzemeltetés",
+        "title": "Néhány változáshoz operátor szükséges",
+        "body": "Az alkalmazás elmentheti a kívánt runtime beállításokat; nem indítja újra a szolgáltatásokat csendben.",
+        "detail1": "Exportálja a runtime env-et a provider, origin, CORS vagy search változások után.",
+        "detail2": "A rendelkezésre állást (readiness) és a szolgáltatás állapotát használja a valóban futó elemek megerősítéséhez."
+      },
+      "title": "Fontos termék-igazságok",
+      "body": "Ezek a szabályok biztosítják a beállítások hitelességét, és megakadályozzák a véletlen túllépéseket."
+    },
+    "ask": {
+      "prompt1": "Mi hiányzik még, mielőtt ez az példány készen állna a felhasználók számára?",
+      "prompt2": "Ellenőrizze a jelenlegi felhasználótípusokat, az onboarding kérdéseket, dokumentációt és erőforrásokat.",
+      "prompt3": "Készítse elő a módosításokat felülvizsgáláshoz: határozza meg az asszisztens hangvételét és az alapértelmezett nyelvet.",
+      "title": "Érdemes kérdezni az Admin Asszisztenssel",
+      "body": "Mielőtt módosításokat kérne, kérjen egy felülvizsgálást. Az képes ellenőrizni a beállításokat és előkészíteni egy módosítási készletet.",
+      "directWriteBody": "Kérje a Sage-től a támogatott konfiguráció ellenőrzését vagy módosítását. A bejegyzés előtt visszaigazolja Önnel a tervezett változtatást.",
+      "directWritePrompt3": "Határozza meg az asszisztens hangvételét és az alapértelmezett nyelvet, és először erősítse meg nálam a tervezett változtatást."
+    },
+    "hero": {
+      "eyebrow": "Admin vezérlő térkép",
+      "shortVersion": {
+        "title": "Rövid változat",
+        "body": "A rendszergazdák beállítják az identitást, a felhasználókat, a tudást, az eszközöket és a beindítási beállításokat. Egyes futásidejű változtatásokhoz még szükség van az operátor újraindítására."
+      }
+    },
+    "title": "Admin Útmutatók",
+    "subtitle": "Egyszerű térkép arról, hogy mit konfigurálnak a rendszergazdák, mit tud a termék, és mire van szükség odafigyelésre a beindítás előtt.",
+    "quickStart": {
+      "title": "Itt kezdje",
+      "body": "Először végezze el a kisméretű, hasznos beállításokat. A tesztelés után, valódi kérdésekkel finomítsa őket."
+    },
+    "safety": {
+      "title": "Alapvető biztonsági tudnivalók",
+      "body": "A rendszergazdák kezelik a hozzáférést, az adatokat, a viselkedést és a futási beállításokat. A kockázatos változtatásoknál haladjon lassan.",
+      "items": {
+        "0": "A rendszergazdák NIP-07 használatával jelentkeznek be. A felhasználók e-mail mágikus linkkel jelentkeznek be.",
+        "1": "A felhasználói mezők alapértelmezés szerint titkosítottak. Csak a tiszta szöveges mezők oszthatók meg a chattel.",
+        "2": "A titkos adatok maszkolva maradnak, hacsak meg nem osztja őket az aktuális rendszergazdai munkamenetre.",
+        "3": "Az asszisztens változtatások javaslatok. Önnek még mindig át kell tekintenie és az Apply gombra kattintania.",
+        "4": "A Deployment Settings tárolja a kívánt futási értékeket. Az üzemeltetők szükség esetén továbbra is exportálják az env-et és újraindítják a szolgáltatásokat."
+      },
+      "directItems": {
+        "0": "A rendszergazdák NIP-07 használatával jelentkeznek be. A felhasználók e-mail mágikus linkkel jelentkeznek be.",
+        "1": "A felhasználói mezők alapértelmezés szerint titkosítottak. Csak a tiszta szöveges mezők oszthatók meg a chattel.",
+        "2": "A titkos adatok maszkolva maradnak, hacsak meg nem osztja őket az aktuális rendszergazdai munkamenetre.",
+        "3": "A Sage a chatben is megerősíti Önnel a konfigurációs változtatásokat, majd közvetlenül végrehajtja a támogatott módosításokat.",
+        "4": "A Deployment Settings tárolja a kívánt futási értékeket. Az üzemeltetők szükség esetén továbbra is exportálják az env-et és újraindítják a szolgáltatásokat."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Bejelentkezés rendszergazdaként",
+        "body": "Használja az admin NIP-07 kulcsot. Tartsa titokban."
+      },
+      "1": {
+        "title": "Az alapok beállítása",
+        "body": "Adja meg az instanciát, válassza ki a megjelenést, és állítsa be az asszisztens identitását."
+      },
+      "2": {
+        "title": "A felhasználók meghatározása",
+        "body": "Hozon típusok, onboarding kérdések és jóváhagyási szabályok létrehozása."
+      },
+      "3": {
+        "title": "Megbízható tudás hozzáadása",
+        "body": "Dokumentumok feltöltése és ellenőrzött források hozzáadása."
+      },
+      "4": {
+        "title": "Tesztelés indítás előtt",
+        "body": "Chatelj felhasználóként, tekintsd át a visszajelzéseket, majd hívj meg valódi embereket."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1319,55 @@
     "securityStep3Primary": "Konfigurációs ellenőrzés futtatása",
     "securityStep3Secondary": "Tárolt adatok áttekintése",
     "user": "Felhasználói konfiguráció",
-    "userDesc": "Felhasználói típusok és bevezetési kérdések meghatározása"
+    "userDesc": "Felhasználói típusok és bevezetési kérdések meghatározása",
+    "subtitleSimple": "Válaszd ki, hol szeretnél dolgozni ezen az instancián.",
+    "workflowsSectionLabel": "Admin munkafolyamatok",
+    "adminAssistant": "Admin Asszisztens",
+    "adminAssistantDesc": "Használd az admin chatet a konfigurációs segítségért és a módosítások ellenőrzéséhez.",
+    "guidedSetup": "Útmutatott beállítás",
+    "guidedSetupDesc": "Átfutás a beállításokon, dokumentumokon, forrásokon és a tesztelésen.",
+    "guides": "Admin Útmutatók",
+    "guidesDesc": "Tudd meg, mit és hol konfigurálnak az adminok.",
+    "testUserSession": "Teszt felhasználói munkamenet",
+    "testUserSessionDesc": "Chatelj szimulált felhasználóként, és tekintsd át a mentett béta naplókat.",
+    "aiSetupTitle": "Beállítás az AI asszisztenssel",
+    "aiSetupBody": "Hagyd, hogy az asszisztens egyetlen lépésben összegyűjtse az alapvető adatokat az instanciád nevéhez és konfigurációjához. Bármikor átválthatsz manuális beállításra.",
+    "aiSetupAction": "Indítás az útmutatott beállítással",
+    "readinessTitle": "Üzembe helyezési készség",
+    "readinessDesc": "Ellenőrizd a készségedet, mielőtt meghívnál felhasználókat. Kontrolláld a blokkolókat, figyelmeztetéseket, a újraindítást igénylő módosításokat és a felállítás állapotát egy helyen.",
+    "readinessPrimary": "Megnyitás: Készség ellenőrzés",
+    "firstRunPathTitle": "Admin első futási folyamat",
+    "firstRunStep1Title": "Az Instance alapbeállításainak konfigurálása",
+    "firstRunStep1Body": "Állítsd be a márkanevet, a nyelvet, a témát, a felhasználói mezőket és az Agent Settings beállításokat, mielőtt ellenőriznéd őket.",
+    "firstRunStep1Action": "Instance Beállítások megnyitása",
+    "firstRunStep2Title": "Üzembe helyezési készség ellenőrzése",
+    "firstRunStep2Body": "Ellenőrizd a blokkolókat, figyelmeztetéseket, a újraindítást igénylő módosításokat és a felállítás állapotát, mielőtt meghívnál felhasználókat.",
+    "firstRunStep2Action": "Üzembe helyezési Segéd\"",
+    "firstRunStep3Title": "A diagnosztika csak vizsgálat esetén használható",
+    "firstRunStep3Body": "Tartsd elérhető a smoke teszteket és a diagnosztikát anélkül, hogy azok az elsődleges termékút mentén lennének.",
+    "firstRunStep3Action": "Diagnosztika megnyitása",
+    "instanceDescSimple": "Név, nyilvános e-mail azonosító, téma és márkakontrollok.",
+    "aiDescSimple": "Promptok, modellorganizáció és dokumentum alapértelmezettek.",
+    "deploymentDescSimple": "Futtatási beállítások, állapot és készenlét részletei.",
+    "resources": "Eszközjegyzék",
+    "resourcesDesc": "Megbízható ügyvédek, NGO-k és ajánlott források válogatása",
+    "resourcesDescSimple": "Megbízható ajánlott források kézi válogatása.",
+    "testFeedback": "Tesztelés és visszajelzés",
+    "testFeedbackDesc": "Chatoljon tesztfelhasználóként, és értékelje a válaszokat a beállítások finomításához",
+    "diagnosticsSectionLabel": "Diagnosztika",
+    "operationsSectionLabel": "Operációk",
+    "testDashboard": "Diagnosztika",
+    "testDashboardDesc": "Fejlesztési smoke-tesztek futtatása és a diagnosztikai modulok vizsgálata",
+    "testDashboardDescSimple": "Smoke-tesztek futtatása a problémák vizsgálatakor.",
+    "iaChecklistTitle": "Admin információarchitektúra felülvizsgálati ellenőrzőlista",
+    "iaChecklistBody": "Az emberi felülvizsgálat során különítsük el a Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness és a diagnosztikai felületeket.",
+    "humanReviewTitle": "Átadás emberi felülvizsgálatra",
+    "humanReviewStatus": "Prémium telepítési támogatás szükséges",
+    "humanReviewBody": "A futtatási környezet alkalmazása egyértelmű marad: exportálja az artefaktumokat, alkalmazza őket operátor támogatásával, indítsa újra az érintett szolgáltatásokat, és ellenőrizze a készenlét igazolását.",
+    "humanReviewAction": "A Deployment Readiness felülvizsgálata",
+    "settingsSectionLabel": "Beállítások",
+    "userManager": "Felhasználótár",
+    "userManagerDesc": "Felhasználók felülvizsgálata, állapot ellenőrzése, listák exportálása és hozzáférés jóváhagyása."
   },
   "adminAI": {
     "title": "AI konfiguráció",
@@ -871,7 +1452,18 @@
       "userInfoPlaceholder": "{user_info} — a jelenlegi felhasználó profilmezőivel helyettesítődik, ha elérhetők"
     },
     "revert": "Visszavonás",
-    "revertToGlobal": "Visszaállítás globálisra"
+    "revertToGlobal": "Visszaállítás globálisra",
+    "knowledgeSearchDisabledLabel": "A Tudáskeresés kikapcsolva",
+    "knowledgeSearchDisabledMessage": "Az aktív alapértelmezett dokumentumokat addig nem fogják használni, amíg a Tudásforrások beállítása nem változik a kiválasztott alapértelmezett dokumentumokra vagy az összes elérhető dokumentumra.",
+    "assembledPromptOutput": "Összesített prompt kimenet",
+    "saveError": "Mentés sikertelen",
+    "revertError": "Visszaállítás sikertelen",
+    "toggleError": "A váltás sikertelen",
+    "loadErrorLabel": "Ügynök beállítások betöltési hiba",
+    "previewErrorLabel": "Ügynök beállítások előnézeti hiba",
+    "documentToggleErrorLabel": "Ügnek beállítások dokumentum váltási hiba",
+    "documentDefaultsHintV2": "A \"Elérhető\" jelölésű dokumentumokat a Tudáskeresés használhatja. A \"Alapértelmezetten aktív\" jelölésű dokumentumok akkor kerülnek beleadásra, ha a Tudásforrások beállítása a kiválasztott alapértelmezett dokumentumoknál vagy az összes elérhető dokumentumnál áll.",
+    "externalChangeConflict": "A Sage vagy egy másik admin megváltoztatta ezt a beállítást, miközben Ön szerkesztette. Mentés előtt mondjon le, és nyissa újra a szerkesztőt."
   },
   "adminDeployment": {
     "title": "Telepítési konfiguráció",
@@ -969,7 +1561,9 @@
       "unknown": "Ismeretlen",
       "usersMigrated": "Migrált felhasználók",
       "usersToMigrate": "Migrálandó felhasználók",
-      "warning": "Ez egy haladó művelet. A helytelen migrálás kizárhat a titkosított adatokból. Csak akkor folytasd, ha megérted a következményeket."
+      "warning": "Ez egy haladó művelet. A helytelen migrálás kizárhat a titkosított adatokból. Csak akkor folytasd, ha megérted a következményeket.",
+      "inputWarningLabel": "Admin kulcismigráció figyelmeztetés",
+      "destructiveWarningLabel": "Admin kulcismigráció törlő figyelmeztetés"
     },
     "revealFailed": "Nem sikerült felfedni az értéket. Ellenőrizd a Nostr bővítmény kapcsolatot.",
     "searchHelp": {
@@ -1000,7 +1594,8 @@
       "overviewDesc": "A biztonsági beállítások szabályozzák a hitelesítést, a munkamenet-kezelést és a fejlesztési rövidítéseket. Az alapértékek helyi fejlesztéshez vannak konfigurálva.",
       "overviewNote": "Éles környezetben győződj meg róla, hogy a szimulációs jelzők ki vannak kapcsolva, és a FRONTEND_URL megegyezik a valódi domaineddel.",
       "overviewTitle": "Biztonság áttekintése",
-      "overviewWhen": "Tekintsd át ezeket a beállításokat, mielőtt nyilvánosan elérhető szerverre telepítenéd."
+      "overviewWhen": "Tekintsd át ezeket a beállításokat, mielőtt nyilvánosan elérhető szerverre telepítenéd.",
+      "devNote": "Használja a MOCK_EMAIL értéket a helyi e-mail teszteléshez; a felhasználói és admin munkamenetekhez továbbra is szükség van a normál hitelesítési folyamatra."
     },
     "sslHelp": {
       "ariaLabel": "SSL és HTTPS konfiguráció súgó",
@@ -1101,7 +1696,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Feltöltések mappa",
       "vector_database_eb5526": "Vektor adatbázis"
-    }
+    },
+    "exportSageRuntimeEnv": "Sage környezet exportálása",
+    "readiness": {
+      "title": "Üzembe helyezési készség",
+      "statusTitle": "Üzembe helyezési készség: {{status}}",
+      "description": "Ellenőrizze a szükséges bizonyítékokat, mielőtt ez az egy-példányos (Single-Instance) üzembe helyezés készen állna a normál működésre.",
+      "openWizard": "Készségellenőrzés megnyitása",
+      "blockerCount": "{{count}} akadályozó",
+      "warningCount": "{{count}} figyelmeztetés",
+      "readyCount": "{{count}} készen",
+      "empty": "Még nem elérhető Deployment-készültségi ellenőrzések.",
+      "conversationBlocking": "Megszakítja a normál beszélgetéseket",
+      "blocker": "Akadályozó",
+      "warning": "Figyelmeztetés",
+      "ready": "Készen",
+      "reviewInferenceVerification": "Inference ellenőrzés felülvizsgálata",
+      "reviewDataLifecycleStatus": "Adat élettartam állapota felülvizsgálata",
+      "reviewDeploymentValidation": "Deployment beállítások felülvizsgálata",
+      "reviewRestartRequired": "Újraindítás szükséges felülvizsgálata",
+      "reviewOperationalReadiness": "Üzemeltetési készenlét felülvizsgálata",
+      "reviewServiceHealth": "Szolgáltatás egészsége felülvizsgálata",
+      "reviewRuntimeEnv": "Runtime Env export felülvizsgálata",
+      "deployment_settings_validation": {
+        "label": "Deployment beállítások ellenőrzése",
+        "status": {
+          "invalid": {
+            "summary": "A Deployment beállítások ellenőrzése hibákat tartalmaz, amelyeket javítani kell.",
+            "nextAction": "A Deployment beállítások ellenőrzési hibáinak felülvizsgálata."
+          },
+          "warnings": {
+            "summary": "A Deployment beállítások ellenőrzése tanácsadó figyelmeztetéseket tartalmaz.",
+            "nextAction": "A Deployment beállítások ellenőrzési figyelmeztetések felülvizsgálata."
+          },
+          "valid": {
+            "summary": "A Deployment beállítások ellenőrzése nem tartalmaz hibát vagy figyelmeztetést.",
+            "nextAction": "Nincs szükség intézkedésre."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Ellenőrizhető Inference",
+        "status": {
+          "current": {
+            "summary": "A konfigurált Model Provider rendelkezik aktuális Inference ellenőrzési feljegyzéssel.",
+            "nextAction": "Nincs szükség intézkedésre. A jelenlegi Inference ellenőrizési feljegyzést akkor vizsgálja meg, ha a provider állításai megváltoznak."
+          },
+          "deferred_missing": {
+            "summary": "A titkosított és ellenőrizhető Inference jelenleg nem ellenőrizve a konfigurált Model Provider esetében.",
+            "nextAction": "Konfiguráljon egy támogatott Model Providert, és futtassa le az Inference ellenőrzést, mielőtt a Deployment-készültséget befejezettnek tekintene."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Adat élettartam felülvizsgálat",
+        "status": {
+          "needs_review": {
+            "summary": "Az Adat élettartam felülvizsgálat admin felülvizsgálást igényel.",
+            "nextAction": "A Aktív Tárolási Élettartam állapotának felülvizsgálata és az Adat élettartam felülvizsgálat rögzítése."
+          },
+          "stale": {
+            "summary": "A rögzített Adat élettartam felülvizsgálat elavult egy támogatott élettartam-változás után.",
+            "nextAction": "A jelenlegi Aktív Tárolási Élettartam állapotának felülvizsgálata és egy új Adat élettartam felülvizsgálat rögzítése."
+          },
+          "reviewed": {
+            "summary": "Az adatciklus-felülvizsgálat befejeződött.",
+            "nextAction": "Nincs szükség intézkedésre, hacsak a támogatott életciklus-állapot nem változik meg."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Deployment Surface Feljegyzések",
+        "status": {
+          "acknowledged": {
+            "summary": "A nem támogatott Deployment Surface kategóriák feljegyzésre kerültek.",
+            "nextAction": "Nincs szükség intézkedésre."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — A nem támogatott Deployment Surface kategóriákhoz üzemeltető feljegyzése szükséges.",
+            "nextAction": "Vizsgálja meg a felsorolt Deployment Surface kategóriákat, és jegyezzen fel mindegyiket, mielőtt a Deployment Readiness állapotot befejezettnek tekintené."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Mentés és visszaállítás gyakorlat",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Egy friss üzemeltető mentési és visszaállítási gyakorlat rekord szükséges.",
+            "nextAction": "Végezzen és rögzessen egy mentési és visszaállítási gyakorlatot ehhez a Deploymenthez."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Újraindítás szükséges",
+        "status": {
+          "current": {
+            "summary": "A szolgáltatás elindítása óta nem változott olyan Deployment Beállítás, amely újraindítást igényel.",
+            "nextAction": "Nincs szükség intézkedésre."
+          },
+          "restart_required": {
+            "summary": "A szolgáltatás elindítása után megváltozott, újraindítást igénylő Deployment Beállítások. ({{changedSettings}})",
+            "nextAction": "Alkalmazza a kívánt Deployment Beállításokat, és indítsa újra az érintett szolgáltatásokat, mielőtt azokat aktuálisnak tekintené."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage futtatási környezet konfiguráció",
+        "status": {
+          "not_generated": {
+            "summary": "A Sage futtatási környezet még nem generálódott a Deployment Beállítások alapján.",
+            "nextAction": "Exportálja a Sage futtatási környezetet, mielőtt a Deployment Beállításokat alkalmazottnak tekintené a Sage számára."
+          },
+          "matches_desired": {
+            "summary": "A futó Sage futtatási konfiguráció megegyezik a kívánt Deployment Beállításokkal.",
+            "nextAction": "Nincs szükség intézkedésre."
+          },
+          "drifted": {
+            "summary": "A futó Sage futtatási konfiguráció eltér a kívánt Deployment Beállításoktól.",
+            "nextAction": "Vizsgálja meg a Sage futtatási konfiguráció eltérést, alkalmazza a generált Sage környezetet, és indítsa újra a Sage-t."
+          },
+          "current": {
+            "summary": "A Sage futtatási környezet generálódott a jelenlegi Deployment Beállítások alapján.",
+            "nextAction": "Nincs szükség intézkedésre, hacsak a generált artefaktum nem került alkalmazásra a Deploymentnél."
+          },
+          "stale": {
+            "summary": "A Deployment Beállítások megváltoztak, miután a Sage futtatási környezet generálódott.",
+            "nextAction": "Exportáljon friss Sage futtatási környezetet, és alkalmazza azt a Deployment újraindítási folyamat során."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Core Backend futtatási konfiguráció",
+        "status": {
+          "not_generated": {
+            "summary": "A Core-backend futtatási környezet még nem generálódott a Deployment Beállítások alapján.",
+            "nextAction": "Exportálja a core-backend futtatási környezetet, mielőtt a Deployment Beállításokat alkalmazottnak tekintené a core-backend számára."
+          },
+          "matches_desired": {
+            "summary": "A futó core-backend futtatási konfiguráció megegyezik a kívánt Deployment Beállításokkal.",
+            "nextAction": "Nincs szükség intézkedésre."
+          },
+          "drifted": {
+            "summary": "A futó core-backend futtatási konfiguráció eltér a kívánt Deployment Beállításoktól.",
+            "nextAction": "Vizsgálja meg a core-backend futtatási környezet konfigurációs eltérést, alkalmazza a generált core-backend környezetet, majd indítsa újra a core-backendet."
+          },
+          "current": {
+            "summary": "A core-backend futtatási környezet generálva lett a jelenlegi Deployment Beállítások alapján.",
+            "nextAction": "Nincs szükség intézkedésre, hacsak a generált artefaktumot nem alkalmazták a Deploymentre."
+          },
+          "stale": {
+            "summary": "A Deployment Beállítások megváltoztak a core-backend futtatási környezet generálása után.",
+            "nextAction": "Exportáljon friss core-backend futtatási környezetet, és alkalmazza azt a Deployment újraindítási folyamat során."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Deployment Assistent",
+      "step": "{{current}}. lépés {{total}} részek közül"
+    },
+    "operationalReadiness": {
+      "title": "Üzemeltetési Készségség",
+      "description": "Ellenőrizze a mentési, visszaállítási, monitorozási és felállítási gyakorlatokat a normál üzemeltetés előtt."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — az Ön Tinfoil API kulcsa a helyi proxyhoz.",
+      "apiKeyLabel": "Tinfoil API kulcs",
+      "ariaLabel": "Sage futtatási konfigurációs segítség",
+      "exampleConfig": "Példa konfiguráció",
+      "goToPage": "Oldal megtekintése",
+      "sageExtra": "Állítsa az LLM_API_kerüléket a {{tinfoilSignupUrl}} oldalról származó Tinfoil kulcsára. A stack hozzárendeli azt a Sage-hez és a helyi Tinfoil proxyhoz.",
+      "sageHint": "Ez a prototípus az Agent Runtime forgalmat a Sage és a Tinfoil keresztül irányítja. Az LLM_API_KEY a hivatalos Model Provider kulcs.",
+      "modelField": "TINFOIL_MODEL — a Tinfoil modell azonosító, amelyet a Sage-nek kell használnia (például: glm-5-2).",
+      "overviewDesc": "Ez a prototípus a Sage-t használja nyilvános Agent Runtime-ként, a Tinfoil-t pedig a Model Provider transportként. Konfigurálja a Model Providert az LLM_* Deployment Beállításokon keresztül; a stack hozzárendeli őket a Sage Tinfoil futtatási környezetéhez.",
+      "overviewTitle": "Sage futtatási áttekintés",
+      "providerField": "LLM_PROVIDER — ehhez a prototípushoz állítsa \"sage\" értékre."
+    },
+    "inferenceVerification": {
+      "current": "Jelenlegi",
+      "missing": "Hiányzó",
+      "expired": "Lejárt",
+      "failed": "Sikertelen",
+      "success": "Sikeres",
+      "statusLoadFailed": "Nem sikerült betölteni az inferencia hitelesítés állapotát",
+      "historyLoadFailed": "Nem sikerült betölteni az inferencia hitelesítés előzményeit",
+      "loadFailed": "Nem sikerült betölteni az inferencia hitelesítést",
+      "manualFailed": "A manuális hitelesítés sikertelen volt",
+      "manualSucceeded": "A manuális ellenőrzés sikeres volt",
+      "detailLoadFailed": "Nem sikerült betölteni az igazolási részleteket",
+      "ariaLabel": "Inference ellenőrzés",
+      "title": "Inference ellenőrzés",
+      "summary": "Csak adminok számára: bizonyíték arra, hogy a védett inference a várt Model Provider platformon fut.",
+      "verifyNow": "Most ellenőrzés",
+      "status": "Állapot",
+      "checkedAt": "Ellenőrzve",
+      "expiresAt": "Lejár",
+      "expectedClaims": "Várható claimek",
+      "expectedClaimsValue": "Várható claimek: {{fingerprint}}",
+      "providerClaims": "Provider claimek",
+      "provider": "Szolgáltató",
+      "model": "Modell",
+      "endpoint": "Végpont",
+      "history": "Ellenőrzési előzmények",
+      "emptyHistory": "Nincsenek ellenőrzési rekordok.",
+      "recordTitle": "Rekord #{{id}}",
+      "inspectAttestation": "Igazolás megtekintése",
+      "fullAttestation": "Teljes igazolási anyag"
+    },
+    "lifecycle": {
+      "notStarted": "Nem indult",
+      "notConfigured": "Nem konfigurálva",
+      "plaintextByOperatorChoice": "Operátor döntése alapján szöveges formátum",
+      "allTombstones": "Összes",
+      "allTombstonesLabel": "Összes tombstone",
+      "incompleteTombstonesFilter": "Feltétlen",
+      "incompleteTombstonesLabel": "Feltétlen tombstone-ok",
+      "completedTombstonesFilter": "Kész",
+      "completedTombstonesLabel": "Kész tombstone-ok",
+      "title": "Adat élettartam állapota",
+      "description": "Az instance adatokra vonatkozó jelenlegi, operátor által szabályozott adatvédelmi lefedettség.",
+      "scopeExcludes": "Kizárva: {{excludes}}",
+      "secureEraseStatus": "Biztonságos törlés: {{status}}",
+      "readinessStatus": "Életciklus készenlét: {{status}}",
+      "readinessNonBlocking": "A v1-es verzióban a felhasználói beszélgetéseket nem blokálják az életciklus készenlét figyelmeztetések.",
+      "readinessStaleReason": "Indok: {{reason}}",
+      "contentEncryptionKey": "Tartalom titkosítási kulcs: {{status}}",
+      "artifactEncryptionPosture": "Artifact titkosítási állapot: {{status}}",
+      "artifactPostureLabel": "Artifact titkosítási állapot",
+      "artifactPostureRequired": "Szükséges",
+      "artifactPostureDisabled": "Kiiktatva",
+      "retentionSchedulerStatus": "Megtartási ütemező: {{status}}",
+      "schedulerObservation": "Megfigyelés: {{status}}",
+      "schedulerEnabledClasses": "Az ütemező által engedélyezett osztályok: {{classes}}",
+      "schedulerLastRunStatus": "Utolsó futtatás állapota: {{status}}",
+      "schedulerLastRun": "Utolsó futtatás: {{trigger}} {{actor}} által",
+      "previewRetention": "Megtartás előnézete",
+      "runScheduledRetention": "Ütemezett futtatás",
+      "previewRetentionResult": "Előnézet: {{conversations}} beszélgetés, {{artifacts}} dokumentum artifact, {{skipped}} kihagyott osztály.",
+      "scheduledRetentionResult": "Ütemezett futtatás: {{status}}, {{retries}} tombstone újradíszt.",
+      "scheduledRetentionStatus": "Ütemezett osztályok: {{classes}}",
+      "auditCoverageStatus": "Audit lefedettség: {{audited}} auditálva, {{exceptions}} kivétel, {{missing}} hiányzó.",
+      "owner": "Tulajdonos: {{owner}}",
+      "deletion": "Törlés: {{status}}",
+      "retention": "Megtartás: {{status}}",
+      "audit": "Audit: {{status}}",
+      "confidentiality": "Bizalmasság: {{status}}",
+      "incompleteTombstones": "Hiányos tombstone-ok: {{count}}",
+      "completedTombstones": "Completed tombstone-ok: {{count}}",
+      "retentionEnabled": "Engedélyezve",
+      "retentionWindow": "Időszak",
+      "retentionDays": "nap",
+      "scheduledEnforcement": "Ütemezve",
+      "saveRetentionPolicy": "Szoftverpolitika mentése",
+      "empty": "Nem elérhető az élettartam állapota.",
+      "retentionPolicySaveFailed": "Nem sikerült menteni az élettartam-politikát.",
+      "retentionPreviewFailed": "Nem sikerült előnézetet készíteni az élettartamról.",
+      "scheduledRetentionFailed": "Nem sikerült futtatni az ütemezett élettartam-kezelést.",
+      "artifactPostureFailed": "Nem sikerült frissíteni az artefaktum titkosítási beállításait.",
+      "unsupportedSurfacesTitle": "Nem támogatott telepítési felületek",
+      "unsupportedSurfacesDescription": "Ezek az operációs nyomok itt láthatóak, de kívül esnek a termék élettartam-szabályozásán.",
+      "unsupportedSurfaceAckFailed": "Nem sikerült frissíteni az elfogadást.",
+      "acknowledgedSurface": "Elfogadva",
+      "acknowledgeSurface": "Elfogadás",
+      "tombstonesTitle": "Törlési napló (Tombstones)",
+      "tombstonesDescription": "A sikertelen élettartam-törlések újraindítása törött tartalmak felfedése nélkül.",
+      "tombstoneStatusFilter": "Törlési napló állapot szűrő",
+      "tombstoneRetryFailed": "Az újrapróbálkozás sikertelen volt.",
+      "tombstonesFetchFailed": "Nem sikerült betölteni a törlési naplókat.",
+      "tombstoneClass": "Osztály: {{className}}",
+      "tombstoneSource": "Forrás: {{source}}",
+      "tombstoneRetries": "Újrapróbálkozások száma: {{count}}",
+      "tombstoneUpdated": "Frissítve: {{updated}}",
+      "retryTombstoneLabel": "A {{id}} törlési napló újraindítása",
+      "retry": "Újrapróbálkozás",
+      "tombstonesEmpty": "Nincsenek újraindításra váró törlési naplók."
+    },
+    "runtimeEnv": {
+      "unknown": "Ismeretlen",
+      "title": "Futtatási konfiguráció egyeztetés",
+      "description": "Összehasonlítja a kívánt telepítési beállításokat, a generált Sage környezetet és a megfigyelhető futtatási állapotot.",
+      "desired": "Kívánt",
+      "configuredKeys": "{{total}} kulcsból {{count}} konfigurálva",
+      "generated": "Generált",
+      "exportedAt": "Exportálva: {{time}}",
+      "notExported": "Nincs rögzített Sage környezet export",
+      "running": "Futtatva",
+      "runningUnknown": "A futtatási állapot még nem vizsgálható közvetlenül.",
+      "coreBackend": "Központi háttérrendszer",
+      "coreBackendHint": "Backend környezeti egyeztetés",
+      "coreDesired": "Kívánt központi állapot",
+      "coreConfiguredKeys": "Core backend: {{count}} kulcs konfigurálva, {{total}} közül",
+      "coreGenerated": "Generált központi állapot",
+      "coreNotExported": "Nincs rögzített core backend környezet export",
+      "coreRunning": "Futó központi állapot",
+      "coreRunningUnknown": "A core backend futási állapota még nem vizsgálható közvetlenül.",
+      "coreExportedTitle": "Core-backend környezet exportálva",
+      "coreSensitiveArtifact": "A core-backend.env fájlt kezelje érzékeny telepítési adatként.",
+      "coreExportDoesNotApply": "Az artefaktum exportálása nem változtatja meg a futó backend folyamatot, amíg egy Operator nem alkalmazza azt és újraindítja a core-backendet.",
+      "exportedTitle": "Sage környezet exportálva",
+      "sensitiveArtifact": "A sage.env fájlt kezelje érzékeny telepítési adatként.",
+      "exportDoesNotApply": "Az artefaktum exportálása nem változtatja meg a futó Sage folyamatot, amíg egy Operator nem alkalmazza azt és újraindítja a Sage-et."
+    },
+    "categorySettingsAria": "{{category}} Beállítások",
+    "exportCoreBackendRuntimeEnv": "Exportálás: core-backend környezet",
+    "restartCurrent": "Újraindítás nem szükséges",
+    "restartCurrentDesc": "A szolgáltatás elindítása óta nem változott olyan telepítési beállítás, amely újraindítást igényelne.",
+    "saveError": "Mentés sikertelen",
+    "openHelpAria": "Segítség megnyitása a(z) {{label}} számára"
   },
   "upload": {
     "invalidFileType": "Érvénytelen fájltípus. Engedélyezett: {{extensions}}",
@@ -1123,7 +2024,8 @@
       "processing": "Feldolgozás alatt",
       "chunked": "Darabolva",
       "complete": "Kész",
-      "failed": "Sikertelen"
+      "failed": "Sikertelen",
+      "completedWithErrors": "Belesetésekkel завершено"
     },
     "chunks": "{{processed}}/{{total}} darab",
     "deleteDocument": "Dokumentum törlése",
@@ -1172,7 +2074,21 @@
     "serverBusy": "A szerver foglalt",
     "tryRefresh": "Próbáld újra",
     "uploadedSuccess": "Sikeresen feltöltve – feldolgozás megkezdődött",
-    "uploadingStatus": "Feltöltés a szerverre..."
+    "uploadingStatus": "Feltöltés a szerverre...",
+    "uploadError": "A feltöltés sikertelen volt",
+    "documentDeletionError": "Dokumentum törlési hiba",
+    "navigationWarning": "A dokumentum még folyamatban van. Csak a feldolgozás megkezdése után távozzon, különben a feltöltés nem mentődhet meg.",
+    "duplicateInBatch": "Ismétlődő dokumentum név ebben a csomadban",
+    "documentsSelected": "{{count}} dokumentum",
+    "queueSummary": "{{valid}} készen, {{rejected}} kihagyva",
+    "skipped": "Kihagyva",
+    "uploadedPartialSuccess": "{{count}} sorba került, {{rejected}} kihagyva",
+    "chooseFiles": "Fájlok kiválasztása",
+    "chooseFolder": "Mappa kiválasztása",
+    "uploadDocuments": "Dokumentumok feltöltése",
+    "replacingDocument": "{{filename}} fájl lecserélése...",
+    "recentDocumentsShowing": "{{shown}} / {{total}} dokumentum megjelenítése",
+    "showMore": "További megjelenítése"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2130,11 @@
       "description": "SSL-tanúsítványok és HTTPS-beállítások konfigurálása",
       "hint": "Konfigurálja a TLS- és proxybeállításokat HTTPS-en keresztüli kiszolgáláskor. Az alapértelmezések biztonságosak a helyi fejlesztéshez; csak a tanúsítványok telepítése után engedélyezze a HTTPS-t.",
       "label": "SSL és biztonság"
+    },
+    "llm": {
+      "label": "A Sage-ügynök futási környezete",
+      "description": "Sage + Tinfoil inferencia konfigurálása",
+      "hint": "Ez a prototípus a Agent Runtime forgalmat a Sage-en keresztül irányítja, a Tinfoil pedig a Model Provider transzportként használja. A módosítások újraindítást igényelnek."
     }
   },
   "promptSections": {
@@ -1240,6 +2161,12 @@
       "description": "Hogyan strukturálja az AI a válaszait",
       "hint": "Szabályozza a formázási preferenciát, például hogy használjon-e felsorolás jeleket, címsort vagy beszélgetési bekezdéseket. Ez befolyásolja, hogyan jelennek meg vizuálisan a válaszok.",
       "placeholder": "Használjon felsorolás jeleket a listákhoz, címsorokat a szakaszokhoz..."
+    },
+    "prompt_system": {
+      "label": "Rendszerutasítás",
+      "description": "Az AI alapvető identitása és működési utasításai",
+      "hint": "Ezt az asszisztens identitáshoz, küldetéshez és a legfelsőbb szintű korrekciókhoz használja, amelyek a hangnem, szabályok, eszközök vagy dokumentumkontextus előtt érvényesülnének. A módosítások az új beszélgetéseket érintik.",
+      "placeholder": "Ön a Sage, egy privát asszisztens ezen az instancián..."
     }
   },
   "parameters": {
@@ -1252,6 +2179,11 @@
       "label": "Tudásmélység",
       "description": "Hány dokumentumrészt vegyen figyelembe",
       "hint": "Kérdések megválaszolásakor az AI végigkeresi a feltöltött dokumentumaidat és bevon releváns részleteket. A magasabb számok több kontextust jelentenek, de lassabb válaszokat. Az alacsonyabb számok gyorsabbak, de kihagyhatnak releváns információt. Alapérték: 5"
+    },
+    "max_tokens": {
+      "label": "Max Token",
+      "description": "A maximális hossz minden AI-válaszhoz",
+      "hint": "Korlátozza a válasz hosszát. Az alacsonyabb értékek rövidebb választ és alacsonyabb költséget biztosítanak; a magasabb értékek hosszabb magyarázatokat tesznek lehetővé. Alapértelmezett: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2191,21 @@
       "label": "Webes keresés",
       "description": "Az AI kereshet az interneten",
       "hint": "Ha engedélyezve van, az AI kereshet a weben aktuális információkért, amelyek nincsenek a dokumentumaidban. Tiltsd le, ha azt szeretnéd, hogy a válaszok csak a feltöltött tudásbázisból származzanak."
+    },
+    "knowledgeSource": {
+      "none": "Nincs",
+      "selected": "Kiválasztott alapdokumentumok",
+      "all": "Összes elérhető dokumentum"
+    },
+    "knowledge_source_default": {
+      "label": "Ismeretforrások",
+      "description": "Válaszd ki, mely feltöltött ismeretforrások legyenek aktívak a Felhasználói Beszélgetésekben",
+      "hint": "Használj \"none\" értéket, ha alapértelmezés szerint nincs feltöltött ismeret, \"selected\" értéket a \"Default Active\" (Alapértelmezett aktív) jelölésű dokumentumokhoz, vagy \"all\" értéket az összes elérhető dokumentumhoz."
+    },
+    "user_default_tool_ids": {
+      "label": "Felhasználói Eszközcsoportok",
+      "description": "A Felhasználói Beszélgetésekben alapértelmezés szerint aktív Eszközcsoportok",
+      "hint": "JSON tömb, amely a \"curated-resources\", \"knowledge-search\" és \"web-search\" értékek egyikét használja. A Knowledge Search-t a Knowledge Sources is szabályozza."
     }
   },
   "colors": {
@@ -1437,6 +2384,51 @@
       "description": "Webhook visszahívási alap URL",
       "hint": "Alap URL a webhook visszahívások létrehozásához. Példa: https://api.example.com/webhooks. Alapértelmezés: http://localhost:8000.",
       "label": "Webhook-cím"
+    },
+    "LLM_PROVIDER": {
+      "label": "Modellszolgáltató",
+      "description": "Python-oldali Model Provider címke",
+      "hint": "Ezen a prototípushoz használd a \"sage\" értéket. Ez a telepítési beállítás támogatja a Python-oldali diagnosztikát és a hitelesítési metaadatokat."
+    },
+    "LLM_MODEL": {
+      "label": "Modell neve",
+      "description": "Modell név/azonosító",
+      "hint": "A Tinfoil modell azonosító, amelyet a Sage-nek használnia kell (pl. \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "API végpont",
+      "description": "Model Provider API alap-URL",
+      "hint": "Tinfoil proxy alap-URL. Alapértelmezett: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API kulcs",
+      "description": "Tinfoil API kulcs (titkos)",
+      "hint": "Hagyja üresen, hogy a Deployment Beállítások titkosak maradjanak."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Chat sebességkorlátozás",
+      "description": "Chat kérések per menitben",
+      "hint": "Maximum /llm/chat kérés per minute felhasználón, admin, token vagy ügyfél IP alapján. Újraindítást igényel. Alapértelmezett: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Retrieval lekérdezési sebességkorlátozás",
+      "description": "Retrieval lekérdezések per menitben",
+      "hint": "Maximum /query kérés per minute felhasználón, token vagy ügyfél IP alapján. Újraindítást igényel. Alapértelmezett: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Feltöltési sebességkorlátozás",
+      "description": "Dokumentum feltöltési kérések per menitben",
+      "hint": "Maximum dokumentum feltöltési kérés per minute admin, token vagy ügyfél IP alapján. Újraindítást igényel. Alapértelmezett: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Vektorkeresési sebességkorlátozás",
+      "description": "Vektorkeresési kérések per menitben",
+      "hint": "Maximum vektorkeresési kérés per minute felhasználón, token vagy ügyfél IP alapján. Újraindítást igényel. Alapértelmezett: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Konfiguráció export sebességkorlátozás",
+      "description": "Deployment konfiguráció exportok óránként",
+      "hint": "Maximum .env exportok óránként admin munkamenetre vagy ügyfél IP alapján. Újraindítást igényel. Alapértelmezett: 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2465,11 @@
       "title": "Készen áll a csatlakozásra"
     },
     "subtitle": "Állítsd be a privát tudásbázisodat néhány lépésben.",
-    "title": "Üdvözöl a Enclave"
+    "title": "Üdvözöl a Enclave",
+    "keySafety": {
+      "title": "Használjon az példányhoz specifikus Nostr kulcsot",
+      "body": "Ne használja a személyes Nostr kulcsát. Hozzon létre vagy válasszon külön admin kulcsot ehhez a példányhoz, hogy csökkentse a megfigyelés kockázatát, és külön tartsa a működési hozzáférést."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2477,8 @@
       "notConfigured": "Ez a funkció nincs konfigurálva.",
       "rateLimited": "Túl sok üzenet. Kérjük, próbálja újra később.",
       "required": "Az üzenet kötelező.",
-      "unavailable": "A kapcsolatfelvétel nem érhető el."
+      "unavailable": "A kapcsolatfelvétel nem érhető el.",
+      "formErrorLabel": "Reachout űrlap hiba"
     },
     "form": {
       "messageLabel": "Üzenet",
@@ -1489,7 +2486,8 @@
       "send": "Küldés"
     },
     "status": {
-      "success": "Köszönjük. Üzenete elküldve."
+      "success": "Köszönjük. Üzenete elküldve.",
+      "successLabel": "Reachout sikeres"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2522,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "A backend hibaüzenetet adott vissza a hitelesítés ellenőrzése közben. Ez nem minősül kijelentkezésnek.",
       "unable_to_verify_admin_session_5f87b8": "Nem ellenőrizhető az admin munkamenet",
       "verifying_admin_session_87c53b": "Admin munkamenet ellenőrzése..."
-    }
+    },
+    "loadingAssistant": "Admin asszisztens betöltése"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2737,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "– Magikus link token ellenőrzése és munkamenet információk lekérése (cookie-alapú munkamenet).",
       "verify_magic_link_token_183cf5": "Magikus link token ellenőrzése",
       "view_all_users_manage_approval_status_and_delete_03feec": "Összes felhasználó megtekintése, jóváhagyási állapot kezelése és felhasználók törlése.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Példány-szintű konfigurációs beállítások megtekintése és frissítése."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Példány-szintű konfigurációs beállítások megtekintése és frissítése.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Teszteli a beállított Model Provider útvonal kapcsolódását."
+    },
+    "labels": {
+      "themePreference": "Téma preferencia",
+      "endpointGuidance": "Endpoint útmutatás",
+      "healthResponseOutput": "Health válasz kimenet",
+      "jobs": "Feladatok",
+      "chunks": "Csomagok",
+      "rateLimitTestType": "Sebességkorlátozási teszt típusa",
+      "successfulRequests": "Sikeres kérések",
+      "successful": "Sikeres",
+      "blockedRequests": "Blokkolt kérések"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Eszemélybeszédet nyomtat"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logó"
+  },
+  "language": {
+    "english": "Angol",
+    "spanish": "Spanyol",
+    "french": "Francia",
+    "german": "Német",
+    "portuguese": "Portugál"
+  },
+  "home": {
+    "checkingInstanceStatus": "Az példány állapotának ellenőrzése..."
+  },
+  "adminGuidedSetup": {
+    "title": "Az instanciád beállítása",
+    "subtitle": "Az asszisztensod egyetlen lépésben összegyűti az alapvető adatokat.",
+    "manual": "Beállítás manuális módosításával",
+    "finish": "Befejezés és tesztelés indítása",
+    "comingSoon": "Ez a szakasz hamarosan megérkezik, és külön készül.",
+    "steps": {
+      "initialize": {
+        "label": "Inicializálás",
+        "title": "Inicializálás",
+        "subtitle": "Legyen meg az alapok a terepedről, hogy az ügynököd a megfelelő alapokon induljon."
+      },
+      "docs": {
+        "label": "Dokumentumok feltöltése",
+        "title": "Töltd fel a kézikönyvedet",
+        "subtitle": "Add hozzá a forrásanyagokat, amik alapján az ügynök válaszol — könyvek, útmutatók és referenciadokumentumok."
+      },
+      "resources": {
+        "label": "Válogatott források",
+        "title": "Válogatott források",
+        "subtitle": "Adj hozzá megbízható, valós forrásokat — fontos kapcsolatokat, ügyvédeket, oktatási és mentális egészségügyi támogatást —, amikre az ügynök hivatkozhat."
+      },
+      "test": {
+        "label": "Tesztelés felhasználóként",
+        "title": "Tesztelés felhasználóként",
+        "subtitle": "Hamarosan érkezik — próbáld ki az asszententet egyik felhasználótípusodként, és értékeld a válaszokat."
+      },
+      "feedback": {
+        "label": "Visszajelzés",
+        "title": "Visszajelzési kör",
+        "subtitle": "Hamarosan érkezik — ellenőrizd a válaszok minőségét, és finomítsd a beállításokat."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Tesztelés és visszajelzés",
+    "subtitle": "Futtass egy tesztfelhasználói munkamenetet, majd tekintsd át a titkosított béta naplókat és a mentett beszélgetések visszajelzéseit.",
+    "tabs": {
+      "test": "Tesztelés felhasználóként",
+      "feedback": "Visszajelzés"
+    },
+    "test": {
+      "pickPersona": "Válassz egy személyiséget a teszthez",
+      "pickPersonaBody": "Hozzon létre egy tesztfelhasználót egyik felhasználótípusához, majd beszélgess vele. A munkamenet titkosított próbatartalomként mentődik, amelyet az Értékelés menüpont alatt értékelhets.",
+      "userType": "Felhasználótípus",
+      "genericUser": "Általános felhasználó (típus nélkül)",
+      "start": "Munkamenet indítása",
+      "admin": "Adminisztrátor",
+      "testUserId": "Tesztfelhasználó",
+      "endSave": "Befejezés és próba mentése",
+      "previewNotice": "Előnézeti mód — a valódi személyazonosság-váltás még nincs bekapcsolva, így ez a chat az admin munkameneted alatt fut. Az átiratot még mindig mentjük a későbbi ellenőrzéshez.",
+      "chatEmpty": "Küldj egy üzenetet ezzel a felhasználóval a próba indításához.",
+      "inputPlaceholder": "Üzenet az asszentendnek ezzel a felhasználóval...",
+      "saved": "Próba mentve (titkosítva). Keresd a Feedback menüpont alatt.",
+      "startError": "Nem sikerült indítani a tesztmunkamenetet",
+      "saveError": "Nem sikerült menteni a próbát",
+      "impersonationUnavailable": "A tesztfelhasználó személyazonosság-váltása még nem elérhető",
+      "sessionTokenError": "Nem sikerült létrehozni a szimulált felhasználói munkamenet-tokent",
+      "testingAs": "Tesztelés {{persona}} személyiséggel",
+      "authFailed": "A szimulált felhasználói munkamenet már nem jogosult.",
+      "discardUnsavedConfirm": "Eltüntetjük a be nem mentett, befejezett lépéseket?",
+      "workspaceAria": "Tesztfelhasználói beszélgetés munkaterület"
+    },
+    "feedback": {
+      "trials": "Béta naplók",
+      "untitled": "Névtelen beszélgetés",
+      "turns": "fordulatok",
+      "turn": "Fordulat",
+      "empty": "Nincsenek mentett béta naplók. Futtasson egy Test User Session-t, vagy várjon a felhasználói beszélgetésekre.",
+      "selectPrompt": "Válasszon ki egy béta naplót az átirat megtekintéséhez és minden fordulat értékeléséhez.",
+      "noNip04": "Csatlakoztasson egy Nostr bővítményt (Alby, nos2x) a leiratok feltávolításához — ezek az admin kulcsához vannak titkosítva.",
+      "sourceUser": "Felhasználói beszélgetés",
+      "sourceTest": "Tesztfelhasználói munkamenet",
+      "thumbUp": "Jó válasz",
+      "thumbDown": "Fejleszteni kell",
+      "notePlaceholder": "Opcionális megjegyzés (titkosítva mentve)…",
+      "exportNotDecrypted": "Az exportálás előtt nyissa meg és titkosítsa fel az átiratot.",
+      "exportFeedbackNotDecrypted": "Néhány visszajelzés nem volt dekódolható. Az exportálás előtt nyissa újra az átiratot, és minden dekódolási kérést hagyjon jóvá.",
+      "exportNeedsExtension": "Az exportáláshoz Nostr bővítmény szükséges. Az átiratok tárolás közben titkosítva vannak, és a bővítménye teszi felismerthetővé őket.",
+      "exportDecrypting": "Még dekódolás folyamatban. Az exportálás akkor válik elérhetővé, amikor minden kérést jóváhagyott.",
+      "exportWhyDisabled": "Miért nincs le отключено az exportálás?",
+      "retryDecryption": "Dekódolás megpróbálata",
+      "decryptPendingTitle": "Ellenőrizze a Nostr bővítményét",
+      "decryptPendingBody": "A bővítmény engedélyt kér ennek az átiratnak a dekódolásához. Lehet, hogy nem nyílik meg automatikusan — ha nem látja, kattintson a bővítmény ikonjára. Válassza a választ mentés lehetőségét, hogy csak egyszer kérjen engedélyt.",
+      "decryptProgress": "Dekódolva: {{done}} {{total}}-ból.",
+      "loadTrialsError": "Nem sikerült betölteni a próbálatokat",
+      "loadTranscriptError": "Nem sikerült betölteni az átiratot",
+      "saveError": "A visszajelzés nem menthető volt",
+      "deleteError": "A munkamenet napló nem törölhető volt",
+      "exportError": "A munkamenet exportálása sikertelen volt",
+      "transcriptIntegrityError": "Az átirat nem elérhető vagy hiányos, ezért nem exportálható.",
+      "decryptTranscriptError": "Nem sikerült dekódolni az átiratot. Hagyja jóvá a dekódolási kérést a Nostr bővítményében."
+    }
+  },
+  "adminResources": {
+    "title": "Eszközjegyzék",
+    "subtitle": "A segédprogram manuálisan karbantartott, ellenőrzött ajánlott forrásait tartalmazza, amelyeket említhet egy beszélgetés eszkaláció esetén. Csak a \"ready\" állapotú források látszanak a végső felhasználóknak.",
+    "add": "Eszköz hozzáadása",
+    "addTitle": "Eszköz hozzáadása",
+    "editTitle": "Eszköz szerkesztése",
+    "empty": "Még nincs eszköz. Adjon hozzá manuálisan, amint rendelkezik ellenőrzött ajánlóval.",
+    "verified": "ellenőrzött",
+    "missing": "Hiányzik a live állapothoz",
+    "name": "Név",
+    "type": "Eszköz típusa",
+    "languages": "Nyelvek (vesszővel tagolt ISO kódok)",
+    "description": "Leírás",
+    "descriptionHint": "Amit az asszisztensnak erről az erőforrásról kell mondania a felhasználónak.",
+    "scopeLevel": "Kiterjedési szint",
+    "scopeCode": "Kiterjedési kód",
+    "scopeCodeHint": "Ország: ISO-kód (NI). Szubrégió/régió: UN M49 kód (013 = Közép-Amerika). Globális: hagyja üresen.",
+    "helpTypes": "Segítség típusai",
+    "contact": "Kapcsolattartási módok",
+    "vettedBy": "Ellenőrzötte",
+    "sourceNote": "Forrás megjegyzése",
+    "markVerified": "Jelölje hitelesnek (első helyen jelenik meg)",
+    "archive": "Archiválás (rejtés a felhasználók elől)",
+    "deleteTitle": "Törölje az erőforrást?",
+    "deleteBody": "Ez eltávolítja a {{name}} directory bejegyzését",
+    "coverage": "Kiterjedés",
+    "coverageHint": "Válasszon kiterjedési szintet, majd keressen a nevére vagy kódjára.",
+    "coverageCodePlaceholder": "Keresés név vagy kód alapján...",
+    "coverageLevelFirst": "Először válasszon kiterjedési szintet",
+    "coverageClear": "Kiterjedési kód törlése",
+    "regionDirectoryUnavailable": "A régió directory nem elérhető. Adja meg manuálisan a kódot.",
+    "level": {
+      "country": "Ország",
+      "subregion": "Szubrégió",
+      "region": "Régió",
+      "global": "Globális"
+    },
+    "addPointer": "Mutató hozzáadása",
+    "addRegion": "Régió hozzáadása",
+    "displayOrder": "Megjelenési sorrend",
+    "displayOrderHint": "A kisebb számok előbb jelennek meg a relevancián és a hitelesítés után.",
+    "kind": "Fajta",
+    "noSearchResults": "Nincs az ilyen keresési eredmény.",
+    "order": "Rendezés",
+    "pointerLabel": "{{number}}. mutató felirat",
+    "pointerType": "{{number}}. mutató típusa",
+    "pointerValue": "Pointer {{number}} érték",
+    "pointers": "Pointerek",
+    "regionNumber": "Region {{number}}",
+    "regions": "Regionok",
+    "removePointer": "Pointer eltávolítása",
+    "removeRegion": "Region eltávolítása",
+    "search": "Eszközök keresése",
+    "searchPlaceholder": "Név, típus, címke, pointer vagy leírás",
+    "tags": "Címkék (vesszővel szeparálva)",
+    "namePlaceholder": "pl. Közép-amerikai Emberi Jogok Tanácsa",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, oktatás, helyi",
+    "loadError": "Az eszközök betöltése sikertelen",
+    "loadDirectoryError": "A könyvtár betöltése sikertelen",
+    "saveError": "Az eszköz mentése sikertelen",
+    "deleteError": "Az eszköz törlése sikertelen"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Vissza az Admin Dashboardhoz",
+    "eyebrow": "Admin műveletek",
+    "title": "Felhasználókezelő",
+    "subtitle": "Ellenőrizze a felhasználókat, értse meg a státuszukat, és engedélyezze a hozzáférést egyetlen egyszerű műszerfalról.",
+    "unlockDetails": "Részletek megjelenítése",
+    "refreshRoster": "Lista frissítése",
+    "exportVisible": "Látható lista exportálása",
+    "prepareVisible": "Látható lista előkészítése",
+    "downloadPrepared": "Előkészített lista letöltése",
+    "exportPrepared": "A teljes látható lista elkészült. A letöltés most már lehetséges.",
+    "rosterTitle": "Felhasználói lista",
+    "rosterShown": "{{total}} felhasználóból {{shown}} látható.",
+    "tableLabel": "Felhasználói lista",
+    "tableRowsLabel": "Felhasználói listasorok",
+    "loadingLabel": "Felhasználói lista betöltése...",
+    "loadingUsers": "Felhasználók betöltése...",
+    "loadRetry": "A felhasználói lista nem tölthető be. Próbálja újra a Lista frissítése gombbal.",
+    "emptyNoUsers": "Még nincs felhasználó. Az új, hitelesített felhasználók itt fognak megjelenni.",
+    "emptyFiltered": "Nincs a szűrőknek megfelelő felhasználó.",
+    "noUserType": "Nincs megadott felhasználótípus",
+    "unknown": "Ismeretlen",
+    "userFallback": "Felhasználó #{{id}}",
+    "approvalSuccess": "{{name}} jóváhagyva.",
+    "exportSuccess": "A felhasználói lista letöltve.",
+    "metrics": {
+      "total": "Összes felhasználó",
+      "totalDetail": "a listában",
+      "pendingApproval": "Várakozás jóváhagyásra",
+      "pendingDetail": "{{count}} várakozik",
+      "approved": "Jóváhagyva",
+      "approvedDetail": "beléphet a chatbe",
+      "incompleteProfiles": "Hiányos profilok",
+      "incompleteDetail": "kötelező válaszokra szükség van"
+    },
+    "callouts": {
+      "loadFailed": "Nem sikerült betölteni a felhasználói listát",
+      "approvalUpdated": "A felhasználó jóváhagyása frissítve",
+      "approvalFailed": "A felhasználói jóváhagyás frissítése sikertelen",
+      "exportReady": "A felhasználói lista exportálása készen áll",
+      "exportFailed": "A felhasználói lista exportálása sikertelen"
+    },
+    "filters": {
+      "search": "Felhasználók keresése",
+      "searchPlaceholder": "Név, e-mail, nyilvános kulcs vagy #ID",
+      "approvalStatus": "Jóváhagyási állapot",
+      "allApprovalStates": "Összes jóváhagyási állapot",
+      "pendingApproval": "Jóváhagyásra vár",
+      "approved": "Jóváhagyva",
+      "allUserTypes": "Összes felhasználótípus"
+    },
+    "columns": {
+      "user": "Felhasználó",
+      "approval": "Jóváhagyás",
+      "userType": "Felhasználótípus",
+      "userProfile": "Felhasználói profil",
+      "joined": "Csatkozás",
+      "action": "Művelet"
+    },
+    "status": {
+      "approved": "Jóváhagyva",
+      "pending": "Folyامban"
+    },
+    "actions": {
+      "approve": "Jóváhagyás",
+      "approveUser": "{{name}} jóváhagyása",
+      "viewUserDetails": "{{name}} részleteinek megtekintése"
+    },
+    "profile": {
+      "noQuestions": "Nincsenek kérdések",
+      "noQuestionsDetail": "Nincsenek alkalmazható csatlakozási kérdések.",
+      "needsProfile": "Profil szükséges",
+      "missingRequiredOne": "1 hiányzó kötelező válasz",
+      "missingRequiredMany": "{{count}} hiányzó kötelező válasz",
+      "noProfileYet": "Még nincs profil",
+      "noAnswersSaved": "Nincsenek mentett válaszok.",
+      "ready": "Profil készen",
+      "answersSavedOne": "1 válasz mentve",
+      "answersSavedMany": "{{count}} válasz mentve"
+    },
+    "identity": {
+      "decrypting": "Név és e-mail visszafeltésének folyamata...",
+      "failed": "A titkosított adatok nem nyithatók meg.",
+      "unavailable": "A titkosított adatokhoz böngésző-aláíró szükséges.",
+      "locked": "A titkosított adatok le vannak zárva."
+    },
+    "errors": {
+      "loadUsers": "Nem sikerült betölteni a felhasználókat.",
+      "loadUserTypes": "Nem sikerült betölteni a felhasználótípusokat.",
+      "loadQuestions": "Nem sikerült betölteni az onboarding kérdéseket.",
+      "approvalUpdate": "A felhasználói jóváhagyás nem frissíthető.",
+      "decryptUnavailable": "A listán elkészítéséhez NIP-04 dekriptálással rendelkező böngészőbővítmény szükséges.",
+      "decryptRoster": "Egy titkosított listaérték nem dekódolható. A táblázat nem készült el.",
+      "prepareRequired": "A letöltés előtt készítse elő a jelenleg látható listát.",
+      "exportAudit": "A felhasználói lista exportja nem ellenőrizhető.",
+      "exportRoster": "Nem sikerült exportálni a felhasználói listát."
+    },
+    "detail": {
+      "booleanYes": "Igen",
+      "booleanNo": "Nem",
+      "fieldUnlocked": "A titkosított válasz megnyitva ebben a böngészőben.",
+      "decryptingField": "Válasz dekódolása...",
+      "encryptedFieldUnavailable": "A titkosított válaszhoz böngésző-aláíró szükséges.",
+      "encryptedFieldFailed": "A titkosított válasz nem nyitható meg.",
+      "encryptedFieldLocked": "A titkosított válasz le van zárva.",
+      "notAnswered": "Nem válaszolt",
+      "requiredMissing": "Hiányzó kötelező válasz.",
+      "backToUserManager": "Vissza a Felhasználót Kezelőhöz",
+      "backToRoster": "Vissza a felhasználói listához",
+      "eyebrow": "Felhasználói adatok",
+      "notFoundTitle": "Felhasználó nem található",
+      "notFoundBody": "Ez a felhasználó nem szerepel a jelenlegi admin listában.",
+      "subtitle": "Ellenőrizze erre a felhasználót: státusz, profilválaszok és hozzáférési adatok.",
+      "approvalStatus": "Jóváhagyási státusz",
+      "waitingApproval": "jóváhagyásra vár",
+      "identityTitle": "Identitás",
+      "name": "Név",
+      "nameUnavailable": "Nem elérhető",
+      "email": "E-mail",
+      "emailUnavailable": "Nem elérhető",
+      "userId": "Felhasználói ID",
+      "publicKey": "Nyilvános kulcs",
+      "noPublicKey": "Nincs nyilvános kulcs",
+      "fieldsTitle": "Profilmezők",
+      "fieldsShown_one": "{{count}} mező vonatkozik erre a felhasználóra.",
+      "fieldsShown_other": "{{count}} mező vonatkozik erre a felhasználóra.",
+      "noFields": "Nincs erre a felhasználóra vonatkozó regisztrációs mező.",
+      "required": "Kötelező",
+      "optional": "Opcionális",
+      "encrypted": "Titkosítva",
+      "plain": "Nincs titkosítva",
+      "chatContext": "Chat kontextus"
+    }
+  },
+  "decryptStatus": {
+    "progress": "{{done}}/{{total}} dekódítása folyamatban",
+    "checkExtension": "ellenőrizze a Nostr bővítményét",
+    "persistentApproval": "Válassza az „megjegyzés” vagy az „mindig” lehetőséget, hogy csak egyszer kérje."
   }
 }

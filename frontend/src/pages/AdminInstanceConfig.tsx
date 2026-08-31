@@ -18,6 +18,7 @@ import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
 import { subscribeAdminConfigChanges } from '../utils/adminConfigEvents';
 import { useInstanceConfig } from '../context/InstanceConfigContext';
 import { AccentColor } from '../types/instance';
+import { advertisedLocales } from '../i18n/localeCatalog';
 
 function ConfigSection({
   title,
@@ -548,13 +549,15 @@ export function AdminInstanceConfig() {
     },
   ];
 
-  const languageOptions = [
-    { value: 'en', label: t('language.english', 'English') },
-    { value: 'es', label: t('language.spanish', 'Spanish') },
-    { value: 'fr', label: t('language.french', 'French') },
-    { value: 'de', label: t('language.german', 'German') },
-    { value: 'pt', label: t('language.portuguese', 'Portuguese') },
-  ];
+  const languageOptions = advertisedLocales.map(
+    ({ code, nativeName, englishName }) => ({
+      value: code,
+      label:
+        nativeName === englishName
+          ? nativeName
+          : `${nativeName} — ${englishName}`,
+    })
+  );
 
   const themeOptions = [
     { value: 'system', label: t('admin.instanceConfig.themeSystem', 'System') },

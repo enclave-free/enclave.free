@@ -1,4 +1,7 @@
 {
+  "adminFeedback": {
+    "conversationTrace": "Trazabilidad de la conversación"
+  },
   "onboarding": {
     "nostr": {
       "whatIsNostr": "¿Qué es Nostr?",
@@ -187,6 +190,8 @@
       "renameCancel": "Cancelar cambio de nombre de la conversación",
       "renameSave": "Guardar título de la conversación",
       "renameSaving": "Cambiando el nombre...",
+      "open": "Abrir sesiones de chat",
+      "close": "Cerrar sesiones de chat",
       "current": "Chat actual",
       "empty": "Vacío",
       "ariaLabel": "Sesiones de chat",
@@ -204,13 +209,130 @@
       "requestLabel": "Error en la solicitud del chat"
     },
     "trace": {
-      "finalizing": "Finalizando la respuesta..."
+      "finalizing": "Finalizando la respuesta...",
+      "collapse": "Contraer",
+      "expand": "Expandir",
+      "reasoning": "Razonamiento",
+      "thinking": "Pensando",
+      "transcript": "Transcripción de {{label}}",
+      "reasoningSummaryAria": "Resumen del razonamiento",
+      "reasoningTranscriptAria": "Transcripción del razonamiento",
+      "label": "Traza",
+      "toolCalls": "Llamadas a herramientas",
+      "retrieval": "Recuperación",
+      "input": "Entrada",
+      "output": "Salida",
+      "retrievedSource": "Fuente recuperada",
+      "score": "puntuación {{score}}",
+      "optionalDetailsAria": "Detalles opcionales de {{label}}"
     },
     "new": "Chat nuevo",
     "listTitle": "Chats",
     "composerContextAria": "Contexto del redactor",
     "contextTitle": "Contexto",
-    "messageActions": "Acciones del mensaje"
+    "messageActions": "Acciones del mensaje",
+    "actions": {
+      "stop": "Detener respuesta",
+      "stopDisabled": "No hay ninguna respuesta que detener.",
+      "regenerate": "Regenerar respuesta",
+      "edit": "Editar mensaje",
+      "waitForResponse": "Espera a que termine la respuesta actual.",
+      "startConversation": "Inicia o reanuda una conversación primero.",
+      "resolveConfirmation": "Resuelve la confirmación de cambios pendiente antes de modificar el historial."
+    },
+    "conversationMessagesAria": "Mensajes de la conversación",
+    "conversationSurfaceAria": "Superficie de conversación",
+    "conversationThreadAria": "Hilo de conversación",
+    "activity": {
+      "label": "Actividad",
+      "summaryAria": "Resumen de actividad",
+      "detailsAria": "Detalles de actividad",
+      "timelineAria": "Línea de tiempo de actividad",
+      "show": "Mostrar actividad",
+      "hide": "Ocultar actividad",
+      "showOptional": "Mostrar detalles opcionales",
+      "hideOptional": "Ocultar detalles opcionales",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "Se intentó llamar a {{toolName}}.",
+        "retry": "Reintentando la herramienta tras el intento {{attempt}}.",
+        "running": "La herramienta está en ejecución.",
+        "completed": "Herramienta completada.",
+        "guarded": "Herramienta protegida.",
+        "failed": "La herramienta falló.",
+        "rejected": "Se rechazó la llamada a la herramienta.",
+        "timedOut": "La herramienta agotó el tiempo.",
+        "knowledgeSearch": { "title": "Búsqueda de conocimiento" },
+        "webSearch": { "title": "Búsqueda web" },
+        "curatedResources": { "title": "Recursos seleccionados" },
+        "adminConfig": { "title": "Configuración de administración" },
+        "databaseQuery": { "title": "Consulta de base de datos" }
+      },
+      "status": {
+        "running": "En ejecución",
+        "succeeded": "Completado",
+        "failed": "Fallido",
+        "guarded": "Protegido",
+        "timed_out": "Tiempo agotado",
+        "rejected": "Rechazado"
+      },
+      "toolSelection": {
+        "title": "Selección de herramientas",
+        "failed": "La selección de herramientas falló antes de registrar una selección utilizable.",
+        "partialFailure": "Se rechazaron algunas selecciones de herramientas del modelo.",
+        "noneSelected": "No se seleccionaron herramientas.",
+        "selected": "Seleccionadas: {{selectedTools}}."
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "Solicitud al modelo",
+          "summary": "Solicitud al modelo: {{elapsedMs}} ms."
+        },
+        "providerFirstEventWait": {
+          "title": "Espera del primer evento del proveedor",
+          "summary": "Espera del primer evento del proveedor: {{elapsedMs}} ms."
+        },
+        "toolExecution": {
+          "title": "Ejecución de herramienta",
+          "summary": "Ejecución de herramienta: {{elapsedMs}} ms."
+        },
+        "resourceDirectoryLookup": {
+          "title": "Búsqueda en el directorio de recursos",
+          "summary": "Búsqueda en el directorio de recursos: {{elapsedMs}} ms."
+        },
+        "retrieval": {
+          "title": "Recuperación",
+          "summary": "Recuperación: {{elapsedMs}} ms."
+        },
+        "retryDelay": {
+          "title": "Espera del reintento",
+          "summary": "Espera del reintento: {{elapsedMs}} ms."
+        },
+        "totalTurn": {
+          "title": "Turno completo",
+          "summary": "Turno completo: {{elapsedMs}} ms."
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "No se encontraron pasajes relevantes en los documentos cargados.",
+        "retrieved": "Se recuperaron {{count}} pasajes de documentos cargados para la respuesta."
+      },
+      "webSearch": {
+        "prepared": "Se prepararon resultados de búsqueda web para la respuesta ({{count}})."
+      },
+      "curatedResources": {
+        "noAdditional": "No se encontraron recursos seleccionados adicionales.",
+        "noMatches": "Ningún recurso seleccionado coincide con esta solicitud.",
+        "returned": "Se devolvieron {{count}} de {{totalCount}} recursos seleccionados."
+      },
+      "adminConfig": {
+        "completed": "La acción de configuración {{toolId}} se completó ({{outcome}}). Ajustes modificados: {{changedSettings}}."
+      },
+      "databaseResultsRedacted": "Los resultados de la base de datos se ocultaron del registro.",
+      "databaseQuery": {
+        "rejected": "Se rechazó la consulta de base de datos."
+      }
+    }
   },
   "common": {
     "adminQuestion": "¿Eres administrador?",
@@ -239,6 +361,8 @@
     "error": "Fallo",
     "back": "Volver",
     "loading": "Cargando...",
+    "loadingPage": "Cargando página",
+    "pageLoadError": "No se pudo cargar la página. Actualiza la página.",
     "unknown": "Desconocido",
     "enabled": "Activado",
     "disabled": "Desactivado",
@@ -256,7 +380,11 @@
     "reset": "Restablecer",
     "exit": "Salir",
     "none": "Ninguno",
-    "all": "Todos"
+    "all": "Todos",
+    "warning": "Advertencia"
+  },
+  "branding": {
+    "logoAlt": "Logotipo de {{name}}"
   },
   "settings": {
     "title": "Configuración",
@@ -316,7 +444,10 @@
       "removeFieldFailed": "Error al eliminar el campo",
       "reorderFailed": "Error al reordenar el campo",
       "updateTypeFailed": "Fallo al actualizar el tipo de usuario",
-      "loadSettingsFailed": "No se pudo cargar la configuración"
+      "loadSettingsFailed": "No se pudo cargar la configuración",
+      "externalConfigConflict": "Sage u otro administrador cambió estos ajustes mientras editabas. Recarga esta página antes de guardar para no sobrescribir los valores más recientes.",
+      "externalSettingsConflict": "Sage u otro administrador cambió estos ajustes mientras editabas. Recarga esta página antes de guardar.",
+      "externalUserConfigConflict": "Sage u otro administrador cambió los Tipos de usuario o las Preguntas de incorporación mientras editabas. Recarga esta página antes de guardar tu borrador."
     },
     "setup": {
       "backToChat": "Volver al chat",
@@ -638,7 +769,9 @@
       "shareSecretsHint": "Desactivado de forma predeterminada. Primero habilita la herramienta de configuración. Cuando está activado, los valores secretos de configuración del despliegue se revelan del lado del cliente y se envían a Sage para este flujo de prototipo.",
       "startNewConversation": "Iniciar una nueva conversación con el asistente",
       "onboardingTitle": "Chat de configuración guiada",
-      "onboardingContext": "Conversación de configuración enfocada"
+      "onboardingContext": "Conversación de configuración enfocada",
+      "directShareSecretsHint": "Opcional: incluye los valores de los secretos de despliegue almacenados en el contexto de esta Conversación. Las lecturas directas de secretos no lo requieren.",
+      "directWritePrompt": "Pregunta sobre la configuración de administración. Sage puede inspeccionar los ajustes y, tras confirmarlo contigo en la conversación, aplicar directamente los cambios admitidos."
     },
     "reachout": {
       "badgeDefault": "Predeterminado",
@@ -886,6 +1019,8 @@
     "connectedAs": "Conectado como",
     "redirecting": "Redirigiendo al panel...",
     "connectionFailed": "Error de conexión",
+    "statusError": "No se pudo comprobar el estado de la instancia",
+    "connectionError": "No se pudo conectar",
     "securityJourneyTitle": "Ruta rápida de seguridad",
     "securityJourneyIntro": "Después de conectarte con Nostr, sigue esta ruta de configuración:",
     "securityJourneyStep1": "Asegura el acceso: configura URLs públicas, desactiva banderas de simulación fuera de desarrollo y define reglas de aprobación.",
@@ -985,7 +1120,9 @@
         "detail1": "Las lecturas de configuración inspeccionan el estado real de la instancia en lugar de adivinar.",
         "detail2": "Los cambios propuestos se preparan para su revisión.",
         "detail3": "Aplicar ejecuta los endpoints de administración aprobados sin otro turno del modelo.",
-        "link": "Abrir asistente de administración"
+        "link": "Abrir asistente de administración",
+        "directWriteDetail2": "Sage pide confirmación en la conversación antes de una escritura admitida.",
+        "directWriteDetail3": "Tras tu confirmación, Sage llama a sus Herramientas de configuración directa e informa del resultado real."
       },
       "guided": {
         "eyebrow": "Comenzar",
@@ -1051,7 +1188,9 @@
       "prompt2": "Revisa los tipos de usuario, las preguntas de incorporación, los documentos y los recursos actuales.",
       "prompt3": "Prepara los cambios para revisión: define el tono del asistente y el idioma predeterminado.",
       "title": "Buenas cosas que pedirle al Asistente de administración",
-      "body": "Pide una revisión antes de pedir cambios. Puede inspeccionar la configuración y preparar un conjunto de cambios."
+      "body": "Pide una revisión antes de pedir cambios. Puede inspeccionar la configuración y preparar un conjunto de cambios.",
+      "directWriteBody": "Pide a Sage que inspeccione o cambie la configuración admitida. Confirmará contigo el cambio previsto antes de escribir.",
+      "directWritePrompt3": "Define el tono del asistente y el idioma predeterminado, y confirma primero conmigo el cambio previsto."
     },
     "hero": {
       "eyebrow": "Mapa de control del administrador",
@@ -1075,6 +1214,13 @@
         "2": "Los secretos permanecen ocultos a menos que los compartas para la sesión de administrador actual.",
         "3": "Los cambios del asistente son propuestas. Tú los revisas y haces clic en Aplicar.",
         "4": "La configuración de despliegue guarda los valores de ejecución deseados. Los operadores aún exportan el entorno y reinician los servicios cuando es necesario."
+      },
+      "directItems": {
+        "0": "Los administradores inician sesión con NIP-07. Los usuarios lo hacen con enlaces mágicos por correo.",
+        "1": "Los campos de usuario están cifrados de forma predeterminada. Solo los campos en texto plano pueden compartirse con el chat.",
+        "2": "Los secretos permanecen ocultos salvo que los compartas para la sesión de administración actual.",
+        "3": "Sage confirma contigo los cambios de configuración en el chat y luego aplica directamente los cambios admitidos.",
+        "4": "La Configuración de Despliegue almacena los valores de ejecución deseados. Los operadores aún exportan el entorno y reinician los servicios cuando es necesario."
       }
     },
     "quickSteps": {
@@ -1174,7 +1320,7 @@
     "testDashboard": "Diagnósticos",
     "testDashboardDesc": "Ejecuta pruebas de humo de desarrollo e inspecciona los módulos de diagnóstico",
     "testDashboardDescSimple": "Ejecuta pruebas de humo al investigar un problema.",
-    "iaChecklistTitle": "Lista de verificación de revisión de IA del administrador",
+    "iaChecklistTitle": "Lista de verificación de revisión de arquitectura de la información del administrador",
     "iaChecklistBody": "Mantén distintas la configuración de despliegue, la configuración de la instancia, la configuración del agente, la preparación del ciclo de vida, la preparación del despliegue y las superficies de diagnóstico durante la revisión humana.",
     "humanReviewTitle": "Transferencia a revisión humana",
     "humanReviewStatus": "Se requiere soporte de despliegue personalizado",
@@ -1207,6 +1353,9 @@
     "noDocuments": "Aún no hay documentos subidos",
     "promptPreview": "Vista previa del Prompt",
     "invalidJson": "Formato JSON inválido",
+    "saveError": "No se pudo guardar",
+    "revertError": "No se pudo revertir",
+    "toggleError": "No se pudo cambiar",
     "chunks": "fragmentos",
     "configureFor": "Configurar para",
     "globalAllUsers": "Todos los usuarios (Global)",
@@ -1274,7 +1423,9 @@
     "loadErrorLabel": "Error al cargar la Configuración del agente",
     "previewErrorLabel": "Error de previsualización de la Configuración del agente",
     "documentToggleErrorLabel": "Error al alternar documento en la Configuración del agente",
-    "documentDefaultsHintV2": "Los documentos marcados como \"Disponible\" pueden usarse en la Búsqueda de conocimiento. Los documentos marcados como \"Activo por defecto\" se incluyen cuando el origen de conocimiento está configurado en documentos predeterminados seleccionados."
+    "documentDefaultsHintV2": "Los documentos marcados como \"Disponible\" pueden usarse en la Búsqueda de conocimiento. Los documentos marcados como \"Activo por defecto\" se incluyen cuando el origen de conocimiento está configurado en documentos predeterminados seleccionados.",
+    "externalChangeConflict": "Sage u otro administrador cambió este ajuste mientras editabas. Cancela y vuelve a abrir el editor antes de guardar.",
+    "saveError": "No se pudo guardar"
   },
   "adminDeployment": {
     "title": "Configuración de Despliegue",
@@ -1291,6 +1442,14 @@
     "configInvalid": "Configuración Inválida",
     "noRecentChanges": "Sin cambios recientes",
     "exportFailed": "Error al exportar",
+    "failedToRetryDeletionTombstone": "No se pudo reintentar la eliminación pendiente",
+    "failedToAcknowledgeUnsupportedSurface": "No se pudo confirmar la superficie de despliegue no compatible",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "No se pudo confirmar la categoría de superficie no compatible",
+    "failedToPreviewRetention": "No se pudo previsualizar la política de retención",
+    "failedToUpdateRetentionPolicy": "No se pudo actualizar la política de retención",
+    "failedToRunScheduledRetention": "No se pudo ejecutar la retención programada",
+    "failedToUpdateArtifactEncryptionPosture": "No se pudo actualizar la postura de cifrado de artefactos",
+    "queryExecutionFailed": "No se pudo ejecutar la consulta",
     "validationFailed": "Error en la solicitud de validación",
     "requiresRestart": "Requiere Reinicio",
     "secret": "Secreto",
@@ -1528,7 +1687,139 @@
       "reviewRestartRequired": "Revisar reinicio requerido",
       "reviewOperationalReadiness": "Revisar preparación operativa",
       "reviewServiceHealth": "Revisar estado del servicio",
-      "reviewRuntimeEnv": "Revisar exportación del entorno de ejecución"
+      "reviewRuntimeEnv": "Revisar exportación del entorno de ejecución",
+      "deployment_settings_validation": {
+        "label": "Validación de la configuración de despliegue",
+        "status": {
+          "invalid": {
+            "summary": "La validación de la configuración de despliegue tiene errores que deben repararse.",
+            "nextAction": "Revisa los errores de validación de la configuración de despliegue."
+          },
+          "warnings": {
+            "summary": "La validación de la configuración de despliegue tiene advertencias informativas.",
+            "nextAction": "Revisa las advertencias de validación de la configuración de despliegue."
+          },
+          "valid": {
+            "summary": "La validación de la configuración de despliegue no tiene errores ni advertencias.",
+            "nextAction": "No se requiere ninguna acción."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Inferencia verificable",
+        "status": {
+          "current": {
+            "summary": "El Proveedor de Modelos configurado tiene un Registro de Verificación de Inferencia vigente.",
+            "nextAction": "No se requiere ninguna acción. Revisa el Registro de Verificación de Inferencia vigente cuando cambien las afirmaciones del proveedor."
+          },
+          "deferred_missing": {
+            "summary": "La Inferencia cifrada y verificable no está verificada actualmente para el Proveedor de Modelos configurado.",
+            "nextAction": "Configura un Proveedor de Modelos compatible y ejecuta la Verificación de Inferencia antes de considerar completa la Preparación del despliegue."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Revisión del ciclo de vida de los datos",
+        "status": {
+          "needs_review": {
+            "summary": "La Revisión del ciclo de vida de los datos necesita revisión del administrador.",
+            "nextAction": "Revisa el estado del almacenamiento activo y registra la Revisión del ciclo de vida de los datos."
+          },
+          "stale": {
+            "summary": "La Revisión del ciclo de vida de los datos registrada está desactualizada tras un cambio compatible.",
+            "nextAction": "Revisa el estado actual del almacenamiento activo y registra una nueva Revisión del ciclo de vida de los datos."
+          },
+          "reviewed": {
+            "summary": "La Revisión del ciclo de vida de los datos se ha completado.",
+            "nextAction": "No se requiere ninguna acción, salvo que cambie el estado compatible del ciclo de vida."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Reconocimientos de superficies de despliegue",
+        "status": {
+          "acknowledged": {
+            "summary": "Se han reconocido las categorías de superficies de despliegue no admitidas.",
+            "nextAction": "No se requiere ninguna acción."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Las categorías de superficies de despliegue no admitidas necesitan el reconocimiento del operador.",
+            "nextAction": "Revisa las categorías de superficies de despliegue indicadas y reconoce cada una antes de considerar completa la Preparación del despliegue."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Simulacro de copia de seguridad y restauración",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Se necesita un registro reciente del simulacro de copia de seguridad y restauración del operador.",
+            "nextAction": "Completa y registra un simulacro de copia de seguridad y restauración para este Despliegue."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Reinicio requerido",
+        "status": {
+          "current": {
+            "summary": "No han cambiado ajustes de despliegue que requieran reinicio desde la última exportación.",
+            "nextAction": "No se requiere ninguna acción."
+          },
+          "restart_required": {
+            "summary": "Los ajustes de despliegue que requieren reinicio cambiaron después del inicio del servicio. ({{changedSettings}})",
+            "nextAction": "Aplica los ajustes de despliegue deseados y reinicia los servicios afectados antes de considerarlos actuales."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Configuración de ejecución de Sage",
+        "status": {
+          "not_generated": {
+            "summary": "El entorno de ejecución de Sage no se ha generado a partir de la Configuración de Despliegue.",
+            "nextAction": "Exporta el entorno de ejecución de Sage antes de considerar aplicada la Configuración de Despliegue."
+          },
+          "matches_desired": {
+            "summary": "La configuración de ejecución de Sage coincide con la Configuración de Despliegue deseada.",
+            "nextAction": "No se requiere ninguna acción."
+          },
+          "drifted": {
+            "summary": "La configuración de ejecución de Sage difiere de la Configuración de Despliegue deseada.",
+            "nextAction": "Investiga la desviación de configuración de Sage, aplica el entorno generado y reinicia el servicio."
+          },
+          "current": {
+            "summary": "El entorno de ejecución de Sage se ha generado a partir de la Configuración de Despliegue actual.",
+            "nextAction": "No se requiere ninguna acción, salvo que el artefacto generado no se haya aplicado al Despliegue."
+          },
+          "stale": {
+            "summary": "La Configuración de Despliegue cambió después de generar el entorno de ejecución de Sage.",
+            "nextAction": "Exporta un entorno de ejecución de Sage actualizado y aplícalo mediante el reinicio del Despliegue."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Configuración de ejecución del backend principal",
+        "status": {
+          "not_generated": {
+            "summary": "El entorno de ejecución de el backend principal no se ha generado a partir de la Configuración de Despliegue.",
+            "nextAction": "Exporta el entorno de ejecución de el backend principal antes de considerar aplicada la Configuración de Despliegue."
+          },
+          "matches_desired": {
+            "summary": "La configuración de ejecución de el backend principal coincide con la Configuración de Despliegue deseada.",
+            "nextAction": "No se requiere ninguna acción."
+          },
+          "drifted": {
+            "summary": "La configuración de ejecución de el backend principal difiere de la Configuración de Despliegue deseada.",
+            "nextAction": "Investiga la desviación de configuración de el backend principal, aplica el entorno generado y reinicia el servicio."
+          },
+          "current": {
+            "summary": "El entorno de ejecución de el backend principal se ha generado a partir de la Configuración de Despliegue actual.",
+            "nextAction": "No se requiere ninguna acción, salvo que el artefacto generado no se haya aplicado al Despliegue."
+          },
+          "stale": {
+            "summary": "La Configuración de Despliegue cambió después de generar el entorno de ejecución de el backend principal.",
+            "nextAction": "Exporta un entorno de ejecución de el backend principal actualizado y aplícalo mediante el reinicio del Despliegue."
+          }
+        }
+      }
     },
     "wizard": {
       "title": "Asistente de despliegue",
@@ -1679,7 +1970,9 @@
     "categorySettingsAria": "Configuración de {{category}}",
     "exportCoreBackendRuntimeEnv": "Exportar entorno de core-backend",
     "restartCurrent": "No se requiere reinicio",
-    "restartCurrentDesc": "No ha cambiado ninguna configuración de despliegue que requiera reinicio desde el inicio del servicio."
+    "restartCurrentDesc": "No ha cambiado ninguna configuración de despliegue que requiera reinicio desde el inicio del servicio.",
+    "saveError": "No se pudo guardar",
+    "openHelpAria": "Abrir ayuda para {{label}}"
   },
   "upload": {
     "invalidFileType": "Tipo de archivo inválido. Permitidos: {{extensions}}",
@@ -1691,6 +1984,7 @@
     "supported": "Soportados: {{extensions}}",
     "removeFile": "Eliminar archivo",
     "uploading": "Subiendo...",
+    "uploadError": "No se pudo cargar el archivo",
     "uploadDocument": "Subir Documento",
     "recentUploads": "Subidas Recientes",
     "noUploads": "Aún no hay subidas",
@@ -1916,7 +2210,15 @@
     "adminSessionExpired": "Sesión de administrador expirada",
     "authenticationFailed": "Error de autenticación",
     "noNostrExtension": "No se encontró extensión Nostr",
-    "exportFailed": "Exportación fallida"
+    "exportFailed": "Exportación fallida",
+    "failedToRetryDeletionTombstone": "No se pudo reintentar la eliminación pendiente",
+    "failedToAcknowledgeUnsupportedSurface": "No se pudo confirmar la superficie de despliegue no compatible",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "No se pudo confirmar la categoría de superficie no compatible",
+    "failedToPreviewRetention": "No se pudo previsualizar la política de retención",
+    "failedToUpdateRetentionPolicy": "No se pudo actualizar la política de retención",
+    "failedToRunScheduledRetention": "No se pudo ejecutar la retención programada",
+    "failedToUpdateArtifactEncryptionPosture": "No se pudo actualizar la postura de cifrado de artefactos",
+    "queryExecutionFailed": "No se pudo ejecutar la consulta"
   },
   "colors": {
     "blue": "Azul",
@@ -2227,12 +2529,16 @@
       "select_u_s_created_at_from_users_u_729d1a": "SELECT u.*, s.created_at FROM users u JOIN sessions s ON u.id = s.user_id;"
     }
   },
+  "home": {
+    "checkingInstanceStatus": "Comprobando el estado de la instancia..."
+  },
   "adminRoute": {
     "extracted": {
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "El backend devolvió un error al validar la autenticación. Esto no se trata como un cierre de sesión.",
       "unable_to_verify_admin_session_5f87b8": "No se pudo verificar la sesión de administrador",
       "verifying_admin_session_87c53b": "Verificando sesión de administrador..."
-    }
+    },
+    "loadingAssistant": "Cargando el asistente de administración"
   },
   "initiationGate": {
     "extracted": {
@@ -2522,7 +2828,14 @@
       "chatEmpty": "Envía un mensaje como este usuario para comenzar la prueba.",
       "inputPlaceholder": "Escribe al asistente como este usuario…",
       "saved": "Prueba guardada (cifrada). Revísala en Comentarios.",
-      "testingAs": "Probando como {{persona}}"
+      "startError": "No se pudo iniciar la sesión de prueba",
+      "saveError": "No se pudo guardar la prueba",
+      "impersonationUnavailable": "La suplantación del usuario de prueba aún no está disponible",
+      "sessionTokenError": "No se pudo crear el token de sesión del usuario sintético",
+      "testingAs": "Probando como {{persona}}",
+      "authFailed": "La sesión del usuario sintético ya no está autorizada.",
+      "discardUnsavedConfirm": "¿Descartar los turnos completados que no se han guardado?",
+      "workspaceAria": "Espacio de trabajo de conversación del usuario de prueba"
     },
     "feedback": {
       "trials": "Registros beta",
@@ -2545,7 +2858,14 @@
       "retryDecryption": "Reintentar descifrado",
       "decryptPendingTitle": "Revisa tu extensión de Nostr",
       "decryptPendingBody": "Está pidiendo permiso para descifrar esta transcripción. Puede que no se abra sola: haz clic en el icono de la extensión si no la ves. Elige la opción de recordar tu decisión para que solo lo pregunte una vez.",
-      "decryptProgress": "Descifrado {{done}} de {{total}}."
+      "decryptProgress": "Descifrado {{done}} de {{total}}.",
+      "loadTrialsError": "No se pudieron cargar las pruebas",
+      "loadTranscriptError": "No se pudo cargar la transcripción",
+      "saveError": "No se pudieron guardar los comentarios",
+      "deleteError": "No se pudo eliminar el registro de sesión",
+      "exportError": "No se pudo exportar la sesión",
+      "transcriptIntegrityError": "La transcripción no está disponible o está incompleta y no se puede exportar.",
+      "decryptTranscriptError": "No se pudo descifrar la transcripción. Aprueba la solicitud de descifrado en tu extensión de Nostr."
     }
   },
   "adminResources": {
@@ -2584,7 +2904,32 @@
       "subregion": "Subregión",
       "region": "Región",
       "global": "Global"
-    }
+    },
+    "addPointer": "Añadir puntero",
+    "addRegion": "Añadir región",
+    "displayOrder": "Orden de visualización",
+    "displayOrderHint": "Los números más bajos aparecen primero, después de la relevancia y la verificación.",
+    "kind": "Tipo",
+    "noSearchResults": "Ningún recurso coincide con esta búsqueda.",
+    "order": "Orden",
+    "pointerLabel": "Etiqueta del puntero {{number}}",
+    "pointerType": "Tipo del puntero {{number}}",
+    "pointerValue": "Valor del puntero {{number}}",
+    "pointers": "Punteros",
+    "regionNumber": "Región {{number}}",
+    "regions": "Regiones",
+    "removePointer": "Eliminar puntero",
+    "removeRegion": "Eliminar región",
+    "search": "Buscar recursos",
+    "searchPlaceholder": "Nombre, tipo, etiqueta, puntero o descripción",
+    "tags": "Etiquetas (separadas por comas)",
+    "namePlaceholder": "p. ej., Asesoría de Derechos Humanos de Centroamérica",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, educación, local",
+    "loadError": "No se pudieron cargar los recursos",
+    "loadDirectoryError": "No se pudo cargar el directorio",
+    "saveError": "No se pudo guardar el recurso",
+    "deleteError": "No se pudo eliminar el recurso"
   },
   "adminUserManager": {
     "backToAdmin": "Volver al panel de administración",

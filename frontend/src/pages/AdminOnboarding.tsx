@@ -116,7 +116,11 @@ export function AdminOnboarding() {
       } catch (err) {
         console.error('Failed to fetch instance status (admin onboarding):', err)
         if (!active) return
-        setStatusError(err instanceof Error ? err.message : 'Failed to check instance status')
+        setStatusError(
+          err instanceof Error
+            ? err.message
+            : t('adminOnboarding.statusError', 'Failed to check instance status')
+        )
         // Fail open: allow admin connection UI to render instead of hanging.
         setInstanceInitialized(true)
       }
@@ -127,7 +131,7 @@ export function AdminOnboarding() {
     return () => {
       active = false
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     return () => {
@@ -175,7 +179,11 @@ export function AdminOnboarding() {
         redirectTimerRef.current = null
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect')
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('adminOnboarding.connectionError', 'Failed to connect')
+      )
       setState('error')
     }
   }

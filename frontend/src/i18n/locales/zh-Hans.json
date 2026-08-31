@@ -1,4 +1,7 @@
 {
+  "adminFeedback": {
+    "conversationTrace": "对话跟踪"
+  },
   "common": {
     "adminQuestion": "你是管理员吗？",
     "signInNostr": "使用 Nostr 登录",
@@ -26,6 +29,8 @@
     "error": "错误",
     "back": "返回",
     "loading": "加载中...",
+    "loadingPage": "正在加载页面",
+    "pageLoadError": "无法加载页面。请刷新。",
     "unknown": "未知",
     "enabled": "已启用",
     "disabled": "已禁用",
@@ -43,7 +48,11 @@
     "reset": "重置",
     "exit": "退出",
     "none": "无",
-    "all": "全部"
+    "all": "全部",
+    "warning": "警告"
+  },
+  "branding": {
+    "logoAlt": "{{name}} 徽标"
   },
   "settings": {
     "title": "设置",
@@ -314,7 +323,10 @@
       "reorderFailed": "重新排序字段失败",
       "loadUsersFailed": "加载用户失败",
       "updateTypeFailed": "更新用户类型失败",
-      "loadSettingsFailed": "加载设置失败"
+      "loadSettingsFailed": "加载设置失败",
+      "externalConfigConflict": "在你编辑期间，Sage 或另一位管理员更改了这些设置。请在保存前重新加载此页面，以免覆盖较新的值。",
+      "externalSettingsConflict": "在你编辑期间，Sage 或另一位管理员更改了这些设置。请在保存前重新加载此页面。",
+      "externalUserConfigConflict": "在你编辑期间，Sage 或另一位管理员更改了用户类型或入门问题。请在保存草稿前重新加载此页面。"
     },
     "userMigration": {
       "title": "用户类型迁移",
@@ -421,7 +433,9 @@
       "approve": "批准",
       "applyErrorLabel": "配置应用错误",
       "onboardingTitle": "引导式设置聊天",
-      "onboardingContext": "专注的设置对话"
+      "onboardingContext": "专注的设置对话",
+      "directShareSecretsHint": "可选：在此对话的上下文中包含已存储的部署密钥值。直接读取密钥不需要此项。",
+      "directWritePrompt": "询问管理配置。Sage 可以检查设置，并在对话中与你确认后，直接应用受支持的更改。"
     },
     "reachout": {
       "badgeDefault": "默认",
@@ -669,6 +683,8 @@
     "connectedAs": "已连接为",
     "redirecting": "正在跳转到仪表板...",
     "connectionFailed": "连接失败",
+    "statusError": "无法检查实例状态",
+    "connectionError": "无法连接",
     "securityJourneyTitle": "安全快速路径",
     "securityJourneyIntro": "完成 Nostr 连接后，请按以下简明步骤设置：",
     "securityJourneyStep1": "保护访问：设置公开 URL，在非开发环境关闭模拟开关，并确定用户审批规则。",
@@ -855,6 +871,15 @@
     "listTitle": "对话",
     "contextTitle": "上下文",
     "messageActions": "消息操作",
+    "actions": {
+      "stop": "停止回复",
+      "stopDisabled": "没有可停止的回复。",
+      "regenerate": "重新生成回复",
+      "edit": "编辑消息",
+      "waitForResponse": "请先等待当前回复完成。",
+      "startConversation": "请先开始或恢复对话。",
+      "resolveConfirmation": "请先处理待确认的更改，再修改历史记录。"
+    },
     "composerContextAria": "编辑器上下文",
     "sessions": {
       "ariaLabel": "对话会话",
@@ -880,7 +905,9 @@
       "renameInput": "对话标题",
       "renameCancel": "取消重命名对话",
       "renameSave": "保存对话标题",
-      "renameSaving": "正在重命名…"
+      "renameSaving": "正在重命名…",
+      "open": "打开聊天会话",
+      "close": "关闭聊天会话"
     },
     "currentChatAria": "当前对话",
     "newFromCurrent": "开始新对话",
@@ -889,7 +916,111 @@
       "requestLabel": "对话请求错误"
     },
     "trace": {
-      "finalizing": "正在生成回复…"
+      "finalizing": "正在生成回复…",
+      "collapse": "收起",
+      "expand": "展开",
+      "reasoning": "推理",
+      "thinking": "思考中",
+      "transcript": "{{label}} 记录",
+      "reasoningSummaryAria": "推理摘要",
+      "reasoningTranscriptAria": "推理记录",
+      "label": "跟踪记录",
+      "toolCalls": "工具调用",
+      "retrieval": "检索",
+      "input": "输入",
+      "output": "输出",
+      "retrievedSource": "检索到的来源",
+      "score": "分数 {{score}}",
+      "optionalDetailsAria": "{{label}} 可选详细信息"
+    },
+    "conversationMessagesAria": "对话消息",
+    "conversationSurfaceAria": "对话区域",
+    "conversationThreadAria": "对话线程",
+    "activity": {
+      "label": "活动",
+      "summaryAria": "活动摘要",
+      "detailsAria": "活动详细信息",
+      "timelineAria": "活动时间线",
+      "show": "显示活动",
+      "hide": "隐藏活动",
+      "showOptional": "显示可选详细信息",
+      "hideOptional": "隐藏可选详细信息",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "已尝试调用 {{toolName}}。",
+        "retry": "工具将在第 {{attempt}} 次尝试后重试。",
+        "running": "工具正在运行。",
+        "completed": "工具已完成。",
+        "guarded": "工具已受保护。",
+        "failed": "工具失败。",
+        "rejected": "工具调用已拒绝。",
+        "timedOut": "工具超时。",
+        "knowledgeSearch": { "title": "知识搜索" },
+        "webSearch": { "title": "网络搜索" },
+        "curatedResources": { "title": "精选资源" },
+        "adminConfig": { "title": "管理员配置" },
+        "databaseQuery": { "title": "数据库查询" }
+      },
+      "status": {
+        "running": "正在运行",
+        "succeeded": "已完成",
+        "failed": "失败",
+        "guarded": "已保护",
+        "timed_out": "已超时",
+        "rejected": "已拒绝"
+      },
+      "toolSelection": {
+        "title": "工具选择",
+        "failed": "工具选择失败，未记录可用的选择。",
+        "partialFailure": "模型选择的部分工具已被拒绝。",
+        "noneSelected": "未选择工具。",
+        "selected": "已选择：{{selectedTools}}。"
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "模型请求",
+          "summary": "模型请求：{{elapsedMs}} 毫秒。"
+        },
+        "providerFirstEventWait": {
+          "title": "等待提供商的第一个事件",
+          "summary": "等待提供商的第一个事件：{{elapsedMs}} 毫秒。"
+        },
+        "toolExecution": {
+          "title": "工具执行",
+          "summary": "工具执行：{{elapsedMs}} 毫秒。"
+        },
+        "resourceDirectoryLookup": {
+          "title": "资源目录查找",
+          "summary": "资源目录查找：{{elapsedMs}} 毫秒。"
+        },
+        "retrieval": {
+          "title": "检索",
+          "summary": "检索：{{elapsedMs}} 毫秒。"
+        },
+        "retryDelay": {
+          "title": "重试延迟",
+          "summary": "重试延迟：{{elapsedMs}} 毫秒。"
+        },
+        "totalTurn": {
+          "title": "本轮总计",
+          "summary": "本轮总计：{{elapsedMs}} 毫秒。"
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "未在已上传的文档中找到相关段落。",
+        "retrieved": "已为回答检索到 {{count}} 个已上传文档段落。"
+      },
+      "webSearch": { "prepared": "已为回答准备网络搜索结果（{{count}}）。" },
+      "curatedResources": {
+        "noAdditional": "未找到其他精选资源。",
+        "noMatches": "没有精选资源匹配此请求。",
+        "returned": "已返回 {{count}} 个精选资源，共 {{totalCount}} 个。"
+      },
+      "adminConfig": {
+        "completed": "管理员配置操作 {{toolId}} 已完成（{{outcome}}）。已更改设置：{{changedSettings}}。"
+      },
+      "databaseResultsRedacted": "数据库结果已从追踪记录中隐藏。",
+      "databaseQuery": { "rejected": "数据库查询已被拒绝。" }
     }
   },
   "errors": {
@@ -924,7 +1055,15 @@
     "adminSessionExpired": "管理员会话已过期",
     "authenticationFailed": "认证失败",
     "noNostrExtension": "未找到Nostr扩展",
-    "exportFailed": "导出失败"
+    "exportFailed": "导出失败",
+    "failedToRetryDeletionTombstone": "无法重试删除记录",
+    "failedToAcknowledgeUnsupportedSurface": "无法确认不受支持的部署面",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "无法确认不受支持的部署面类别",
+    "failedToPreviewRetention": "无法预览保留策略",
+    "failedToUpdateRetentionPolicy": "无法更新保留策略",
+    "failedToRunScheduledRetention": "无法运行计划保留任务",
+    "failedToUpdateArtifactEncryptionPosture": "无法更新工件加密状态",
+    "queryExecutionFailed": "查询执行失败"
   },
   "adminGuides": {
     "card": {
@@ -1014,7 +1153,9 @@
         "detail1": "配置读取会检查真实的实例状态，而非猜测。",
         "detail2": "拟议的变更会被暂存以供审查。",
         "detail3": "应用会运行已批准的管理员端点，无需再次经过模型处理。",
-        "link": "打开管理员助手"
+        "link": "打开管理员助手",
+        "directWriteDetail2": "在受支持的写入之前，Sage 会在对话中请求确认。",
+        "directWriteDetail3": "你确认后，Sage 会调用其直接配置工具并报告实际结果。"
       },
       "guided": {
         "eyebrow": "开始",
@@ -1080,7 +1221,9 @@
       "prompt2": "审查当前的用户类型、引导问题、文档和资源。",
       "prompt3": "准备变更以供审查：设置助手语气和默认语言。",
       "title": "适合向管理员助手询问的问题",
-      "body": "在请求变更之前先请求一次审查。它可以检查设置并准备一份变更集。"
+      "body": "在请求变更之前先请求一次审查。它可以检查设置并准备一份变更集。",
+      "directWriteBody": "请 Sage 检查或更改受支持的配置。写入前它会与你确认预期的更改。",
+      "directWritePrompt3": "设置助手语气和默认语言，并先与我确认预期的更改。"
     },
     "hero": {
       "eyebrow": "管理员控制图",
@@ -1104,6 +1247,13 @@
         "2": "除非你在当前管理员会话中共享，否则密钥保持掩码状态。",
         "3": "助手的变更是提议。你仍需审查并点击应用。",
         "4": "部署设置存储期望的运行时值。运维人员在需要时仍需导出环境并重启服务。"
+      },
+      "directItems": {
+        "0": "管理员使用 NIP-07 登录，用户通过邮件魔法链接登录。",
+        "1": "用户字段默认加密。只有明文字段才能与聊天共享。",
+        "2": "除非你为当前管理会话共享，否则密钥始终保持隐藏。",
+        "3": "Sage 会在聊天中与你确认配置更改，然后直接应用受支持的更改。",
+        "4": "部署设置保存期望的运行时值。必要时运营者仍需导出环境变量并重启服务。"
       }
     },
     "quickSteps": {
@@ -1203,7 +1353,7 @@
     "testDashboard": "诊断",
     "testDashboardDesc": "运行开发冒烟检查并检视诊断模块",
     "testDashboardDescSimple": "在排查问题时运行冒烟检查。",
-    "iaChecklistTitle": "管理员 IA 审查清单",
+    "iaChecklistTitle": "管理员信息架构审查清单",
     "iaChecklistBody": "在人工审查期间保持部署设置、实例设置、Agent 设置、生命周期就绪情况、部署就绪情况和诊断界面各自独立。",
     "humanReviewTitle": "人工审查交接",
     "humanReviewStatus": "需要白手套部署支持",
@@ -1236,6 +1386,9 @@
     "noDocuments": "尚未上传文档",
     "promptPreview": "提示词预览",
     "invalidJson": "JSON 格式无效",
+    "saveError": "无法保存",
+    "revertError": "无法还原",
+    "toggleError": "无法切换",
     "chunks": "块",
     "configureFor": "配置对象",
     "globalAllUsers": "全局所有用户",
@@ -1303,7 +1456,9 @@
     "loadErrorLabel": "Agent 设置加载错误",
     "previewErrorLabel": "Agent 设置预览错误",
     "documentToggleErrorLabel": "Agent 设置文档切换错误",
-    "documentDefaultsHintV2": "标记为\"可用\"的文档可供知识搜索使用。当知识来源设置为选定的默认文档时，标记为\"默认启用\"的文档将被包含在内。"
+    "documentDefaultsHintV2": "标记为\"可用\"的文档可供知识搜索使用。当知识来源设置为选定的默认文档时，标记为\"默认启用\"的文档将被包含在内。",
+    "externalChangeConflict": "在你编辑期间，Sage 或另一位管理员更改了此设置。请取消并重新打开编辑器后再保存。",
+    "saveError": "无法保存"
   },
   "adminDeployment": {
     "title": "部署配置",
@@ -1557,7 +1712,139 @@
       "reviewRestartRequired": "审查需要重启项",
       "reviewOperationalReadiness": "审查运维就绪情况",
       "reviewServiceHealth": "审查服务健康状况",
-      "reviewRuntimeEnv": "审查运行时环境导出"
+      "reviewRuntimeEnv": "审查运行时环境导出",
+      "deployment_settings_validation": {
+        "label": "部署设置校验",
+        "status": {
+          "invalid": {
+            "summary": "部署设置校验存在必须修复的错误。",
+            "nextAction": "查看部署设置校验错误。"
+          },
+          "warnings": {
+            "summary": "部署设置校验存在提示性警告。",
+            "nextAction": "查看部署设置校验警告。"
+          },
+          "valid": {
+            "summary": "部署设置校验没有错误或警告。",
+            "nextAction": "无需操作。"
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "可验证推理",
+        "status": {
+          "current": {
+            "summary": "已配置的模型提供商拥有当前有效的推理验证记录。",
+            "nextAction": "无需操作。提供商声明发生变化时，请查看当前的推理验证记录。"
+          },
+          "deferred_missing": {
+            "summary": "当前未验证已配置模型提供商的加密且可验证推理。",
+            "nextAction": "配置受支持的模型提供商并运行推理验证，然后再将部署就绪视为完成。"
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "数据生命周期审查",
+        "status": {
+          "needs_review": {
+            "summary": "数据生命周期审查需要管理员审查。",
+            "nextAction": "审查活动存储状态并记录数据生命周期审查。"
+          },
+          "stale": {
+            "summary": "记录的数据生命周期审查在受支持的生命周期变更后已过时。",
+            "nextAction": "审查当前活动存储状态并记录新的数据生命周期审查。"
+          },
+          "reviewed": {
+            "summary": "数据生命周期审查已完成。",
+            "nextAction": "除非受支持的生命周期状态发生变化，否则无需操作。"
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "部署面确认",
+        "status": {
+          "acknowledged": {
+            "summary": "不受支持的部署面类别已确认。",
+            "nextAction": "无需操作。"
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — 不受支持的部署面类别需要操作员确认。",
+            "nextAction": "审查列出的部署面类别并逐一确认，然后再将部署就绪视为完成。"
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "备份与恢复演练",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "需要近期的操作员备份与恢复演练记录。",
+            "nextAction": "为此部署完成并记录一次备份与恢复演练。"
+          }
+        }
+      },
+      "restart_required": {
+        "label": "需要重启",
+        "status": {
+          "current": {
+            "summary": "自上次导出以来，没有需要重启的部署设置发生更改。",
+            "nextAction": "无需操作。"
+          },
+          "restart_required": {
+            "summary": "服务启动后，需要重启的部署设置发生了更改。 ({{changedSettings}})",
+            "nextAction": "应用所需的部署设置并重启受影响的服务，然后再将其视为当前设置。"
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage 运行时配置",
+        "status": {
+          "not_generated": {
+            "summary": "Sage 的运行时环境尚未根据部署设置生成。",
+            "nextAction": "在认定部署设置已应用之前，请先导出 Sage 的运行时环境。"
+          },
+          "matches_desired": {
+            "summary": "Sage 的运行时配置与期望的部署设置一致。",
+            "nextAction": "无需操作。"
+          },
+          "drifted": {
+            "summary": "Sage 的运行时配置与期望的部署设置不一致。",
+            "nextAction": "排查 Sage 的配置漂移，应用生成的环境并重启服务。"
+          },
+          "current": {
+            "summary": "Sage 的运行时环境已根据当前部署设置生成。",
+            "nextAction": "除非生成的产物尚未应用到部署，否则无需操作。"
+          },
+          "stale": {
+            "summary": "在生成 Sage 的运行时环境后，部署设置发生了更改。",
+            "nextAction": "导出最新的 Sage 运行时环境，并通过部署重启流程应用。"
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "核心后端运行时配置",
+        "status": {
+          "not_generated": {
+            "summary": "核心后端 的运行时环境尚未根据部署设置生成。",
+            "nextAction": "在认定部署设置已应用之前，请先导出 核心后端 的运行时环境。"
+          },
+          "matches_desired": {
+            "summary": "核心后端 的运行时配置与期望的部署设置一致。",
+            "nextAction": "无需操作。"
+          },
+          "drifted": {
+            "summary": "核心后端 的运行时配置与期望的部署设置不一致。",
+            "nextAction": "排查 核心后端 的配置漂移，应用生成的环境并重启服务。"
+          },
+          "current": {
+            "summary": "核心后端 的运行时环境已根据当前部署设置生成。",
+            "nextAction": "除非生成的产物尚未应用到部署，否则无需操作。"
+          },
+          "stale": {
+            "summary": "在生成 核心后端 的运行时环境后，部署设置发生了更改。",
+            "nextAction": "导出最新的 核心后端 运行时环境，并通过部署重启流程应用。"
+          }
+        }
+      }
     },
     "wizard": {
       "title": "部署向导",
@@ -1708,7 +1995,9 @@
     "categorySettingsAria": "{{category}} 设置",
     "exportCoreBackendRuntimeEnv": "导出核心后端环境变量",
     "restartCurrent": "无需重启",
-    "restartCurrentDesc": "自服务启动以来，没有需要重启的部署设置发生变更。"
+    "restartCurrentDesc": "自服务启动以来，没有需要重启的部署设置发生变更。",
+    "saveError": "无法保存",
+    "openHelpAria": "打开 {{label}} 的帮助"
   },
   "upload": {
     "invalidFileType": "无效的文件类型。允许: {{extensions}}",
@@ -1720,6 +2009,7 @@
     "supported": "支持格式：{{extensions}}",
     "removeFile": "移除文件",
     "uploading": "上传中...",
+    "uploadError": "上传失败",
     "uploadDocument": "上传文档",
     "recentUploads": "最近上传",
     "noUploads": "暂无上传",
@@ -2222,12 +2512,16 @@
       "select_u_s_created_at_from_users_u_729d1a": "SELECT u.*, s.created_at FROM users u JOIN sessions s ON u.id = s.user_id;"
     }
   },
+  "home": {
+    "checkingInstanceStatus": "正在检查实例状态…"
+  },
   "adminRoute": {
     "extracted": {
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "后端在验证身份验证时返回错误。这不被视为注销。",
       "unable_to_verify_admin_session_5f87b8": "无法验证管理员会话",
       "verifying_admin_session_87c53b": "正在验证管理员会话..."
-    }
+    },
+    "loadingAssistant": "正在加载管理员助手"
   },
   "initiationGate": {
     "extracted": {
@@ -2517,7 +2811,14 @@
       "chatEmpty": "以此用户身份发送一条消息以开始试用。",
       "inputPlaceholder": "以此用户身份向助手发消息…",
       "saved": "试用已保存（已加密）。请在“反馈”中审查。",
-      "testingAs": "正以 {{persona}} 身份测试"
+      "startError": "无法启动测试会话",
+      "saveError": "无法保存试用",
+      "impersonationUnavailable": "测试用户模拟功能尚不可用",
+      "sessionTokenError": "无法创建合成用户会话令牌",
+      "testingAs": "正以 {{persona}} 身份测试",
+      "authFailed": "合成用户会话已不再获得授权。",
+      "discardUnsavedConfirm": "要放弃尚未保存的已完成轮次吗？",
+      "workspaceAria": "测试用户对话工作区"
     },
     "feedback": {
       "trials": "测试版日志",
@@ -2540,7 +2841,14 @@
       "retryDecryption": "重新解密",
       "decryptPendingTitle": "请查看你的 Nostr 扩展",
       "decryptPendingBody": "它正在请求解密此对话记录的权限。它可能不会自动弹出——如果没看到，请点击扩展图标。请选择记住此选择的选项，这样它只会询问一次。",
-      "decryptProgress": "已解密 {{done}} / {{total}}。"
+      "decryptProgress": "已解密 {{done}} / {{total}}。",
+      "loadTrialsError": "无法加载试用记录",
+      "loadTranscriptError": "无法加载对话记录",
+      "saveError": "无法保存反馈",
+      "deleteError": "无法删除会话日志",
+      "exportError": "无法导出会话",
+      "transcriptIntegrityError": "对话记录不可用或不完整，无法导出。",
+      "decryptTranscriptError": "无法解密对话记录。请在 Nostr 扩展中批准解密请求。"
     }
   },
   "adminResources": {
@@ -2579,7 +2887,32 @@
       "subregion": "次区域",
       "region": "区域",
       "global": "全球"
-    }
+    },
+    "addPointer": "添加指针",
+    "addRegion": "添加地区",
+    "displayOrder": "显示顺序",
+    "displayOrderHint": "在相关性和验证之后，数字较小的排在前面。",
+    "kind": "类型",
+    "noSearchResults": "没有资源符合此搜索。",
+    "order": "顺序",
+    "pointerLabel": "指针 {{number}} 标签",
+    "pointerType": "指针 {{number}} 类型",
+    "pointerValue": "指针 {{number}} 值",
+    "pointers": "指针",
+    "regionNumber": "地区 {{number}}",
+    "regions": "地区",
+    "removePointer": "移除指针",
+    "removeRegion": "移除地区",
+    "search": "搜索资源",
+    "searchPlaceholder": "名称、类型、标签、指针或描述",
+    "tags": "标签（用逗号分隔）",
+    "namePlaceholder": "例如：中美洲人权委员会",
+    "languagesPlaceholder": "zh-Hans, en",
+    "tagsPlaceholder": "比特币、教育、本地",
+    "loadError": "无法加载资源",
+    "loadDirectoryError": "无法加载目录",
+    "saveError": "无法保存资源",
+    "deleteError": "无法删除资源"
   },
   "adminUserManager": {
     "backToAdmin": "返回管理控制台",

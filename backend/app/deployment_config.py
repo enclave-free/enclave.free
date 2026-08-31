@@ -1531,16 +1531,26 @@ def _readiness_item(
     status: str,
     summary: str,
     next_action: str,
+    summary_key: Optional[str] = None,
+    summary_values: Optional[Mapping[str, Any]] = None,
+    next_action_key: Optional[str] = None,
+    next_action_values: Optional[Mapping[str, Any]] = None,
     conversation_blocking: bool = False,
 ) -> dict:
+    message_key_prefix = f"adminDeployment.readiness.{key}.status.{status}"
     return {
         "key": key,
         "label": label,
+        "label_key": f"adminDeployment.readiness.{key}.label",
         "source": source,
         "severity": severity,
         "status": status,
         "summary": summary,
+        "summary_key": summary_key or f"{message_key_prefix}.summary",
+        "summary_values": dict(summary_values or {}),
         "next_action": next_action,
+        "next_action_key": next_action_key or f"{message_key_prefix}.nextAction",
+        "next_action_values": dict(next_action_values or {}),
         "conversation_blocking": conversation_blocking,
     }
 
@@ -1647,9 +1657,21 @@ def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
             f"{len(unacknowledged_surfaces)} unsupported Deployment Surface acknowledgements."
         )
         next_action = "Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces."
+        summary_key = (
+            "adminDeployment.readiness.deployment_surface_acknowledgements."
+            "status.needs_acknowledgement.summary"
+        )
+        summary_values = {"count": len(unacknowledged_surfaces)}
+        next_action_key = (
+            "adminDeployment.readiness.deployment_surface_acknowledgements."
+            "status.needs_acknowledgement.nextAction"
+        )
     else:
         summary = readiness.get("summary") or "Data Lifecycle Review needs Admin review."
         next_action = "Review Data Lifecycle Status."
+        summary_key = None
+        summary_values = None
+        next_action_key = None
     return _readiness_item(
         key="lifecycle_readiness",
         label="Data Lifecycle Review",
@@ -1657,7 +1679,10 @@ def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
         severity="warning",
         status=status,
         summary=summary,
+        summary_key=summary_key,
+        summary_values=summary_values,
         next_action=next_action,
+        next_action_key=next_action_key,
     )
 
 
@@ -1680,6 +1705,7 @@ def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
         severity="warning",
         status="needs_acknowledgement",
         summary=f"{len(unacknowledged)} unsupported Deployment Surface entries need acknowledgement.",
+        summary_values={"count": len(unacknowledged)},
         next_action="Acknowledge unsupported Deployment Surface categories after review.",
     )
 
@@ -1707,6 +1733,7 @@ def _restart_readiness_item() -> dict:
             severity="warning",
             status="restart_required",
             summary=f"Runtime restart is required for changed Deployment Settings: {changed}.",
+            summary_values={"changedSettings": changed},
             next_action="Restart the affected service after reviewing changes.",
         )
     return _readiness_item(

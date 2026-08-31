@@ -22,7 +22,8 @@
       "title": "Điều gì mô tả bạn tốt nhất?",
       "description": "Chọn tùy chọn phù hợp nhất với nhu cầu của bạn",
       "loadError": "Không thể tải loại người dùng. Vui lòng thử lại.",
-      "selectionLabel": "Chọn loại người dùng"
+      "selectionLabel": "Chọn loại người dùng",
+      "errorLabel": "Lỗi tải loại người dùng"
     },
     "language": {
       "selectLabel": "Chọn ngôn ngữ",
@@ -65,7 +66,8 @@
       "encryptionBody": "Các trường hồ sơ được mã hóa theo mặc định, nhưng quản trị viên phiên bản này kiểm soát cài đặt ở cấp trường và có thể cho phép dữ liệu được chọn được lưu trữ hoặc chia sẻ theo cách khác.",
       "adminControlNotice": "Việc xử lý dữ liệu do quản trị viên phiên bản này cấu hình, bao gồm những gì có thể được lưu trữ không mã hóa hoặc chia sẻ với các công cụ AI.",
       "noWarrantyNotice": "Phần mềm Enclave được cung cấp nguyên trạng mà không có bảo hành. Việc sử dụng phiên bản này tuân theo các chính sách của quản trị viên.",
-      "retentionNotice": "Thời gian lưu giữ và xóa dữ liệu được đặt bởi quản trị viên thể hiện này. Liên hệ với họ để yêu cầu truy cập, chỉnh sửa hoặc xóa."
+      "retentionNotice": "Thời gian lưu giữ và xóa dữ liệu được đặt bởi quản trị viên thể hiện này. Liên hệ với họ để yêu cầu truy cập, chỉnh sửa hoặc xóa.",
+      "errorLabel": "Lỗi yêu cầu magic link"
     },
     "verify": {
       "verifying": "Đang xác minh liên kết của bạn...",
@@ -125,20 +127,28 @@
       "databaseName": "Cơ sở dữ liệu",
       "knowledgeGraph": "Truy vấn đồ thị kiến thức",
       "config": "Cấu hình",
-      "configName": "Cấu hình"
+      "configName": "Cấu hình",
+      "knowledgeSearch": "Tìm kiếm tài liệu đã tải lên và các đoạn kiến thức",
+      "knowledgeSearchName": "Kiến thức",
+      "curatedResources": "Tìm các nguồn tham khảo đã được quản trị viên kiểm duyệt và các tổ chức đáng tin cậy",
+      "curatedResourcesName": "Nguồn tài nguyên"
     },
     "documentScope": {
       "title": "Cơ sở kiến thức",
       "description": "Chọn nguồn để đưa vào ngữ cảnh",
       "noSources": "Không có nguồn nào",
       "clearAll": "Xóa tất cả",
-      "docsLabel": "Tài liệu"
+      "docsLabel": "Tài liệu",
+      "clearAllSelectedAria": "Xóa tất cả tài liệu đã chọn",
+      "docsLabelWithCount": "Tài liệu {{count}}"
     },
     "messages": {
       "searching": "Đang tìm kiếm \"{{term}}\"...",
       "searchingPrefix": "Đang tìm kiếm",
       "searchResults": "Tôi đã tìm kiếm \"{{term}}\" cho bạn:",
-      "newConversation": "Cuộc trò chuyện mới"
+      "newConversation": "Cuộc trò chuyện mới",
+      "copy": "Sao chép tin nhắn",
+      "copied": "Đã sao chép tin nhắn"
     },
     "code": {
       "copy": "Sao chép",
@@ -157,7 +167,177 @@
       "roleUser": "Bạn",
       "roleAssistant": "Trợ lý",
       "footer": "Xuất từ {{instanceName}}",
-      "exportedOn": "Xuất lúc {{timestamp}}"
+      "exportedOn": "Xuất lúc {{timestamp}}",
+      "copiedExportNotice": "Bản xuất này sẽ rời khỏi bộ lưu trữ sản phẩm đang hoạt động và nằm ngoài Vòng đời Lưu trữ Hoạt động sau khi tải xuống."
+    },
+    "new": "Chat mới",
+    "listTitle": "Các cuộc trò chuyện",
+    "contextTitle": "Ngữ cảnh",
+    "messageActions": "Thao tác tin nhắn",
+    "actions": {
+      "stop": "Dừng phản hồi",
+      "stopDisabled": "Không có phản hồi nào để dừng.",
+      "regenerate": "Tạo lại phản hồi",
+      "edit": "Chỉnh sửa tin nhắn",
+      "waitForResponse": "Hãy đợi phản hồi hiện tại hoàn tất trước.",
+      "startConversation": "Hãy bắt đầu hoặc tiếp tục một cuộc trò chuyện trước.",
+      "resolveConfirmation": "Hãy giải quyết Xác nhận Thay đổi đang chờ trước khi thay đổi lịch sử."
+    },
+    "composerContextAria": "Ngữ cảnh trình soạn thảo",
+    "sessions": {
+      "ariaLabel": "Các phiên chat",
+      "current": "Chat hiện tại",
+      "empty": "Trống",
+      "messageCount_one": "{{count}} tin nhắn",
+      "messageCount_other": "{{count}} tin nhắn",
+      "deleteConfirmTitle": "Xóa \"{{title}}\"?",
+      "rename": "Đổi tên {{title}}",
+      "delete": "Xóa {{title}}",
+      "resumeInvalid": "Không thể tải cuộc hội thoại này.",
+      "renameEmpty": "Tiêu đề cuộc hội thoại là bắt buộc.",
+      "renameError": "Không thể đổi tên cuộc hội thoại.",
+      "deleteError": "Không thể xóa cuộc hội thoại.",
+      "loading": "Đang tải các đoạn chat...",
+      "error": "Không thể tải các đoạn chat",
+      "saved": "Đã lưu chat",
+      "deleteConfirmBody": "Thao tác này sẽ xóa cuộc hội thoại đã lưu và Bộ nhớ Phiên của nó.",
+      "deleteCancel": "Hủy xóa cuộc hội thoại",
+      "cancel": "Hủy",
+      "deleteConfirm": "Xóa cuộc hội thoại",
+      "deleteDeleting": "Đang xóa...",
+      "renameInput": "Tiêu đề cuộc hội thoại",
+      "renameCancel": "Hủy đổi tên cuộc hội<0xC2><0xA0>thoại",
+      "renameSave": "Lưu tiêu đề cuộc hội thoại",
+      "renameSaving": "Đang đổi tên...",
+      "open": "Mở các phiên chat",
+      "close": "Đóng các phiên chat"
+    },
+    "currentChatAria": "Chat hiện tại",
+    "newFromCurrent": "Bắt đầu chat mới",
+    "documentsContextTitle": "Tài liệu",
+    "errors": {
+      "requestLabel": "Lỗi yêu cầu chat"
+    },
+    "trace": {
+      "finalizing": "Đang hoàn tất phản hồi...",
+      "collapse": "Thu gọn",
+      "expand": "Mở rộng",
+      "reasoning": "Suy luận",
+      "thinking": "Đang suy nghĩ",
+      "transcript": "Bản ghi {{label}}",
+      "reasoningSummaryAria": "Tóm tắt suy luận",
+      "reasoningTranscriptAria": "Bản ghi suy luận",
+      "label": "Truy vết",
+      "toolCalls": "Các lệnh gọi công cụ",
+      "retrieval": "Truy xuất",
+      "input": "Đầu vào",
+      "output": "Đầu ra",
+      "retrievedSource": "Nguồn đã truy xuất",
+      "score": "điểm {{score}}",
+      "optionalDetailsAria": "Chi tiết bổ sung {{label}}"
+    },
+    "conversationMessagesAria": "Các tin nhắn hội thoại",
+    "conversationSurfaceAria": "Giao diện hội thoại",
+    "conversationThreadAria": "Luồng hội thoại",
+    "activity": {
+      "label": "Hoạt động",
+      "summaryAria": "Tóm tắt hoạt động",
+      "detailsAria": "Chi tiết hoạt động",
+      "timelineAria": "Dòng thời gian hoạt động",
+      "show": "Hiển thị hoạt động",
+      "hide": "Ẩn hoạt động",
+      "showOptional": "Hiển thị chi tiết bổ sung",
+      "hideOptional": "Ẩn chi tiết bổ</strong> bổ sung",
+      "tool": {
+        "title": "{{toolName}}",
+        "attempted": "Đã thử gọi {{toolName}}.",
+        "retry": "Đang thử lại công cụ sau lần thử {{attempt}}.",
+        "running": "Công cụ đang chạy.",
+        "completed": "Công cụ đã hoàn tất.",
+        "guarded": "Công cụ đã được bảo vệ.",
+        "failed": "Công cụ bị lỗi.",
+        "rejected": "Lệnh gọi công cụ đã bị từ chối.",
+        "timedOut": "Công cụ hết thời gian chờ.",
+        "knowledgeSearch": {
+          "title": "Tìm kiếm Kiến thức"
+        },
+        "webSearch": {
+          "title": "Tìm kiếm Web"
+        },
+        "curatedResources": {
+          "title": "Tài nguyên được chọn lọc"
+        },
+        "adminConfig": {
+          "title": "Cấu hình Admin"
+        },
+        "databaseQuery": {
+          "title": "Truy vấn Cơ sở dữ liệu"
+        }
+      },
+      "status": {
+        "running": "Đang chạy",
+        "succeeded": "Thành công",
+        "failed": "Thất bại",
+        "guarded": "Đã được bảo vệ",
+        "timed_out": "Hết thời gian chờ",
+        "rejected": "Đã bị từ chối"
+      },
+      "toolSelection": {
+        "title": "Lựa chọn Công cụ",
+        "failed": "Việc lựa chọn công cụ đã thất bại trước khi ghi nhận được lựa chọn khả dụng.",
+        "partialFailure": "Một số lựa chọn Công cụ của mô hình đã bị từ chối.",
+        "noneSelected": "Không có Công cụ nào được chọn.",
+        "selected": "Đã chọn: {{selectedTools}}."
+      },
+      "timing": {
+        "modelRequest": {
+          "title": "Yêu cầu mô hình",
+          "summary": "Yêu cầu mô hình: {{elapsedMs}} ms."
+        },
+        "providerFirstEventWait": {
+          "title": "Thời gian chờ sự kiện đầu tiên từ nhà cung cấp",
+          "summary": "Thời gian chờ sự kiện đầu tiên từ nhà cung cấp: {{elapsedMs}} ms."
+        },
+        "toolExecution": {
+          "title": "Thực thi công cụ",
+          "summary": "Thực thi công cụ: {{elapsedMs}} ms."
+        },
+        "resourceDirectoryLookup": {
+          "title": "Tra cứu Thư mục Tài nguyên",
+          "summary": "Tra cứu Thư mục Tài nguyên: {{elapsedMs}} ms."
+        },
+        "retrieval": {
+          "title": "Truy xuất",
+          "summary": "Truy xuất: {{elapsedMs}} ms."
+        },
+        "retryDelay": {
+          "title": "Độ trễ thử lại",
+          "summary": "Độ trễ thử lại: {{elapsedMs}} ms."
+        },
+        "totalTurn": {
+          "title": "Tổng lượt tương tác",
+          "summary": "Tổng thời gian: {{elapsedMs}} ms."
+        }
+      },
+      "knowledgeSearch": {
+        "noResults": "Không tìm thấy đoạn văn nào phù hợp trong các tài liệu đã tải lên.",
+        "retrieved": "Đã truy xuất {{count}} đoạn văn từ tài liệu đã tải lên để trả lời."
+      },
+      "webSearch": {
+        "prepared": "Kết quả tìm kiếm web đã được chuẩn bị cho câu trả lời ({{count}})."
+      },
+      "curatedResources": {
+        "noAdditional": "Không tìm thấy tài nguyên chọn lọc bổ sung nào.",
+        "noMatches": "Không có tài nguyên chọn lọc nào khớp với yêu cầu này.",
+        "returned": "Đã trả về {{count}} trên tổng số {{totalCount}} tài nguyên chọn lọc."
+      },
+      "adminConfig": {
+        "completed": "Hành động cấu hình Admin {{toolId}} đã hoàn tất ({{outcome}}). Các cài đặt đã thay đổi: {{changedSettings}}."
+      },
+      "databaseResultsRedacted": "Kết quả cơ sở dữ liệu đã được ẩn khỏi dấu vết (trace).",
+      "databaseQuery": {
+        "rejected": "Truy vấn cơ sở dữ liệu đã bị từ chối."
+      }
     }
   },
   "common": {
@@ -197,7 +377,17 @@
     "retry": "Thử lại",
     "saved": "Đã lưu",
     "sending": "Đang gửi...",
-    "gotIt": "Đã hiểu"
+    "gotIt": "Đã hiểu",
+    "send": "Gửi",
+    "backToAdminDashboard": "Quay lại Bảng điều khiển Admin",
+    "loadingPage": "Đang tải trang",
+    "pageLoadError": "Tải trang thất bại. Vui lòng làm mới.",
+    "export": "Xuất",
+    "reset": "Đặt lại",
+    "exit": "Thoát",
+    "none": "Không có",
+    "all": "Tất cả",
+    "warning": "Cảnh báo"
   },
   "settings": {
     "title": "Cài đặt",
@@ -220,8 +410,23 @@
       "deploymentConfig": "Cấu hình triển khai",
       "deploymentConfigDesc": "Dịch vụ, SMTP, lưu trữ",
       "userConfig": "Cấu hình người dùng",
-      "userConfigDesc": "Loại người dùng và câu hỏi giới thiệu"
-    }
+      "userConfigDesc": "Loại người dùng và câu hỏi giới thiệu",
+      "guidedSetup": "Thiết lập hướng dẫn",
+      "guidedSetupDesc": "Hướng dẫn từng bước qua thiết lập, tài liệu, tài nguyên và kiểm thử.",
+      "guides": "Hướng dẫn Admin",
+      "guidesDesc": "Hiểu rõ những gì admin cấu hình và ở đâu.",
+      "testUserSession": "Kiểm tra phiên người dùng",
+      "testUserSessionDesc": "Chat với tư cách người dùng giả lập và xem lại phản hồi bản beta.",
+      "diagnostics": "Chẩn đoán",
+      "diagnosticsDesc": "Chạy kiểm tra nhanh (smoke checks) trong khi điều tra các vấn đề.",
+      "resourceDirectory": "Thư mục Tài nguyên",
+      "resourceDirectoryDesc": "Tự tay biên soạn các tài nguyên tham khảo đáng tin cậy."
+    },
+    "diagnostics": "Chẩn đoán",
+    "adminWorkflows": "Quy trình Admin",
+    "settingsSection": "Cài đặt",
+    "dataAndContent": "Dữ liệu & Nội dung",
+    "operations": "Vận hành"
   },
   "admin": {
     "confirmDelete": "Bạn có chắc chắn muốn xóa bản ghi này không?",
@@ -264,7 +469,12 @@
       "instanceSectionTitle": "Cấu hình phiên bản",
       "onboardingFieldsHint": "Tạo câu hỏi người dùng trả lời trong quá trình giới thiệu.",
       "userSectionDesc": "Cấu hình các loại người dùng và câu hỏi người dùng trả lời trong quá trình giới thiệu.",
-      "userSectionTitle": "Cấu hình người dùng"
+      "userSectionTitle": "Cấu hình người dùng",
+      "fieldScopeFilterLabel": "Lọc câu hỏi theo loại người dùng",
+      "noFieldsForScope": "Chưa có câu hỏi nào áp dụng cho loại người dùng này.",
+      "reorderNeedsAllScope": "Hiển thị tất cả câu hỏi để sắp xếp lại",
+      "fieldScopeGlobalHint": "Các câu hỏi mà mọi người dùng đều phải trả lời, bất kể loại người dùng nào.",
+      "fieldScopeTypeHint": "Tất cả những gì loại người dùng này được hỏi: các câu hỏi chung mà mọi người đều trả lời, cộng với các câu hỏi riêng của họ."
     },
     "database": {
       "backToSetup": "Quay lại Thiết lập quản trị",
@@ -350,7 +560,14 @@
       "nip07Unavailable": "Không phát hiện tiện ích mở rộng Nostr",
       "plaintextFieldIcon": "Trường văn bản thuần",
       "primaryKeyIcon": "Khóa chính",
-      "unlockDecryption": "Mở khóa giải mã"
+      "unlockDecryption": "Mở khóa giải mã",
+      "safeQueryResults": "Kết quả truy vấn an toàn",
+      "queryError": "Lỗi truy vấn",
+      "writeResult": "Kết quả ghi cơ sở dữ liệu",
+      "emptyQueryResult": "Kết quả truy vấn trống",
+      "readOnly": "Chỉ đọc",
+      "tableLoadError": "Lỗi tải bảng",
+      "readOnlyHint": "Việc chỉnh sửa trực tiếp cơ sở dữ liệu đã bị vô hiệu hóa; hãy sử dụng các luồng admin có kiểm tra để thực hiện thay đổi."
     },
     "fields": {
       "nameRequired": "Tên trường là bắt buộc",
@@ -440,7 +657,11 @@
       "removeFieldFailed": "Không thể xóa trường",
       "reorderFailed": "Không thể sắp xếp lại trường",
       "loadUsersFailed": "Không thể tải người dùng",
-      "updateTypeFailed": "Không thể cập nhật loại người dùng"
+      "updateTypeFailed": "Không thể cập nhật loại người dùng",
+      "loadSettingsFailed": "Tải cài đặt thất bại",
+      "externalConfigConflict": "Sage hoặc một admin khác đã thay đổi các cài đặt này trong khi bạn đang chỉnh sửa. Hãy tải lại trang này trước khi lưu để không ghi đè lên các giá trị mới hơn.",
+      "externalSettingsConflict": "Sage hoặc một admin khác đã thay đổi các cài đặt này trong khi bạn đang chỉnh sửa. Hãy tải lại trang này trước khi lưu.",
+      "externalUserConfigConflict": "Sage hoặc một admin khác đã thay đổi Loại Người dùng hoặc Câu hỏi Onboarding trong khi bạn đang chỉnh sửa. Hãy tải lại trang này trước khi lưu bản nháp của bạn."
     },
     "userMigration": {
       "title": "Di chuyển loại người dùng",
@@ -475,7 +696,10 @@
       "emailEncryptedHint": "Email (đã mã hóa)",
       "nameEncryptedHint": "Tên (đã mã hóa)",
       "noUsersHint": "Thử thay đổi bộ lọc ở trên hoặc làm mới.",
-      "pubkeyPresent": "Khóa công khai Nostr có mặt"
+      "pubkeyPresent": "Khóa công khai Nostr có mặt",
+      "usersErrorLabel": "Lỗi di chuyển người dùng theo loại",
+      "errorLabel": "Lỗi di chuyển người dùng theo loại",
+      "summaryLabel": "Tóm tắt di chuyển người dùng theo loại"
     },
     "configAssistant": {
       "openAria": "Mở trợ lý quản trị",
@@ -513,8 +737,40 @@
         "restartRequiredFor": "Cần khởi động lại cho: {{keys}}.",
         "restartRequiredNo": "Cần khởi động lại: không.",
         "restartCheckFailedHttp": "Kiểm tra yêu cầu khởi động lại thất bại (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Kiểm tra yêu cầu khởi động lại thất bại (lỗi mạng)."
-      }
+        "restartCheckFailedNetwork": "Kiểm tra yêu cầu khởi động lại thất bại (lỗi mạng).",
+        "pageRefreshRecommended": "Hãy làm mới trang này để thấy các cập nhật về chủ đề."
+      },
+      "onboardingWelcome": "Chào mừng — hãy cùng thiết lập không gian của bạn. Hãy trả lời càng nhiều câu hỏi càng tốt trong một tin nhắn (đánh số chúng, và bỏ qua bất kỳ điều gì bạn không chắc chắn):\n\n1. **Tên** — chúng ta nên gọi không gian này là gì? (hiển thị ở đầu trang & tab trình duyệt)\n2. **Mô tả** — một câu về mục đích của nó (ghi chú riêng tư, không hiểnng cho người dùng)\n3. **Tên trợ lý** — trợ lý AI nên được gọi là gì?\n4. **Màu nhấn** — màu nổi bật cho các nút & liên kết (một cái tên như xanh dương/xanh mòng két, hoặc mã hex như #3B82F6)\n5. **Chủ đề** — sáng, tối, hoặc hệ thống (khớp với thiết bị)?\n6. **Ngôn ngữ mặc định** — ví dụ: Tiếng Anh hoặc Tiếng Tây Ban Nha (tùy chọn)\n7. **Slogan** — một dòng ngắn gọn cho đầu trang (tùy chọn)\n8. **Người dùng mới** — cho phép họ vào ngay lập tức, hay phê duyệt từng người?\n9. **Loại người dùng** — những loại người dùng không phải admin nào sẽ sử dụng nơi này? (ví dụ: Giáo viên và Học sinh) — Tôi sẽ tạo từng loại cho bạn\n\nVí dụ: \"9. Giáo viên và Học sinh\". Tôi sẽ lưu mọi thứ trong một bước — và bạn có thể chuyển sang thiết lập thủ công bất cứ lúc cần.",
+      "collapseSidebar": "Thu nhỏ thanh bên trợ lý",
+      "expandSidebar": "Mở thanh bên trợ lý quản trị",
+      "resize": "Thay đổi kích thước bảng trợ lý quản trị",
+      "railLabel": "Trợ lý",
+      "shareSecretsHint": "Mặc định là Tắt. Hãy bật công cụ Cấu hình trước. Khi được bật, các giá trị cấu hình triển khai bí mật sẽ được hiển thị ở phía client và được gửi đến Sage cho luồng thử nghiệm này.",
+      "applyIntentUsePanel": "Sử dụng bảng các thay đổi đang chờ xử lý bên dưới và nhấn Áp dụng để xác nhận các cập nhật cấu hình này.",
+      "applyIntentNoPending": "Không có thay đổi cấu hình nào đang chờ xử lý để áp dụng. Hãy yêu cầu trợ lý đề xuất một bộ thay đổi trước.",
+      "startNewConversation": "Bắt đầu cuộc hội thoại mới với trợ lý",
+      "reducedContextNoticeLabel": "Thông báo về việc giảm bớt ngữ cảnh",
+      "sessionMemoryNoticeLabel": "Thông báo về việc nén Bộ nhớ Phiên làm việc",
+      "sessionMemoryNotice": "Ngữ cảnh cũ đã được tóm tắt để duy trì cuộc hội thoại này.",
+      "reducedContextNotice": "Một số ngữ cảnh đã bị giảm bớt để phù hợp với ngân sách của Nhà cung cấp Mô hình ({{sections}}). Câu trả lời có thể kém đầy đủ hơn cho đến khi bạn bắt đầu một cuộc hội thoại mới với trợ lý.",
+      "reducedContextSections": {
+        "recentConversation": "lịch sử hội thoại gần đây"
+      },
+      "approvalCardTitle": "Phê duyệt thay đổi cấu hình",
+      "applying": "Đang áp dụng",
+      "applied": "Đã áp dụng",
+      "rejected": "Đã từ chối",
+      "failed": "Thất bại",
+      "superseded": "Đã bị thay thế",
+      "hideDetails": "Ẩn chi tiết",
+      "reviewDetails": "Xem chi tiết",
+      "reject": "Từ chối",
+      "approve": "Phê duyệt",
+      "applyErrorLabel": "Lỗi áp dụng cấu hình",
+      "onboardingTitle": "Chat Hướng dẫn Thiết lập",
+      "onboardingContext": "Cuộc hội thoại thiết lập tập trung",
+      "directShareSecretsHint": "Tùy chọn: bao gồm các giá trị secret triển khai đã lưu vào ngữ cảnh của Cuộc hội thoại này. Việc đọc secret trực tiếp không yêu cầu điều này.",
+      "directWritePrompt": "Hỏi về cấu hình admin. Sage có thể kiểm tra các cài đặt và, sau khi xác nhận với bạn trong cuộc hội thoại, sẽ áp dụng trực tiếp các thay đổi được hỗ trợ."
     },
     "reachout": {
       "badgeDefault": "Mặc định",
@@ -681,7 +937,16 @@
       "typographyTitle": "Kiểu chữ",
       "userIconLabel": "Biểu tượng người dùng",
       "userLabelLabel": "Nhãn người dùng",
-      "userLabelPlaceholder": "Ví dụ: Bạn"
+      "userLabelPlaceholder": "Ví dụ: Bạn",
+      "publicEmailDisplayNameLabel": "Tên hiển thị email công khai (tùy chọn)",
+      "publicEmailDisplayNameHint": "Được sử dụng trong các email đăng nhập bằng magic-link. Để trống để sử dụng tên Instance.",
+      "defaultsTitle": "Cấu hình mặc định của Instance",
+      "defaultsDesc": "Thiết lập ngôn ngữ và chủ đề cơ bản được sử dụng trước khi các trình điều khiển trình duyệt cục bộ được áp dụng.",
+      "defaultLanguageLabel": "Ngôn ngữ mặc định",
+      "defaultThemeLabel": "Chủ đề mặc định",
+      "themeSystem": "Hệ thống",
+      "themeLight": "Sáng",
+      "themeDark": "Tối"
     },
     "userConfig": {
       "subtitle": "Cấu hình các loại người dùng và câu hỏi người dùng trả lời trong quá trình giới thiệu.",
@@ -689,6 +954,55 @@
       "typeDescription": "Mô tả",
       "typeIcon": "Biểu tượng loại",
       "typeName": "Tên loại"
+    },
+    "userApproval": {
+      "updateFailed": "Cập nhật phê duyệt người dùng thất bại.",
+      "approvedUser": "Người dùng #{{id}} đã được phê duyệt.",
+      "revokedUser": "Người dùng #{{id}} đã được chuyển về trạng thái chờ.",
+      "title": "Phê duyệt Người dùng",
+      "subtitle": "Chọn xem các Người dùng đã xác thực mới có thể vào chat ngay lập tức hay phải chờ Admin phê duyệt.",
+      "requireManualLabel": "Yêu cầu phê duyệt thủ công cho người dùng mới",
+      "requireManualHint": "Khi được bật, các Người dùng mới sẽ ở màn hình chờ phê duyệt cho đến khi được Admin chấp thuận.",
+      "loadingHint": "Đang tải...",
+      "saveButton": "Lưu cấu hình phê duyệt người dùng",
+      "savedCalloutLabel": "Đã lưu cấu hình phê duyệt người dùng",
+      "errorCalloutLabel": "Lỗi phê duyệt người dùng",
+      "pendingTitle": "Yêu cầu đang chờ",
+      "pendingCount_zero": "{{count}} người dùng cần được phê duyệt trước khi có quyền truy cập chat.",
+      "pendingCount_one": "{{count}} người dùng cần được phê duyệt trước khi có quyền truy cập chat.",
+      "pendingCount_two": "{{count}} người dùng cần được phê duyệt trước khi có quyền truy cập chat.",
+      "pendingCount_few": "{{count}} người dùng cần được phê duyệt trước khi có quyền truy cập chat.",
+      "pendingCount_many": "{{count}} người dùng cần được phê duyệt trước khi có quyền truy cập chat.",
+      "pendingCount_other": "{{count}} người dùng cần được phê duyệt trước khi có quyền truy cập chat.",
+      "nonePending": "Không có người dùng nào đang chờ phê duyệt.",
+      "actionSavedCalloutLabel": "Đã cập nhật cấu hình phê duyệt người dùng",
+      "actionErrorCalloutLabel": "Cập nhật cấu hình phê duyệt người dùng thất bại",
+      "loadingUsers": "Đang tải người dùng...",
+      "emptyState": "Các Người dùng mới đang chờ phê duyệt sẽ xuất hiện tại đây khi yêu cầu phê duyệt thủ công được bật.",
+      "emailOnFile": "Email đã lưu",
+      "nameOnFile": "Tên đã lưu",
+      "approveButton": "Phê duyệt",
+      "revokeButton": "Thu hồi"
+    },
+    "userRosterExport": {
+      "auditFailed": "Không thể kiểm tra danh sách người dùng xuất ra. Tệp bảng tính đã không được tải xuống.",
+      "decryptUnavailable": "Cần có một tiện ích mở rộng trình duyệt hỗ trợ giải mã NIP-02 để chuẩn bị danh sách này.",
+      "decryptFailed": "Không thể giải mã một giá trị danh sách đã mã hóa. Không có bảng tính nào được tạo.",
+      "prepared": "Danh sách đầy đủ đã sẵn sàng. Hiện đã có thể tải xuống.",
+      "prepareRequired": "Hãy chuẩn bị danh sách hiện tại trước khi tải xuống.",
+      "prepareButton": "Chuẩn bị danh sách người dùng",
+      "downloadButton": "Tải danh sách đã chuẩn bị",
+      "success": "Đã tải xuống bảng tính danh sách người dùng.",
+      "failed": "Xuất danh sách người dùng thất bại.",
+      "button": "Xuất người dùng",
+      "successLabel": "Đã sẵn sàng xuất danh sách người dùng",
+      "errorLabel": "Xuất danh sách người dùng thất bại"
+    },
+    "userIdentity": {
+      "decrypting": "Đang giải mã tên/email...",
+      "decryptFailed": "Không thể giải mã tên/email",
+      "unlockDetails": "Mở khóa để hiển thị tên/email",
+      "unlockButton": "Mở khóa chi tiết"
     }
   },
   "adminOnboarding": {
@@ -713,7 +1027,9 @@
     "legalResponsibilityNotice": "Bạn chịu trách nhiệm về cấu hình hợp pháp, thông báo cho người dùng và các chính sách xử lý dữ liệu cho phiên bản này.",
     "extracted": {
       "change_language_789b14": "Thay đổi ngôn ngữ"
-    }
+    },
+    "statusError": "Kiểm tra trạng thái instance thất bại",
+    "connectionError": "Kết nối thất bại"
   },
   "errors": {
     "requestFailed": "Yêu cầu thất bại",
@@ -747,11 +1063,228 @@
     "adminSessionExpired": "Phiên quản trị viên đã hết hạn",
     "authenticationFailed": "Xác thực thất bại",
     "noNostrExtension": "Không tìm thấy tiện ích Nostr",
-    "exportFailed": "Xuất thất bại"
+    "exportFailed": "Xuất thất bại",
+    "failedToRetryDeletionTombstone": "Thử lại việc xóa tombstone thất bại",
+    "failedToAcknowledgeUnsupportedSurface": "Xác nhận bề mặt triển khai không được hỗ trợ thất bại",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Xác nhận danh mục bề mặt triển khai không được hỗ trợ thất bại",
+    "failedToPreviewRetention": "Xem trước chính sách lưu trữ thất bại",
+    "failedToUpdateRetentionPolicy": "Cập nhật chính sách lưu trữ thất bại",
+    "failedToRunScheduledRetention": "Chạy lưu trữ theo lịch trình thất bại",
+    "failedToUpdateArtifactEncryptionPosture": "Cập nhật trạng thái mã hóa artifact thất bại",
+    "queryExecutionFailed": "Thực thi truy vấn thất bại"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Quản trị viên có thể"
+    },
+    "summary": {
+      "brand": {
+        "title": "Định dạng thương hiệu cho instance",
+        "body": "Hiển thị tên, logo, chủ đề, danh tính trợ lý và email công khai."
+      },
+      "people": {
+        "title": "Quản lý người dùng",
+        "body": "Loại người dùng, câu hỏi làm quen, phê duyệt, di chuyển và quyền truy cập."
+      },
+      "agent": {
+        "title": "Định hình Sage",
+        "body": "Quy tắc câu lệnh, cài đặt phản hồi, quyền truy cập tài liệu và mặc định của công cụ."
+      },
+      "launch": {
+        "title": "Khởi chạy an toàn",
+        "body": "Email, tên miền, CORS, HTTPS, định tuyến mô hình, tình trạng hoạt động và môi trường runtime."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Thương hiệu",
+        "title": "Nhận diện và giao diện",
+        "body": "Giúp instance mang đậm bản sắc tổ chức của bạn.",
+        "detail1": "Tên, khẩu hiệu, tên trợ lý và nhãn người dùng.",
+        "detail2": "Logo, favicon, biểu tượng, màu chủ đạo, chủ đề, kiểu chữ và phong cách trò chuyện.",
+        "detail3": "Ngôn ngữ mặc định và tên hiển thị email công khai.",
+        "link": "Mở Cài đặt Instance"
+      },
+      "people": {
+        "eyebrow": "Truy cập",
+        "title": "Con người và quyền truy cập",
+        "body": "Quyết định ai có thể sử dụng instance và những gì bạn yêu cầu họ cung cấp.",
+        "detail1": "Loại người dùng cho các nhóm như nhân viên, thành viên hoặc khách hàng.",
+        "detail2": "Các trường đăng ký, câu hỏi bắt buộc, tùy chọn, placeholder và các trường theo từng loại.",
+        "detail3": "Phê duyệt thủ công, di chuyển người dùng, thu hồi quyền truy cập và xóa.",
+        "link": "Mở Cài đặt Người dùng"
+      },
+      "agent": {
+        "eyebrow": "Hành vi",
+        "title": "Hành vi của Agent",
+        "body": "Định hình cách Sage trả lời và các công cụ nào được bật theo mặc định.",
+        "detail1": "Mẫu prompt, quy tắc hành vi, các chủ đề bị cấm và cài đặt phản hồi.",
+        "detail2": "Cài đặt mặc định cho các công cụ Knowledge, Resources, Web, Config và Database.",
+        "detail3": "Cài đặt toàn cục cùng với các tùy chỉnh theo loại người dùng.",
+        "link": "Mở Cài đặt Agent"
+      },
+      "docs": {
+        "eyebrow": "Kiến thức",
+        "title": "Kiến thức tài liệu",
+        "body": "Cung cấp cho agent nguồn tài liệu để nó có thể tìm kiếm.",
+        "detail1": "Tải lên PDF, chính sách, FAQ, sổ tay và hướng dẫn.",
+        "detail2": "Tài liệu được chia nhỏ, nhúng (embedded) và được lập chỉ mục để tìm kiếm.",
+        "detail3": "Document Access kiểm soát những gì có thể được chọn hoặc kích hoạt theo mặc định.",
+        "link": "Mở Tải lên Tài liệu"
+      },
+      "resources": {
+        "eyebrow": "Tham chiếu",
+        "title": "Nguồn tài liệu đã được kiểm duyệt",
+        "body": "Thêm các nguồn tham khảo đáng tin cậy mà agent có thể đề xuất.",
+        "detail1": "Tên, mô tả, loại tài nguyên, ngôn ngữ, phạm vi bao phủ và các loại trợ giúp.",
+        "detail2": "Điện thoại, email, URL, kênh bảo mật, địa chỉ và ghi chú.",
+        "detail3": "Các tài nguyên đã xác minh sẽ được ưu tiên hàng đầu. Các tài nguyên đã lưu trữ sẽ được ẩn khỏi người dùng.",
+        "link": "Mở Danh mục Tài nguyên"
+      },
+      "ops": {
+        "eyebrow": "Vận hành",
+        "title": "Vận hành và runtime",
+        "body": "Giữ cho instance luôn được kết nối, có thể truy cập và hoạt động ổn định.",
+        "detail1": "SMTP cho magic link qua email, tên miền, CORS, HTTPS và các URL công khai.",
+        "detail2": "Nhà cung cấp mô hình, mô hình embedding, tìm kiếm, lưu trữ và tình trạng dịch vụ.",
+        "detail3": "Xuất env runtime, trạng thái sẵn sàng, các cài đặt cũ và di chuyển khóa admin.",
+        "link": "Mở Cài đặt Triển khai"
+      },
+      "title": "Những gì quản trị viên có thể cấu hình",
+      "body": "Đây là các bề mặt điều khiển chính. Bạn có thể sử dụng trực tiếp các trang này hoặc yêu cầu Admin Assistant chuẩn bị các thay đổi."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Hỏi",
+        "title": "Trợ lý quản trị",
+        "body": "Đặt câu hỏi về thiết lập hiện tại và yêu cầu thay đổi cấu hình.",
+        "detail1": "Việc đọc cấu hình sẽ kiểm tra trạng thái thực tế của instance thay vì dự đoán.",
+        "detail2": "Các thay đổi đề xuất sẽ được đưa vào trạng thái chờ để xem xét.",
+        "detail3": "Lệnh Apply sẽ thực thi các endpoint admin đã được phê duyệt mà không cần thêm một lượt tương tác với mô hình.",
+        "link": "Mở Admin Assistant",
+        "directWriteDetail2": "Sage sẽ yêu cầu xác nhận qua hội thoại trước khi thực hiện một thao tác ghi được hỗ trợ.",
+        "directWriteDetail3": "Sau khi bạn xác nhận, Sage sẽ gọi các Tools cấu hình trực tiếp của nó và báo cáo kết quả thực tế."
+      },
+      "guided": {
+        "eyebrow": "Bắt đầu",
+        "title": "Thiết lập Hướng dẫn",
+        "body": "Sử dụng một cuộc chat hướng dẫn để tạo cấu hình đầu tiên hữu ích.",
+        "detail1": "Danh tính, trợ lý, ngôn ngữ, chính sách truy cập, loại người dùng, câu hỏi và các quy tắc hành vi.",
+        "detail2": "Sau đó tải lên tài liệu, thêm tài nguyên và kiểm tra.",
+        "link": "Mở Thiết lập Hướng dẫn"
+      },
+      "test": {
+        "eyebrow": "Xác thực",
+        "title": "Kiểm tra và phản hồi",
+        "body": "Trải nghiệm agent dưới góc độ người dùng trước khi chính thức triển khai.",
+        "detail1": "Chọn loại người dùng, bắt đầu phiên thử nghiệm và lưu kết quả thử nghiệm.",
+        "detail2": "Xem lại các bản nhật ký beta đã mã hóa và đánh giá câu trả lời.",
+        "link": "Mở Phiên Người dùng Thử nghiệm"
+      },
+      "database": {
+        "eyebrow": "Kiểm tra",
+        "title": "Trình khám phá Cơ sở dữ liệu",
+        "body": "Kiểm tra dữ liệu SQLite đã lưu khi gỡ lỗi.",
+        "detail1": "Sử dụng các truy vấn SELECT chỉ đọc để kiểm tra.",
+        "detail2": "Không sử dụng nó như một đường dẫn thay đổi dữ liệu sản phẩm.",
+        "link": "Mở Trình khám phá Cơ sở dữ liệu"
+      },
+      "title": "Các quy trình quản trị phổ biến",
+      "body": "Sử dụng các quy trình này khi bạn đang thiết lập, kiểm tra chất lượng hoặc điều tra dữ liệu."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Môi trường thực thi",
+        "title": "Một runtime hội thoại",
+        "body": "Knowledge, Resources, Web, Config và Database là các bộ công cụ có thể hiển thị, không phải là các hệ thống chat riêng biệt.",
+        "detail1": "Mô hình có thể gọi các công cụ đã được bật khi chúng hữu ích.",
+        "detail2": "Config và Database chỉ hiển thị đối với các admin đã được máy chủ xác thực."
+      },
+      "auth": {
+        "eyebrow": "Đăng nhập",
+        "title": "Các phương thức đăng nhập khác nhau",
+        "body": "Admin sử dụng NIP-07. Người dùng sử dụng liên kết magic qua email.",
+        "detail1": "Khóa riêng tư của Admin được lưu trong trình ký duyệt của trình duyệt.",
+        "detail2": "SMTP phải hoạt động trước khi các liên kết magic của người dùng hoạt động trong môi trường production."
+      },
+      "data": {
+        "eyebrow": "Quyền riêng tư",
+        "title": "Ranh giới dữ liệu rất quan trọng",
+        "body": "Các trường hồ sơ đã mã hóa sẽ không nằm trong ngữ cảnh chat.",
+        "detail1": "Chỉ các trường không mã hóa mới có thể được đánh dấu để đưa vào ngữ cảnh chat AI.",
+        "detail2": "Các bí mật triển khai được lưu trữ dưới dạng mã hóa và được hiển thị dưới dạng mặt nạ theo mặc định."
+      },
+      "ops": {
+        "eyebrow": "Vận hành",
+        "title": "Một số thay đổi cần người vận hành",
+        "body": "Ứng dụng có thể lưu các cài đặt runtime mong muốn; nó không tự ý khởi động lại các dịch vụ.",
+        "detail1": "Xuất runtime env sau khi thay đổi provider, origin, CORS hoặc tìm kiếm.",
+        "detail2": "Sử dụng trạng thái sẵn sàng và sức khỏe dịch vụ để xác nhận những gì thực sự đang chạy."
+      },
+      "title": "Những nguyên tắc sản phẩm cần ghi nhớ",
+      "body": "Những quy tắc này giúp việc thiết lập luôn trung thực và ngăn chặn việc lạm quyền vô ý."
+    },
+    "ask": {
+      "prompt1": "Còn thiếu điều gì trước khi phiên bản này sẵn sàng phục vụ người dùng?",
+      "prompt2": "Hãy xem lại các loại người dùng hiện tại, câu hỏi hướng dẫn, tài liệu và các nguồn lực.",
+      "prompt3": "Chuẩn bị các thay đổi để xem xét: thiết lập tông giọng của trợ lý và ngôn ngữ mặc định.",
+      "title": "Những câu hỏi hay dành cho Trợ lý Admin",
+      "body": "Hãy yêu cầu xem xét trước khi yêu cầu thay đổi. Nó có thể kiểm tra thiết lập và chuẩn bị một bộ thay đổi.",
+      "directWriteBody": "Yêu cầu Sage kiểm tra hoặc thay đổi cấu hình được hỗ trợ. Nó sẽ xác nhận thay đổi dự kiến với bạn trước khi thực hiện ghi.",
+      "directWritePrompt3": "Thiết lập tông giọng của trợ lý và ngôn ngữ mặc định, và hãy xác nhận thay đổi dự kiến với tôi trước."
+    },
+    "hero": {
+      "eyebrow": "Sơ đồ điều khiển dành cho Admin",
+      "shortVersion": {
+        "title": "Phiên bản rút gọn",
+        "body": "Admin thiết lập danh tính, người dùng, kiến thức, công cụ và cài đặt khởi chạy. Một số thay đổi trong quá trình vận hành vẫn cần khởi động lại trình điều hành."
+      }
+    },
+    "title": "Hướng dẫn dành cho Admin",
+    "subtitle": "Sơ đồ đơn giản về những gì admin cần cấu hình, khả năng của sản phẩm và những gì cần lưu ý trước khi khởi chạy.",
+    "quickStart": {
+      "title": "Bắt đầu tại đây",
+      "body": "Thực hiện các thiết lập nhỏ và hữu ích trước. Hoàn thiện chúng sau khi đã thử nghiệm với các câu hỏi thực tế."
+    },
+    "safety": {
+      "title": "Các nguyên tắc an toàn cơ bản",
+      "body": "Quản trị viên kiểm soát quyền truy cập, dữ liệu, hành vi và các cài đặt runtime. Hãy cẩn trọng với các thay đổi rủi ro.",
+      "items": {
+        "0": "Quản trị viên đăng nhập bằng NIP-07. Người dùng đăng nhập bằng liên kết magic qua email.",
+        "1": "Các trường người dùng được mã hóa theo mặc định. Chỉ các trường văn bản thuần (plaintext) mới có thể chia sẻ với chat.",
+        "2": "Các thông tin bí mật sẽ được ẩn đi trừ khi bạn chia sẻ chúng cho phiên làm việc của quản trị viên hiện tại.",
+        "3": "Các thay đổi của Trợ lý là các đề xuất. Bạn vẫn cần xem xét và nhấn Áp dụng.",
+        "4": "Cài đặt Triển khai lưu trữ các giá trị runtime mong muốn. Người vận hành vẫn cần xuất env và khởi động lại các dịch vụ khi cần thiết."
+      },
+      "directItems": {
+        "0": "Quản trị viên đăng nhập bằng NIP-07. Người dùng đăng nhập bằng liên kết magic qua email.",
+        "1": "Các trường người dùng được mã hóa theo mặc định. Chỉ các trường văn bản thuần (plaintext) mới có thể chia sẻ với chat.",
+        "2": "Các thông tin bí mật sẽ được ẩn đi trừ khi bạn chia sẻ chúng cho phiên làm việc của quản trị viên hiện tại.",
+        "3": "Sage xác nhận các thay đổi cấu hình với bạn trong chat, sau đó áp dụng trực tiếp các thay đổi được hỗ trợ.",
+        "4": "Cài đặt Triển khai lưu trữ các giá trị runtime mong muốn. Người vận hành vẫn cần xuất env và khởi động lại các dịch vụ khi cần thiết."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Đăng nhập với tư cách quản trị viên",
+        "body": "Sử dụng khóa NIP-07 của quản trị viên. Hãy giữ bí mật."
+      },
+      "1": {
+        "title": "Thiết lập các thông tin cơ bản",
+        "body": "Đặt tên cho instance, chọn giao diện và thiết lập danh tính cho trợ lý."
+      },
+      "2": {
+        "title": "Xác định người dùng của bạn",
+        "body": "Tạo các loại người dùng, câu hỏi hướng dẫn và quy tắc phê duyệt."
+      },
+      "3": {
+        "title": "Thêm kiến thức đáng tin cậy",
+        "body": "Tải lên tài liệu và thêm các nguồn tài nguyên đã được kiểm duyệt."
+      },
+      "4": {
+        "title": "Kiểm tra trước khi ra mắt",
+        "body": "Chat với tư cách người dùng, xem xét phản hồi, sau đó mời người dùng thật."
+      }
     }
   },
   "adminDashboard": {
@@ -788,7 +1321,55 @@
     "securityStep3Primary": "Chạy xác thực cấu hình",
     "securityStep3Secondary": "Xem xét dữ liệu lưu trữ",
     "user": "Cấu hình người dùng",
-    "userDesc": "Xác định loại người dùng và câu hỏi giới thiệu"
+    "userDesc": "Xác định loại người dùng và câu hỏi giới thiệu",
+    "subtitleSimple": "Chọn nơi bạn muốn làm việc trên instance này.",
+    "workflowsSectionLabel": "Quy trình Quản trị",
+    "adminAssistant": "Trợ lý Quản trị",
+    "adminAssistantDesc": "Sử dụng chat quản trị để được trợ giúp cấu hình và xem xét thay đổi.",
+    "guidedSetup": "Thiết lập có hướng dẫn",
+    "guidedSetupDesc": "Hướng dẫn từng bước về thiết lập, tài liệu, tài nguyên và kiểm thử.",
+    "guides": "Hướng dẫn Quản trị",
+    "guidesDesc": "Hiểu rõ những gì quản trị viên cần cấu hình và ở đâu.",
+    "testUserSession": "Phiên người dùng kiểm thử",
+    "testUserSessionDesc": "Chat với tư cách người dùng mô phỏng và xem lại các nhật ký beta đã lưu.",
+    "aiSetupTitle": "Thiết lập với trợ lý AI",
+    "aiSetupBody": "Để trợ lý thu thập các thông tin cơ bản để đặt tên và cấu hình instance của bạn chỉ trong một lần. Bạn có thể chuyển sang thiết lập thủ công bất cứ lúc nào.",
+    "aiSetupAction": "Bắt đầu thiết lập có hướng dẫn",
+    "readinessTitle": "Sẵn sàng triển khai",
+    "readinessDesc": "Xem xét mức độ sẵn sàng trước khi mời người dùng. Kiểm tra các điểm nghẽn, cảnh báo, các thay đổi yêu cầu khởi động lại và trạng thái phục hồi tại một nơi.",
+    "readinessPrimary": "Mở Xem xét mức độ sẵn sàng",
+    "firstRunPathTitle": "Lộ trình chạy lần đầu cho Quản trị viên",
+    "firstRunStep1Title": "Cấu hình nền tảng Instance",
+    "firstRunStep1Body": "Thiết lập thương hiệu, ngôn ngữ, giao diện, các trường người dùng và Cài đặt Agent trước khi xem xét.",
+    "firstRunStep1Action": "Mở Cài đặt Instance",
+    "firstRunStep2Title": "Xem xét mức độ sẵn sàng triển khai",
+    "firstRunStep2Body": "Kiểm tra các điểm nghẽn, cảnh báo, các thay đổi yêu cầu khởi động lại và trạng thái phục hồi trước khi mời người dùng.",
+    "firstRunStep2Action": "Mở Trình hướng dẫn triển khai",
+    "firstRunStep3Title": "Chỉ sử dụng chẩn đoán khi cần điều tra",
+    "firstRunStep3Body": "Giữ các bài kiểm tra nhanh (smoke tests) và chẩn đoán ở trạng thái có thể truy cập mà không biến chúng thành lộ trình sản phẩm chính.",
+    "firstRunStep3Action": "Mở Chẩn đoán",
+    "instanceDescSimple": "Tên, danh tính email công khai, giao diện và các kiểm soát thương hiệu.",
+    "aiDescSimple": "Prompt, hành vi mô hình và các thiết lập mặc định của tài liệu.",
+    "deploymentDescSimple": "Cài đặt runtime, tình trạng hoạt động và chi tiết trạng thái sẵn sàng.",
+    "resources": "Danh mục Tài nguyên",
+    "resourcesDesc": "Tổng hợp các luật sư, tổ chức phi chính phủ (NGO) và nguồn giới thiệu đáng tin cậy",
+    "resourcesDescSimple": "Tổng hợp thủ công các nguồn giới thiệu đáng tin cậy.",
+    "testFeedback": "Kiểm thử & Phản hồi",
+    "testFeedbackDesc": "Chat với tư cách người dùng thử nghiệm và đánh giá câu trả lời để tinh chỉnh thiết lập của bạn",
+    "diagnosticsSectionLabel": "Chẩn đoán",
+    "operationsSectionLabel": "Vận hành",
+    "testDashboard": "Chẩn đoán",
+    "testDashboardDesc": "Chạy kiểm tra nhanh (smoke checks) trong quá trình phát triển và kiểm tra các mô-đun chẩn đoán",
+    "testDashboardDescSimple": "Chạy kiểm tra nhanh khi đang điều tra sự cố.",
+    "iaChecklistTitle": "Danh sách kiểm tra đánh giá kiến trúc thông tin dành cho Admin",
+    "iaChecklistBody": "Giữ cho các phần Cài đặt Triển khai, Cài đặt Thực thể, Cài đặt Agent, Trạng thái Sẵn sàng Vòng đời, Trạng thái Sẵn sàng Triển khai và các bề mặt chẩn đoán tách biệt trong quá trình đánh giá thủ công.",
+    "humanReviewTitle": "Bàn giao đánh giá thủ công",
+    "humanReviewStatus": "Yêu cầu hỗ trợ triển khai chuyên sâu",
+    "humanReviewBody": "Việc áp dụng môi trường runtime vẫn được thực hiện rõ ràng: xuất các artifact, áp dụng chúng với sự hỗ trợ của operator, khởi động lại các dịch vụ bị ảnh hưởng và xác minh bằng chứng sẵn sàng.",
+    "humanReviewAction": "Xem xét Trạng thái Sẵn sàng Triển khai",
+    "settingsSectionLabel": "Cài đặt",
+    "userManager": "Quản lý Người dùng",
+    "userManagerDesc": "Xem xét người dùng, kiểm tra trạng thái, xuất danh sách và phê duyệt quyền truy cập."
   },
   "adminAI": {
     "title": "Cấu hình AI",
@@ -873,7 +1454,18 @@
       "userInfoPlaceholder": "{user_info} — được thay thế bằng các trường hồ sơ của người dùng hiện tại, nếu có"
     },
     "revert": "Hoàn nguyên",
-    "revertToGlobal": "Hoàn nguyên về toàn cầu"
+    "revertToGlobal": "Hoàn nguyên về toàn cầu",
+    "knowledgeSearchDisabledLabel": "Tìm kiếm Kiến thức đang tắt",
+    "knowledgeSearchDisabledMessage": "Các tài liệu mặc định đang hoạt động sẽ không được sử dụng cho đến khi Nguồn Kiến thức được đặt thành các tài liệu mặc định đã chọn hoặc tất cả tài liệu hiện có.",
+    "assembledPromptOutput": "Kết quả prompt đã lắp ráp",
+    "saveError": "Lưu thất bại",
+    "revertError": "Hoàn tác thất bại",
+    "toggleError": "Chuyển đổi thất bại",
+    "loadErrorLabel": "Lỗi tải Cài đặt Agent",
+    "previewErrorLabel": "Lỗi xem trước Cài đặt Agent",
+    "documentToggleErrorLabel": "Lỗi chuyển đổi tài liệu Cài đặt Agent",
+    "documentDefaultsHintV2": "Các tài liệu được đánh dấu \"Có sẵn\" có thể được sử dụng bởi Tìm kiếm Kiến thức. Các tài liệu được đánh dấu \"Mặc định hoạt động\" sẽ được bao gồm khi Nguồn Kiến thức được đặt thành các tài liệu mặc định đã chọn.",
+    "externalChangeConflict": "Sage hoặc một quản trị viên khác đã thay đổi cài đặt này trong khi bạn đang chỉnh sửa. Hãy hủy và mở lại trình chỉnh sửa trước khi lưu."
   },
   "adminDeployment": {
     "title": "Cấu hình triển khai",
@@ -971,7 +1563,9 @@
       "unknown": "Không xác định",
       "usersMigrated": "Người dùng đã di chuyển",
       "usersToMigrate": "Người dùng cần di chuyển",
-      "warning": "Đây là thao tác nâng cao. Di chuyển không chính xác có thể khóa bạn khỏi dữ liệu đã mã hóa. Chỉ tiếp tục nếu bạn hiểu hệ quả."
+      "warning": "Đây là thao tác nâng cao. Di chuyển không chính xác có thể khóa bạn khỏi dữ liệu đã mã hóa. Chỉ tiếp tục nếu bạn hiểu hệ quả.",
+      "inputWarningLabel": "Cảnh báo di chuyển khóa Admin",
+      "destructiveWarningLabel": "Cảnh báo nguy hiểm khi di chuyển khóa Admin"
     },
     "revealFailed": "Không thể hiển thị giá trị. Kiểm tra kết nối tiện ích mở rộng Nostr.",
     "searchHelp": {
@@ -1002,7 +1596,8 @@
       "overviewDesc": "Cài đặt bảo mật kiểm soát xác thực, quản lý phiên và lối tắt phát triển. Mặc định được cấu hình cho phát triển cục bộ.",
       "overviewNote": "Trong môi trường sản xuất, đảm bảo cờ mô phỏng đã tắt và FRONTEND_URL khớp với tên miền thực.",
       "overviewTitle": "Tổng quan bảo mật",
-      "overviewWhen": "Xem xét các cài đặt này trước khi triển khai lên máy chủ công cộng."
+      "overviewWhen": "Xem xét các cài đặt này trước khi triển khai lên máy chủ công cộng.",
+      "devNote": "Sử dụng MOCK_EMAIL để kiểm tra email cục bộ; các phiên người dùng và admin vẫn yêu cầu quy trình xác minh thông thường."
     },
     "sslHelp": {
       "ariaLabel": "Trợ giúp cấu hình SSL và HTTPS",
@@ -1103,7 +1698,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Thư mục tải lên",
       "vector_database_eb5526": "Cơ sở dữ liệu vector"
-    }
+    },
+    "exportSageRuntimeEnv": "Xuất môi trường Sage",
+    "readiness": {
+      "title": "Sẵn sàng Triển khai",
+      "statusTitle": "Sẵn sàng Triển khai: {{status}}",
+      "description": "Xem xét các bằng chứng cần thiết trước khi Triển khai Đơn instance này sẵn sàng cho hoạt động bình thường.",
+      "openWizard": "Mở Xem xét mức độ sẵn sàng",
+      "blockerCount": "{{count}} lỗi chặn",
+      "warningCount": "{{count}} cảnh báo",
+      "readyCount": "{{count}} sẵn sàng",
+      "empty": "Chưa có kiểm tra Sẵn sàng Triển khai nào khả dụng.",
+      "conversationBlocking": "Chặn các Hội thoại thông thường",
+      "blocker": "Lỗi chặn",
+      "warning": "Cảnh báo",
+      "ready": "Sẵn sàng",
+      "reviewInferenceVerification": "Xem lại Xác minh Suy luận",
+      "reviewDataLifecycleStatus": "Xem lại Trạng thái Vòng đời Dữ liệu",
+      "reviewDeploymentValidation": "Xem lại Cài đặt Triển khai",
+      "reviewRestartRequired": "Xem lại Yêu cầu Khởi động lại",
+      "reviewOperationalReadiness": "Xem lại Độ sẵn sàng Vận hành",
+      "reviewServiceHealth": "Xem lại Tình trạng Dịch vụ",
+      "reviewRuntimeEnv": "Xem lại Xuất Môi trường Runtime",
+      "deployment_settings_validation": {
+        "label": "Xác thực Cài đặt Triển khai",
+        "status": {
+          "invalid": {
+            "summary": "Việc xác thực Cài đặt Triển khai có lỗi cần được khắc phục.",
+            "nextAction": "Xem lại các lỗi xác thực Cài đặt Triển khai."
+          },
+          "warnings": {
+            "summary": "Việc xác thực Cài đặt Triển khai có các cảnh báo tư vấn.",
+            "nextAction": "Xem lại các cảnh báo xác thực Cài đặt Triển khai."
+          },
+          "valid": {
+            "summary": "Việc xác thực Cài đặt Triển khai không có lỗi hoặc cảnh báo.",
+            "nextAction": "Không cần thực hiện hành động nào."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Suy luận có thể xác minh",
+        "status": {
+          "current": {
+            "summary": "Nhà cung cấp Mô hình đã được cấu hình hiện có Bản ghi Xác minh Suy luận.",
+            "nextAction": "Không cần thực hiện hành động nào. Xem lại Bản ghi Xác minh Suy luận hiện tại khi các tuyên bố của nhà cung cấp thay đổi."
+          },
+          "deferred_missing": {
+            "summary": "Suy luận Mã hóa và có thể xác minh hiện chưa được xác minh cho Nhà cung cấp Mô hình đã cấu hình.",
+            "nextAction": "Hãy cấu hình một Nhà cung cấp Mô hình được hỗ trợ và chạy Xác minh Suy luận trước khi coi Độ sẵn sàng Triển khai là hoàn tất."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Xem lại Vòng đời Dữ liệu",
+        "status": {
+          "needs_review": {
+            "summary": "Việc Xem lại Vòng đời Dữ liệu cần Quản trị viên xem xét.",
+            "nextAction": "Xem lại tình trạng Vòng đời Lưu trữ Đang hoạt động và ghi lại kết quả Xem lại Vòng đời Dữ liệu."
+          },
+          "stale": {
+            "summary": "Bản ghi Xem lại Vòng đời Dữ liệu đã cũ sau một thay đổi vòng đời được hỗ trợ.",
+            "nextAction": "Xem lại tình trạng Vòng lưu trữ Đang hoạt động hiện tại và ghi lại kết quả Xem lại Vòng đời Dữ liệu mới."
+          },
+          "reviewed": {
+            "summary": "Đã hoàn tất việc Kiểm duyệt Vòng đời Dữ liệu.",
+            "nextAction": "Không cần thực hiện hành động nào trừ khi trạng thái vòng đời được hỗ trợ thay đổi."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Xác nhận Bề mặt Triển khai",
+        "status": {
+          "acknowledged": {
+            "summary": "Các danh mục Bề mặt Triển khai không được hỗ trợ đã được xác nhận.",
+            "nextAction": "Không cần thực hiện hành động nào."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Các danh mục Bề mặt Triển khai không được hỗ trợ cần được Người vận hành xác nhận.",
+            "nextAction": "Hãy kiểm tra các danh mục Bề mặt Triển khai được liệt kê và xác nhận từng danh mục trước khi coi trạng thái Sẵn sàng Triển khai là hoàn tất."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Diễn tập Sao lưu và Khôi phục",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Yêu cầu có bản ghi Diễn tập Sao lưu và Khôi phục gần đây của Người vận hành.",
+            "nextAction": "Hãy hoàn tất và ghi lại một bản Diễn tập Sao lưu và Khôi phục cho lần Triển khai này."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Yêu cầu Khởi động lại",
+        "status": {
+          "current": {
+            "summary": "Không có Cài đặt Triển khai nào yêu cầu khởi động lại thay đổi kể từ khi bắt đầu dịch vụ.",
+            "nextAction": "Không cần thực hiện hành cần hành động nào."
+          },
+          "restart_required": {
+            "summary": "Các Cài đặt Triển khai yêu cầu khởi động lại đã thay đổi sau khi bắt đầu dịch vụ. ({{changedSettings}})",
+            "nextAction": "Hãy áp dụng các Cài đặt Triển khai mong muốn và khởi động lại các dịch vụ bị ảnh hưởng trước khi coi chúng là hiện tại."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Cấu hình Runtime Sage",
+        "status": {
+          "not_generated": {
+            "summary": "Môi trường runtime Sage vẫn chưa được tạo từ Cài đặt Triển khai.",
+            "nextAction": "Hãy xuất môi trường runtime Sage trước khi coi các Cài đặt Triển khai đã được áp dụng cho Sage."
+          },
+          "matches_desired": {
+            "summary": "Cấu hình runtime Sage đang chạy khớp với Cài đặt Triển khai mong muốn.",
+            "nextAction": "Không cần thực hiện hành động nào."
+          },
+          "drifted": {
+            "summary": "Cấu hình runtime Sage đang chạy khác với Cài đặt Triển khai mong muốn.",
+            "nextAction": "Hãy kiểm tra sự sai lệch cấu hình runtime Sage, áp dụng môi trường Sage đã được tạo và khởi động lại Sage."
+          },
+          "current": {
+            "summary": "Môi trường runtime Sage đã được tạo từ các Cài đặt Triển khai hiện tại.",
+            "nextAction": "Không cần thực hiện hành động nào trừ khi tệp tạo ra chưa được áp dụng vào Triển khai."
+          },
+          "stale": {
+            "summary": "Cài đặt Triển khai đã thay đổi sau khi môi trường runtime Sage được tạo.",
+            "nextAction": "Hãy xuất một môi trường runtime Sage mới và áp dụng nó thông qua quy trình khởi động lại Triển khai."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Cấu hình Runtime Core Backend",
+        "status": {
+          "not_generated": {
+            "summary": "Môi trường runtime core-backend vẫn chưa được tạo từ Cài thực hiện Triển khai.",
+            "nextAction": "Hãy xuất môi trường runtime core-backend trước khi coi các Cài đặt Triển khai đã được áp dụng cho core-backend."
+          },
+          "matches_desired": {
+            "summary": "Cấu hình runtime core-backend đang chạy khớp với Cài đặt Triển khai mong muốn.",
+            "nextAction": "Không cần thực hiện hành động nào."
+          },
+          "drifted": {
+            "summary": "Cấu hình runtime core-backend đang chạy khác với Cài đặt Triển khai mong muốn.",
+            "nextAction": "Kiểm tra sự sai lệch cấu hình runtime core-backend, áp dụng môi trường core-backend đã được tạo và khởi động lại core-backend."
+          },
+          "current": {
+            "summary": "Môi trường runtime core-backend đã được tạo từ Cài đặt Triển khai hiện tại.",
+            "nextAction": "Không cần thực hiện hành động nào trừ khi artifact đã tạo chưa được áp dụng vào Triển khai."
+          },
+          "stale": {
+            "summary": "Cài đặt Triển khai đã thay đổi sau khi môi trường runtime core-backend được tạo.",
+            "nextAction": "Xuất môi trường runtime core-backend mới và áp dụng thông qua quy trình khởi động lại Triển khai."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Trình hướng dẫn Triển khai",
+      "step": "Bước {{current}} trên {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Sẵn sàng Vận hành",
+      "description": "Kiểm tra các quy trình sao lưu, khôi phục, giám sát và diễn tập phục hồi trước khi vận hành bình thường."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — khóa API Tinfoil của bạn cho proxy cục bộ.",
+      "apiKeyLabel": "Khóa API Tinfoil",
+      "ariaLabel": "Hỗ trợ cấu hình runtime Sage",
+      "exampleConfig": "Cấu hình ví dụ",
+      "goToPage": "Đi đến trang",
+      "sageExtra": "Đặt LLM_API_KEY thành khóa Tinfoil của bạn từ {{tinfoilSignupUrl}}. Hệ thống sẽ ánh xạ nó tới Sage và proxy Tinfoil cục bộ.",
+      "sageHint": "Bản mẫu này điều hướng lưu lượng Agent Runtime thông qua Sage và Tinfoil. LLM_API_KEY là khóa Nhà cung cấp Mô hình chuẩn.",
+      "modelField": "TINFOIL_MODEL — định danh mô hình Tinfoil mà Sage nên sử dụng (ví dụ: glm-5-2).",
+      "overviewDesc": "Bản mẫu này sử dụng Sage làm Agent Runtime công khai và Tinfoil làm phương thức truyền tải của Nhà cung cấp Mô hình. Cấu hình Nhà cung cấp Mô hình thông qua Cài đặt Triển khai LLM_*; hệ thống sẽ ánh xạ chúng tới runtime Tinfoil của Sage.",
+      "overviewTitle": "Tổng quan về Runtime Sage",
+      "providerField": "LLM_PROVIDER — đặt thành \"sage\" cho bản mẫu này."
+    },
+    "inferenceVerification": {
+      "current": "Hiện tại",
+      "missing": "Thiếu",
+      "expired": "Đã hết hạn",
+      "failed": "Thất bại",
+      "success": "Thành công",
+      "statusLoadFailed": "Tải trạng thái xác minh suy luận thất bại",
+      "historyLoadFailed": "Tải lịch sử xác minh suy luận thất bại",
+      "loadFailed": "Tải xác minh suy luận thất bại",
+      "manualFailed": "Xác minh thủ công thất bại",
+      "manualSucceeded": "Xác minh thủ công thành công",
+      "detailLoadFailed": "Tải chi tiết chứng thực thất bại",
+      "ariaLabel": "Xác minh suy luận",
+      "title": "Xác minh suy luận",
+      "summary": "Bằng chứng dành riêng cho Admin cho thấy suy luận được bảo vệ đang chạy trên Nhà cung cấp Mô hình dự kiến.",
+      "verifyNow": "Xác minh ngay",
+      "status": "Trạng thái",
+      "checkedAt": "Đã kiểm tra",
+      "expiresAt": "Hết hạn",
+      "expectedClaims": "Các yêu cầu (claims) dự kiến",
+      "expectedClaimsValue": "Yêu cầu dự kiến: {{fingerprint}}",
+      "providerClaims": "Yêu cầu của Nhà cung cấp",
+      "provider": "Nhà cung cấp",
+      "model": "Mô hình",
+      "endpoint": "Điểm cuối (Endpoint)",
+      "history": "Lịch sử xác minh",
+      "emptyHistory": "Chưa có bản ghi xác minh nào.",
+      "recordTitle": "Bản ghi #{{id}}",
+      "inspectAttestation": "Kiểm tra chứng thực",
+      "fullAttestation": "Toàn bộ tài liệu chứng thực"
+    },
+    "lifecycle": {
+      "notStarted": "Chưa bắt đầu",
+      "notConfigured": "Chưa được cấu hình",
+      "plaintextByOperatorChoice": "Văn bản thuần túy theo lựa chọn của Nhà điều hành",
+      "allTombstones": "Tất cả",
+      "allTombstonesLabel": "Tất cả tombstones",
+      "incompleteTombstonesFilter": "Chưa hoàn tất",
+      "incompleteTombstonesLabel": "Tombstones chưa hoàn tất",
+      "completedTombstonesFilter": "Đã hoàn tất",
+      "completedTombstonesLabel": "Tombstones đã hoàn tất",
+      "title": "Trạng thái vòng đời dữ liệu",
+      "description": "Phạm vi bảo mật do Nhà điều hành kiểm soát hiện tại trên dữ liệu Instance.",
+      "scopeExcludes": "Loại trừ: {{excludes}}",
+      "secureEraseStatus": "Xóa an toàn: {{status}}",
+      "readinessStatus": "Trạng thái sẵn sàng vòng đời: {{status}}",
+      "readinessNonBlocking": "Các cuộc hội thoại của người dùng không bị chặn bởi các cảnh báo về Trạng thái sẵn sàng vòng đời trong v1.",
+      "readinessStaleReason": "Lý do: {{reason}}",
+      "contentEncryptionKey": "Khóa mã hóa nội dung: {{status}}",
+      "artifactEncryptionPosture": "Tình trạng mã hóa artifact: {{status}}",
+      "artifactPostureLabel": "Tình trạng mã hóa artifact",
+      "artifactPostureRequired": "Bắt buộc",
+      "artifactPostureDisabled": "Đã tắt",
+      "retentionSchedulerStatus": "Bộ lập lịch lưu trữ: {{status}}",
+      "schedulerObservation": "Quan sát: {{status}}",
+      "schedulerEnabledClasses": "Các lớp được bộ lập lịch kích hoạt: {{classes}}",
+      "schedulerLastRunStatus": "Trạng thái lần chạy cuối: {{status}}",
+      "schedulerLastRun": "Lần chạy cuối: {{trigger}} bởi {{actor}}",
+      "previewRetention": "Xem trước lưu trữ",
+      "runScheduledRetention": "Chạy theo lịch trình",
+      "previewRetentionResult": "Xem trước: {{conversations}} cuộc hội thoại, {{artifacts}} artifact tài liệu, {{skipped}} lớp bị bỏ qua.",
+      "scheduledRetentionResult": "Lần chạy theo lịch: {{status}} với {{retries}} lần thử lại tombstone.",
+      "scheduledRetentionStatus": "Các lớp được lập lịch: {{classes}}",
+      "auditCoverageStatus": "Phạm vi kiểm tra: {{audited}} đã kiểm tra, {{exceptions}} ngoại lệ, {{missing}} thiếu.",
+      "owner": "Chủ sở hữu: {{owner}}",
+      "deletion": "Xóa: {{status}}",
+      "retention": "Lưu trữ: {{status}}",
+      "audit": "Kiểm tra: {{status}}",
+      "confidentiality": "Tính bảo mật: {{status}}",
+      "incompleteTombstones": "Tombstone chưa hoàn tất: {{count}}",
+      "completedTombstones": "Tombstone đã hoàn tất: {{count}}",
+      "retentionEnabled": "Đã bật",
+      "retentionWindow": "Cửa sổ",
+      "retentionDays": "ngày",
+      "scheduledEnforcement": "Đã lập lịch",
+      "saveRetentionPolicy": "Lưu chính sách",
+      "empty": "Không có thông tin về trạng thái vòng đời.",
+      "retentionPolicySaveFailed": "Không thể lưu chính sách lưu trữ.",
+      "retentionPreviewFailed": "Không thể xem trước chế độ lưu trữ.",
+      "scheduledRetentionFailed": "Không thể thực hiện lưu trữ theo lịch trình.",
+      "artifactPostureFailed": "Không thể cập nhật cấu hình mã hóa artifact.",
+      "unsupportedSurfacesTitle": "Các bề mặt triển khai không được hỗ trợ",
+      "unsupportedSurfacesDescription": "Các dấu vết vận hành này được hiển thị ở đây nhưng nằm ngoài sự kiểm soát của vòng đời sản phẩm.",
+      "unsupportedSurfaceAckFailed": "Không thể cập nhật xác nhận.",
+      "acknowledgedSurface": "Đã xác nhận",
+      "acknowledgeSurface": "Xác nhận",
+      "tombstonesTitle": "Dấu vết xóa (Tombstones)",
+      "tombstonesDescription": "Thử lại các lệnh xóa vòng đời chưa hoàn tất mà không làm lộ nội dung đã xóa.",
+      "tombstoneStatusFilter": "Bộ lọc trạng thái dấu vết xóa",
+      "tombstoneRetryFailed": "Thử lại thất bại.",
+      "tombstonesFetchFailed": "Không thể tải các dấu vết xóa.",
+      "tombstoneClass": "Loại: {{className}}",
+      "tombstoneSource": "Nguồn: {{source}}",
+      "tombstoneRetries": "Số lần thử lại: {{count}}",
+      "tombstoneUpdated": "Đã cập nhật: {{updated}}",
+      "retryTombstoneLabel": "Thử lại dấu vết xóa {{id}}",
+      "retry": "Thử lại",
+      "tombstonesEmpty": "Không có dấu vết xóa nào đang chờ thử lại."
+    },
+    "runtimeEnv": {
+      "unknown": "Không xác định",
+      "title": "Đồng bộ cấu hình Runtime",
+      "description": "So sánh Cài đặt triển khai mong muốn, môi trường Sage được tạo và trạng thái đang chạy có thể quan sát được.",
+      "desired": "Mong muốn",
+      "configuredKeys": "Đã cấu hình {{count}} trên {{total}} khóa",
+      "generated": "Đã tạo",
+      "exportedAt": "Đã xuất {{time}}",
+      "notExported": "Chưa có bản xuất môi trường Sage nào được ghi lại",
+      "running": "Đang chạy",
+      "runningUnknown": "Trạng thái đang chạy hiện chưa được kiểm tra trực tiếp.",
+      "coreBackend": "Backend lõi",
+      "coreBackendHint": "Căn chỉnh môi trường tiến trình Backend",
+      "coreDesired": "Trạng thái lõi mong muốn",
+      "coreConfiguredKeys": "Core backend: đã cấu hình {{count}} trên {{total}} khóa",
+      "coreGenerated": "Trạng thái lõi đã tạo",
+      "coreNotExported": "Chưa ghi nhận xuất môi trường core backend",
+      "coreRunning": "Trạng thái lõi đang chạy",
+      "coreRunningUnknown": "Trạng thái hoạt động của core backend chưa được kiểm tra trực tiếp.",
+      "coreExportedTitle": "Đã xuất môi trường Core-backend",
+      "coreSensitiveArtifact": "Hãy coi core-backend.env là tài liệu triển khai nhạy cảm.",
+      "coreExportDoesNotApply": "Việc xuất artifact không làm thay đổi tiến trình backend đang chạy cho đến khi Người vận hành (Operator) áp dụng và khởi động lại core-backend.",
+      "exportedTitle": "Đã xuất môi trường Sage",
+      "sensitiveArtifact": "Hãy coi sage.env là tài liệu triển khai nhạy cảm.",
+      "exportDoesNotApply": "Việc xuất artifact không làm thay cả tiến trình Sage đang chạy cho đến khi Người vận hành (Operator) áp dụng và khởi động lại Sage."
+    },
+    "categorySettingsAria": "Cài đặt {{category}}",
+    "exportCoreBackendRuntimeEnv": "Xuất môi trường core-backend",
+    "restartCurrent": "Không yêu cầu khởi động lại",
+    "restartCurrentDesc": "Không có Cài đặt Triển khai nào yêu cầu khởi động lại thay đổi kể từ khi bắt đầu dịch vụ.",
+    "saveError": "Lưu thất bại",
+    "openHelpAria": "Mở trợ giúp cho {{label}}"
   },
   "upload": {
     "invalidFileType": "Loại tệp không hợp lệ. Cho phép: {{extensions}}",
@@ -1125,7 +2026,8 @@
       "processing": "Đang xử lý",
       "chunked": "Đã chia khối",
       "complete": "Hoàn thành",
-      "failed": "Thất bại"
+      "failed": "Thất bại",
+      "completedWithErrors": "Hoàn tất với lỗi"
     },
     "chunks": "{{processed}}/{{total}} khối",
     "deleteDocument": "Xóa tài liệu",
@@ -1174,7 +2076,21 @@
     "serverBusy": "Máy chủ đang bận",
     "tryRefresh": "Thử lại",
     "uploadedSuccess": "Đã tải lên thành công — bắt đầu xử lý",
-    "uploadingStatus": "Đang tải lên máy chủ..."
+    "uploadingStatus": "Đang tải lên máy chủ...",
+    "uploadError": "Tải lên thất bại",
+    "documentDeletionError": "Lỗi xóa tài liệu",
+    "navigationWarning": "Tài liệu của bạn vẫn đang được chuyển đi. Chỉ rời đi sau khi quá trình xử lý đã bắt đầu, nếu không việc tải lên có thể không được lưu.",
+    "duplicateInBatch": "Tên tài liệu bị trùng trong đợt này",
+    "documentsSelected": "{{count}} tài liệu",
+    "queueSummary": "{{valid}} sẵn sàng, {{rejected}} bị bỏ qua",
+    "skipped": "Đã bỏ qua",
+    "uploadedPartialSuccess": "{{count}} đã vào hàng đợi, {{rejected}} bị bỏ qua",
+    "chooseFiles": "Chọn tệp",
+    "chooseFolder": "Chọn thư mục",
+    "uploadDocuments": "Tải tài liệu lên",
+    "replacingDocument": "Đang thay thế {{filename}}",
+    "recentDocumentsShowing": "Hiển thị {{shown}} trên {{total}} tài liệu",
+    "showMore": "Xem thêm"
   },
   "configCategories": {
     "embedding": {
@@ -1216,6 +2132,11 @@
       "description": "Cấu hình chứng chỉ SSL và cài đặt HTTPS",
       "hint": "Cấu hình cài đặt TLS và proxy khi phục vụ qua HTTPS. Mặc định an toàn cho phát triển cục bộ; chỉ bật HTTPS sau khi chứng chỉ được gắn kết.",
       "label": "SSL & Bảo mật"
+    },
+    "llm": {
+      "label": "Môi trường thực thi tác nhân Sage",
+      "description": "Cấu hình suy luận Sage + Tinfoil",
+      "hint": "Bản mẫu này điều hướng lưu lượng Agent Runtime qua Sage và sử dụng Tinfoil làm phương thức truyền tải của Model Provider. Các thay đổi yêu cầu khởi động lại."
     }
   },
   "promptSections": {
@@ -1242,6 +2163,12 @@
       "description": "Cách AI cấu trúc phản hồi của nó",
       "hint": "Kiểm soát sở thích định dạng như sử dụng dấu chấm, tiêu đề hoặc đoạn văn hội thoại. Điều này ảnh hưởng đến cách câu trả lời được trình bày trực quan.",
       "placeholder": "Sử dụng dấu chấm cho danh sách, tiêu đề cho các phần..."
+    },
+    "prompt_system": {
+      "label": "Lời nhắc hệ thống",
+      "description": "Danh tính cốt lõi và hướng dẫn vận hành cho AI",
+      "hint": "Sử dụng nội dung này cho danh tính trợ lý, sứ mệnh và các ranh giới cấp cao nhất cần được áp dụng trước khi xét đến giọng điệu, quy tắc, công cụ hoặc ngữ cảnh tài liệu. Các thay đổi sẽ ảnh hưởng đến các cuộc hội thoại mới.",
+      "placeholder": "Bạn là Sage, một trợ lý riêng tư cho phiên bản này..."
     }
   },
   "parameters": {
@@ -1254,6 +2181,11 @@
       "label": "Độ sâu kiến thức",
       "description": "Bao nhiêu phần tài liệu để tham chiếu",
       "hint": "Khi trả lời câu hỏi, AI tìm kiếm tài liệu đã tải lên của bạn và lấy các phần liên quan. Số cao hơn nghĩa là nhiều ngữ cảnh hơn nhưng phản hồi chậm hơn. Số thấp hơn nhanh hơn nhưng có thể bỏ sót thông tin liên quan. Mặc định: 5"
+    },
+    "max_tokens": {
+      "label": "Số Token tối đa",
+      "description": "Độ dài tối đa cho mỗi phản hồi của AI",
+      "hint": "Giới hạn độ dài của một phản hồi. Giá trị thấp giúp câu trả lời ngắn gọn và giảm chi tiết; giá trị cao cho phép giải thích dài hơn. Mặc định: 2048"
     }
   },
   "defaults": {
@@ -1261,6 +2193,21 @@
       "label": "Tìm kiếm web",
       "description": "Cho phép AI tìm kiếm internet",
       "hint": "Khi được bật, AI có thể tìm kiếm web để lấy thông tin hiện tại không có trong tài liệu của bạn. Tắt điều này nếu bạn muốn phản hồi chỉ đến từ cơ sở kiến thức đã tải lên."
+    },
+    "knowledgeSource": {
+      "none": "Không có",
+      "selected": "Các tài liệu mặc định đã chọn",
+      "all": "Tất cả tài liệu hiện có"
+    },
+    "knowledge_source_default": {
+      "label": "Nguồn Kiến thức",
+      "description": "Chọn các nguồn kiến thức đã tải lên sẽ được kích hoạt trong Hội thoại Người dùng",
+      "hint": "Sử dụng \"none\" để không có kiến thức tải lên theo mặc định, \"selected\" cho các tài liệu được đánh dấu là Mặc định Kích hoạt, hoặc \"all\" cho tất cả tài liệu hiện có."
+    },
+    "user_default_tool_ids": {
+      "label": "Bộ Công cụ Người dùng",
+      "description": "Các Bộ Công cụ được kích hoạt mặc định trong Hội thoại Người dùng",
+      "hint": "Mảng JSON sử dụng bất kỳ giá trị nào trong \"curated-resources\", \"knowledge-search\", và \"web-search\". Knowledge Search cũng được điều khiển bởi Nguồn Kiến thức."
     }
   },
   "colors": {
@@ -1439,6 +2386,51 @@
       "description": "URL cơ sở gọi lại Webhook",
       "hint": "URL cơ sở được sử dụng để xây dựng các gọi lại webhook. Ví dụ: https://api.example.com/webhooks. Mặc định: http://localhost:8000.",
       "label": "URL Webhook"
+    },
+    "LLM_PROVIDER": {
+      "label": "Nhà cung cấp mô hình",
+      "description": "Nhãn Model Provider phía Python",
+      "hint": "Sử dụng \"sage\" cho bản mẫu này. Cài đặt triển khai này hỗ trợ chẩn đoán phía Python và siêu dữ liệu xác minh."
+    },
+    "LLM_MODEL": {
+      "label": "Tên Model",
+      "description": "Tên/định danh Model",
+      "hint": "Định danh model Tinfoil mà Sage nên sử dụng (ví dụ: \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "Điểm cuối API",
+      "description": "URL cơ sở API của Model Provider",
+      "hint": "URL cơ sở proxy Tinfoil. Mặc định: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "Khóa API",
+      "description": "Khóa API Tinfoil (bí mật)",
+      "hint": "Để trống để giữ bí mật Cài đặt Triển khai hiện tại."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Giới hạn Tốc độ Chat",
+      "description": "Số yêu cầu chat mỗi phút",
+      "hint": "Số yêu cầu /llm/chat tối đa mỗi phút cho mỗi người dùng, admin, token hoặc IP máy khách cố định. Yêu cầu khởi động lại. Mặc định: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Giới hạn Tốc độ Truy vấn Retrieval",
+      "description": "Số yêu cầu truy vấn retrieval mỗi phút",
+      "hint": "Số yêu cầu /query tối đa mỗi phút cho mỗi người dùng, token hoặc IP máy khách cố định. Yêu cầu khởi động lại. Mặc định: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Giới hạn Tốc độ Tải lên",
+      "description": "Số yêu cầu tải tài liệu lên mỗi phút",
+      "hint": "Số yêu cầu tải tài liệu lên tối đa mỗi phút cho mỗi admin, token hoặc IP máy khách cố định. Yêu cầu khởi động lại. Mặc định: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Giới hạn Tốc độ Tìm kiếm Vector",
+      "description": "Số yêu cầu tìm kiếm vector mỗi phút",
+      "hint": "Số yêu cầu tìm kiếm vector tối đa mỗi phút cho mỗi người dùng, token hoặc IP máy khách cố định. Yêu cầu khởi động lại. Mặc định: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Giới hạn Tốc độ Xuất Cấu hình",
+      "description": "Số lần xuất cấu hình triển khai mỗi giờ",
+      "hint": "Số lần xuất .env tối đa mỗi giờ cho mỗi phiên admin hoặc IP máy khách. Yêu cầu khởi động lại. Mặc định: 5."
     }
   },
   "instanceInitiation": {
@@ -1475,7 +2467,11 @@
       "title": "Sẵn sàng kết nối"
     },
     "subtitle": "Thiết lập cơ sở kiến thức riêng tư của bạn trong vài bước.",
-    "title": "Chào mừng đến với Enclave"
+    "title": "Chào mừng đến với Enclave",
+    "keySafety": {
+      "title": "Sử dụng khóa Nostr riêng cho Instance",
+      "body": "Không sử dụng khóa Nostr cá nhân của bạn. Hãy tạo hoặc chọn một khóa admin chuyên dụng cho Instance này để giảm rủi ro bị giám sát và giữ quyền truy cập vận hành tách biệt."
+    }
   },
   "reachout": {
     "errors": {
@@ -1483,7 +2479,8 @@
       "notConfigured": "Tính năng này chưa được cấu hình.",
       "rateLimited": "Quá nhiều tin nhắn. Vui lòng thử lại sau.",
       "required": "Tin nhắn là bắt buộc.",
-      "unavailable": "Reachout không khả dụng."
+      "unavailable": "Reachout không khả dụng.",
+      "formErrorLabel": "Lỗi biểu mẫu Reachout"
     },
     "form": {
       "messageLabel": "Tin nhắn",
@@ -1491,7 +2488,8 @@
       "send": "Gửi"
     },
     "status": {
-      "success": "Cảm ơn. Tin nhắn của bạn đã được gửi."
+      "success": "Cảm ơn. Tin nhắn của bạn đã được gửi.",
+      "successLabel": "Reachout thành công"
     },
     "mode": {
       "feedback": {
@@ -1526,7 +2524,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Máy chủ phụ trợ đã trả về lỗi khi xác thực. Điều này không được coi là đăng xuất.",
       "unable_to_verify_admin_session_5f87b8": "Không thể xác minh phiên quản trị viên",
       "verifying_admin_session_87c53b": "Đang xác minh phiên quản trị viên..."
-    }
+    },
+    "loadingAssistant": "Đang tải trợ lý quản trị"
   },
   "initiationGate": {
     "extracted": {
@@ -1740,7 +2739,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Xác minh mã thông báo liên kết thần kỳ và lấy thông tin phiên (phiên dựa trên cookie).",
       "verify_magic_link_token_183cf5": "Xác minh mã thông báo liên kết thần kỳ",
       "view_all_users_manage_approval_status_and_delete_03feec": "Xem tất cả người dùng, quản lý trạng thái phê duyệt và xóa người dùng.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Xem và cập nhật cài đặt cấu hình toàn phiên bản."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Xem và cập nhật cài đặt cấu hình toàn phiên bản.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Kiểm tra kết nối tới đường dẫn Model Provider đã cấu hình."
+    },
+    "labels": {
+      "themePreference": "Tùy chọn giao diện",
+      "endpointGuidance": "Hướng dẫn Endpoint",
+      "healthResponseOutput": "Kết quả phản hồi Health",
+      "jobs": "Công việc",
+      "chunks": "Phân đoạn",
+      "rateLimitTestType": "Loại kiểm tra giới hạn tốc độ",
+      "successfulRequests": "Yêu cầu thành công",
+      "successful": "Thành công",
+      "blockedRequests": "Yêu cầu bị chặn"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Lịch sử hội thoại"
+  },
+  "branding": {
+    "logoAlt": "Logo {{name}}"
+  },
+  "language": {
+    "english": "Tiếng Anh",
+    "spanish": "Tiếng Tây Ban Nha",
+    "french": "Tiếng Pháp",
+    "german": "Tiếng Đức",
+    "portuguese": "Tiếng Bồ Đào Nha"
+  },
+  "home": {
+    "checkingInstanceStatus": "Đang kiểm tra trạng thái instance..."
+  },
+  "adminGuidedSetup": {
+    "title": "Thiết lập instance của bạn",
+    "subtitle": "Trợ lý của bạn sẽ thu thập các thông tin cơ bản trong một lần duy nhất.",
+    "manual": "Cấu hình thủ công thay thế",
+    "finish": "Hoàn tất & bắt đầu thử nghiệm",
+    "comingSoon": "Giai đoạn này sắp ra mắt và đang được xây dựng riêng biệt.",
+    "steps": {
+      "initialize": {
+        "label": "Khởi tạo",
+        "title": "Khởi tạo",
+        "subtitle": "Hãy cùng thiết lập các thông tin cơ bản cho không gian của bạn để agent có được nền tảng chuẩn xác."
+      },
+      "docs": {
+        "label": "Tải lên tài liệu",
+        "title": "Tải lên hướng dẫn thực địa của bạn",
+        "subtitle": "Thêm tài liệu nguồn mà agent sẽ dùng để trả lời — sách, hướng dẫn và tài liệu tham khảo."
+      },
+      "resources": {
+        "label": "Tài nguyên chọn lọc",
+        "title": "Tài nguyên chọn lọc",
+        "subtitle": "Thêm các tài nguyên thực tế đáng tin cậy — danh bạ chính, luật sư, hỗ trợ giáo dục và sức khỏe tâm thần — mà agent có thể giới thiệu cho mọi người."
+      },
+      "test": {
+        "label": "Kiểm thử với tư cách Người dùng",
+        "title": "Kiểm thử với tư cách người dùng",
+        "subtitle": "Sắp ra mắt — hãy thử đóng vai một trong các loại người dùng của bạn và đánh giá các câu trả lời."
+      },
+      "feedback": {
+        "label": "Phản hồi",
+        "title": "Vòng lặp phản hồi",
+        "subtitle": "Sắp ra mắt — xem lại chất lượng câu trả lời và cải thiện thiết lập của bạn."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Kiểm thử & Phản hồi",
+    "subtitle": "Chạy một Phiên Người dùng Kiểm thử, sau đó xem lại các nhật ký beta đã mã hóa và phản hồi từ các cuộc hội thoại đã lưu.",
+    "tabs": {
+      "test": "Kiểm thử với tư cách Người dùng",
+      "feedback": "Phản hồi"
+    },
+    "test": {
+      "pickPersona": "Chọn một nhân vật để kiểm thử",
+      "pickPersonaBody": "Cấp một người dùng kiểm thử cho một trong các loại người dùng của bạn, sau đó trò chuyện với tư cách là họ. Phiên này sẽ được lưu dưới dạng một bản dùng thử đã mã hóa mà bạn có thể đánh giá trong phần Phản hồi.",
+      "userType": "Loại người dùng",
+      "genericUser": "Người dùng chung (không có loại)",
+      "start": "Bắt đầu phiên",
+      "admin": "Quản trị viên",
+      "testUserId": "Người dùng kiểm thử",
+      "endSave": "Kết thúc & lưu bản dùng thử",
+      "previewNotice": "Chế độ xem trước — tính năng giả lập thực thụ chưa được kết nối, vì vậy cuộc trò chuyện này sẽ chạy dưới phiên quản trị viên của bạn. Bản ghi chép vẫn được lưu để xem lại.",
+      "chatEmpty": "Hãy gửi một tin nhắn với tư cách người dùng này để bắt đầu bản dùng thử.",
+      "inputPlaceholder": "Nhắn tin cho trợ lý với tư cách người dùng này...",
+      "saved": "Bản dùng thử đã được lưu (đã mã hóa). Hãy xem lại trong phần Phản hồi.",
+      "startError": "Không thể bắt đầu phiên kiểm thử",
+      "saveError": "Không thể lưu bản dùng thử",
+      "impersonationUnavailable": "Tính năng giả lập người dùng kiểm thử chưa khả dụng",
+      "sessionTokenError": "Không thể tạo mã thông báo phiên người dùng giả lập",
+      "testingAs": "Đang kiểm thử với tư cách {{persona}}",
+      "authFailed": "Phiên Người dùng giả lập không còn được ủy quyền.",
+      "discardUnsavedConfirm": "Hủy bỏ các lượt hội thoại đã hoàn tất nhưng chưa được lưu?",
+      "workspaceAria": "Không gian làm việc hội thoại Người dùng Kiểm thử"
+    },
+    "feedback": {
+      "trials": "Nhật ký Beta",
+      "untitled": "Cuộc hội thoại chưa đặt tên",
+      "turns": "lượt",
+      "turn": "Lượt",
+      "empty": "Chưa có nhật ký beta nào được lưu. Hãy chạy một Phiên Người dùng Thử nghiệm hoặc đợi các cuộc hội thoại của người dùng.",
+      "selectPrompt": "Chọn một nhật ký beta để xem bản ghi và đánh giá từng lượt.",
+      "noNip04": "Kết nối với một tiện ích mở rộng Nostr (Alby, nos2x) để giải mã bản ghi — chúng được mã hóa bằng khóa admin của bạn.",
+      "sourceUser": "Cuộc hội thoại của người dùng",
+      "sourceTest": "Phiên Người dùng Thử nghiệm",
+      "thumbUp": "Câu trả lời tốt",
+      "thumbDown": "Cần cải thiện",
+      "notePlaceholder": "Ghi chú tùy chọn (được lưu dưới dạng mã hóa)…",
+      "exportNotDecrypted": "Hãy mở và giải mã bản ghi trước khi xuất.",
+      "exportFeedbackNotDecrypted": "Một số nhận xét phản hồi không thể giải mã. Hãy mở lại bản ghi và phê duyệt mọi yêu cầu giải mã trước khi xuất.",
+      "exportNeedsExtension": "Việc xuất yêu cầu một tiện ích mở rộng Nostr. Các bản ghi được mã hóa khi lưu trữ và tiện ích mở rộng của bạn chính là thứ giải mã chúng.",
+      "exportDecrypting": "Đang giải mã. Tính năng xuất sẽ khả dụng sau khi mọi yêu cầu được phê duyệt.",
+      "exportWhyDisabled": "Tại sao tính năng xuất bị vô hiệu hóa?",
+      "retryDecryption": "Thử lại việc giải mã",
+      "decryptPendingTitle": "Kiểm tra tiện ích mở rộng Nostr của bạn",
+      "decryptPendingBody": "Nó đang yêu cầu quyền giải mã bản ghi này. Nó có thể không tự mở — hãy nhấp vào biểu tượng tiện ích mở rộng nếu bạn không thấy nó. Hãy chọn tùy chọn ghi nhớ lựa chọn của bạn để nó chỉ hỏi một lần.",
+      "decryptProgress": "Đã giải mã {{done}} trên {{total}}.",
+      "loadTrialsError": "Không thể tải các thử nghiệm",
+      "loadTranscriptError": "Không thể tải bản ghi",
+      "saveError": "Không thể lưu phản hồi",
+      "deleteError": "Không thể xóa nhật ký phiên",
+      "exportError": "Xuất phiên thất bại",
+      "transcriptIntegrityError": "Bản ghi không khả dụng hoặc không đầy đủ và không thể xuất.",
+      "decryptTranscriptError": "Không thể giải mã bản ghi. Hãy phê duyệt yêu cầu giải mã trong tiện ích mở sau Nostr của bạn."
+    }
+  },
+  "adminResources": {
+    "title": "Danh mục Tài nguyên",
+    "subtitle": "Duy trì thủ công các nguồn giới thiệu đã được kiểm duyệt mà trợ lý có thể đề cập khi cuộc hội thoại cần chuyển cấp. Chỉ các nguồn ở trạng thái \"ready\" mới được hiển thị cho người dùng cuối.",
+    "add": "Thêm tài nguyên",
+    "addTitle": "Thêm tài nguyên",
+    "editTitle": "Chỉnh sửa tài nguyên",
+    "empty": "Chưa có tài nguyên nào. Hãy thêm thủ công khi bạn có một nguồn giới thiệu đã được kiểm duyệt.",
+    "verified": "đã xác minh",
+    "missing": "Thiếu thông tin để hoạt động",
+    "name": "Tên",
+    "type": "Loại tài nguyên",
+    "languages": "Ngôn ngữ (mã ISO cách nhau bằng dấu phẩy)",
+    "description": "Mô tả",
+    "descriptionHint": "Những gì trợ lý nên nói với người dùng về tài nguyên này.",
+    "scopeLevel": "Cấp độ phạm vi",
+    "scopeCode": "Mã phạm vi",
+    "scopeCodeHint": "Quốc gia: mã ISO (NI). Tiểu vùng/vùng: mã UN M49 (013 = Trung Mỹ). Toàn cầu: để trống.",
+    "helpTypes": "Các loại hỗ trợ",
+    "contact": "Phương thức liên hệ",
+    "vettedBy": "Được xác minh bởi",
+    "sourceNote": "Ghi chú nguồn",
+    "markVerified": "Đánh dấu là đã xác minh (xếp hạng đầu tiên)",
+    "archive": "Lưu trữ (ẩn khỏi người dùng cuối)",
+    "deleteTitle": "Xóa tài nguyên?",
+    "deleteBody": "Thao tác này sẽ xóa mục danh mục cho {{name}}",
+    "coverage": "Phạm vi bao phủ",
+    "coverageHint": "Chọn một cấp độ phạm vi, sau đó tìm theo tên hoặc mã.",
+    "coverageCodePlaceholder": "Tìm kiếm theo tên hoặc mã...",
+    "coverageLevelFirst": "Vui lòng chọn cấp độ phạm vi trước",
+    "coverageClear": "Xóa mã phạm vi",
+    "regionDirectoryUnavailable": "Danh mục vùng không khả dụng. Hãy nhập mã thủ công.",
+    "level": {
+      "country": "Quốc gia",
+      "subregion": "Tiểu vùng",
+      "region": "Vùng",
+      "global": "Toàn cầu"
+    },
+    "addPointer": "Thêm con trỏ",
+    "addRegion": "Thêm vùng",
+    "displayOrder": "Thứ tự hiển thị",
+    "displayOrderHint": "Số nhỏ hơn sẽ hiển thị trước sau mức độ liên quan và xác minh.",
+    "kind": "Loại",
+    "noSearchResults": "Không có tài nguyên nào khớp với tìm kiếm này.",
+    "order": "Thứ tự",
+    "pointerLabel": "Nhãn con trỏ {{number}}",
+    "pointerType": "Loại con trỏ {{number}}",
+    "pointerValue": "Giá trị con trỏ {{number}}",
+    "pointers": "Con trỏ",
+    "regionNumber": "Vùng {{number}}",
+    "regions": "Các vùng",
+    "removePointer": "Xóa con trỏ",
+    "removeRegion": "Xóa vùng",
+    "search": "Tìm kiếm tài nguyên",
+    "searchPlaceholder": "Tên, loại, thẻ, con trỏ hoặc mô tả",
+    "tags": "Thẻ (cách nhau bằng dấu phẩy)",
+    "namePlaceholder": "ví dụ: Hội đồng Nhân quyền Trung Mỹ",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, giáo dục, địa phương",
+    "loadError": "Không thể tải tài nguyên",
+    "loadDirectoryError": "Không thể tải thư mục",
+    "saveError": "Không thể lưu tài nguyên",
+    "deleteError": "Không thể xóa tài nguyên"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Quay lại Bảng điều khiển Admin",
+    "eyebrow": "Thao tác quản trị",
+    "title": "Quản lý người dùng",
+    "subtitle": "Xem xét người dùng, nắm bắt trạng thái và phê duyệt quyền truy cập từ một bảng điều khiển đơn giản.",
+    "unlockDetails": "Xem chi tiết",
+    "refreshRoster": "Làm mới danh sách",
+    "exportVisible": "Xuất danh sách đang hiển thị",
+    "prepareVisible": "Chuẩn bị danh sách đang hiển thị",
+    "downloadPrepared": "Tải danh sách đã chuẩn bị",
+    "exportPrepared": "Danh sách hiển thị đầy đủ đã sẵn sàng. Hiện đã có thể tải về.",
+    "rosterTitle": "Danh sách người dùng",
+    "rosterShown": "Hiển thị {{shown}} trên tổng số {{total}}.",
+    "tableLabel": "Danh sách người dùng",
+    "tableRowsLabel": "Các hàng trong danh sách người dùng",
+    "loadingLabel": "Đang tải danh sách người dùng",
+    "loadingUsers": "Đang tải người dùng...",
+    "loadRetry": "Không thể tải danh sách người dùng. Hãy dùng Làm mới danh sách để thử lại.",
+    "emptyNoUsers": "Chưa có người dùng nào. Người dùng đã xác thực mới sẽ xuất hiện tại đây.",
+    "emptyFiltered": "Không có người dùng nào khớp với bộ lọc này.",
+    "noUserType": "Không có Loại Người dùng",
+    "unknown": "Không xác định",
+    "userFallback": "Người dùng #{{id}}",
+    "approvalSuccess": "Đã phê duyệt {{name}}.",
+    "exportSuccess": "Đã tải bảng tính danh sách người dùng.",
+    "metrics": {
+      "total": "Tổng số người dùng",
+      "totalDetail": "trong danh sách",
+      "pendingApproval": "Đang chờ phê duyệt",
+      "pendingDetail": "{{count}} đang chờ",
+      "approved": "Đã phê duyệt",
+      "approvedDetail": "có thể tham gia chat",
+      "incompleteProfiles": "Hồ sơ chưa hoàn thiện",
+      "incompleteDetail": "cần trả lời các câu hỏi bắt buộc"
+    },
+    "callouts": {
+      "loadFailed": "Tải danh sách người dùng thất bại",
+      "approvalUpdated": "Trạng thái phê duyệt người dùng đã được cập nhật",
+      "approvalFailed": "Cập nhật phê duyệt người dùng thất bại",
+      "exportReady": "Đã sẵn sàng xuất danh sách người dùng",
+      "exportFailed": "Xuất danh sách người dùng thất bại"
+    },
+    "filters": {
+      "search": "Tìm kiếm người dùng",
+      "searchPlaceholder": "Tên, email, khóa công khai, hoặc #ID",
+      "approvalStatus": "Trạng thái phê duyệt",
+      "allApprovalStates": "Tất cả trạng thái phê duyệt",
+      "pendingApproval": "Đang chờ phê duyệt",
+      "approved": "Đã phê duyệt",
+      "allUserTypes": "Tất cả loại người dùng"
+    },
+    "columns": {
+      "user": "Người dùng",
+      "approval": "Phê duyệt",
+      "userType": "Loại người dùng",
+      "userProfile": "Hồ sơ người dùng",
+      "joined": "Tham gia",
+      "action": "Thao tác"
+    },
+    "status": {
+      "approved": "Đã phê duyệt",
+      "pending": "Đang chờ"
+    },
+    "actions": {
+      "approve": "Phê duyệt",
+      "approveUser": "Phê duyệt {{name}}",
+      "viewUserDetails": "Xem chi tiết {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Không có câu hỏi nào",
+      "noQuestionsDetail": "Không có câu hỏi onboarding nào được áp dụng.",
+      "needsProfile": "Cần hoàn thiện hồ sơ",
+      "missingRequiredOne": "Thiếu 1 câu trả lời bắt buộc",
+      "missingRequiredMany": "Thiếu {{count}} câu trả lời bắt buộc",
+      "noProfileYet": "Chưa có hồ sơ",
+      "noAnswersSaved": "Chưa có câu trả lời nào được lưu.",
+      "ready": "Hồ sơ đã sẵn sàng",
+      "answersSavedOne": "Đã lưu 1 câu trả lời",
+      "answersSavedMany": "Đã lưu {{count}} câu trả lời"
+    },
+    "identity": {
+      "decrypting": "Đang giải mã tên và email...",
+      "failed": "Không thể mở khóa thông tin đã mã hóa.",
+      "unavailable": "Thông tin đã mã hóa cần một trình ký duyệt trên trình duyệt.",
+      "locked": "Thông tin đã mã hóa đang bị khóa."
+    },
+    "errors": {
+      "loadUsers": "Không thể tải danh sách người dùng.",
+      "loadUserTypes": "Không thể tải các loại người dùng.",
+      "loadQuestions": "Không thể tải các câu hỏi hướng dẫn.",
+      "approvalUpdate": "Không thể cập nhật phê duyệt người dùng.",
+      "decryptUnavailable": "Cần một tiện ích mở rộng trình duyệt có tính năng giải mã NIP-04 để chuẩn bị danh sách này.",
+      "decryptRoster": "Không thể giải mã một giá trị danh sách đã mã hóa. Không có bảng tính nào được tạo.",
+      "prepareRequired": "Hãy chuẩn bị danh sách đang hiển thị trước khi tải xuống.",
+      "exportAudit": "Không thể kiểm tra xuất nhật ký danh sách người dùng.",
+      "exportRoster": "Không thể xuất danh sách người dùng."
+    },
+    "detail": {
+      "booleanYes": "Có",
+      "booleanNo": "Không",
+      "fieldUnlocked": "Câu trả lời đã mã hóa đã được mở khóa trên trình duyệt này.",
+      "decryptingField": "Đang giải mã câu trả lời...",
+      "encryptedFieldUnavailable": "Câu trả lời đã mã hóa cần một trình ký duyệt trên trình duyệt.",
+      "encryptedFieldFailed": "Không thể mở khóa câu trả lời đã mã hóa.",
+      "encryptedFieldLocked": "Câu trả lời đã mã hóa đang bị khóa.",
+      "notAnswered": "Chưa trả lời",
+      "requiredMissing": "Thiếu câu trả lời bắt buộc.",
+      "backToUserManager": "Quay lại Trình quản lý người dùng",
+      "backToRoster": "Quay lại danh sách người dùng",
+      "eyebrow": "Chi tiết người dùng",
+      "notFoundTitle": "Không tìm thấy người dùng",
+      "notFoundBody": "Người dùng này không có trong danh sách quản trị hiện tại.",
+      "subtitle": "Xem trạng thái, câu trả lời hồ sơ và chi tiết quyền truy cập của người dùng này.",
+      "approvalStatus": "Trạng thái phê duyệt",
+      "waitingApproval": "đang chờ phê duyệt",
+      "identityTitle": "Danh tính",
+      "name": "Tên",
+      "nameUnavailable": "Không khả dụng",
+      "email": "Email",
+      "emailUnavailable": "Không khả dụng",
+      "userId": "ID người dùng",
+      "publicKey": "Khóa công khai",
+      "noPublicKey": "Không có khóa công khai",
+      "fieldsTitle": "Các trường hồ sơ",
+      "fieldsShown_one": "Có {{count}} trường áp dụng cho người dùng này.",
+      "fieldsShown_other": "Có {{count}} trường áp dụng cho người dùng này.",
+      "noFields": "Không có trường hướng dẫn nào áp dụng cho người dùng này.",
+      "required": "Bắt buộc",
+      "optional": "Tùy chọn",
+      "encrypted": "Đã mã hóa",
+      "plain": "Văn bản thuần",
+      "chatContext": "Ngữ cảnh trò chuyện"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Đang giải mã {{done}}/{{total}}",
+    "checkExtension": "kiểm tra tiện ích Nostr của bạn",
+    "persistentApproval": "Chọn tùy chọn ghi nhớ hoặc luôn luôn để chỉ yêu cầu một lần duy nhất."
   }
 }
