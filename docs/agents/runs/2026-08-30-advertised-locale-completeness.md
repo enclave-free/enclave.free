@@ -6,10 +6,10 @@
 - Loop: Feature Dev
 - Target repo: `enclave-free/enclave.free`
 - Base branch: `staging`
-- Feature branch: `feature/advertised-locale-completeness`
+- Feature branch: `feature/advertised-locale-completeness-final` (clean-history shipping branch)
 - Human owner: plebdev
 - Started: 2026-08-30
-- Current status: #660–#666 complete and verified; clean-history PR preparation in progress
+- Current status: #660–#666 complete and verified; non-draft staging PR #667 open, PR review in progress
 - Skill setup status: complete; issue tracker, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -27,7 +27,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - Agent briefs: pending
 - Review packets: pending
 - Local CodeRabbit report: `docs/agents/runs/2026-08-31-advertised-locale-completeness-coderabbit-local.md` (service unavailable after three authenticated attempts; independent Standards + Spec fallback passed)
-- PR URL: parent PR pending; Sage dependency PR: https://github.com/enclave-free/sage/pull/54
+- PR URL: https://github.com/enclave-free/enclave.free/pull/667; Sage dependency PR: https://github.com/enclave-free/sage/pull/54
 - Existing source work: PR #658, issues #495 and #647
 
 ## Commands
