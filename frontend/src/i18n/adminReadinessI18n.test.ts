@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import controlPlaneReadinessContractSource from '../../../backend/app/deployment_readiness_contract.json?raw';
 import i18n from './index';
 import { localeResources } from './localeCatalog';
 import { deploymentReadinessStatuses } from './dynamicTranslationFamilies';
 import { lookupLocaleMessage } from './localizationContract';
 
 describe('primary Admin readiness i18n', () => {
+  it('matches every item and status accepted by the Enclave Control Plane', () => {
+    expect(deploymentReadinessStatuses).toEqual(
+      JSON.parse(controlPlaneReadinessContractSource)
+    );
+  });
+
   it('covers every reachable item/status label, summary, and next action in priority locales', () => {
     const priorityLocales = ['en', 'es', 'fr', 'ru', 'ar', 'zh-Hans'] as const;
     for (const locale of priorityLocales) {

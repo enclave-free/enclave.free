@@ -23,17 +23,6 @@ export const localizedCoverageLevels = [
 
 const adminGuideQuickStepIndexes = [0, 1, 2, 3, 4] as const;
 const adminGuideSafetyItemIndexes = [0, 1, 2, 3, 4] as const;
-const readinessItemKeys = [
-  'deployment_settings_validation',
-  'verifiable_inference',
-  'lifecycle_readiness',
-  'deployment_surface_acknowledgements',
-  'backup_restore_drill',
-  'restart_required',
-  'sage_runtime_env',
-  'core_backend_runtime_env',
-] as const;
-
 export const deploymentReadinessStatuses = {
   deployment_settings_validation: ['invalid', 'warnings', 'valid'],
   verifiable_inference: ['current', 'deferred_missing'],
@@ -59,6 +48,8 @@ export const deploymentReadinessStatuses = {
     'stale',
   ],
 } as const;
+
+const readinessItemKeys = Object.keys(deploymentReadinessStatuses);
 
 const readinessStatusKeys = Object.entries(deploymentReadinessStatuses).flatMap(
   ([item, statuses]) =>

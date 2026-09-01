@@ -27,3 +27,4 @@
 - Continue: yes, using the workflow's independent Codex review fallback
 - Escalate: no
 - Notes: Authentication succeeded with CodeRabbit CLI 0.7.5. Three attempts failed with the same recoverable error: `Connection failed: WebSocket closed`. The fallback Standards review found no hard documented-rule violation and the fallback Spec review passed. A remaining wire-shape data-clump observation is recorded as unrelated compatibility-API cleanup; rendering duplication was removed in `def891b`.
+- Maintainer direction: further CodeRabbit attempts were explicitly waived on 2026-08-31; subsequent cleanup uses fresh independent Standards + Spec review.

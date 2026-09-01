@@ -122,9 +122,52 @@ export function inspectStaticCopy(
       if (!staticCopyExempt(violation, exemptions)) violations.push(violation);
     };
 
+    const valueBindings = new Map<string, ts.VariableDeclaration[]>();
+
+    const bindingScope = (node: ts.Node): ts.Node => {
+      let current = node.parent;
+      while (current) {
+        if (
+          ts.isSourceFile(current) ||
+          ts.isBlock(current) ||
+          ts.isFunctionLike(current)
+        ) {
+          return current;
+        }
+        current = current.parent;
+      }
+      return sourceFile;
+    };
+
+    const scopeContains = (scope: ts.Node, node: ts.Node): boolean => {
+      let current: ts.Node | undefined = node;
+      while (current) {
+        if (current === scope) return true;
+        current = current.parent;
+      }
+      return false;
+    };
+
+    const resolveValueBinding = (
+      identifier: ts.Identifier
+    ): ts.VariableDeclaration | undefined =>
+      (valueBindings.get(identifier.text) ?? [])
+        .filter(
+          (declaration) =>
+            declaration.initializer &&
+            declaration.getStart(sourceFile) <
+              identifier.getStart(sourceFile) &&
+            scopeContains(bindingScope(declaration), identifier)
+        )
+        .sort(
+          (left, right) =>
+            right.getStart(sourceFile) - left.getStart(sourceFile)
+        )[0];
+
     const inspectExpression = (
       expression: ts.Expression,
-      kind: StaticCopyKind = 'text'
+      kind: StaticCopyKind = 'text',
+      resolving = new Set<ts.VariableDeclaration>()
     ): void => {
       if (
         ts.isCallExpression(expression) &&
@@ -133,6 +176,14 @@ export function inspectStaticCopy(
           (ts.isPropertyAccessExpression(expression.expression) &&
             expression.expression.name.text === 't'))
       ) {
+        return;
+      }
+      if (ts.isIdentifier(expression)) {
+        const binding = resolveValueBinding(expression);
+        if (!binding?.initializer || resolving.has(binding)) return;
+        const nextResolving = new Set(resolving);
+        nextResolving.add(binding);
+        inspectExpression(binding.initializer, kind, nextResolving);
         return;
       }
       if (ts.isStringLiteralLike(expression)) {
@@ -257,6 +308,15 @@ export function inspectStaticCopy(
     };
 
     const collectBindings = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer
+      ) {
+        const bindings = valueBindings.get(node.name.text) ?? [];
+        bindings.push(node);
+        valueBindings.set(node.name.text, bindings);
+      }
       if (
         ts.isVariableDeclaration(node) &&
         ts.isArrayBindingPattern(node.name) &&

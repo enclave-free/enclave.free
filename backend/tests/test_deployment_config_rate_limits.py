@@ -344,6 +344,29 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertNotIn("core_backend_runtime_env", items_by_key)
         self.assertNotIn("service_health", items_by_key)
 
+    def test_readiness_items_reject_undeclared_localization_keys(self) -> None:
+        item_kwargs = {
+            "label": "Test readiness item",
+            "source": "test",
+            "severity": "info",
+            "summary": "Summary",
+            "next_action": "Next action",
+        }
+
+        with self.assertRaisesRegex(ValueError, "Undeclared Deployment Readiness item"):
+            self.deployment_config._readiness_item(
+                key="new_unregistered_item",
+                status="current",
+                **item_kwargs,
+            )
+
+        with self.assertRaisesRegex(ValueError, "Undeclared Deployment Readiness status"):
+            self.deployment_config._readiness_item(
+                key="restart_required",
+                status="new_unregistered_status",
+                **item_kwargs,
+            )
+
     def test_deployment_readiness_counts_unacknowledged_unsupported_surfaces(self) -> None:
         lifecycle_status = {
             "lifecycle_readiness": {"status": "reviewed"},

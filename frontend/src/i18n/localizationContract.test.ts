@@ -194,6 +194,45 @@ describe('localization contract validator', () => {
     ).toEqual([]);
   });
 
+  it('reports static copy stored in a rendered variable', () => {
+    expect(
+      inspectStaticCopy({
+        'components/shared/VariableFixture.tsx': `
+          function VariableFixture() {
+            const caption = 'Welcome back';
+            return <h1>{caption}</h1>;
+          }
+        `,
+      })
+    ).toEqual([
+      {
+        file: 'components/shared/VariableFixture.tsx',
+        kind: 'text',
+        text: 'Welcome back',
+      },
+    ]);
+  });
+
+  it('preserves the rendered attribute kind and allows translated variables', () => {
+    expect(
+      inspectStaticCopy({
+        'components/shared/VariableAttributeFixture.tsx': `
+          function VariableAttributeFixture() {
+            const title = 'Open account details';
+            const caption = t('account.details');
+            return <button title={title}>{caption}</button>;
+          }
+        `,
+      })
+    ).toEqual([
+      {
+        file: 'components/shared/VariableAttributeFixture.tsx',
+        kind: 'title',
+        text: 'Open account details',
+      },
+    ]);
+  });
+
   it('reports static copy in rendered attribute expressions and state object values', () => {
     const report = inspectStaticCopy({
       'components/shared/AttributeFlowFixture.tsx': `

@@ -9,7 +9,7 @@
 - Feature branch: `feature/advertised-locale-completeness-final` (clean-history shipping branch)
 - Human owner: plebdev
 - Started: 2026-08-30
-- Current status: #660–#666 complete and verified; non-draft staging PR #667 open with all checks green; awaiting human merge permission
+- Current status: #660–#666 complete and verified; non-draft staging PR #667 open; final self-review cleanup is ready for CI and remains unmerged pending human permission
 - Skill setup status: complete; issue tracker, triage labels, and multi-context domain docs are configured
 
 ## Goal
@@ -28,6 +28,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - Review packets: pending
 - Local CodeRabbit report: `docs/agents/runs/2026-08-31-advertised-locale-completeness-coderabbit-local.md` (service unavailable after three authenticated attempts; independent Standards + Spec fallback passed)
 - PR CodeRabbit report: `docs/agents/runs/2026-08-31-advertised-locale-completeness-coderabbit-pr.md` (review skipped at the service's 100-file limit; independent Standards + Spec fallback passed)
+- Maintainer review direction: on 2026-08-31 the maintainer explicitly waived further CodeRabbit attempts and directed completion through independent Standards + Spec review.
 - PR URL: https://github.com/enclave-free/enclave.free/pull/667; Sage dependency PR: https://github.com/enclave-free/sage/pull/54
 - Existing source work: PR #658, issues #495 and #647
 
@@ -77,6 +78,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - Twenty-five formerly incomplete locale catalogs gained 25,225 shared English-key translations plus 36 locale-specific plural leaves across Czech, Hebrew, Italian, Polish, Portuguese, Romanian, and Ukrainian: 25,261 direct locale entries total.
 - Deployment Readiness now carries stable label, summary, and next-action keys alongside compatibility English text; runtime acknowledgement counts and changed setting names remain interpolation values instead of disappearing when localized copy resolves.
 - Parser-backed static-copy enforcement covers visible JSX and translatable attributes, and every Admin default-language choice derives from the same 31-locale catalog as onboarding and i18next.
+- Final independent review closed two enforcement gaps: rendered lexical variables are now resolved by the static-copy inspector, and a production-owned Deployment Readiness item/status contract is validated by the Enclave Control Plane and compared exactly with the frontend registry.
 - Catalog changes are direct locale JSON edits. Draft translations were machine-assisted locally with `qwen3.6:35b` and `gemma4:26b`, then structurally validated and reviewed for untranslated English labels. The deliverable contains no translation generator, broker, checkpoint state, or generation-only dependency. Native-speaker Linguistic Review remains an explicit nonblocking follow-up rather than being implied by structural completeness.
 - The binding-aware AST contract recognizes actual translation bindings, rejects indirect dynamic keys, requires zero missing locale keys and zero missing locale-specific plural forms, and stays out of production assets.
 - Focused readiness/localization verification passed 3 files / 50 tests; the complete frontend suite passed 83 files / 490 tests; TypeScript, production build, parser asset exclusion, the 5-test production container/runtime contract, and the 3-test Compose contract passed.
@@ -87,6 +89,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - The magic-link renderer supports all 31 advertised locale codes, uses exact placeholder validation, separates plain RFC subjects from escaped HTML, and isolates RTL URL/identity fragments. Frontend locale propagation remains intentionally sequenced after #661.
 - Sage PR #54 adds keyed Activity descriptors while preserving English compatibility fields and stable safe machine identifiers; provider-controlled unsafe display data and trace IDs are redacted before stream, snapshot, persistence, and export boundaries.
 - Final Sage review additionally gates timing title keys on canonical fallback equality, so custom compatibility titles remain visible and unkeyed instead of being replaced by localized static copy.
+- Post-review verification covered all 493 frontend test definitions across the full and isolated harness runs, including 36 localization tests and 6 reset-script tests; TypeScript and the direct Vite production build passed. The exact GitHub backend security selection passed 144 tests in Python 3.11.
 
 ## Open questions
 

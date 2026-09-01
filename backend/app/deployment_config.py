@@ -11,6 +11,7 @@ import ipaddress
 import logging
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Final, Mapping, Optional
 from urllib.parse import ParseResult, urlparse
 from fastapi import APIRouter, Header, HTTPException, Depends, Query, Request
@@ -36,6 +37,30 @@ from models import (
 )
 
 logger = logging.getLogger("enclave.deployment_config")
+
+
+def _load_readiness_status_contract() -> Dict[str, frozenset[str]]:
+    contract_path = Path(__file__).with_name("deployment_readiness_contract.json")
+    raw_contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(raw_contract, dict):
+        raise RuntimeError("Deployment Readiness contract must be an object")
+
+    contract: Dict[str, frozenset[str]] = {}
+    for item, statuses in raw_contract.items():
+        if (
+            not isinstance(item, str)
+            or not item
+            or not isinstance(statuses, list)
+            or not statuses
+            or any(not isinstance(status, str) or not status for status in statuses)
+            or len(statuses) != len(set(statuses))
+        ):
+            raise RuntimeError("Deployment Readiness contract contains an invalid item or status")
+        contract[item] = frozenset(statuses)
+    return contract
+
+
+READINESS_STATUS_CONTRACT: Final[Dict[str, frozenset[str]]] = _load_readiness_status_contract()
 
 # Track when this module was loaded (service start time)
 # Used to determine which config changes require restart
@@ -1537,6 +1562,12 @@ def _readiness_item(
     next_action_values: Optional[Mapping[str, Any]] = None,
     conversation_blocking: bool = False,
 ) -> dict:
+    allowed_statuses = READINESS_STATUS_CONTRACT.get(key)
+    if allowed_statuses is None:
+        raise ValueError(f"Undeclared Deployment Readiness item: {key}")
+    if status not in allowed_statuses:
+        raise ValueError(f"Undeclared Deployment Readiness status for {key}: {status}")
+
     message_key_prefix = f"adminDeployment.readiness.{key}.status.{status}"
     return {
         "key": key,

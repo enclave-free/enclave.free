@@ -13,6 +13,12 @@ export const staticCopyExemptions: StaticCopyExemption[] = [
     reason: 'Technical language-code fallback displayed beside a code block.',
   },
   {
+    file: '../components/chat/ChatMessage.tsx',
+    kind: 'text',
+    text: '-reasoning',
+    reason: 'Technical DOM ID suffix for the reasoning disclosure region.',
+  },
+  {
     file: '../pages/AdminAIConfig.tsx',
     kind: 'text',
     text: '{context}',
@@ -62,6 +68,7 @@ export const staticCopyExemptions: StaticCopyExemption[] = [
     'EMBEDDING_MODEL',
     'FORCE_HTTPS',
     'HSTS_MAX_AGE',
+    'HTTP',
     'intfloat/multilingual-e5-large',
     'intfloat/multilingual-e5-small',
     'LLM_MODEL',
@@ -248,6 +255,7 @@ export const staticCopyExemptions: StaticCopyExemption[] = [
     'Enter',
     'Failed (check JSON syntax)',
     'HTTP',
+    'Invalid pubkey',
   ].map((text) => ({
     file: '../pages/TestDashboard.tsx',
     kind: 'text' as const,

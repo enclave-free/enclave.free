@@ -4363,16 +4363,17 @@ export function AdminDeploymentConfig() {
                 {auditLog.entries.map((entry) => {
                   // Mask secret values in audit log display
                   const secret = isSecretKey(entry.config_key);
+                  const emptyValue = `(${t('common.none', 'None')})`;
                   const displayOld = secret
                     ? '********'
                     : entry.old_value
                       ? `"${entry.old_value}"`
-                      : '(empty)';
+                      : emptyValue;
                   const displayNew = secret
                     ? '********'
                     : entry.new_value
                       ? `"${entry.new_value}"`
-                      : '(empty)';
+                      : emptyValue;
 
                   return (
                     <div
