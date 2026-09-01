@@ -576,7 +576,9 @@ export function AdminDocumentUpload({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Upload failed');
+        throw new Error(
+          errorData.detail || t('upload.uploadError', 'Upload failed')
+        );
       }
 
       const data: UploadResponse | BatchUploadResponse = await response.json();
@@ -622,7 +624,9 @@ export function AdminDocumentUpload({
         setUploadError(translateErrorMessage(error.message));
       } else {
         setUploadError(
-          error instanceof Error ? error.message : 'Upload failed'
+          error instanceof Error
+            ? error.message
+            : t('upload.uploadError', 'Upload failed')
         );
       }
     } finally {

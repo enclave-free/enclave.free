@@ -406,6 +406,10 @@ class MagicLinkRequest(BaseModel):
     """Request model for sending a magic link"""
     email: str = Field(..., min_length=3, max_length=254)
     name: str = Field(default="", max_length=200)
+    # Locale is intentionally permissive at the request boundary. An absent,
+    # unknown, or malformed value falls back to English rather than turning a
+    # sign-in request into a validation error.
+    locale: Any = None
 
     @field_validator("email")
     @classmethod

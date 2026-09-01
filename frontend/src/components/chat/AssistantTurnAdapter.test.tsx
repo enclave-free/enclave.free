@@ -159,6 +159,35 @@ describe('AssistantTurnAdapter', () => {
     ]);
   });
 
+  it('translates action labels and disabled reasons at the adapter boundary', () => {
+    const state = buildAssistantConversationState({
+      turns: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'Done',
+          activitySteps: [],
+          traceDeltas: [],
+          trace: null,
+          traceStatus: null,
+        },
+      ],
+      transportCapabilities: { regenerate: true },
+      isRunning: true,
+      translate: (key, fallback) => `${key}:${fallback}`,
+    });
+
+    expect(state.turnItems[0].actions).toEqual([
+      {
+        id: 'regenerate',
+        label: 'chat.actions.regenerate:Regenerate response',
+        disabled: true,
+        disabledReason:
+          'chat.actions.waitForResponse:Wait for the current response to finish first.',
+      },
+    ]);
+  });
+
   it('extracts text from assistant-ui append messages', () => {
     expect(
       extractAppendMessageText({

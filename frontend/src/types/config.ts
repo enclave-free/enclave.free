@@ -231,11 +231,16 @@ export type DeploymentReadinessSeverity = 'blocker' | 'warning' | 'ready';
 export interface DeploymentReadinessItem {
   key: string;
   label: string;
+  label_key?: string;
   source: string;
   severity: DeploymentReadinessSeverity;
   status: string;
   summary: string;
+  summary_key?: string;
+  summary_values?: Record<string, string | number | boolean | null>;
   next_action: string;
+  next_action_key?: string;
+  next_action_values?: Record<string, string | number | boolean | null>;
   conversation_blocking: boolean;
 }
 

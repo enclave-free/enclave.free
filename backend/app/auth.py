@@ -9,7 +9,6 @@ import os
 import secrets
 import smtplib
 import logging
-import html
 from pathlib import Path
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -18,6 +17,7 @@ from typing import Optional
 
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from fastapi import Depends, HTTPException, Header, Cookie, Response
+from magic_link_email import normalize_magic_link_locale, render_magic_link_email
 
 logger = logging.getLogger("enclave.auth")
 
@@ -221,42 +221,21 @@ def get_magic_link_email_display_name() -> str:
     )
 
 
-def build_magic_link_email(to_email: str, token: str) -> MIMEMultipart:
+def build_magic_link_email(to_email: str, token: str, locale: object = None) -> MIMEMultipart:
     verify_url = f"{FRONTEND_URL}/verify?token={token}"
     display_name = get_magic_link_email_display_name()
-    escaped_display_name = html.escape(display_name)
-    escaped_verify_url = html.escape(verify_url, quote=True)
+    rendered = render_magic_link_email(
+        locale=locale,
+        display_name=display_name,
+        verify_url=verify_url,
+        minutes=MAGIC_LINK_MAX_AGE // 60,
+    )
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Sign in to {display_name}"
+    msg["Subject"] = rendered.subject
     msg["From"] = get_smtp_from()
     msg["To"] = to_email
-
-    html_body = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-    </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; color: #333;">
-        <div style="max-width: 480px; margin: 0 auto;">
-            <h2 style="color: #333; margin-bottom: 24px;">Sign in to {escaped_display_name}</h2>
-            <p style="margin-bottom: 24px;">Click the button below to sign in. This link will expire in 15 minutes.</p>
-            <a href="{escaped_verify_url}"
-               style="display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-                Sign in to {escaped_display_name}
-            </a>
-            <p style="margin-top: 24px; font-size: 14px; color: #666;">
-                If you didn't request this email, you can safely ignore it.
-            </p>
-            <p style="margin-top: 24px; font-size: 12px; color: #999;">
-                Or copy this link: {escaped_verify_url}
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-    msg.attach(MIMEText(html_body, "html"))
+    msg.attach(MIMEText(rendered.html, "html"))
     return msg
 
 # Token expiration (15 minutes)
@@ -548,7 +527,7 @@ def is_admin_session_current(admin: dict, token_data: dict) -> bool:
     return _admin_session_nonce_from_record(admin) == _admin_session_nonce_from_token(token_data)
 
 
-def send_magic_link_email(to_email: str, token: str) -> bool:
+def send_magic_link_email(to_email: str, token: str, locale: object = None) -> bool:
     """
     Send magic link email via SMTP.
     Returns True if sent successfully.
@@ -569,7 +548,7 @@ def send_magic_link_email(to_email: str, token: str) -> bool:
         return True
 
     try:
-        msg = build_magic_link_email(to_email, token)
+        msg = build_magic_link_email(to_email, token, locale)
         if smtp["port"] == 465:
             # Port 465 uses implicit SSL (connection starts encrypted)
             with smtplib.SMTP_SSL(smtp["host"], smtp["port"], timeout=smtp["timeout"]) as server:

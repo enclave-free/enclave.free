@@ -36,7 +36,17 @@
     "refresh": "Vernieuwen",
     "retry": "Opnieuw proberen",
     "saved": "Opgeslagen",
-    "sending": "Verzenden..."
+    "sending": "Verzenden...",
+    "send": "Verzenden",
+    "backToAdminDashboard": "Terug naar Admin Dashboard",
+    "loadingPage": "Pagina laden",
+    "pageLoadError": "Pagina laden mislukt. Vernieuw de pagina.",
+    "export": "Exporteren",
+    "reset": "Resetten",
+    "exit": "Afsluiten",
+    "none": "Geen",
+    "all": "Alle",
+    "warning": "Waarschuwing"
   },
   "settings": {
     "title": "Instellingen",
@@ -59,8 +69,23 @@
       "aiConfig": "AI-configuratie",
       "aiConfigDesc": "Prompts, parameters, standaardwaarden",
       "deploymentConfig": "Implementatieconfiguratie",
-      "deploymentConfigDesc": "Services, SMTP, opslag"
-    }
+      "deploymentConfigDesc": "Services, SMTP, opslag",
+      "guidedSetup": "Begeleide installatie",
+      "guidedSetupDesc": "Doorloop de installatie, documenten, bronnen en tests.",
+      "guides": "Admin Gidsen",
+      "guidesDesc": "Begrijp wat admins configureren en waar.",
+      "testUserSession": "Test Gebruikerssessie",
+      "testUserSessionDesc": "Chat als een gesimuleerde gebruiker en bekijk bèta-feedback.",
+      "diagnostics": "Diagnostiek",
+      "diagnosticsDesc": "Voer smoke checks uit tijdens het onderzoeken van problemen.",
+      "resourceDirectory": "Bronnengids",
+      "resourceDirectoryDesc": "Beheer handmatig vertrouwde verwijzingsbronnen."
+    },
+    "diagnostics": "Diagnostiek",
+    "adminWorkflows": "Beheerdersworkflows",
+    "settingsSection": "Instellingen",
+    "dataAndContent": "Gegevens en inhoud",
+    "operations": "Operaties"
   },
   "admin": {
     "confirmDelete": "Weet je zeker dat je dit record wilt verwijderen?",
@@ -102,7 +127,12 @@
       "database": "Database",
       "databaseHint": "Bekijk en beheer de gegevens van je instantie direct in de SQLite-database.",
       "openDatabase": "Database-verkenner openen",
-      "save": "Configuratie opslaan"
+      "save": "Configuratie opslaan",
+      "fieldScopeFilterLabel": "Filter vragen op doelegtype",
+      "noFieldsForScope": "Er zijn nog geen vragen voor dit doelegtype.",
+      "reorderNeedsAllScope": "Toon alle vragen om ze te kunnen herschikken",
+      "fieldScopeGlobalHint": "Vragen die elke gebruiker beantwoordt, ongeacht hun type.",
+      "fieldScopeTypeHint": "Alles wat deze doelegtype wordt gevraagd: de globale vragen die iedereen beantwoordt, plus hun eigen vragen."
     },
     "instanceConfig": {
       "title": "Instantie-configuratie",
@@ -177,7 +207,16 @@
       "typographyGrotesk": "Grotesk",
       "typographyGroteskDesc": "Vet, eigentijds lettertype met persoonlijkheid.",
       "typographyHumanist": "Humanistisch",
-      "typographyHumanistDesc": "Warm, leesbaar lettertype met helderheid."
+      "typographyHumanistDesc": "Warm, leesbaar lettertype met helderheid.",
+      "publicEmailDisplayNameLabel": "Openbare e-mailweergavenaam (optioneel)",
+      "publicEmailDisplayNameHint": "Wordt gebruikt in e-mails voor magic-link aanmelding. Laat leeg om de naam van de Instance te gebruiken.",
+      "defaultsTitle": "Instance Standaarden",
+      "defaultsDesc": "Stel de basisinstellingen in voor taal en thema die worden gebruikt voordat lokale browserinstellingen van toepassing zijn.",
+      "defaultLanguageLabel": "Standaardtaal",
+      "defaultThemeLabel": "Standaardthema",
+      "themeSystem": "Systeem",
+      "themeLight": "Licht",
+      "themeDark": "Donker"
     },
     "userConfig": {
       "title": "Gebruikersconfiguratie",
@@ -269,7 +308,14 @@
       "nip07Unavailable": "Geen Nostr-extensie gedetecteerd",
       "plaintextFieldIcon": "Platte-tekstveld",
       "primaryKeyIcon": "Primaire sleutel",
-      "unlockDecryption": "Ontgrendel Ontcijfering"
+      "unlockDecryption": "Ontgrendel Ontcijfering",
+      "safeQueryResults": "Veilige query-resultaten",
+      "queryError": "Query-fout",
+      "writeResult": "Resultaat database-schrijfactie",
+      "emptyQueryResult": "Leeg query-resultaat",
+      "readOnly": "Alleen-lezen",
+      "tableLoadError": "Fout bij laden van tabel",
+      "readOnlyHint": "Directe database-bewerkingen zijn uitgeschakeld; gebruik gecontroleerde admin-workflows om wijzigingen aan te brengen."
     },
     "fields": {
       "nameRequired": "Veldnaam is verplicht",
@@ -359,7 +405,11 @@
       "updateFieldFailed": "Kan veld niet bijwerken",
       "removeFieldFailed": "Kan veld niet verwijderen",
       "reorderFailed": "Kan veld niet herordenen",
-      "loadUsersFailed": "Kan gebruikers niet laden"
+      "loadUsersFailed": "Kan gebruikers niet laden",
+      "loadSettingsFailed": "Instellingen laden is mislukt",
+      "externalConfigConflict": "Sage of een andere admin heeft deze instellingen gewijzigd terwijl je aan het bewerken was. Herlaad deze pagina voordat je opslaat om te voorkomen dat je de nieuwere waarden overschrijft.",
+      "externalSettingsConflict": "Sage of een andere admin heeft deze instellingen gewijzigd terwijl je aan het bewerken was. Herlaad deze pagina voordat je opslaat.",
+      "externalUserConfigConflict": "Sage of een andere admin heeft Gebruikerstypen of Onboarding-vragen gewijzigd terwijl je aan het bewerken was. Herlaad deze pagina voordat je je concept opslaat."
     },
     "userMigration": {
       "title": "Gebruikerstype-migratie",
@@ -394,7 +444,10 @@
       "emailEncryptedHint": "E-mail (versleuteld)",
       "nameEncryptedHint": "Naam (versleuteld)",
       "noUsersHint": "Probeer het filter hierboven te wijzigen of te vernieuwen.",
-      "pubkeyPresent": "Nostr publieke sleutel aanwezig"
+      "pubkeyPresent": "Nostr publieke sleutel aanwezig",
+      "usersErrorLabel": "Fout bij migratie van gebruikerstype",
+      "errorLabel": "Fout bij migratie van gebruikerstype",
+      "summaryLabel": "Samenvatting migratie van gebruikerstype"
     },
     "configAssistant": {
       "openAria": "Admin-assistent openen",
@@ -432,8 +485,40 @@
         "restartRequiredFor": "Herstart vereist voor: {{keys}}.",
         "restartRequiredNo": "Herstart vereist: nee.",
         "restartCheckFailedHttp": "Controle op herstartvereiste mislukt (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Controle op herstartvereiste mislukt (netwerkfout)."
-      }
+        "restartCheckFailedNetwork": "Controle op herstartvereiste mislukt (netwerkfout).",
+        "pageRefreshRecommended": "Vernieuw deze pagina om thema-updates te zien."
+      },
+      "onboardingWelcome": "Welkom — laten we je ruimte instellen. Beantwoord zoveel mogelijk van deze vragen in één bericht (nummer ze, en sla alles over waar je onzeker over bent):\n\n1. **Naam** — hoe moeten we deze ruimte noemen? (wordt getoond in de header & browsertab)\n2. **Beschrijving** — één zin over waar het voor is (een privénotitie, wordt niet getoond aan gebruikers)\n3. **Naam assistent** — hoe moet de AI-helper heten?\n4. **Accentkleur** — de accentkleur voor knoppen & links (een naam zoals blauw/teal, of een hex-code zoals #3B82F6)\n5. ** Thema** — licht, donker, of systeem (volg het apparaat)?\n6. **Standaardtaal** — bijv. Engels of Spaans (optioneel)\n7. **Tagline** — een korte regel voor de header (optioneel)\n8. **Nieuwe gebruikers** — direct toelaten, of elke persoon goedkeuren?\n9. **Gebruikerstypen** — welke soorten niet-beheerders gaan dit gebruiken? (bijv. Docent en Student) — ik zal ze allemaal voor je aanmaken\n\nVoorbeeld: \"9. Docent en Student\". Ik sla alles in één stap op — en je kunt op elk moment overschakelen naar handmatige instellingen.",
+      "collapseSidebar": "Zijbalk assistent inklappen",
+      "expandSidebar": "Zijbalk admin assistent openen",
+      "resize": "Paneel admin assistent aanpassen",
+      "railLabel": "Assistent",
+      "shareSecretsHint": "Standaard uitgeschakeld. Schakel eerst de Config-tool in. Wanneer ingeschakeld, worden configuratiewaarden voor geheime uitrol aan de clientzijde onthuld en naar Sage gestuurd voor deze prototype-flow.",
+      "applyIntentUsePanel": "Gebruik het paneel met openstaande wijzigingen hieronder en klik op Toepassen om deze configuratie-updates te bevestigen.",
+      "applyIntentNoPending": "Er zijn geen openstaande configuratiewijzigingen om toe te passen. Vraag de assistent eerst om een set wijzigingen voor te stellen.",
+      "startNewConversation": "Nieuw gesprek met assistent starten",
+      "reducedContextNoticeLabel": "Melding verminderde context",
+      "sessionMemoryNoticeLabel": "Melding Session Memory-compressie",
+      "sessionMemoryNotice": "Oudere context is samengevat om dit gesprek voort te zetten.",
+      "reducedContextNotice": "Sommige context is verminderd om binnen het budget van de Model Provider te blijven ({{sections}}). Antwoorden kunnen minder volledig zijn totdat je een nieuw gesprek met de assistent start.",
+      "reducedContextSections": {
+        "recentConversation": "recente gesprekshistorie"
+      },
+      "approvalCardTitle": "Configuratie-wijzigingen goedkeuren",
+      "applying": "Toepassen",
+      "applied": "Toegepast",
+      "rejected": "Afgewezen",
+      "failed": "Mislukt",
+      "superseded": "Vervangen",
+      "hideDetails": "Details verbergen",
+      "reviewDetails": "Details bekijken",
+      "reject": "Afwijzen",
+      "approve": "Goedkeuren",
+      "applyErrorLabel": "Fout bij config-toepassing",
+      "onboardingTitle": "Begeleide Setup Chat",
+      "onboardingContext": "Gerichte setup-conversatie",
+      "directShareSecretsHint": "Optioneel: voeg opgeslagen deployment secret-waarden toe aan de context van deze conversatie. Directe secret-leesacties vereisen dit niet.",
+      "directWritePrompt": "Stel vragen over de admin-configuratie. Sage kan instellingen inspecteren en, na bevestiging in de conversatie, ondersteunde wijzigingen direct toepassen."
     },
     "reachout": {
       "badgeDefault": "Standaard",
@@ -526,6 +611,55 @@
       "userTypes": "Gebruikerstypes",
       "userTypesExplain": "Categorieën die gebruikers groeperen. Elk type kan zijn eigen set verplichte velden en machtigingen hebben.",
       "whenToUse": "Wanneer gebruikerstypen aanmaken:"
+    },
+    "userApproval": {
+      "updateFailed": "Bijwerken van gebruikersgoedkeuring is mislukt.",
+      "approvedUser": "Gebruiker #{{id}} goedgekeurd.",
+      "revokedUser": "Gebruiker #{{id}} is teruggezet naar in afwachting.",
+      "title": "Gebruikersgoedkeuring",
+      "subtitle": "Kies of nieuwe geauthenticeerde gebruikers direct de chat kunnen betreden of moeten wachten op goedkeuring door de Admin.",
+      "requireManualLabel": "Handmatige goedkeuring vereisen voor nieuwe gebruikers",
+      "requireManualHint": "Wanneer ingeschakeld, komen nieuwe Users terecht op het scherm voor wachtende goedkeuring totdat een Admin hen goedkeurt.",
+      "loadingHint": "Laden...",
+      "saveButton": "Gebruikersgoedkeuring opslaan",
+      "savedCalloutLabel": "Gebruikersgoedkeuring opgeslagen",
+      "errorCalloutLabel": "Fout bij gebruikersgoedkeuring",
+      "pendingTitle": "Wachtende goedkeuringen",
+      "pendingCount_zero": "{{count}} gebruikers hebben goedkeuring nodig voor chattoegang.",
+      "pendingCount_one": "{{count}} gebruiker heeft goedkeuring nodig voor chattoegang.",
+      "pendingCount_two": "{{count}} gebruikers hebben goedkeuring nodig voor chattoegang.",
+      "pendingCount_few": "{{count}} gebruikers hebben goedkeuring nodig voor chattoegang.",
+      "pendingCount_many": "{{count}} gebruikers hebben goedkeuring nodig voor chattoegang.",
+      "pendingCount_other": "{{count}} gebruikers hebben goedkeuring nodig voor chattoegang.",
+      "nonePending": "Er wachten geen gebruikers op goedkeuring.",
+      "actionSavedCalloutLabel": "Gebruikersgoedkeuring bijgewerkt",
+      "actionErrorCalloutLabel": "Bijwerken gebruikersgoedkeuring mislukt",
+      "loadingUsers": "Gebruikers laden...",
+      "emptyState": "Nieuwe Users die wachten op goedkeuring verschijnen hier wanneer handmatige goedkeuring vereist is.",
+      "emailOnFile": "E-mail in dossier",
+      "nameOnFile": "Naam in dossier",
+      "approveButton": "Goedkeuren",
+      "revokeButton": "Intrekken"
+    },
+    "userRosterExport": {
+      "auditFailed": "Exporteren van gebruikerslijst kon niet worden gecontroleerd. Het spreadsheet is niet gedownload.",
+      "decryptUnavailable": "Een browserextensie met NIP-0</strong>04 decryptie is vereist om deze lijst voor te bereiden.",
+      "decryptFailed": "Een versleutelde lijstwaarde kon niet worden gedecodeerd. Er is geen spreadsheet aangemaakt.",
+      "prepared": "De volledige lijst is voorbereid. Downloaden is nu mogelijk.",
+      "prepareRequired": "Bereid de huidige lijst voor voordat u deze downloadt.",
+      "prepareButton": "Gebruikerslijst voorbereiden",
+      "downloadButton": "Voorbereide lijst downloaden",
+      "success": "Gebruikerslijst spreadsheet gedownload.",
+      "failed": "Exporteren van gebruikerslijst mislukt.",
+      "button": "Gebruikers exporteren",
+      "successLabel": "Export van gebruikerslijst gereed",
+      "errorLabel": "Exporteren van gebruikerslijst mislukt"
+    },
+    "userIdentity": {
+      "decrypting": "Naam/e-mail ontsleutelen...",
+      "decryptFailed": "Naam/e-mail kon niet worden ontsleuteld",
+      "unlockDetails": "Ontgrendelen om naam/e-mail te tonen",
+      "unlockButton": "Details ontgrendelen"
     }
   },
   "adminOnboarding": {
@@ -550,7 +684,9 @@
     "legalResponsibilityNotice": "Je bent verantwoordelijk voor een rechtmatige configuratie, gebruikersmededelingen en gegevensverwerkingsbeleid voor deze instantie.",
     "extracted": {
       "change_language_789b14": "Taal wijzigen"
-    }
+    },
+    "statusError": "Controleren van instantiestatus mislukt",
+    "connectionError": "Verbinding maken mislukt"
   },
   "onboarding": {
     "nostr": {
@@ -575,7 +711,8 @@
       "title": "Wat beschrijft jou het best?",
       "description": "Selecteer de optie die het best bij je behoeften past",
       "loadError": "Kan gebruikerstypen niet laden. Probeer het opnieuw.",
-      "selectionLabel": "Gebruikerstype selectie"
+      "selectionLabel": "Gebruikerstype selectie",
+      "errorLabel": "Fout bij laden van doelegtype"
     },
     "language": {
       "selectLabel": "Selecteer een taal",
@@ -618,7 +755,8 @@
       "encryptionBody": "Profielvelden worden standaard versleuteld, maar de beheerder van deze instantie beheert instellingen op veldniveau en kan toestaan dat geselecteerde gegevens anders worden opgeslagen of gedeeld.",
       "adminControlNotice": "Gegevensverwerking wordt geconfigureerd door de beheerder van deze instantie, inclusief wat onversleuteld mag worden opgeslagen of gedeeld met AI-tools.",
       "retentionNotice": "Bewaar- en verwijdertermijnen worden ingesteld door de beheerder van deze instantie. Neem contact met hen op voor toegangs-, correctie- of verwijderverzoeken.",
-      "noWarrantyNotice": "Enclave-software wordt geleverd zonder garantie. Het gebruik van deze instantie is onderworpen aan het beleid van de beheerder."
+      "noWarrantyNotice": "Enclave-software wordt geleverd zonder garantie. Het gebruik van deze instantie is onderworpen aan het beleid van de beheerder.",
+      "errorLabel": "Fout bij aanvraag magic link"
     },
     "verify": {
       "verifying": "Je link wordt geverifieerd...",
@@ -678,20 +816,28 @@
       "databaseName": "Gegevensbank",
       "knowledgeGraph": "Query de kennisgraaf",
       "config": "Configuratie",
-      "configName": "Configuratie"
+      "configName": "Configuratie",
+      "knowledgeSearch": "Zoek in geüploade documenten en kennisfragmenten",
+      "knowledgeSearchName": "Kennis",
+      "curatedResources": "Vind door admins gecontroleerde verwijzingsbronnen en vertrouwde organisaties",
+      "curatedResourcesName": "Bronnen"
     },
     "documentScope": {
       "title": "Kennisbanken",
       "description": "Selecteer bronnen om in de context op te nemen",
       "noSources": "Geen bronnen beschikbaar",
       "clearAll": "Alles wissen",
-      "docsLabel": "Documenten"
+      "docsLabel": "Documenten",
+      "clearAllSelectedAria": "Alle geselecteerde documenten wissen",
+      "docsLabelWithCount": "Documenten {{count}}"
     },
     "messages": {
       "searching": "Zoeken naar \"{{term}}\"...",
       "searchingPrefix": "Zoeken",
       "searchResults": "Ik heb \"{{term}}\" voor je gezocht:",
-      "newConversation": "Nieuw gesprek"
+      "newConversation": "Nieuw gesprek",
+      "copy": "Bericht kopiëren",
+      "copied": "Bericht gekopieerd"
     },
     "code": {
       "copy": "Kopiëren",
@@ -710,7 +856,87 @@
       "roleUser": "Jij",
       "roleAssistant": "Assistent",
       "footer": "Geëxporteerd van {{instanceName}}",
-      "exportedOn": "Geëxporteerd op {{timestamp}}"
+      "exportedOn": "Geëxporteerd op {{timestamp}}",
+      "copiedExportNotice": "Deze export verlaat de actieve productopslag en valt na het downloaden buiten de Active Storage Lifecycle."
+    },
+    "new": "Nieuwe chat",
+    "listTitle": "Chats",
+    "contextTitle": "Context",
+    "messageActions": "Berichtacties",
+    "actions": {
+      "stop": "Antwoord stoppen",
+      "stopDisabled": "Er is geen antwoord om te stoppen.",
+      "regenerate": "Antwoord opnieuw genereren",
+      "edit": "Bericht bewerken",
+      "waitForResponse": "Wacht eerst tot het huidige antwoord is voltooid.",
+      "startConversation": "Start of hervat eerst een gesprek.",
+      "resolveConfirmation": "Los de openstaande wijzigingsbevestiging op voordat de geschiedenis wordt gewijzigd."
+    },
+    "composerContextAria": "Composercontext",
+    "sessions": {
+      "ariaLabel": "Chatsessies",
+      "current": "Huidige chat",
+      "empty": "Leeg",
+      "messageCount_one": "{{count}} bericht",
+      "messageCount_other": "{{count}} berichten",
+      "deleteConfirmTitle": "\"{{title}}\" verwijderen?",
+      "rename": "{{title}} hernoemen",
+      "delete": "{{title}} verwijderen",
+      "resumeInvalid": "Conversatie kan niet worden geladen.",
+      "renameEmpty": "Titel van de conversatie is verplicht.",
+      "renameError": "Conversatie kan niet worden hernoemd.",
+      "deleteError": "Conversatie kan niet worden verwijderd.",
+      "loading": "Chats laden...",
+      "error": "Chats kunnen niet worden geladen",
+      "saved": "Opgeslagen chat",
+      "deleteConfirmBody": "Dit verwijdert de opgeslagen conversatie en het bijbehorende sessiegeheugen.",
+      "deleteCancel": "Verwijderen van conversatie annuleren",
+      "cancel": "Annuleren",
+      "deleteConfirm": "Conversatie verwijderen",
+      "deleteDeleting": "Verwijderen...",
+      "renameInput": "Titel van de conversatie",
+      "renameCancel": "Hernoemen van conversatie annuleren",
+      "renameSave": "Titel van conversatie opslaan",
+      "renameSaving": "Hernoemen...",
+      "open": "Chatsessies openen",
+      "close": "Chatsessies sluiten"
+    },
+    "currentChatAria": "Huidige chat",
+    "newFromCurrent": "Start een nieuwe chat",
+    "documentsContextTitle": "Documenten",
+    "errors": {
+      "requestLabel": "Fout bij chatverzoek"
+    },
+    "trace": {
+      "finalizing": "Antwoord afronden...",
+      "collapse": "Inklappen",
+      "expand": "Uitklappen",
+      "reasoning": "Redenering",
+      "thinking": "Denken",
+      "transcript": "Transcript van {{label}}",
+      "reasoningSummaryAria": "Samenvatting redenering",
+      "reasoningTranscriptAria": "Transcript redenering",
+      "label": "Trace",
+      "toolCalls": "Tool-aanroepen",
+      "retrieval": "Ophalen",
+      "input": "Input",
+      "output": "Output",
+      "retrievedSource": "Opgeschatte bron",
+      "score": "score {{score}}",
+      "optionalDetailsAria": "Optionele details van {{label}}"
+    },
+    "conversationMessagesAria": "Conversatiemeldingen",
+    "conversationSurfaceAria": "Conversatie-oppervlak",
+    "conversationThreadAria": "Conversatiedraad",
+    "activity": {
+      "label": "Activiteit",
+      "summaryAria": "Activiteitsoverzicht",
+      "detailsAria": "Activiteitsdetails",
+      "timelineAria": "Activiteitstijdlijn",
+      "show": "Activiteit tonen",
+      "hide": "Activiteit verbergen",
+      "showOptional": "Optionele details tonen",
+      "hideOptional": "Optionele details verbergen"
     }
   },
   "errors": {
@@ -745,11 +971,228 @@
     "adminSessionExpired": "Beheerdersessie verlopen",
     "authenticationFailed": "Verificatie mislukt",
     "noNostrExtension": "Geen Nostr-extensie gevonden",
-    "exportFailed": "Exporteren mislukt"
+    "exportFailed": "Exporteren mislukt",
+    "failedToRetryDeletionTombstone": "Opnieuw proberen verwijdering tombstone mislukt",
+    "failedToAcknowledgeUnsupportedSurface": "Bevestigen van niet-ondersteunde deployment surface mislukt",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Bevestigen van niet-ondersteunde deployment surface categorie mislukt",
+    "failedToPreviewRetention": "Voorvertoning bewaarbeleid mislukt",
+    "failedToUpdateRetentionPolicy": "Bijwerken bewaarbeleid mislukt",
+    "failedToRunScheduledRetention": "Uitvoeren geplande bewaarbeleid mislukt",
+    "failedToUpdateArtifactEncryptionPosture": "Bijwerken encryptie-instellingen artifacts mislukt",
+    "queryExecutionFailed": "Uitvoeren van query mislukt"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Admins kunnen"
+    },
+    "summary": {
+      "brand": {
+        "title": "De instantie branden",
+        "body": "Naam, logo, thema, identiteit van de assistent en weergave van het publieke e-mailadres."
+      },
+      "people": {
+        "title": "Mensen beheren",
+        "body": "Gebruikerstypen, onboarding-vragen, goedkeuringen, migratie en toegang."
+      },
+      "agent": {
+        "title": "Sage vormgeven",
+        "body": "Prompt-regels, responstinstellingen, documenttoegang en standaardinstellingen voor tools."
+      },
+      "launch": {
+        "title": "Veilig lanceren",
+        "body": "E-mail, domeinen, CORS, HTTPS, model-routing, gezondheid en runtime-omgeving."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Branding",
+        "title": "Identiteit en uiterlijk",
+        "body": "Zorg dat de instantie aanvoelt als jouw organisatie.",
+        "detail1": "Naam, tagline, assistentnaam en gebruikerslabel.",
+        "detail2": "Logo, favicon, icoon, accentkleur, thema, typografie en chatstijl.",
+        "detail3": "Standaardtaal en de publieke weergavenaam voor e-mail.",
+        "link": "Open Instellingen voor de instantie"
+      },
+      "people": {
+        "eyebrow": "Toegang",
+        "title": "Mensen en toegang",
+        "body": "Bepaal wie de instantie gebruikt en wat je hen vraagt.",
+        "detail1": "Gebruikerstypen voor groepen zoals personeel, leden of klanten.",
+        "detail2": "Onboarding-velden, verplichte vragen, opties, placeholders en velden per type.",
+        "detail3": "Handmatige goedkeuring, gebruikersmigratie, intrekken van toegang en verwijdering.",
+        "link": "Open Gebruikersinstellingen"
+      },
+      "agent": {
+        "eyebrow": "Gedrag",
+        "title": "Gedrag van de agent",
+        "body": "Bepaal hoe Sage antwoordt en welke tools standaard aanstaan.",
+        "detail1": "Prompt-template, gedragsregels, verboden onderwerpen en antwoordinstellingen.",
+        "detail2": "Standaardinstellingen voor Knowledge, Resources, Web, Config en Database tools.",
+        "detail3": "Globale instellingen plus overschrijvingen per gebruikerstype.",
+        "link": "Open Agentinstellingen"
+      },
+      "docs": {
+        "eyebrow": "Kennis",
+        "title": "Documentkennis",
+        "body": "Geef de agent bronmateriaal dat doorzocht kan worden.",
+        "detail1": "Upload PDF's, beleid, FAQ's, handboeken en gidsen.",
+        "detail2": "Documenten worden opgedeeld, ingebed en doorzoekbaar gemaakt.",
+        "detail3": "Document Access bepaalt wat standaard geselecteerd of actief kan zijn.",
+        "link": "Open Document-upload"
+      },
+      "resources": {
+        "eyebrow": "Verwijzingen",
+        "title": "Gecontroleerde bronnen",
+        "body": "Voeg vertrouwde verwijzingen toe die de agent kan aanbevelen.",
+        "detail1": "Namen, beschrijvingen, type resource, talen, dekking en hulpsoorten.",
+        "detail2": "Telefoon, e-mail, URL, beveiligd kanaal, adres en notities.",
+        "detail3": "Geverifieerde resources staan bovenaan. Gearchiveerde resources blijven verborgen voor gebruikers.",
+        "link": "Resource Directory openen"
+      },
+      "ops": {
+        "eyebrow": "Bewerkingen",
+        "title": "Operations en runtime",
+        "body": "Houd de instantie verbonden, bereikbaar en gezond.",
+        "detail1": "SMTP voor e-mail magic links, domeinen, CORS, HTTPS en publieke URL's.",
+        "detail2": "Modelprovider, embedding model, zoeken, opslag en de gezondheid van de service.",
+        "detail3": "Runtime env export, gereedheid, verouderde instellingen en migratie van de admin-sleutel.",
+        "link": "Deployment Settings openen"
+      },
+      "title": "Wat admins configureren",
+      "body": "Dit zijn de belangrijkste besturingsvlakken. Je kunt de pagina's direct gebruiken of de Admin Assistant vragen om wijzigingen voor te bereiden."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Vraag",
+        "title": "Beheerassistent",
+        "body": "Stel vragen over de huidige configuratie en vraag configuratiewijzigingen aan.",
+        "detail1": "Configuratie-uitlezingen controleren de werkelijke status van de instantie in plaats van te gokken.",
+        "detail2": "Voorgestelde wijzigingen worden klaargezet voor beoordeling.",
+        "detail3": "Apply voert de goedgekeurde admin-endpoints uit zonder een extra model-beurt.",
+        "link": "Admin Assistant openen",
+        "directWriteDetail2": "Sage vraagt om een bevestiging via de chat voordat een ondersteunde schrijfactie wordt uitgevoerd.",
+        "directWriteDetail3": "Nadat je hebt bevestigd, roept Sage zijn directe configuratie-Tools aan en rapporteert het werkelijke resultaat."
+      },
+      "guided": {
+        "eyebrow": "Start",
+        "title": "Begeleide Setup",
+        "body": "Gebruik een begeleide chat om een nuttige eerste configuratie te maken.",
+        "detail1": "Identiteit, assistant, taal, toegangsbeleid, doeltypen, vragen en gedragsregels.",
+        "detail2": "Upload vervolgens documenten, voeg resources toe en test.",
+        "link": "Begeleide Setup openen"
+      },
+      "test": {
+        "eyebrow": "Valideer",
+        "title": "Testen en feedback",
+        "body": "Probeer de agent vanuit het perspectief van een gebruiker voordat de lancering plaatsvindt.",
+        "detail1": "Kies een type gebruiker, start een testsessie en sla de proefperiode op.",
+        "detail2": "Bekijk versleutelde beta-logs en beoordeel antwoorden.",
+        "link": "Open Test Gebruikerssessie"
+      },
+      "database": {
+        "eyebrow": "Inspecteren",
+        "title": "Databaseverkenner",
+        "body": "Inspecteer opgeslagen SQLite-gegevens tijdens het debuggen.",
+        "detail1": "Gebruik alleen-lezen SELECT-queries voor inspectie.",
+        "detail2": "Gebruik dit niet als pad voor productmutaties.",
+        "link": "Databaseverkenner openen"
+      },
+      "title": "Veelvoorkomende admin-workflows",
+      "body": "Gebruik deze bij het opzetten, controleren van de kwaliteit of onderzoeken van gegevens."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Uitvoering",
+        "title": "Eén gesprek runtime",
+        "body": "Knowledge, Resources, Web, Config en Database zijn zichtbare toolsets, geen afzonderlijke chatsystemen.",
+        "detail1": "Het model kan ingeschakelde tools aanroepen wanneer deze helpen.",
+        "detail2": "Config en Database verschijnen alleen voor door de server gevalideerde admins."
+      },
+      "auth": {
+        "eyebrow": "Inloggen",
+        "title": "Verschillende inlogpaden",
+        "body": "Admins gebruiken NIP-07. Gebruikers gebruiken email magic links.",
+        "detail1": "Admin private keys blijven in de browser signer.",
+        "detail2": "SMTP moet werken voordat user magic links in productie werken."
+      },
+      "data": {
+        "eyebrow": "Privacy",
+        "title": "Datagrenzen zijn belangrijk",
+        "body": "Versleutelde profielvelden blijven buiten de chatcontext.",
+        "detail1": "Alleen niet-versleutelde velden kunnen worden gemarkeerd voor AI-chatcontext.",
+        "detail2": "Deployment secrets worden versleuteld opgeslagen en standaard gemaskeerd weergegeven."
+      },
+      "ops": {
+        "eyebrow": "Beheer",
+        "title": "Sommige wijzigingen vereisen operators",
+        "body": "De app kan gewenste runtime-instellingen opslaan; deze start services niet stilletjes opnieuw op.",
+        "detail1": "Exporteer runtime env na wijzigingen in provider, origin, CORS of search.",
+        "detail2": "Gebruik readiness en service health om te bevestigen wat er daadwerkelijk draait."
+      },
+      "title": "Product-essentials om te onthouden",
+      "body": "Deze regels houden de configuratie eerlijk en voorkomen onbedoelde overschrijdingen."
+    },
+    "ask": {
+      "prompt1": "Wat ontbreekt er nog voordat deze instantie klaar is voor gebruikers?",
+      "prompt2": "Bekijk de huidige gebruikerstypen, onboardingvragen, documentatie en bronnen.",
+      "prompt3": "Bereid wijzigingen voor om te beoordelen: stel de toon van de assistent en de standaardtaal in.",
+      "title": "Goede vragen voor de Admin Assistant",
+      "body": "Vraag om een beoordeling voordat je om wijzigingen vraagt. Het kan de configuratie inspecteren en een set wijzigingen voorbereiden.",
+      "directWriteBody": "Vraag Sage om de ondersteunde configuratie te inspecteren of te wijzigen. Het zal de beoogde wijziging met je bevestigen voordat het wordt doorgevoerd.",
+      "directWritePrompt3": "Stel de toon van de assistent en de standaardtaal in, en bevestig de beoogde wijziging eerst met mij."
+    },
+    "hero": {
+      "eyebrow": "Beheeroverzicht voor admins",
+      "shortVersion": {
+        "title": "Korte versie",
+        "body": "Admins stellen de identiteit, gebruikers, kennis, tools en lanceerinstellingen in. Sommige runtime-wijzigingen vereisen nog steeds een herstart van de operator."
+      }
+    },
+    "title": "Admin Gidsen",
+    "subtitle": "Een eenvoudige kaart van wat admins configureren, wat het product kan doen en wat zorg vereist voor de lancering.",
+    "quickStart": {
+      "title": "Begin hier",
+      "body": "Voer eerst de kleine, nuttige instellingen uit. Werk deze bij na het testen met echte vragen."
+    },
+    "safety": {
+      "title": "Basisprincipes voor veiligheid",
+      "body": "Admins beheren toegang, gegevens, gedrag en runtime-instellingen. Wees voorzichtig met risicovolle wijzigingen.",
+      "items": {
+        "0": "Admins loggen in met NIP-07. Gebruikers loggen in met email magic links.",
+        "1": "Gebruikersvelden zijn standaard versleuteld. Alleen tekstvelden kunnen worden gedeeld met de chat.",
+        "2": "Geheimen blijven gemaskeerd, tenzij je ze deelt voor de huidige admin-sessie.",
+        "3": "Wijzigingen door de assistent zijn voorstellen. Je beoordeelt ze nog steeds en klikt op Toepassen.",
+        "4": "Deployment Settings slaan de gewenste runtime-waarden op. Operators exporteren nog steeds de env en herstarten services indien nodig."
+      },
+      "directItems": {
+        "0": "Admins loggen in met NIP-0achten. Gebruikers loggen in met email magic links.",
+        "1": "Gebruikersvelden zijn standaard versleuteld. Alleen tekstvelden kunnen worden gedeeld met de chat.",
+        "2": "Geheimen blijven gemaskeerd, tenzij je ze deelt voor de huidige admin-sessie.",
+        "3": "Sage bevestigt configuratiewijzigingen met je in de chat en voert ondersteunde wijzigingen vervolgens direct door.",
+        "4": "Deployment Settings slaan de gewenste runtime-waarden op. Operators exporteren nog steeds de env en herstarten services indien nodig."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Inloggen als admin",
+        "body": "Gebruik de admin NIP-07 sleutel. Houd deze privé."
+      },
+      "1": {
+        "title": "Stel de basisinstellingen in",
+        "body": "Geef de instantie een naam, kies de uitstraling en stel de identiteit van de assistent in."
+      },
+      "2": {
+        "title": "Definieer je gebruikers",
+        "body": "Maak doeltypen, onboardingvragen en goedkeuringsregels aan."
+      },
+      "3": {
+        "title": "Voeg betrouwbare kennis toe",
+        "body": "Upload documenten en voeg gecontroleerde bronnen toe."
+      },
+      "4": {
+        "title": "Test voor de lancering",
+        "body": "Chat als een gebruiker, bekijk feedback en nodig daarna echte mensen uit."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1229,55 @@
     "database": "Database-verkenner",
     "databaseDesc": "Blader door en query de SQLite-database",
     "configSectionLabel": "Configuratie",
-    "dataSectionLabel": "Gegevens en inhoud"
+    "dataSectionLabel": "Gegevens en inhoud",
+    "subtitleSimple": "Kies waar je aan deze instantie wilt werken.",
+    "workflowsSectionLabel": "Beheerdersworkflows",
+    "adminAssistant": "Admin Assistent",
+    "adminAssistantDesc": "Gebruik de admin-chat voor hulp bij configuratie en het beoordelen van wijzigingen.",
+    "guidedSetup": "Begeleide Installatie",
+    "guidedSetupDesc": "Loop door de installatie, documenten, bronnen en het testen heen.",
+    "guides": "Admin Gidsen",
+    "guidesDesc": "Begrijp wat admins configureren en waar.",
+    "testUserSession": "Test Gebruikerssessie",
+    "testUserSessionDesc": "Chat als een gesimuleerde gebruiker en bekijk opgeslagen bètalogs.",
+    "aiSetupTitle": "Instellen met de AI-assistent",
+    "aiSetupBody": "Laat de assistent de basisgegevens verzamelen om je instantie in één keer te benoemen en te configureren. Je kunt op elk moment overschakelen naar handmatige installatie.",
+    "aiSetupAction": "Start begeleide installatie",
+    "readinessTitle": "Klaar voor Implementatie",
+    "readinessDesc": "Controleer de gereedheid voordat je gebruikers uitnodigt. Controleer blokkades, waarschuwingen, wijzigingen die een herstart vereisen en de herstelstatus op één plek.",
+    "readinessPrimary": "Open Gereedheidscontrole",
+    "firstRunPathTitle": "Eerste pad voor admins",
+    "firstRunStep1Title": "Configureer de basisinstellingen van de instantie",
+    "firstRunStep1Body": "Stel branding, taal, thema, gebruikersvelden en Agent Settings in voordat je de wijzigingen controleert.",
+    "firstRunStep1Action": "Open Instellingen van de instantie",
+    "firstRunStep2Title": "Controleer de gereedheid voor implementatie",
+    "firstRunStep2Body": "Controleer blokkades, waarschuwingen, wijzigingen die een herstart vereisen en de herstelstatus voordat je gebruikers uitnodigt.",
+    "firstRunStep2Action": "Open Implementatiewizard",
+    "firstRunStep3Title": "Gebruik diagnostiek alleen bij onderzoek",
+    "firstRunStep3Body": "Houd smoke-tests en diagnostiek bereikbaar zonder ze het primaire productpad te maken.",
+    "firstRunStep3Action": "Open Diagnostiek",
+    "instanceDescSimple": "Naam, publieke e-mailidentiteit, thema en branding-instellingen.",
+    "aiDescSimple": "Prompts, modelgedrag en standaarddocumenten.",
+    "deploymentDescSimple": "Runtime-instellingen, status en details over de gereedheid.",
+    "resources": "Bronnengids",
+    "resourcesDesc": "Beheer vertrouwde advocaten, NGO's en verwijzingsbronnen",
+    "resourcesDescSimple": "Beheer handmatig vertrouwde verwijzingsbronnen.",
+    "testFeedback": "Testen & Feedback",
+    "testFeedbackDesc": "Chat als testgebruiker en beoordeel antwoorden om je configuratie te verfijnen",
+    "diagnosticsSectionLabel": "Diagnostiek",
+    "operationsSectionLabel": "Bewerkingen",
+    "testDashboard": "Diagnostiek",
+    "testDashboardDesc": "Voer smoke checks uit tijdens de ontwikkeling en inspecteer diagnostische modules",
+    "testDashboardDescSimple": "Voer smoke checks uit bij het onderzoeken van een probleem.",
+    "iaChecklistTitle": "Checklist voor de review van de informatiearchitectuur door de admin",
+    "iaChecklistBody": "Houd Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness en diagnostische oppervlakken gescheiden tijdens menselijke beoordeling.",
+    "humanReviewTitle": "Overdracht voor menselijke beoordeling",
+    "humanReviewStatus": "White-glove deployment ondersteuning vereist",
+    "humanReviewBody": "Toepassing van de runtime env blijft expliciet: exporteer artefacten, pas ze toe met ondersteuning van de operator, herstart de getroffen services en verifieer het bewijs van gereedheid.",
+    "humanReviewAction": "Deployment Readiness beoordelen",
+    "settingsSectionLabel": "Instellingen",
+    "userManager": "Gebruikerbeheer",
+    "userManagerDesc": "Beheer gebruikers, controleer de status, exporteer lijsten en keur toegang goed."
   },
   "adminAI": {
     "title": "AI-configuratie",
@@ -871,7 +1362,18 @@
       "userInfoPlaceholder": "{user_info} — wordt vervangen door de profielvelden van de huidige gebruiker, indien beschikbaar"
     },
     "revert": "Terugdraaien",
-    "revertToGlobal": "Terug naar Globaal"
+    "revertToGlobal": "Terug naar Globaal",
+    "knowledgeSearchDisabledLabel": "Knowledge Search staat uit",
+    "knowledgeSearchDisabledMessage": "Actieve standaarddocumenten worden niet gebruikt totdat Knowledge Sources is ingesteld op geselecteerde standaarddocumenten of alle beschikbare documenten.",
+    "assembledPromptOutput": "Samengestelde prompt-output",
+    "saveError": "Opslaan mislukt",
+    "revertError": "Terugdraaien mislukt",
+    "toggleError": "Schakelen mislukt",
+    "loadErrorLabel": "Fout bij laden Agent Settings",
+    "previewErrorLabel": "Fout bij voorvertoning Agent Settings",
+    "documentToggleErrorLabel": "Fout bij schakelen document Agent Settings",
+    "documentDefaultsHintV2": "Documenten gemarkeerd als \"Beschikbaar\" kunnen worden gebruikt door Knowledge Search. Documenten gemarkeerd als \"Standaard actief\" worden opgenomen wanneer Knowledge Sources is ingesteld op geselecteerde standaarddocumenten.",
+    "externalChangeConflict": "Sage of een andere admin heeft deze instelling gewijzigd terwijl u aan het bewerken was. Annuleer en open de editor opnieuw voordat u opslaat."
   },
   "adminDeployment": {
     "title": "Deployment-configuratie",
@@ -1006,7 +1508,9 @@
       "unknown": "Onbekend",
       "usersMigrated": "Gebruikers gemigreerd",
       "usersToMigrate": "Te migreren gebruikers",
-      "warning": "Dit is een geavanceerde bewerking. Onjuiste migratie kan je buitensluiten van versleutelde gegevens. Ga alleen verder als je de gevolgen begrijpt."
+      "warning": "Dit is een geavanceerde bewerking. Onjuiste migratie kan je buitensluiten van versleutelde gegevens. Ga alleen verder als je de gevolgen begrijpt.",
+      "inputWarningLabel": "Waarschuwing voor migratie van admin-sleutel",
+      "destructiveWarningLabel": "Waarschuwing voor destructieve migratie van admin-sleutel"
     },
     "revealFailed": "Kan de waarde niet onthullen. Controleer je Nostr-extensieverbinding.",
     "searchHelp": {
@@ -1037,7 +1541,8 @@
       "overviewDesc": "Beveiligingsinstellingen bepalen authenticatie, sessiebeheer en ontwikkelingssnelkoppelingen. Standaardwaarden zijn geconfigureerd voor lokale ontwikkeling.",
       "overviewNote": "In productie, zorg ervoor dat simulatievlaggen uit staan en FRONTEND_URL overeenkomt met je werkelijke domein.",
       "overviewTitle": "Overzicht beveiliging",
-      "overviewWhen": "Controleer deze instellingen voordat je deployt naar een publiek toegankelijke server."
+      "overviewWhen": "Controleer deze instellingen voordat je deployt naar een publiek toegankelijke server.",
+      "devNote": "Gebruik MOCK_EMAIL voor lokale e-mailtests; gebruikers- en admin-sessies vereisen nog steeds de normale verificatieflow."
     },
     "sslHelp": {
       "ariaLabel": "Hulp bij SSL- en HTTPS-configuratie",
@@ -1101,7 +1606,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Uploadmap",
       "vector_database_eb5526": "Vector-database"
-    }
+    },
+    "exportSageRuntimeEnv": "Sage-omgeving exporteren",
+    "readiness": {
+      "title": "Klaar voor implementatie",
+      "statusTitle": "Klaar voor implementatie: {{status}}",
+      "description": "Bekijk het benodigde bewijs voordat deze Single-Instance Deployment klaar is voor normale werking.",
+      "openWizard": "Review Klaarheid Openen",
+      "blockerCount": "{{count}} blokkades",
+      "warningCount": "{{count}} waarschuwingen",
+      "readyCount": "{{count}} gereed",
+      "empty": "Er zijn nog geen Deployment Readiness-controles beschikbaar.",
+      "conversationBlocking": "Blokkeert normale Conversations",
+      "blocker": "Blokkade",
+      "warning": "Waarschuwing",
+      "ready": "Gereed",
+      "reviewInferenceVerification": "Controleer Inference Verificatie",
+      "reviewDataLifecycleStatus": "Controleer Data Lifecycle Status",
+      "reviewDeploymentValidation": "Controleer Deployment-instellingen",
+      "reviewRestartRequired": "Controleer Herstart Vereist",
+      "reviewOperationalReadiness": "Controleer Operationele Gereedheid",
+      "reviewServiceHealth": "Controleer Servicegezondheid",
+      "reviewRuntimeEnv": "Controleer Runtime Env Export",
+      "deployment_settings_validation": {
+        "label": "Validatie Deployment-instellingen",
+        "status": {
+          "invalid": {
+            "summary": "De validatie van de Deployment-instellingen bevat fouten die moeten worden hersteld.",
+            "nextAction": "Controleer de validatiefouten van de Deployment-instellingen."
+          },
+          "warnings": {
+            "summary": "De validatie van de Deployment-instellingen bevat adviserende waarschuwingen.",
+            "nextAction": "Controleer de validatiewaarschuwingen van de Deployment-instellingen."
+          },
+          "valid": {
+            "summary": "De validatie van de Deployment-instellingen bevat geen fouten of waarschuwingen.",
+            "nextAction": "Geen actie vereist."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Verifieerbare Inference",
+        "status": {
+          "current": {
+            "summary": "De geconfigureerde Model Provider heeft een actueel Inference Verification Record.",
+            "nextAction": "Geen actie vereist. Controleer het huidige Inference Verification Record wanneer provider-claims wijzigen."
+          },
+          "deferred_missing": {
+            "summary": "Encrypted en Verifiable Inference is momenteel niet geverifieerd voor de geconfigureerde Model Provider.",
+            "nextAction": "Configureer een ondersteunde Model Provider en voer Inference Verification uit voordat u Deployment Readiness als voltooid beschouwt."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Data Lifecycle Controle",
+        "status": {
+          "needs_review": {
+            "summary": "Data Lifecycle Controle vereist controle door de Admin.",
+            "nextAction": "Controleer de huidige Active Storage Lifecycle-status en leg de Data Lifecycle Controle vast."
+          },
+          "stale": {
+            "summary": "De vastgelegde Data Lifecycle Controle is verouderd na een ondersteunde lifecycle-wijziging.",
+            "nextAction": "Controleer de huidige Active Storage Lifecycle-status en leg een nieuwe Data Lifecycle Controle vast."
+          },
+          "reviewed": {
+            "summary": "De Data Lifecycle Review is voltooid.",
+            "nextAction": "Geen actie vereist, tenzij de ondersteunde lifecycle-status verandert."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Bevestigingen Deployment Surface",
+        "status": {
+          "acknowledged": {
+            "summary": "Categorieën voor niet-ondersteunde Deployment Surface zijn bevestigd.",
+            "nextAction": "Geen actie vereist."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Niet-ondersteunde Deployment Surface-categorieën vereisen bevestiging door de Operator.",
+            "nextAction": "Bekijk de vermelde Deployment Surface-categorieën en bevestig elke categorie voordat u de Deployment Readiness als voltooid beschouwt."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Backup en Restore Oefening",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Een recent verslag van een Operator Backup en Restore Oefening is vereist.",
+            "nextAction": "Voer een Backup en Restore Oefening uit voor deze Deployment en leg deze vast."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Herstart Vereist",
+        "status": {
+          "current": {
+            "summary": "Geen Deployment-instellingen die een herstart vereisen, zijn gewijzigd sinds de start van de service.",
+            "nextAction": "Geen actie vereist."
+          },
+          "restart_required": {
+            "summary": "Deployment-instellingen die een herstart vereisen, zijn gewijzigd na de start van de service. ({{changedSettings}})",
+            "nextAction": "Pas de gewenste Deployment-instellingen toe en herstart de getroffen services voordat u deze als actueel beschouwt."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage-runtimeconfiguratie",
+        "status": {
+          "not_generated": {
+            "summary": "De Sage runtime env is nog niet gegenereerd op basis van de Deployment-instellingen.",
+            "nextAction": "Exporteer de Sage runtime env voordat u de Deployment-instellingen als toegepast op Sage beschouwt."
+          },
+          "matches_desired": {
+            "summary": "De actieve Sage runtime config komt overeen met de gewenste Deployment-instellingen.",
+            "nextAction": "Geen actie vereist."
+          },
+          "drifted": {
+            "summary": "De actieve Sage runtime config wijkt af van de gewenste Deployment-instellingen.",
+            "nextAction": "Onderzoek de afwijking in de Sage runtime config, pas de gegenereerde Sage env toe en herstart Sage."
+          },
+          "current": {
+            "summary": "De Sage runtime env is gegenereerd op basis van de huidige Deployment-instellingen.",
+            "nextAction": "Geen actie vereist, tenzij het gegenereerde artefact nog niet is toegepast op de Deployment."
+          },
+          "stale": {
+            "summary": "Deployment-instellingen zijn gewijzigd nadat de Sage runtime env is gegenereerd.",
+            "nextAction": "Exporteer een nieuwe Sage runtime env en pas deze toe via het herstartpad van de Deployment."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Core-backendruntimeconfiguratie",
+        "status": {
+          "not_generated": {
+            "summary": "De core-backend runtime env is nog niet gegenereerd op basis van de Deployment-instellingen.",
+            "nextAction": "Exporteer de core-backend runtime env voordat u de Deployment-instellingen als toegepast op core-backend beschouwt."
+          },
+          "matches_desired": {
+            "summary": "De actieve core-backend runtime config komt overeen met de gewenste Deployment-instellingen.",
+            "nextAction": "Geen actie vereist."
+          },
+          "drifted": {
+            "summary": "De actieve core-backend runtime config wijkt af van de gewenste Deployment-instellingen.",
+            "nextAction": "Onderzoek de drift in de core-backend runtime config, pas de gegenereerde core-backend env toe en herstart core-backend."
+          },
+          "current": {
+            "summary": "De core-backend runtime env is gegenereerd op basis van de huidige Deployment Settings.",
+            "nextAction": "Geen actie vereist, tenzij het gegenereerde artefact nog niet is toegepast op de Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings zijn gewijzigd nadat de core-backend runtime env is gegenereerd.",
+            "nextAction": "Exporteer een nieuwe core-backend runtime env en pas deze toe via het pad voor het herstarten van de Deployment."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Implementatiewizard",
+      "step": "Stap {{current}} van {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Operationele Gereedheid",
+      "description": "Controleer back-up, herstel, monitoring en recovery-oefeningen voor de normale bedrijfsvoering."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — je Tinfoil API-sleutel voor de lokale proxy.",
+      "apiKeyLabel": "Tinfoil API-sleutel",
+      "ariaLabel": "Hulp bij Sage runtime-configuratie",
+      "exampleConfig": "Voorbeeldconfiguratie",
+      "goToPage": "Ga naar pagina",
+      "sageExtra": "Stel LLM_API_KEY in op je Tinfoil-sleutel van {{tinfoilSignupUrl}}. De stack koppelt deze aan Sage en de lokale Tinfoil proxy.",
+      "sageHint": "Deze prototype routeert Agent Runtime-verkeer via Sage en Tinfoil. LLM_API_KEY is de standaard Model Provider-sleutel.",
+      "modelField": "TINFOIL_MODEL — de Tinfoil model-identifier die Sage moet gebruiken (bijvoorbeeld: glm-5-2).",
+      "overviewDesc": "Deze prototype gebruikt Sage als de publieke Agent Runtime en Tinfoil als de Model Provider transport. Configureer de Model Provider via de LLM_* Deployment Settings; de stack koppelt deze aan de Tinfoil runtime van Sage.",
+      "overviewTitle": "Overzicht Sage Runtime",
+      "providerField": "LLM_PROVIDER — instellen op \"sage\" voor deze prototype."
+    },
+    "inferenceVerification": {
+      "current": "Huidig",
+      "missing": "Ontbrekend",
+      "expired": "Verlopen",
+      "failed": "Mislukt",
+      "success": "Succes",
+      "statusLoadFailed": "Laden van status inferentie-verificatie mislukt",
+      "historyLoadFailed": "Laden van geschiedenis inferentie-verificatie mislukt",
+      "loadFailed": "Laden van inferentie-verificatie mislukt",
+      "manualFailed": "Handmatige verificatie mislukt",
+      "manualSucceeded": "Handmatige verificatie geslaagd",
+      "detailLoadFailed": "Laden van attestatiedetails mislukt",
+      "ariaLabel": "Inference Verificatie",
+      "title": "Inference Verificatie",
+      "summary": "Alleen voor admins: bewijs dat beschermde inference draait op de verwachte Model Provider.",
+      "verifyNow": "Nu verifiëren",
+      "status": "Status",
+      "checkedAt": "Gecontroleerd",
+      "expiresAt": "Verloopt",
+      "expectedClaims": "Verwachte claims",
+      "expectedClaimsValue": "Verwachte claims: {{fingerprint}}",
+      "providerClaims": "Claims van provider",
+      "provider": "Provider",
+      "model": "Model",
+      "endpoint": "Endpoint",
+      "history": "Verificatiegeschiedenis",
+      "emptyHistory": "Nog geen verificatiegegevens.",
+      "recordTitle": "Record #{{id}}",
+      "inspectAttestation": "Attestatie inspecteren",
+      "fullAttestation": "Volledig attestatiemateriaal"
+    },
+    "lifecycle": {
+      "notStarted": "Niet gestart",
+      "notConfigured": "Niet geconfigureerd",
+      "plaintextByOperatorChoice": "Plaintext op keuze van operator",
+      "allTombstones": "Alle",
+      "allTombstonesLabel": "Alle tombstones",
+      "incompleteTombstonesFilter": "Onvolledig",
+      "incompleteTombstonesLabel": "Onvolledige tombstings",
+      "completedTombstonesFilter": "Voltooid",
+      "completedTombstonesLabel": "Voltooide tombstones",
+      "title": "Status Gegevenslevenscyclus",
+      "description": "Huidige door de operator beheerde privacydekking over de instancedata.",
+      "scopeExcludes": "Sluit uit: {{excludes}}",
+      "secureEraseStatus": "Veilig wissen: {{status}}",
+      "readinessStatus": "Lifecycle-gereedheid: {{status}}",
+      "readinessNonBlocking": "Gebruikersgesprekken worden in v1 niet geblokkeerd door waarschuwingen voor Lifecycle-gereedheid.",
+      "readinessStaleReason": "Reden: {{reason}}",
+      "contentEncryptionKey": "Content-encryptiesleutel: {{status}}",
+      "artifactEncryptionPosture": "Encryptiestatus van artifacts: {{status}}",
+      "artifactPostureLabel": "Encryptiestatus van artifacts",
+      "artifactPostureRequired": "Vereist",
+      "artifactPostureDisabled": "Uitgeschakeld",
+      "retentionSchedulerStatus": "Retentieplanner: {{status}}",
+      "schedulerObservation": "Observatie: {{status}}",
+      "schedulerEnabledClasses": "Door scheduler ingeschakelde klassen: {{classes}}",
+      "schedulerLastRunStatus": "Status laatste uitvoering: {{status}}",
+      "schedulerLastRun": "Laatste uitvoering: {{trigger}} door {{actor}}",
+      "previewRetention": "Retention bekijken",
+      "runScheduledRetention": "Geplande uitvoering starten",
+      "previewRetentionResult": "Voorvertoning: {{conversations}} gesprekken, {{artifacts}} document-artifacts, {{skipped}} overgeslagen klassen.",
+      "scheduledRetentionResult": "Geplande uitvoering: {{status}} met {{retries}} tombstone-pogingen.",
+      "scheduledRetentionStatus": "Geplande klassen: {{classes}}",
+      "auditCoverageStatus": "Audit-dekking: {{audited}} geaudit, {{exceptions}} uitzonderingen, {{missing}} ontbrekend.",
+      "owner": "Eigenaar: {{owner}}",
+      "deletion": "Verwijdering: {{status}}",
+      "retention": "Retentie: {{status}}",
+      "audit": "Audit: {{status}}",
+      "confidentiality": "Vertrouwelijkheid: {{status}}",
+      "incompleteTombstones": "Onvolledige tombstones: {{count}}",
+      "completedTombstones": "Voltooide tombstones: {{count}}",
+      "retentionEnabled": "Ingeschakeld",
+      "retentionWindow": "Venster",
+      "retentionDays": "dagen",
+      "scheduledEnforcement": "Gepland",
+      "saveRetentionPolicy": "Beleid opslaan",
+      "empty": "Lifecycle-status is niet beschikbaar.",
+      "retentionPolicySaveFailed": "Bewaren van bewaartermijn mislukt.",
+      "retentionPreviewFailed": "Voorbeeld van bewaartermijn kan niet worden weergegeven.",
+      "scheduledRetentionFailed": "Geplande bewaartermijn kan niet worden uitgevoerd.",
+      "artifactPostureFailed": "Bijwerken van encryptie-instellingen voor artifacts mislukt.",
+      "unsupportedSurfacesTitle": "Niet-ondersteunde deployment-oppervlakken",
+      "unsupportedSurfacesDescription": "Deze operationele sporen worden hier vermeld, maar vallen buiten de controle van de product-lifecycle.",
+      "unsupportedSurfaceAckFailed": "Bijwerken van bevestiging mislukt.",
+      "acknowledgedSurface": "Bevestigd",
+      "acknowledgeSurface": "Bevestigen",
+      "tombstonesTitle": "Verwijderings-tombstones",
+      "tombstonesDescription": "Onvolledige lifecycle-verwijderingen opnieuw proberen zonder verwijderde inhoud bloot te leggep.",
+      "tombstoneStatusFilter": "Filter voor tombstone-status",
+      "tombstoneRetryFailed": "Opnieuw proberen mislukt.",
+      "tombstonesFetchFailed": "Verwijderings-tombstones kunnen niet worden geladen.",
+      "tombstoneClass": "Klasse: {{className}}",
+      "tombstoneSource": "Bron: {{source}}",
+      "tombstoneRetries": "Pogingen: {{count}}",
+      "tombstoneUpdated": "Bijgewerkt: {{updated}}",
+      "retryTombstoneLabel": "Verwijderings-tombstone {{id}} opnieuw proberen",
+      "retry": "Opnieuw proberen",
+      "tombstonesEmpty": "Er staan geen verwijderings-tombstones te wachten op een nieuwe poging."
+    },
+    "runtimeEnv": {
+      "unknown": "Onbekend",
+      "title": "Uitlijning van runtime-configuratie",
+      "description": "Vergelijkt gewenste Deployment Settings, gegenereerde Sage-omgeving en de waarneembare actieve status.",
+      "desired": "Gewenst",
+      "configuredKeys": "{{count}} van {{total}} sleutels geconfigureerd",
+      "generated": "Gegenereerd",
+      "exportedAt": "Geëxporteerd {{time}}",
+      "notExported": "Geen Sage-omgevingsexport geregistreerd",
+      "running": "Actief",
+      "runningUnknown": "Actieve status kan nog niet direct worden gecontroleerd.",
+      "coreBackend": "Core-backend",
+      "coreBackendHint": "Afstemming van backend-procesomgeving",
+      "coreDesired": "Core Gewenst",
+      "coreConfiguredKeys": "Core backend: {{count}} van {{total}} sleutels geconfigureerd",
+      "coreGenerated": "Core gegenereerd",
+      "coreNotExported": "Geen export van core backend-omgeving geregistreerd",
+      "coreRunning": "Core draaiend",
+      "coreRunningUnknown": "De draaiende status van de core backend kan nog niet direct worden gecontroleerd.",
+      "coreExportedTitle": "Core-backend omgevingsvariabelen geëxporteerd",
+      "coreSensitiveArtifact": "Behandel core-backend.env als gevoelig implementatiemateriaal.",
+      "coreExportDoesNotApply": "Het exporteren van het artefact verandert het draaiende backend-proces niet totdat een Operator het toepast en core-backend opnieuw opstart.",
+      "exportedTitle": "Sage omgevingsvariabelen geëxporteerd",
+      "sensitiveArtifact": "Behandel sage.env als gevoelig implementatiemateriaal.",
+      "exportDoesNotApply": "Het exporteren van het artefact verandert het draaiende Sage-proces niet totdat een Operator het toepast en Sage opnieuw opstart."
+    },
+    "categorySettingsAria": "{{category}} Instellingen",
+    "exportCoreBackendRuntimeEnv": "Exporteer core-backend omgevingsvariabelen",
+    "restartCurrent": "Geen herstart vereist",
+    "restartCurrentDesc": "Geen herstart vereist. Deployment-instellingen zijn gewijzigd sinds de start van de service.",
+    "saveError": "Opslaan mislukt",
+    "openHelpAria": "Open help voor {{label}}"
   },
   "upload": {
     "invalidFileType": "Ongeldig bestandstype. Toegestaan: {{extensions}}",
@@ -1129,7 +1940,8 @@
       "processing": "Verwerken",
       "chunked": "Opgedeeld",
       "complete": "Voltooid",
-      "failed": "Mislukt"
+      "failed": "Mislukt",
+      "completedWithErrors": "Voltooid met fouten"
     },
     "chunks": "{{processed}}/{{total}} delen",
     "deleteDocument": "Document verwijderen",
@@ -1172,7 +1984,21 @@
       "troubleshootingDesc": "Veelvoorkomende problemen en hoe je ze oplost.",
       "troubleshootingTitle": "Probleemoplossing",
       "txtDesc": ".txt — Platte-tekstbestanden. Het eenvoudigste formaat, werkt betrouwbaar met alle inhoud."
-    }
+    },
+    "uploadError": "Upload mislukt",
+    "documentDeletionError": "Fout bij verwijderen document",
+    "navigationWarning": "Uw document wordt nog overgedragen. Verlaat de pagina pas nadat de verwerking is gestart, anders wordt de upload mogelijk niet opgeslagen.",
+    "duplicateInBatch": "Dubbele documentnaam in deze batch",
+    "documentsSelected": "{{count}} documenten",
+    "queueSummary": "{{valid}} gereed, {{rejected}} overgeslagen",
+    "skipped": "Overgeslagen",
+    "uploadedPartialSuccess": "{{count}} in wachtrij, {{rejected}} overgeslagen",
+    "chooseFiles": "Bestanden kiezen",
+    "chooseFolder": "Map kiezen",
+    "uploadDocuments": "Documenten uploaden",
+    "replacingDocument": "{{filename}} wordt vervangen",
+    "recentDocumentsShowing": "Toont {{shown}} van {{total}} documenten",
+    "showMore": "Toon meer"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2040,11 @@
       "label": "Algemeen",
       "description": "Overige configuratieopties",
       "hint": "Diverse instellingen die niet in andere categorieën passen."
+    },
+    "llm": {
+      "label": "Sage-agentruntime",
+      "description": "Configureer Sage + Tinfoil inferentie",
+      "hint": "Deze prototype stuurt Agent Runtime-verkeer via Sage en gebruikt Tinfoil als Model Provider-transport. Wijzigingen vereisen een herstart."
     }
   },
   "promptSections": {
@@ -1240,6 +2071,12 @@
       "description": "Hoe de AI zijn reacties structureert",
       "hint": "Bepaalt opmaakvoorkeuren zoals het gebruik van opsommingstekens, koppen of conversationele paragrafen. Dit beïnvloedt hoe antwoorden visueel worden gepresenteerd.",
       "placeholder": "Gebruik opsommingstekens voor lijsten, koppen voor secties..."
+    },
+    "prompt_system": {
+      "label": "Systeemprompt",
+      "description": "Kernidentiteit en instructies voor de AI",
+      "hint": "Gebruik dit voor de identiteit van de assistent, de missie en de belangrijkste kaders die van toepassing moeten zijn vóór toon, regels, tools of documentcontext. Wijzigingen hebben invloed op nieuwe gesprekken.",
+      "placeholder": "Je bent Sage, een privé-assistent voor deze instantie..."
     }
   },
   "parameters": {
@@ -1252,6 +2089,11 @@
       "label": "Kennisdiepte",
       "description": "Hoeveel documentsecties er worden geraadpleegd",
       "hint": "Bij het beantwoorden van vragen doorzoekt de AI je geüploade documenten en haalt relevante secties op. Hogere aantallen betekenen meer context maar tragere reacties. Lagere aantallen zijn sneller maar kunnen relevante info missen. Standaard: 5"
+    },
+    "max_tokens": {
+      "label": "Max. tokens",
+      "description": "Maximale lengte voor elk AI-antwoord",
+      "hint": "Beperkt hoe lang een antwoord kan zijn. Lagere waarden houden antwoorden kort en verlagen de kosten; hogere waarden maken langere uitleg mogelijk. Standaard: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2101,21 @@
       "label": "Webzoeken",
       "description": "Sta de AI toe om op internet te zoeken",
       "hint": "Wanneer ingeschakeld, kan de AI op het web zoeken naar actuele informatie die niet in je documenten staat. Schakel dit uit als je wilt dat reacties alleen uit je geüploade kennisbank komen."
+    },
+    "knowledgeSource": {
+      "none": "Geen",
+      "selected": "Geselecteerde standaarddocumenten",
+      "all": "Alle beschikbare documenten"
+    },
+    "knowledge_source_default": {
+      "label": "Kennisbronnen",
+      "description": "Kies welke geüploade kennisbronnen actief zijn in gebruikersgesprekken",
+      "hint": "Gebruik \"none\" voor geen geüploade kennis standaard, \"selected\" voor documenten die als 'Standaard actief' zijn gemarkeerd, of \"all\" voor alle beschikbare documenten."
+    },
+    "user_default_tool_ids": {
+      "label": "Gebruikers-toolsets",
+      "description": "Toolsets die standaard actief zijn in gebruikersgesprekken",
+      "hint": "JSON-array met een van \"curated-resources\", \"knowledge-search\", en \"web-search\". Knowledge Search wordt ook beheerd door Kennisbronnen."
     }
   },
   "deploymentConfigItems": {
@@ -1426,6 +2283,51 @@
       "label": "Monitoring-URL",
       "description": "URL voor gezondheidsmonitoring",
       "hint": "Gezondheidscontrole-URL voor externe monitors. Standaard: http://localhost:8000/health."
+    },
+    "LLM_PROVIDER": {
+      "label": "Modelprovider",
+      "description": "Model Provider-label aan de Python-zijde",
+      "hint": "Gebruik \"sage\" voor deze prototype. Deze deployment-instelling ondersteunt diagnostiek en verificatie-metadata aan de Python-zijde."
+    },
+    "LLM_MODEL": {
+      "label": "Modelnaam",
+      "description": "Modelnaam/identificatie",
+      "hint": "De Tinfoil-modelidentificatie die Sage moet gebruiken (bijv. \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "API-endpoint",
+      "description": "Basis-URL van de Model Provider API",
+      "hint": "Tinfoil proxy basis-URL. Standaard: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API-sleutel",
+      "description": "Tinfoil API-sleutel (geheim)",
+      "hint": "Leeg laten om de huidige Deployment Settings geheim te houden."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Chat-limiet",
+      "description": "Chatverzoeken per minuut",
+      "hint": "Maximaal aantal /llm/chat-verzoeken per minuut per stabiele gebruiker, admin, token of client IP. Vereist herstart. Standaard: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Retrieval Query-limiet",
+      "description": "Retrieval query-verzoeken per minuut",
+      "hint": "Maximaal aantal /query-verzoeken per minuut per stabiele gebruiker, token of client IP. Vereist herstart. Standaard: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Upload-limiet",
+      "description": "Document-uploadverzoeken per minuut",
+      "hint": "Maximaal aantal document-uploadverzoeken per minuut per stabiele admin, token of client IP. Vereist herstart. Standaard: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Vector Search-limiet",
+      "description": "Vector search-verzoeken per minuut",
+      "hint": "Maximaal aantal vector search-verzoeken per minuut per stabiele gebruiker, token of client IP. Vereist herstart. Standaard: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Config Export-limiet",
+      "description": "Deployment config-exports per uur",
+      "hint": "Maximaal aantal .env-exports per uur per admin-sessie of client IP. Vereist herstart. Standaard: 5."
     }
   },
   "colors": {
@@ -1473,7 +2375,11 @@
       "title": "Klaar om te verbinden"
     },
     "subtitle": "Stel je privé-kennisbank in met een paar stappen.",
-    "title": "Welkom bij Enclave"
+    "title": "Welkom bij Enclave",
+    "keySafety": {
+      "title": "Gebruik een instance-specifieke Nostr-sleutel",
+      "body": "Gebruik geen persoonlijke Nostr-sleutel. Maak of kies een specifieke admin-sleutel voor deze Instance om het surveillance-risico te verkleinen en operationele toegang gescheiden te houden."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2387,8 @@
       "notConfigured": "Deze functie is niet geconfigureerd.",
       "rateLimited": "Te veel berichten. Probeer het later opnieuw.",
       "required": "Bericht is verplicht.",
-      "unavailable": "Bereik is niet beschikbaar."
+      "unavailable": "Bereik is niet beschikbaar.",
+      "formErrorLabel": "Fout in Reachout-formulier"
     },
     "form": {
       "messageLabel": "Bericht",
@@ -1489,7 +2396,8 @@
       "send": "Verzenden"
     },
     "status": {
-      "success": "Bedankt. Uw bericht is verzonden."
+      "success": "Bedankt. Uw bericht is verzonden.",
+      "successLabel": "Reachout succesvol"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2432,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "De backend gaf een fout terug bij het valideren van authenticatie. Dit wordt niet behandeld als een uitlogactie.",
       "unable_to_verify_admin_session_5f87b8": "Kan admin-sessie niet verifiëren",
       "verifying_admin_session_87c53b": "Admin-sessie wordt geverifieerd..."
-    }
+    },
+    "loadingAssistant": "Admin-assistent laden"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2647,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Verifieer een magic link token en krijg sessie-info (cookie-gebaseerde sessie).",
       "verify_magic_link_token_183cf5": "Verifieer Magic Link Token",
       "view_all_users_manage_approval_status_and_delete_03feec": "Bekijk alle gebruikers, beheer goedkeuringsstatus en verwijder gebruikers.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Bekijk en update instantiebrede configuratie-instellingen."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Bekijk en update instantiebrede configuratie-instellingen.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Test de verbinding met het geconfigureerde Model Provider-pad."
+    },
+    "labels": {
+      "themePreference": "Themapreferentie",
+      "endpointGuidance": "Endpoint-begeleiding",
+      "healthResponseOutput": "Health-respons output",
+      "jobs": "Jobs",
+      "chunks": "Segmenten",
+      "rateLimitTestType": "Type rate limit-test",
+      "successfulRequests": "Geslaagde verzoeken",
+      "successful": "Geslaagd",
+      "blockedRequests": "Geblokkeerde verzoeken"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Gespreksverloop"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logo"
+  },
+  "language": {
+    "english": "Engels",
+    "spanish": "Spaans",
+    "french": "Frans",
+    "german": "Duits",
+    "portuguese": "Portugees"
+  },
+  "home": {
+    "checkingInstanceStatus": "Status van instantie controleren..."
+  },
+  "adminGuidedSetup": {
+    "title": "Configureer je instantie",
+    "subtitle": "Je assistent verzamelt de basisgegevens in één keer.",
+    "manual": "Handmatig configureren in plaats daarvan",
+    "finish": "Voltooien & testen starten",
+    "comingSoon": "Deze fase komt binnenkort en wordt apart ontwikkeld.",
+    "steps": {
+      "initialize": {
+        "label": "Initialiseren",
+        "title": "Initialiseren",
+        "subtitle": "Laten we de basis van je ruimte doornemen, zodat je agent met de juiste basis begint."
+      },
+      "docs": {
+        "label": "Documenten uploaden",
+        "title": "Upload je gids",
+        "subtitle": "Voeg het bronmateriaal toe waarop je agent antwoordt — boeken, gidsen en referentiedocumenten."
+      },
+      "resources": {
+        "label": "Gecureerde bronnen",
+        "title": "Gecureerde bronnen",
+        "subtitle": "Voeg vertrouwde bronnen uit de echte wereld toe — belangrijke contactpersonen, advocaten, educatieve en mentale gezondheidssteun — waar de agent mensen naar kan verwijzen."
+      },
+      "test": {
+        "label": "Testen als gebruiker",
+        "title": "Testen als een gebruiker",
+        "subtitle": "Binnenkort beschikbaar — probeer de assistent als een van jouw gebruikerstypen en beoordeel de antwoorden."
+      },
+      "feedback": {
+        "label": "Feedback",
+        "title": "Feedbackloop",
+        "subtitle": "Binnenkort beschikbaar — beoordeel de kwaliteit van de antwoorden en verbeter je instellingen."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Testen & Feedback",
+    "subtitle": "Start een testgebruikerssessie en bekijk vervolgens versleutelde bètalogs en feedback van opgeslagen gesprekken.",
+    "tabs": {
+      "test": "Testen als gebruiker",
+      "feedback": "Feedback"
+    },
+    "test": {
+      "pickPersona": "Kies een persona om te testen",
+      "pickPersonaBody": "Maak een testgebruiker aan voor een van jouw gebruikerstypen en chat vervolgens als deze gebruiker. De sessie wordt opgeslagen als een versleutelde proefperiode die je kunt beoordelen onder Feedback.",
+      "userType": "Gebruikertype",
+      "genericUser": "Algemene gebruiker (geen type)",
+      "start": "Sessie starten",
+      "admin": "Beheerder",
+      "testUserId": "Testgebruiker",
+      "endSave": "Einde & sla proefperiode op",
+      "previewNotice": "Voorbeeldmodus — volledige impersonatie is nog niet gekoppeld, dus deze chat wordt uitgevoerd onder jouw admin-sessie. Het transcript wordt nog steeds opgeslagen voor beoordeling.",
+      "chatEmpty": "Stuur een bericht als deze gebruiker om de proefperiode te starten.",
+      "inputPlaceholder": "Bericht naar de assistent als deze gebruiker...",
+      "saved": "Proefperiode opgeslagen (versleuteld). Bekijk deze onder Feedback.",
+      "startError": "Starten van een testsessie mislukt",
+      "saveError": "Opslaan van proefperiode mislukt",
+      "impersonationUnavailable": "Impersonatie van de testgebruiker is nog niet beschikbaar",
+      "sessionTokenError": "Kon geen synthetische gebruikerssessie-token aanmaken",
+      "testingAs": "Testen als {{persona}}",
+      "authFailed": "De synthetische gebruikerssessie is niet langer geautoriseerd.",
+      "discardUnsavedConfirm": "Voltooide beurten die niet zijn opgeslagen weggooien?",
+      "workspaceAria": "Werkruimte voor testgebruikersgesprekken"
+    },
+    "feedback": {
+      "trials": "Bètalogs",
+      "untitled": "Ongetiteld gesprek",
+      "turns": "beurten",
+      "turn": "Beurt",
+      "empty": "Nog geen beta-logs opgeslagen. Start een Test User Session of wacht op gebruikersgesprekken.",
+      "selectPrompt": "Selecteer een beta-log om het transcript te bekijken en elke beurt te beoordelen.",
+      "noNip04": "Koppel een Nostr-extensie (Alby, nos2<0xC2>x) om transcripten te ontsleutelen — deze zijn versleuteld met jouw admin-sleutel.",
+      "sourceUser": "Gebruikersgesprek",
+      "sourceTest": "Testgebruikerssessie",
+      "thumbUp": "Goed antwoord",
+      "thumbDown": "Moet worden verbeterd",
+      "notePlaceholder": "Optionele notitie (wordt versleuteld opgeslagen)…",
+      "exportNotDecrypted": "Open en ontsleutel het transcript voordat je exporteert.",
+      "exportFeedbackNotDecrypted": "Sommige feedbackreacties konden niet worden ontsleuteld. Open het transcript opnieuw en keur elk ontsleutelverzoek goed voordat je exporteert.",
+      "exportNeedsExtension": "Exporteren vereist een Nostr-extensie. Transcripten zijn versleuteld ('at rest') en jouw extensie is degene die ze ontsleutelt.",
+      "exportDecrypting": "Wordt nog ontsleuteld. Exporteren is beschikbaar zodra elk verzoek is goedgekeurd.",
+      "exportWhyDisabled": "Waarom is exporteren uitgeschakeld?",
+      "retryDecryption": "Decryptie opnieuw proberen",
+      "decryptPendingTitle": "Controleer je Nostr-extensie",
+      "decryptPendingBody": "Er wordt om toestemming gevraagd om dit transcript te ontsleutelen. Het opent mogelijk niet automatisch — klik op het extensie-icoon als je het niet ziet. Kies de optie om je keuze te onthouden, zodat er slechts één keer om toestemming wordt gevraagd.",
+      "decryptProgress": "Ontsleuteld: {{done}} van {{total}}.",
+      "loadTrialsError": "Laden van trials mislukt",
+      "loadTranscriptError": "Laden van transcript mislukt",
+      "saveError": "Feedback kon niet worden opgeslagen",
+      "deleteError": "Sessie-log kon niet worden verwijderd",
+      "exportError": "Exporteren van sessie mislukt",
+      "transcriptIntegrityError": "Het transcript is niet beschikbaar of onvolledig en kan niet worden geëxporteerd.",
+      "decryptTranscriptError": "Transcript kon niet worden ontsleuteld. Keur het ontsleutelverzoek goed in je Nostr-extensie."
+    }
+  },
+  "adminResources": {
+    "title": "Bronnengids",
+    "subtitle": "Onderhoud handmatig gecontroleerde verwijzingsbronnen die de assistent kan noemen wanneer een gesprek escaleert. Alleen \"ready\" bronnen worden getoond aan eindgebruikers.",
+    "add": "Bron toevoegen",
+    "addTitle": "Bron toevoegen",
+    "editTitle": "Bron bewerken",
+    "empty": "Nog geen bronnen. Voeg er handmatig een toe zodra je een gecontroleerde verwijzing hebt.",
+    "verified": "geverifieerd",
+    "missing": "Ontbrekend om live te gaan",
+    "name": "Naam",
+    "type": "Type bron",
+    "languages": "Talen (door komma's gescheiden ISO-codes)",
+    "description": "Beschrijving",
+    "descriptionHint": "Wat de assistent de persoon over deze bron moet vertellen.",
+    "scopeLevel": "Dekkingniveau",
+    "scopeCode": "Dekkingscode",
+    "scopeCodeHint": "Land: ISO-code (NI). Subregio/regio: UN M49-code (013 = Centraal-Amerika). Globaal: leeg laten.",
+    "helpTypes": "Soorten hulp",
+    "contact": "Contactmethoden",
+    "vettedBy": "Gecontroleerd door",
+    "sourceNote": "Bronnotitie",
+    "markVerified": "Markeren als geverifieerd (staat bovenaan)",
+    "archive": "Archiveren (verbergen voor eindgebruikers)",
+    "deleteTitle": "Bron verwijderen?",
+    "deleteBody": "Dit verwijdert de directory-vermelding voor {{name}}",
+    "coverage": "Dekking",
+    "coverageHint": "Kies een dekkingsniveau en zoek vervolgens naar de naam of code.",
+    "coverageCodePlaceholder": "Zoeken op naam of code...",
+    "coverageLevelFirst": "Kies eerst een dekkingsniveau",
+    "coverageClear": "Dekkingscode wissen",
+    "regionDirectoryUnavailable": "Regio-directory niet beschikbaar. Voer handmatig een code in.",
+    "level": {
+      "country": "Land",
+      "subregion": "Subregio",
+      "region": "Regio",
+      "global": "Globaal"
+    },
+    "addPointer": "Pointer toevoegen",
+    "addRegion": "Regio toevoegen",
+    "displayOrder": "Weergavevolgorde",
+    "displayOrderHint": "Lagere nummers verschijnen eerst, na relevantie en verificatie.",
+    "kind": "Type",
+    "noSearchResults": "Geen bronnen gevonden die aan deze zoekopdracht voldoen.",
+    "order": "Volgorde",
+    "pointerLabel": "Label pointer {{number}}",
+    "pointerType": "Type pointer {{number}}",
+    "pointerValue": "Pointer {{number}} waarde",
+    "pointers": "Verwijzingen",
+    "regionNumber": "Regio {{number}}",
+    "regions": "Regio's",
+    "removePointer": "Pointer verwijderen",
+    "removeRegion": "Regio verwijderen",
+    "search": "Resources zoeken",
+    "searchPlaceholder": "Naam, soort, tag, pointer of beschrijving",
+    "tags": "Tags (gescheiden door komma's)",
+    "namePlaceholder": "bijv. Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, education, local",
+    "loadError": "Laden van resources mislukt",
+    "loadDirectoryError": "Laden van directory mislukt",
+    "saveError": "Opslaan van resource mislukt",
+    "deleteError": "Verwijderen van resource mislukt"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Terug naar Admin Dashboard",
+    "eyebrow": "Admin-bewerkingen",
+    "title": "Gebruikersbeheer",
+    "subtitle": "Bekijk gebruikers, begrijp hun status en keur toegang goed via één eenvoudig dashboard.",
+    "unlockDetails": "Details ontgrendelen",
+    "refreshRoster": "Lijst vernieuwen",
+    "exportVisible": "Zichtbare lijst exporteren",
+    "prepareVisible": "Zichtbare lijst voorbereiden",
+    "downloadPrepared": "Voorbereide lijst downloaden",
+    "exportPrepared": "De volledige zichtbare lijst is voorbereid. Downloaden is nu mogelijk.",
+    "rosterTitle": "Gebruikerslijst",
+    "rosterShown": "{{shown}} van {{total}} getoond.",
+    "tableLabel": "Gebruikerslijst",
+    "tableRowsLabel": "Rijen gebruikerslijst",
+    "loadingLabel": "Gebruikerslijst laden",
+    "loadingUsers": "Gebruikers laden...",
+    "loadRetry": "Gebruikerslijst kon niet worden geladen. Gebruik 'Lijst vernieuwen' om het opnieuw te proberen.",
+    "emptyNoUsers": "Nog geen gebruikers. Nieuwe geauthenticeerde gebruikers verschijnen hier.",
+    "emptyFiltered": "Geen gebruikers gevonden met deze filters.",
+    "noUserType": "Geen gebruikerstype",
+    "unknown": "Onbekend",
+    "userFallback": "Gebruiker #{{id}}",
+    "approvalSuccess": "{{name}} goedgekeurd.",
+    "exportSuccess": "Gebruikerslijst spreadsheet gedownload.",
+    "metrics": {
+      "total": "Totaal aantal gebruikers",
+      "totalDetail": "in lijst",
+      "pendingApproval": "In afwachting van goedkeuring",
+      "pendingDetail": "{{count}} in afwachting",
+      "approved": "Goedgekeurd",
+      "approvedDetail": "kan chat betreden",
+      "incompleteProfiles": "Onvolledige profielen",
+      "incompleteDetail": "vereisen verplichte antwoorden"
+    },
+    "callouts": {
+      "loadFailed": "Laden gebruikerslijst mislukt",
+      "approvalUpdated": "Gebruikersgoedkeuring bijgewerkt",
+      "approvalFailed": "Bijwerken goedkeuring gebruiker mislukt",
+      "exportReady": "Export gebruikerslijst gereed",
+      "exportFailed": "Export gebruikerslijst mislukt"
+    },
+    "filters": {
+      "search": "Gebruikers zoeken",
+      "searchPlaceholder": "Naam, e-mail, publieke sleutel of #ID",
+      "approvalStatus": "Goedkeuringsstatus",
+      "allApprovalStates": "Alle goedkeuringsstatussen",
+      "pendingApproval": "In afwachting van goedkeuring",
+      "approved": "Goedgekeurd",
+      "allUserTypes": "Alle gebruikerstypen"
+    },
+    "columns": {
+      "user": "Gebruiker",
+      "approval": "Goedkeuring",
+      "userType": "Gebrekertype",
+      "userProfile": "Gebruikersprofiel",
+      "joined": "Lid geworden",
+      "action": "Actie"
+    },
+    "status": {
+      "approved": "Goedgekeurd",
+      "pending": "In afwachting"
+    },
+    "actions": {
+      "approve": "Goedkeuren",
+      "approveUser": "Goedkeur {{name}}",
+      "viewUserDetails": "Details van {{name}} bekijken"
+    },
+    "profile": {
+      "noQuestions": "Geen vragen",
+      "noQuestionsDetail": "Geen onboardingvragen van toepassing.",
+      "needsProfile": "Profiel vereist",
+      "missingRequiredOne": "1 vereist antwoord ontbreekt",
+      "missingRequiredMany": "{{count}} vereiste antwoorden ontbreken",
+      "noProfileYet": "Nog geen profiel",
+      "noAnswersSaved": "Geen antwoorden opgeslagen.",
+      "ready": "Profiel gereed",
+      "answersSavedOne": "1 antwoord opgeslagen",
+      "answersSavedMany": "{{count}} antwoorden opgeslagen"
+    },
+    "identity": {
+      "decrypting": "Naam en e-mail aan het ontsleutelen...",
+      "failed": "Versleutelde gegevens konden niet worden ontgrendeld.",
+      "unavailable": "Versleutelde gegevens hebben een browser-signer nodig.",
+      "locked": "Versleutelde gegevens zijn vergrendeld."
+    },
+    "errors": {
+      "loadUsers": "Gebruikers laden is mislukt.",
+      "loadUserTypes": "Gebruikerstypen laden is mislukt.",
+      "loadQuestions": "Onboarding-vragen laden is mislukt.",
+      "approvalUpdate": "Goedkeuring van de gebruiker kon niet worden bijgewerkt.",
+      "decryptUnavailable": "Een browser-extensie met NIP-04 decryptie is vereist om deze lijst voor te bereiden.",
+      "decryptRoster": "Een versleutelde lijstwaarde kon niet worden gedecodeerd. Er is geen spreadsheet aangemaakt.",
+      "prepareRequired": "Bereid de huidige zichtbare lijst voor voordat u deze downloadt.",
+      "exportAudit": "Export van de gebruikerslijst kon niet worden gecontroleerd.",
+      "exportRoster": "Exporteren van de gebruikerslijst is mislukt."
+    },
+    "detail": {
+      "booleanYes": "Ja",
+      "booleanNo": "Nee",
+      "fieldUnlocked": "Versleuteld antwoord ontgrendeld in deze browser.",
+      "decryptingField": "Antwoord aan het decoderen...",
+      "encryptedFieldUnavailable": "Versleuteld antwoord heeft een browser-signer nodig.",
+      "encryptedFieldFailed": "Versleuteld antwoord kon niet worden ontgrendeld.",
+      "encryptedFieldLocked": "Versleuteld antwoord is vergrendeld.",
+      "notAnswered": "Niet beantwoord",
+      "requiredMissing": "Verplicht antwoord ontbreekt.",
+      "backToUserManager": "Terug naar User Manager",
+      "backToRoster": "Terug naar gebruikerslijst",
+      "eyebrow": "Gebruikersgegevens",
+      "notFoundTitle": "Gebruiker niet gevonden",
+      "notFoundBody": "Deze gebruiker staat niet in de huidige admin-lijst.",
+      "subtitle": "Bekijk de status, profielantwoorden en toegangsgegevens van deze gebruiker.",
+      "approvalStatus": "Goedkeuringsstatus",
+      "waitingApproval": "wacht op goedkeuring",
+      "identityTitle": "Identiteit",
+      "name": "Naam",
+      "nameUnavailable": "Niet beschikbaar",
+      "email": "E-mail",
+      "emailUnavailable": "Niet beschikbaar",
+      "userId": "Gebruikers-ID",
+      "publicKey": "Publieke sleutel",
+      "noPublicKey": "Geen publieke sleutel",
+      "fieldsTitle": "Profielvelden",
+      "fieldsShown_one": "{{count}} veld is van toepassing op deze gebruiker.",
+      "fieldsShown_other": "{{count}} velden zijn van toepassing op deze gebruiker.",
+      "noFields": "Er zijn geen onboarding-velden van toepassing op deze gebruiker.",
+      "required": "Verplicht",
+      "optional": "Optioneel",
+      "encrypted": "Versleuteld",
+      "plain": "Onversleuteld",
+      "chatContext": "Chatcontext"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Decrypten: {{done}} van {{total}}",
+    "checkExtension": "controleer je Nostr-extensie",
+    "persistentApproval": "Kies de optie onthouden of altijd, zodat het slechts één keer wordt gevraagd."
   }
 }

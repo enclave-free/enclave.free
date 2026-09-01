@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { API_BASE } from '../../types/onboarding'
 import { Button, Callout, IconButton, Textarea } from '../ui'
+import type { ReachoutMode } from '../../i18n/dynamicTranslationFamilies'
 
-export type ReachoutMode = 'feedback' | 'help' | 'support'
+export type { ReachoutMode } from '../../i18n/dynamicTranslationFamilies'
 
 interface ReachoutOverrides {
   title?: string

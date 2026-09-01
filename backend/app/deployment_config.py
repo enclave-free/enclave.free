@@ -11,6 +11,7 @@ import ipaddress
 import logging
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Final, Mapping, Optional
 from urllib.parse import ParseResult, urlparse
 from fastapi import APIRouter, Header, HTTPException, Depends, Query, Request
@@ -36,6 +37,30 @@ from models import (
 )
 
 logger = logging.getLogger("enclave.deployment_config")
+
+
+def _load_readiness_status_contract() -> Dict[str, frozenset[str]]:
+    contract_path = Path(__file__).with_name("deployment_readiness_contract.json")
+    raw_contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(raw_contract, dict):
+        raise RuntimeError("Deployment Readiness contract must be an object")
+
+    contract: Dict[str, frozenset[str]] = {}
+    for item, statuses in raw_contract.items():
+        if (
+            not isinstance(item, str)
+            or not item
+            or not isinstance(statuses, list)
+            or not statuses
+            or any(not isinstance(status, str) or not status for status in statuses)
+            or len(statuses) != len(set(statuses))
+        ):
+            raise RuntimeError("Deployment Readiness contract contains an invalid item or status")
+        contract[item] = frozenset(statuses)
+    return contract
+
+
+READINESS_STATUS_CONTRACT: Final[Dict[str, frozenset[str]]] = _load_readiness_status_contract()
 
 # Track when this module was loaded (service start time)
 # Used to determine which config changes require restart
@@ -1531,16 +1556,32 @@ def _readiness_item(
     status: str,
     summary: str,
     next_action: str,
+    summary_key: Optional[str] = None,
+    summary_values: Optional[Mapping[str, Any]] = None,
+    next_action_key: Optional[str] = None,
+    next_action_values: Optional[Mapping[str, Any]] = None,
     conversation_blocking: bool = False,
 ) -> dict:
+    allowed_statuses = READINESS_STATUS_CONTRACT.get(key)
+    if allowed_statuses is None:
+        raise ValueError(f"Undeclared Deployment Readiness item: {key}")
+    if status not in allowed_statuses:
+        raise ValueError(f"Undeclared Deployment Readiness status for {key}: {status}")
+
+    message_key_prefix = f"adminDeployment.readiness.{key}.status.{status}"
     return {
         "key": key,
         "label": label,
+        "label_key": f"adminDeployment.readiness.{key}.label",
         "source": source,
         "severity": severity,
         "status": status,
         "summary": summary,
+        "summary_key": summary_key or f"{message_key_prefix}.summary",
+        "summary_values": dict(summary_values or {}),
         "next_action": next_action,
+        "next_action_key": next_action_key or f"{message_key_prefix}.nextAction",
+        "next_action_values": dict(next_action_values or {}),
         "conversation_blocking": conversation_blocking,
     }
 
@@ -1647,9 +1688,21 @@ def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
             f"{len(unacknowledged_surfaces)} unsupported Deployment Surface acknowledgements."
         )
         next_action = "Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces."
+        summary_key = (
+            "adminDeployment.readiness.deployment_surface_acknowledgements."
+            "status.needs_acknowledgement.summary"
+        )
+        summary_values = {"count": len(unacknowledged_surfaces)}
+        next_action_key = (
+            "adminDeployment.readiness.deployment_surface_acknowledgements."
+            "status.needs_acknowledgement.nextAction"
+        )
     else:
         summary = readiness.get("summary") or "Data Lifecycle Review needs Admin review."
         next_action = "Review Data Lifecycle Status."
+        summary_key = None
+        summary_values = None
+        next_action_key = None
     return _readiness_item(
         key="lifecycle_readiness",
         label="Data Lifecycle Review",
@@ -1657,7 +1710,10 @@ def _lifecycle_readiness_item(lifecycle_status: dict) -> dict:
         severity="warning",
         status=status,
         summary=summary,
+        summary_key=summary_key,
+        summary_values=summary_values,
         next_action=next_action,
+        next_action_key=next_action_key,
     )
 
 
@@ -1680,6 +1736,7 @@ def _unsupported_surface_readiness_item(lifecycle_status: dict) -> dict:
         severity="warning",
         status="needs_acknowledgement",
         summary=f"{len(unacknowledged)} unsupported Deployment Surface entries need acknowledgement.",
+        summary_values={"count": len(unacknowledged)},
         next_action="Acknowledge unsupported Deployment Surface categories after review.",
     )
 
@@ -1707,6 +1764,7 @@ def _restart_readiness_item() -> dict:
             severity="warning",
             status="restart_required",
             summary=f"Runtime restart is required for changed Deployment Settings: {changed}.",
+            summary_values={"changedSettings": changed},
             next_action="Restart the affected service after reviewing changes.",
         )
     return _readiness_item(

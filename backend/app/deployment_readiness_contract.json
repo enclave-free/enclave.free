@@ -1,0 +1,25 @@
+{
+  "deployment_settings_validation": ["invalid", "warnings", "valid"],
+  "verifiable_inference": ["current", "deferred_missing"],
+  "lifecycle_readiness": ["needs_review", "stale", "reviewed"],
+  "deployment_surface_acknowledgements": [
+    "acknowledged",
+    "needs_acknowledgement"
+  ],
+  "backup_restore_drill": ["operator_evidence_required"],
+  "restart_required": ["current", "restart_required"],
+  "sage_runtime_env": [
+    "not_generated",
+    "matches_desired",
+    "drifted",
+    "current",
+    "stale"
+  ],
+  "core_backend_runtime_env": [
+    "not_generated",
+    "matches_desired",
+    "drifted",
+    "current",
+    "stale"
+  ]
+}

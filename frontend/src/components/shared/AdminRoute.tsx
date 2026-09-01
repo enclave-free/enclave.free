@@ -64,13 +64,14 @@ interface AdminRouteProps {
 type GuardState = 'checking' | AdminSessionValidationState;
 
 function AssistantLoadingFallback() {
+  const { t } = useTranslation();
   return (
     <div
       role="status"
-      aria-label="Loading admin assistant"
+      aria-label={t('adminRoute.loadingAssistant', 'Loading admin assistant')}
       className="flex h-full min-h-40 items-center justify-center px-4 text-sm text-text-muted"
     >
-      Loading...
+      {t('common.loading')}
     </div>
   );
 }

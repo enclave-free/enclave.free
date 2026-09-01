@@ -50,9 +50,6 @@ interface TranscriptToolSummary {
   summary?: string | null;
 }
 
-const TRANSCRIPT_INTEGRITY_ERROR =
-  'The transcript is unavailable or incomplete and cannot be exported.';
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -124,13 +121,14 @@ function isTranscriptTurn(value: unknown): value is ParsedTranscriptTurn {
 
 function parseTranscriptTurns(
   plaintext: string,
-  expectedTurnCount: number
+  expectedTurnCount: number,
+  integrityError: string
 ): TranscriptTurn[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(plaintext) as unknown;
   } catch {
-    throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
+    throw new Error(integrityError);
   }
   if (
     typeof parsed !== 'object' ||
@@ -140,7 +138,7 @@ function parseTranscriptTurns(
     parsed.turns.length !== expectedTurnCount ||
     !parsed.turns.every(isTranscriptTurn)
   ) {
-    throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
+    throw new Error(integrityError);
   }
   return parsed.turns.map((turn) => ({
     ...turn,
@@ -184,6 +182,7 @@ function transcriptToolSummaries(
 }
 
 function TranscriptTraceSummary({ turn }: { turn: TranscriptTurn }) {
+  const { t } = useTranslation();
   const tools = transcriptToolSummaries(turn);
   const reasoning = turn.trace?.reasoning?.summary;
   if (tools.length === 0 && !reasoning) return null;
@@ -191,7 +190,7 @@ function TranscriptTraceSummary({ turn }: { turn: TranscriptTurn }) {
   return (
     <div
       className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-secondary"
-      aria-label="Conversation trace"
+      aria-label={t('adminFeedback.conversationTrace')}
     >
       {reasoning && <div className="mb-2 leading-relaxed">{reasoning}</div>}
       {tools.length > 0 && (
@@ -223,6 +222,10 @@ function TranscriptTraceSummary({ turn }: { turn: TranscriptTurn }) {
  */
 export function FeedbackView() {
   const { t } = useTranslation();
+  const transcriptIntegrityError = t(
+    'adminTestFeedback.feedback.transcriptIntegrityError',
+    'The transcript is unavailable or incomplete and cannot be exported.'
+  );
   const [logs, setLogs] = useState<SessionLogMetadata[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -305,12 +308,17 @@ export function FeedbackView() {
       setLogs(await listSessionLogs());
     } catch (err) {
       setListError(
-        err instanceof Error ? err.message : 'Failed to load trials'
+        err instanceof Error
+          ? err.message
+          : t(
+              'adminTestFeedback.feedback.loadTrialsError',
+              'Failed to load trials'
+            )
       );
     } finally {
       setLoadingList(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadList();
@@ -342,7 +350,7 @@ export function FeedbackView() {
         hasTranscriptCiphertext !== hasTranscriptKey ||
         (!hasTranscriptCiphertext && full.turn_count > 0)
       ) {
-        throw new Error(TRANSCRIPT_INTEGRITY_ERROR);
+        throw new Error(transcriptIntegrityError);
       }
 
       // Count everything that will need an extension approval up front, so the
@@ -367,10 +375,17 @@ export function FeedbackView() {
         if (!isCurrentRequest()) return;
         if (plaintext == null) {
           throw new Error(
-            'Could not decrypt the transcript. Approve the decryption request in your Nostr extension.'
+            t(
+              'adminTestFeedback.feedback.decryptTranscriptError',
+              'Could not decrypt the transcript. Approve the decryption request in your Nostr extension.'
+            )
           );
         }
-        parsedTurns = parseTranscriptTurns(plaintext, full.turn_count);
+          parsedTurns = parseTranscriptTurns(
+            plaintext,
+            full.turn_count,
+            transcriptIntegrityError
+          );
         setDecryptProgress((prev) =>
           prev ? { ...prev, done: prev.done + 1 } : prev
         );
@@ -424,7 +439,12 @@ export function FeedbackView() {
     } catch (err) {
       if (isCurrentRequest()) {
         setDetailError(
-          err instanceof Error ? err.message : 'Failed to load transcript'
+          err instanceof Error
+            ? err.message
+            : t(
+                'adminTestFeedback.feedback.loadTranscriptError',
+                'Failed to load transcript'
+              )
         );
       }
     } finally {
@@ -433,7 +453,7 @@ export function FeedbackView() {
         setDecryptProgress(null);
       }
     }
-  }, []);
+  }, [t, transcriptIntegrityError]);
 
   const updateDraft = (turnIndex: number, patch: Partial<TurnDraft>) => {
     setDrafts((prev) => {
@@ -472,12 +492,17 @@ export function FeedbackView() {
         });
       } catch (err) {
         setFeedbackError(
-          err instanceof Error ? err.message : 'Feedback could not be saved'
+          err instanceof Error
+            ? err.message
+            : t(
+                'adminTestFeedback.feedback.saveError',
+                'Feedback could not be saved'
+              )
         );
         updateDraft(turnIndex, { saving: false });
       }
     },
-    [selectedId, drafts]
+    [selectedId, drafts, t]
   );
 
   const handleDelete = useCallback(
@@ -496,11 +521,14 @@ export function FeedbackView() {
         setDeleteError(
           err instanceof Error
             ? err.message
-            : 'Session log could not be deleted'
+            : t(
+                'adminTestFeedback.feedback.deleteError',
+                'Session log could not be deleted'
+              )
         );
       }
     },
-    [selectedId, loadList]
+    [selectedId, loadList, t]
   );
 
   const handleExport = useCallback(async () => {
@@ -564,7 +592,9 @@ export function FeedbackView() {
       downloadBlob(blob, `beta-session-log-${selectedId}.json`);
     } catch (err) {
       setExportError(
-        err instanceof Error ? err.message : 'Session export failed'
+        err instanceof Error
+          ? err.message
+          : t('adminTestFeedback.feedback.exportError', 'Session export failed')
       );
     } finally {
       setExporting(false);

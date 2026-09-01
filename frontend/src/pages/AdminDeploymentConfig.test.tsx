@@ -242,13 +242,21 @@ describe('AdminDeploymentConfig', () => {
                 {
                   key: 'lifecycle_readiness',
                   label: 'Data Lifecycle Review',
+                  label_key:
+                    'adminDeployment.readiness.lifecycle_readiness.label',
                   source: 'lifecycle_readiness',
                   severity: 'warning',
                   status: 'stale',
                   summary:
                     'Data Lifecycle Review needs Admin review and 15 unsupported Deployment Surface acknowledgements.',
+                  summary_key:
+                    'adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.summary',
+                  summary_values: { count: 15 },
                   next_action:
                     'Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces.',
+                  next_action_key:
+                    'adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.nextAction',
+                  next_action_values: {},
                   conversation_blocking: false,
                 },
                 {
@@ -954,22 +962,22 @@ describe('AdminDeploymentConfig', () => {
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Verifiable Inference is deferred for this prototype and is not required for normal Conversations.'
+        'Encrypted and Verifiable Inference is not currently verified for the configured Model Provider.'
       )
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Track Verifiable Inference as post-prototype hardening; verification can still be reviewed or run manually.'
+        'Configure a supported Model Provider and run Inference Verification before treating Deployment Readiness as complete.'
       )
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Data Lifecycle Review needs Admin review and 15 unsupported Deployment Surface acknowledgements.'
+        '15 — Unsupported Deployment Surface categories need Operator acknowledgement.'
       )
     ).toBeInTheDocument();
     expect(
       within(readiness).getByText(
-        'Review Data Lifecycle Status and acknowledge unsupported Deployment Surfaces.'
+        'Review the listed Deployment Surface categories and acknowledge each one before treating Deployment Readiness as complete.'
       )
     ).toBeInTheDocument();
     const lifecycleItem = within(readiness)
