@@ -122,7 +122,8 @@ describe('Sage Stream Event Adapter', () => {
         id: 'timing-final-provider-1',
         kind: 'timing',
         title: 'Provider first-event wait',
-        content: 'Provider first-event wait: 184 ms (combined provider wait).',
+        content:
+          'Provider first-event wait: 184 ms (combined provider wait).',
         status: 'succeeded',
         metadata: {
           phase: 'provider_first_event_wait',

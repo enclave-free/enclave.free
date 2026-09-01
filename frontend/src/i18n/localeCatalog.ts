@@ -38,7 +38,6 @@ interface LocaleCatalogDefinition {
   englishName: string;
   flag: string;
   translation: LocaleMessages;
-  advertised: boolean;
 }
 
 // Order is intentional and drives every language selector. It is a
@@ -51,7 +50,6 @@ export const localeCatalog = [
     englishName: 'Spanish',
     flag: '🇪🇸',
     translation: es,
-    advertised: true,
   },
   {
     code: 'en',
@@ -59,7 +57,6 @@ export const localeCatalog = [
     englishName: 'English',
     flag: '🇺🇸',
     translation: en,
-    advertised: true,
   },
   {
     code: 'fr',
@@ -67,7 +64,6 @@ export const localeCatalog = [
     englishName: 'French',
     flag: '🇫🇷',
     translation: fr,
-    advertised: true,
   },
   {
     code: 'ru',
@@ -75,7 +71,6 @@ export const localeCatalog = [
     englishName: 'Russian',
     flag: '🇷🇺',
     translation: ru,
-    advertised: true,
   },
   {
     code: 'ar',
@@ -83,7 +78,6 @@ export const localeCatalog = [
     englishName: 'Arabic',
     flag: '🇸🇦',
     translation: ar,
-    advertised: true,
   },
   {
     code: 'zh-Hans',
@@ -91,7 +85,6 @@ export const localeCatalog = [
     englishName: 'Chinese (Simplified)',
     flag: '🇨🇳',
     translation: zhHans,
-    advertised: true,
   },
 
   // High-need — large populations facing serious human-rights / authoritarian pressure.
@@ -101,7 +94,6 @@ export const localeCatalog = [
     englishName: 'Persian',
     flag: '🇮🇷',
     translation: fa,
-    advertised: true,
   },
   {
     code: 'zh-Hant',
@@ -109,7 +101,6 @@ export const localeCatalog = [
     englishName: 'Chinese (Traditional)',
     flag: '🇹🇼',
     translation: zhHant,
-    advertised: true,
   },
   {
     code: 'uk',
@@ -117,7 +108,6 @@ export const localeCatalog = [
     englishName: 'Ukrainian',
     flag: '🇺🇦',
     translation: uk,
-    advertised: true,
   },
   {
     code: 'tr',
@@ -125,7 +115,6 @@ export const localeCatalog = [
     englishName: 'Turkish',
     flag: '🇹🇷',
     translation: tr,
-    advertised: true,
   },
   {
     code: 'hi',
@@ -133,7 +122,6 @@ export const localeCatalog = [
     englishName: 'Hindi',
     flag: '🇮🇳',
     translation: hi,
-    advertised: true,
   },
   {
     code: 'bn',
@@ -141,7 +129,6 @@ export const localeCatalog = [
     englishName: 'Bengali',
     flag: '🇧🇩',
     translation: bn,
-    advertised: true,
   },
   {
     code: 'id',
@@ -149,7 +136,6 @@ export const localeCatalog = [
     englishName: 'Indonesian',
     flag: '🇮🇩',
     translation: id,
-    advertised: true,
   },
   {
     code: 'vi',
@@ -157,7 +143,6 @@ export const localeCatalog = [
     englishName: 'Vietnamese',
     flag: '🇻🇳',
     translation: vi,
-    advertised: true,
   },
   {
     code: 'th',
@@ -165,7 +150,6 @@ export const localeCatalog = [
     englishName: 'Thai',
     flag: '🇹🇭',
     translation: th,
-    advertised: true,
   },
   {
     code: 'he',
@@ -173,7 +157,6 @@ export const localeCatalog = [
     englishName: 'Hebrew',
     flag: '🇮🇱',
     translation: he,
-    advertised: true,
   },
   {
     code: 'ko',
@@ -181,7 +164,6 @@ export const localeCatalog = [
     englishName: 'Korean',
     flag: '🇰🇷',
     translation: ko,
-    advertised: true,
   },
   {
     code: 'pt',
@@ -189,7 +171,6 @@ export const localeCatalog = [
     englishName: 'Portuguese',
     flag: '🇧🇷',
     translation: pt,
-    advertised: true,
   },
   {
     code: 'ja',
@@ -197,7 +178,6 @@ export const localeCatalog = [
     englishName: 'Japanese',
     flag: '🇯🇵',
     translation: ja,
-    advertised: true,
   },
 
   // Lower-priority — spoken predominantly in stable, low-risk regions.
@@ -207,7 +187,6 @@ export const localeCatalog = [
     englishName: 'Polish',
     flag: '🇵🇱',
     translation: pl,
-    advertised: true,
   },
   {
     code: 'de',
@@ -215,7 +194,6 @@ export const localeCatalog = [
     englishName: 'German',
     flag: '🇩🇪',
     translation: de,
-    advertised: true,
   },
   {
     code: 'it',
@@ -223,7 +201,6 @@ export const localeCatalog = [
     englishName: 'Italian',
     flag: '🇮🇹',
     translation: it,
-    advertised: true,
   },
   {
     code: 'nl',
@@ -231,7 +208,6 @@ export const localeCatalog = [
     englishName: 'Dutch',
     flag: '🇳🇱',
     translation: nl,
-    advertised: true,
   },
   {
     code: 'cs',
@@ -239,7 +215,6 @@ export const localeCatalog = [
     englishName: 'Czech',
     flag: '🇨🇿',
     translation: cs,
-    advertised: true,
   },
   {
     code: 'ro',
@@ -247,7 +222,6 @@ export const localeCatalog = [
     englishName: 'Romanian',
     flag: '🇷🇴',
     translation: ro,
-    advertised: true,
   },
   {
     code: 'hu',
@@ -255,7 +229,6 @@ export const localeCatalog = [
     englishName: 'Hungarian',
     flag: '🇭🇺',
     translation: hu,
-    advertised: true,
   },
   {
     code: 'el',
@@ -263,7 +236,6 @@ export const localeCatalog = [
     englishName: 'Greek',
     flag: '🇬🇷',
     translation: el,
-    advertised: true,
   },
   {
     code: 'sv',
@@ -271,7 +243,6 @@ export const localeCatalog = [
     englishName: 'Swedish',
     flag: '🇸🇪',
     translation: sv,
-    advertised: true,
   },
   {
     code: 'no',
@@ -279,7 +250,6 @@ export const localeCatalog = [
     englishName: 'Norwegian',
     flag: '🇳🇴',
     translation: no,
-    advertised: true,
   },
   {
     code: 'da',
@@ -287,7 +257,6 @@ export const localeCatalog = [
     englishName: 'Danish',
     flag: '🇩🇰',
     translation: da,
-    advertised: true,
   },
   {
     code: 'fi',
@@ -295,19 +264,13 @@ export const localeCatalog = [
     englishName: 'Finnish',
     flag: '🇫🇮',
     translation: fi,
-    advertised: true,
   },
 ] as const satisfies readonly LocaleCatalogDefinition[];
 
 type LocaleCatalogEntry = (typeof localeCatalog)[number];
-export type AdvertisedLocale = Extract<
-  LocaleCatalogEntry,
-  { advertised: true }
->;
+export type AdvertisedLocale = LocaleCatalogEntry;
 
-export const advertisedLocales = localeCatalog.filter(
-  (locale): locale is AdvertisedLocale => locale.advertised
-);
+export const advertisedLocales = localeCatalog;
 export type AdvertisedLocaleCode = AdvertisedLocale['code'];
 
 export const advertisedLocaleCodes = advertisedLocales.map(
